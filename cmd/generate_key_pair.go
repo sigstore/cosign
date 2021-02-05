@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"golang.org/x/term"
@@ -38,7 +39,7 @@ func generateKeyPair(ctx context.Context) error {
 	}
 
 	// Encrypt the private key and store it.
-	password, err := getPass()
+	password, err := getPass(true)
 	if err != nil {
 		return err
 	}
@@ -65,16 +66,19 @@ func generateKeyPair(ctx context.Context) error {
 	return nil
 }
 
-func getPass() ([]byte, error) {
-	fmt.Print("Enter password for private key: ")
+func getPass(confirm bool) ([]byte, error) {
+	fmt.Fprint(os.Stderr, "Enter password for private key: ")
 	pw1, err := term.ReadPassword(0)
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Print("Enter again: ")
+	if !confirm {
+		return pw1, nil
+	}
+	fmt.Fprint(os.Stderr, "Enter again: ")
 	pw2, err := term.ReadPassword(0)
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
 	}

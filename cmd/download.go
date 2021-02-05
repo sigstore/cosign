@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 
+	"github.com/dlorenc/cosign/pkg"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
@@ -26,5 +30,21 @@ func Download() *ffcli.Command {
 }
 
 func download(_ context.Context, imageRef string) error {
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return err
+	}
+
+	signatures, err := pkg.FetchSignatures(ref)
+	if err != nil {
+		return err
+	}
+	for _, sig := range signatures {
+		b, err := json.Marshal(sig)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+	}
 	return nil
 }

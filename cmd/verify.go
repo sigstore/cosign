@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"strings"
 
+	"github.com/dlorenc/cosign/pkg"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
@@ -30,5 +34,33 @@ func Verify() *ffcli.Command {
 }
 
 func verify(_ context.Context, keyPath string, imageRef string) error {
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return err
+	}
+
+	pubKey, err := pkg.LoadPublicKey(keyPath)
+	if err != nil {
+		return err
+	}
+
+	signatures, err := pkg.FetchSignatures(ref)
+	if err != nil {
+		return err
+	}
+
+	errs := []string{}
+	verified := false
+	for _, sp := range signatures {
+		if err := pkg.Verify(pubKey, sp.Base64Signature, sp.Payload); err != nil {
+			errs = append(errs, err.Error())
+			continue
+		}
+		fmt.Println(string(sp.Payload))
+		verified = true
+	}
+	if !verified {
+		return fmt.Errorf("no matching signatures:\n%s", strings.Join(errs, "\n  "))
+	}
 	return nil
 }

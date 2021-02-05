@@ -3,7 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 
+	"github.com/dlorenc/cosign/pkg"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
@@ -26,5 +31,20 @@ func Generate() *ffcli.Command {
 }
 
 func generate(_ context.Context, imageRef string) error {
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return err
+	}
+
+	get, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return err
+	}
+
+	payload, err := pkg.Payload(get.Descriptor)
+	if err != nil {
+		return err
+	}
+	fmt.Print(string(payload))
 	return nil
 }
