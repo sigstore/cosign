@@ -13,7 +13,7 @@ func Payload(img v1.Descriptor) ([]byte, error) {
 			Image: Image{
 				DockerManifestDigest: img.Digest.Hex,
 			},
-			Type: "cosine container signature",
+			Type: "cosign container signature",
 		},
 	}
 

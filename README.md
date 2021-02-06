@@ -82,14 +82,14 @@ The signature is passed via the -signature flag.
 It can be a file:
 
 ```
-$ cosine upload -signature file.sig us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign upload -signature file.sig us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
 the base64-encoded signature:
 
 ```
-$ cosine upload -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign upload -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
 ```
 
@@ -122,7 +122,7 @@ $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 
 ## Signature Specification
 
-`cosine` is inspired by tools like [minisign](https://jedisct1.github.io/minisign/) and
+`cosign` is inspired by tools like [minisign](https://jedisct1.github.io/minisign/) and
 [signify](https://www.openbsd.org/papers/bsdcan-signify.html).
 
 Generated private keys are stored in encrypted PEM format using AES-256-CBC, secured by a password.
@@ -151,7 +151,7 @@ $ cosign verify -key NqfC4CpZiE4OGpuYFSSMzXHJqXQ6u1W55prrZIjjZJ0= us-central1-do
 
 ## Storage Specification
 
-`cosine ` stores signatures in an OCI registry, and uses a naming convention (tag based
+`cosign ` stores signatures in an OCI registry, and uses a naming convention (tag based
 on the sha256 of what we're signing) for locating the signature index.
 
 <p align="center">
@@ -169,21 +169,21 @@ Alternative implementations could use transparency logs, local filesystem, a sep
 
 ### Signing subjects
 
-`cosine` only works for artifacts stored as "manifests" in the registry today.
+`cosign` only works for artifacts stored as "manifests" in the registry today.
 The proposed mechanism is flexible enough to support signing arbitrary things.
 
 ## Caveats
 
-`cosine` only generates Ed25519 keys with SHA256 hashes.
+`cosign` only generates Ed25519 keys with SHA256 hashes.
 Keys are stored in PEM-encoded PKCS8 format.
-However, you can use `cosine` to store and retrieve signatures in any format, from any algorithm.
+However, you can use `cosign` to store and retrieve signatures in any format, from any algorithm.
 
-`cosine` does not handle key-distribution or PKI.
+`cosign` does not handle key-distribution or PKI.
 
-`cosine` does not handle key-management or storage.
+`cosign` does not handle key-management or storage.
 There are no keyrings or local state.
 
-`cosine` only supports Red Hat's [simple signing](https://www.redhat.com/en/blog/container-image-signing)
+`cosign` only supports Red Hat's [simple signing](https://www.redhat.com/en/blog/container-image-signing)
 format for payloads.
 That looks like:
 
@@ -196,7 +196,7 @@ That looks like:
            "image": {
                "Docker-manifest-digest": "sha256:20be...fe55"
            },
-           "type": "cosine container signature"
+           "type": "cosign container signature"
     },
     "optional": {
            "creator": "atomic",
@@ -204,10 +204,10 @@ That looks like:
     }
 }
 ```
-**Note:** This can be generated for an image reference using `cosine generate <image>`.
+**Note:** This can be generated for an image reference using `cosign generate <image>`.
 
 
-`cosine` signatures are stored as separate objects in the OCI registry, with only a weak
+`cosign` signatures are stored as separate objects in the OCI registry, with only a weak
 reference back to the object they "sign".
 This means this relationship is opaque to the registry, and signatures *will not* be deleted
 or garbage-collected when the image is deleted.
@@ -218,8 +218,8 @@ Multiple signatures are stored in a list which is unfortunately "racy" today.
 To add a signtaure, clients orchestrate a "read-append-write" operation, so the last write
 will win in the case of contention.
 
-`cosine` has been tested, barely, against GCP's Artifact Registry (pkg.dev).
-`cosine` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
+`cosign` has been tested, barely, against GCP's Artifact Registry (pkg.dev).
+`cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
 interactions, which has excellent support, but other registries may have quirks.
 
 ## FAQ
@@ -232,8 +232,8 @@ Hopefully no one yet. Stay tuned, though.
 
 ### Why not use containers/image signing
 
-`containers/image` signing is close to `cosine`, and we reuse payload formats.
-`cosine` differs in that it signs with ED25519 keys instead of PGP, and stores
+`containers/image` signing is close to `cosign`, and we reuse payload formats.
+`cosign` differs in that it signs with ED25519 keys instead of PGP, and stores
 signatures in the registry.
 
 ### Why not use TUF?
@@ -262,6 +262,3 @@ If you're aware of another system that does meet these, please let me know!
 * Multiple entities can sign an image
 * Signing an image does not mutate the image
 * Pure-go implementation
-
-## Future Ideas
-
