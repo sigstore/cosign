@@ -278,6 +278,13 @@ If you're aware of another system that does meet these, please let me know!
 
 ## Future Ideas
 
+### Registry API Changes
+
+The naming convention and read-modify-write update patterns we use to store things in
+a registry a bit, well, "hacky".
+I think they're the best (only) real option available today, but if the registry API
+changes we can improve these.
+
 ### Other Types
 
 `cosign` can sign anything in a registry.
@@ -289,7 +296,6 @@ for distribution.
 This also means new artifact types can be uploaded to a registry and signed.
 One interesting type to store and sign would be TUF repositories.
 I haven't tried yet, but I'm fairly certain TUF could be implemented on top of this.
-
 
 ### Base Image/Layer Signing
 
