@@ -18,8 +18,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -29,8 +31,9 @@ import (
 
 func Verify() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign verify", flag.ExitOnError)
-		key     = flagset.String("key", "", "path to the private key")
+		flagset     = flag.NewFlagSet("cosign verify", flag.ExitOnError)
+		key         = flagset.String("key", "", "path to the private key")
+		checkClaims = flagset.Bool("check-claims", true, "whether to check the claims found")
 	)
 	return &ffcli.Command{
 		Name:       "verify",
@@ -44,12 +47,12 @@ func Verify() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return verify(ctx, *key, args[0])
+			return verify(ctx, *key, args[0], *checkClaims)
 		},
 	}
 }
 
-func verify(_ context.Context, keyRef string, imageRef string) error {
+func verify(_ context.Context, keyRef string, imageRef string, checkClaims bool) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -60,23 +63,53 @@ func verify(_ context.Context, keyRef string, imageRef string) error {
 		return err
 	}
 
-	signatures, err := pkg.FetchSignatures(ref)
+	signatures, desc, err := pkg.FetchSignatures(ref)
 	if err != nil {
 		return err
 	}
 
-	errs := []string{}
-	verified := false
+	verifyErrs := []string{}
+	verifiedPayloads := [][]byte{}
 	for _, sp := range signatures {
 		if err := pkg.Verify(pubKey, sp.Base64Signature, sp.Payload); err != nil {
-			errs = append(errs, err.Error())
+			verifyErrs = append(verifyErrs, err.Error())
 			continue
 		}
-		fmt.Println(string(sp.Payload))
-		verified = true
+		verifiedPayloads = append(verifiedPayloads, sp.Payload)
 	}
-	if !verified {
-		return fmt.Errorf("no matching signatures:\n%s", strings.Join(errs, "\n  "))
+	if len(verifiedPayloads) == 0 {
+		return fmt.Errorf("no matching signatures:\n%s", strings.Join(verifyErrs, "\n  "))
 	}
+
+	if !checkClaims {
+		fmt.Fprintln(os.Stderr, "Warning: the following claims have not been verified:")
+		for _, vp := range verifiedPayloads {
+			fmt.Println(string(vp))
+		}
+		return nil
+	}
+
+	checkClaimErrs := []string{}
+	foundOne := false
+	// Now look through the payloads for things we understand
+	for _, vp := range verifiedPayloads {
+		ss := pkg.SimpleSigning{}
+		if err := json.Unmarshal(vp, &ss); err != nil {
+			checkClaimErrs = append(checkClaimErrs, err.Error())
+			continue
+		}
+		foundDgst := ss.Critical.Image.DockerManifestDigest
+		if foundDgst == desc.Digest.Hex {
+			foundOne = true
+			fmt.Println(string(vp))
+		} else {
+			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing digest in claim: %s", foundDgst))
+			continue
+		}
+	}
+	if !foundOne {
+		return fmt.Errorf("no matching claims:\n%s", strings.Join(checkClaimErrs, "\n  "))
+	}
+
 	return nil
 }

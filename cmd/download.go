@@ -51,7 +51,7 @@ func download(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	signatures, err := pkg.FetchSignatures(ref)
+	signatures, _, err := pkg.FetchSignatures(ref)
 	if err != nil {
 		return err
 	}

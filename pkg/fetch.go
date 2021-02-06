@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
@@ -30,27 +31,24 @@ type SignedPayload struct {
 	Payload         []byte
 }
 
-func FetchSignatures(ref name.Reference) ([]SignedPayload, error) {
+func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error) {
 	var idxRef name.Reference
-	if tag, ok := ref.(name.Tag); ok {
-		desc, err := remote.Get(tag, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-		if err != nil {
-			return nil, err
-		}
-		munged := strings.ReplaceAll(desc.Digest.String(), ":", "-")
-		idxRef = ref.Context().Tag(munged)
-	} else if dgst, ok := ref.(name.Digest); ok {
-		munged := strings.ReplaceAll(dgst.Identifier(), ":", "-")
-		idxRef = ref.Context().Tag(munged)
+	targetDesc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, nil, err
 	}
+	munged := strings.ReplaceAll(targetDesc.Digest.String(), ":", "-")
+	idxRef = ref.Context().Tag(munged)
 
 	idx, err := remote.Index(idxRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+
 	}
 	m, err := idx.IndexManifest()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+
 	}
 
 	signatures := []SignedPayload{}
@@ -61,22 +59,25 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, error) {
 		}
 		l, err := remote.Layer(ref.Context().Digest(desc.Digest.String()), remote.WithAuthFromKeychain(authn.DefaultKeychain))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+
 		}
 
 		r, err := l.Compressed()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+
 		}
 
 		payload, err := ioutil.ReadAll(r)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+
 		}
 		signatures = append(signatures, SignedPayload{
 			Payload:         payload,
 			Base64Signature: base64sig,
 		})
 	}
-	return signatures, nil
+	return signatures, &targetDesc.Descriptor, nil
 }

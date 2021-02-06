@@ -55,7 +55,7 @@ import (
 
 const (
 	pemType = "ENCRYPTED COSIGN PRIVATE KEY"
-	sigkey  = "dev.ggcr.crane/signature"
+	sigkey  = "dev.cosignproject.cosign/signature"
 )
 
 func LoadPrivateKey(keyPath string, pass []byte) (ed25519.PrivateKey, error) {
