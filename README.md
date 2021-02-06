@@ -262,3 +262,73 @@ If you're aware of another system that does meet these, please let me know!
 * Multiple entities can sign an image
 * Signing an image does not mutate the image
 * Pure-go implementation
+
+## Future Ideas
+
+### Other Types
+
+`cosign` can sign anything in a registry.
+These examples show signing a single image, but you could also sign a multi-platform `Index`,
+or any other type of artifact.
+This includes Helm Charts, Tekton Pipelines, and anything else currently using OCI registries
+for distribution.
+
+This also means new artifact types can be uploaded to a registry and signed.
+One interesting type to store and sign would be TUF repositories.
+I haven't tried yet, but I'm fairly certain TUF could be implemented on top of this.
+
+
+### Base Image/Layer Signing
+
+Again, `cosign` can sign anything in a registry.
+You could use `cosign` to sign an image that is intended to be used as a base image,
+and inlcude that provenance metadata in resulting derived images.
+This could be used to enforce that an image was built from an authorized base image.
+
+Rough Idea:
+* OCI manifests have an ordered list of `layer` `Descriptors`, which can contain annotations.
+  See [here](https://github.com/opencontainers/image-spec/blob/master/manifest.md) for the
+  specification.
+* A base image is an ordered list of layers to which other layers are appended, as well as an
+  initial configuration object that is mutated.
+  * A derived image is free to completely delete/destroy/recreate the config from its base image,
+    so signing the config would provided limited value.
+* We can sign the full set of ordered base layers, and attach that signature as an annotation to
+  the **last** layer in the resulting child image.
+
+This example manifest manifest represents an image that has been built from a base image with two
+layers.
+One additional layer is added, forming the final image.
+
+```json
+{
+  "schemaVersion": 2,
+  "config": {
+    "mediaType": "application/vnd.oci.image.config.v1+json",
+    "size": 7023,
+    "digest": "sha256:b5b2b2c507a0944348e0303114d8d93aaaa081732b86451d9bce1f432a537bc7"
+  },
+  "layers": [
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "size": 32654,
+      "digest": "sha256:9834876dcfb05cb167a5c24953eba58c4ac89b1adf57f28f2f9d09af107ee8f0"
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "size": 16724,
+      "digest": "sha256:3c3a4604a545cdc127456d94e421cd355bca5b528f4a9c1905b15da2eb4a4c6b",
+      "annotations": {
+        "dev.cosign.signature.baseimage": "Ejy6ipGJjUzMDoQFePWixqPBYF0iSnIvpMWps3mlcYNSEcRRZelL7GzimKXaMjxfhy5bshNGvDT5QoUJ0tqUAg=="
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "size": 73109,
+      "digest": "sha256:ec4b8955958665577945c89419d1af06b5f7636b4ac3da7f12184802ad867736"
+    }
+  ],
+}
+```
+
+Note that this could be applied recursively, for multiple intermediate base images.
