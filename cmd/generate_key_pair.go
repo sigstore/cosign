@@ -20,13 +20,14 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/theupdateframework/go-tuf/encrypted"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"golang.org/x/term"
@@ -59,14 +60,17 @@ func generateKeyPair(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	var pb *pem.Block
 
-	pb, err = x509.EncryptPEMBlock(rand.Reader, "ENCRYPTED COSIGN PRIVATE KEY", priv, password, x509.PEMCipherAES256)
+	encBytes, err := encrypted.Encrypt(priv, password)
 	if err != nil {
 		return err
 	}
 
-	privBytes := pem.EncodeToMemory(pb)
+	privBytes := pem.EncodeToMemory(&pem.Block{
+		Bytes: encBytes,
+		Type:  "ENCRYPTED COSIGN PRIVATE KEY",
+	})
+	// TODO: make sure the perms are locked down first.
 	if err := ioutil.WriteFile("cosign.key", privBytes, 0600); err != nil {
 		return err
 	}

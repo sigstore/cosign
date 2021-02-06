@@ -19,7 +19,6 @@ package pkg
 import (
 	"bytes"
 	"crypto/ed25519"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -35,6 +34,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
 // {
@@ -70,7 +70,7 @@ func LoadPrivateKey(keyPath string, pass []byte) (ed25519.PrivateKey, error) {
 		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
-	priv, err := x509.DecryptPEMBlock(p, pass)
+	priv, err := encrypted.Decrypt(p.Bytes, pass)
 	if err != nil {
 		return nil, err
 	}

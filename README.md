@@ -138,13 +138,13 @@ $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 `cosign` is inspired by tools like [minisign](https://jedisct1.github.io/minisign/) and
 [signify](https://www.openbsd.org/papers/bsdcan-signify.html).
 
-Generated private keys are stored in encrypted PEM format using AES-256-CBC, secured by a password.
+Generated private keys are stored in PEM format.
+The keys encrypted under a password using scrypt as a KDF and nacl/secretbox for encryption.
+
 They have a PEM header of `ENCRYPTED COSIGN PRIVATE KEY`:
 
 ```
 -----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----
-Proc-Type: 4,ENCRYPTED
-DEK-Info: AES-256-CBC,a826701d7c783bbda1494b4dd217e544
 ...
 -----END ENCRYPTED COSIGN PRIVATE KEY-----
 ```
