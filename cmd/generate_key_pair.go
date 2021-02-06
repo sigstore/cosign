@@ -45,7 +45,7 @@ func generateKeyPair(ctx context.Context) error {
 	}
 	var pb *pem.Block
 
-	pb, err = x509.EncryptPEMBlock(rand.Reader, "ENCRYPTED PRIVATE KEY", priv, password, x509.PEMCipherAES256)
+	pb, err = x509.EncryptPEMBlock(rand.Reader, "ENCRYPTED COSIGN PRIVATE KEY", priv, password, x509.PEMCipherAES256)
 	if err != nil {
 		return err
 	}
@@ -54,15 +54,17 @@ func generateKeyPair(ctx context.Context) error {
 	if err := ioutil.WriteFile("cosign.key", privBytes, 0600); err != nil {
 		return err
 	}
+	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
 
 	// Now do the public key
 	pubBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
+		Type:  "COSIGN PUBLIC KEY",
 		Bytes: pub,
 	})
 	if err := ioutil.WriteFile("cosign.pub", pubBytes, 0600); err != nil {
 		return err
 	}
+	fmt.Fprintln(os.Stderr, "Public key written to cosign.key")
 	return nil
 }
 

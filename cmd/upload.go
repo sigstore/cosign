@@ -39,8 +39,12 @@ func Upload() *ffcli.Command {
 func upload(ctx context.Context, sigRef, imageRef string) error {
 	var b64SigBytes []byte
 	var err error
+
+	// This can be "-", a file or a string.
 	if sigRef == "-" {
 		b64SigBytes, err = ioutil.ReadAll(os.Stdin)
+	} else if _, err := os.Stat(sigRef); os.IsNotExist(err) {
+		b64SigBytes = []byte(sigRef)
 	} else {
 		b64SigBytes, err = ioutil.ReadFile(sigRef)
 	}

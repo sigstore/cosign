@@ -45,6 +45,6 @@ func generate(_ context.Context, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(string(payload))
+	fmt.Println(string(payload))
 	return nil
 }

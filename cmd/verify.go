@@ -33,13 +33,13 @@ func Verify() *ffcli.Command {
 	}
 }
 
-func verify(_ context.Context, keyPath string, imageRef string) error {
+func verify(_ context.Context, keyRef string, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
-	pubKey, err := pkg.LoadPublicKey(keyPath)
+	pubKey, err := pkg.LoadPublicKey(keyRef)
 	if err != nil {
 		return err
 	}

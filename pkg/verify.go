@@ -7,10 +7,25 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
-func LoadPublicKey(keyPath string) (ed25519.PublicKey, error) {
-	b, err := ioutil.ReadFile(keyPath)
+const pubKeyPemType = "COSIGN PUBLIC KEY"
+
+func LoadPublicKey(keyRef string) (ed25519.PublicKey, error) {
+
+	// The key could be plaintext or in a file.
+	// First check if the file exists.
+	if _, err := os.Stat(keyRef); os.IsNotExist(err) {
+		// Make sure it's base64 encoded
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(keyRef)
+		if err != nil {
+			return nil, fmt.Errorf("%s must be a path to a public key or a base64 encoded public key", keyRef)
+		}
+		return ed25519.PublicKey(pubKeyBytes), nil
+	}
+
+	b, err := ioutil.ReadFile(keyRef)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +34,7 @@ func LoadPublicKey(keyPath string) (ed25519.PublicKey, error) {
 		return nil, errors.New("pem.Decode failed")
 	}
 
-	if p.Type != "PUBLIC KEY" {
+	if p.Type != pubKeyPemType {
 		return nil, fmt.Errorf("not public: %q", p.Type)
 	}
 	return ed25519.PublicKey(p.Bytes), nil

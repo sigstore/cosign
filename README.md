@@ -2,113 +2,181 @@
 
 Container Signing, Verification and Storage in an OCI registry.
 
-### Installation
+## Installation
 
-TODO
+For now, clone and `go build ./cmd`.
+I'll publish releases when I'm comfortable supporting this for others to use.
 
 ## Usage
-
 
 ### Generate a keypair
 
 ```
 $ cosign generate-key-pair
+Enter password for private key:
+Enter again:
+Private key written to cosign.key
+Public key written to cosign.key
 ```
 
-### Signing
-
-#### Sign a container and store the signature in the registry
+### Sign a container and store the signature in the registry
 
 ```
-$ cosign sign -key private-key.pem gcr.io/dlorenc-vmtest2/foo
+$ cosign sign -key private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Enter password for private key:
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
 This can be done multiple times:
 
 ```
-$ cosign sign -key private-key.pem gcr.io/dlorenc-vmtest2/foo
-$ cosign sign -key other-private-key.pem gcr.io/dlorenc-vmtest2/foo
+$ cosign sign -key private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Enter password for private key:
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+
+$ cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Enter password for private key:
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
 We only actually sign the digest, but you can pass by tag or digest:
 
 ```
-cosign sign -key other-private-key.pem gcr.io/dlorenc-vmtest2/foo:v1
-cosign sign -key other-private-key.pem gcr.io/dlorenc-vmtest2/foo@sha256:dfda
+cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
+Enter password for private key:
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+
+cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun@sha256:dfda
+Enter password for private key:
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
-#### Sign but skip upload
+### Sign but skip upload
+
+The base64 encoded signature is printed to stdout.
+This can be stored somewhere else.
 
 ```
-$ cosign sign -key key.pem gcr.io/dlorenc-vmtest2/foo --no-upload
+$ cosign sign -key key.pem --upload=false us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ==
 ```
 
-#### Generate the signature payload, to sign with another tool
+### Generate the signature payload, to sign with another tool
+
+The json payload is printed to stdout:
 
 ```
-$ cosign generate gcr.io/dlorenc-vmtest2/foo
+$ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
 ```
 
 This can be piped directly into openssl:
 
 ```
-$ cosign generate gcr.io/dlorenc-vmtest2/foo | openssl...
+$ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun | openssl...
 ```
 
-#### Upload a generated signature
+### Upload a generated signature
+
+The signature is passed via the -signature flag.
+It can be a file:
 
 ```
-$ cosign upload -signature sig gcr.io/dlorenc-vmtest2/foo
+$ cosine upload -signature file.sig us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
-This can read from stdin if you want to chain from the generate command:
+the base64-encoded signature:
 
 ```
-$ cosign generate gcr.io/dlorenc-vmtest2/foo | openssl... | cosign upload -signature -- gcr.io/dlorenc-vmtest2/foo
+$ cosine upload -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
 ```
 
-### Verification
-
-#### Verify a container against a public key
+or, `-` for stdin for chaining from other commands:
 
 ```
-# Returns 0 if *at least one* signature for the image is found matching the public key.
-$ cosign verify -key public-key.pem gcr.io/dlorenc-vmtest2/foo
+$ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun | openssl... | cosign upload -signature -- us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
 ```
 
-#### Download the signatures to verify with another tool
+### Verify a container against a public key
+
+This command returns 0 if *at least one* signature for the image is found matching the public key.
+
+Any matching signatures are printed to stdout, in json format.
 
 ```
-$ cosign download gcr.io/dlorenc-vmtest2/foo
+$ cosign verify -key public-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
 ```
 
-These can be piped to openssl:
+### Download the signatures to verify with another tool
+
+Each signature is printed to stdout in a json format:
 
 ```
-$ cosign download gcr.io/dlorenc-vmtest2/foo | openssl...
-```
-
-or to a remote KMS:
-```
-$ cosign download gcr.io/dlorenc-vmtest2/foo | gcloud kms asymetric-sign...
-```
-
-#### Verify a downloaded signature
-
-```
-$ cosine verify -key public-key.pem -signature sig <image>
+$ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+{"Base64Signature":"Ejy6ipGJjUzMDoQFePWixqPBYF0iSnIvpMWps3mlcYNSEcRRZelL7GzimKXaMjxfhy5bshNGvDT5QoUJ0tqUAg==","Payload":"eyJDcml0aWNhbCI6eyJJZGVudGl0eSI6eyJkb2NrZXItcmVmZXJlbmNlIjoiIn0sIkltYWdlIjp7IkRvY2tlci1tYW5pZmVzdC1kaWdlc3QiOiI4N2VmNjBmNTU4YmFkNzliZWVhNjQyNWEzYjI4OTg5ZjAxZGQ0MTcxNjQxNTBhYjNiYWFiOThkY2JmMDRkZWY4In0sIlR5cGUiOiIifSwiT3B0aW9uYWwiOm51bGx9"}
 ```
 
 ## Signature Specification
 
-`cosine is inspired by tools like [minisign](https://jedisct1.github.io/minisign/) and
+`cosine` is inspired by tools like [minisign](https://jedisct1.github.io/minisign/) and
 [signify](https://www.openbsd.org/papers/bsdcan-signify.html).
 
+Generated private keys are stored in encrypted PEM format using AES-256-CBC, secured by a password.
+They have a PEM header of `ENCRYPTED COSIGN PRIVATE KEY`:
 
-### Caveats
+```
+-----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-256-CBC,a826701d7c783bbda1494b4dd217e544
+...
+-----END ENCRYPTED COSIGN PRIVATE KEY-----
+```
 
-`cosine` only supports Ed25519 keys with SHA256 hashes.
+Public keys are stored on disk in PEM format with a header of `COSIGN PUBLIC KEY`.
+```
+-----BEGIN COSIGN PUBLIC KEY-----
+NqfC4CpZiE4OGpuYFSSMzXHJqXQ6u1W55prrZIjjZJ0=
+-----END COSIGN PUBLIC KEY-----
+```
+
+The inner (base64 encoded) data portion can be supplied directly on the command line without the PEM blocks:
+
+```
+$ cosign verify -key NqfC4CpZiE4OGpuYFSSMzXHJqXQ6u1W55prrZIjjZJ0= us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+```
+
+## Storage Specification
+
+`cosine ` stores signatures in an OCI registry, and uses a naming convention (tag based
+on the sha256 of what we're signing) for locating the signature index.
+
+<p align="center">
+  <img src="/images/signatures.dot.svg" />
+</p>
+
+`reg.example.com/ubuntu@sha256:703218c0465075f4425e58fac086e09e1de5c340b12976ab9eb8ad26615c3715` has signatures located at `reg.example.com/ubuntu:sha256-703218c0465075f4425e58fac086e09e1de5c340b12976ab9eb8ad26615c3715`
+
+Roughly (ignoring ports in the hostname): `s/:/-/g` and `s/@/:/g` to find the signature index.
+
+See [Race conditions](#race-conditions) for some caveats around this strategy.
+
+Alternative implementations could use transparency logs, local filesystem, a separate repository
+    registry, an explicit reference to a signature index, a new registry API, grafeas, etc.
+
+### Signing subjects
+
+`cosine` only works for artifacts stored as "manifests" in the registry today.
+The proposed mechanism is flexible enough to support signing arbitrary things.
+
+## Caveats
+
+`cosine` only generates Ed25519 keys with SHA256 hashes.
 Keys are stored in PEM-encoded PKCS8 format.
+However, you can use `cosine` to store and retrieve signatures in any format, from any algorithm.
 
 `cosine` does not handle key-distribution or PKI.
 
@@ -117,7 +185,6 @@ There are no keyrings or local state.
 
 `cosine` only supports Red Hat's [simple signing](https://www.redhat.com/en/blog/container-image-signing)
 format for payloads.
-
 That looks like:
 
 ```
@@ -137,12 +204,23 @@ That looks like:
     }
 }
 ```
-
 **Note:** This can be generated for an image reference using `cosine generate <image>`.
 
-## Storage Specification
 
-add jon's diagram
+`cosine` signatures are stored as separate objects in the OCI registry, with only a weak
+reference back to the object they "sign".
+This means this relationship is opaque to the registry, and signatures *will not* be deleted
+or garbage-collected when the image is deleted.
+Similarly, they **can** easily be copied from one environment to another, but this is not
+automatic.
+
+Multiple signatures are stored in a list which is unfortunately "racy" today.
+To add a signtaure, clients orchestrate a "read-append-write" operation, so the last write
+will win in the case of contention.
+
+`cosine` has been tested, barely, against GCP's Artifact Registry (pkg.dev).
+`cosine` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
+interactions, which has excellent support, but other registries may have quirks.
 
 ## FAQ
 
@@ -165,16 +243,16 @@ I haven't tried yet, but think we can also reuse a registry for TUF storage.
 
 ### Why not use Blockchain?
 
-Just kidding. Nobody actually asked this.
+Just kidding. Nobody actually asked this. Don't be that person.
 
 ### Why not use $FOO?
 
-See the next section, [Requirements].
+See the next section, [Requirements](#Requirements).
 I designed this tool to meet a few specific requirements, and didn't find
 anything else that met all of these.
 If you're aware of another system that does meet these, please let me know!
 
-## Requirements
+## Design Requirements
 
 * No external services for signature storage, querying, or retrieval
 * Everything should work over the registry API
@@ -184,3 +262,6 @@ If you're aware of another system that does meet these, please let me know!
 * Multiple entities can sign an image
 * Signing an image does not mutate the image
 * Pure-go implementation
+
+## Future Ideas
+

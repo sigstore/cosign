@@ -38,7 +38,7 @@ import (
 // }
 
 const (
-	pemType = "ENCRYPTED PRIVATE KEY"
+	pemType = "ENCRYPTED COSIGN PRIVATE KEY"
 	sigkey  = "dev.ggcr.crane/signature"
 )
 
