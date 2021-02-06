@@ -24,7 +24,7 @@ Public key written to cosign.key
 ```
 $ cosign sign -key private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Enter password for private key:
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
 This can be done multiple times:
@@ -32,11 +32,11 @@ This can be done multiple times:
 ```
 $ cosign sign -key private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Enter password for private key:
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 
 $ cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Enter password for private key:
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
 We only actually sign the digest, but you can pass by tag or digest:
@@ -44,14 +44,27 @@ We only actually sign the digest, but you can pass by tag or digest:
 ```
 cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
 Enter password for private key:
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 
 cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun@sha256:dfda
 Enter password for private key:
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
-### Sign but skip upload
+### Sign and upload a generated payload (in another format, from another tool)
+
+The payload must be specified as a path to a file:
+
+```
+$ cosign sign -key key.pem -payload payload.json us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ==
+Using payload from: payload.json
+Enter password for private key:
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+
+```
+
+### Sign but skip upload (to store somewhere else)
 
 The base64 encoded signature is printed to stdout.
 This can be stored somewhere else.
@@ -61,7 +74,7 @@ $ cosign sign -key key.pem --upload=false us-central1-docker.pkg.dev/dlorenc-vmt
 Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ==
 ```
 
-### Generate the signature payload, to sign with another tool
+### Generate the signature payload (to sign with another tool)
 
 The json payload is printed to stdout:
 
@@ -83,21 +96,21 @@ It can be a file:
 
 ```
 $ cosign upload -signature file.sig us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
 the base64-encoded signature:
 
 ```
 $ cosign upload -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
 ```
 
 or, `-` for stdin for chaining from other commands:
 
 ```
 $ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun | openssl... | cosign upload -signature -- us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Pushing signature to:  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
 ```
 
 ### Verify a container against a public key

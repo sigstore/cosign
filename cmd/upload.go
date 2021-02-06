@@ -83,7 +83,7 @@ func upload(ctx context.Context, sigRef, imageRef string) error {
 		return err
 	}
 
-	fmt.Fprintln(os.Stderr, "Pushing signature to: ", dstTag.String())
+	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
 	if err := remote.WriteIndex(dstTag, idx, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
 		return err
 	}

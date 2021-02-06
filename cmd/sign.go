@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -18,9 +19,10 @@ import (
 
 func Sign() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign sign", flag.ExitOnError)
-		key     = flagset.String("key", "", "path to the private key")
-		upload  = flagset.Bool("upload", true, "whether to upload the signature")
+		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
+		key         = flagset.String("key", "", "path to the private key")
+		upload      = flagset.Bool("upload", true, "whether to upload the signature")
+		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 	)
 	return &ffcli.Command{
 		Name:       "sign",
@@ -34,12 +36,12 @@ func Sign() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return sign(ctx, *key, args[0], *upload)
+			return sign(ctx, *key, args[0], *upload, *payloadPath)
 		},
 	}
 }
 
-func sign(ctx context.Context, keyPath string, imageRef string, upload bool) error {
+func sign(ctx context.Context, keyPath string, imageRef string, upload bool, payloadPath string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -50,7 +52,14 @@ func sign(ctx context.Context, keyPath string, imageRef string, upload bool) err
 		return err
 	}
 
-	payload, err := pkg.Payload(get.Descriptor)
+	// The payload can be specified via a flag to skip generation.
+	var payload []byte
+	if payloadPath != "" {
+		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
+		payload, err = ioutil.ReadFile(payloadPath)
+	} else {
+		payload, err = pkg.Payload(get.Descriptor)
+	}
 	if err != nil {
 		return err
 	}
@@ -79,7 +88,7 @@ func sign(ctx context.Context, keyPath string, imageRef string, upload bool) err
 		return err
 	}
 
-	fmt.Fprintln(os.Stderr, "Pushing signature to: ", dstTag.String())
+	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
 	if err := remote.WriteIndex(dstTag, idx, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
 		return err
 	}
