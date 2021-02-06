@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dlorenc/cosign/pkg"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/projectcosign/cosign/pkg"
 )
 
 func Verify() *ffcli.Command {

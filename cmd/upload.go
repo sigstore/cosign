@@ -26,11 +26,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dlorenc/cosign/pkg"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/projectcosign/cosign/pkg"
 )
 
 func Upload() *ffcli.Command {

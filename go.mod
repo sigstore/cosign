@@ -1,4 +1,4 @@
-module github.com/dlorenc/cosign
+module github.com/projectcosign/cosign
 
 go 1.15
 
