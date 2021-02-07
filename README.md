@@ -124,6 +124,22 @@ $ cosign verify -key public-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/t
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
 ```
 
+**Important Note**:
+
+Signature payloads created by `cosign` included the digest of the container image they are attached to.
+By default, `cosign` validates that this digest matches the container during `cosign verify`.
+
+If you are using other payload formats with `cosign`, you can use the `-check-claims=false` flag:
+
+```
+$ cosign verify -check-claims=false -key public-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+Warning: the following claims have not been verified:
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container signature"},"Optional":null}
+```
+
+This will still verify the signature and payload against the supplied public key, but will not
+verify any claims in the payload.
+
 ### Download the signatures to verify with another tool
 
 Each signature is printed to stdout in a json format:
