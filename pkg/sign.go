@@ -37,22 +37,6 @@ import (
 	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
-// {
-//     "critical": {
-//            "identity": {
-//                "docker-reference": "testing/manifest"
-//            },
-//            "image": {
-//                "Docker-manifest-digest": "sha256:20be...fe55"
-//            },
-//            "type": "atomic container signature"
-//     },
-//     "optional": {
-//            "creator": "atomic",
-//            "timestamp": 1458239713
-//     }
-// }
-
 const (
 	pemType = "ENCRYPTED COSIGN PRIVATE KEY"
 	sigkey  = "dev.cosignproject.cosign/signature"

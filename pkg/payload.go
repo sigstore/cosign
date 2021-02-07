@@ -22,7 +22,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func Payload(img v1.Descriptor) ([]byte, error) {
+func Payload(img v1.Descriptor, a map[string]string) ([]byte, error) {
 
 	simpleSigning := SimpleSigning{
 		Critical: Critical{
@@ -31,6 +31,7 @@ func Payload(img v1.Descriptor) ([]byte, error) {
 			},
 			Type: "cosign container signature",
 		},
+		Optional: a,
 	}
 
 	b, err := json.Marshal(simpleSigning)

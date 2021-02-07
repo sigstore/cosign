@@ -30,8 +30,11 @@ import (
 
 func Generate() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign generate", flag.ExitOnError)
+		flagset     = flag.NewFlagSet("cosign generate", flag.ExitOnError)
+		annotations = annotationsMap{}
 	)
+	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
+
 	return &ffcli.Command{
 		Name:       "generate",
 		ShortUsage: "cosign generate <image uri>",
@@ -41,12 +44,12 @@ func Generate() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return generate(ctx, args[0])
+			return generate(ctx, args[0], annotations.annotations)
 		},
 	}
 }
 
-func generate(_ context.Context, imageRef string) error {
+func generate(_ context.Context, imageRef string, a map[string]string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -57,7 +60,7 @@ func generate(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	payload, err := pkg.Payload(get.Descriptor)
+	payload, err := pkg.Payload(get.Descriptor, a)
 	if err != nil {
 		return err
 	}

@@ -84,7 +84,7 @@ func upload(ctx context.Context, sigRef, imageRef string) error {
 	munged := strings.ReplaceAll(get.Descriptor.Digest.String(), ":", "-")
 	dstTag := ref.Context().Tag(munged)
 
-	payload, err := pkg.Payload(get.Descriptor)
+	payload, err := pkg.Payload(get.Descriptor, nil)
 	if err != nil {
 		return err
 	}

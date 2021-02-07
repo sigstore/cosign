@@ -22,7 +22,7 @@ Public key written to cosign.key
 ### Sign a container and store the signature in the registry
 
 ```
-$ cosign sign -key private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign sign -key cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
@@ -30,11 +30,11 @@ Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sh
 This can be done multiple times:
 
 ```
-$ cosign sign -key private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign sign -key cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 
-$ cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign sign -key other-cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
@@ -42,13 +42,29 @@ Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sh
 We only actually sign the digest, but you can pass by tag or digest:
 
 ```
-cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
+$ cosign sign -key other-cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
 Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 
-cosign sign -key other-private-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun@sha256:dfda
+$ cosign sign -key other-cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
 Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+```
+
+The `-a` flag can be used to add annotations to the generated, signed payload.
+This flag can be repeated:
+
+```
+$ cosign sign -key cosign.key -a foo=bar -a baz=bat us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
+Enter password for private key:
+Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+```
+
+These values are included in the signed payload under the `Optional` section.
+(More on this later):
+
+```
+"Optional":{"baz":"bat","foo":"bar"}
 ```
 
 ### Sign and upload a generated payload (in another format, from another tool)
@@ -61,7 +77,6 @@ Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJi
 Using payload from: payload.json
 Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-
 ```
 
 ### Sign but skip upload (to store somewhere else)

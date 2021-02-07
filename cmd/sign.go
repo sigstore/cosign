@@ -33,13 +33,40 @@ import (
 	"github.com/projectcosign/cosign/pkg"
 )
 
+type annotationsMap struct {
+	annotations map[string]string
+}
+
+func (a *annotationsMap) Set(s string) error {
+	if a.annotations == nil {
+		a.annotations = map[string]string{}
+	}
+	kvp := strings.SplitN(s, "=", 2)
+	if len(kvp) != 2 {
+		return fmt.Errorf("invalid flag: %s, expected key=value", s)
+	}
+
+	a.annotations[kvp[0]] = kvp[1]
+	return nil
+}
+
+func (a *annotationsMap) String() string {
+	s := []string{}
+	for k, v := range a.annotations {
+		s = append(s, fmt.Sprintf("%s=%s", k, v))
+	}
+	return strings.Join(s, ",")
+}
+
 func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
 		key         = flagset.String("key", "", "path to the private key")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
+		annotations = annotationsMap{}
 	)
+	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
 		ShortUsage: "cosign sign -key <key> <image uri>",
@@ -52,12 +79,14 @@ func Sign() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return sign(ctx, *key, args[0], *upload, *payloadPath)
+			return sign(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations)
 		},
 	}
 }
 
-func sign(ctx context.Context, keyPath string, imageRef string, upload bool, payloadPath string) error {
+func sign(ctx context.Context, keyPath string,
+	imageRef string, upload bool, payloadPath string,
+	annotations map[string]string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -74,7 +103,7 @@ func sign(ctx context.Context, keyPath string, imageRef string, upload bool, pay
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
 		payload, err = ioutil.ReadFile(payloadPath)
 	} else {
-		payload, err = pkg.Payload(get.Descriptor)
+		payload, err = pkg.Payload(get.Descriptor, annotations)
 	}
 	if err != nil {
 		return err
