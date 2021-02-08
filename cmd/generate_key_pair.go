@@ -84,7 +84,7 @@ func generateKeyPair(ctx context.Context) error {
 	if err := ioutil.WriteFile("cosign.pub", pubBytes, 0600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.key")
+	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
 	return nil
 }
 
