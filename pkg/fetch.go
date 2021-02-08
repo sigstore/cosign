@@ -19,12 +19,14 @@ package pkg
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
@@ -44,6 +46,9 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 
 	rdesc, err := remote.Get(idxRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
+		if te, ok := err.(*transport.Error); ok && te.StatusCode == http.StatusNotFound {
+			return nil, nil, fmt.Errorf("manifest not found: %s", idxRef)
+		}
 		return nil, nil, err
 	}
 
