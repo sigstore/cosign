@@ -17,6 +17,7 @@ limitations under the License.
 package pkg
 
 import (
+	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 type SignedPayload struct {
@@ -40,19 +42,26 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 	munged := strings.ReplaceAll(targetDesc.Digest.String(), ":", "-")
 	idxRef = ref.Context().Tag(munged)
 
-	idx, err := remote.Index(idxRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	rdesc, err := remote.Get(idxRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, nil, err
-
 	}
-	m, err := idx.IndexManifest()
+
+	var descriptors []v1.Descriptor
+	switch rdesc.MediaType {
+	case types.DockerManifestSchema2:
+		descriptors, err = Compat.Descriptors(idxRef)
+	case types.OCIImageIndex:
+		descriptors, err = Index.Descriptors(idxRef)
+	default:
+		err = fmt.Errorf("unsupported media type: %s", rdesc.MediaType)
+	}
 	if err != nil {
 		return nil, nil, err
-
 	}
 
 	signatures := []SignedPayload{}
-	for _, desc := range m.Manifests {
+	for _, desc := range descriptors {
 		base64sig, ok := desc.Annotations[sigkey]
 		if !ok {
 			continue
@@ -60,7 +69,6 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		l, err := remote.Layer(ref.Context().Digest(desc.Digest.String()), remote.WithAuthFromKeychain(authn.DefaultKeychain))
 		if err != nil {
 			return nil, nil, err
-
 		}
 
 		r, err := l.Compressed()
@@ -72,7 +80,6 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		payload, err := ioutil.ReadAll(r)
 		if err != nil {
 			return nil, nil, err
-
 		}
 		signatures = append(signatures, SignedPayload{
 			Payload:         payload,

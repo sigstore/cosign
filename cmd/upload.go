@@ -37,6 +37,7 @@ func Upload() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign upload", flag.ExitOnError)
 		signature = flagset.String("signature", "", "path to the signature or {-} for stdin")
+		format    = flagset.String("format", "compat", "index|compat")
 	)
 	return &ffcli.Command{
 		Name:       "upload",
@@ -47,12 +48,16 @@ func Upload() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return upload(ctx, *signature, args[0])
+			uploader, ok := pkg.Uploaders[*format]
+			if !ok {
+				return fmt.Errorf("unsupported format flag: %s", *format)
+			}
+			return upload(ctx, *signature, args[0], uploader)
 		},
 	}
 }
 
-func upload(ctx context.Context, sigRef, imageRef string) error {
+func upload(ctx context.Context, sigRef, imageRef string, uploader pkg.Uploader) error {
 	var b64SigBytes []byte
 	var err error
 
@@ -94,14 +99,5 @@ func upload(ctx context.Context, sigRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	idx, err := pkg.CreateIndex(sigBytes, payload, dstTag)
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	if err := remote.WriteIndex(dstTag, idx, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
-		return err
-	}
-	return nil
+	return uploader.Upload(sigBytes, payload, dstTag)
 }
