@@ -107,6 +107,7 @@ func indexUpload(signature, payload []byte, dstTag name.Reference) error {
 	idx := mutate.AppendManifests(base, mutate.IndexAddendum{
 		Add: l,
 		Descriptor: v1.Descriptor{
+			MediaType: "application/vnd.com.redhat.simplesigning.v1+json",
 			Annotations: map[string]string{
 				sigkey: base64.StdEncoding.EncodeToString(signature),
 			},
