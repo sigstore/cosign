@@ -7,7 +7,13 @@ Container Signing, Verification and Storage in an OCI registry.
 For now, clone and `go build -o cosign ./cmd`.
 I'll publish releases when I'm comfortable supporting this for others to use.
 
-## Usage
+## Quick Start
+
+This shows how to:
+
+* generate a keypair
+* sign a container image and store that signature in the registry
+* find signatures for a container image, and verify them against a public key
 
 ### Generate a keypair
 
@@ -27,7 +33,26 @@ Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
-This can be done multiple times:
+### Verify a container against a public key
+
+This command returns 0 if *at least one* `cosign` formatted signature for the image is found
+matching the public key.
+See the detailed usage below for information and caveats on other signature formats.
+
+Any valid payloads are printed to stdout, in json format.
+Note that these signed payloads include the digest of the container image, which is how we can be
+sure these "detached" signatures cover the correct image.
+
+```
+$ cosign verify -key public-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
+```
+
+## Detailed Usage
+
+### Sign a container multiple times
+
+Multiple signatures can be "attached" to a single container image:
 
 ```
 $ cosign sign -key cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
@@ -128,16 +153,7 @@ $ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun | open
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
 ```
 
-### Verify a container against a public key
-
-This command returns 0 if *at least one* signature for the image is found matching the public key.
-
-Any matching signatures are printed to stdout, in json format.
-
-```
-$ cosign verify -key public-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
-```
+### Verifying claims
 
 **Important Note**:
 
