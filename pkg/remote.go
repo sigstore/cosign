@@ -17,30 +17,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
-// Two ways to upload:
-// Image and Index
-
-type Uploader struct {
-	Upload      func([]byte, []byte, name.Reference) error
-	Descriptors func(name.Reference) ([]v1.Descriptor, error)
-}
-
-var Uploaders = map[string]Uploader{
-	"compat": Compat,
-	"index":  Index,
-}
-
-var Compat = Uploader{
-	Upload:      compatUpload,
-	Descriptors: compatDescriptors,
-}
-
-var Index = Uploader{
-	Upload:      indexUpload,
-	Descriptors: indexDescriptors,
-}
-
-func compatDescriptors(ref name.Reference) ([]v1.Descriptor, error) {
+func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, err
@@ -53,7 +30,7 @@ func compatDescriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	return m.Layers, nil
 }
 
-func compatUpload(signature, payload []byte, dstTag name.Reference) error {
+func Upload(signature, payload []byte, dstTag name.Reference) error {
 	l := &staticLayer{
 		b:  payload,
 		mt: types.OCIContentDescriptor,
@@ -84,53 +61,6 @@ func compatUpload(signature, payload []byte, dstTag name.Reference) error {
 		return err
 	}
 	return nil
-}
-
-func indexUpload(signature, payload []byte, dstTag name.Reference) error {
-	l := &staticLayer{
-		b:  payload,
-		mt: types.OCIContentDescriptor,
-	}
-
-	base, err := remote.Index(dstTag, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		if te, ok := err.(*transport.Error); ok {
-			if te.StatusCode != http.StatusNotFound {
-				return te
-			}
-			base = empty.Index
-		} else {
-			return err
-		}
-	}
-
-	idx := mutate.AppendManifests(base, mutate.IndexAddendum{
-		Add: l,
-		Descriptor: v1.Descriptor{
-			MediaType: "application/vnd.com.redhat.simplesigning.v1+json",
-			Annotations: map[string]string{
-				sigkey: base64.StdEncoding.EncodeToString(signature),
-			},
-		},
-	})
-
-	if err := remote.WriteIndex(dstTag, idx, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
-		return err
-	}
-	return nil
-}
-
-func indexDescriptors(ref name.Reference) ([]v1.Descriptor, error) {
-	idx, err := remote.Index(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return nil, err
-	}
-	m, err := idx.IndexManifest()
-	if err != nil {
-		return nil, err
-	}
-
-	return m.Manifests, nil
 }
 
 type staticLayer struct {

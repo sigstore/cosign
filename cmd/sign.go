@@ -65,7 +65,6 @@ func Sign() *ffcli.Command {
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		annotations = annotationsMap{}
-		format      = flagset.String("format", "compat", "index|compat")
 	)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
@@ -80,18 +79,14 @@ func Sign() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			uploader, ok := pkg.Uploaders[*format]
-			if !ok {
-				return fmt.Errorf("unsupported format flag: %s", *format)
-			}
-			return sign(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, uploader)
+			return sign(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations)
 		},
 	}
 }
 
 func sign(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, uploader pkg.Uploader) error {
+	annotations map[string]string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -134,5 +129,5 @@ func sign(ctx context.Context, keyPath string,
 	dstTag := ref.Context().Tag(munged)
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	return uploader.Upload(signature, payload, dstTag)
+	return pkg.Upload(signature, payload, dstTag)
 }
