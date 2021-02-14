@@ -32,9 +32,10 @@ var (
 
 func main() {
 	root := &ffcli.Command{
-		ShortUsage:  "cosign [flags] <subcommand>",
-		FlagSet:     rootFlagSet,
-		Subcommands: []*ffcli.Command{Verify(), Sign(), Upload(), Generate(), Download(), GenerateKeyPair()},
+		ShortUsage: "cosign [flags] <subcommand>",
+		FlagSet:    rootFlagSet,
+		Subcommands: []*ffcli.Command{
+			Verify(), Sign(), Upload(), Generate(), Download(), GenerateKeyPair(), GenerateCert()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},

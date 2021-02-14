@@ -17,3 +17,4 @@
 # cosign stuff
 cosign.key
 cosign.pub
+cosign.pem
