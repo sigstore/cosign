@@ -125,8 +125,7 @@ func sign(ctx context.Context, keyPath string,
 	}
 
 	// sha256:... -> sha256-...
-	munged := strings.ReplaceAll(get.Descriptor.Digest.String(), ":", "-")
-	dstTag := ref.Context().Tag(munged)
+	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
 	return cosign.Upload(signature, payload, dstTag)

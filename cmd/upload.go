@@ -23,7 +23,6 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -80,9 +79,8 @@ func upload(ctx context.Context, sigRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	// sha256:... -> sha256-...
-	munged := strings.ReplaceAll(get.Descriptor.Digest.String(), ":", "-")
-	dstTag := ref.Context().Tag(munged)
+
+	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
 	payload, err := cosign.Payload(get.Descriptor, nil)
 	if err != nil {
