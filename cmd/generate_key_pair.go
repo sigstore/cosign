@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -58,12 +57,7 @@ func generateKeyPair(ctx context.Context) error {
 	}
 	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
 
-	// Now do the public key
-	pubBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "COSIGN PUBLIC KEY",
-		Bytes: keys.PublicBytes,
-	})
-	if err := ioutil.WriteFile("cosign.pub", pubBytes, 0600); err != nil {
+	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0600); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
