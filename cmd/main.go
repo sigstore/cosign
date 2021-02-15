@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/projectcosign/cosign/cmd/cli"
 )
 
 var (
@@ -34,7 +35,7 @@ func main() {
 	root := &ffcli.Command{
 		ShortUsage:  "cosign [flags] <subcommand>",
 		FlagSet:     rootFlagSet,
-		Subcommands: []*ffcli.Command{Verify(), Sign(), Upload(), Generate(), Download(), GenerateKeyPair()},
+		Subcommands: []*ffcli.Command{cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},

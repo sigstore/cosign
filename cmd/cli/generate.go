@@ -14,53 +14,56 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package cli
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/projectcosign/cosign/pkg/cosign"
 )
 
-func Download() *ffcli.Command {
+func Generate() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign download", flag.ExitOnError)
+		flagset     = flag.NewFlagSet("cosign generate", flag.ExitOnError)
+		annotations = annotationsMap{}
 	)
+	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
+
 	return &ffcli.Command{
-		Name:       "download",
-		ShortUsage: "cosign download <image uri>",
-		ShortHelp:  "Download signatures from the supplied container image",
+		Name:       "generate",
+		ShortUsage: "cosign generate <image uri>",
+		ShortHelp:  "generate signatures from the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return download(ctx, args[0])
+			return generate(ctx, args[0], annotations.annotations)
 		},
 	}
 }
 
-func download(_ context.Context, imageRef string) error {
+func generate(_ context.Context, imageRef string, a map[string]string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
-	signatures, _, err := cosign.FetchSignatures(ref)
+	get, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return err
 	}
-	for _, sig := range signatures {
-		b, err := json.Marshal(sig)
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(b))
+
+	payload, err := cosign.Payload(get.Descriptor, a)
+	if err != nil {
+		return err
 	}
+	fmt.Print(string(payload))
 	return nil
 }

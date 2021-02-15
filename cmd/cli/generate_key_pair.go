@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package cli
 
 import (
 	"context"
@@ -41,12 +41,12 @@ func GenerateKeyPair() *ffcli.Command {
 		ShortHelp:  "generate-key-pair generates a key-pair",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return generateKeyPair(ctx)
+			return GenerateKeyPairCmd(ctx)
 		},
 	}
 }
 
-func generateKeyPair(ctx context.Context) error {
+func GenerateKeyPairCmd(ctx context.Context) error {
 	keys, err := cosign.GenerateKeyPair(getPass)
 	if err != nil {
 		return err
