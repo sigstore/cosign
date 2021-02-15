@@ -62,7 +62,7 @@ func Verify(pubkey ed25519.PublicKey, base64sig string, payload []byte) error {
 	}
 
 	if !ed25519.Verify(pubkey, payload, signature) {
-		return errors.New("unable to verify whatever")
+		return errors.New("unable to verify signature")
 	}
 
 	return nil
