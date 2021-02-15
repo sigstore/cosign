@@ -39,7 +39,7 @@ func Upload() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "upload",
 		ShortUsage: "cosign upload <image uri>",
-		ShortHelp:  "upload signatures from the supplied container image",
+		ShortHelp:  "upload signatures to the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {

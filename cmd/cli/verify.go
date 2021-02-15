@@ -32,7 +32,7 @@ import (
 func Verify() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign verify", flag.ExitOnError)
-		key         = flagset.String("key", "", "path to the private key")
+		key         = flagset.String("key", "", "path to the public key")
 		checkClaims = flagset.Bool("check-claims", true, "whether to check the claims found")
 	)
 	return &ffcli.Command{
