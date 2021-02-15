@@ -2,7 +2,7 @@
 
 Container Signing, Verification and Storage in an OCI registry.
 
-![](images/intro.gif)
+![intro](images/intro.gif)
 
 ## Installation
 
