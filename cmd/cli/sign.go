@@ -69,13 +69,14 @@ func Sign() *ffcli.Command {
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
-		ShortUsage: "cosign sign -key <key> <image uri>",
+		ShortUsage: "cosign sign -key <key> [-payload <path>] [-a key=value] [-upload=true|false] <image uri>",
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if *key == "" {
 				return flag.ErrHelp
 			}
+
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
