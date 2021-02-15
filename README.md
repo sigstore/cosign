@@ -2,6 +2,8 @@
 
 Container Signing, Verification and Storage in an OCI registry.
 
+![](images/intro.gif)
+
 ## Installation
 
 For now, clone and `go build -o cosign ./cmd`.
