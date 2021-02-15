@@ -18,8 +18,6 @@ package main
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/pem"
 	"errors"
 	"flag"
@@ -27,7 +25,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/theupdateframework/go-tuf/encrypted"
+	"github.com/projectcosign/cosign/pkg/cosign"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"golang.org/x/term"
@@ -50,28 +48,12 @@ func GenerateKeyPair() *ffcli.Command {
 }
 
 func generateKeyPair(ctx context.Context) error {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	keys, err := cosign.GenerateKeyPair(getPass)
 	if err != nil {
 		return err
 	}
-
-	// Encrypt the private key and store it.
-	password, err := getPass(true)
-	if err != nil {
-		return err
-	}
-
-	encBytes, err := encrypted.Encrypt(priv, password)
-	if err != nil {
-		return err
-	}
-
-	privBytes := pem.EncodeToMemory(&pem.Block{
-		Bytes: encBytes,
-		Type:  "ENCRYPTED COSIGN PRIVATE KEY",
-	})
 	// TODO: make sure the perms are locked down first.
-	if err := ioutil.WriteFile("cosign.key", privBytes, 0600); err != nil {
+	if err := ioutil.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
@@ -79,7 +61,7 @@ func generateKeyPair(ctx context.Context) error {
 	// Now do the public key
 	pubBytes := pem.EncodeToMemory(&pem.Block{
 		Type:  "COSIGN PUBLIC KEY",
-		Bytes: pub,
+		Bytes: keys.PublicBytes,
 	})
 	if err := ioutil.WriteFile("cosign.pub", pubBytes, 0600); err != nil {
 		return err

@@ -17,4 +17,4 @@
 # cosign stuff
 cosign.key
 cosign.pub
-cosign
+/cosign
