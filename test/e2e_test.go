@@ -1,10 +1,10 @@
-// +build e2e
-
 package test
 
 import (
 	"context"
 	"io/ioutil"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -26,10 +27,8 @@ var passFunc = func(_ bool) ([]byte, error) {
 }
 
 func TestSignVerify(t *testing.T) {
-	repo := os.Getenv("COSIGN_TEST_REPO")
-	if repo == "" {
-		t.Fatal("Must set COSIGN_TEST_REPO to run e2e tests.")
-	}
+	repo, stop := reg(t)
+	defer stop()
 	td := t.TempDir()
 	os.Chdir(td)
 
@@ -52,10 +51,9 @@ func TestSignVerify(t *testing.T) {
 }
 
 func TestMultipleSignatures(t *testing.T) {
-	repo := os.Getenv("COSIGN_TEST_REPO")
-	if repo == "" {
-		t.Fatal("Must set COSIGN_TEST_REPO to run e2e tests.")
-	}
+	repo, stop := reg(t)
+	defer stop()
+
 	td1 := t.TempDir()
 	td2 := t.TempDir()
 
@@ -139,4 +137,19 @@ func mustErr(err error, t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+}
+
+func reg(t *testing.T) (string, func()) {
+	repo := os.Getenv("COSIGN_TEST_REPO")
+	if repo != "" {
+		return repo, func() {}
+	}
+
+	t.Log("COSIGN_TEST_REPO unset, using fake registry")
+	r := httptest.NewServer(registry.New())
+	u, err := url.Parse(r.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return u.Host, r.Close
 }
