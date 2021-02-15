@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package cli
 
 import (
 	"context"
@@ -79,14 +79,15 @@ func Sign() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations)
+
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass)
 		},
 	}
 }
 
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string) error {
+	annotations map[string]string, pf cosign.PassFunc) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		return err
 	}
 
-	pass, err := getPass(false)
+	pass, err := pf(false)
 	if err != nil {
 		return err
 	}

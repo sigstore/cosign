@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package cli
 
 import (
 	"context"
@@ -47,12 +47,12 @@ func Verify() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return verify(ctx, *key, args[0], *checkClaims)
+			return VerifyCmd(ctx, *key, args[0], *checkClaims)
 		},
 	}
 }
 
-func verify(_ context.Context, keyRef string, imageRef string, checkClaims bool) error {
+func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bool) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
