@@ -113,7 +113,11 @@ func sign(ctx context.Context, keyPath string,
 	if err != nil {
 		return err
 	}
-	pk, err := cosign.LoadPrivateKey(keyPath, pass)
+	kb, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return err
+	}
+	pk, err := cosign.LoadPrivateKey(kb, pass)
 	if err != nil {
 		return err
 	}

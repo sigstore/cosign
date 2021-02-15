@@ -29,7 +29,6 @@ import (
 const pubKeyPemType = "COSIGN PUBLIC KEY"
 
 func LoadPublicKey(keyRef string) (ed25519.PublicKey, error) {
-
 	// The key could be plaintext or in a file.
 	// First check if the file exists.
 	if _, err := os.Stat(keyRef); os.IsNotExist(err) {

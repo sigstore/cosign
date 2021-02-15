@@ -19,8 +19,8 @@ package cosign
 import (
 	"crypto/ed25519"
 	"encoding/pem"
+	"errors"
 	"fmt"
-	"io/ioutil"
 
 	"github.com/theupdateframework/go-tuf/encrypted"
 )
@@ -30,14 +30,12 @@ const (
 	sigkey  = "dev.cosignproject.cosign/signature"
 )
 
-func LoadPrivateKey(keyPath string, pass []byte) (ed25519.PrivateKey, error) {
-	b, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		return nil, err
-	}
-
+func LoadPrivateKey(key []byte, pass []byte) (ed25519.PrivateKey, error) {
 	// Decrypt first
-	p, _ := pem.Decode(b)
+	p, _ := pem.Decode(key)
+	if p == nil {
+		return nil, errors.New("invalid pem block")
+	}
 	if p.Type != pemType {
 		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
