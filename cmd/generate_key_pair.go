@@ -89,8 +89,17 @@ func generateKeyPair(ctx context.Context) error {
 }
 
 func getPass(confirm bool) ([]byte, error) {
+	// Handle piped in passwords.
+	var read = func() ([]byte, error) {
+		return term.ReadPassword(0)
+	}
+	if !term.IsTerminal(0) {
+		read = func() ([]byte, error) {
+			return ioutil.ReadAll(os.Stdin)
+		}
+	}
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
-	pw1, err := term.ReadPassword(0)
+	pw1, err := read()
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
@@ -99,7 +108,7 @@ func getPass(confirm bool) ([]byte, error) {
 		return pw1, nil
 	}
 	fmt.Fprint(os.Stderr, "Enter again: ")
-	pw2, err := term.ReadPassword(0)
+	pw2, err := read()
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
