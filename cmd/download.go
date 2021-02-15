@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/pkg"
+	"github.com/projectcosign/cosign/pkg/cosign"
 )
 
 func Download() *ffcli.Command {
@@ -51,7 +51,7 @@ func download(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	signatures, _, err := pkg.FetchSignatures(ref)
+	signatures, _, err := cosign.FetchSignatures(ref)
 	if err != nil {
 		return err
 	}

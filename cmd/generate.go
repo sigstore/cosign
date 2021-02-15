@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/pkg"
+	"github.com/projectcosign/cosign/pkg/cosign"
 )
 
 func Generate() *ffcli.Command {
@@ -60,7 +60,7 @@ func generate(_ context.Context, imageRef string, a map[string]string) error {
 		return err
 	}
 
-	payload, err := pkg.Payload(get.Descriptor, a)
+	payload, err := cosign.Payload(get.Descriptor, a)
 	if err != nil {
 		return err
 	}

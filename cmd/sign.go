@@ -30,7 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/pkg"
+	"github.com/projectcosign/cosign/pkg/cosign"
 )
 
 type annotationsMap struct {
@@ -103,7 +103,7 @@ func sign(ctx context.Context, keyPath string,
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
 		payload, err = ioutil.ReadFile(payloadPath)
 	} else {
-		payload, err = pkg.Payload(get.Descriptor, annotations)
+		payload, err = cosign.Payload(get.Descriptor, annotations)
 	}
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func sign(ctx context.Context, keyPath string,
 	if err != nil {
 		return err
 	}
-	pk, err := pkg.LoadPrivateKey(keyPath, pass)
+	pk, err := cosign.LoadPrivateKey(keyPath, pass)
 	if err != nil {
 		return err
 	}
@@ -129,5 +129,5 @@ func sign(ctx context.Context, keyPath string,
 	dstTag := ref.Context().Tag(munged)
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	return pkg.Upload(signature, payload, dstTag)
+	return cosign.Upload(signature, payload, dstTag)
 }

@@ -29,7 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/pkg"
+	"github.com/projectcosign/cosign/pkg/cosign"
 )
 
 func Upload() *ffcli.Command {
@@ -84,7 +84,7 @@ func upload(ctx context.Context, sigRef, imageRef string) error {
 	munged := strings.ReplaceAll(get.Descriptor.Digest.String(), ":", "-")
 	dstTag := ref.Context().Tag(munged)
 
-	payload, err := pkg.Payload(get.Descriptor, nil)
+	payload, err := cosign.Payload(get.Descriptor, nil)
 	if err != nil {
 		return err
 	}
@@ -94,5 +94,5 @@ func upload(ctx context.Context, sigRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	return pkg.Upload(sigBytes, payload, dstTag)
+	return cosign.Upload(sigBytes, payload, dstTag)
 }
