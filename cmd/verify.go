@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/pkg"
+	"github.com/projectcosign/cosign/pkg/cosign"
 )
 
 func Verify() *ffcli.Command {
@@ -58,12 +58,12 @@ func verify(_ context.Context, keyRef string, imageRef string, checkClaims bool)
 		return err
 	}
 
-	pubKey, err := pkg.LoadPublicKey(keyRef)
+	pubKey, err := cosign.LoadPublicKey(keyRef)
 	if err != nil {
 		return err
 	}
 
-	signatures, desc, err := pkg.FetchSignatures(ref)
+	signatures, desc, err := cosign.FetchSignatures(ref)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func verify(_ context.Context, keyRef string, imageRef string, checkClaims bool)
 	verifyErrs := []string{}
 	verifiedPayloads := [][]byte{}
 	for _, sp := range signatures {
-		if err := pkg.Verify(pubKey, sp.Base64Signature, sp.Payload); err != nil {
+		if err := cosign.Verify(pubKey, sp.Base64Signature, sp.Payload); err != nil {
 			verifyErrs = append(verifyErrs, err.Error())
 			continue
 		}
@@ -93,7 +93,7 @@ func verify(_ context.Context, keyRef string, imageRef string, checkClaims bool)
 	foundOne := false
 	// Now look through the payloads for things we understand
 	for _, vp := range verifiedPayloads {
-		ss := pkg.SimpleSigning{}
+		ss := cosign.SimpleSigning{}
 		if err := json.Unmarshal(vp, &ss); err != nil {
 			checkClaimErrs = append(checkClaimErrs, err.Error())
 			continue
