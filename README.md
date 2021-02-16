@@ -106,6 +106,14 @@ Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
 ```
 
+Signatures are uploaded to an OCI artifact stored with a predictable name.
+This name can be located with the `cosign triangulate` command:
+
+```shell
+cosign triangulate gcr.io/dlorenc-vmtest2/demo
+gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
+```
+
 ### Sign but skip upload (to store somewhere else)
 
 The base64 encoded signature is printed to stdout.
@@ -400,3 +408,64 @@ One additional layer is added, forming the final image.
 ```
 
 Note that this could be applied recursively, for multiple intermediate base images.
+
+### Counter-Signing
+
+Cosign signatures (and their protected paylaods) are stored as artifacts in a registry.
+These signature objects can also be signed, resulting in a new, "counter-signature" artifact.
+This "counter-signature" protects the signature (or set of signatures) **and** the referenced artifact, which allows
+it to act as an attestation to the **signature(s) themselves**.
+
+Before we sign the signature artifact, we first give it a memorable name so we can find it later.
+
+```shell
+$ cosign sign -key cosign.key -a sig=original gcr.io/dlorenc-vmtest2/demo
+Enter password for private key:
+Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
+$ cosign verify -key cosign.pub  gcr.io/dlorenc-vmtest2/demo | jq .
+{
+  "Critical": {
+    "Identity": {
+      "docker-reference": ""
+    },
+    "Image": {
+      "Docker-manifest-digest": "97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"
+    },
+    "Type": "cosign container signature"
+  },
+  "Optional": {
+    "sig": "original"
+  }
+}
+
+# Now give that signature a memorable name, then sign that
+$ crane tag $(cosign triangulate gcr.io/dlorenc-vmtest2/demo) mysignature
+2021/02/15 20:22:55 gcr.io/dlorenc-vmtest2/demo:mysignature: digest: sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e size: 556
+$ cosign sign -key cosign.key -a sig=counter gcr.io/dlorenc-vmtest2/demo:mysignature
+Enter password for private key:
+Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e.cosign
+$ cosign verify -key cosign.pub gcr.io/dlorenc-vmtest2/demo:mysignature
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e"},"Type":"cosign container signature"},"Optional":{"sig":"counter"}}
+
+# Finally, check the original signature
+$ crane manifest gcr.io/dlorenc-vmtest2/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+  "config": {
+    "mediaType": "application/vnd.docker.container.image.v1+json",
+    "size": 233,
+    "digest": "sha256:3b25a088710d03f39be26629d22eb68cd277a01673b9cb461c4c24fbf8c81c89"
+  },
+  "layers": [
+    {
+      "mediaType": "application/vnd.oci.descriptor.v1+json",
+      "size": 217,
+      "digest": "sha256:0e79a356609f038089088ec46fd95f4649d04de989487220b1a0adbcc63fadae",
+      "annotations": {
+        "dev.cosignproject.cosign/signature": "5uNZKEP9rm8zxAL0VVX7McMmyArzLqtxMTNPjPO2ns+5GJpBeXg+i9ILU+WjmGAKBCqiexTxzLC1/nkOzD4cDA=="
+      }
+    }
+  ]
+}
+```
