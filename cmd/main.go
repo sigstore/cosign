@@ -36,7 +36,7 @@ func main() {
 		ShortUsage: "cosign [flags] <subcommand>",
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
-			cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair(), cli.SignBlob(), cli.VerifyBlob()},
+			cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair(), cli.SignBlob(), cli.VerifyBlob(), cli.Triangulate()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},
