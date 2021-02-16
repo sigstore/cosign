@@ -30,8 +30,8 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
-var verify = func(k, i string, b bool) error {
-	_, err := cli.VerifyCmd(context.Background(), k, i, b)
+var verify = func(k, i string, b bool, a map[string]string) error {
+	_, err := cli.VerifyCmd(context.Background(), k, i, b, a)
 	return err
 }
 
@@ -49,13 +49,25 @@ func TestSignVerify(t *testing.T) {
 
 	ctx := context.Background()
 	// Verify should fail at first
-	mustErr(verify(pubKeyPath, imgName, true), t)
+	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now sign the image
 	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc), t)
 
 	// Now verify should work!
-	must(verify(pubKeyPath, imgName, true), t)
+	must(verify(pubKeyPath, imgName, true, nil), t)
+
+	// Look for a specific annotation
+	mustErr(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar"}), t)
+
+	// Sign the image with an annotation
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", map[string]string{"foo": "bar"}, passFunc), t)
+
+	// It should match this time.
+	must(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar"}), t)
+
+	// But two doesn't work
+	mustErr(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar", "baz": "bat"}), t)
 }
 
 func TestMultipleSignatures(t *testing.T) {
@@ -76,21 +88,21 @@ func TestMultipleSignatures(t *testing.T) {
 	ctx := context.Background()
 
 	// Verify should fail at first for both keys
-	mustErr(verify(pub1, imgName, true), t)
-	mustErr(verify(pub2, imgName, true), t)
+	mustErr(verify(pub1, imgName, true, nil), t)
+	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign the image with one key
 	must(cli.SignCmd(ctx, priv1, imgName, true, "", nil, passFunc), t)
 	// Now verify should work with that one, but not the other
-	must(verify(pub1, imgName, true), t)
-	mustErr(verify(pub2, imgName, true), t)
+	must(verify(pub1, imgName, true, nil), t)
+	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign with the other key too
 	must(cli.SignCmd(ctx, priv2, imgName, true, "", nil, passFunc), t)
 
 	// Now verify should work with both
-	must(verify(pub1, imgName, true), t)
-	must(verify(pub2, imgName, true), t)
+	must(verify(pub1, imgName, true, nil), t)
+	must(verify(pub2, imgName, true, nil), t)
 }
 
 func TestGenerate(t *testing.T) {
@@ -215,12 +227,14 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 }
 
 func must(err error, t *testing.T) {
+	t.Helper()
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func mustErr(err error, t *testing.T) {
+	t.Helper()
 	if err == nil {
 		t.Fatal("expected error")
 	}

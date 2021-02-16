@@ -181,6 +181,45 @@ Warning: the following claims have not been verified:
 This will still verify the signature and payload against the supplied public key, but will not
 verify any claims in the payload.
 
+Annotations made in the original signature (`cosign sign -a foo=bar`) are present under the `Optional` section of the payload:
+
+```shell
+$ cosign verify -key cosign.pub  gcr.io/dlorenc-vmtest2/demo | jq .
+{
+  "Critical": {
+    "Identity": {
+      "docker-reference": ""
+    },
+    "Image": {
+      "Docker-manifest-digest": "97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"
+    },
+    "Type": "cosign container signature"
+  },
+  "Optional": {
+    "sig": "original"
+  }
+}
+```
+
+These can be checked with matching `-a foo=bar` flags on `cosign verify`.
+When using this flag, **every** specified key-value pair **must exist and match** in the verified payload.
+The payload may contain other key-value pairs.
+
+```shell
+# This works
+$ cosign verify -a -key cosign.pub  gcr.io/dlorenc-vmtest2/demo
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container signature"},"Optional":{"sig":"original"}}
+
+# This works too
+$ cosign verify -a sig=original -key cosign.pub  gcr.io/dlorenc-vmtest2/demo
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container signature"},"Optional":{"sig":"original"}}
+
+# This doesn't work
+$ cosign verify -a sig=original -a=foo=bar -key cosign.pub  gcr.io/dlorenc-vmtest2/demo
+error: no matching claims:
+invalid or missing annotation in claim: map[sig:original]
+```
+
 ### Download the signatures to verify with another tool
 
 Each signature is printed to stdout in a json format:

@@ -35,7 +35,10 @@ func Verify() *ffcli.Command {
 		flagset     = flag.NewFlagSet("cosign verify", flag.ExitOnError)
 		key         = flagset.String("key", "", "path to the public key")
 		checkClaims = flagset.Bool("check-claims", true, "whether to check the claims found")
+		annotations = annotationsMap{}
 	)
+	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
+
 	return &ffcli.Command{
 		Name:       "verify",
 		ShortUsage: "cosign verify -key <key> <image uri>",
@@ -48,7 +51,7 @@ func Verify() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			verified, err := VerifyCmd(ctx, *key, args[0], *checkClaims)
+			verified, err := VerifyCmd(ctx, *key, args[0], *checkClaims, annotations.annotations)
 			if err != nil {
 				return err
 			}
@@ -63,7 +66,7 @@ func Verify() *ffcli.Command {
 	}
 }
 
-func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bool) ([]cosign.SignedPayload, error) {
+func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bool, annotations map[string]string) ([]cosign.SignedPayload, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
@@ -94,8 +97,8 @@ func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bo
 		return valid, nil
 	}
 
-	// Now we have to actually parse the payloads and make sure the digest is correct
-	verified, err := verifyClaims(desc.Digest.Hex, valid)
+	// Now we have to actually parse the payloads and make sure the digest (and other claims) are correct
+	verified, err := verifyClaims(desc.Digest.Hex, annotations, valid)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +125,7 @@ func validSignatures(pubKey ed25519.PublicKey, signatures []cosign.SignedPayload
 
 }
 
-func verifyClaims(digest string, signatures []cosign.SignedPayload) ([]cosign.SignedPayload, error) {
+func verifyClaims(digest string, annotations map[string]string, signatures []cosign.SignedPayload) ([]cosign.SignedPayload, error) {
 	checkClaimErrs := []string{}
 	// Now look through the payloads for things we understand
 	verifiedPayloads := []cosign.SignedPayload{}
@@ -133,14 +136,27 @@ func verifyClaims(digest string, signatures []cosign.SignedPayload) ([]cosign.Si
 			continue
 		}
 		foundDgst := ss.Critical.Image.DockerManifestDigest
-		if foundDgst == digest {
-			verifiedPayloads = append(verifiedPayloads, sp)
-		} else {
+		if foundDgst != digest {
 			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing digest in claim: %s", foundDgst))
+			continue
 		}
+		if !correctAnnotations(annotations, ss.Optional) {
+			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing annotation in claim: %v", ss.Optional))
+			continue
+		}
+		verifiedPayloads = append(verifiedPayloads, sp)
 	}
 	if len(verifiedPayloads) == 0 {
 		return nil, fmt.Errorf("no matching claims:\n%s", strings.Join(checkClaimErrs, "\n  "))
 	}
 	return verifiedPayloads, nil
+}
+
+func correctAnnotations(wanted, have map[string]string) bool {
+	for k, v := range wanted {
+		if have[k] != v {
+			return false
+		}
+	}
+	return true
 }
