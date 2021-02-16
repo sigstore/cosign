@@ -34,7 +34,6 @@ func TestSignVerify(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
-	os.Chdir(td)
 
 	imgName := path.Join(repo, "cosign-e2e")
 
@@ -115,17 +114,23 @@ func TestGenerate(t *testing.T) {
 }
 
 func keypair(t *testing.T, td string) (*cosign.Keys, string, string) {
-	os.Chdir(td)
+	if err := os.Chdir(td); err != nil {
+		t.Fatal(err)
+	}
 	keys, err := cosign.GenerateKeyPair(passFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	privKeyPath := filepath.Join(td, "cosign.key")
-	ioutil.WriteFile(privKeyPath, keys.PrivateBytes, 0600)
+	if err := ioutil.WriteFile(privKeyPath, keys.PrivateBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
 
 	pubKeyPath := filepath.Join(td, "cosign.pub")
-	ioutil.WriteFile(pubKeyPath, keys.PublicBytes, 0600)
+	if err := ioutil.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
 	return keys, privKeyPath, pubKeyPath
 }
 
@@ -195,10 +200,10 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 	}
 
 	cleanup := func() {
-		remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 		munged := cosign.Munge(remoteImage.Descriptor)
 		ref, _ := name.ParseReference(munged)
-		remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	}
 	return ref, remoteImage, cleanup
 }

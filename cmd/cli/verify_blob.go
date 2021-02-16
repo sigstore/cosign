@@ -58,10 +58,13 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 
 	var b64SigBytes []byte
 	// This can be the raw bytes or a path to them.
-	if _, err := os.Stat(sigRef); os.IsNotExist(err) {
+	if _, err = os.Stat(sigRef); os.IsNotExist(err) {
 		b64SigBytes = []byte(sigRef)
 	} else {
 		b64SigBytes, err = ioutil.ReadFile(sigRef)
+	}
+	if err != nil {
+		return err
 	}
 
 	var blobBytes []byte
