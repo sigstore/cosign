@@ -59,7 +59,7 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	// This can be "-", a file or a string.
 	if sigRef == "-" {
 		b64SigBytes, err = ioutil.ReadAll(os.Stdin)
-	} else if _, err := os.Stat(sigRef); os.IsNotExist(err) {
+	} else if _, err = os.Stat(sigRef); os.IsNotExist(err) {
 		b64SigBytes = []byte(sigRef)
 	} else {
 		b64SigBytes, err = ioutil.ReadFile(sigRef)
