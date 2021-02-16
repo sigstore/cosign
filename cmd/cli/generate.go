@@ -20,6 +20,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -44,12 +46,12 @@ func Generate() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return generate(ctx, args[0], annotations.annotations)
+			return GenerateCmd(ctx, args[0], annotations.annotations, os.Stdout)
 		},
 	}
 }
 
-func generate(_ context.Context, imageRef string, a map[string]string) error {
+func GenerateCmd(_ context.Context, imageRef string, a map[string]string, w io.Writer) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -64,6 +66,6 @@ func generate(_ context.Context, imageRef string, a map[string]string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(string(payload))
+	fmt.Fprintln(w, string(payload))
 	return nil
 }

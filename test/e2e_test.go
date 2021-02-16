@@ -1,8 +1,10 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
@@ -84,6 +86,32 @@ func TestMultipleSignatures(t *testing.T) {
 	// Now verify should work with both
 	must(cli.VerifyCmd(ctx, pub1, imgName, true), t)
 	must(cli.VerifyCmd(ctx, pub2, imgName, true), t)
+}
+
+func TestGenerate(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+	_, desc, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	// Generate the payload for the image, and check the digest.
+	b := bytes.Buffer{}
+	must(cli.GenerateCmd(context.Background(), imgName, nil, &b), t)
+	ss := cosign.SimpleSigning{}
+	must(json.Unmarshal(b.Bytes(), &ss), t)
+
+	equals(desc.Digest.Hex, ss.Critical.Image.DockerManifestDigest, t)
+
+	// Now try with some annotations.
+	b.Reset()
+	a := map[string]string{"foo": "bar"}
+	must(cli.GenerateCmd(context.Background(), imgName, a, &b), t)
+	must(json.Unmarshal(b.Bytes(), &ss), t)
+
+	equals(desc.Digest.Hex, ss.Critical.Image.DockerManifestDigest, t)
+	equals(ss.Optional["foo"], "bar", t)
 }
 
 func keypair(t *testing.T, td string) (*cosign.Keys, string, string) {
@@ -184,6 +212,12 @@ func must(err error, t *testing.T) {
 func mustErr(err error, t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func equals(v1, v2 interface{}, t *testing.T) {
+	if diff := cmp.Diff(v1, v2); diff != "" {
+		t.Error(diff)
 	}
 }
 
