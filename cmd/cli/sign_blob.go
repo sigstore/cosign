@@ -33,7 +33,7 @@ func SignBlob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
 		key     = flagset.String("key", "", "path to the private key")
-		sig     = flagset.String("raw-sig", "", "(optional) path to write the raw signature")
+		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
@@ -49,12 +49,12 @@ func SignBlob() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignBlobCmd(ctx, *key, *sig, args[0], getPass)
+			return SignBlobCmd(ctx, *key, args[0], *b64, getPass)
 		},
 	}
 }
 
-func SignBlobCmd(ctx context.Context, keyPath, sigPath, payloadPath string, pf cosign.PassFunc) error {
+func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf cosign.PassFunc) error {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -80,11 +80,11 @@ func SignBlobCmd(ctx context.Context, keyPath, sigPath, payloadPath string, pf c
 		return err
 	}
 	signature := ed25519.Sign(pk, payload)
-	if sigPath != "" {
-		if err := ioutil.WriteFile(sigPath, signature, 0644); err != nil {
-			return err
-		}
+	if b64 {
+		fmt.Println(base64.StdEncoding.EncodeToString(signature))
+	} else {
+		// No newline if using the raw signature
+		os.Stdout.Write(signature)
 	}
-	fmt.Println(base64.StdEncoding.EncodeToString(signature))
 	return nil
 }

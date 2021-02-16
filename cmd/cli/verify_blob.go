@@ -18,6 +18,7 @@ package cli
 
 import (
 	"context"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -50,18 +51,33 @@ func VerifyBlob() *ffcli.Command {
 	}
 }
 
+func isb64(data []byte) bool {
+	_, err := base64.StdEncoding.DecodeString(string(data))
+	return err == nil
+}
+
 func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef string) error {
 	pubKey, err := cosign.LoadPublicKey(keyRef)
 	if err != nil {
 		return err
 	}
 
-	var b64SigBytes []byte
-	// This can be the raw bytes or a path to them.
+	var b64sig string
+	// This can be the base64-encoded bytes or a path to the signature
 	if _, err = os.Stat(sigRef); os.IsNotExist(err) {
-		b64SigBytes = []byte(sigRef)
+		b64sig = sigRef
 	} else {
-		b64SigBytes, err = ioutil.ReadFile(sigRef)
+		b, err := ioutil.ReadFile(sigRef)
+		if err != nil {
+			return nil
+		}
+		// If in a file, it could be raw or base64-encoded.
+		// We want them to be encoded eventually, but not double encoded!
+		if isb64(b) {
+			b64sig = string(b)
+		} else {
+			b64sig = base64.StdEncoding.EncodeToString(b)
+		}
 	}
 	if err != nil {
 		return err
@@ -77,7 +93,7 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 		return err
 	}
 
-	if err := cosign.Verify(pubKey, string(b64SigBytes), blobBytes); err != nil {
+	if err := cosign.Verify(pubKey, b64sig, blobBytes); err != nil {
 		return err
 	}
 	fmt.Println("Verified OK")
