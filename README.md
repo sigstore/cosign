@@ -206,11 +206,11 @@ They have a PEM header of `ENCRYPTED COSIGN PRIVATE KEY`:
 -----END ENCRYPTED COSIGN PRIVATE KEY-----
 ```
 
-Public keys are stored on disk in PEM format with a header of `COSIGN PUBLIC KEY`.
+Public keys are stored on disk in PEM-encoded standard PKIX format with a header of `PUBLIC KEY`.
 ```
------BEGIN COSIGN PUBLIC KEY-----
+-----BEGIN PUBLIC KEY-----
 NqfC4CpZiE4OGpuYFSSMzXHJqXQ6u1W55prrZIjjZJ0=
------END COSIGN PUBLIC KEY-----
+-----END PUBLIC KEY-----
 ```
 
 The inner (base64 encoded) data portion can be supplied directly on the command line without the PEM blocks:

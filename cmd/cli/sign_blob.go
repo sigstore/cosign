@@ -33,11 +33,12 @@ func SignBlob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
 		key     = flagset.String("key", "", "path to the private key")
+		sig     = flagset.String("raw-sig", "", "(optional) path to write the raw signature")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
-		ShortUsage: "cosign sign-blob -key <key> <blob>",
-		ShortHelp:  "Sign the supplied container image",
+		ShortUsage: "cosign sign-blob -key <key> [-sig <sig path>] <blob>",
+		ShortHelp:  "Sign the supplied blob, outputting the base64-nocded signature to stdout",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if *key == "" {
@@ -48,12 +49,12 @@ func SignBlob() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignBlobCmd(ctx, *key, args[0], getPass)
+			return SignBlobCmd(ctx, *key, *sig, args[0], getPass)
 		},
 	}
 }
 
-func SignBlobCmd(ctx context.Context, keyPath string, payloadPath string, pf cosign.PassFunc) error {
+func SignBlobCmd(ctx context.Context, keyPath, sigPath, payloadPath string, pf cosign.PassFunc) error {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -79,6 +80,11 @@ func SignBlobCmd(ctx context.Context, keyPath string, payloadPath string, pf cos
 		return err
 	}
 	signature := ed25519.Sign(pk, payload)
+	if sigPath != "" {
+		if err := ioutil.WriteFile(sigPath, signature, 0644); err != nil {
+			return err
+		}
+	}
 	fmt.Println(base64.StdEncoding.EncodeToString(signature))
 	return nil
 }

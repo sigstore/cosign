@@ -3,6 +3,7 @@ package cosign
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/pem"
 
 	"github.com/theupdateframework/go-tuf/encrypted"
@@ -37,10 +38,15 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 		Type:  "ENCRYPTED COSIGN PRIVATE KEY",
 	})
 
+	b, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return nil, err
+	}
+
 	// Now do the public key
 	pubBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "COSIGN PUBLIC KEY",
-		Bytes: pub,
+		Type:  "PUBLIC KEY",
+		Bytes: b,
 	})
 
 	return &Keys{
