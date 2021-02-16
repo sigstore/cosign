@@ -40,12 +40,12 @@ func Download() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return download(ctx, args[0])
+			return DownloadCmd(ctx, args[0])
 		},
 	}
 }
 
-func download(_ context.Context, imageRef string) error {
+func DownloadCmd(_ context.Context, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

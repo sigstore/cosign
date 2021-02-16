@@ -35,6 +35,7 @@ func Upload() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign upload", flag.ExitOnError)
 		signature = flagset.String("signature", "", "path to the signature or {-} for stdin")
+		payload   = flagset.String("payload", "", "path to the payload covered by the signature (if using another format)")
 	)
 	return &ffcli.Command{
 		Name:       "upload",
@@ -46,12 +47,12 @@ func Upload() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return upload(ctx, *signature, args[0])
+			return UploadCmd(ctx, *signature, *payload, args[0])
 		},
 	}
 }
 
-func upload(ctx context.Context, sigRef, imageRef string) error {
+func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	var b64SigBytes []byte
 	var err error
 
@@ -82,7 +83,12 @@ func upload(ctx context.Context, sigRef, imageRef string) error {
 
 	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
-	payload, err := cosign.Payload(get.Descriptor, nil)
+	var payload []byte
+	if payloadRef == "" {
+		payload, err = cosign.Payload(get.Descriptor, nil)
+	} else {
+		payload, err = ioutil.ReadFile(payloadRef)
+	}
 	if err != nil {
 		return err
 	}

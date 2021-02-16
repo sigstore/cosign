@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"encoding/base64"
 	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
@@ -97,6 +99,52 @@ func keypair(t *testing.T, td string) (*cosign.Keys, string, string) {
 	pubKeyPath := filepath.Join(td, "cosign.pub")
 	ioutil.WriteFile(pubKeyPath, keys.PublicBytes, 0600)
 	return keys, privKeyPath, pubKeyPath
+}
+
+func TestUploadDownload(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+	ctx := context.Background()
+
+	imgName := path.Join(repo, "cosign-e2e")
+	ref, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+	payload := "testpayload"
+	payloadPath := mkfile(payload, td, t)
+
+	signature := base64.StdEncoding.EncodeToString([]byte("testsignature"))
+	sigPath := mkfile(signature, td, t)
+
+	// Upload it!
+	must(cli.UploadCmd(ctx, sigPath, payloadPath, imgName), t)
+
+	// Now download it!
+	signatures, _, err := cosign.FetchSignatures(ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(signatures) != 1 {
+		t.Error("unexpected signatures")
+	}
+	if diff := cmp.Diff(signatures[0].Base64Signature, signature); diff != "" {
+		t.Error(diff)
+	}
+	if diff := cmp.Diff(signatures[0].Payload, []byte(payload)); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func mkfile(contents, td string, t *testing.T) string {
+	f, err := ioutil.TempFile(td, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if _, err := f.Write([]byte(contents)); err != nil {
+		t.Fatal(err)
+	}
+	return f.Name()
 }
 
 func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()) {
