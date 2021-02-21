@@ -30,6 +30,11 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
+var verify = func(k, i string, b bool) error {
+	_, err := cli.VerifyCmd(context.Background(), k, i, b)
+	return err
+}
+
 func TestSignVerify(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
@@ -44,13 +49,13 @@ func TestSignVerify(t *testing.T) {
 
 	ctx := context.Background()
 	// Verify should fail at first
-	mustErr(cli.VerifyCmd(ctx, pubKeyPath, imgName, true), t)
+	mustErr(verify(pubKeyPath, imgName, true), t)
 
 	// Now sign the image
 	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc), t)
 
 	// Now verify should work!
-	must(cli.VerifyCmd(ctx, pubKeyPath, imgName, true), t)
+	must(verify(pubKeyPath, imgName, true), t)
 }
 
 func TestMultipleSignatures(t *testing.T) {
@@ -69,22 +74,23 @@ func TestMultipleSignatures(t *testing.T) {
 	_, priv2, pub2 := keypair(t, td2)
 
 	ctx := context.Background()
+
 	// Verify should fail at first for both keys
-	mustErr(cli.VerifyCmd(ctx, pub1, imgName, true), t)
-	mustErr(cli.VerifyCmd(ctx, pub2, imgName, true), t)
+	mustErr(verify(pub1, imgName, true), t)
+	mustErr(verify(pub2, imgName, true), t)
 
 	// Now sign the image with one key
 	must(cli.SignCmd(ctx, priv1, imgName, true, "", nil, passFunc), t)
 	// Now verify should work with that one, but not the other
-	must(cli.VerifyCmd(ctx, pub1, imgName, true), t)
-	mustErr(cli.VerifyCmd(ctx, pub2, imgName, true), t)
+	must(verify(pub1, imgName, true), t)
+	mustErr(verify(pub2, imgName, true), t)
 
 	// Now sign with the other key too
 	must(cli.SignCmd(ctx, priv2, imgName, true, "", nil, passFunc), t)
 
 	// Now verify should work with both
-	must(cli.VerifyCmd(ctx, pub1, imgName, true), t)
-	must(cli.VerifyCmd(ctx, pub2, imgName, true), t)
+	must(verify(pub1, imgName, true), t)
+	must(verify(pub2, imgName, true), t)
 }
 
 func TestGenerate(t *testing.T) {

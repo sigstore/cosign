@@ -18,6 +18,7 @@ package cli
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -47,69 +48,99 @@ func Verify() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return VerifyCmd(ctx, *key, args[0], *checkClaims)
+			verified, err := VerifyCmd(ctx, *key, args[0], *checkClaims)
+			if err != nil {
+				return err
+			}
+			if !*checkClaims {
+				fmt.Fprintln(os.Stderr, "Warning: the following claims have not been verified:")
+			}
+			for _, vp := range verified {
+				fmt.Println(string(vp.Payload))
+			}
+			return nil
 		},
 	}
 }
 
-func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bool) error {
+func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bool) ([]cosign.SignedPayload, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pubKey, err := cosign.LoadPublicKey(keyRef)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	signatures, desc, err := cosign.FetchSignatures(ref)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	verifyErrs := []string{}
-	verifiedPayloads := [][]byte{}
+	// We have a few different checks to do here:
+	// 1. The signatures blobs are valid (the public key can verify the payload and signature)
+	// 2. The payload blobs are in a format we understand, and the digest of the image is correct
+
+	// 1. First find all valid signatures
+	valid, err := validSignatures(pubKey, signatures)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we're not verifying claims, just print and exit.
+	if !checkClaims {
+		return valid, nil
+	}
+
+	// Now we have to actually parse the payloads and make sure the digest is correct
+	verified, err := verifyClaims(desc.Digest.Hex, valid)
+	if err != nil {
+		return nil, err
+	}
+
+	return verified, nil
+}
+
+func validSignatures(pubKey ed25519.PublicKey, signatures []cosign.SignedPayload) ([]cosign.SignedPayload, error) {
+	validSignatures := []cosign.SignedPayload{}
+	validationErrs := []string{}
+
 	for _, sp := range signatures {
 		if err := cosign.Verify(pubKey, sp.Base64Signature, sp.Payload); err != nil {
-			verifyErrs = append(verifyErrs, err.Error())
+			validationErrs = append(validationErrs, err.Error())
 			continue
 		}
-		verifiedPayloads = append(verifiedPayloads, sp.Payload)
+		validSignatures = append(validSignatures, sp)
 	}
-	if len(verifiedPayloads) == 0 {
-		return fmt.Errorf("no matching signatures:\n%s", strings.Join(verifyErrs, "\n  "))
+	// If there are none, we error.
+	if len(validSignatures) == 0 {
+		return nil, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n  "))
 	}
+	return validSignatures, nil
 
-	if !checkClaims {
-		fmt.Fprintln(os.Stderr, "Warning: the following claims have not been verified:")
-		for _, vp := range verifiedPayloads {
-			fmt.Println(string(vp))
-		}
-		return nil
-	}
+}
 
+func verifyClaims(digest string, signatures []cosign.SignedPayload) ([]cosign.SignedPayload, error) {
 	checkClaimErrs := []string{}
-	foundOne := false
 	// Now look through the payloads for things we understand
-	for _, vp := range verifiedPayloads {
+	verifiedPayloads := []cosign.SignedPayload{}
+	for _, sp := range signatures {
 		ss := cosign.SimpleSigning{}
-		if err := json.Unmarshal(vp, &ss); err != nil {
+		if err := json.Unmarshal(sp.Payload, &ss); err != nil {
 			checkClaimErrs = append(checkClaimErrs, err.Error())
 			continue
 		}
 		foundDgst := ss.Critical.Image.DockerManifestDigest
-		if foundDgst == desc.Digest.Hex {
-			foundOne = true
-			fmt.Println(string(vp))
+		if foundDgst == digest {
+			verifiedPayloads = append(verifiedPayloads, sp)
 		} else {
 			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing digest in claim: %s", foundDgst))
-			continue
 		}
 	}
-	if !foundOne {
-		return fmt.Errorf("no matching claims:\n%s", strings.Join(checkClaimErrs, "\n  "))
+	if len(verifiedPayloads) == 0 {
+		return nil, fmt.Errorf("no matching claims:\n%s", strings.Join(checkClaimErrs, "\n  "))
 	}
-
-	return nil
+	return verifiedPayloads, nil
 }
