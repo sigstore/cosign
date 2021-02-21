@@ -57,6 +57,10 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
+github.com/digitorus/pkcs7 v0.0.0-20200320092839-808436b6f6d1 h1:V1cgDSp4Kq4eMCfazhWyqi2Js7BijkgPnp4Yej9CD9I=
+github.com/digitorus/pkcs7 v0.0.0-20200320092839-808436b6f6d1/go.mod h1:p2IZ9yq2kEKGFr3rfpYxaaOzB0VdLbF8VkZReEIpJmU=
+github.com/digitorus/timestamp v0.0.0-20210102082646-54ddd7720e27 h1:X8tvQGATvS7vQBAPPn0f7nQPcTamu4ecCbRafPrBgik=
+github.com/digitorus/timestamp v0.0.0-20210102082646-54ddd7720e27/go.mod h1:IKw2TcDeMaZrNjpdq7gPc7I+a21+Sn34bUqWrTc70Hs=
 github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017 h1:2HQmlpI3yI9deH18Q6xiSOIjXD4sLI55Y/gfpa8/558=
 github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/distribution v2.7.1+incompatible h1:a5mlkVzth6W5A4fOsS3D2EO5BUmsJpcB+cRlLU7cSug=

@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	pemType = "ENCRYPTED COSIGN PRIVATE KEY"
-	sigkey  = "dev.cosignproject.cosign/signature"
+	pemType      = "ENCRYPTED COSIGN PRIVATE KEY"
+	sigkey       = "dev.cosignproject.cosign/signature"
+	timestampKey = "dev.cosignproject.cosign/timestamp"
 )
 
 func LoadPrivateKey(key []byte, pass []byte) (ed25519.PrivateKey, error) {

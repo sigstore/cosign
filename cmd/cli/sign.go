@@ -64,6 +64,7 @@ func Sign() *ffcli.Command {
 		key         = flagset.String("key", "", "path to the private key")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
+		tsServer    = flagset.String("timestamp-server", "", "The address of a timestamp server to get a signed timestamp from. Ex. (https://freetsa.org/tsr).")
 		annotations = annotationsMap{}
 	)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -81,14 +82,14 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass)
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *tsServer, getPass)
 		},
 	}
 }
 
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, pf cosign.PassFunc) error {
+	annotations map[string]string, tsServer string, pf cosign.PassFunc) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -125,8 +126,20 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 	signature := ed25519.Sign(pk, payload)
 
+	var timestamp string
+	if tsServer != "" {
+		ts, err := cosign.GetTimestamp(tsServer, signature)
+		if err != nil {
+			return err
+		}
+		timestamp = ts
+	}
+
 	if !upload {
 		fmt.Println(base64.StdEncoding.EncodeToString(signature))
+		if timestamp != "" {
+			fmt.Println(timestamp)
+		}
 		return nil
 	}
 
@@ -134,5 +147,5 @@ func SignCmd(ctx context.Context, keyPath string,
 	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	return cosign.Upload(signature, payload, dstTag)
+	return cosign.Upload(signature, payload, timestamp, dstTag)
 }

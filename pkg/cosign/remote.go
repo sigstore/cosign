@@ -30,7 +30,7 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	return m.Layers, nil
 }
 
-func Upload(signature, payload []byte, dstTag name.Reference) error {
+func Upload(signature, payload []byte, timestamp string, dstTag name.Reference) error {
 	l := &staticLayer{
 		b:  payload,
 		mt: types.OCIContentDescriptor,
@@ -50,7 +50,8 @@ func Upload(signature, payload []byte, dstTag name.Reference) error {
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer: l,
 		Annotations: map[string]string{
-			sigkey: base64.StdEncoding.EncodeToString(signature),
+			sigkey:       base64.StdEncoding.EncodeToString(signature),
+			timestampKey: timestamp,
 		},
 	})
 	if err != nil {

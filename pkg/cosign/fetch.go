@@ -33,6 +33,7 @@ import (
 type SignedPayload struct {
 	Base64Signature string
 	Payload         []byte
+	Timestamp       string
 }
 
 func Munge(desc v1.Descriptor) string {
@@ -90,6 +91,7 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		signatures = append(signatures, SignedPayload{
 			Payload:         payload,
 			Base64Signature: base64sig,
+			Timestamp:       desc.Annotations[timestampKey],
 		})
 	}
 	return signatures, &targetDesc.Descriptor, nil
