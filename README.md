@@ -315,7 +315,6 @@ That looks like:
 ```
 **Note:** This can be generated for an image reference using `cosign generate <image>`.
 
-
 `cosign` signatures are stored as separate objects in the OCI registry, with only a weak
 reference back to the object they "sign".
 This means this relationship is opaque to the registry, and signatures *will not* be deleted
@@ -392,6 +391,48 @@ for distribution.
 This also means new artifact types can be uploaded to a registry and signed.
 One interesting type to store and sign would be TUF repositories.
 I haven't tried yet, but I'm fairly certain TUF could be implemented on top of this.
+
+### Tag Signing
+
+`cosign` signatures protect the digests of objects stored in a registry.
+The optional `annotations` support (via the `-a` flag to `cosign sign`) can be used to add extra
+data to the payload that is signed and protected by the signature.
+One use-case for this might be to sign a tag->digest mapping.
+
+If you would like to attest that a specific tag (or set of tags) should point at a digest, you can
+run something like:
+
+```shell
+$ TAG=sign-me
+$ DGST=$(crane digest gcr.io/dlorenc-vmtest2/demo:$TAG)
+$ cosign sign -key cosign.key -a tag=$TAG gcr.io/dlorenc-vmtest2/demo@$DGST
+Enter password for private key:
+Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
+```
+
+Then you can verify that the tag->digest mapping is also covered in the signature, using the `-a` flag to `cosign verify`.
+This example verifes that the digest `$TAG` points to (`sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36`)
+has been signed, **and also** that the `$TAG`:
+
+```
+$ cosign verify -key cosign.pub -a tag=$TAG gcr.io/dlorenc-vmtest2/demo:$TAG | jq .
+{
+  "Critical": {
+    "Identity": {
+      "docker-reference": ""
+    },
+    "Image": {
+      "Docker-manifest-digest": "97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"
+    },
+    "Type": "cosign container signature"
+  },
+  "Optional": {
+    "tag": "sign-me"
+  }
+}
+```
+
+Timestamps could also be added here, to implement TUF-style freeze-attack prevention.
 
 ### Base Image/Layer Signing
 
