@@ -33,7 +33,7 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 func Upload(signature, payload []byte, dstTag name.Reference) error {
 	l := &staticLayer{
 		b:  payload,
-		mt: types.OCIContentDescriptor,
+		mt: "application/vnd.dev.cosign.simplesigning.v1+json",
 	}
 	base, err := remote.Image(dstTag, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
