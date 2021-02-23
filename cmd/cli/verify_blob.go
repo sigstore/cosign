@@ -93,7 +93,7 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 		return err
 	}
 
-	if err := cosign.Verify(pubKey, b64sig, blobBytes); err != nil {
+	if err := cosign.VerifySignature(pubKey, b64sig, blobBytes); err != nil {
 		return err
 	}
 	fmt.Println("Verified OK")

@@ -18,12 +18,9 @@ package cli
 
 import (
 	"context"
-	"crypto/ed25519"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -77,86 +74,5 @@ func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bo
 		return nil, err
 	}
 
-	signatures, desc, err := cosign.FetchSignatures(ref)
-	if err != nil {
-		return nil, err
-	}
-
-	// We have a few different checks to do here:
-	// 1. The signatures blobs are valid (the public key can verify the payload and signature)
-	// 2. The payload blobs are in a format we understand, and the digest of the image is correct
-
-	// 1. First find all valid signatures
-	valid, err := validSignatures(pubKey, signatures)
-	if err != nil {
-		return nil, err
-	}
-
-	// If we're not verifying claims, just print and exit.
-	if !checkClaims {
-		return valid, nil
-	}
-
-	// Now we have to actually parse the payloads and make sure the digest (and other claims) are correct
-	verified, err := verifyClaims(desc.Digest.Hex, annotations, valid)
-	if err != nil {
-		return nil, err
-	}
-
-	return verified, nil
-}
-
-func validSignatures(pubKey ed25519.PublicKey, signatures []cosign.SignedPayload) ([]cosign.SignedPayload, error) {
-	validSignatures := []cosign.SignedPayload{}
-	validationErrs := []string{}
-
-	for _, sp := range signatures {
-		if err := cosign.Verify(pubKey, sp.Base64Signature, sp.Payload); err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
-		validSignatures = append(validSignatures, sp)
-	}
-	// If there are none, we error.
-	if len(validSignatures) == 0 {
-		return nil, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n  "))
-	}
-	return validSignatures, nil
-
-}
-
-func verifyClaims(digest string, annotations map[string]string, signatures []cosign.SignedPayload) ([]cosign.SignedPayload, error) {
-	checkClaimErrs := []string{}
-	// Now look through the payloads for things we understand
-	verifiedPayloads := []cosign.SignedPayload{}
-	for _, sp := range signatures {
-		ss := cosign.SimpleSigning{}
-		if err := json.Unmarshal(sp.Payload, &ss); err != nil {
-			checkClaimErrs = append(checkClaimErrs, err.Error())
-			continue
-		}
-		foundDgst := ss.Critical.Image.DockerManifestDigest
-		if foundDgst != digest {
-			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing digest in claim: %s", foundDgst))
-			continue
-		}
-		if !correctAnnotations(annotations, ss.Optional) {
-			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing annotation in claim: %v", ss.Optional))
-			continue
-		}
-		verifiedPayloads = append(verifiedPayloads, sp)
-	}
-	if len(verifiedPayloads) == 0 {
-		return nil, fmt.Errorf("no matching claims:\n%s", strings.Join(checkClaimErrs, "\n  "))
-	}
-	return verifiedPayloads, nil
-}
-
-func correctAnnotations(wanted, have map[string]string) bool {
-	for k, v := range wanted {
-		if have[k] != v {
-			return false
-		}
-	}
-	return true
+	return cosign.Verify(ref, pubKey, checkClaims, annotations)
 }

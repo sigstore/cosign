@@ -502,7 +502,7 @@ Before we sign the signature artifact, we first give it a memorable name so we c
 $ cosign sign -key cosign.key -a sig=original gcr.io/dlorenc-vmtest2/demo
 Enter password for private key:
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
-$ cosign verify -key cosign.pub  gcr.io/dlorenc-vmtest2/demo | jq .
+$ cosign verify -key cosign.pub gcr.io/dlorenc-vmtest2/demo | jq .
 {
   "Critical": {
     "Identity": {
