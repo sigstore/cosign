@@ -4,7 +4,7 @@ This directory contains an experimental OPA plugin (embedded OPA interpreter) th
 
 ## OCI
 
-`oci.manifest(ref) manifest`
+### `oci.manifest(ref) manifest`
 
 This function takes a reference to an OCI image in a registry and returns the manifest.
 
@@ -43,7 +43,7 @@ This function takes a reference to an OCI image in a registry and returns the ma
 }
 ```
 
-`oci.file(ref, path) file`
+### `oci.file(ref, path) file`
 
 This function takes a reference to an OCI image in a registry and a path as inputs.
 It returns the contents of the file at that path.
@@ -53,7 +53,9 @@ It returns the contents of the file at that path.
 "NAME=\"Ubuntu\"\nVERSION=\"20.04.1 LTS (Focal Fossa)\"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME=\"Ubuntu 20.04.1 LTS\"\nVERSION_ID=\"20.04\"\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nVERSION_CODENAME=focal\nUBUNTU_CODENAME=focal\n"
 ```
 
-`cosign.signatures(ref) []cosign.SignedPayload`
+## Cosign
+
+### `cosign.signatures(ref) []cosign.SignedPayload`
 
 This function takes a reference to an OCI image in a registry and returns a list of `cosign.SignedPayload` structs.
 It does not perform any verification or validation.
@@ -72,7 +74,7 @@ It does not perform any verification or validation.
 ]
 ```
 
-`cosign.verify(ref, pubkey) []cosign.SignedPayload`
+### `cosign.verify(ref, pubkey) []cosign.SignedPayload`
 
 This function takes a reference to an OCI image in a registry and a base64 encoded PKIX public key.
 It returns a list of verified `cosign.SignedPayload` structs.
