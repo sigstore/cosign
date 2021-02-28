@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 func Verify() *ffcli.Command {

@@ -24,7 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/projectcosign/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"golang.org/x/term"
