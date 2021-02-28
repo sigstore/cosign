@@ -26,7 +26,7 @@ import (
 	"os"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 func SignBlob() *ffcli.Command {

@@ -23,7 +23,7 @@ import (
 	"os"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/projectcosign/cosign/cmd/cli"
+	"github.com/sigstore/cosign/cmd/cli"
 )
 
 var (

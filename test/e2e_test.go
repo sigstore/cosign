@@ -20,8 +20,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/projectcosign/cosign/cmd/cli"
-	"github.com/projectcosign/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/cmd/cli"
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 var keyPass = []byte("hello")
