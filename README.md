@@ -4,6 +4,11 @@ Container Signing, Verification and Storage in an OCI registry.
 
 ![intro](images/intro.gif)
 
+## Info
+
+`Cosign` is developed as part of the [`sigstore`](sigstore.dev) project.
+Come on over to our [slack channel](https://sigstore.slack.com)!
+
 ## Installation
 
 For now, clone and `go build -o cosign ./cmd`.
