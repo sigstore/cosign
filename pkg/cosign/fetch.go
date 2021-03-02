@@ -58,7 +58,7 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		return nil, nil, err
 	}
 
-	if rdesc.MediaType != types.DockerManifestSchema2 {
+	if rdesc.MediaType != types.OCIManifestSchema1 {
 		return nil, nil, fmt.Errorf("unsupported media type: %s", rdesc.MediaType)
 	}
 	descriptors, err := Descriptors(idxRef)

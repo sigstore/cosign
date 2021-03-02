@@ -57,6 +57,8 @@ func Upload(signature, payload []byte, dstTag name.Reference) error {
 		return err
 	}
 
+	img = mutate.MediaType(img, types.OCIManifestSchema1)
+
 	if err := remote.Write(dstTag, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
 		return err
 	}
