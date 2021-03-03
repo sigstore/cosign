@@ -31,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
 
 type annotationsMap struct {
@@ -61,7 +62,8 @@ func (a *annotationsMap) String() string {
 func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
-		key         = flagset.String("key", "", "path to the private key")
+		privKey     = flagset.String("key", "", "path to the private key")
+		publicKey   = flagset.String("public-key", "", "path to the public key")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		annotations = annotationsMap{}
@@ -73,7 +75,7 @@ func Sign() *ffcli.Command {
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" {
+			if *privKey == "" {
 				return flag.ErrHelp
 			}
 
@@ -81,12 +83,12 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass)
+			return SignCmd(ctx, *privKey, *publicKey, args[0], *upload, *payloadPath, annotations.annotations, getPass)
 		},
 	}
 }
 
-func SignCmd(ctx context.Context, keyPath string,
+func SignCmd(ctx context.Context, keyPath string, publicKey string,
 	imageRef string, upload bool, payloadPath string,
 	annotations map[string]string, pf cosign.PassFunc) error {
 	ref, err := name.ParseReference(imageRef)
@@ -134,5 +136,9 @@ func SignCmd(ctx context.Context, keyPath string,
 	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	return cosign.Upload(signature, payload, dstTag)
+	if err := cosign.Upload(signature, payload, dstTag); err != nil {
+		return err
+	}
+
+	return tlog.Publish(signature, payload, publicKey)
 }
