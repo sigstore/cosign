@@ -2,6 +2,8 @@
 
 Container Signing, Verification and Storage in an OCI registry.
 
+Cosign aims to make signatures **invisible infrastructure**.
+
 ![intro](images/intro.gif)
 
 ## Info
@@ -234,6 +236,84 @@ $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 {"Base64Signature":"Ejy6ipGJjUzMDoQFePWixqPBYF0iSnIvpMWps3mlcYNSEcRRZelL7GzimKXaMjxfhy5bshNGvDT5QoUJ0tqUAg==","Payload":"eyJDcml0aWNhbCI6eyJJZGVudGl0eSI6eyJkb2NrZXItcmVmZXJlbmNlIjoiIn0sIkltYWdlIjp7IkRvY2tlci1tYW5pZmVzdC1kaWdlc3QiOiI4N2VmNjBmNTU4YmFkNzliZWVhNjQyNWEzYjI4OTg5ZjAxZGQ0MTcxNjQxNTBhYjNiYWFiOThkY2JmMDRkZWY4In0sIlR5cGUiOiIifSwiT3B0aW9uYWwiOm51bGx9"}
 ```
 
+## Caveats
+
+### Intentionally Missing Features
+
+`cosign` only generates Ed25519 keys with SHA256 hashes.
+Keys are stored in PEM-encoded PKCS8 format.
+However, you can use `cosign` to store and retrieve signatures in any format, from any algorithm.
+
+`cosign` does not handle key-distribution or PKI.
+
+`cosign` does not handle expiry or revocation.
+See [here](https://github.com/notaryproject/requirements/pull/47) for some discussion on the topic.
+
+`cosign` does not handle public-key management or storage.
+There are no keyrings or local state.
+
+### Unintentionally Missing Features
+
+`cosign` will integrate with transparency logs!
+See https://github.com/sigstore/cosign/issues/34 for more info.
+
+`cosign` will integrate with even more transparency logs, and a PKI.
+See https://github.com/sigStore/fulcio for more info.
+
+### Registry Support
+
+`cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
+interactions, which has excellent support, but other registries may have quirks.
+
+Today, `cosign` has only been tested, barely, against GCP's Artifact Registry and Container Registry.
+We aim for wide registry support.
+Please help test!
+See https://github.com/sigstore/cosign/issues/40 for the tracking issue.
+
+### Things That Should Probably Change
+
+#### Payload Formats
+
+`cosign` only supports Red Hat's [simple signing](https://www.redhat.com/en/blog/container-image-signing)
+format for payloads.
+That looks like:
+
+```
+{
+    "critical": {
+           "identity": {
+               "docker-reference": "testing/manifest"
+           },
+           "image": {
+               "Docker-manifest-digest": "sha256:20be...fe55"
+           },
+           "type": "cosign container signature"
+    },
+    "optional": {
+           "creator": "atomic",
+           "timestamp": 1458239713
+    }
+}
+```
+**Note:** This can be generated for an image reference using `cosign generate <image>`.
+
+I'm happy to switch this format to something else if it makes sense.
+See [https://github.com/notaryproject/nv2/issues/40] for one option.
+
+
+#### Registry Details
+
+`cosign` signatures are stored as separate objects in the OCI registry, with only a weak
+reference back to the object they "sign".
+This means this relationship is opaque to the registry, and signatures *will not* be deleted
+or garbage-collected when the image is deleted.
+Similarly, they **can** easily be copied from one environment to another, but this is not
+automatic.
+
+Multiple signatures are stored in a list which is unfortunately "racy" today.
+To add a signtaure, clients orchestrate a "read-append-write" operation, so the last write
+will win in the case of contention.
+
 ## Signature Specification
 
 `cosign` is inspired by tools like [minisign](https://jedisct1.github.io/minisign/) and
@@ -286,55 +366,6 @@ Alternative implementations could use transparency logs, local filesystem, a sep
 `cosign` only works for artifacts stored as "manifests" in the registry today.
 The proposed mechanism is flexible enough to support signing arbitrary things.
 
-## Caveats
-
-`cosign` only generates Ed25519 keys with SHA256 hashes.
-Keys are stored in PEM-encoded PKCS8 format.
-However, you can use `cosign` to store and retrieve signatures in any format, from any algorithm.
-
-`cosign` does not handle key-distribution or PKI.
-
-`cosign` does not handle key-management or storage.
-There are no keyrings or local state.
-
-`cosign` only supports Red Hat's [simple signing](https://www.redhat.com/en/blog/container-image-signing)
-format for payloads.
-That looks like:
-
-```
-{
-    "critical": {
-           "identity": {
-               "docker-reference": "testing/manifest"
-           },
-           "image": {
-               "Docker-manifest-digest": "sha256:20be...fe55"
-           },
-           "type": "cosign container signature"
-    },
-    "optional": {
-           "creator": "atomic",
-           "timestamp": 1458239713
-    }
-}
-```
-**Note:** This can be generated for an image reference using `cosign generate <image>`.
-
-`cosign` signatures are stored as separate objects in the OCI registry, with only a weak
-reference back to the object they "sign".
-This means this relationship is opaque to the registry, and signatures *will not* be deleted
-or garbage-collected when the image is deleted.
-Similarly, they **can** easily be copied from one environment to another, but this is not
-automatic.
-
-Multiple signatures are stored in a list which is unfortunately "racy" today.
-To add a signtaure, clients orchestrate a "read-append-write" operation, so the last write
-will win in the case of contention.
-
-`cosign` has been tested, barely, against GCP's Artifact Registry (pkg.dev).
-`cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
-interactions, which has excellent support, but other registries may have quirks.
-
 ## FAQ
 
 ### Who is using this?
@@ -368,6 +399,7 @@ If you're aware of another system that does meet these, please let me know!
 ## Design Requirements
 
 * No external services for signature storage, querying, or retrieval
+* We aim for as much registry support as possible
 * Everything should work over the registry API
 * PGP should not be required at all. 
 * Users must be able to find all signatures for an image
@@ -554,3 +586,4 @@ $ crane manifest gcr.io/dlorenc-vmtest2/demo@sha256:71f70e5d29bde87f988740665257
   ]
 }
 ```
+
