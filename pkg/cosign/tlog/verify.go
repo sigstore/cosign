@@ -25,7 +25,7 @@ import (
 
 	"github.com/go-openapi/swag"
 	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -96,7 +96,7 @@ func Verify(signedPayload []cosign.SignedPayload, publicKey string) error {
 		rootHash, _ := hex.DecodeString(*lep.Payload.RootHash)
 		leafHash, _ := hex.DecodeString(params.EntryUUID)
 
-		v := logverifier.New(rfc6962.DefaultHasher)
+		v := logverifier.New(hasher.DefaultHasher)
 		if err := v.VerifyInclusionProof(*lep.Payload.LogIndex, *lep.Payload.TreeSize, hashes, rootHash, leafHash); err != nil {
 			return errors.Wrap(err, "verifying inclusion proof")
 		}
