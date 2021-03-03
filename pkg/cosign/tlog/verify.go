@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962"
@@ -33,46 +32,10 @@ import (
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 )
-
-const (
-	tlogEnv       = "TLOG"
-	tlogServerEnv = "TLOG_SERVER"
-	rekorServer   = "https://api.rekor.dev"
-)
-
-// Publish will publish the signature, public key and payload to the tlog
-func Publish(signature, payload []byte, publicKey string) error {
-	if os.Getenv(tlogEnv) != "1" {
-		return nil
-	}
-	if publicKey == "" {
-		return fmt.Errorf("to push to tlog, please pass in path to public key via --public-key")
-	}
-	pubKey, err := ioutil.ReadFile(publicKey)
-	if err != nil {
-		return errors.Wrap(err, "reading public key")
-	}
-	rekorClient, err := app.GetRekorClient(tlogServer())
-	if err != nil {
-		return err
-	}
-	re := rekorEntry(payload, signature, pubKey)
-	returnVal := models.Rekord{
-		APIVersion: swag.String(re.APIVersion()),
-		Spec:       re.RekordObj,
-	}
-	params := entries.NewCreateLogEntryParams()
-	params.SetProposedEntry(&returnVal)
-	if _, err := rekorClient.Entries.CreateLogEntry(params); err != nil {
-		return errors.Wrap(err, "creating log entry")
-	}
-	fmt.Println("Sucessfully appended to transparency log")
-	return nil
-}
 
 // Verify will verify the signature, public key and payload are in the tlog, as well as verifying the signature itself
+// most of this code taken from github.com/sigstore/rekor/cmd/cli/app/verify.go
 func Verify(signedPayload []cosign.SignedPayload, publicKey string) error {
 	if os.Getenv(tlogEnv) != "1" {
 		return nil
@@ -90,7 +53,6 @@ func Verify(signedPayload []cosign.SignedPayload, publicKey string) error {
 		params := entries.NewGetLogEntryProofParams()
 		searchParams := entries.NewSearchLogQueryParams()
 		searchLogQuery := models.SearchLogQuery{}
-		// var entry models.ProposedEntry
 		signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
 		if err != nil {
 			return errors.Wrap(err, "decoding base64 signature")
@@ -135,36 +97,10 @@ func Verify(signedPayload []cosign.SignedPayload, publicKey string) error {
 		leafHash, _ := hex.DecodeString(params.EntryUUID)
 
 		v := logverifier.New(rfc6962.DefaultHasher)
-		if err := v.VerifyInclusionProof(*lep.Payload.LogIndex, *lep.Payload.TreeSize,
-			hashes, rootHash, leafHash); err != nil {
-			return err
+		if err := v.VerifyInclusionProof(*lep.Payload.LogIndex, *lep.Payload.TreeSize, hashes, rootHash, leafHash); err != nil {
+			return errors.Wrap(err, "verifying inclusion proof")
 		}
 	}
 	fmt.Println("Verified signature, payload and public key exist in transparency log")
 	return nil
-}
-
-func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
-	return rekord_v001.V001Entry{
-		RekordObj: models.RekordV001Schema{
-			Data: &models.RekordV001SchemaData{
-				Content: strfmt.Base64(payload),
-			},
-			Signature: &models.RekordV001SchemaSignature{
-				Content: strfmt.Base64(signature),
-				Format:  models.RekordV001SchemaSignatureFormatX509,
-				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
-					Content: strfmt.Base64(pubKey),
-				},
-			},
-		},
-	}
-}
-
-// tlogServer returns the name of the tlog server, can be overwritten via env var
-func tlogServer() string {
-	if s := os.Getenv(tlogServerEnv); s != "" {
-		return s
-	}
-	return rekorServer
 }

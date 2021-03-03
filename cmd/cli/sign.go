@@ -140,5 +140,5 @@ func SignCmd(ctx context.Context, keyPath string, publicKey string,
 		return err
 	}
 
-	return tlog.Publish(signature, payload, publicKey)
+	return tlog.Upload(signature, payload, publicKey)
 }
