@@ -7,6 +7,7 @@ require (
 	github.com/go-openapi/swag v0.19.14
 	github.com/google/go-cmp v0.5.4
 	github.com/google/go-containerregistry v0.4.1-0.20210206001656-4d068fbcb51f
+	github.com/google/trillian v1.3.13
 	github.com/open-policy-agent/opa v0.26.0
 	github.com/peterbourgon/ff/v3 v3.0.0
 	github.com/pkg/errors v0.9.1
