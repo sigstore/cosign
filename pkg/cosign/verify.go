@@ -104,7 +104,7 @@ func Verify(ref name.Reference, pubKey ed25519.PublicKey, checkClaims bool, anno
 	}
 
 	// Now we have to actually parse the payloads and make sure the digest (and other claims) are correct
-	verified, err := verifyClaims(desc.Digest.Hex, annotations, valid)
+	verified, err := verifyClaims(desc.Digest.String(), annotations, valid)
 	if err != nil {
 		return nil, err
 	}

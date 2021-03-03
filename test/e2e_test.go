@@ -119,7 +119,7 @@ func TestGenerate(t *testing.T) {
 	ss := cosign.SimpleSigning{}
 	must(json.Unmarshal(b.Bytes(), &ss), t)
 
-	equals(desc.Digest.Hex, ss.Critical.Image.DockerManifestDigest, t)
+	equals(desc.Digest.String(), ss.Critical.Image.DockerManifestDigest, t)
 
 	// Now try with some annotations.
 	b.Reset()
@@ -127,7 +127,7 @@ func TestGenerate(t *testing.T) {
 	must(cli.GenerateCmd(context.Background(), imgName, a, &b), t)
 	must(json.Unmarshal(b.Bytes(), &ss), t)
 
-	equals(desc.Digest.Hex, ss.Critical.Image.DockerManifestDigest, t)
+	equals(desc.Digest.String(), ss.Critical.Image.DockerManifestDigest, t)
 	equals(ss.Optional["foo"], "bar", t)
 }
 
