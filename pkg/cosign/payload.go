@@ -26,7 +26,7 @@ func Payload(img v1.Descriptor, a map[string]string) ([]byte, error) {
 	simpleSigning := SimpleSigning{
 		Critical: Critical{
 			Image: Image{
-				DockerManifestDigest: img.Digest.Hex,
+				DockerManifestDigest: img.Digest.String(),
 			},
 			Type: "cosign container signature",
 		},
