@@ -30,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
@@ -62,8 +63,7 @@ func (a *annotationsMap) String() string {
 func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
-		privKey     = flagset.String("key", "", "path to the private key")
-		publicKey   = flagset.String("public-key", "", "path to the public key")
+		key         = flagset.String("key", "", "path to the private key")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		annotations = annotationsMap{}
@@ -75,7 +75,7 @@ func Sign() *ffcli.Command {
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *privKey == "" {
+			if *key == "" {
 				return flag.ErrHelp
 			}
 
@@ -83,12 +83,12 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *privKey, *publicKey, args[0], *upload, *payloadPath, annotations.annotations, getPass)
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass)
 		},
 	}
 }
 
-func SignCmd(ctx context.Context, keyPath string, publicKey string,
+func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
 	annotations map[string]string, pf cosign.PassFunc) error {
 	ref, err := name.ParseReference(imageRef)
@@ -140,5 +140,9 @@ func SignCmd(ctx context.Context, keyPath string, publicKey string,
 		return err
 	}
 
-	return tlog.Upload(signature, payload, publicKey)
+	pubKey, err := cosign.LoadPublicKeyFromPrivKey(pk)
+	if err != nil {
+		return errors.Wrap(err, "loading public key from priv key")
+	}
+	return tlog.Upload(signature, payload, pubKey)
 }

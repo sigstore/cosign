@@ -18,7 +18,6 @@ package tlog
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/go-openapi/strfmt"
@@ -33,27 +32,20 @@ import (
 
 const (
 	tlogEnv       = "TLOG"
-	tlogServerEnv = "TLOG_SERVER"
+	tlogServerEnv = "REKOR_SERVER"
 	rekorServer   = "https://api.rekor.dev"
 )
 
 // Upload will upload the signature, public key and payload to the tlog
-func Upload(signature, payload []byte, publicKey string) error {
+func Upload(signature, payload, publicKey []byte) error {
 	if os.Getenv(tlogEnv) != "1" {
 		return nil
-	}
-	if publicKey == "" {
-		return fmt.Errorf("to push to tlog, please pass in path to public key via --public-key")
-	}
-	pubKey, err := ioutil.ReadFile(publicKey)
-	if err != nil {
-		return errors.Wrap(err, "reading public key")
 	}
 	rekorClient, err := app.GetRekorClient(tlogServer())
 	if err != nil {
 		return err
 	}
-	re := rekorEntry(payload, signature, pubKey)
+	re := rekorEntry(payload, signature, publicKey)
 	returnVal := models.Rekord{
 		APIVersion: swag.String(re.APIVersion()),
 		Spec:       re.RekordObj,
