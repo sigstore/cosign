@@ -34,7 +34,7 @@ import (
 func Upload() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign upload", flag.ExitOnError)
-		signature = flagset.String("signature", "", "path to the signature or {-} for stdin")
+		signature = flagset.String("signature", "", "the signature, path to the signature, or {-} for stdin")
 		payload   = flagset.String("payload", "", "path to the payload covered by the signature (if using another format)")
 	)
 	return &ffcli.Command{
@@ -54,20 +54,11 @@ func Upload() *ffcli.Command {
 
 func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	var b64SigBytes []byte
-	var err error
 
-	// This can be "-", a file or a string.
-	if sigRef == "-" {
-		b64SigBytes, err = ioutil.ReadAll(os.Stdin)
-	} else if _, err = os.Stat(sigRef); os.IsNotExist(err) {
-		b64SigBytes = []byte(sigRef)
-	} else {
-		b64SigBytes, err = ioutil.ReadFile(sigRef)
-	}
+	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
-	}
-	if len(b64SigBytes) == 0 {
+	} else if len(b64SigBytes) == 0 {
 		return errors.New("empty signature")
 	}
 
@@ -99,4 +90,42 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 		return err
 	}
 	return cosign.Upload(sigBytes, payload, dstTag)
+}
+
+type SignatureArgType uint8
+
+const (
+	StdinSignature SignatureArgType = iota
+	RawSignature   SignatureArgType = iota
+	FileSignature  SignatureArgType = iota
+)
+
+func signatureBytes(sigRef string) ([]byte, error) {
+	// sigRef can be "-", a string or a file.
+	switch signatureType(sigRef) {
+	case StdinSignature:
+		return ioutil.ReadAll(os.Stdin)
+	case RawSignature:
+		return []byte(sigRef), nil
+	case FileSignature:
+		return ioutil.ReadFile(sigRef)
+	default:
+		return nil, errors.New("unknown signature arg type")
+	}
+}
+
+func signatureType(sigRef string) SignatureArgType {
+	switch {
+	case sigRef == "-":
+		return StdinSignature
+	case signatureFileNotExists(sigRef):
+		return RawSignature
+	default:
+		return FileSignature
+	}
+}
+
+func signatureFileNotExists(sigRef string) bool {
+	_, err := os.Stat(sigRef)
+	return os.IsNotExist(err)
 }
