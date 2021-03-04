@@ -31,14 +31,14 @@ import (
 )
 
 const (
-	tlogEnv       = "TLOG"
-	tlogServerEnv = "REKOR_SERVER"
-	rekorServer   = "https://api.rekor.dev"
+	Env         = "TLOG"
+	ServerEnv   = "REKOR_SERVER"
+	rekorServer = "https://api.rekor.dev"
 )
 
 // Upload will upload the signature, public key and payload to the tlog
 func Upload(signature, payload, publicKey []byte) error {
-	if os.Getenv(tlogEnv) != "1" {
+	if os.Getenv(Env) != "1" {
 		return nil
 	}
 	rekorClient, err := app.GetRekorClient(tlogServer())
@@ -78,7 +78,7 @@ func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
 
 // tlogServer returns the name of the tlog server, can be overwritten via env var
 func tlogServer() string {
-	if s := os.Getenv(tlogServerEnv); s != "" {
+	if s := os.Getenv(ServerEnv); s != "" {
 		return s
 	}
 	return rekorServer

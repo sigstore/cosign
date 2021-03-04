@@ -37,7 +37,7 @@ import (
 // Verify will verify the signature, public key and payload are in the tlog, as well as verifying the signature itself
 // most of this code taken from github.com/sigstore/rekor/cmd/cli/app/verify.go
 func Verify(signedPayload []cosign.SignedPayload, publicKey string) error {
-	if os.Getenv(tlogEnv) != "1" {
+	if os.Getenv(Env) != "1" {
 		return nil
 	}
 	pubKey, err := ioutil.ReadFile(publicKey)
