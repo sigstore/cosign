@@ -22,12 +22,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/cmd/cli"
 )
 
 var (
 	rootFlagSet = flag.NewFlagSet("cosign", flag.ExitOnError)
+	debug       = rootFlagSet.Bool("d", false, "log debug output to stderr")
 	verbose     = rootFlagSet.Bool("v", false, "increase log verbosity")
 )
 
@@ -42,7 +44,19 @@ func main() {
 		},
 	}
 
-	if err := root.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
+	if err := root.Parse(os.Args[1:]); err != nil {
+		if *verbose {
+			fmt.Print("verbose!")
+		}
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *debug {
+		logs.Debug.SetOutput(os.Stderr)
+	}
+
+	if err := root.Run(context.Background()); err != nil {
 		if *verbose {
 			fmt.Print("verbose!")
 		}
