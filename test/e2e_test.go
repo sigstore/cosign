@@ -158,32 +158,74 @@ func TestUploadDownload(t *testing.T) {
 	td := t.TempDir()
 	ctx := context.Background()
 
+	testCases := map[string]struct {
+		signature     string
+		signatureType cli.SignatureArgType
+		expectedErr   bool
+	}{
+		"file containing signature": {
+			signature:     "testsignaturefile",
+			signatureType: cli.FileSignature,
+			expectedErr:   false,
+		},
+		"raw signature as argument": {
+			signature:     "testsignatureraw",
+			signatureType: cli.RawSignature,
+			expectedErr:   false,
+		},
+		"empty signature as argument": {
+			signature:     "",
+			signatureType: cli.RawSignature,
+			expectedErr:   true,
+		},
+	}
+
 	imgName := path.Join(repo, "cosign-e2e")
-	ref, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-	payload := "testpayload"
-	payloadPath := mkfile(payload, td, t)
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			ref, _, cleanup := mkimage(t, imgName)
+			payload := "testpayload"
+			payloadPath := mkfile(payload, td, t)
+			signature := base64.StdEncoding.EncodeToString([]byte(testCase.signature))
 
-	signature := base64.StdEncoding.EncodeToString([]byte("testsignature"))
-	sigPath := mkfile(signature, td, t)
+			var sigRef string
+			if testCase.signatureType == cli.FileSignature {
+				sigRef = mkfile(signature, td, t)
+			} else {
+				sigRef = signature
+			}
 
-	// Upload it!
-	must(cli.UploadCmd(ctx, sigPath, payloadPath, imgName), t)
+			// Upload it!
+			err := cli.UploadCmd(ctx, sigRef, payloadPath, imgName)
+			if testCase.expectedErr {
+				mustErr(err, t)
+			} else {
+				must(err, t)
+			}
 
-	// Now download it!
-	signatures, _, err := cosign.FetchSignatures(ref)
-	if err != nil {
-		t.Fatal(err)
+			// Now download it!
+			signatures, _, err := cosign.FetchSignatures(ref)
+			if testCase.expectedErr {
+				mustErr(err, t)
+			} else {
+				must(err, t)
+
+				if len(signatures) != 1 {
+					t.Error("unexpected signatures")
+				}
+				if diff := cmp.Diff(signatures[0].Base64Signature, signature); diff != "" {
+					t.Error(diff)
+				}
+				if diff := cmp.Diff(signatures[0].Payload, []byte(payload)); diff != "" {
+					t.Error(diff)
+				}
+			}
+
+			// Now delete it!
+			cleanup()
+		})
 	}
-	if len(signatures) != 1 {
-		t.Error("unexpected signatures")
-	}
-	if diff := cmp.Diff(signatures[0].Base64Signature, signature); diff != "" {
-		t.Error(diff)
-	}
-	if diff := cmp.Diff(signatures[0].Payload, []byte(payload)); diff != "" {
-		t.Error(diff)
-	}
+
 }
 
 func mkfile(contents, td string, t *testing.T) string {
