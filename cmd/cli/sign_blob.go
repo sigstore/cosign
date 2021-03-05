@@ -82,7 +82,7 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		return err
 	}
 	h := sha256.Sum256(payload)
-	signature, err := ecdsa.SignASN1(rand.Reader, &pk, h[:])
+	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
 	if err != nil {
 		return err
 	}

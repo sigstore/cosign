@@ -31,30 +31,30 @@ const (
 	sigkey  = "dev.cosignproject.cosign/signature"
 )
 
-func LoadPrivateKey(key []byte, pass []byte) (ecdsa.PrivateKey, error) {
+func LoadPrivateKey(key []byte, pass []byte) (*ecdsa.PrivateKey, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
-		return ecdsa.PrivateKey{}, errors.New("invalid pem block")
+		return nil, errors.New("invalid pem block")
 	}
 	if p.Type != pemType {
-		return ecdsa.PrivateKey{}, fmt.Errorf("unsupported pem type: %s", p.Type)
+		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
 	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
 	if err != nil {
-		return ecdsa.PrivateKey{}, errors.Wrap(err, "decrypt")
+		return nil, errors.Wrap(err, "decrypt")
 	}
 
 	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return ecdsa.PrivateKey{}, errors.Wrap(err, "parsing priv key")
+		return nil, errors.Wrap(err, "parsing private key")
 	}
-	typed, ok := pk.(*ecdsa.PrivateKey)
+	epk, ok := pk.(*ecdsa.PrivateKey)
 	if !ok {
-		return ecdsa.PrivateKey{}, fmt.Errorf("ecdsa priv key")
+		return nil, fmt.Errorf("invalid private key")
 	}
-	return *typed, nil
+	return epk, nil
 }
 
 type SimpleSigning struct {

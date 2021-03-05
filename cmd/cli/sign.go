@@ -129,7 +129,7 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 
 	h := sha256.Sum256(payload)
-	signature, err := ecdsa.SignASN1(rand.Reader, &pk, h[:])
+	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
 	if err != nil {
 		return errors.Wrap(err, "signing asn1")
 	}
