@@ -33,40 +33,40 @@ import (
 
 const pubKeyPemType = "PUBLIC KEY"
 
-func LoadPublicKey(keyRef string) (ecdsa.PublicKey, error) {
+func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	// The key could be plaintext or in a file.
 	// First check if the file exists.
 	var pubBytes []byte
 	if _, err := os.Stat(keyRef); os.IsNotExist(err) {
 		pubBytes, err = base64.StdEncoding.DecodeString(keyRef)
 		if err != nil {
-			return ecdsa.PublicKey{}, err
+			return nil, err
 		}
 	} else {
 		// PEM encoded file.
 		b, err := ioutil.ReadFile(keyRef)
 		if err != nil {
-			return ecdsa.PublicKey{}, err
+			return nil, err
 		}
 		p, _ := pem.Decode(b)
 		if p == nil {
-			return ecdsa.PublicKey{}, errors.New("pem.Decode failed")
+			return nil, errors.New("pem.Decode failed")
 		}
 		if p.Type != pubKeyPemType {
-			return ecdsa.PublicKey{}, fmt.Errorf("not public: %q", p.Type)
+			return nil, fmt.Errorf("not public: %q", p.Type)
 		}
 		pubBytes = p.Bytes
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(pubBytes)
 	if err != nil {
-		return ecdsa.PublicKey{}, err
+		return nil, err
 	}
 	ed, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
-		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key")
+		return nil, fmt.Errorf("invalid public key")
 	}
-	return *ed, nil
+	return ed, nil
 }
 
 func LoadPublicKeyFromPrivKey(pk ecdsa.PrivateKey) ([]byte, error) {
@@ -81,20 +81,20 @@ func LoadPublicKeyFromPrivKey(pk ecdsa.PrivateKey) ([]byte, error) {
 	return pubBytes, nil
 }
 
-func VerifySignature(pubkey ecdsa.PublicKey, base64sig string, payload []byte) error {
+func VerifySignature(pubkey *ecdsa.PublicKey, base64sig string, payload []byte) error {
 	signature, err := base64.StdEncoding.DecodeString(base64sig)
 	if err != nil {
 		return err
 	}
 
-	if !ecdsa.VerifyASN1(&pubkey, payload, signature) {
+	if !ecdsa.VerifyASN1(pubkey, payload, signature) {
 		return errors.New("unable to verify signature")
 	}
 
 	return nil
 }
 
-func Verify(ref name.Reference, pubKey ecdsa.PublicKey, checkClaims bool, annotations map[string]string) ([]SignedPayload, error) {
+func Verify(ref name.Reference, pubKey *ecdsa.PublicKey, checkClaims bool, annotations map[string]string) ([]SignedPayload, error) {
 	signatures, desc, err := FetchSignatures(ref)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func Verify(ref name.Reference, pubKey ecdsa.PublicKey, checkClaims bool, annota
 	return verified, nil
 }
 
-func validSignatures(pubKey ecdsa.PublicKey, signatures []SignedPayload) ([]SignedPayload, error) {
+func validSignatures(pubKey *ecdsa.PublicKey, signatures []SignedPayload) ([]SignedPayload, error) {
 	validSignatures := []SignedPayload{}
 	validationErrs := []string{}
 
