@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
 
 func Verify() *ffcli.Command {
@@ -58,7 +59,7 @@ func Verify() *ffcli.Command {
 			for _, vp := range verified {
 				fmt.Println(string(vp.Payload))
 			}
-			return nil
+			return tlog.Verify(verified, *key)
 		},
 	}
 }

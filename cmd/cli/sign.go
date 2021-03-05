@@ -33,6 +33,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
 
 type annotationsMap struct {
@@ -139,5 +140,13 @@ func SignCmd(ctx context.Context, keyPath string,
 	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	return cosign.Upload(signature, payload, dstTag)
+	if err := cosign.Upload(signature, payload, dstTag); err != nil {
+		return err
+	}
+
+	pubKey, err := cosign.LoadPublicKeyFromPrivKey(pk)
+	if err != nil {
+		return errors.Wrap(err, "loading public key from priv key")
+	}
+	return tlog.Upload(signature, payload, pubKey)
 }

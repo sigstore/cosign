@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/cmd/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
 
 var keyPass = []byte("hello")
@@ -226,6 +227,38 @@ func TestUploadDownload(t *testing.T) {
 		})
 	}
 
+}
+
+func TestTlog(t *testing.T) {
+	if err := os.Setenv(tlog.ServerEnv, "http://127.0.0.1:3000"); err != nil {
+		t.Fatalf("error setitng env: %v", err)
+	}
+	defer os.Unsetenv(tlog.ServerEnv)
+	if err := os.Setenv(tlog.Env, "1"); err != nil {
+		t.Fatalf("error setting env: %v", err)
+	}
+	defer os.Unsetenv(tlog.Env)
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+	// Verify should fail at first
+	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+
+	// Now sign the image
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc), t)
+
+	// Now verify should work!
+	must(verify(pubKeyPath, imgName, true, nil), t)
 }
 
 func mkfile(contents, td string, t *testing.T) string {
