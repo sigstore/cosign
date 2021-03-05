@@ -66,12 +66,13 @@ func Sign() *ffcli.Command {
 		key         = flagset.String("key", "", "path to the private key")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
+		forceTlog   = flagset.Bool("force-tlog", false, "whether to upload to the tlog even when the image is private")
 		annotations = annotationsMap{}
 	)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
-		ShortUsage: "cosign sign -key <key> [-payload <path>] [-a key=value] [-upload=true|false] <image uri>",
+		ShortUsage: "cosign sign -key <key> [-payload <path>] [-a key=value] [-upload=true|false] [-force-tlog=true|false] <image uri>",
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
@@ -83,14 +84,14 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass)
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass, *forceTlog)
 		},
 	}
 }
 
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, pf cosign.PassFunc) error {
+	annotations map[string]string, pf cosign.PassFunc, forceTlog bool) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -144,5 +145,18 @@ func SignCmd(ctx context.Context, keyPath string,
 	if err != nil {
 		return errors.Wrap(err, "loading public key from priv key")
 	}
+
+	// Check if the image is public (no auth in Get)
+	if _, err := remote.Get(ref); err != nil {
+		//private image!
+		if forceTlog {
+			fmt.Println("force uploading signature of private image to tlog")
+			return tlog.Upload(signature, payload, pubKey)
+		} else {
+			fmt.Println("skipping upload of private image, use --force-tlog to upload")
+			return nil
+		}
+	}
+
 	return tlog.Upload(signature, payload, pubKey)
 }
