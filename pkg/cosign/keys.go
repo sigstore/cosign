@@ -19,7 +19,7 @@ type Keys struct {
 }
 
 func GenerateKeyPair(pf PassFunc) (*Keys, error) {
-	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
