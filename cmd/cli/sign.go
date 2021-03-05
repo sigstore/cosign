@@ -18,7 +18,8 @@ package cli
 
 import (
 	"context"
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -30,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
@@ -117,13 +119,16 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 	kb, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "reading %s", keyPath)
 	}
 	pk, err := cosign.LoadPrivateKey(kb, pass)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "loading private key")
 	}
-	signature := ed25519.Sign(pk, payload)
+	signature, err := ecdsa.SignASN1(rand.Reader, &pk, payload)
+	if err != nil {
+		return errors.Wrap(err, "signing asn1")
+	}
 
 	if !upload {
 		fmt.Println(base64.StdEncoding.EncodeToString(signature))

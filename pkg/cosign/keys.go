@@ -1,11 +1,13 @@
 package cosign
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
 
+	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
@@ -17,27 +19,32 @@ type Keys struct {
 }
 
 func GenerateKeyPair(pf PassFunc) (*Keys, error) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
 
+	x509Encoded, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		return nil, errors.Wrap(err, "x509 encoding private key")
+	}
 	// Encrypt the private key and store it.
 	password, err := pf(true)
 	if err != nil {
 		return nil, err
 	}
-
-	encBytes, err := encrypted.Encrypt(priv, password)
+	encBytes, err := encrypted.Encrypt(x509Encoded, password)
 	if err != nil {
 		return nil, err
 	}
+	// store in PEM format
 
 	privBytes := pem.EncodeToMemory(&pem.Block{
 		Bytes: encBytes,
 		Type:  "ENCRYPTED COSIGN PRIVATE KEY",
 	})
 
+	pub := &priv.PublicKey
 	b, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
 		return nil, err

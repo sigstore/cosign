@@ -17,11 +17,12 @@ limitations under the License.
 package cosign
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
@@ -30,21 +31,30 @@ const (
 	sigkey  = "dev.cosignproject.cosign/signature"
 )
 
-func LoadPrivateKey(key []byte, pass []byte) (ed25519.PrivateKey, error) {
+func LoadPrivateKey(key []byte, pass []byte) (ecdsa.PrivateKey, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
-		return nil, errors.New("invalid pem block")
+		return ecdsa.PrivateKey{}, errors.New("invalid pem block")
 	}
 	if p.Type != pemType {
-		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
+		return ecdsa.PrivateKey{}, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
-	priv, err := encrypted.Decrypt(p.Bytes, pass)
+	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
 	if err != nil {
-		return nil, err
+		return ecdsa.PrivateKey{}, errors.Wrap(err, "decrypt")
 	}
-	return ed25519.PrivateKey(priv), nil
+
+	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
+	if err != nil {
+		return ecdsa.PrivateKey{}, errors.Wrap(err, "parsing priv key")
+	}
+	typed, ok := pk.(*ecdsa.PrivateKey)
+	if !ok {
+		return ecdsa.PrivateKey{}, fmt.Errorf("ecdsa priv key")
+	}
+	return *typed, nil
 }
 
 type SimpleSigning struct {

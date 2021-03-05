@@ -17,7 +17,7 @@ limitations under the License.
 package cosign
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -33,56 +33,56 @@ import (
 
 const pubKeyPemType = "PUBLIC KEY"
 
-func LoadPublicKey(keyRef string) (ed25519.PublicKey, error) {
+func LoadPublicKey(keyRef string) (ecdsa.PublicKey, error) {
 	// The key could be plaintext or in a file.
 	// First check if the file exists.
 	var pubBytes []byte
 	if _, err := os.Stat(keyRef); os.IsNotExist(err) {
 		pubBytes, err = base64.StdEncoding.DecodeString(keyRef)
 		if err != nil {
-			return nil, err
+			return ecdsa.PublicKey{}, err
 		}
 	} else {
 		// PEM encoded file.
 		b, err := ioutil.ReadFile(keyRef)
 		if err != nil {
-			return nil, err
+			return ecdsa.PublicKey{}, err
 		}
 		p, _ := pem.Decode(b)
 		if p == nil {
-			return nil, errors.New("pem.Decode failed")
+			return ecdsa.PublicKey{}, errors.New("pem.Decode failed")
 		}
 		if p.Type != pubKeyPemType {
-			return nil, fmt.Errorf("not public: %q", p.Type)
+			return ecdsa.PublicKey{}, fmt.Errorf("not public: %q", p.Type)
 		}
 		pubBytes = p.Bytes
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(pubBytes)
 	if err != nil {
-		return nil, err
+		return ecdsa.PublicKey{}, err
 	}
-	ed, ok := pub.(ed25519.PublicKey)
+	ed, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("invalid public key")
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key")
 	}
-	return ed, nil
+	return *ed, nil
 }
 
-func VerifySignature(pubkey ed25519.PublicKey, base64sig string, payload []byte) error {
+func VerifySignature(pubkey ecdsa.PublicKey, base64sig string, payload []byte) error {
 	signature, err := base64.StdEncoding.DecodeString(base64sig)
 	if err != nil {
 		return err
 	}
 
-	if !ed25519.Verify(pubkey, payload, signature) {
+	if !ecdsa.VerifyASN1(&pubkey, payload, signature) {
 		return errors.New("unable to verify signature")
 	}
 
 	return nil
 }
 
-func Verify(ref name.Reference, pubKey ed25519.PublicKey, checkClaims bool, annotations map[string]string) ([]SignedPayload, error) {
+func Verify(ref name.Reference, pubKey ecdsa.PublicKey, checkClaims bool, annotations map[string]string) ([]SignedPayload, error) {
 	signatures, desc, err := FetchSignatures(ref)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func Verify(ref name.Reference, pubKey ed25519.PublicKey, checkClaims bool, anno
 	return verified, nil
 }
 
-func validSignatures(pubKey ed25519.PublicKey, signatures []SignedPayload) ([]SignedPayload, error) {
+func validSignatures(pubKey ecdsa.PublicKey, signatures []SignedPayload) ([]SignedPayload, error) {
 	validSignatures := []SignedPayload{}
 	validationErrs := []string{}
 
