@@ -17,13 +17,15 @@ limitations under the License.
 package tlog
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -52,10 +54,21 @@ func Upload(signature, payload, publicKey []byte) error {
 	}
 	params := entries.NewCreateLogEntryParams()
 	params.SetProposedEntry(&returnVal)
-	if _, err := rekorClient.Entries.CreateLogEntry(params); err != nil {
-		return errors.Wrap(err, "creating log entry")
+	resp, err := rekorClient.Entries.CreateLogEntry(params)
+	if err == nil {
+		return err
 	}
-	fmt.Println("Sucessfully appended to transparency log")
+	// If the entry already exists, we get a specific error.
+	// Here, we display the proof and succeed.
+	if _, ok := err.(*entries.CreateLogEntryConflict); ok {
+		cs := cosign.SignedPayload{
+			Base64Signature: base64.StdEncoding.EncodeToString(signature),
+			Payload:         payload,
+		}
+		fmt.Println("Signature already exists. Displaying proof")
+		return Verify([]cosign.SignedPayload{cs}, publicKey)
+	}
+	fmt.Println("Sucessfully appended to transparency log: ", path.Join(tlogServer(), resp.Location.String()))
 	return nil
 }
 
