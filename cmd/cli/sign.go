@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -126,7 +127,9 @@ func SignCmd(ctx context.Context, keyPath string,
 	if err != nil {
 		return errors.Wrap(err, "loading private key")
 	}
-	signature, err := ecdsa.SignASN1(rand.Reader, &pk, payload)
+
+	h := sha256.Sum256(payload)
+	signature, err := ecdsa.SignASN1(rand.Reader, &pk, h[:])
 	if err != nil {
 		return errors.Wrap(err, "signing asn1")
 	}

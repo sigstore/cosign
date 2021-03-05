@@ -18,6 +18,7 @@ package cosign
 
 import (
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -87,7 +88,8 @@ func VerifySignature(pubkey *ecdsa.PublicKey, base64sig string, payload []byte) 
 		return err
 	}
 
-	if !ecdsa.VerifyASN1(pubkey, payload, signature) {
+	h := sha256.Sum256(payload)
+	if !ecdsa.VerifyASN1(pubkey, h[:], signature) {
 		return errors.New("unable to verify signature")
 	}
 
