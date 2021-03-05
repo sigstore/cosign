@@ -8,7 +8,7 @@ Cosign aims to make signatures **invisible infrastructure**.
 
 ## Info
 
-`Cosign` is developed as part of the [`sigstore`](sigstore.dev) project.
+`Cosign` is developed as part of the [`sigstore`](https://sigstore.dev) project.
 Come on over to our [slack channel](https://sigstore.slack.com)!
 
 ## Installation
