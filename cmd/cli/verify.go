@@ -18,6 +18,7 @@ package cli
 
 import (
 	"context"
+	"crypto/ed25519"
 	"flag"
 	"fmt"
 	"os"
@@ -49,7 +50,13 @@ func Verify() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			verified, err := VerifyCmd(ctx, *key, args[0], *checkClaims, annotations.annotations)
+
+			pubKey, err := cosign.LoadPublicKey(*key)
+			if err != nil {
+				return flag.ErrHelp
+			}
+
+			verified, err := VerifyCmd(ctx, pubKey, args[0], *checkClaims, annotations.annotations)
 			if err != nil {
 				return err
 			}
@@ -59,21 +66,20 @@ func Verify() *ffcli.Command {
 			for _, vp := range verified {
 				fmt.Println(string(vp.Payload))
 			}
-			return tlog.Verify(verified, *key)
+			return nil
 		},
 	}
 }
 
-func VerifyCmd(_ context.Context, keyRef string, imageRef string, checkClaims bool, annotations map[string]string) ([]cosign.SignedPayload, error) {
+func VerifyCmd(_ context.Context, pubKey ed25519.PublicKey, imageRef string, checkClaims bool, annotations map[string]string) ([]cosign.SignedPayload, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
 	}
 
-	pubKey, err := cosign.LoadPublicKey(keyRef)
+	sp, err := cosign.Verify(ref, pubKey, checkClaims, annotations)
 	if err != nil {
 		return nil, err
 	}
-
-	return cosign.Verify(ref, pubKey, checkClaims, annotations)
+	return sp, tlog.Verify(sp, pubKey)
 }

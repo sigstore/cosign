@@ -32,7 +32,11 @@ var passFunc = func(_ bool) ([]byte, error) {
 }
 
 var verify = func(k, i string, b bool, a map[string]string) error {
-	_, err := cli.VerifyCmd(context.Background(), k, i, b, a)
+	pk, err := cosign.LoadPublicKey(k)
+	if err != nil {
+		return err
+	}
+	_, err = cli.VerifyCmd(context.Background(), pk, i, b, a)
 	return err
 }
 
@@ -229,15 +233,17 @@ func TestUploadDownload(t *testing.T) {
 
 }
 
-func TestTlog(t *testing.T) {
-	if err := os.Setenv(tlog.ServerEnv, "http://127.0.0.1:3000"); err != nil {
+func setenv(t *testing.T, k, v string) func() {
+	if err := os.Setenv(k, v); err != nil {
 		t.Fatalf("error setitng env: %v", err)
 	}
-	defer os.Unsetenv(tlog.ServerEnv)
-	if err := os.Setenv(tlog.Env, "1"); err != nil {
-		t.Fatalf("error setting env: %v", err)
+	return func() {
+		os.Unsetenv(tlog.ServerEnv)
 	}
-	defer os.Unsetenv(tlog.Env)
+}
+
+func TestTlog(t *testing.T) {
+	defer setenv(t, tlog.ServerEnv, "http://127.0.0.1:3000")()
 
 	repo, stop := reg(t)
 	defer stop()
@@ -254,10 +260,18 @@ func TestTlog(t *testing.T) {
 	// Verify should fail at first
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
-	// Now sign the image
+	// Now sign the image without the tlog
 	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc), t)
-
 	// Now verify should work!
+	must(verify(pubKeyPath, imgName, true, nil), t)
+
+	// But verify with tlog won't work
+	defer setenv(t, tlog.Env, "1")()
+	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+
+	// Sign with the tlog
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc), t)
+	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
 

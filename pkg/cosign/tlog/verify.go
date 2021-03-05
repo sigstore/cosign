@@ -17,10 +17,12 @@ limitations under the License.
 package tlog
 
 import (
+	"crypto/ed25519"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/go-openapi/swag"
@@ -36,13 +38,18 @@ import (
 
 // Verify will verify the signature, public key and payload are in the tlog, as well as verifying the signature itself
 // most of this code taken from github.com/sigstore/rekor/cmd/cli/app/verify.go
-func Verify(signedPayload []cosign.SignedPayload, publicKey string) error {
+func Verify(signedPayload []cosign.SignedPayload, publicKey ed25519.PublicKey) error {
+	der, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return err
+	}
+	pubBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: der,
+	})
+
 	if os.Getenv(Env) != "1" {
 		return nil
-	}
-	pubKey, err := ioutil.ReadFile(publicKey)
-	if err != nil {
-		return errors.Wrap(err, "reading public key")
 	}
 	rekorClient, err := app.GetRekorClient(tlogServer())
 	if err != nil {
@@ -57,7 +64,7 @@ func Verify(signedPayload []cosign.SignedPayload, publicKey string) error {
 		if err != nil {
 			return errors.Wrap(err, "decoding base64 signature")
 		}
-		re := rekorEntry(sp.Payload, signature, pubKey)
+		re := rekorEntry(sp.Payload, signature, pubBytes)
 		entry := &models.Rekord{
 			APIVersion: swag.String(re.APIVersion()),
 			Spec:       re.RekordObj,
