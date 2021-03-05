@@ -16,8 +16,7 @@ jobs:
       # Checks out a copy of your repository on the ubuntu-latest machine
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
-      - run: go test ./...
-      - run: go build -o cosign ./cmd/
+      - run: ./test/e2e_test.sh
   golangci:
     name: lint
     runs-on: ubuntu-latest

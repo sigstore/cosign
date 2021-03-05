@@ -69,6 +69,18 @@ func LoadPublicKey(keyRef string) (ed25519.PublicKey, error) {
 	return ed, nil
 }
 
+func LoadPublicKeyFromPrivKey(pk ed25519.PrivateKey) ([]byte, error) {
+	pubKey, err := x509.MarshalPKIXPublicKey(pk.Public())
+	if err != nil {
+		return nil, err
+	}
+	pubBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKey,
+	})
+	return pubBytes, nil
+}
+
 func VerifySignature(pubkey ed25519.PublicKey, base64sig string, payload []byte) error {
 	signature, err := base64.StdEncoding.DecodeString(base64sig)
 	if err != nil {
