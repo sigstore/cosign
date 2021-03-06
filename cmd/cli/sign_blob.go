@@ -18,7 +18,9 @@ package cli
 
 import (
 	"context"
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -79,7 +81,11 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 	if err != nil {
 		return err
 	}
-	signature := ed25519.Sign(pk, payload)
+	h := sha256.Sum256(payload)
+	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
+	if err != nil {
+		return err
+	}
 	if b64 {
 		fmt.Println(base64.StdEncoding.EncodeToString(signature))
 	} else {
