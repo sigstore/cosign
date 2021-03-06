@@ -17,11 +17,12 @@ limitations under the License.
 package cosign
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
@@ -30,7 +31,7 @@ const (
 	sigkey  = "dev.cosignproject.cosign/signature"
 )
 
-func LoadPrivateKey(key []byte, pass []byte) (ed25519.PrivateKey, error) {
+func LoadPrivateKey(key []byte, pass []byte) (*ecdsa.PrivateKey, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
@@ -40,11 +41,20 @@ func LoadPrivateKey(key []byte, pass []byte) (ed25519.PrivateKey, error) {
 		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
-	priv, err := encrypted.Decrypt(p.Bytes, pass)
+	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "decrypt")
 	}
-	return ed25519.PrivateKey(priv), nil
+
+	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing private key")
+	}
+	epk, ok := pk.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("invalid private key")
+	}
+	return epk, nil
 }
 
 type SimpleSigning struct {

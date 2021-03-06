@@ -18,7 +18,9 @@ package cli
 
 import (
 	"context"
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -120,13 +122,18 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 	kb, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "reading %s", keyPath)
 	}
 	pk, err := cosign.LoadPrivateKey(kb, pass)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "loading private key")
 	}
-	signature := ed25519.Sign(pk, payload)
+
+	h := sha256.Sum256(payload)
+	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
+	if err != nil {
+		return errors.Wrap(err, "signing asn1")
+	}
 
 	if !upload {
 		fmt.Println(base64.StdEncoding.EncodeToString(signature))

@@ -17,7 +17,8 @@ limitations under the License.
 package cosign
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -33,7 +34,7 @@ import (
 
 const pubKeyPemType = "PUBLIC KEY"
 
-func LoadPublicKey(keyRef string) (ed25519.PublicKey, error) {
+func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	// The key could be plaintext or in a file.
 	// First check if the file exists.
 	var pubBytes []byte
@@ -62,14 +63,17 @@ func LoadPublicKey(keyRef string) (ed25519.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	ed, ok := pub.(ed25519.PublicKey)
+	ed, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("invalid public key")
 	}
 	return ed, nil
 }
 
-func LoadPublicKeyFromPrivKey(pk ed25519.PrivateKey) ([]byte, error) {
+func LoadPublicKeyFromPrivKey(pk *ecdsa.PrivateKey) ([]byte, error) {
+	if pk == nil {
+		return nil, fmt.Errorf("nil private key")
+	}
 	pubKey, err := x509.MarshalPKIXPublicKey(pk.Public())
 	if err != nil {
 		return nil, err
@@ -81,20 +85,21 @@ func LoadPublicKeyFromPrivKey(pk ed25519.PrivateKey) ([]byte, error) {
 	return pubBytes, nil
 }
 
-func VerifySignature(pubkey ed25519.PublicKey, base64sig string, payload []byte) error {
+func VerifySignature(pubkey *ecdsa.PublicKey, base64sig string, payload []byte) error {
 	signature, err := base64.StdEncoding.DecodeString(base64sig)
 	if err != nil {
 		return err
 	}
 
-	if !ed25519.Verify(pubkey, payload, signature) {
+	h := sha256.Sum256(payload)
+	if !ecdsa.VerifyASN1(pubkey, h[:], signature) {
 		return errors.New("unable to verify signature")
 	}
 
 	return nil
 }
 
-func Verify(ref name.Reference, pubKey ed25519.PublicKey, checkClaims bool, annotations map[string]string) ([]SignedPayload, error) {
+func Verify(ref name.Reference, pubKey *ecdsa.PublicKey, checkClaims bool, annotations map[string]string) ([]SignedPayload, error) {
 	signatures, desc, err := FetchSignatures(ref)
 	if err != nil {
 		return nil, err
@@ -124,7 +129,7 @@ func Verify(ref name.Reference, pubKey ed25519.PublicKey, checkClaims bool, anno
 	return verified, nil
 }
 
-func validSignatures(pubKey ed25519.PublicKey, signatures []SignedPayload) ([]SignedPayload, error) {
+func validSignatures(pubKey *ecdsa.PublicKey, signatures []SignedPayload) ([]SignedPayload, error) {
 	validSignatures := []SignedPayload{}
 	validationErrs := []string{}
 
