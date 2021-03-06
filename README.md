@@ -12,6 +12,8 @@ Cosign aims to make signatures **invisible infrastructure**.
 We also use a slack [slack channel](https://sigstore.slack.com)!
 Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcfWn4XEyMqUUutbUQ) for the invite link.
 
+See [here](KEYLESS.md) for info on the experimental Keyless signatures mode.
+
 ## Installation
 
 For now, clone and `go build -o cosign ./cmd`.
@@ -431,7 +433,7 @@ $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa2
       "size": 217,
       "digest": "sha256:0e79a356609f038089088ec46fd95f4649d04de989487220b1a0adbcc63fadae",
       "annotations": {
-        "dev.cosignproject.cosign/signature": "5uNZKEP9rm8zxAL0VVX7McMmyArzLqtxMTNPjPO2ns+5GJpBeXg+i9ILU+WjmGAKBCqiexTxzLC1/nkOzD4cDA=="
+        "dev.sigstore.cosign/signature": "5uNZKEP9rm8zxAL0VVX7McMmyArzLqtxMTNPjPO2ns+5GJpBeXg+i9ILU+WjmGAKBCqiexTxzLC1/nkOzD4cDA=="
       }
     }
   ]

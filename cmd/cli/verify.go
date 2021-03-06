@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 )
 
 func Verify() *ffcli.Command {
@@ -42,30 +43,31 @@ func Verify() *ffcli.Command {
 		ShortHelp:  "Verify a signature on the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" {
-				return flag.ErrHelp
-			}
 			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-
-			pubKey, err := cosign.LoadPublicKey(*key)
-			if err != nil {
 				return flag.ErrHelp
 			}
 
 			co := cosign.CheckOpts{
 				Annotations: annotations.annotations,
 				Claims:      *checkClaims,
-				PubKey:      pubKey,
 				Tlog:        os.Getenv("TLOG") == "1",
+				Roots:       fulcio.Roots,
+			}
+
+			// Keys are optional!
+			if *key != "" {
+				pubKey, err := cosign.LoadPublicKey(*key)
+				if err != nil {
+					return err
+				}
+				co.PubKey = pubKey
 			}
 
 			verified, err := VerifyCmd(ctx, args[0], co)
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(os.Stderr, "The following checks were performed on these signatures:")
+			fmt.Fprintln(os.Stderr, "The following checks were performed on all of these signatures:")
 			if co.Claims {
 				if co.Annotations != nil {
 					fmt.Fprintln(os.Stderr, "  - The specified annotations were verified.")
@@ -78,7 +80,13 @@ func Verify() *ffcli.Command {
 			if co.PubKey != nil {
 				fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 			}
+			if co.Roots != nil { // This is always true for now, we hardcode the fulcio root.
+				fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
+			}
 			for _, vp := range verified {
+				if vp.Cert != nil {
+					fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
+				}
 				fmt.Println(string(vp.Payload))
 			}
 			return nil

@@ -31,11 +31,13 @@ import (
 
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
+
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -167,11 +169,16 @@ type CheckOpts struct {
 	Claims      bool
 	Tlog        bool
 	PubKey      *ecdsa.PublicKey
+	Roots       *x509.CertPool
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
 func Verify(ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
+	// Enforce this up front.
+	if co.Roots == nil && co.PubKey == nil {
+		return nil, errors.New("one of public key or cert roots is required")
+	}
 	// TODO: Figure out if we'll need a client before creating one.
 	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
@@ -187,8 +194,19 @@ func Verify(ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
 	validationErrs := []string{}
 	checkedSignatures := []SignedPayload{}
 	for _, sp := range allSignatures {
-		if co.PubKey != nil { // This should always be set for now until we use certiicates.
+		// It's possible to have both a public key and certificates, but we'll make them mutually exclusive.
+		if co.PubKey != nil {
 			if err := sp.VerifyKey(co.PubKey); err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
+		} else { // We must have roots since we don't have a public key
+			// Check the signature first then the cert itself
+			if err := sp.VerifyKey(sp.Cert.PublicKey.(*ecdsa.PublicKey)); err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
+			if err := sp.TrustedCert(co.Roots); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -260,6 +278,23 @@ func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *SimpleSigning) error
 
 func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) error {
 	return findTlogEntry(rc, sp.Base64Signature, sp.Payload, publicKeyPem)
+}
+
+func (sp *SignedPayload) TrustedCert(roots *x509.CertPool) error {
+	if _, err := sp.Cert.Verify(x509.VerifyOptions{
+		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
+		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
+		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
+		CurrentTime: sp.Cert.NotBefore,
+		Roots:       fulcio.Roots,
+		KeyUsages: []x509.ExtKeyUsage{
+			x509.ExtKeyUsage(x509.KeyUsageDigitalSignature),
+			x509.ExtKeyUsageCodeSigning,
+		},
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func correctAnnotations(wanted, have map[string]string) bool {

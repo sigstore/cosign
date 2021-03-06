@@ -28,6 +28,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -77,10 +79,6 @@ func Sign() *ffcli.Command {
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" {
-				return flag.ErrHelp
-			}
-
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
@@ -115,21 +113,36 @@ func SignCmd(ctx context.Context, keyPath string,
 		return err
 	}
 
-	pass, err := pf(false)
-	if err != nil {
-		return err
-	}
-	kb, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		return errors.Wrapf(err, "reading %s", keyPath)
-	}
-	pk, err := cosign.LoadPrivateKey(kb, pass)
-	if err != nil {
-		return errors.Wrap(err, "loading private key")
+	var priv *ecdsa.PrivateKey
+	var cert string
+	if keyPath != "" {
+		kb, err := ioutil.ReadFile(keyPath)
+		if err != nil {
+			return errors.Wrapf(err, "reading %s", keyPath)
+		}
+		pass, err := pf(false)
+		if err != nil {
+			return err
+		}
+		priv, err = cosign.LoadPrivateKey(kb, pass)
+		if err != nil {
+			return errors.Wrap(err, "loading private key")
+		}
+	} else { // Keyless!
+		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
+		priv, err = cosign.GeneratePrivateKey()
+		if err != nil {
+			return errors.Wrap(err, "generating cert")
+		}
+		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
+		cert, err = fulcio.GetCert(ctx, priv)
+		if err != nil {
+			return errors.Wrap(err, "retrieving cert")
+		}
 	}
 
 	h := sha256.Sum256(payload)
-	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
+	signature, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
 		return errors.Wrap(err, "signing asn1")
 	}
@@ -143,7 +156,8 @@ func SignCmd(ctx context.Context, keyPath string,
 	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	if err := cosign.Upload(signature, payload, dstTag); err != nil {
+
+	if err := cosign.Upload(signature, payload, dstTag, cert); err != nil {
 		return err
 	}
 
@@ -152,7 +166,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		//private image!
 		if forceTlog {
 			fmt.Println("force uploading signature of private image to tlog")
-			return cosign.UploadTLog(signature, payload, &pk.PublicKey)
+			return cosign.UploadTLog(signature, payload, &priv.PublicKey)
 		} else {
 			fmt.Println("skipping upload of private image, use --force-tlog to upload")
 			return nil
@@ -161,5 +175,5 @@ func SignCmd(ctx context.Context, keyPath string,
 	if os.Getenv(cosign.TLogEnv) != "1" {
 		return nil
 	}
-	return cosign.UploadTLog(signature, payload, &pk.PublicKey)
+	return cosign.UploadTLog(signature, payload, &priv.PublicKey)
 }

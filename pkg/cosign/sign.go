@@ -27,8 +27,10 @@ import (
 )
 
 const (
-	pemType = "ENCRYPTED COSIGN PRIVATE KEY"
-	sigkey  = "dev.cosignproject.cosign/signature"
+	pemType  = "ENCRYPTED COSIGN PRIVATE KEY"
+	sigkey   = "dev.sigstore.cosign/signature"
+	certkey  = "dev.sigstore.cosign/certificate"
+	chainkey = "dev.sigstore.cosign/chain"
 )
 
 func LoadPrivateKey(key []byte, pass []byte) (*ecdsa.PrivateKey, error) {
