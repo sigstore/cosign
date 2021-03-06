@@ -17,7 +17,20 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
-func Upload(signature, payload []byte, dstTag name.Reference) error {
+func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, err
+	}
+	m, err := img.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	return m.Layers, nil
+}
+
+func Upload(signature, payload []byte, dstTag name.Reference, cert string) error {
 	l := &staticLayer{
 		b:  payload,
 		mt: "application/vnd.dev.cosign.simplesigning.v1+json",
@@ -34,11 +47,15 @@ func Upload(signature, payload []byte, dstTag name.Reference) error {
 		}
 	}
 
+	annotations := map[string]string{
+		sigkey: base64.StdEncoding.EncodeToString(signature),
+	}
+	if cert != "" {
+		annotations[certkey] = cert
+	}
 	img, err := mutate.Append(base, mutate.Addendum{
-		Layer: l,
-		Annotations: map[string]string{
-			sigkey: base64.StdEncoding.EncodeToString(signature),
-		},
+		Layer:       l,
+		Annotations: annotations,
 	})
 	if err != nil {
 		return err

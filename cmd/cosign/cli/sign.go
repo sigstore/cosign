@@ -29,6 +29,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -80,10 +82,12 @@ func Sign() *ffcli.Command {
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" && *kmsVal == "" {
-				return flag.ErrHelp
+			// A key file (or kms address) is required unless we're in experimental mode!
+			if !cosign.Experimental() {
+				if *key == "" && *kmsVal == "" {
+					return flag.ErrHelp
+				}
 			}
-
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
@@ -119,7 +123,9 @@ func SignCmd(ctx context.Context, keyPath string,
 
 	var signature []byte
 	var publicKey *ecdsa.PublicKey
-	if kmsVal != "" {
+	var cert string
+	switch {
+	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
 			return err
@@ -132,11 +138,28 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return errors.Wrap(err, "getting public key")
 		}
-	} else {
+	case keyPath != "":
 		signature, publicKey, err = sign(ctx, get, keyPath, payload, pf)
-	}
-	if err != nil {
-		return errors.Wrap(err, "signing")
+		if err != nil {
+			return errors.Wrap(err, "signing payload")
+		}
+	default: // Keyless!
+		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
+		priv, err := cosign.GeneratePrivateKey()
+		if err != nil {
+			return errors.Wrap(err, "generating cert")
+		}
+		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
+		cert, err = fulcio.GetCert(ctx, priv)
+		if err != nil {
+			return errors.Wrap(err, "retrieving cert")
+		}
+		h := sha256.Sum256(payload)
+		signature, err = ecdsa.SignASN1(rand.Reader, priv, h[:])
+		if err != nil {
+			return errors.Wrap(err, "signing")
+		}
+		publicKey = &priv.PublicKey
 	}
 
 	if !upload {
@@ -148,18 +171,19 @@ func SignCmd(ctx context.Context, keyPath string,
 	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	if err := cosign.Upload(signature, payload, dstTag); err != nil {
+
+	if err := cosign.Upload(signature, payload, dstTag, cert); err != nil {
 		return err
 	}
 
-	if os.Getenv(cosign.ExperimentalEnv) != "1" {
+	if !cosign.Experimental() {
 		return nil
 	}
 
 	// Check if the image is public (no auth in Get)
 	if !force {
 		if _, err := remote.Get(ref); err != nil {
-			fmt.Println("warning: uploading to the public transparency log for a private image, please confirm: (Y/N)")
+			fmt.Print("warning: uploading to the public transparency log for a private image, please confirm [Y/N]: ")
 			var response string
 			if _, err := fmt.Scanln(&response); err != nil {
 				return err
@@ -170,7 +194,12 @@ func SignCmd(ctx context.Context, keyPath string,
 			}
 		}
 	}
-	return cosign.UploadTLog(signature, payload, publicKey)
+	index, err := cosign.UploadTLog(signature, payload, publicKey)
+	if err != nil {
+		return err
+	}
+	fmt.Println("tlog entry created with index: ", index)
+	return nil
 }
 
 func sign(ctx context.Context, img *remote.Descriptor, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
@@ -186,12 +215,12 @@ func sign(ctx context.Context, img *remote.Descriptor, keyPath string, payload [
 	if err != nil {
 		return
 	}
+	publicKey = &pk.PublicKey
 
 	h := sha256.Sum256(payload)
 	signature, err = ecdsa.SignASN1(rand.Reader, pk, h[:])
 	if err != nil {
 		return
 	}
-	publicKey = &pk.PublicKey
 	return
 }
