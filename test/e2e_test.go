@@ -266,11 +266,13 @@ func TestTlog(t *testing.T) {
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
-	// But verify with tlog won't work
+	// Now we turn on the tlog!
 	defer setenv(t, tlog.Env, "1")()
+
+	// Verify shouldn't work since we haven't put anything in it yet.
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
-	// Sign with the tlog
+	// Sign again with the tlog env var on
 	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc, false), t)
 	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil), t)
