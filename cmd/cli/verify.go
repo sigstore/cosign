@@ -18,7 +18,7 @@ package cli
 
 import (
 	"context"
-	"crypto/ed25519"
+	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"os"
@@ -63,6 +63,9 @@ func Verify() *ffcli.Command {
 			if !*checkClaims {
 				fmt.Fprintln(os.Stderr, "Warning: the following claims have not been verified:")
 			}
+			if os.Getenv(tlog.Env) == "1" {
+				fmt.Fprintln(os.Stderr, "The following signatures were all present in the transparency log:")
+			}
 			for _, vp := range verified {
 				fmt.Println(string(vp.Payload))
 			}
@@ -71,7 +74,7 @@ func Verify() *ffcli.Command {
 	}
 }
 
-func VerifyCmd(_ context.Context, pubKey ed25519.PublicKey, imageRef string, checkClaims bool, annotations map[string]string) ([]cosign.SignedPayload, error) {
+func VerifyCmd(_ context.Context, pubKey *ecdsa.PublicKey, imageRef string, checkClaims bool, annotations map[string]string) ([]cosign.SignedPayload, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
@@ -81,5 +84,12 @@ func VerifyCmd(_ context.Context, pubKey ed25519.PublicKey, imageRef string, che
 	if err != nil {
 		return nil, err
 	}
-	return sp, tlog.Verify(sp, pubKey)
+	if os.Getenv(tlog.Env) != "1" {
+		return sp, nil
+	}
+	tlogPayloads, err := tlog.Verify(sp, pubKey)
+	if err != nil {
+		return nil, err
+	}
+	return tlogPayloads, nil
 }

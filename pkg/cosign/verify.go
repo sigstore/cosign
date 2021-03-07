@@ -70,11 +70,8 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	return ed, nil
 }
 
-func LoadPublicKeyFromPrivKey(pk *ecdsa.PrivateKey) ([]byte, error) {
-	if pk == nil {
-		return nil, fmt.Errorf("nil private key")
-	}
-	pubKey, err := x509.MarshalPKIXPublicKey(pk.Public())
+func MarshalPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
+	pubKey, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
 		return nil, err
 	}

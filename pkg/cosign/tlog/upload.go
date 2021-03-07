@@ -1,5 +1,5 @@
 /*
-Copyright The Rekor Authors
+Copyright The Sigstore Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ limitations under the License.
 package tlog
 
 import (
+	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -39,15 +39,17 @@ const (
 )
 
 // Upload will upload the signature, public key and payload to the tlog
-func Upload(signature, payload, publicKey []byte) error {
-	if os.Getenv(Env) != "1" {
-		return nil
-	}
+func Upload(signature, payload []byte, publicKey *ecdsa.PublicKey) error {
 	rekorClient, err := app.GetRekorClient(tlogServer())
 	if err != nil {
 		return err
 	}
-	re := rekorEntry(payload, signature, publicKey)
+	wrappedKey, err := cosign.MarshalPublicKey(publicKey)
+	if err != nil {
+		return err
+	}
+
+	re := rekorEntry(payload, signature, wrappedKey)
 	returnVal := models.Rekord{
 		APIVersion: swag.String(re.APIVersion()),
 		Spec:       re.RekordObj,
@@ -55,20 +57,21 @@ func Upload(signature, payload, publicKey []byte) error {
 	params := entries.NewCreateLogEntryParams()
 	params.SetProposedEntry(&returnVal)
 	resp, err := rekorClient.Entries.CreateLogEntry(params)
-	if err == nil {
+	if err != nil {
+		// If the entry already exists, we get a specific error.
+		// Here, we display the proof and succeed.
+		if _, ok := err.(*entries.CreateLogEntryConflict); ok {
+			cs := cosign.SignedPayload{
+				Base64Signature: base64.StdEncoding.EncodeToString(signature),
+				Payload:         payload,
+			}
+			fmt.Println("Signature already exists. Displaying proof")
+			_, err := Verify([]cosign.SignedPayload{cs}, publicKey)
+			return err
+		}
 		return err
 	}
-	// If the entry already exists, we get a specific error.
-	// Here, we display the proof and succeed.
-	if _, ok := err.(*entries.CreateLogEntryConflict); ok {
-		cs := cosign.SignedPayload{
-			Base64Signature: base64.StdEncoding.EncodeToString(signature),
-			Payload:         payload,
-		}
-		fmt.Println("Signature already exists. Displaying proof")
-		return Verify([]cosign.SignedPayload{cs}, publicKey)
-	}
-	fmt.Println("Sucessfully appended to transparency log: ", path.Join(tlogServer(), resp.Location.String()))
+	fmt.Println("Sucessfully appended to transparency log: ", tlogServer(), resp.Location)
 	return nil
 }
 
