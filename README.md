@@ -240,7 +240,7 @@ $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 
 ### Intentionally Missing Features
 
-`cosign` only generates Ed25519 keys with SHA256 hashes.
+`cosign` only generates ECDSA-P256 keys and uses SHA256 hashes.
 Keys are stored in PEM-encoded PKCS8 format.
 However, you can use `cosign` to store and retrieve signatures in any format, from any algorithm.
 
@@ -377,7 +377,7 @@ Hopefully no one yet. Stay tuned, though.
 ### Why not use containers/image signing
 
 `containers/image` signing is close to `cosign`, and we reuse payload formats.
-`cosign` differs in that it signs with ED25519 keys instead of PGP, and stores
+`cosign` differs in that it signs with ECDSA-P256 keys instead of PGP, and stores
 signatures in the registry.
 
 ### Why not use TUF?

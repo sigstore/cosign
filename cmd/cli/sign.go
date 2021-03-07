@@ -1,5 +1,5 @@
 /*
-Copyright The Rekor Authors
+Copyright The Sigstore Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -148,22 +148,19 @@ func SignCmd(ctx context.Context, keyPath string,
 		return err
 	}
 
-	pubKey, err := cosign.LoadPublicKeyFromPrivKey(pk)
-	if err != nil {
-		return errors.Wrap(err, "loading public key from priv key")
-	}
-
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref); err != nil {
 		//private image!
 		if forceTlog {
 			fmt.Println("force uploading signature of private image to tlog")
-			return tlog.Upload(signature, payload, pubKey)
+			return tlog.Upload(signature, payload, &pk.PublicKey)
 		} else {
 			fmt.Println("skipping upload of private image, use --force-tlog to upload")
 			return nil
 		}
 	}
-
-	return tlog.Upload(signature, payload, pubKey)
+	if os.Getenv(tlog.Env) != "1" {
+		return nil
+	}
+	return tlog.Upload(signature, payload, &pk.PublicKey)
 }
