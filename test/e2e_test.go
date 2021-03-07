@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sigstore/cosign/pkg/cosign"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -21,8 +23,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/cmd/cli"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
 
 var keyPass = []byte("hello")
@@ -36,7 +36,13 @@ var verify = func(k, i string, b bool, a map[string]string) error {
 	if err != nil {
 		return err
 	}
-	_, err = cli.VerifyCmd(context.Background(), pk, i, b, a)
+	co := cosign.CheckOpts{
+		PubKey:      pk,
+		Annotations: a,
+		Claims:      b,
+		Tlog:        os.Getenv("TLOG") == "1",
+	}
+	_, err = cli.VerifyCmd(context.Background(), i, co)
 	return err
 }
 
@@ -238,12 +244,12 @@ func setenv(t *testing.T, k, v string) func() {
 		t.Fatalf("error setitng env: %v", err)
 	}
 	return func() {
-		os.Unsetenv(tlog.ServerEnv)
+		os.Unsetenv(cosign.ServerEnv)
 	}
 }
 
 func TestTlog(t *testing.T) {
-	defer setenv(t, tlog.ServerEnv, "http://127.0.0.1:3000")()
+	defer setenv(t, cosign.ServerEnv, "http://127.0.0.1:3000")()
 
 	repo, stop := reg(t)
 	defer stop()
@@ -267,7 +273,7 @@ func TestTlog(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now we turn on the tlog!
-	defer setenv(t, tlog.Env, "1")()
+	defer setenv(t, cosign.TLogEnv, "1")()
 
 	// Verify shouldn't work since we haven't put anything in it yet.
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
