@@ -18,7 +18,6 @@ package cli
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"os"
@@ -26,7 +25,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
 
 func Verify() *ffcli.Command {
@@ -56,15 +54,29 @@ func Verify() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			verified, err := VerifyCmd(ctx, pubKey, args[0], *checkClaims, annotations.annotations)
+			co := cosign.CheckOpts{
+				Annotations: annotations.annotations,
+				Claims:      *checkClaims,
+				PubKey:      pubKey,
+				Tlog:        os.Getenv("TLOG") == "1",
+			}
+
+			verified, err := VerifyCmd(ctx, args[0], co)
 			if err != nil {
 				return err
 			}
-			if !*checkClaims {
-				fmt.Fprintln(os.Stderr, "Warning: the following claims have not been verified:")
+			fmt.Fprintln(os.Stderr, "The following checks were performed on these signatures:")
+			if co.Claims {
+				if co.Annotations != nil {
+					fmt.Fprintln(os.Stderr, "  - The specified annotations were verified.")
+				}
+				fmt.Fprintln(os.Stderr, "  - The cosign claims were validated")
 			}
-			if os.Getenv(tlog.Env) == "1" {
-				fmt.Fprintln(os.Stderr, "The following signatures were all present in the transparency log:")
+			if co.Tlog {
+				fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
+			}
+			if co.PubKey != nil {
+				fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 			}
 			for _, vp := range verified {
 				fmt.Println(string(vp.Payload))
@@ -74,22 +86,15 @@ func Verify() *ffcli.Command {
 	}
 }
 
-func VerifyCmd(_ context.Context, pubKey *ecdsa.PublicKey, imageRef string, checkClaims bool, annotations map[string]string) ([]cosign.SignedPayload, error) {
+func VerifyCmd(_ context.Context, imageRef string, co cosign.CheckOpts) ([]cosign.SignedPayload, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
 	}
 
-	sp, err := cosign.Verify(ref, pubKey, checkClaims, annotations)
+	sp, err := cosign.Verify(ref, co)
 	if err != nil {
 		return nil, err
 	}
-	if os.Getenv(tlog.Env) != "1" {
-		return sp, nil
-	}
-	tlogPayloads, err := tlog.Verify(sp, pubKey)
-	if err != nil {
-		return nil, err
-	}
-	return tlogPayloads, nil
+	return sp, nil
 }

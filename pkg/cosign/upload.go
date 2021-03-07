@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tlog
+package cosign
 
 import (
 	"crypto/ecdsa"
@@ -25,7 +25,6 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
-	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -33,18 +32,18 @@ import (
 )
 
 const (
-	Env         = "TLOG"
+	TLogEnv     = "TLOG"
 	ServerEnv   = "REKOR_SERVER"
 	rekorServer = "https://api.rekor.dev"
 )
 
 // Upload will upload the signature, public key and payload to the tlog
-func Upload(signature, payload []byte, publicKey *ecdsa.PublicKey) error {
-	rekorClient, err := app.GetRekorClient(tlogServer())
+func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) error {
+	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
 		return err
 	}
-	wrappedKey, err := cosign.MarshalPublicKey(publicKey)
+	wrappedKey, err := marshalPublicKey(publicKey)
 	if err != nil {
 		return err
 	}
@@ -61,17 +60,17 @@ func Upload(signature, payload []byte, publicKey *ecdsa.PublicKey) error {
 		// If the entry already exists, we get a specific error.
 		// Here, we display the proof and succeed.
 		if _, ok := err.(*entries.CreateLogEntryConflict); ok {
-			cs := cosign.SignedPayload{
+			cs := SignedPayload{
 				Base64Signature: base64.StdEncoding.EncodeToString(signature),
 				Payload:         payload,
 			}
 			fmt.Println("Signature already exists. Displaying proof")
-			_, err := Verify([]cosign.SignedPayload{cs}, publicKey)
-			return err
+
+			return findTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, wrappedKey)
 		}
 		return err
 	}
-	fmt.Println("Sucessfully appended to transparency log: ", tlogServer(), resp.Location)
+	fmt.Println("Sucessfully appended to transparency log: ", TlogServer(), resp.Location)
 	return nil
 }
 
@@ -93,7 +92,7 @@ func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
 }
 
 // tlogServer returns the name of the tlog server, can be overwritten via env var
-func tlogServer() string {
+func TlogServer() string {
 	if s := os.Getenv(ServerEnv); s != "" {
 		return s
 	}

@@ -34,7 +34,6 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/tlog"
 )
 
 type annotationsMap struct {
@@ -153,14 +152,14 @@ func SignCmd(ctx context.Context, keyPath string,
 		//private image!
 		if forceTlog {
 			fmt.Println("force uploading signature of private image to tlog")
-			return tlog.Upload(signature, payload, &pk.PublicKey)
+			return cosign.UploadTLog(signature, payload, &pk.PublicKey)
 		} else {
 			fmt.Println("skipping upload of private image, use --force-tlog to upload")
 			return nil
 		}
 	}
-	if os.Getenv(tlog.Env) != "1" {
+	if os.Getenv(cosign.TLogEnv) != "1" {
 		return nil
 	}
-	return tlog.Upload(signature, payload, &pk.PublicKey)
+	return cosign.UploadTLog(signature, payload, &pk.PublicKey)
 }

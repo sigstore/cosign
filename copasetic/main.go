@@ -158,7 +158,11 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			sps, err := cosign.Verify(ref, pubKey, true, nil)
+			co := cosign.CheckOpts{
+				PubKey: pubKey,
+				Claims: true,
+			}
+			sps, err := cosign.Verify(ref, co)
 			if err != nil {
 				return nil, err
 			}

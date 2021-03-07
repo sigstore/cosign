@@ -1,5 +1,5 @@
 /*
-Copyright The Rekor Authors
+Copyright The Sigstore Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,15 +21,25 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 
+	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/trillian/merkle/logverifier"
+	"github.com/google/trillian/merkle/rfc6962/hasher"
+	"github.com/pkg/errors"
+
+	"github.com/sigstore/rekor/cmd/cli/app"
+	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 const pubKeyPemType = "PUBLIC KEY"
@@ -65,12 +75,12 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	}
 	ed, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("invalid public key")
+		return nil, errors.New("invalid public key")
 	}
 	return ed, nil
 }
 
-func MarshalPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
+func marshalPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
 	pubKey, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
 		return nil, err
@@ -96,80 +106,160 @@ func VerifySignature(pubkey *ecdsa.PublicKey, base64sig string, payload []byte) 
 	return nil
 }
 
-func Verify(ref name.Reference, pubKey *ecdsa.PublicKey, checkClaims bool, annotations map[string]string) ([]SignedPayload, error) {
-	signatures, desc, err := FetchSignatures(ref)
+func findTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) error {
+	params := entries.NewGetLogEntryProofParams()
+	searchParams := entries.NewSearchLogQueryParams()
+	searchLogQuery := models.SearchLogQuery{}
+	signature, err := base64.StdEncoding.DecodeString(b64Sig)
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "decoding base64 signature")
+	}
+	re := rekorEntry(payload, signature, pubKey)
+	entry := &models.Rekord{
+		APIVersion: swag.String(re.APIVersion()),
+		Spec:       re.RekordObj,
 	}
 
-	// We have a few different checks to do here:
-	// 1. The signatures blobs are valid (the public key can verify the payload and signature)
-	// 2. The payload blobs are in a format we understand, and the digest of the image is correct
+	entries := []models.ProposedEntry{entry}
+	searchLogQuery.SetEntries(entries)
 
-	// 1. First find all valid signatures
-	valid, err := validSignatures(pubKey, signatures)
+	searchParams.SetEntry(&searchLogQuery)
+	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "searching log query")
 	}
-
-	// If we're not verifying claims, just print and exit.
-	if !checkClaims {
-		return valid, nil
+	if len(resp.Payload) == 0 {
+		return errors.New("entry not found")
+	} else if len(resp.Payload) > 1 {
+		return errors.New("multiple entries returned; this should not happen")
 	}
-
-	// Now we have to actually parse the payloads and make sure the digest (and other claims) are correct
-	verified, err := verifyClaims(desc.Digest.String(), annotations, valid)
+	logEntry := resp.Payload[0]
+	if len(logEntry) != 1 {
+		return errors.New("UUID value can not be extracted")
+	}
+	for k := range logEntry {
+		params.EntryUUID = k
+	}
+	lep, err := rekorClient.Entries.GetLogEntryProof(params)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return verified, nil
+	hashes := [][]byte{}
+	for _, h := range lep.Payload.Hashes {
+		hb, _ := hex.DecodeString(h)
+		hashes = append(hashes, hb)
+	}
+
+	rootHash, _ := hex.DecodeString(*lep.Payload.RootHash)
+	leafHash, _ := hex.DecodeString(params.EntryUUID)
+
+	v := logverifier.New(hasher.DefaultHasher)
+	if err := v.VerifyInclusionProof(*lep.Payload.LogIndex, *lep.Payload.TreeSize, hashes, rootHash, leafHash); err != nil {
+		return errors.Wrap(err, "verifying inclusion proof")
+	}
+	return nil
 }
 
-func validSignatures(pubKey *ecdsa.PublicKey, signatures []SignedPayload) ([]SignedPayload, error) {
-	validSignatures := []SignedPayload{}
+// There are only payloads. Some have certs, some don't.
+type CheckOpts struct {
+	Annotations map[string]string
+	Claims      bool
+	Tlog        bool
+	PubKey      *ecdsa.PublicKey
+}
+
+// Verify does all the main cosign checks in a loop, returning validated payloads.
+// If there were no payloads, we return an error.
+func Verify(ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
+	// TODO: Figure out if we'll need a client before creating one.
+	rekorClient, err := app.GetRekorClient(TlogServer())
+	if err != nil {
+		return nil, err
+	}
+
+	// These are all the signatures attached to our image that we know how to parse.
+	allSignatures, desc, err := FetchSignatures(ref)
+	if err != nil {
+		return nil, err
+	}
+
 	validationErrs := []string{}
-
-	for _, sp := range signatures {
-		if err := VerifySignature(pubKey, sp.Base64Signature, sp.Payload); err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
+	checkedSignatures := []SignedPayload{}
+	for _, sp := range allSignatures {
+		if co.PubKey != nil { // This should always be set for now until we use certiicates.
+			if err := sp.VerifyKey(co.PubKey); err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
 		}
-		validSignatures = append(validSignatures, sp)
-	}
-	// If there are none, we error.
-	if len(validSignatures) == 0 {
-		return nil, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n  "))
-	}
-	return validSignatures, nil
 
+		// We can't check annotations without claims, both require unmarshalling the payload.
+		if co.Claims {
+			ss := &SimpleSigning{}
+			if err := json.Unmarshal(sp.Payload, ss); err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
+
+			if err := sp.VerifyClaims(desc, ss); err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
+
+			if co.Annotations != nil {
+				if !correctAnnotations(co.Annotations, ss.Optional) {
+					validationErrs = append(validationErrs, "missing or incorrect annotation")
+					continue
+				}
+			}
+		}
+
+		if co.Tlog {
+			pubKeyPem, err := marshalPublicKey(co.PubKey)
+			if err != nil {
+				validationErrs = append(validationErrs, "missing or incorrect annotation")
+				continue
+			}
+			if err := sp.VerifyTlog(rekorClient, pubKeyPem); err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
+		}
+
+		// Phew, we made it.
+		checkedSignatures = append(checkedSignatures, sp)
+	}
+	if len(checkedSignatures) == 0 {
+		return nil, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n "))
+	}
+	return checkedSignatures, nil
 }
 
-func verifyClaims(digest string, annotations map[string]string, signatures []SignedPayload) ([]SignedPayload, error) {
-	checkClaimErrs := []string{}
-	// Now look through the payloads for things we understand
-	verifiedPayloads := []SignedPayload{}
-	for _, sp := range signatures {
-		ss := SimpleSigning{}
-		if err := json.Unmarshal(sp.Payload, &ss); err != nil {
-			checkClaimErrs = append(checkClaimErrs, err.Error())
-			continue
-		}
-		foundDgst := ss.Critical.Image.DockerManifestDigest
-		if foundDgst != digest {
-			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing digest in claim: %s", foundDgst))
-			continue
-		}
-		if !correctAnnotations(annotations, ss.Optional) {
-			checkClaimErrs = append(checkClaimErrs, fmt.Sprintf("invalid or missing annotation in claim: %v", ss.Optional))
-			continue
-		}
-		verifiedPayloads = append(verifiedPayloads, sp)
+func (sp *SignedPayload) VerifyKey(pubKey *ecdsa.PublicKey) error {
+	signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
+	if err != nil {
+		return err
 	}
-	if len(verifiedPayloads) == 0 {
-		return nil, fmt.Errorf("no matching claims:\n%s", strings.Join(checkClaimErrs, "\n  "))
+
+	h := sha256.Sum256(sp.Payload)
+	if !ecdsa.VerifyASN1(pubKey, h[:], signature) {
+		return errors.New("unable to verify signature")
 	}
-	return verifiedPayloads, nil
+
+	return nil
+}
+
+func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *SimpleSigning) error {
+	foundDgst := ss.Critical.Image.DockerManifestDigest
+	if foundDgst != d.Digest.String() {
+		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)
+	}
+	return nil
+}
+
+func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) error {
+	return findTlogEntry(rc, sp.Base64Signature, sp.Payload, publicKeyPem)
 }
 
 func correctAnnotations(wanted, have map[string]string) bool {
