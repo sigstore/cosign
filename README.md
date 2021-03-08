@@ -236,6 +236,20 @@ $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 {"Base64Signature":"Ejy6ipGJjUzMDoQFePWixqPBYF0iSnIvpMWps3mlcYNSEcRRZelL7GzimKXaMjxfhy5bshNGvDT5QoUJ0tqUAg==","Payload":"eyJDcml0aWNhbCI6eyJJZGVudGl0eSI6eyJkb2NrZXItcmVmZXJlbmNlIjoiIn0sIkltYWdlIjp7IkRvY2tlci1tYW5pZmVzdC1kaWdlc3QiOiI4N2VmNjBmNTU4YmFkNzliZWVhNjQyNWEzYjI4OTg5ZjAxZGQ0MTcxNjQxNTBhYjNiYWFiOThkY2JmMDRkZWY4In0sIlR5cGUiOiIifSwiT3B0aW9uYWwiOm51bGx9"}
 ```
 
+### Rekor Support
+_Note: this is an experimental feature_
+
+To publish signed artifacts to a Rekor transparency log and verify their existence in the log, set the `TLOG=1` environment variable.
+
+```
+TLOG=1 cosign sign -key cosign.key gcr.io/dlorenc-vmtest2/demo
+TLOG=1 cosign verify -key cosign.pub gcr.io/dlorenc-vmtest2/demo
+```
+
+`cosign` defaults to using the public instance of rekor at [api.rekor.dev](https://api.rekor.dev).
+To configure the rekor server, set the `REKOR_SERVER` env variable.
+
+
 ## Caveats
 
 ### Intentionally Missing Features
