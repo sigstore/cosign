@@ -53,7 +53,7 @@ Note that these signed payloads include the digest of the container image, which
 sure these "detached" signatures cover the correct image.
 
 ```
-$ cosign verify -key public-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign verify -key cosign.pub us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
 ```
 
