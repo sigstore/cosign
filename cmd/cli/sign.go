@@ -166,7 +166,12 @@ func SignCmd(ctx context.Context, keyPath string,
 		//private image!
 		if forceTlog {
 			fmt.Println("force uploading signature of private image to tlog")
-			return cosign.UploadTLog(signature, payload, &priv.PublicKey)
+			index, err := cosign.UploadTLog(signature, payload, &priv.PublicKey)
+			if err != nil {
+				return nil
+			}
+			fmt.Println("tlog entry created with index: ", index)
+			return nil
 		} else {
 			fmt.Println("skipping upload of private image, use --force-tlog to upload")
 			return nil
@@ -175,5 +180,10 @@ func SignCmd(ctx context.Context, keyPath string,
 	if os.Getenv(cosign.TLogEnv) != "1" {
 		return nil
 	}
-	return cosign.UploadTLog(signature, payload, &priv.PublicKey)
+	index, err := cosign.UploadTLog(signature, payload, &priv.PublicKey)
+	if err != nil {
+		return nil
+	}
+	fmt.Println("tlog entry created with index: ", index)
+	return nil
 }

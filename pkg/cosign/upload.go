@@ -21,9 +21,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -38,14 +40,14 @@ const (
 )
 
 // Upload will upload the signature, public key and payload to the tlog
-func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) error {
+func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) (string, error) {
 	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
-		return err
+		return "", err
 	}
 	wrappedKey, err := marshalPublicKey(publicKey)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	re := rekorEntry(payload, signature, wrappedKey)
@@ -67,11 +69,15 @@ func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) error {
 			fmt.Println("Signature already exists. Displaying proof")
 
 			return findTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, wrappedKey)
+
 		}
-		return err
+		return "", err
 	}
-	fmt.Println("Sucessfully appended to transparency log: ", TlogServer(), resp.Location)
-	return nil
+	// UUID is at the end of location
+	for _, p := range resp.Payload {
+		return strconv.FormatInt(*p.LogIndex, 10), nil
+	}
+	return "", errors.New("bad response from server")
 }
 
 func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {

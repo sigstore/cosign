@@ -76,12 +76,16 @@ func Verify() *ffcli.Command {
 			}
 			if co.Tlog {
 				fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
+				fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
 			}
 			if co.PubKey != nil {
 				fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 			}
 			if co.Roots != nil { // This is always true for now, we hardcode the fulcio root.
 				fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
+				if !co.Tlog {
+					fmt.Fprintln(os.Stderr, "  - WARNING - THE CERTIFICATE EXPIRY WAS NOT CHECKED")
+				}
 			}
 			for _, vp := range verified {
 				if vp.Cert != nil {

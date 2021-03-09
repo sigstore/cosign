@@ -12,7 +12,7 @@ Cosign aims to make signatures **invisible infrastructure**.
 We also use a slack [slack channel](https://sigstore.slack.com)!
 Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcfWn4XEyMqUUutbUQ) for the invite link.
 
-See [here](KEYLESS.md) for info on the experimental Keyless signatures mode.
+🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨 
 
 ## Installation
 
