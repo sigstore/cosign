@@ -21,20 +21,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"hash/crc32"
-	"io/ioutil"
-	"os"
 	"strings"
 
 	kms "cloud.google.com/go/kms/apiv1"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-	"github.com/sigstore/cosign/pkg/cosign"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -67,42 +61,18 @@ func newGCP(ctx context.Context, keyResourceID string) (*gcp, error) {
 	}, nil
 }
 
-func (g *gcp) Sign(ctx context.Context, keyPath string,
-	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, kmsVal string, forceTlog bool) error {
-
-	ref, err := name.ParseReference(imageRef)
+func (g *gcp) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
+	// get public key first
+	publicKey, err = g.publicKey(ctx)
 	if err != nil {
-		return err
-	}
-
-	get, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return err
-	}
-
-	// The payload can be specified via a flag to skip generation.
-	var payload []byte
-	if payloadPath != "" {
-		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		payload, err = ioutil.ReadFile(payloadPath)
-	} else {
-		payload, err = cosign.Payload(get.Descriptor, annotations)
-	}
-	if err != nil {
-		return err
-	}
-
-	// get public key now
-	publicKey, err := g.publicKey(ctx)
-	if err != nil {
-		return errors.Wrap(err, "getting public key")
+		return
 	}
 
 	// Calculate the digest of the message.
 	digest := sha256.New()
-	if _, err := digest.Write(payload); err != nil {
-		return fmt.Errorf("failed to create digest: %v", err)
+	_, err = digest.Write(payload)
+	if err != nil {
+		return
 	}
 	// Optional but recommended: Compute digest's CRC32C.
 	crc32c := func(data []byte) uint32 {
@@ -113,7 +83,7 @@ func (g *gcp) Sign(ctx context.Context, keyPath string,
 
 	name, err := g.keyVersionName(ctx)
 	if err != nil {
-		return errors.Wrap(err, "key version name")
+		return
 	}
 	req := &kmspb.AsymmetricSignRequest{
 		Name: name,
@@ -126,48 +96,21 @@ func (g *gcp) Sign(ctx context.Context, keyPath string,
 	}
 	result, err := g.client.AsymmetricSign(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to sign digest: %v", err)
+		return
 	}
 	// Optional, but recommended: perform integrity verification on result.
 	// For more details on ensuring E2E in-transit integrity to and from Cloud KMS visit:
 	// https://cloud.google.com/kms/docs/data-integrity-guidelines
 	if !result.VerifiedDigestCrc32C {
-		return fmt.Errorf("AsymmetricSign: request corrupted in-transit")
+		err = fmt.Errorf("AsymmetricSign: request corrupted in-transit")
+		return
 	}
 	if int64(crc32c(result.Signature)) != result.SignatureCrc32C.Value {
-		return fmt.Errorf("AsymmetricSign: response corrupted in-transit")
+		err = fmt.Errorf("AsymmetricSign: response corrupted in-transit")
+		return
 	}
-
-	signature := result.GetSignature()
-
-	if !upload {
-		fmt.Println(base64.StdEncoding.EncodeToString(signature))
-		return nil
-	}
-
-	// sha256:... -> sha256-...
-	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
-
-	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
-	if err := cosign.Upload(signature, payload, dstTag); err != nil {
-		return err
-	}
-
-	// Check if the image is public (no auth in Get)
-	if _, err := remote.Get(ref); err != nil {
-		//private image!
-		if forceTlog {
-			fmt.Println("force uploading signature of private image to tlog")
-			return cosign.UploadTLog(signature, payload, publicKey)
-		} else {
-			fmt.Println("skipping upload of private image, use --force-tlog to upload")
-			return nil
-		}
-	}
-	if os.Getenv(cosign.TLogEnv) != "1" {
-		return nil
-	}
-	return cosign.UploadTLog(signature, payload, publicKey)
+	signature = result.GetSignature()
+	return
 }
 
 func (g *gcp) publicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
@@ -223,8 +166,6 @@ func (g *gcp) keyVersionName(ctx context.Context) (string, error) {
 	return name, nil
 }
 
-// GCP KMS keyResourceID should be in the format
-// "projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]".
 func (g *gcp) CreateKey(ctx context.Context) error {
 	if err := g.createKeyRing(ctx); err != nil {
 		return errors.Wrap(err, "creating key ring")

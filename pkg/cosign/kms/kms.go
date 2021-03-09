@@ -18,8 +18,11 @@ package kms
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"strings"
+
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 type KMS interface {
@@ -29,9 +32,7 @@ type KMS interface {
 
 	// Sign is responsible for signing an image via the keys
 	// stored in KMS
-	Sign(ctx context.Context, keyPath string,
-		imageRef string, upload bool, payloadPath string,
-		annotations map[string]string, kmsVal string, forceTlog bool) error
+	Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, publicKey *ecdsa.PublicKey, err error)
 }
 
 const gcpScheme = "gcpkms://"
