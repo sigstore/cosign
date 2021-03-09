@@ -83,7 +83,7 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	return ed, nil
 }
 
-func marshalPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
+func MarshalPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
 	if pub == nil {
 		return nil, errors.New("empty cert")
 	}
@@ -125,7 +125,7 @@ func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon,
 	return nil, errors.New("empty response")
 }
 
-func findTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (string, error) {
+func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (string, error) {
 	params := entries.NewGetLogEntryProofParams()
 	searchParams := entries.NewSearchLogQueryParams()
 	searchLogQuery := models.SearchLogQuery{}
@@ -260,7 +260,7 @@ func Verify(ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
 			} else {
 				pk = sp.Cert.PublicKey
 			}
-			pub, err := marshalPublicKey(pk.(*ecdsa.PublicKey))
+			pub, err := MarshalPublicKey(pk.(*ecdsa.PublicKey))
 			if err != nil {
 				validationErrs = append(validationErrs, "missing or incorrect annotation")
 				continue
@@ -333,7 +333,7 @@ func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *SimpleSigning) error
 }
 
 func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (string, error) {
-	return findTlogEntry(rc, sp.Base64Signature, sp.Payload, publicKeyPem)
+	return FindTlogEntry(rc, sp.Base64Signature, sp.Payload, publicKeyPem)
 }
 
 func (sp *SignedPayload) TrustedCert(roots *x509.CertPool) error {

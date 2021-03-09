@@ -26,11 +26,12 @@ import (
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/rekor/cmd/cli/app"
 )
 
 func VerifyBlob() *ffcli.Command {
 	var (
-		flagset   = flag.NewFlagSet("cosign verify", flag.ExitOnError)
+		flagset   = flag.NewFlagSet("cosign verify-blob", flag.ExitOnError)
 		key       = flagset.String("key", "", "path to the public key")
 		signature = flagset.String("signature", "", "path to the signature")
 	)
@@ -73,7 +74,7 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 	} else {
 		b, err := ioutil.ReadFile(sigRef)
 		if err != nil {
-			return nil
+			return err
 		}
 		// If in a file, it could be raw or base64-encoded.
 		// We want them to be encoded eventually, but not double encoded!
@@ -98,5 +99,23 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 		return err
 	}
 	fmt.Println("Verified OK")
+
+	if os.Getenv("TLOG") == "1" {
+		rekorClient, err := app.GetRekorClient(cosign.TlogServer())
+		if err != nil {
+			return err
+		}
+		pubBytes, err := cosign.MarshalPublicKey(pubKey)
+		if err != nil {
+			return err
+		}
+		index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
+		if err != nil {
+			return err
+		}
+		fmt.Println("tlog entry verified with index: ", index)
+		return nil
+	}
+
 	return nil
 }

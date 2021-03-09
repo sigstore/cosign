@@ -93,5 +93,15 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		// No newline if using the raw signature
 		os.Stdout.Write(signature)
 	}
+
+	if os.Getenv("TLOG") == "1" {
+		index, err := cosign.UploadTLog(signature, payload, &pk.PublicKey)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("tlog entry created with index: ", index)
+		return signature, nil
+	}
+
 	return signature, nil
 }

@@ -45,7 +45,7 @@ func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) (string, 
 	if err != nil {
 		return "", err
 	}
-	wrappedKey, err := marshalPublicKey(publicKey)
+	wrappedKey, err := MarshalPublicKey(publicKey)
 	if err != nil {
 		return "", err
 	}
@@ -68,7 +68,7 @@ func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) (string, 
 			}
 			fmt.Println("Signature already exists. Displaying proof")
 
-			return findTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, wrappedKey)
+			return FindTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, wrappedKey)
 
 		}
 		return "", err

@@ -374,13 +374,6 @@ func mustErr(err error, t *testing.T) {
 	}
 }
 
-func mustStr(out []byte, err error, t *testing.T) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func equals(v1, v2 interface{}, t *testing.T) {
 	if diff := cmp.Diff(v1, v2); diff != "" {
 		t.Error(diff)
