@@ -33,14 +33,22 @@ type gcpDetails struct {
 	key        string
 }
 
+type GCPKMS struct {
+	keyResourceID string
+}
+
+func (g *GCPKMS) Encrypt() error {
+	return nil
+}
+
 // GCP KMS keyResourceID should be in the format
 // "projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]".
-func CreateKey(ctx context.Context, keyResourceID string) error {
+func (g *GCPKMS) CreateKey(ctx context.Context) error {
 	client, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
 		return errors.Wrap(err, "new key management client")
 	}
-	deets, err := parseKeyResourceID(keyResourceID)
+	deets, err := parseKeyResourceID(g.keyResourceID)
 	if err != nil {
 		return errors.Wrap(err, "parsing key resource ID")
 	}
@@ -65,7 +73,7 @@ func parseKeyResourceID(keyResourceID string) (gcpDetails, error) {
 
 func createKeyRing(ctx context.Context, client *kms.KeyManagementClient, deets gcpDetails) error {
 	getKeyRingRequest := &kmspb.GetKeyRingRequest{
-		Name: deets.keyRing,
+		Name: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", deets.projectID, deets.locationID, deets.keyRing),
 	}
 	if result, err := client.GetKeyRing(ctx, getKeyRingRequest); err == nil {
 		fmt.Printf("Key ring %s already exists in GCP KMS, moving on to creating key.\n", result.GetName())
@@ -83,6 +91,14 @@ func createKeyRing(ctx context.Context, client *kms.KeyManagementClient, deets g
 }
 
 func createKey(ctx context.Context, client *kms.KeyManagementClient, deets gcpDetails) error {
+	getKeyRequest := &kmspb.GetCryptoKeyRequest{
+		Name: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", deets.projectID, deets.locationID, deets.keyRing, deets.key),
+	}
+	if result, err := client.GetCryptoKey(ctx, getKeyRequest); err == nil {
+		fmt.Printf("Key %s already exists in GCP KMS, skipping creation.\n", result.GetName())
+		return nil
+	}
+
 	createKeyRequest := &kmspb.CreateCryptoKeyRequest{
 		Parent:      fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", deets.projectID, deets.locationID, deets.keyRing),
 		CryptoKeyId: deets.key,
