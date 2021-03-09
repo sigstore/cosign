@@ -51,12 +51,13 @@ func SignBlob() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignBlobCmd(ctx, *key, args[0], *b64, getPass)
+			_, err := SignBlobCmd(ctx, *key, args[0], *b64, getPass)
+			return err
 		},
 	}
 }
 
-func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf cosign.PassFunc) error {
+func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -66,25 +67,25 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		payload, err = ioutil.ReadFile(payloadPath)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pass, err := pf(false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	kb, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	pk, err := cosign.LoadPrivateKey(kb, pass)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	h := sha256.Sum256(payload)
 	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if b64 {
 		fmt.Println(base64.StdEncoding.EncodeToString(signature))
@@ -92,5 +93,5 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		// No newline if using the raw signature
 		os.Stdout.Write(signature)
 	}
-	return nil
+	return signature, nil
 }
