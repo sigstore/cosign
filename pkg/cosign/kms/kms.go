@@ -27,22 +27,23 @@ type KMS interface {
 	// with the ECDSA algorithm on the P-256 Curve with a SHA-256 digest
 	CreateKey(context.Context) error
 
-	// Encrypt is responsible for signing
-	Encrypt() error
+	// Sign is responsible for signing an image via the keys
+	// stored in KMS
+	Sign(ctx context.Context, keyPath string,
+		imageRef string, upload bool, payloadPath string,
+		annotations map[string]string, kmsVal string, forceTlog bool) error
 }
 
 const gcpScheme = "gcpkms://"
 
-func Get(keyResourceID string) (KMS, error) {
+func Get(ctx context.Context, keyResourceID string) (KMS, error) {
 	id := strings.SplitAfter(keyResourceID, "://")
 	if len(id) != 2 {
 		return nil, errors.New("please format the kms key as gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]")
 	}
 	switch scheme := id[0]; scheme {
 	case gcpScheme:
-		return &GCPKMS{
-			keyResourceID: id[1],
-		}, nil
+		return newGCP(ctx, id[1])
 	default:
 		return nil, errors.New("currently only GCP KMS is supported")
 	}

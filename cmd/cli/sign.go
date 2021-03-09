@@ -34,6 +34,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kms"
 )
 
 type annotationsMap struct {
@@ -65,6 +66,7 @@ func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
 		key         = flagset.String("key", "", "path to the private key")
+		kmsVal      = flagset.String("kms", "", "create key pair in KMS service to use for signing")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		forceTlog   = flagset.Bool("force-tlog", false, "whether to upload to the tlog even when the image is private")
@@ -77,7 +79,7 @@ func Sign() *ffcli.Command {
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" {
+			if *key == "" && *kmsVal == "" {
 				return flag.ErrHelp
 			}
 
@@ -85,14 +87,23 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass, *forceTlog)
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *kmsVal, getPass, *forceTlog)
 		},
 	}
 }
 
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, pf cosign.PassFunc, forceTlog bool) error {
+	annotations map[string]string, kmsVal string, pf cosign.PassFunc, forceTlog bool) error {
+
+	if kmsVal != "" {
+		k, err := kms.Get(ctx, kmsVal)
+		if err != nil {
+			return err
+		}
+		return k.Sign(ctx, keyPath, imageRef, upload, payloadPath, annotations, kmsVal, forceTlog)
+	}
+
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

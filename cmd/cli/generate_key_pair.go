@@ -50,7 +50,7 @@ func GenerateKeyPair() *ffcli.Command {
 
 func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 	if kmsVal != "" {
-		k, err := kms.Get(kmsVal)
+		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
 			return err
 		}
