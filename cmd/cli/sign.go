@@ -66,7 +66,7 @@ func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
 		key         = flagset.String("key", "", "path to the private key")
-		kmsVal      = flagset.String("kms", "", "create key pair in KMS service to use for signing")
+		kmsVal      = flagset.String("kms", "", "sign via a private key stored in a KMS")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		forceTlog   = flagset.Bool("force-tlog", false, "whether to upload to the tlog even when the image is private")
@@ -123,7 +123,14 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return err
 		}
-		signature, publicKey, err = k.Sign(ctx, get, payload)
+		signature, err = k.Sign(ctx, get, payload)
+		if err != nil {
+			return errors.Wrap(err, "signing")
+		}
+		publicKey, err = k.PublicKey(ctx)
+		if err != nil {
+			return errors.Wrap(err, "getting public key")
+		}
 	} else {
 		signature, publicKey, err = sign(ctx, get, keyPath, payload, pf)
 	}

@@ -32,9 +32,13 @@ type KMS interface {
 
 	// Sign is responsible for signing an image via the keys
 	// stored in KMS
-	Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, publicKey *ecdsa.PublicKey, err error)
+	Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error)
+
+	// PublicKey returns the public key stored in the KMS
+	PublicKey(ctx context.Context) (*ecdsa.PublicKey, error)
 }
 
+// schemes for various KMS services are copied from https://github.com/google/go-cloud/tree/master/secrets
 const gcpScheme = "gcpkms://"
 
 func Get(ctx context.Context, keyResourceID string) (KMS, error) {

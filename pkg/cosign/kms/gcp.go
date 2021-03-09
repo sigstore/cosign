@@ -61,13 +61,7 @@ func newGCP(ctx context.Context, keyResourceID string) (*gcp, error) {
 	}, nil
 }
 
-func (g *gcp) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
-	// get public key first
-	publicKey, err = g.publicKey(ctx)
-	if err != nil {
-		return
-	}
-
+func (g *gcp) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error) {
 	// Calculate the digest of the message.
 	digest := sha256.New()
 	_, err = digest.Write(payload)
@@ -113,7 +107,7 @@ func (g *gcp) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) 
 	return
 }
 
-func (g *gcp) publicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
+func (g *gcp) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	name, err := g.keyVersionName(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "key version")
@@ -135,7 +129,7 @@ func (g *gcp) publicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	}
 	ecKey, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("public key is not rsa")
+		return nil, fmt.Errorf("public key is not ecdsa")
 	}
 	return ecKey, nil
 }
