@@ -17,11 +17,11 @@ limitations under the License.
 package cosign
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -29,6 +29,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 type SignedPayload struct {
@@ -68,42 +70,39 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 	}
 
 	signatures := make([]SignedPayload, len(descriptors))
-	var errs []error
-	var wg sync.WaitGroup
-	wg.Add(len(descriptors))
+
+	g, _ := errgroup.WithContext(context.Background())
+
 	for i, desc := range descriptors {
-		go func(i int, desc v1.Descriptor) {
-			defer wg.Done()
+		i, desc := i, desc
+		g.Go(func() error {
 			base64sig, ok := desc.Annotations[sigkey]
 			if !ok {
-				return
+				return nil
 			}
 			l, err := remote.Layer(ref.Context().Digest(desc.Digest.String()), remote.WithAuthFromKeychain(authn.DefaultKeychain))
 			if err != nil {
-				errs = append(errs, err)
-				return
+				return errors.Wrap(err, "remote layer")
 			}
 
 			r, err := l.Compressed()
 			if err != nil {
-				errs = append(errs, err)
-				return
+				return errors.Wrap(err, "compressing")
 			}
 
 			payload, err := ioutil.ReadAll(r)
 			if err != nil {
-				errs = append(errs, err)
-				return
+				return err
 			}
 			signatures[i] = SignedPayload{
 				Payload:         payload,
 				Base64Signature: base64sig,
 			}
-		}(i, desc)
+			return nil
+		})
 	}
-	wg.Wait()
-	if errs != nil {
-		return nil, nil, fmt.Errorf("errors found: %v", errs)
+	if err := g.Wait(); err != nil {
+		return nil, nil, err
 	}
 	return signatures, &targetDesc.Descriptor, nil
 }

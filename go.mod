@@ -13,5 +13,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/rekor v0.1.1-0.20210228052401-f0b66bf3835c
 	github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf
 )
