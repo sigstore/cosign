@@ -25,6 +25,7 @@ import (
 	"os"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kms"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"golang.org/x/term"
@@ -33,6 +34,7 @@ import (
 func GenerateKeyPair() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign generate-key-pair", flag.ExitOnError)
+		kmsVal  = flagset.String("kms", "", "create key pair in KMS service to use for signing")
 	)
 
 	return &ffcli.Command{
@@ -41,12 +43,20 @@ func GenerateKeyPair() *ffcli.Command {
 		ShortHelp:  "generate-key-pair generates a key-pair",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return GenerateKeyPairCmd(ctx)
+			return GenerateKeyPairCmd(ctx, *kmsVal)
 		},
 	}
 }
 
-func GenerateKeyPairCmd(ctx context.Context) error {
+func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
+	if kmsVal != "" {
+		k, err := kms.Get(ctx, kmsVal)
+		if err != nil {
+			return err
+		}
+		return k.CreateKey(ctx)
+	}
+
 	keys, err := cosign.GenerateKeyPair(getPass)
 	if err != nil {
 		return err

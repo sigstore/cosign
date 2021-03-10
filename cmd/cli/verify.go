@@ -24,12 +24,14 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 func Verify() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign verify", flag.ExitOnError)
+		kmsVal      = flagset.String("kms", "", "verify via a public key stored in a KMS")
 		key         = flagset.String("key", "", "path to the public key")
 		checkClaims = flagset.Bool("check-claims", true, "whether to check the claims found")
 		annotations = annotationsMap{}
@@ -42,16 +44,20 @@ func Verify() *ffcli.Command {
 		ShortHelp:  "Verify a signature on the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" {
+			if *key == "" && *kmsVal == "" {
 				return flag.ErrHelp
 			}
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
 
-			pubKey, err := cosign.LoadPublicKey(*key)
+			pubKeyDescriptor := *key
+			if *kmsVal != "" {
+				pubKeyDescriptor = *kmsVal
+			}
+			pubKey, err := cosign.LoadPublicKey(pubKeyDescriptor)
 			if err != nil {
-				return flag.ErrHelp
+				return errors.Wrap(err, "loading public key")
 			}
 
 			co := cosign.CheckOpts{
