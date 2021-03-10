@@ -177,7 +177,7 @@ type CheckOpts struct {
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
-func Verify(ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
+func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
 	// TODO: Figure out if we'll need a client before creating one.
 	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
@@ -185,7 +185,7 @@ func Verify(ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
 	}
 
 	// These are all the signatures attached to our image that we know how to parse.
-	allSignatures, desc, err := FetchSignatures(ref)
+	allSignatures, desc, err := FetchSignatures(ctx, ref)
 	if err != nil {
 		return nil, err
 	}

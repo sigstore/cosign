@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -116,7 +117,7 @@ func main() {
 				return nil, err
 			}
 
-			sps, _, err := cosign.FetchSignatures(ref)
+			sps, _, err := cosign.FetchSignatures(context.Background(), ref)
 			if err != nil {
 				return nil, err
 			}
@@ -162,7 +163,7 @@ func main() {
 				PubKey: pubKey,
 				Claims: true,
 			}
-			sps, err := cosign.Verify(ref, co)
+			sps, err := cosign.Verify(context.Background(), ref, co)
 			if err != nil {
 				return nil, err
 			}

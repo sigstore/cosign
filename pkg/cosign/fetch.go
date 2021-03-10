@@ -42,7 +42,7 @@ func Munge(desc v1.Descriptor) string {
 	return munged
 }
 
-func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error) {
+func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, *v1.Descriptor, error) {
 	var sigRef name.Reference
 	targetDesc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
@@ -60,7 +60,7 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		return nil, nil, err
 	}
 
-	g, ctx := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 	signatures := make([]SignedPayload, len(m.Layers))
 	sem := semaphore.NewWeighted(int64(runtime.NumCPU()))
 	for i, desc := range m.Layers {
