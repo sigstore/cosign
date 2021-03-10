@@ -19,6 +19,7 @@ package cosign
 import (
 	"context"
 	"io/ioutil"
+	"runtime"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -26,6 +27,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 type SignedPayload struct {
@@ -58,11 +60,16 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		return nil, nil, err
 	}
 
-	g, _ := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(context.Background())
 	signatures := make([]SignedPayload, len(m.Layers))
+	sem := semaphore.NewWeighted(int64(runtime.NumCPU()))
 	for i, desc := range m.Layers {
 		i, desc := i, desc
+		if err := sem.Acquire(ctx, 1); err != nil {
+			return nil, nil, err
+		}
 		g.Go(func() error {
+			defer sem.Release(1)
 			base64sig, ok := desc.Annotations[sigkey]
 			if !ok {
 				return nil
