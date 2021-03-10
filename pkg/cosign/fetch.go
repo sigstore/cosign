@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -66,31 +67,43 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		return nil, nil, err
 	}
 
-	signatures := []SignedPayload{}
-	for _, desc := range descriptors {
-		base64sig, ok := desc.Annotations[sigkey]
-		if !ok {
-			continue
-		}
-		l, err := remote.Layer(ref.Context().Digest(desc.Digest.String()), remote.WithAuthFromKeychain(authn.DefaultKeychain))
-		if err != nil {
-			return nil, nil, err
-		}
+	signatures := make([]SignedPayload, len(descriptors))
+	var errs []error
+	var wg sync.WaitGroup
+	wg.Add(len(descriptors))
+	for i, desc := range descriptors {
+		go func(i int, desc v1.Descriptor) {
+			defer wg.Done()
+			base64sig, ok := desc.Annotations[sigkey]
+			if !ok {
+				return
+			}
+			l, err := remote.Layer(ref.Context().Digest(desc.Digest.String()), remote.WithAuthFromKeychain(authn.DefaultKeychain))
+			if err != nil {
+				errs = append(errs, err)
+				return
+			}
 
-		r, err := l.Compressed()
-		if err != nil {
-			return nil, nil, err
+			r, err := l.Compressed()
+			if err != nil {
+				errs = append(errs, err)
+				return
+			}
 
-		}
-
-		payload, err := ioutil.ReadAll(r)
-		if err != nil {
-			return nil, nil, err
-		}
-		signatures = append(signatures, SignedPayload{
-			Payload:         payload,
-			Base64Signature: base64sig,
-		})
+			payload, err := ioutil.ReadAll(r)
+			if err != nil {
+				errs = append(errs, err)
+				return
+			}
+			signatures[i] = SignedPayload{
+				Payload:         payload,
+				Base64Signature: base64sig,
+			}
+		}(i, desc)
+	}
+	wg.Wait()
+	if errs != nil {
+		return nil, nil, fmt.Errorf("errors found: %v", errs)
 	}
 	return signatures, &targetDesc.Descriptor, nil
 }
