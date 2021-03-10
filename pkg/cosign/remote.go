@@ -17,19 +17,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
-func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return nil, err
-	}
-	m, err := img.Manifest()
-	if err != nil {
-		return nil, err
-	}
-
-	return m.Layers, nil
-}
-
 func Upload(signature, payload []byte, dstTag name.Reference) error {
 	l := &staticLayer{
 		b:  payload,
