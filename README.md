@@ -27,6 +27,8 @@ This shows how to:
 
 See the [Usage documentation](USAGE.md) for more commands!
 
+See the [FUN.md](FUN.md) documentation for some fun tips and tricks!
+
 ### Generate a keypair
 
 ```
