@@ -9,7 +9,8 @@ Cosign aims to make signatures **invisible infrastructure**.
 ## Info
 
 `Cosign` is developed as part of the [`sigstore`](https://sigstore.dev) project.
-Come on over to our [slack channel](https://sigstore.slack.com)!
+We also use a slack [slack channel](https://sigstore.slack.com)!
+Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcfWn4XEyMqUUutbUQ) for the invite link.
 
 ## Installation
 
@@ -24,6 +25,10 @@ This shows how to:
 * sign a container image and store that signature in the registry
 * find signatures for a container image, and verify them against a public key
 
+See the [Usage documentation](USAGE.md) for more commands!
+
+See the [FUN.md](FUN.md) documentation for some fun tips and tricks!
+
 ### Generate a keypair
 
 ```
@@ -37,9 +42,9 @@ Public key written to cosign.key
 ### Sign a container and store the signature in the registry
 
 ```
-$ cosign sign -key cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign sign -key cosign.key dlorenc/demo
 Enter password for private key:
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.cosign
 ```
 
 ### Verify a container against a public key
@@ -53,202 +58,29 @@ Note that these signed payloads include the digest of the container image, which
 sure these "detached" signatures cover the correct image.
 
 ```
-$ cosign verify -key cosign.pub us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
+$ cosign verify -key cosign.pub dlorenc/demo
+The following checks were performed on these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container signature"},"Optional":null}
 ```
 
 ## Detailed Usage
 
-### Sign a container multiple times
+See the [Usage documentation](USAGE.md) for more commands!
 
-Multiple signatures can be "attached" to a single container image:
-
-```
-$ cosign sign -key cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Enter password for private key:
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-
-$ cosign sign -key other-cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Enter password for private key:
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-```
-
-We only actually sign the digest, but you can pass by tag or digest:
-
-```
-$ cosign sign -key other-cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
-Enter password for private key:
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-
-$ cosign sign -key other-cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
-Enter password for private key:
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-```
-
-The `-a` flag can be used to add annotations to the generated, signed payload.
-This flag can be repeated:
-
-```
-$ cosign sign -key cosign.key -a foo=bar -a baz=bat us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:v1
-Enter password for private key:
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-```
-
-These values are included in the signed payload under the `Optional` section.
-(More on this later):
-
-```
-"Optional":{"baz":"bat","foo":"bar"}
-```
-
-### Sign and upload a generated payload (in another format, from another tool)
-
-The payload must be specified as a path to a file:
-
-```
-$ cosign sign -key key.pem -payload payload.json us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ==
-Using payload from: payload.json
-Enter password for private key:
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-```
-
-Signatures are uploaded to an OCI artifact stored with a predictable name.
-This name can be located with the `cosign triangulate` command:
-
-```shell
-cosign triangulate gcr.io/dlorenc-vmtest2/demo
-gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
-```
-
-### Sign but skip upload (to store somewhere else)
-
-The base64 encoded signature is printed to stdout.
-This can be stored somewhere else.
-
-```
-$ cosign sign -key key.pem --upload=false us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ==
-```
-
-### Generate the signature payload (to sign with another tool)
-
-The json payload is printed to stdout:
-
-```
-$ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
-```
-
-This can be piped directly into openssl:
-
-```
-$ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun | openssl...
-```
-
-### Upload a generated signature
-
-The signature is passed via the -signature flag.
-It can be a file:
-
-```
-$ cosign upload -signature file.sig us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
-```
-
-the base64-encoded signature:
-
-```
-$ cosign upload -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
-```
-
-or, `-` for stdin for chaining from other commands:
-
-```
-$ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun | openssl... | cosign upload -signature -- us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
-```
-
-### Verifying claims
-
-**Important Note**:
-
-Signature payloads created by `cosign` included the digest of the container image they are attached to.
-By default, `cosign` validates that this digest matches the container during `cosign verify`.
-
-If you are using other payload formats with `cosign`, you can use the `-check-claims=false` flag:
-
-```
-$ cosign verify -check-claims=false -key public-key.pem us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-Warning: the following claims have not been verified:
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container signature"},"Optional":null}
-```
-
-This will still verify the signature and payload against the supplied public key, but will not
-verify any claims in the payload.
-
-Annotations made in the original signature (`cosign sign -a foo=bar`) are present under the `Optional` section of the payload:
-
-```shell
-$ cosign verify -key cosign.pub  gcr.io/dlorenc-vmtest2/demo | jq .
-{
-  "Critical": {
-    "Identity": {
-      "docker-reference": ""
-    },
-    "Image": {
-      "Docker-manifest-digest": "97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"
-    },
-    "Type": "cosign container signature"
-  },
-  "Optional": {
-    "sig": "original"
-  }
-}
-```
-
-These can be checked with matching `-a foo=bar` flags on `cosign verify`.
-When using this flag, **every** specified key-value pair **must exist and match** in the verified payload.
-The payload may contain other key-value pairs.
-
-```shell
-# This works
-$ cosign verify -a -key cosign.pub  gcr.io/dlorenc-vmtest2/demo
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container signature"},"Optional":{"sig":"original"}}
-
-# This works too
-$ cosign verify -a sig=original -key cosign.pub  gcr.io/dlorenc-vmtest2/demo
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container signature"},"Optional":{"sig":"original"}}
-
-# This doesn't work
-$ cosign verify -a sig=original -a=foo=bar -key cosign.pub  gcr.io/dlorenc-vmtest2/demo
-error: no matching claims:
-invalid or missing annotation in claim: map[sig:original]
-```
-
-### Download the signatures to verify with another tool
-
-Each signature is printed to stdout in a json format:
-
-```
-$ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
-{"Base64Signature":"Ejy6ipGJjUzMDoQFePWixqPBYF0iSnIvpMWps3mlcYNSEcRRZelL7GzimKXaMjxfhy5bshNGvDT5QoUJ0tqUAg==","Payload":"eyJDcml0aWNhbCI6eyJJZGVudGl0eSI6eyJkb2NrZXItcmVmZXJlbmNlIjoiIn0sIkltYWdlIjp7IkRvY2tlci1tYW5pZmVzdC1kaWdlc3QiOiI4N2VmNjBmNTU4YmFkNzliZWVhNjQyNWEzYjI4OTg5ZjAxZGQ0MTcxNjQxNTBhYjNiYWFiOThkY2JmMDRkZWY4In0sIlR5cGUiOiIifSwiT3B0aW9uYWwiOm51bGx9"}
-```
-
-### Rekor Support
+## Rekor Support
 _Note: this is an experimental feature_
 
 To publish signed artifacts to a Rekor transparency log and verify their existence in the log, set the `TLOG=1` environment variable.
 
 ```
-TLOG=1 cosign sign -key cosign.key gcr.io/dlorenc-vmtest2/demo
-TLOG=1 cosign verify -key cosign.pub gcr.io/dlorenc-vmtest2/demo
+TLOG=1 cosign sign -key cosign.key dlorenc/demo
+TLOG=1 cosign verify -key cosign.pub dlorenc/demo
 ```
 
 `cosign` defaults to using the public instance of rekor at [api.rekor.dev](https://api.rekor.dev).
 To configure the rekor server, set the `REKOR_SERVER` env variable.
-
 
 ## Caveats
 
@@ -279,7 +111,12 @@ See https://github.com/sigStore/fulcio for more info.
 `cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
 interactions, which has excellent support, but other registries may have quirks.
 
-Today, `cosign` has only been tested, barely, against GCP's Artifact Registry and Container Registry.
+Today, `cosign` has been tested and works against the following registries:
+
+* GCP's Artifact Registry and Container Registry
+* Docker Hub
+* Azure Container Registry
+
 We aim for wide registry support.
 Please help test!
 See https://github.com/sigstore/cosign/issues/40 for the tracking issue.
@@ -455,10 +292,10 @@ run something like:
 
 ```shell
 $ TAG=sign-me
-$ DGST=$(crane digest gcr.io/dlorenc-vmtest2/demo:$TAG)
-$ cosign sign -key cosign.key -a tag=$TAG gcr.io/dlorenc-vmtest2/demo@$DGST
+$ DGST=$(crane digest dlorenc/demo:$TAG)
+$ cosign sign -key cosign.key -a tag=$TAG dlorenc/demo@$DGST
 Enter password for private key:
-Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
+Pushing signature to: dlorenc/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
 ```
 
 Then you can verify that the tag->digest mapping is also covered in the signature, using the `-a` flag to `cosign verify`.
@@ -466,7 +303,7 @@ This example verifes that the digest `$TAG` points to (`sha256:97fc222cee7991b5b
 has been signed, **and also** that the `$TAG`:
 
 ```
-$ cosign verify -key cosign.pub -a tag=$TAG gcr.io/dlorenc-vmtest2/demo:$TAG | jq .
+$ cosign verify -key cosign.pub -a tag=$TAG dlorenc/demo:$TAG | jq .
 {
   "Critical": {
     "Identity": {
@@ -550,10 +387,10 @@ it to act as an attestation to the **signature(s) themselves**.
 Before we sign the signature artifact, we first give it a memorable name so we can find it later.
 
 ```shell
-$ cosign sign -key cosign.key -a sig=original gcr.io/dlorenc-vmtest2/demo
+$ cosign sign -key cosign.key -a sig=original dlorenc/demo
 Enter password for private key:
-Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
-$ cosign verify -key cosign.pub gcr.io/dlorenc-vmtest2/demo | jq .
+Pushing signature to: dlorenc/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign
+$ cosign verify -key cosign.pub dlorenc/demo | jq .
 {
   "Critical": {
     "Identity": {
@@ -570,16 +407,16 @@ $ cosign verify -key cosign.pub gcr.io/dlorenc-vmtest2/demo | jq .
 }
 
 # Now give that signature a memorable name, then sign that
-$ crane tag $(cosign triangulate gcr.io/dlorenc-vmtest2/demo) mysignature
-2021/02/15 20:22:55 gcr.io/dlorenc-vmtest2/demo:mysignature: digest: sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e size: 556
-$ cosign sign -key cosign.key -a sig=counter gcr.io/dlorenc-vmtest2/demo:mysignature
+$ crane tag $(cosign triangulate dlorenc/demo) mysignature
+2021/02/15 20:22:55 dlorenc/demo:mysignature: digest: sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e size: 556
+$ cosign sign -key cosign.key -a sig=counter dlorenc/demo:mysignature
 Enter password for private key:
-Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e.cosign
-$ cosign verify -key cosign.pub gcr.io/dlorenc-vmtest2/demo:mysignature
+Pushing signature to: dlorenc/demo:sha256-71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e.cosign
+$ cosign verify -key cosign.pub dlorenc/demo:mysignature
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e"},"Type":"cosign container signature"},"Optional":{"sig":"counter"}}
 
 # Finally, check the original signature
-$ crane manifest gcr.io/dlorenc-vmtest2/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e
+$ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e
 {
   "schemaVersion": 2,
   "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
@@ -600,4 +437,3 @@ $ crane manifest gcr.io/dlorenc-vmtest2/demo@sha256:71f70e5d29bde87f988740665257
   ]
 }
 ```
-
