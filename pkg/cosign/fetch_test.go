@@ -79,7 +79,7 @@ vn2snyjRWmm8kGr62QR0T6TKIElf07EmdrAglZodYXcHhv0b0JUmdTnn30vRDQ==
 -----BEGIN OTHER THING-----
 `
 
-func Test_loadCerts(t *testing.T) {
+func Test_LoadCerts(t *testing.T) {
 	type args struct {
 		pemStr string
 	}
@@ -120,9 +120,9 @@ func Test_loadCerts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := loadCerts(tt.args.pemStr)
+			got, err := LoadCerts(tt.args.pemStr)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("loadCerts() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("LoadCerts() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if d := cmp.Diff(tt.want, len(got)); d != "" {

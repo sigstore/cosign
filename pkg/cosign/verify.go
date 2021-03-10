@@ -337,11 +337,15 @@ func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (stri
 }
 
 func (sp *SignedPayload) TrustedCert(roots *x509.CertPool) error {
-	if _, err := sp.Cert.Verify(x509.VerifyOptions{
+	return TrustedCert(sp.Cert, roots)
+}
+
+func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {
+	if _, err := cert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
 		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
-		CurrentTime: sp.Cert.NotBefore,
+		CurrentTime: cert.NotBefore,
 		Roots:       fulcio.Roots,
 		KeyUsages: []x509.ExtKeyUsage{
 			x509.ExtKeyUsage(x509.KeyUsageDigitalSignature),

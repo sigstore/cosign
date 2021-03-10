@@ -91,7 +91,7 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		// We may have a certificate and chain
 		certPem := desc.Annotations[certkey]
 		if certPem != "" {
-			certs, err := loadCerts(certPem)
+			certs, err := LoadCerts(certPem)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -102,7 +102,7 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 		}
 		chainPem := desc.Annotations[chainkey]
 		if chainPem != "" {
-			certs, err := loadCerts(chainPem)
+			certs, err := LoadCerts(chainPem)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -114,7 +114,7 @@ func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error
 	return signatures, &targetDesc.Descriptor, nil
 }
 
-func loadCerts(pemStr string) ([]*x509.Certificate, error) {
+func LoadCerts(pemStr string) ([]*x509.Certificate, error) {
 	blocks := []*pem.Block{}
 	pemBytes := []byte(pemStr)
 	for {

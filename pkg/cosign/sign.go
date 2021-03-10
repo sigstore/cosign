@@ -28,7 +28,7 @@ import (
 
 const (
 	pemType  = "ENCRYPTED COSIGN PRIVATE KEY"
-	sigkey   = "dev.sigstore.cosign/signature"
+	sigkey   = "dev.cosignproject.cosign/signature"
 	certkey  = "dev.sigstore.cosign/certificate"
 	chainkey = "dev.sigstore.cosign/chain"
 )

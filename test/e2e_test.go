@@ -140,8 +140,8 @@ func TestSignBlob(t *testing.T) {
 	ctx := context.Background()
 
 	// Verify should fail on a bad input
-	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath1, "badsig", blob), t)
-	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath2, "badsig", blob), t)
+	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath1, "", "badsig", blob), t)
+	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath2, "", "badsig", blob), t)
 
 	// Now sign the blob with one key
 	sig, err := cli.SignBlobCmd(ctx, privKeyPath1, bp, true, passFunc)
@@ -149,7 +149,7 @@ func TestSignBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cli.VerifyBlobCmd(ctx, pubKeyPath1, string(sig), bp), t)
+	must(cli.VerifyBlobCmd(ctx, pubKeyPath1, "", string(sig), bp), t)
 }
 
 func TestGenerate(t *testing.T) {
