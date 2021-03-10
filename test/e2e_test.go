@@ -63,7 +63,7 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now sign the image
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc, false), t)
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, "", passFunc, false), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -72,7 +72,7 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar"}), t)
 
 	// Sign the image with an annotation
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", map[string]string{"foo": "bar"}, passFunc, false), t)
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", map[string]string{"foo": "bar"}, "", passFunc, false), t)
 
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar"}), t)
@@ -103,13 +103,13 @@ func TestMultipleSignatures(t *testing.T) {
 	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign the image with one key
-	must(cli.SignCmd(ctx, priv1, imgName, true, "", nil, passFunc, false), t)
+	must(cli.SignCmd(ctx, priv1, imgName, true, "", nil, "", passFunc, false), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil), t)
 	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign with the other key too
-	must(cli.SignCmd(ctx, priv2, imgName, true, "", nil, passFunc, false), t)
+	must(cli.SignCmd(ctx, priv2, imgName, true, "", nil, "", passFunc, false), t)
 
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil), t)
@@ -267,7 +267,7 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now sign the image without the tlog
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc, false), t)
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, "", passFunc, false), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -279,7 +279,7 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Sign again with the tlog env var on
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc, false), t)
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, "", passFunc, false), t)
 	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
