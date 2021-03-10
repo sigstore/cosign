@@ -64,8 +64,12 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 
 	var b64sig string
 	// This can be the base64-encoded bytes or a path to the signature
-	if _, err = os.Stat(sigRef); os.IsNotExist(err) {
-		b64sig = sigRef
+	if _, err = os.Stat(sigRef); err != nil {
+		if os.IsNotExist(err) {
+			b64sig = sigRef
+		} else {
+			return err
+		}
 	} else {
 		b, err := ioutil.ReadFile(sigRef)
 		if err != nil {
@@ -78,9 +82,6 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 		} else {
 			b64sig = base64.StdEncoding.EncodeToString(b)
 		}
-	}
-	if err != nil {
-		return err
 	}
 
 	var blobBytes []byte
