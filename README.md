@@ -109,7 +109,12 @@ See https://github.com/sigStore/fulcio for more info.
 `cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
 interactions, which has excellent support, but other registries may have quirks.
 
-Today, `cosign` has only been tested, barely, against GCP's Artifact Registry and Container Registry and DockerHub.
+Today, `cosign` has been tested and works against the following registries:
+
+* GCP's Artifact Registry and Container Registry
+* Docker Hub
+* Azure Container Registry
+
 We aim for wide registry support.
 Please help test!
 See https://github.com/sigstore/cosign/issues/40 for the tracking issue.
@@ -430,4 +435,3 @@ $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa2
   ]
 }
 ```
-
