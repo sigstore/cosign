@@ -34,6 +34,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kms"
 )
 
 type annotationsMap struct {
@@ -65,6 +66,7 @@ func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
 		key         = flagset.String("key", "", "path to the private key")
+		kmsVal      = flagset.String("kms", "", "sign via a private key stored in a KMS")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		forceTlog   = flagset.Bool("force-tlog", false, "whether to upload to the tlog even when the image is private")
@@ -77,7 +79,7 @@ func Sign() *ffcli.Command {
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" {
+			if *key == "" && *kmsVal == "" {
 				return flag.ErrHelp
 			}
 
@@ -85,24 +87,23 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, getPass, *forceTlog)
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *kmsVal, getPass, *forceTlog)
 		},
 	}
 }
 
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, pf cosign.PassFunc, forceTlog bool) error {
+	annotations map[string]string, kmsVal string, pf cosign.PassFunc, forceTlog bool) error {
+
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "parsing reference")
 	}
-
 	get, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "getting remote image")
 	}
-
 	// The payload can be specified via a flag to skip generation.
 	var payload []byte
 	if payloadPath != "" {
@@ -112,26 +113,29 @@ func SignCmd(ctx context.Context, keyPath string,
 		payload, err = cosign.Payload(get.Descriptor, annotations)
 	}
 	if err != nil {
-		return err
+		return errors.Wrap(err, "payload")
 	}
 
-	pass, err := pf(false)
-	if err != nil {
-		return err
+	var signature []byte
+	var publicKey *ecdsa.PublicKey
+	if kmsVal != "" {
+		k, err := kms.Get(ctx, kmsVal)
+		if err != nil {
+			return err
+		}
+		signature, err = k.Sign(ctx, get, payload)
+		if err != nil {
+			return errors.Wrap(err, "signing")
+		}
+		publicKey, err = k.PublicKey(ctx)
+		if err != nil {
+			return errors.Wrap(err, "getting public key")
+		}
+	} else {
+		signature, publicKey, err = sign(ctx, get, keyPath, payload, pf)
 	}
-	kb, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		return errors.Wrapf(err, "reading %s", keyPath)
-	}
-	pk, err := cosign.LoadPrivateKey(kb, pass)
-	if err != nil {
-		return errors.Wrap(err, "loading private key")
-	}
-
-	h := sha256.Sum256(payload)
-	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
-	if err != nil {
-		return errors.Wrap(err, "signing asn1")
+		return errors.Wrap(err, "signing")
 	}
 
 	if !upload {
@@ -152,7 +156,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		//private image!
 		if forceTlog {
 			fmt.Println("force uploading signature of private image to tlog")
-			return cosign.UploadTLog(signature, payload, &pk.PublicKey)
+			return cosign.UploadTLog(signature, payload, publicKey)
 		} else {
 			fmt.Println("skipping upload of private image, use --force-tlog to upload")
 			return nil
@@ -161,5 +165,28 @@ func SignCmd(ctx context.Context, keyPath string,
 	if os.Getenv(cosign.TLogEnv) != "1" {
 		return nil
 	}
-	return cosign.UploadTLog(signature, payload, &pk.PublicKey)
+	return cosign.UploadTLog(signature, payload, publicKey)
+}
+
+func sign(ctx context.Context, img *remote.Descriptor, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
+	pass, err := pf(false)
+	if err != nil {
+		return
+	}
+	kb, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return
+	}
+	pk, err := cosign.LoadPrivateKey(kb, pass)
+	if err != nil {
+		return
+	}
+
+	h := sha256.Sum256(payload)
+	signature, err = ecdsa.SignASN1(rand.Reader, pk, h[:])
+	if err != nil {
+		return
+	}
+	publicKey = &pk.PublicKey
+	return
 }

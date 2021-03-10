@@ -17,6 +17,7 @@ limitations under the License.
 package cosign
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -36,6 +37,7 @@ import (
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/pkg/cosign/kms"
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -48,7 +50,11 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	// The key could be plaintext or in a file.
 	// First check if the file exists.
 	var pubBytes []byte
-	if _, err := os.Stat(keyRef); os.IsNotExist(err) {
+	ctx := context.Background()
+	if k, err := kms.Get(ctx, keyRef); err == nil {
+		// KMS specified
+		return k.PublicKey(ctx)
+	} else if _, err := os.Stat(keyRef); os.IsNotExist(err) {
 		pubBytes, err = base64.StdEncoding.DecodeString(keyRef)
 		if err != nil {
 			return nil, err
