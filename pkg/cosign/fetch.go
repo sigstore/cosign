@@ -17,17 +17,13 @@ limitations under the License.
 package cosign
 
 import (
-	"fmt"
 	"io/ioutil"
-	"net/http"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 type SignedPayload struct {
@@ -43,40 +39,35 @@ func Munge(desc v1.Descriptor) string {
 }
 
 func FetchSignatures(ref name.Reference) ([]SignedPayload, *v1.Descriptor, error) {
-	var idxRef name.Reference
+	var sigRef name.Reference
 	targetDesc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, nil, err
 	}
-	idxRef = ref.Context().Tag(Munge(targetDesc.Descriptor))
+	sigRef = ref.Context().Tag(Munge(targetDesc.Descriptor))
 
-	rdesc, err := remote.Get(idxRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	sigImg, err := remote.Image(sigRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		if te, ok := err.(*transport.Error); ok && te.StatusCode == http.StatusNotFound {
-			return nil, nil, fmt.Errorf("manifest not found: %s", idxRef)
-		}
 		return nil, nil, err
 	}
 
-	if rdesc.MediaType != types.DockerManifestSchema2 {
-		return nil, nil, fmt.Errorf("unsupported media type: %s", rdesc.MediaType)
-	}
-	descriptors, err := Descriptors(idxRef)
+	m, err := sigImg.Manifest()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	signatures := []SignedPayload{}
-	for _, desc := range descriptors {
+	for _, desc := range m.Layers {
 		base64sig, ok := desc.Annotations[sigkey]
 		if !ok {
 			continue
 		}
-		l, err := remote.Layer(ref.Context().Digest(desc.Digest.String()), remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		l, err := sigImg.LayerByDigest(desc.Digest)
 		if err != nil {
 			return nil, nil, err
 		}
 
+		// Compressed is a misnomer here, we just want the raw bytes from the registry.
 		r, err := l.Compressed()
 		if err != nil {
 			return nil, nil, err
