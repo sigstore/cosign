@@ -61,7 +61,7 @@ func ValidReference(ref string) error {
 func parseReference(resourceID string) (projectID, locationID, keyRing, keyName string, err error) {
 	v := re.FindStringSubmatch(resourceID)
 	if len(v) != 5 {
-		err = fmt.Errorf("invalid format %q", resourceID)
+		err = errors.Errorf("invalid gcpkms format %q", resourceID)
 		return
 	}
 	projectID, locationID, keyRing, keyName = v[1], v[2], v[3], v[4]
@@ -152,7 +152,7 @@ func (g *GCPKMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	}
 	publicKey, err := x509.ParsePKIXPublicKey(p.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse public key: %v", err)
+		return nil, errors.Wrap(err,"failed to parse public key")
 	}
 	ecKey, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
