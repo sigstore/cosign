@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	cli "github.com/sigstore/cosign/cmd/cosign"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 )
 
 var (
