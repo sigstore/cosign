@@ -169,11 +169,11 @@ func SignCmd(ctx context.Context, keyPath string,
 }
 
 func sign(ctx context.Context, img *remote.Descriptor, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
-	pass, err := pf(false)
+	kb, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		return
 	}
-	kb, err := ioutil.ReadFile(keyPath)
+	pass, err := pf(false)
 	if err != nil {
 		return
 	}
