@@ -14,8 +14,17 @@ Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcf
 
 ## Installation
 
-For now, clone and `go build -o cosign ./cmd`.
-I'll publish releases when I'm comfortable supporting this for others to use.
+For now, clone the repository and run:
+
+    go build -o cosign ./cmd/cosign
+
+Alternatively, if you have Go 1.16+, you can directly install by running:
+
+    go install github.com/sigstore/cosign/cmd/cosign@latest
+
+and the resulting binary will be placed at `$HOME/go/bin/cosign`.
+
+We'll publish releases at a later time.
 
 ## Quick Start
 
