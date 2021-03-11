@@ -64,7 +64,7 @@ func Verify() *ffcli.Command {
 				Annotations: annotations.annotations,
 				Claims:      *checkClaims,
 				PubKey:      pubKey,
-				Tlog:        os.Getenv("TLOG") == "1",
+				Tlog:        os.Getenv(cosign.ExperimentalEnv) == "1",
 			}
 
 			verified, err := VerifyCmd(ctx, args[0], co)

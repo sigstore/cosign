@@ -40,7 +40,7 @@ var verify = func(k, i string, b bool, a map[string]string) error {
 		PubKey:      pk,
 		Annotations: a,
 		Claims:      b,
-		Tlog:        os.Getenv("TLOG") == "1",
+		Tlog:        os.Getenv(cosign.ExperimentalEnv) == "1",
 	}
 	_, err = cli.VerifyCmd(context.Background(), i, co)
 	return err
@@ -244,7 +244,7 @@ func setenv(t *testing.T, k, v string) func() {
 		t.Fatalf("error setitng env: %v", err)
 	}
 	return func() {
-		os.Unsetenv(cosign.ServerEnv)
+		os.Unsetenv(k)
 	}
 }
 
@@ -273,7 +273,7 @@ func TestTlog(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now we turn on the tlog!
-	defer setenv(t, cosign.TLogEnv, "1")()
+	defer setenv(t, cosign.ExperimentalEnv, "1")()
 
 	// Verify shouldn't work since we haven't put anything in it yet.
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)

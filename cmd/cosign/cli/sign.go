@@ -69,13 +69,13 @@ func Sign() *ffcli.Command {
 		kmsVal      = flagset.String("kms", "", "sign via a private key stored in a KMS")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
-		forceTlog   = flagset.Bool("force-tlog", false, "whether to upload to the tlog even when the image is private")
+		force       = flagset.Bool("f", false, "skip warnings and confirmations")
 		annotations = annotationsMap{}
 	)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
-		ShortUsage: "cosign sign -key <key> [-payload <path>] [-a key=value] [-upload=true|false] [-force-tlog=true|false] <image uri>",
+		ShortUsage: "cosign sign -key <key> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
 		ShortHelp:  "Sign the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
@@ -87,14 +87,14 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *kmsVal, getPass, *forceTlog)
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *kmsVal, getPass, *force)
 		},
 	}
 }
 
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, kmsVal string, pf cosign.PassFunc, forceTlog bool) error {
+	annotations map[string]string, kmsVal string, pf cosign.PassFunc, force bool) error {
 
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
@@ -151,19 +151,23 @@ func SignCmd(ctx context.Context, keyPath string,
 		return err
 	}
 
-	// Check if the image is public (no auth in Get)
-	if _, err := remote.Get(ref); err != nil {
-		//private image!
-		if forceTlog {
-			fmt.Println("force uploading signature of private image to tlog")
-			return cosign.UploadTLog(signature, payload, publicKey)
-		} else {
-			fmt.Println("skipping upload of private image, use --force-tlog to upload")
-			return nil
-		}
-	}
-	if os.Getenv(cosign.TLogEnv) != "1" {
+	if os.Getenv(cosign.ExperimentalEnv) != "1" {
 		return nil
+	}
+
+	// Check if the image is public (no auth in Get)
+	if !force {
+		if _, err := remote.Get(ref); err != nil {
+			fmt.Println("warning: uploading to the public transparency log for a private image, please confirm: (Y/N)")
+			var response string
+			if _, err := fmt.Scanln(&response); err != nil {
+				return err
+			}
+			if response != "Y" {
+				fmt.Println("not uploading to transparency log")
+				return nil
+			}
+		}
 	}
 	return cosign.UploadTLog(signature, payload, publicKey)
 }
