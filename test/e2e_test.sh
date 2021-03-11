@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -ex
+set -ex
 
 echo "copying rekor repo"
 cd $HOME
@@ -28,7 +28,7 @@ echo
 echo "running tests"
 
 cd $GITHUB_WORKSPACE
-go build -o cosign ./cmd/
+go build -o cosign ./cmd/cosign
 go test ./...
 
 
