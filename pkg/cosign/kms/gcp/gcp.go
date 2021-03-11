@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kms
+package gcp
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"hash/crc32"
-	"strings"
+	"regexp"
 
 	kms "cloud.google.com/go/kms/apiv1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-type gcp struct {
+type GCPKMS struct {
 	client        *kms.KeyManagementClient
 	keyResourceID string
 	projectID     string
@@ -42,26 +42,53 @@ type gcp struct {
 	key           string
 }
 
-func newGCP(ctx context.Context, keyResourceID string) (*gcp, error) {
-	details := strings.Split(keyResourceID, "/")
-	if len(details) != 8 {
-		return nil, errors.New("kms specification should be in the format gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]")
+var (
+	ErrKMSReference = errors.New("kms specification should be in the format gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]")
+
+	re = regexp.MustCompile(`^gcpkms://projects/([^/]+)/locations/([^/]+)/keyRings/([^/]+)/cryptoKeys/([^/]+)$`)
+)
+
+// schemes for various KMS services are copied from https://github.com/google/go-cloud/tree/master/secrets
+const ReferenceScheme = "gcpkms://"
+
+func ValidReference(ref string) error {
+	if !re.MatchString(ref){
+		return ErrKMSReference
 	}
+	return nil
+}
+
+func parseReference(resourceID string) (projectID, locationID, keyRing, keyName string, err error) {
+	v := re.FindStringSubmatch(resourceID)
+	if len(v) != 5 {
+		err = fmt.Errorf("invalid format %q", resourceID)
+		return
+	}
+	projectID, locationID, keyRing, keyName = v[1], v[2], v[3], v[4]
+	return
+}
+
+func NewGCP(ctx context.Context, keyResourceID string) (*GCPKMS, error) {
+	projectID, locationID, keyRing, keyName, err := parseReference(keyResourceID)
+	if err != nil {
+		return nil, err
+	}
+
 	client, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "new key management client")
+		return nil, errors.Wrap(err, "new gcp kms client")
 	}
-	return &gcp{
+	return &GCPKMS{
 		client:        client,
 		keyResourceID: keyResourceID,
-		projectID:     details[1],
-		locationID:    details[3],
-		keyRing:       details[5],
-		key:           details[7],
+		projectID:     projectID,
+		locationID:    locationID,
+		keyRing:       keyRing,
+		key:           keyName,
 	}, nil
 }
 
-func (g *gcp) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error) {
+func (g *GCPKMS) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error) {
 	// Calculate the digest of the message.
 	digest := sha256.New()
 	_, err = digest.Write(payload)
@@ -107,7 +134,7 @@ func (g *gcp) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) 
 	return
 }
 
-func (g *gcp) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
+func (g *GCPKMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	name, err := g.keyVersionName(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "key version")
@@ -136,7 +163,7 @@ func (g *gcp) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 
 // keyVersionName returns the first key version found for a key in KMS
 // TODO: is there a better way to do this?
-func (g *gcp) keyVersionName(ctx context.Context) (string, error) {
+func (g *GCPKMS) keyVersionName(ctx context.Context) (string, error) {
 	req := &kmspb.ListCryptoKeyVersionsRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", g.projectID, g.locationID, g.keyRing, g.key),
 	}
@@ -160,14 +187,14 @@ func (g *gcp) keyVersionName(ctx context.Context) (string, error) {
 	return name, nil
 }
 
-func (g *gcp) CreateKey(ctx context.Context) error {
+func (g *GCPKMS) CreateKey(ctx context.Context) error {
 	if err := g.createKeyRing(ctx); err != nil {
 		return errors.Wrap(err, "creating key ring")
 	}
 	return g.createKey(ctx)
 }
 
-func (g *gcp) createKeyRing(ctx context.Context) error {
+func (g *GCPKMS) createKeyRing(ctx context.Context) error {
 	getKeyRingRequest := &kmspb.GetKeyRingRequest{
 		Name: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", g.projectID, g.locationID, g.keyRing),
 	}
@@ -186,7 +213,7 @@ func (g *gcp) createKeyRing(ctx context.Context) error {
 	return err
 }
 
-func (g *gcp) createKey(ctx context.Context) error {
+func (g *GCPKMS) createKey(ctx context.Context) error {
 	getKeyRequest := &kmspb.GetCryptoKeyRequest{
 		Name: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", g.projectID, g.locationID, g.keyRing, g.key),
 	}

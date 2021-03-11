@@ -19,10 +19,11 @@ package kms
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
-	"strings"
+	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
 )
 
 type KMS interface {
@@ -38,18 +39,9 @@ type KMS interface {
 	PublicKey(ctx context.Context) (*ecdsa.PublicKey, error)
 }
 
-// schemes for various KMS services are copied from https://github.com/google/go-cloud/tree/master/secrets
-const gcpScheme = "gcpkms://"
-
 func Get(ctx context.Context, keyResourceID string) (KMS, error) {
-	id := strings.SplitAfter(keyResourceID, "://")
-	if len(id) != 2 {
-		return nil, errors.New("please format the kms key as gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]")
+	if err := gcp.ValidReference(keyResourceID); err != nil {
+		return nil, fmt.Errorf("could not parse kms reference (only GCP supported for now): %w",err)
 	}
-	switch scheme := id[0]; scheme {
-	case gcpScheme:
-		return newGCP(ctx, id[1])
-	default:
-		return nil, errors.New("currently only GCP KMS is supported")
-	}
+	return gcp.NewGCP(ctx, keyResourceID)
 }
