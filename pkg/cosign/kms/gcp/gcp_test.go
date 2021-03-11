@@ -2,7 +2,7 @@ package gcp
 
 import "testing"
 
-func Test_parseReference(t *testing.T) {
+func TestParseReference(t *testing.T) {
 	tests := []struct {
 		in           string
 		wantProjectID  string
