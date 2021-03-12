@@ -28,3 +28,9 @@ jobs:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
           version: v1.29
           timeout: 5m
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@v2.7.0
+        env:
+          GOROOT: ""
+        with:
+          args: ./...
