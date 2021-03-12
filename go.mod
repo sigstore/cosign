@@ -14,8 +14,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/rekor v0.1.1-0.20210228052401-f0b66bf3835c
 	github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
-	gocloud.dev v0.22.0
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf
-	google.golang.org/genproto v0.0.0-20210303154014-9728d6b83eeb // indirect
-	google.golang.org/protobuf v1.25.0 // indirect
+	google.golang.org/genproto v0.0.0-20210303154014-9728d6b83eeb
+	google.golang.org/protobuf v1.25.0
 )
