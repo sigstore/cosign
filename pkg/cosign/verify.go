@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-openapi/swag"
@@ -61,7 +62,7 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 		}
 	} else {
 		// PEM encoded file.
-		b, err := ioutil.ReadFile(keyRef)
+		b, err := ioutil.ReadFile(filepath.Clean(keyRef))
 		if err != nil {
 			return nil, err
 		}

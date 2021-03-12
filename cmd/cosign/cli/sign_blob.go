@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -63,7 +64,7 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		payload, err = ioutil.ReadAll(os.Stdin)
 	} else {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		payload, err = ioutil.ReadFile(payloadPath)
+		payload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
 	}
 	if err != nil {
 		return err
@@ -73,7 +74,7 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 	if err != nil {
 		return err
 	}
-	kb, err := ioutil.ReadFile(keyPath)
+	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,10 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		fmt.Println(base64.StdEncoding.EncodeToString(signature))
 	} else {
 		// No newline if using the raw signature
-		os.Stdout.Write(signature)
+		_, err := os.Stdout.Write(signature)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
