@@ -32,9 +32,9 @@ import (
 )
 
 const (
-	TLogEnv     = "TLOG"
-	ServerEnv   = "REKOR_SERVER"
-	rekorServer = "https://api.rekor.dev"
+	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
+	ServerEnv       = "REKOR_SERVER"
+	rekorServer     = "https://api.rekor.dev"
 )
 
 // Upload will upload the signature, public key and payload to the tlog
