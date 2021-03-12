@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -71,7 +72,7 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 			return err
 		}
 	} else {
-		b, err := ioutil.ReadFile(sigRef)
+		b, err := ioutil.ReadFile(filepath.Clean(sigRef))
 		if err != nil {
 			return nil
 		}
@@ -88,7 +89,7 @@ func VerifyBlobCmd(_ context.Context, keyRef string, sigRef string, blobRef stri
 	if blobRef == "-" {
 		blobBytes, err = ioutil.ReadAll(os.Stdin)
 	} else {
-		blobBytes, err = ioutil.ReadFile(blobRef)
+		blobBytes, err = ioutil.ReadFile(filepath.Clean(blobRef))
 	}
 	if err != nil {
 		return err

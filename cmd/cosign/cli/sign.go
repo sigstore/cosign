@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -108,7 +109,7 @@ func SignCmd(ctx context.Context, keyPath string,
 	var payload []byte
 	if payloadPath != "" {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		payload, err = ioutil.ReadFile(payloadPath)
+		payload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
 	} else {
 		payload, err = cosign.Payload(get.Descriptor, annotations)
 	}
@@ -173,7 +174,7 @@ func SignCmd(ctx context.Context, keyPath string,
 }
 
 func sign(ctx context.Context, img *remote.Descriptor, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
-	kb, err := ioutil.ReadFile(keyPath)
+	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return
 	}

@@ -23,6 +23,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -78,7 +79,7 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	if payloadRef == "" {
 		payload, err = cosign.Payload(get.Descriptor, nil)
 	} else {
-		payload, err = ioutil.ReadFile(payloadRef)
+		payload, err = ioutil.ReadFile(filepath.Clean(payloadRef))
 	}
 	if err != nil {
 		return err
@@ -108,7 +109,7 @@ func signatureBytes(sigRef string) ([]byte, error) {
 	case RawSignature:
 		return []byte(sigRef), nil
 	case FileSignature:
-		return ioutil.ReadFile(sigRef)
+		return ioutil.ReadFile(filepath.Clean(sigRef))
 	default:
 		return nil, errors.New("unknown signature arg type")
 	}
