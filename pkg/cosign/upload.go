@@ -70,7 +70,7 @@ func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) error {
 		}
 		return err
 	}
-	fmt.Println("Sucessfully appended to transparency log: ", TlogServer(), resp.Location)
+	fmt.Println("Successfully appended to transparency log: ", TlogServer(), resp.Location)
 	return nil
 }
 

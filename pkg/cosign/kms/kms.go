@@ -41,7 +41,7 @@ type KMS interface {
 
 func Get(ctx context.Context, keyResourceID string) (KMS, error) {
 	if err := gcp.ValidReference(keyResourceID); err != nil {
-		return nil, fmt.Errorf("could not parse kms reference (only GCP supported for now): %w",err)
+		return nil, fmt.Errorf("could not parse kms reference (only GCP supported for now): %w", err)
 	}
 	return gcp.NewGCP(ctx, keyResourceID)
 }

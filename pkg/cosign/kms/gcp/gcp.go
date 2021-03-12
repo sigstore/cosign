@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-type GCPKMS struct {
+type KMS struct {
 	client        *kms.KeyManagementClient
 	keyResourceID string
 	projectID     string
@@ -52,7 +52,7 @@ var (
 const ReferenceScheme = "gcpkms://"
 
 func ValidReference(ref string) error {
-	if !re.MatchString(ref){
+	if !re.MatchString(ref) {
 		return ErrKMSReference
 	}
 	return nil
@@ -68,7 +68,7 @@ func parseReference(resourceID string) (projectID, locationID, keyRing, keyName 
 	return
 }
 
-func NewGCP(ctx context.Context, keyResourceID string) (*GCPKMS, error) {
+func NewGCP(ctx context.Context, keyResourceID string) (*KMS, error) {
 	projectID, locationID, keyRing, keyName, err := parseReference(keyResourceID)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func NewGCP(ctx context.Context, keyResourceID string) (*GCPKMS, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "new gcp kms client")
 	}
-	return &GCPKMS{
+	return &KMS{
 		client:        client,
 		keyResourceID: keyResourceID,
 		projectID:     projectID,
@@ -88,7 +88,7 @@ func NewGCP(ctx context.Context, keyResourceID string) (*GCPKMS, error) {
 	}, nil
 }
 
-func (g *GCPKMS) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error) {
+func (g *KMS) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error) {
 	// Calculate the digest of the message.
 	digest := sha256.New()
 	_, err = digest.Write(payload)
@@ -134,7 +134,7 @@ func (g *GCPKMS) Sign(ctx context.Context, img *remote.Descriptor, payload []byt
 	return
 }
 
-func (g *GCPKMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
+func (g *KMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	name, err := g.keyVersionName(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "key version")
@@ -152,7 +152,7 @@ func (g *GCPKMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	}
 	publicKey, err := x509.ParsePKIXPublicKey(p.Bytes)
 	if err != nil {
-		return nil, errors.Wrap(err,"failed to parse public key")
+		return nil, errors.Wrap(err, "failed to parse public key")
 	}
 	ecKey, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
@@ -163,7 +163,7 @@ func (g *GCPKMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 
 // keyVersionName returns the first key version found for a key in KMS
 // TODO: is there a better way to do this?
-func (g *GCPKMS) keyVersionName(ctx context.Context) (string, error) {
+func (g *KMS) keyVersionName(ctx context.Context) (string, error) {
 	req := &kmspb.ListCryptoKeyVersionsRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", g.projectID, g.locationID, g.keyRing, g.key),
 	}
@@ -187,14 +187,14 @@ func (g *GCPKMS) keyVersionName(ctx context.Context) (string, error) {
 	return name, nil
 }
 
-func (g *GCPKMS) CreateKey(ctx context.Context) error {
+func (g *KMS) CreateKey(ctx context.Context) error {
 	if err := g.createKeyRing(ctx); err != nil {
 		return errors.Wrap(err, "creating key ring")
 	}
 	return g.createKey(ctx)
 }
 
-func (g *GCPKMS) createKeyRing(ctx context.Context) error {
+func (g *KMS) createKeyRing(ctx context.Context) error {
 	getKeyRingRequest := &kmspb.GetKeyRingRequest{
 		Name: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", g.projectID, g.locationID, g.keyRing),
 	}
@@ -213,7 +213,7 @@ func (g *GCPKMS) createKeyRing(ctx context.Context) error {
 	return err
 }
 
-func (g *GCPKMS) createKey(ctx context.Context) error {
+func (g *KMS) createKey(ctx context.Context) error {
 	getKeyRequest := &kmspb.GetCryptoKeyRequest{
 		Name: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", g.projectID, g.locationID, g.keyRing, g.key),
 	}

@@ -4,7 +4,7 @@ import "testing"
 
 func TestParseReference(t *testing.T) {
 	tests := []struct {
-		in           string
+		in             string
 		wantProjectID  string
 		wantLocationID string
 		wantKeyRing    string
@@ -20,16 +20,16 @@ func TestParseReference(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			in:             "gcpkms://projects/p1/p2/locations/l1/l2/keyRings/r1/r2/cryptoKeys/k1/k2",
-			wantErr:        true,
+			in:      "gcpkms://projects/p1/p2/locations/l1/l2/keyRings/r1/r2/cryptoKeys/k1/k2",
+			wantErr: true,
 		},
 		{
-			in:             "foo://bar",
-			wantErr:        true,
+			in:      "foo://bar",
+			wantErr: true,
 		},
 		{
-			in:             "",
-			wantErr:        true,
+			in:      "",
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
