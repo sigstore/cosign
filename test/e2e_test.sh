@@ -29,7 +29,7 @@ echo "running tests"
 
 cd $GITHUB_WORKSPACE
 go build -o cosign ./cmd/cosign
-go test ./...
+go test -tags=e2e ./...
 
 
 echo "cleanup"
