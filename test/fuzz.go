@@ -1,3 +1,5 @@
+// +build fuzz
+
 /*
 Copyright The Rekor Authors
 
@@ -29,7 +31,7 @@ func FuzzGetPassword(data []byte) int {
 	}
 	p, err := cli.GetPass(true)
 	if err != nil {
-		return 1
+		panic(fmt.Sprintf("error getting password: %v", err))
 	}
 	// the password we got back is not what was entered
 	if bytes.Compare(p, data) != 0 {
