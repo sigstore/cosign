@@ -42,7 +42,7 @@ var verify = func(k, i string, b bool, a map[string]string) error {
 		PubKey:      pk,
 		Annotations: a,
 		Claims:      b,
-		Tlog:        os.Getenv(cosign.ExperimentalEnv) == "1",
+		Tlog:        cosign.Experimental(),
 	}
 	_, err = cli.VerifyCmd(context.Background(), i, co)
 	return err
@@ -63,12 +63,15 @@ func TestSignVerify(t *testing.T) {
 	ctx := context.Background()
 	// Verify should fail at first
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+	// So should download
+	mustErr(cli.DownloadCmd(ctx, imgName), t)
 
 	// Now sign the image
 	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, "", passFunc, false), t)
 
-	// Now verify should work!
+	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(cli.DownloadCmd(ctx, imgName), t)
 
 	// Look for a specific annotation
 	mustErr(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar"}), t)
@@ -116,6 +119,40 @@ func TestMultipleSignatures(t *testing.T) {
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil), t)
 	must(verify(pub2, imgName, true, nil), t)
+}
+
+func TestSignBlob(t *testing.T) {
+
+	var blob = "someblob"
+	td1 := t.TempDir()
+	td2 := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td1)
+		os.RemoveAll(td2)
+	})
+	bp := filepath.Join(td1, blob)
+
+	if err := ioutil.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+	_, _, pubKeyPath2 := keypair(t, td2)
+
+	ctx := context.Background()
+
+	// Verify should fail on a bad input
+	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath1, "", "badsig", blob), t)
+	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath2, "", "badsig", blob), t)
+
+	// Now sign the blob with one key
+	sig, err := cli.SignBlobCmd(ctx, privKeyPath1, bp, true, passFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Now verify should work with that one, but not the other
+	must(cli.VerifyBlobCmd(ctx, pubKeyPath1, "", string(sig), bp), t)
+	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath2, "", string(sig), bp), t)
 }
 
 func TestGenerate(t *testing.T) {

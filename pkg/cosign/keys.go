@@ -18,8 +18,13 @@ type Keys struct {
 	PublicBytes  []byte
 }
 
+func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+
+}
+
 func GenerateKeyPair(pf PassFunc) (*Keys, error) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv, err := GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}

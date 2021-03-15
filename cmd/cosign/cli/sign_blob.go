@@ -29,7 +29,9 @@ import (
 	"path/filepath"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 )
 
 func SignBlob() *ffcli.Command {
@@ -44,20 +46,24 @@ func SignBlob() *ffcli.Command {
 		ShortHelp:  "Sign the supplied blob, outputting the base64-nocded signature to stdout",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" {
-				return flag.ErrHelp
+			// A key file is required unless we're in experimental mode!
+			if !cosign.Experimental() {
+				if *key == "" {
+					return flag.ErrHelp
+				}
 			}
 
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
 
-			return SignBlobCmd(ctx, *key, args[0], *b64, GetPass)
+			_, err := SignBlobCmd(ctx, *key, args[0], *b64, GetPass)
+			return err
 		},
 	}
 }
 
-func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf cosign.PassFunc) error {
+func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -67,34 +73,62 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	pass, err := pf(false)
-	if err != nil {
-		return err
-	}
-	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
-	if err != nil {
-		return err
-	}
-	pk, err := cosign.LoadPrivateKey(kb, pass)
-	if err != nil {
-		return err
+	var priv *ecdsa.PrivateKey
+	var cert string
+	if keyPath != "" {
+		kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
+		if err != nil {
+			return nil, errors.Wrapf(err, "reading %s", keyPath)
+		}
+		pass, err := pf(false)
+		if err != nil {
+			return nil, err
+		}
+		priv, err = cosign.LoadPrivateKey(kb, pass)
+		if err != nil {
+			return nil, errors.Wrap(err, "loading private key")
+		}
+	} else { // Keyless!
+		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
+		priv, err = cosign.GeneratePrivateKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "generating cert")
+		}
+		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
+		cert, err = fulcio.GetCert(ctx, priv)
+		if err != nil {
+			return nil, errors.Wrap(err, "retrieving cert")
+		}
+		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
 	}
 	h := sha256.Sum256(payload)
-	signature, err := ecdsa.SignASN1(rand.Reader, pk, h[:])
+	signature, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	if cosign.Experimental() {
+		index, err := cosign.UploadTLog(signature, payload, &priv.PublicKey)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("tlog entry created with index: ", index)
+		return signature, nil
+	}
+
 	if b64 {
-		fmt.Println(base64.StdEncoding.EncodeToString(signature))
+		signature = []byte(base64.StdEncoding.EncodeToString(signature))
+		fmt.Println(string(signature))
 	} else {
 		// No newline if using the raw signature
 		_, err := os.Stdout.Write(signature)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+
+	return signature, nil
 }
