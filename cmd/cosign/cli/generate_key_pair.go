@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	// for fuzzing
+	// Read is for fuzzing
 	Read func() ([]byte, error)
 )
 
