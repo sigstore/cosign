@@ -26,6 +26,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 )
 
 func Verify() *ffcli.Command {
@@ -44,34 +45,34 @@ func Verify() *ffcli.Command {
 		ShortHelp:  "Verify a signature on the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if *key == "" && *kmsVal == "" {
-				return flag.ErrHelp
-			}
 			if len(args) != 1 {
 				return flag.ErrHelp
-			}
-
-			pubKeyDescriptor := *key
-			if *kmsVal != "" {
-				pubKeyDescriptor = *kmsVal
-			}
-			pubKey, err := cosign.LoadPublicKey(pubKeyDescriptor)
-			if err != nil {
-				return errors.Wrap(err, "loading public key")
 			}
 
 			co := cosign.CheckOpts{
 				Annotations: annotations.annotations,
 				Claims:      *checkClaims,
-				PubKey:      pubKey,
-				Tlog:        os.Getenv(cosign.ExperimentalEnv) == "1",
+				Tlog:        cosign.Experimental(),
+				Roots:       fulcio.Roots,
+			}
+			// Keys are optional!
+			if *key != "" {
+				pubKeyDescriptor := *key
+				if *kmsVal != "" {
+					pubKeyDescriptor = *kmsVal
+				}
+				pubKey, err := cosign.LoadPublicKey(pubKeyDescriptor)
+				if err != nil {
+					return errors.Wrap(err, "loading public key")
+				}
+				co.PubKey = pubKey
 			}
 
 			verified, err := VerifyCmd(ctx, args[0], co)
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(os.Stderr, "The following checks were performed on these signatures:")
+			fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 			if co.Claims {
 				if co.Annotations != nil {
 					fmt.Fprintln(os.Stderr, "  - The specified annotations were verified.")
@@ -80,11 +81,21 @@ func Verify() *ffcli.Command {
 			}
 			if co.Tlog {
 				fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
+				fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
 			}
 			if co.PubKey != nil {
 				fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 			}
+			if co.Roots != nil { // This is always true for now, we hardcode the fulcio root.
+				fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
+				if !co.Tlog {
+					fmt.Fprintln(os.Stderr, "  - WARNING - THE CERTIFICATE EXPIRY WAS NOT CHECKED. set COSIGN_EXPERIMENTAL=1 to check!")
+				}
+			}
 			for _, vp := range verified {
+				if vp.Cert != nil {
+					fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
+				}
 				fmt.Println(string(vp.Payload))
 			}
 			return nil
