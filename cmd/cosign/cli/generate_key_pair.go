@@ -33,7 +33,7 @@ import (
 
 var (
 	// for fuzzing
-	read func() ([]byte, error)
+	Read func() ([]byte, error)
 )
 
 func GenerateKeyPair() *ffcli.Command {
@@ -62,7 +62,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		return k.CreateKey(ctx)
 	}
 
-	keys, err := cosign.GenerateKeyPair(getPass)
+	keys, err := cosign.GenerateKeyPair(GetPass)
 	if err != nil {
 		return err
 	}
@@ -79,10 +79,10 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 	return nil
 }
 
-func getPass(confirm bool) ([]byte, error) {
+func GetPass(confirm bool) ([]byte, error) {
 	setReadPasswordFn()
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
-	pw1, err := read()
+	pw1, err := Read()
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func getPass(confirm bool) ([]byte, error) {
 		return pw1, nil
 	}
 	fmt.Fprint(os.Stderr, "Enter again: ")
-	pw2, err := read()
+	pw2, err := Read()
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
@@ -104,15 +104,15 @@ func getPass(confirm bool) ([]byte, error) {
 }
 
 func setReadPasswordFn() {
-	if read != nil {
+	if Read != nil {
 		return
 	}
 	// Handle piped in passwords.
-	read = func() ([]byte, error) {
+	Read = func() ([]byte, error) {
 		return term.ReadPassword(0)
 	}
 	if !term.IsTerminal(0) {
-		read = func() ([]byte, error) {
+		Read = func() ([]byte, error) {
 			return ioutil.ReadAll(os.Stdin)
 		}
 	}

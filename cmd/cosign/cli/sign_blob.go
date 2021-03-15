@@ -52,7 +52,7 @@ func SignBlob() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignBlobCmd(ctx, *key, args[0], *b64, getPass)
+			return SignBlobCmd(ctx, *key, args[0], *b64, GetPass)
 		},
 	}
 }

@@ -88,7 +88,7 @@ func Sign() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *kmsVal, getPass, *force)
+			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *kmsVal, GetPass, *force)
 		},
 	}
 }

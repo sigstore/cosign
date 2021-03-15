@@ -19,13 +19,15 @@ package cli
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 )
 
 func FuzzGetPassword(data []byte) int {
-	read = func() ([]byte, error) {
+	cli.Read = func() ([]byte, error) {
 		return data, nil
 	}
-	p, err := getPass(true)
+	p, err := cli.GetPass(true)
 	if err != nil {
 		return 1
 	}
