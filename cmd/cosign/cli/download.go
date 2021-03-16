@@ -45,13 +45,13 @@ func Download() *ffcli.Command {
 	}
 }
 
-func DownloadCmd(_ context.Context, imageRef string) error {
+func DownloadCmd(ctx context.Context, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
-	signatures, _, err := cosign.FetchSignatures(ref)
+	signatures, _, err := cosign.FetchSignatures(ctx, ref)
 	if err != nil {
 		return err
 	}

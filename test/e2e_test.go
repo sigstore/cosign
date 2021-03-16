@@ -254,7 +254,7 @@ func TestUploadDownload(t *testing.T) {
 			}
 
 			// Now download it!
-			signatures, _, err := cosign.FetchSignatures(ref)
+			signatures, _, err := cosign.FetchSignatures(ctx, ref)
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {

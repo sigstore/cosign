@@ -103,13 +103,13 @@ func Verify() *ffcli.Command {
 	}
 }
 
-func VerifyCmd(_ context.Context, imageRef string, co cosign.CheckOpts) ([]cosign.SignedPayload, error) {
+func VerifyCmd(ctx context.Context, imageRef string, co cosign.CheckOpts) ([]cosign.SignedPayload, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
 	}
 
-	sp, err := cosign.Verify(ref, co)
+	sp, err := cosign.Verify(ctx, ref, co)
 	if err != nil {
 		return nil, err
 	}
