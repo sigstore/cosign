@@ -57,7 +57,7 @@ func SignBlob() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			_, err := SignBlobCmd(ctx, *key, args[0], *b64, getPass)
+			_, err := SignBlobCmd(ctx, *key, args[0], *b64, GetPass)
 			return err
 		},
 	}

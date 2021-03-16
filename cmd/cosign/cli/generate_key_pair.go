@@ -31,6 +31,11 @@ import (
 	"golang.org/x/term"
 )
 
+var (
+	// Read is for fuzzing
+	Read = readPasswordFn
+)
+
 func GenerateKeyPair() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign generate-key-pair", flag.ExitOnError)
@@ -57,7 +62,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		return k.CreateKey(ctx)
 	}
 
-	keys, err := cosign.GenerateKeyPair(getPass)
+	keys, err := cosign.GenerateKeyPair(GetPass)
 	if err != nil {
 		return err
 	}
@@ -74,16 +79,8 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 	return nil
 }
 
-func getPass(confirm bool) ([]byte, error) {
-	// Handle piped in passwords.
-	var read = func() ([]byte, error) {
-		return term.ReadPassword(0)
-	}
-	if !term.IsTerminal(0) {
-		read = func() ([]byte, error) {
-			return ioutil.ReadAll(os.Stdin)
-		}
-	}
+func GetPass(confirm bool) ([]byte, error) {
+	read := Read()
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
 	pw1, err := read()
 	fmt.Fprintln(os.Stderr)
@@ -104,4 +101,17 @@ func getPass(confirm bool) ([]byte, error) {
 		return nil, errors.New("passwords do not match")
 	}
 	return pw1, nil
+}
+
+func readPasswordFn() func() ([]byte, error) {
+	// Handle piped in passwords.
+	r := func() ([]byte, error) {
+		return term.ReadPassword(0)
+	}
+	if !term.IsTerminal(0) {
+		r = func() ([]byte, error) {
+			return ioutil.ReadAll(os.Stdin)
+		}
+	}
+	return r
 }

@@ -5,6 +5,7 @@ go 1.15
 require (
 	cloud.google.com/go v0.79.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
+	github.com/dvyukov/go-fuzz v0.0.0-20210103155950-6a8e9d1f2415 // indirect
 	github.com/go-openapi/runtime v0.19.26
 	github.com/go-openapi/strfmt v0.20.0
 	github.com/go-openapi/swag v0.19.14
