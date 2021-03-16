@@ -1,4 +1,4 @@
-// +build fuzz
+// +build gofuzz
 
 /*
 Copyright The Rekor Authors
@@ -26,9 +26,13 @@ import (
 )
 
 func FuzzGetPassword(data []byte) int {
-	cli.Read = func() ([]byte, error) {
-		return data, nil
+	original := cli.Read
+	cli.Read = func() func() ([]byte, error) {
+		return func() ([]byte, error) {
+			return data, nil
+		}
 	}
+	defer func() { cli.Read = original }()
 	p, err := cli.GetPass(true)
 	if err != nil {
 		panic(fmt.Sprintf("error getting password: %v", err))

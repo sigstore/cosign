@@ -33,7 +33,7 @@ import (
 
 var (
 	// Read is for fuzzing
-	Read func() ([]byte, error)
+	Read = readPasswordFn
 )
 
 func GenerateKeyPair() *ffcli.Command {
@@ -80,9 +80,9 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 }
 
 func GetPass(confirm bool) ([]byte, error) {
-	setReadPasswordFn()
+	read := Read()
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
-	pw1, err := Read()
+	pw1, err := read()
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func GetPass(confirm bool) ([]byte, error) {
 		return pw1, nil
 	}
 	fmt.Fprint(os.Stderr, "Enter again: ")
-	pw2, err := Read()
+	pw2, err := read()
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
@@ -103,17 +103,15 @@ func GetPass(confirm bool) ([]byte, error) {
 	return pw1, nil
 }
 
-func setReadPasswordFn() {
-	if Read != nil {
-		return
-	}
+func readPasswordFn() func() ([]byte, error) {
 	// Handle piped in passwords.
-	Read = func() ([]byte, error) {
+	r := func() ([]byte, error) {
 		return term.ReadPassword(0)
 	}
 	if !term.IsTerminal(0) {
-		Read = func() ([]byte, error) {
+		r = func() ([]byte, error) {
 			return ioutil.ReadAll(os.Stdin)
 		}
 	}
+	return r
 }

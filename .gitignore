@@ -20,3 +20,6 @@ cosign.pub
 /cosign
 .vscode
 
+# fuzzing artifacts
+*.libfuzzer
+*fuzz.a
