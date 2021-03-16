@@ -12,10 +12,21 @@ Cosign aims to make signatures **invisible infrastructure**.
 We also use a slack [slack channel](https://sigstore.slack.com)!
 Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcfWn4XEyMqUUutbUQ) for the invite link.
 
+🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨 
+
 ## Installation
 
-For now, clone and `go build -o cosign ./cmd`.
-I'll publish releases when I'm comfortable supporting this for others to use.
+For now, clone the repository and run:
+
+    go build -o cosign ./cmd/cosign
+
+Alternatively, if you have Go 1.16+, you can directly install by running:
+
+    go install github.com/sigstore/cosign/cmd/cosign@latest
+
+and the resulting binary will be placed at `$HOME/go/bin/cosign`.
+
+We'll publish releases at a later time.
 
 ## Quick Start
 
@@ -72,11 +83,12 @@ See the [Usage documentation](USAGE.md) for more commands!
 ## Rekor Support
 _Note: this is an experimental feature_
 
-To publish signed artifacts to a Rekor transparency log and verify their existence in the log, set the `TLOG=1` environment variable.
+To publish signed artifacts to a Rekor transparency log and verify their existence in the log
+set the `COSIGN_EXPERIMENTAL=1` environment variable.
 
 ```
-TLOG=1 cosign sign -key cosign.key dlorenc/demo
-TLOG=1 cosign verify -key cosign.pub dlorenc/demo
+COSIGN_EXPERIMENTAL=1 cosign sign -key cosign.key dlorenc/demo
+COSIGN_EXPERIMENTAL=1 cosign verify -key cosign.pub dlorenc/demo
 ```
 
 `cosign` defaults to using the public instance of rekor at [api.rekor.dev](https://api.rekor.dev).
@@ -431,7 +443,7 @@ $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa2
       "size": 217,
       "digest": "sha256:0e79a356609f038089088ec46fd95f4649d04de989487220b1a0adbcc63fadae",
       "annotations": {
-        "dev.cosignproject.cosign/signature": "5uNZKEP9rm8zxAL0VVX7McMmyArzLqtxMTNPjPO2ns+5GJpBeXg+i9ILU+WjmGAKBCqiexTxzLC1/nkOzD4cDA=="
+        "dev.sigstore.cosign/signature": "5uNZKEP9rm8zxAL0VVX7McMmyArzLqtxMTNPjPO2ns+5GJpBeXg+i9ILU+WjmGAKBCqiexTxzLC1/nkOzD4cDA=="
       }
     }
   ]

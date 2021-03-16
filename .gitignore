@@ -18,3 +18,5 @@
 cosign.key
 cosign.pub
 /cosign
+.vscode
+

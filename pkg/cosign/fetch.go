@@ -18,6 +18,9 @@ package cosign
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"runtime"
 	"strings"
@@ -33,7 +36,18 @@ import (
 type SignedPayload struct {
 	Base64Signature string
 	Payload         []byte
+	Cert            *x509.Certificate
+	Chain           []*x509.Certificate
 }
+
+// TODO: marshal the cert correctly.
+// func (sp *SignedPayload) MarshalJSON() ([]byte, error) {
+// 	x509.Certificate.
+// 	pem.EncodeToMemory(&pem.Block{
+// 		Type: "CERTIFICATE",
+// 		Bytes:
+// 	})
+// }
 
 func Munge(desc v1.Descriptor) string {
 	// sha256:... -> sha256-...
@@ -90,6 +104,30 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 			if err != nil {
 				return err
 			}
+			sp := SignedPayload{
+				Payload:         payload,
+				Base64Signature: base64sig,
+			}
+			// We may have a certificate and chain
+			certPem := desc.Annotations[certkey]
+			if certPem != "" {
+				certs, err := LoadCerts(certPem)
+				if err != nil {
+					return err
+				}
+				if len(certs) != 1 {
+					return fmt.Errorf("expected 1 certificate, found %d", len(certs))
+				}
+				sp.Cert = certs[0]
+			}
+			chainPem := desc.Annotations[chainkey]
+			if chainPem != "" {
+				certs, err := LoadCerts(chainPem)
+				if err != nil {
+					return err
+				}
+				sp.Chain = certs
+			}
 			signatures[i] = SignedPayload{
 				Payload:         payload,
 				Base64Signature: base64sig,
@@ -97,8 +135,34 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 			return nil
 		})
 	}
+
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
 	return signatures, &targetDesc.Descriptor, nil
+}
+
+func LoadCerts(pemStr string) ([]*x509.Certificate, error) {
+	blocks := []*pem.Block{}
+	pemBytes := []byte(pemStr)
+	for {
+		block, rest := pem.Decode(pemBytes)
+		if block == nil {
+			break
+		}
+		if block.Type == "CERTIFICATE" {
+			blocks = append(blocks, block)
+		}
+		pemBytes = rest
+	}
+
+	certs := []*x509.Certificate{}
+	for _, block := range blocks {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		certs = append(certs, cert)
+	}
+	return certs, nil
 }

@@ -210,7 +210,7 @@ func findFile(img v1.Image, path string) ([]byte, error) {
 				// Resolve and recurse!
 				dst := hdr.Linkname
 				if !filepath.IsAbs(hdr.Linkname) {
-					dst, _ = filepath.Abs(filepath.Join(filepath.Dir(fp), hdr.Linkname))
+					dst, _ = filepath.Abs(filepath.Join(filepath.Dir(fp), filepath.Clean(hdr.Linkname)))
 				}
 				return findFile(img, dst)
 			}
