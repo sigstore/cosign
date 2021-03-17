@@ -111,7 +111,16 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 	}
 
 	if cosign.Experimental() {
-		index, err := cosign.UploadTLog(signature, payload, &priv.PublicKey)
+		thingToUpload := []byte{}
+		if cert != "" {
+			thingToUpload = []byte(cert)
+		} else {
+			thingToUpload, err = cosign.MarshalPublicKey(&priv.PublicKey)
+			if err != nil {
+				return nil, err
+			}
+		}
+		index, err := cosign.UploadTLog(signature, payload, thingToUpload)
 		if err != nil {
 			return nil, err
 		}

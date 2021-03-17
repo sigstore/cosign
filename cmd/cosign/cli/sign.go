@@ -206,7 +206,17 @@ func SignCmd(ctx context.Context, keyPath string,
 			}
 		}
 	}
-	index, err := cosign.UploadTLog(signature, payload, publicKey)
+	thingToUpload := []byte{}
+	// Upload the full cert if we have it!
+	if cert != "" {
+		thingToUpload = []byte(cert)
+	} else {
+		thingToUpload, err = cosign.MarshalPublicKey(publicKey)
+		if err != nil {
+			return err
+		}
+	}
+	index, err := cosign.UploadTLog(signature, payload, thingToUpload)
 	if err != nil {
 		return err
 	}
