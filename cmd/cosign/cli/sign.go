@@ -206,7 +206,7 @@ func SignCmd(ctx context.Context, keyPath string,
 			}
 		}
 	}
-	thingToUpload := []byte{}
+	var thingToUpload []byte
 	// Upload the full cert if we have it!
 	if cert != "" {
 		thingToUpload = []byte(cert)

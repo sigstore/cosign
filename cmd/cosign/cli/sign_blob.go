@@ -111,7 +111,7 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 	}
 
 	if cosign.Experimental() {
-		thingToUpload := []byte{}
+		var thingToUpload []byte
 		if cert != "" {
 			thingToUpload = []byte(cert)
 		} else {
