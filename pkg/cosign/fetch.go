@@ -79,10 +79,10 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 	sem := semaphore.NewWeighted(int64(runtime.NumCPU()))
 	for i, desc := range m.Layers {
 		i, desc := i, desc
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return nil, nil, err
-		}
 		g.Go(func() error {
+			if err := sem.Acquire(ctx, 1); err != nil {
+				return err
+			}
 			defer sem.Release(1)
 			base64sig, ok := desc.Annotations[sigkey]
 			if !ok {
@@ -99,7 +99,6 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 				return err
 
 			}
-
 			payload, err := ioutil.ReadAll(r)
 			if err != nil {
 				return err
@@ -128,14 +127,11 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 				}
 				sp.Chain = certs
 			}
-			signatures[i] = SignedPayload{
-				Payload:         payload,
-				Base64Signature: base64sig,
-			}
+
+			signatures[i] = sp
 			return nil
 		})
 	}
-
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
