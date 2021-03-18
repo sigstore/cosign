@@ -208,7 +208,7 @@ $ cosign verify -key NqfC4CpZiE4OGpuYFSSMzXHJqXQ6u1W55prrZIjjZJ0= us-central1-do
 
 ## Storage Specification
 
-`cosign ` stores signatures in an OCI registry, and uses a naming convention (tag based
+`cosign` stores signatures in an OCI registry, and uses a naming convention (tag based
 on the sha256 of what we're signing) for locating the signature index.
 
 <p align="center">
@@ -222,12 +222,32 @@ Roughly (ignoring ports in the hostname): `s/:/-/g` and `s/@/:/g` to find the si
 See [Race conditions](#race-conditions) for some caveats around this strategy.
 
 Alternative implementations could use transparency logs, local filesystem, a separate repository
-    registry, an explicit reference to a signature index, a new registry API, grafeas, etc.
+registry, an explicit reference to a signature index, a new registry API, grafeas, etc.
 
 ### Signing subjects
 
 `cosign` only works for artifacts stored as "manifests" in the registry today.
 The proposed mechanism is flexible enough to support signing arbitrary things.
+
+### KMS Support
+`cosign` supports using a KMS provider to generate and sign keys.
+Right now we only support GCP KMS, but are hoping to support more in the future! 
+
+To generate a key in GCP KMS (and a key ring, if necessary) run:
+```
+cosign generate-key-pair -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEY_RING>/cryptoKeys/<KEY_NAME>
+```
+This command will also save the public key to a file locally, which can be used for verification later on.
+
+To sign an image run:
+```
+cosign sign -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEY_RING>/cryptoKeys/<KEY_NAME> dlorenc/demo
+```
+
+and to verify with the public key in KMS:
+```
+cosign verify -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEY_RING>/cryptoKeys/<KEY_NAME> dlorenc/demo
+```
 
 ## FAQ
 
