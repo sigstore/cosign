@@ -42,7 +42,7 @@ func SignBlob() *ffcli.Command {
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
-		ShortUsage: "cosign sign-blob -key <key> [-kms KMSPATH] [-sig <sig path>] <blob>",
+		ShortUsage: "cosign sign-blob -key <key>|-kms <kms> [-sig <sig path>] <blob>",
 		ShortHelp:  "Sign the supplied blob, outputting the base64-nocded signature to stdout",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
