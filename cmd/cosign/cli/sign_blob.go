@@ -78,12 +78,14 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 
 	var signature []byte
 	var publicKey *ecdsa.PublicKey
-	if keyPath != "" {
+
+	switch {
+	case keyPath != "":
 		signature, publicKey, err = sign(ctx, keyPath, payload, pf)
 		if err != nil {
 			return nil, errors.Wrap(err, "signing blob")
 		}
-	} else if kmsVal != "" {
+	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
 			return nil, err
@@ -96,7 +98,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		if err != nil {
 			return nil, errors.Wrap(err, "getting public key")
 		}
-	} else { // Keyless!
+	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		priv, err := cosign.GeneratePrivateKey()
 		if err != nil {
