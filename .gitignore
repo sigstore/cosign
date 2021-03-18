@@ -15,8 +15,7 @@
 # vendor/
 
 # cosign stuff
-cosign.key
-cosign.pub
+cosign.sig
 /cosign
 .vscode
 

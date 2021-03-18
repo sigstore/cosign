@@ -1,0 +1,38 @@
+name: CI-Build
+
+# Run this workflow every time a new commit pushed to your repository
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  # Set the job key. The key is displayed as the job name
+  # when a job name is not provided
+  build:
+    # Name the Job
+    name: build
+    # Set the type of machine to run on
+    runs-on: ubuntu-latest
+    steps:
+      # Checks out a copy of your repository on the ubuntu-latest machine
+      - uses: actions/checkout@v2
+      
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+
+      - name: Run Go tests
+        run: go build ./cmd/cosign
+      - name: Print Digest
+        run: shasum -a 256 cosign > cosign.sha256
+      - name: sign
+        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key cosign.key cosign > cosign.sig
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts
+          path: |
+            cosign
+            cosign.sha256
+            cosign.sig
