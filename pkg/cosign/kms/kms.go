@@ -35,6 +35,9 @@ type KMS interface {
 	// stored in KMS
 	Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error)
 
+	// SignBlob is responsible for signing a blob
+	// SignBlob(ctx context.Context, payload []byte) (signature []byte, err error)
+
 	// PublicKey returns the public key stored in the KMS
 	PublicKey(ctx context.Context) (*ecdsa.PublicKey, error)
 }

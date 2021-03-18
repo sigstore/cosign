@@ -88,6 +88,52 @@ func NewGCP(ctx context.Context, keyResourceID string) (*KMS, error) {
 	}, nil
 }
 
+func (g *KMS) SignBlob(ctx context.Context, payload []byte) (signature []byte, err error) {
+	// Calculate the digest of the message.
+	digest := sha256.New()
+	_, err = digest.Write(payload)
+	if err != nil {
+		return
+	}
+	// Optional but recommended: Compute digest's CRC32C.
+	crc32c := func(data []byte) uint32 {
+		t := crc32.MakeTable(crc32.Castagnoli)
+		return crc32.Checksum(data, t)
+	}
+	digestCRC32C := crc32c(digest.Sum(nil))
+
+	name, err := g.keyVersionName(ctx)
+	if err != nil {
+		return
+	}
+	req := &kmspb.AsymmetricSignRequest{
+		Name: name,
+		Digest: &kmspb.Digest{
+			Digest: &kmspb.Digest_Sha256{
+				Sha256: digest.Sum(nil),
+			},
+		},
+		DigestCrc32C: wrapperspb.Int64(int64(digestCRC32C)),
+	}
+	result, err := g.client.AsymmetricSign(ctx, req)
+	if err != nil {
+		return
+	}
+	// Optional, but recommended: perform integrity verification on result.
+	// For more details on ensuring E2E in-transit integrity to and from Cloud KMS visit:
+	// https://cloud.google.com/kms/docs/data-integrity-guidelines
+	if !result.VerifiedDigestCrc32C {
+		err = fmt.Errorf("AsymmetricSign: request corrupted in-transit")
+		return
+	}
+	if int64(crc32c(result.Signature)) != result.SignatureCrc32C.Value {
+		err = fmt.Errorf("AsymmetricSign: response corrupted in-transit")
+		return
+	}
+	signature = result.GetSignature()
+	return
+}
+
 func (g *KMS) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error) {
 	// Calculate the digest of the message.
 	digest := sha256.New()
