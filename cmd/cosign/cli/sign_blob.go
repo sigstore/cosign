@@ -19,8 +19,6 @@ package cli
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -81,7 +79,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 	var signature []byte
 	var publicKey *ecdsa.PublicKey
 	if keyPath != "" {
-		signature, publicKey, err = signBlob(ctx, keyPath, payload, pf)
+		signature, publicKey, err = sign(ctx, keyPath, payload, pf)
 		if err != nil {
 			return nil, errors.Wrap(err, "signing blob")
 		}
@@ -90,7 +88,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		if err != nil {
 			return nil, err
 		}
-		signature, err = k.Sign(ctx, nil, payload)
+		signature, err = k.Sign(ctx, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "signing")
 		}
@@ -132,26 +130,4 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		}
 	}
 	return signature, nil
-}
-
-func signBlob(ctx context.Context, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
-	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "reading %s", keyPath)
-	}
-	pass, err := pf(false)
-	if err != nil {
-		return nil, nil, err
-	}
-	priv, err := cosign.LoadPrivateKey(kb, pass)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "loading private key")
-	}
-	h := sha256.Sum256(payload)
-	signature, err = ecdsa.SignASN1(rand.Reader, priv, h[:])
-	if err != nil {
-		return nil, nil, err
-	}
-	publicKey = &priv.PublicKey
-	return
 }

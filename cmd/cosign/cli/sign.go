@@ -142,7 +142,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return err
 		}
-		signature, err = k.Sign(ctx, get, payload)
+		signature, err = k.Sign(ctx, payload)
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
@@ -151,7 +151,7 @@ func SignCmd(ctx context.Context, keyPath string,
 			return errors.Wrap(err, "getting public key")
 		}
 	case keyPath != "":
-		signature, publicKey, err = sign(ctx, get, keyPath, payload, pf)
+		signature, publicKey, err = sign(ctx, keyPath, payload, pf)
 		if err != nil {
 			return errors.Wrap(err, "signing payload")
 		}
@@ -214,7 +214,7 @@ func SignCmd(ctx context.Context, keyPath string,
 	return nil
 }
 
-func sign(ctx context.Context, img *remote.Descriptor, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
+func sign(ctx context.Context, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
 	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return
