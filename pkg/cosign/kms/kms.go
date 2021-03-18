@@ -29,7 +29,7 @@ import (
 type KMS interface {
 	// CreateKey is responsible for creating an asymmetric key pair
 	// with the ECDSA algorithm on the P-256 Curve with a SHA-256 digest
-	CreateKey(context.Context) error
+	CreateKey(context.Context) (*ecdsa.PublicKey, error)
 
 	// Sign is responsible for signing an image via the keys
 	// stored in KMS

@@ -233,9 +233,9 @@ func (g *KMS) keyVersionName(ctx context.Context) (string, error) {
 	return name, nil
 }
 
-func (g *KMS) CreateKey(ctx context.Context) error {
+func (g *KMS) CreateKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	if err := g.createKeyRing(ctx); err != nil {
-		return errors.Wrap(err, "creating key ring")
+		return nil, errors.Wrap(err, "creating key ring")
 	}
 	return g.createKey(ctx)
 }
@@ -259,15 +259,15 @@ func (g *KMS) createKeyRing(ctx context.Context) error {
 	return err
 }
 
-func (g *KMS) createKey(ctx context.Context) error {
+func (g *KMS) createKey(ctx context.Context) (*ecdsa.PublicKey, error) {
+	name := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", g.projectID, g.locationID, g.keyRing, g.key)
 	getKeyRequest := &kmspb.GetCryptoKeyRequest{
-		Name: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", g.projectID, g.locationID, g.keyRing, g.key),
+		Name: name,
 	}
 	if result, err := g.client.GetCryptoKey(ctx, getKeyRequest); err == nil {
 		fmt.Printf("Key %s already exists in GCP KMS, skipping creation.\n", result.GetName())
-		return nil
+		return g.PublicKey(ctx)
 	}
-
 	createKeyRequest := &kmspb.CreateCryptoKeyRequest{
 		Parent:      fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", g.projectID, g.locationID, g.keyRing),
 		CryptoKeyId: g.key,
@@ -280,8 +280,8 @@ func (g *KMS) createKey(ctx context.Context) error {
 	}
 	result, err := g.client.CreateCryptoKey(ctx, createKeyRequest)
 	if err != nil {
-		return errors.Wrap(err, "creating crypto key")
+		return nil, errors.Wrap(err, "creating crypto key")
 	}
 	fmt.Printf("Created key %s in GCP KMS\n", result.GetName())
-	return nil
+	return g.PublicKey(ctx)
 }
