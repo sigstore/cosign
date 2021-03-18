@@ -18,6 +18,8 @@ package cli
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -44,8 +46,9 @@ func GenerateKeyPair() *ffcli.Command {
 
 	return &ffcli.Command{
 		Name:       "generate-key-pair",
-		ShortUsage: "cosign generate-key-pair",
+		ShortUsage: "cosign generate-key-pair [-kms KMSPATH]",
 		ShortHelp:  "generate-key-pair generates a key-pair",
+		LongHelp:   "generate-key-pair generates a key-pair",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			return GenerateKeyPairCmd(ctx, *kmsVal)
@@ -59,7 +62,23 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		if err != nil {
 			return err
 		}
-		return k.CreateKey(ctx)
+		pub, err := k.CreateKey(ctx)
+		if err != nil {
+			return err
+		}
+		derBytes, err := x509.MarshalPKIXPublicKey(pub)
+		if err != nil {
+			return err
+		}
+		pemBytes := pem.EncodeToMemory(&pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: derBytes,
+		})
+		if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
+			return err
+		}
+		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+		return nil
 	}
 
 	keys, err := cosign.GenerateKeyPair(GetPass)
