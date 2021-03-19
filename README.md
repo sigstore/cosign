@@ -128,6 +128,7 @@ Today, `cosign` has been tested and works against the following registries:
 * GCP's Artifact Registry and Container Registry
 * Docker Hub
 * Azure Container Registry
+* JFrog Artifactory Container Registry
 
 We aim for wide registry support.
 Please help test!
