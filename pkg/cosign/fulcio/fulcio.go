@@ -6,15 +6,15 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"os"
 
 	"github.com/sigstore/fulcio/cmd/client/app"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/fulcio/pkg/generated/models"
 	"github.com/sigstore/fulcio/pkg/oauthflow"
@@ -81,16 +81,24 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, error) {
 
 	bearerAuth := httptransport.BearerToken(idToken.RawString)
 
+	content := strfmt.Base64(pubBytes)
+	email := strfmt.Base64(proof)
 	params := operations.NewSigningCertParams()
-	params.SetSubmitcsr(&models.Submit{
-		Pub:   strfmt.Base64(base64.StdEncoding.EncodeToString(pubBytes)),
-		Proof: strfmt.Base64(base64.StdEncoding.EncodeToString(proof)),
-	})
+	params.SetCertificateRequest(
+		&models.CertificateRequest{
+			PublicKey: &models.CertificateRequestPublicKey{
+				Algorithm: swag.String(models.CertificateRequestPublicKeyAlgorithmEcdsa),
+				Content:   &content,
+			},
+			SignedEmailAddress: &email,
+		},
+	)
+
 	resp, err := fcli.Operations.SigningCert(params, bearerAuth)
 	if err != nil {
 		return "", err
 	}
-	return resp.Payload.Certificate, nil
+	return resp.Payload, nil
 }
 
 // This is the root in the fulcio project.
