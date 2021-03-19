@@ -30,7 +30,7 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	return m.Layers, nil
 }
 
-func Upload(signature, payload []byte, dstTag name.Reference, cert string) error {
+func Upload(signature, payload []byte, dstTag name.Reference, cert, chain string) error {
 	l := &staticLayer{
 		b:  payload,
 		mt: "application/vnd.dev.cosign.simplesigning.v1+json",
@@ -52,6 +52,7 @@ func Upload(signature, payload []byte, dstTag name.Reference, cert string) error
 	}
 	if cert != "" {
 		annotations[certkey] = cert
+		annotations[chainkey] = chain
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,
