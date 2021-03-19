@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"runtime"
 	"strings"
@@ -113,9 +112,6 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 				certs, err := LoadCerts(certPem)
 				if err != nil {
 					return err
-				}
-				if len(certs) != 1 {
-					return fmt.Errorf("expected 1 certificate, found %d", len(certs))
 				}
 				sp.Cert = certs[0]
 			}

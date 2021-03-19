@@ -105,7 +105,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 			return nil, errors.Wrap(err, "generating cert")
 		}
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-		cert, err := fulcio.GetCert(ctx, priv)
+		cert, _, err := fulcio.GetCert(ctx, priv) // TODO: use the chain
 		if err != nil {
 			return nil, errors.Wrap(err, "retrieving cert")
 		}

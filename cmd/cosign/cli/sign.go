@@ -135,7 +135,7 @@ func SignCmd(ctx context.Context, keyPath string,
 
 	var signature []byte
 	var publicKey *ecdsa.PublicKey
-	var cert string
+	var cert, chain string
 	switch {
 	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
@@ -162,7 +162,7 @@ func SignCmd(ctx context.Context, keyPath string,
 			return errors.Wrap(err, "generating cert")
 		}
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-		cert, err = fulcio.GetCert(ctx, priv)
+		cert, chain, err = fulcio.GetCert(ctx, priv) // TODO, use the chain.
 		if err != nil {
 			return errors.Wrap(err, "retrieving cert")
 		}
@@ -184,7 +184,7 @@ func SignCmd(ctx context.Context, keyPath string,
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
 
-	if err := cosign.Upload(signature, payload, dstTag, cert); err != nil {
+	if err := cosign.Upload(signature, payload, dstTag, cert, chain); err != nil {
 		return err
 	}
 

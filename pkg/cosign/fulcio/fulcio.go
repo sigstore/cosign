@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"os"
 
@@ -31,19 +32,19 @@ func fulcioServer() string {
 	return defaultFulcioAddress
 }
 
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error) {
 	fcli, err := app.GetFulcioClient(fulcioServer())
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	provider, err := oidc.NewProvider(ctx, "https://accounts.google.com")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// TODO: Switch these to be creds from the sigstore project.
@@ -58,7 +59,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, error) {
 
 	idToken, err := oauthflow.GetIDToken(provider, config)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	var claims struct {
@@ -66,17 +67,17 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, error) {
 		Verified bool   `json:"email_verified"`
 	}
 	if err := idToken.ParsedToken.Claims(&claims); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if !claims.Verified {
-		return "", errors.New("email not verified by identity provider")
+		return "", "", errors.New("email not verified by identity provider")
 	}
 
 	// Sign the email address as part of the request
 	h := sha256.Sum256([]byte(claims.Email))
 	proof, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	bearerAuth := httptransport.BearerToken(idToken.RawString)
@@ -96,9 +97,13 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, error) {
 
 	resp, err := fcli.Operations.SigningCert(params, bearerAuth)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return resp.Payload, nil
+
+	// split the cert and the chain
+	certBlock, chainPem := pem.Decode([]byte(resp.Payload))
+	certPem := pem.EncodeToMemory(certBlock)
+	return string(certPem), string(chainPem), nil
 }
 
 // This is the root in the fulcio project.
