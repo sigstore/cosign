@@ -21,8 +21,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-
 	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
 )
 
@@ -33,7 +31,7 @@ type KMS interface {
 
 	// Sign is responsible for signing an image via the keys
 	// stored in KMS
-	Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error)
+	Sign(ctx context.Context, payload []byte) (signature []byte, err error)
 
 	// PublicKey returns the public key stored in the KMS
 	PublicKey(ctx context.Context) (*ecdsa.PublicKey, error)

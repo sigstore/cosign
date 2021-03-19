@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -29,8 +28,10 @@ import (
 	"path/filepath"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign/kms"
 	"github.com/sigstore/rekor/cmd/cli/app"
 )
 
@@ -38,19 +39,20 @@ func VerifyBlob() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign verify-blob", flag.ExitOnError)
 		key       = flagset.String("key", "", "path to the public key")
+		kmsVal    = flagset.String("kms", "", "verify via a public key stored in a KMS")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "path to the signature")
 	)
 	return &ffcli.Command{
 		Name:       "verify-blob",
-		ShortUsage: "cosign verify-blob -key <key>|-cert <cert> -signature <sig> <blob>",
+		ShortUsage: "cosign verify-blob -key <key>|-cert <cert>|-kms <kms> -signature <sig> <blob>",
 		ShortHelp:  "Verify a signature on the supplied blob",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return VerifyBlobCmd(ctx, *key, *cert, *signature, args[0])
+			return VerifyBlobCmd(ctx, *key, *kmsVal, *cert, *signature, args[0])
 		},
 	}
 }
@@ -60,7 +62,7 @@ func isb64(data []byte) bool {
 	return err == nil
 }
 
-func VerifyBlobCmd(_ context.Context, keyRef string, certRef string, sigRef string, blobRef string) error {
+func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef string) error {
 
 	var pubKey *ecdsa.PublicKey
 	var err error
@@ -70,6 +72,15 @@ func VerifyBlobCmd(_ context.Context, keyRef string, certRef string, sigRef stri
 		pubKey, err = cosign.LoadPublicKey(keyRef)
 		if err != nil {
 			return err
+		}
+	case kmsVal != "":
+		k, err := kms.Get(ctx, kmsVal)
+		if err != nil {
+			return errors.Wrap(err, "getting kms")
+		}
+		pubKey, err = k.PublicKey(ctx)
+		if err != nil {
+			return errors.Wrap(err, "kms public key")
 		}
 	case certRef != "": // KEYLESS MODE!
 		pems, err := ioutil.ReadFile(certRef)

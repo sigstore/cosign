@@ -27,7 +27,6 @@ import (
 	"regexp"
 
 	kms "cloud.google.com/go/kms/apiv1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -88,7 +87,7 @@ func NewGCP(ctx context.Context, keyResourceID string) (*KMS, error) {
 	}, nil
 }
 
-func (g *KMS) Sign(ctx context.Context, img *remote.Descriptor, payload []byte) (signature []byte, err error) {
+func (g *KMS) Sign(ctx context.Context, payload []byte) (signature []byte, err error) {
 	// Calculate the digest of the message.
 	digest := sha256.New()
 	_, err = digest.Write(payload)

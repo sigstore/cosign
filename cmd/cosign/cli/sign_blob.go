@@ -19,8 +19,6 @@ package cli
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -32,23 +30,25 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign/kms"
 )
 
 func SignBlob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
 		key     = flagset.String("key", "", "path to the private key")
+		kmsVal  = flagset.String("kms", "", "sign via a private key stored in a KMS")
 		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
-		ShortUsage: "cosign sign-blob -key <key> [-sig <sig path>] <blob>",
+		ShortUsage: "cosign sign-blob -key <key>|-kms <kms> [-sig <sig path>] <blob>",
 		ShortHelp:  "Sign the supplied blob, outputting the base64-nocded signature to stdout",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !cosign.Experimental() {
-				if *key == "" {
+				if *key == "" && *kmsVal == "" {
 					return flag.ErrHelp
 				}
 			}
@@ -57,13 +57,13 @@ func SignBlob() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			_, err := SignBlobCmd(ctx, *key, args[0], *b64, GetPass)
+			_, err := SignBlobCmd(ctx, *key, *kmsVal, args[0], *b64, GetPass)
 			return err
 		},
 	}
 }
 
-func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -76,42 +76,44 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 		return nil, err
 	}
 
-	var priv *ecdsa.PrivateKey
-	var cert string
-	if keyPath != "" {
-		kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
+	var signature []byte
+	var publicKey *ecdsa.PublicKey
+
+	switch {
+	case keyPath != "":
+		signature, publicKey, err = sign(ctx, keyPath, payload, pf)
 		if err != nil {
-			return nil, errors.Wrapf(err, "reading %s", keyPath)
+			return nil, errors.Wrap(err, "signing blob")
 		}
-		pass, err := pf(false)
+	case kmsVal != "":
+		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
 			return nil, err
 		}
-		priv, err = cosign.LoadPrivateKey(kb, pass)
+		signature, err = k.Sign(ctx, payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "loading private key")
+			return nil, errors.Wrap(err, "signing")
 		}
-	} else { // Keyless!
+		publicKey, err = k.PublicKey(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "getting public key")
+		}
+	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		priv, err = cosign.GeneratePrivateKey()
+		priv, err := cosign.GeneratePrivateKey()
 		if err != nil {
 			return nil, errors.Wrap(err, "generating cert")
 		}
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-		cert, err = fulcio.GetCert(ctx, priv)
+		cert, err := fulcio.GetCert(ctx, priv)
 		if err != nil {
 			return nil, errors.Wrap(err, "retrieving cert")
 		}
 		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
 	}
-	h := sha256.Sum256(payload)
-	signature, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
-	if err != nil {
-		return nil, err
-	}
 
 	if cosign.Experimental() {
-		index, err := cosign.UploadTLog(signature, payload, &priv.PublicKey)
+		index, err := cosign.UploadTLog(signature, payload, publicKey)
 		if err != nil {
 			return nil, err
 		}
@@ -129,6 +131,5 @@ func SignBlobCmd(ctx context.Context, keyPath, payloadPath string, b64 bool, pf 
 			return nil, err
 		}
 	}
-
 	return signature, nil
 }
