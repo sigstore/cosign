@@ -15,10 +15,7 @@
 # vendor/
 
 # cosign stuff
-/cosign.sig
-/cosign.key
-/cosign.pub
-/cosign
+/cosign*
 .vscode
 
 # fuzzing artifacts

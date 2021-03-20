@@ -20,7 +20,7 @@ LDFLAGS = "-X github.com/sigstore/cosign/cmd/cosign/cli.gitVersion=$(GIT_VERSION
              -X github.com/sigstore/cosign/cmd/cosign/cli.gitTreeState=$(GIT_TREESTATE) \
              -X github.com/sigstore/cosign/cmd/cosign/cli.buildDate=$(BUILDDATE)"
 
-.PHONY: all lint test clean cosign
+.PHONY: all lint test clean cosign cross
 
 all: cosign
 
@@ -37,6 +37,16 @@ golangci-lint:
 
 lint: golangci-lint ## Runs golangci-lint linter
 	$(GOLANGCI_LINT) run  -n
+
+
+PLATFORMS=darwin linux
+ARCHITECTURES=amd64
+
+cross:
+	$(foreach GOOS, $(PLATFORMS),\
+		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
+	go build -ldflags $(LDFLAGS) -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign)))
+	shasum -a 256 cosign-* > cosign.sha2556
 
 test:
 	go test ./...
