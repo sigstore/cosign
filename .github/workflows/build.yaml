@@ -2,7 +2,6 @@ name: CI-Build
 
 # Run this workflow every time a new commit pushed to your repository
 on:
-  pull_request:
   push:
     branches:
       - main
