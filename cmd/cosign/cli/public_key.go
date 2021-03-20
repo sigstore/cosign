@@ -91,10 +91,7 @@ func GetPublicKey(ctx context.Context, keyPath, kmsVal string, pf cosign.PassFun
 		}
 		pub = &pk.PublicKey
 	}
-	pemBytes, err := cosign.MarshalPublicKey(pub)
-	if err != nil {
-		return err
-	}
+	pemBytes := cosign.KeyToPem(pub)
 	if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
 		return err
 	}

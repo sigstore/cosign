@@ -63,20 +63,31 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 		Type:  "ENCRYPTED COSIGN PRIVATE KEY",
 	})
 
-	pub := &priv.PublicKey
-	b, err := x509.MarshalPKIXPublicKey(pub)
-	if err != nil {
-		return nil, err
-	}
-
 	// Now do the public key
-	pubBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: b,
-	})
+	pubBytes := KeyToPem(&priv.PublicKey)
 
 	return &Keys{
 		PrivateBytes: privBytes,
 		PublicBytes:  pubBytes,
 	}, nil
+}
+
+func KeyToPem(pub *ecdsa.PublicKey) []byte {
+	// This can only panic if the key is not an actual crypto key, so we're safe
+	b, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		panic(err)
+	}
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: b,
+	})
+}
+
+func CertToPem(c *x509.Certificate) []byte {
+	// This can only panic if the key is not an actual crypto key, so we're safe
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: c.Raw,
+	})
 }

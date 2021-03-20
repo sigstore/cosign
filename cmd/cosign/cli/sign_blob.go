@@ -86,14 +86,17 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 	}
 
 	var signature []byte
-	var publicKey *ecdsa.PublicKey
+	var pemBytes []byte
 
 	switch {
 	case keyPath != "":
-		signature, publicKey, err = sign(ctx, keyPath, payload, pf)
+		var pub *ecdsa.PublicKey
+		signature, pub, err = sign(ctx, keyPath, payload, pf)
 		if err != nil {
 			return nil, errors.Wrap(err, "signing blob")
 		}
+		pemBytes = cosign.KeyToPem(pub)
+
 	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
@@ -103,10 +106,11 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		if err != nil {
 			return nil, errors.Wrap(err, "signing")
 		}
-		publicKey, err = k.PublicKey(ctx)
+		publicKey, err := k.PublicKey(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "getting public key")
 		}
+		pemBytes = cosign.KeyToPem(publicKey)
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		priv, err := cosign.GeneratePrivateKey()
@@ -114,16 +118,15 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 			return nil, errors.Wrap(err, "generating cert")
 		}
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-		cert, _, err := fulcio.GetCert(ctx, priv) // TODO: use the chain
+		pemBytes, _, err := fulcio.GetCert(ctx, priv) // TODO: use the chain
 		if err != nil {
 			return nil, errors.Wrap(err, "retrieving cert")
 		}
-		publicKey = &priv.PublicKey
-		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
+		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", string(pemBytes))
 	}
 
 	if cosign.Experimental() {
-		index, err := cosign.UploadTLog(signature, payload, publicKey)
+		index, err := cosign.UploadTLog(signature, payload, pemBytes)
 		if err != nil {
 			return nil, err
 		}
