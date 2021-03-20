@@ -24,3 +24,5 @@
 # fuzzing artifacts
 *.libfuzzer
 *fuzz.a
+
+bin*
