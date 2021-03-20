@@ -20,14 +20,14 @@ LDFLAGS = "-X github.com/sigstore/cosign/cmd/cosign/cli.gitVersion=$(GIT_VERSION
              -X github.com/sigstore/cosign/cmd/cosign/cli.gitTreeState=$(GIT_TREESTATE) \
              -X github.com/sigstore/cosign/cmd/cosign/cli.buildDate=$(BUILDDATE)"
 
-.PHONY: all lint test clean
+.PHONY: all lint test clean cosign
 
 all: cosign
 
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 
 cosign: $(SRCS)
-	go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
+	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
 
 lint:
 	$(GOBIN)/golangci-lint run -v ./...
