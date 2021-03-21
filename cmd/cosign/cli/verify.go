@@ -43,7 +43,7 @@ func Verify() *ffcli.Command {
 	flagset := flag.NewFlagSet("cosign verify", flag.ExitOnError)
 	annotations := annotationsMap{}
 
-	flagset.StringVar(&cmd.Key, "kms", "", "verify via a public key stored in a KMS")
+	flagset.StringVar(&cmd.Key, "key", "", "path to the public key")
 	flagset.StringVar(&cmd.KmsVal, "kms", "", "verify via a public key stored in a KMS")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 
