@@ -33,19 +33,16 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
-var verify = func(k, i string, b bool, a map[string]string) error {
-	pk, err := cosign.LoadPublicKey(k)
-	if err != nil {
-		return err
+var verify = func(key, imageRef string, checkClaims bool, annotations map[string]string) error {
+	cmd := cli.VerifyCommand{
+		Key:         key,
+		CheckClaims: checkClaims,
+		Annotations: annotations,
 	}
-	co := cosign.CheckOpts{
-		PubKey:      pk,
-		Annotations: a,
-		Claims:      b,
-		Tlog:        cosign.Experimental(),
-	}
-	_, err = cli.VerifyCmd(context.Background(), i, co)
-	return err
+
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
 }
 
 func TestSignVerify(t *testing.T) {

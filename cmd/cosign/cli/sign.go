@@ -97,14 +97,6 @@ func Sign() *ffcli.Command {
 	}
 }
 
-// KeyParseError is an error returned when an incorrect set of key flags
-// are parsed by the CLI
-type KeyParseError struct{}
-
-func (e *KeyParseError) Error() string {
-	return "either local key path (-key) or KMS path (-kms) must be provided, not both"
-}
-
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
 	annotations map[string]string, kmsVal string, pf cosign.PassFunc, force bool) error {
