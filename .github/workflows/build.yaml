@@ -22,11 +22,13 @@ jobs:
           go-version: '1.16'
 
       - name: build
-        run: make
+        run: make cross
       - name: Print Info
-        run: ./cosign version && shasum -a 256 ./cosign > cosign.sha256 && cat cosign.sha256
+        run: ./cosign-linux-amd64 version && shasum -a 256 ./cosign-linux-amd64 > cosign.sha256 && cat cosign.sha256
       - name: sign
-        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign sign-blob -key ./.github/workflows/cosign.key ./cosign > cosign.sig
+        run: |
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key ././cosign-linux-amd64 > cosign-linux-amd64.sig
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-darwin-amd64 sign-blob -key ./.github/workflows/cosign.key ././cosign-darwin-amd64 > cosign-darwin-amd64.sig
       - name: verify
         run: ./cosign verify-blob -key ./.github/workflows/cosign.pub -signature cosign.sig ./cosign
       - name: Upload artifacts
@@ -34,6 +36,6 @@ jobs:
         with:
           name: artifacts
           path: |
-            cosign
-            cosign.sha256
-            cosign.sig
+            cosign-*
+            cosign.-*sha256
+            cosign-*.sig
