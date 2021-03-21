@@ -15,10 +15,9 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-LDFLAGS = "-X github.com/sigstore/cosign/cmd/cosign/cli.gitVersion=$(GIT_VERSION) \
-             -X github.com/sigstore/cosign/cmd/cosign/cli.gitCommit=$(GIT_HASH) \
-             -X github.com/sigstore/cosign/cmd/cosign/cli.gitTreeState=$(GIT_TREESTATE) \
-             -X github.com/sigstore/cosign/cmd/cosign/cli.buildDate=$(BUILDDATE)"
+PKG=github.com/sigstore/cosign/cmd/cosign/cli
+
+LDFLAGS="-X $(PKG).gitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE)"
 
 .PHONY: all lint test clean cosign cross
 
@@ -54,3 +53,7 @@ test:
 clean:
 	rm -rf cosign
 
+.PHONY: ko
+ko:
+	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
+	GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish github.com/sigstore/cosign/cmd/cosign
