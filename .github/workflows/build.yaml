@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+  pull_request: #REMOVE
 jobs:
   # Set the job key. The key is displayed as the job name
   # when a job name is not provided
@@ -38,7 +39,7 @@ jobs:
       - name: build
         run: make cross
       - name: container
-        run: KO_DOCKER_REPO=gcr.io/projectsigstore/cosign/ci-builds make ko
+        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_DOCKER_REPO=gcr.io/projectsigstore/cosign/ci/cosign make sign-container
       - name: Print Info
         run: ./cosign-linux-amd64 version && shasum -a 256 ./cosign-linux-amd64 > cosign.sha256 && cat cosign.sha256
       - name: sign

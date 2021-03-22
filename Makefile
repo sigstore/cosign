@@ -59,3 +59,7 @@ ko:
 	GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
+
+.PHONY: sign-container
+sign-container: cosign ko
+	./cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)

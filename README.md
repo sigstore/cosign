@@ -24,12 +24,12 @@ and the resulting binary will be placed at `$HOME/go/bin/cosign`.
 
 ### Containers
 
-CI Built containers are published for every commit at `gcr.io/projectsigstore/cosign/ci-builds`.
+CI Built containers are published for every commit at `gcr.io/projectsigstore/cosign/ci/cosign`.
 They are tagged with the commit.
 They can be found with `crane ls`:
 
 ```
-$ crane ls gcr.io/projectsigstore/cosign/ci-builds
+$ crane ls gcr.io/projectsigstore/cosign/ci/cosign
 749f896
 749f896bb378aca5cb45c5154fc0cb43f6728d48
 ```
