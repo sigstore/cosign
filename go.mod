@@ -5,7 +5,7 @@ go 1.15
 require (
 	cloud.google.com/go v0.79.0
 	github.com/coreos/go-oidc/v3 v3.0.0
-	github.com/go-openapi/runtime v0.19.26
+	github.com/go-openapi/runtime v0.19.27
 	github.com/go-openapi/strfmt v0.20.0
 	github.com/go-openapi/swag v0.19.14
 	github.com/google/go-cmp v0.5.5
