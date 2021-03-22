@@ -208,3 +208,29 @@ Each signature is printed to stdout in a json format:
 $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 {"Base64Signature":"Ejy6ipGJjUzMDoQFePWixqPBYF0iSnIvpMWps3mlcYNSEcRRZelL7GzimKXaMjxfhy5bshNGvDT5QoUJ0tqUAg==","Payload":"eyJDcml0aWNhbCI6eyJJZGVudGl0eSI6eyJkb2NrZXItcmVmZXJlbmNlIjoiIn0sIkltYWdlIjp7IkRvY2tlci1tYW5pZmVzdC1kaWdlc3QiOiI4N2VmNjBmNTU4YmFkNzliZWVhNjQyNWEzYjI4OTg5ZjAxZGQ0MTcxNjQxNTBhYjNiYWFiOThkY2JmMDRkZWY4In0sIlR5cGUiOiIifSwiT3B0aW9uYWwiOm51bGx9"}
 ```
+
+## Retrieve the Public Key From a Private Key or KMS
+
+
+KMS:
+```
+$ cosign public-key -kms gcpkms://projects/someproject/locations/us-central1/keyRings/foo/cryptoKeys/bug
+Public key written to cosign.pub
+$ cat cosign.pub
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgrKKtyws86/APoULh/zXk4LONqII
+AcxvLtLEgRjRI4TKnMAXtIGp8K4X4CTWPEXMqSYZZUa2I1YvHyLLY2bEzA==
+-----END PUBLIC KEY-----
+```
+
+Private Key:
+```
+$ ./cosign public-key -key cosign.key
+Enter password for private key:
+Public key written to cosign.pub
+$ cat cosign.pub
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjCxhhvb1KmIfe1J2ceT25kHepstb
+IDYuTA0U1ri4F0CXXazLiftzGlyfse1No4orr8w1ZIchQ8TJlyCSaSuR0Q==
+-----END PUBLIC KEY-----
+```

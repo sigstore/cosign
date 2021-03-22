@@ -18,8 +18,6 @@ package cli
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -66,14 +64,10 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		if err != nil {
 			return err
 		}
-		derBytes, err := x509.MarshalPKIXPublicKey(pub)
+		pemBytes, err := cosign.MarshalPublicKey(pub)
 		if err != nil {
 			return err
 		}
-		pemBytes := pem.EncodeToMemory(&pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: derBytes,
-		})
 		if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
 			return err
 		}
