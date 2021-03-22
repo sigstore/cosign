@@ -21,8 +21,24 @@ jobs:
         with:
           go-version: '1.16'
 
+      - name: install ko
+        run: |
+          curl -L https://github.com/google/ko/releases/download/v0.8.1/ko_0.8.1_Linux_x86_64.tar.gz | tar xzf - ko && \
+          chmod +x ./ko && sudo mv ko /usr/local/bin/
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: projectsigstore
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          export_default_credentials: true
+      - name: creds
+        run: gcloud auth configure-docker --quiet
+
       - name: build
         run: make cross
+      - name: container
+        run: KO_DOCKER_REPO=gcr.io/projectsigstore/cosign/ci-builds make ko
       - name: Print Info
         run: ./cosign-linux-amd64 version && shasum -a 256 ./cosign-linux-amd64 > cosign.sha256 && cat cosign.sha256
       - name: sign
@@ -30,7 +46,7 @@ jobs:
           echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key ././cosign-linux-amd64 > cosign-linux-amd64.sig
           echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key ././cosign-darwin-amd64 > cosign-darwin-amd64.sig
       - name: verify
-        run: ./cosign verify-blob -key ./.github/workflows/cosign.pub -signature cosign.sig ./cosign-linux-amd64
+        run: ./cosign-linux-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-linux-amd64.sig ./cosign-linux-amd64
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
