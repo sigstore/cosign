@@ -16,17 +16,37 @@ Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcf
 
 ## Installation
 
-For now, clone the repository and run:
+If you have Go 1.16+, you can directly install by running:
 
-    go build -o cosign ./cmd/cosign
-
-Alternatively, if you have Go 1.16+, you can directly install by running:
-
-    go install github.com/sigstore/cosign/cmd/cosign@latest
+    $ go install github.com/sigstore/cosign/cmd/cosign@latest
 
 and the resulting binary will be placed at `$HOME/go/bin/cosign`.
 
-We'll publish releases at a later time.
+### Containers
+
+CI Built containers are published for every commit at `gcr.io/projectsigstore/cosign/ci-builds`.
+They are tagged with the commit.
+They can be found with `crane ls`:
+
+```
+$ crane ls gcr.io/projectsigstore/cosign/ci-builds
+749f896
+749f896bb378aca5cb45c5154fc0cb43f6728d48
+```
+
+### Releases
+
+Releases are published in this repository under the Releases page, and hosted in the GCS bucket `cosign-releases`.
+They can be viewed with `gsutil`:
+
+```
+$ gsutil ls gs://cosign-releases/v0.1.0
+gs://cosign-releases/v0.1.0/cosign
+gs://cosign-releases/v0.1.0/cosign.sha256
+gs://cosign-releases/v0.1.0/cosign.sig
+```
+
+Cross platform builds will start in v0.2.0.
 
 ## Quick Start
 
