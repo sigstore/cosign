@@ -120,12 +120,8 @@ func printVerification(verified []cosign.SignedPayload, co cosign.CheckOpts) {
 	if co.PubKey != nil {
 		fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 	}
-	if co.Roots != nil { // This is always true for now, we hardcode the fulcio root.
-		fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
-		if !co.Tlog {
-			fmt.Fprintln(os.Stderr, "  - WARNING - THE CERTIFICATE EXPIRY WAS NOT CHECKED. set COSIGN_EXPERIMENTAL=1 to check!")
-		}
-	}
+	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
+
 	for _, vp := range verified {
 		if vp.Cert != nil {
 			fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
