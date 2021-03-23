@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-  pull_request: #REMOVE
 jobs:
   # Set the job key. The key is displayed as the job name
   # when a job name is not provided
