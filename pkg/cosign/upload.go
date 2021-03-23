@@ -22,9 +22,12 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/cmd/cli/app"
@@ -35,12 +38,34 @@ import (
 
 const (
 	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
+	repoEnv         = "COSIGN_REPOSITORY"
 	ServerEnv       = "REKOR_SERVER"
 	rekorServer     = "https://api.rekor.dev"
 )
 
 func Experimental() bool {
 	return os.Getenv(ExperimentalEnv) == "1"
+}
+
+func DestinationTag(ref name.Reference, img *remote.Descriptor) (name.Tag, error) {
+	dstTag := ref.Context().Tag(Munge(img.Descriptor))
+	wantRepo := os.Getenv(repoEnv)
+	if wantRepo == "" {
+		return dstTag, nil
+	}
+	// strip registry from image
+	oldImage := strings.TrimPrefix(dstTag.Name(), dstTag.RegistryStr())
+	newSubrepo := strings.TrimPrefix(wantRepo, dstTag.RegistryStr())
+
+	// replace old subrepo with new one
+	subRepo := strings.Split(oldImage, "/")
+	if s := strings.SplitAfterN(newSubrepo, "/", 1); len(s) == 1 {
+		subRepo[1] = strings.TrimPrefix(s[0], "/")
+	} else {
+		subRepo[1] = strings.TrimPrefix(s[1], "/")
+	}
+	subbed := dstTag.RegistryStr() + strings.Join(subRepo, "/")
+	return name.NewTag(subbed)
 }
 
 // Upload will upload the signature, public key and payload to the tlog

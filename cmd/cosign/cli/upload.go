@@ -73,7 +73,10 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 		return err
 	}
 
-	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
+	dstTag, err := cosign.DestinationTag(ref, get)
+	if err != nil {
+		return err
+	}
 
 	var payload []byte
 	if payloadRef == "" {

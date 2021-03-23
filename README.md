@@ -198,6 +198,18 @@ Multiple signatures are stored in a list which is unfortunately "racy" today.
 To add a signtaure, clients orchestrate a "read-append-write" operation, so the last write
 will win in the case of contention.
 
+##### Specifying Registry
+`cosign` will default to storing signatures in the same repo as the image it is signing.
+To specify a different repo for signatures, you can set the `COSIGN_REPOSITORY` environment variable.
+
+This will replace the repo in the provided image like this:
+```
+export COSIGN_REPOSITORY=gcr.io/my-new-repo
+gcr.io/dlorenc-vmtest2/demo -> gcr.io/my-new-repo/demo:sha256-DIGEST.cosign
+```
+So the signature for `gcr.io/dlorenc-vmtest2/demo` will be stored in `gcr.io/my-new-repo/demo:sha256-DIGEST.cosign`.
+
+
 ## Signature Specification
 
 `cosign` is inspired by tools like [minisign](https://jedisct1.github.io/minisign/) and
