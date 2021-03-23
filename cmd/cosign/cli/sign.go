@@ -172,7 +172,10 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 
 	// sha256:... -> sha256-...
-	dstTag := ref.Context().Tag(cosign.Munge(get.Descriptor))
+	dstTag, err := cosign.DestinationTag(ref, get)
+	if err != nil {
+		return err
+	}
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
 
