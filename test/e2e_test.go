@@ -37,7 +37,7 @@ var verify = func(key, imageRef string, checkClaims bool, annotations map[string
 	cmd := cli.VerifyCommand{
 		Key:         key,
 		CheckClaims: checkClaims,
-		Annotations: annotations,
+		Annotations: &annotations,
 	}
 
 	args := []string{imageRef}

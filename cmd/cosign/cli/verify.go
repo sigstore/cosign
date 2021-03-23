@@ -34,7 +34,7 @@ type VerifyCommand struct {
 	KmsVal      string
 	Key         string
 	CheckClaims bool
-	Annotations map[string]string
+	Annotations *map[string]string
 }
 
 // Verify builds and returns an ffcli command
@@ -49,7 +49,7 @@ func Verify() *ffcli.Command {
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
-	cmd.Annotations = annotations.annotations
+	cmd.Annotations = &annotations.annotations
 
 	return &ffcli.Command{
 		Name:       "verify",
@@ -70,7 +70,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	}
 
 	co := cosign.CheckOpts{
-		Annotations: c.Annotations,
+		Annotations: *c.Annotations,
 		Claims:      c.CheckClaims,
 		Tlog:        cosign.Experimental(),
 		Roots:       fulcio.Roots,
