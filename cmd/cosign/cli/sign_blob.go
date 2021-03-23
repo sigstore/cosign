@@ -109,6 +109,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		if err != nil {
 			return nil, errors.Wrap(err, "retrieving cert")
 		}
+		publicKey = &priv.PublicKey
 		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
 	}
 
