@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	_ "embed" // To enable the `go:embed` directive.
 	"encoding/pem"
 	"errors"
 	"os"
@@ -23,6 +24,10 @@ import (
 )
 
 const defaultFulcioAddress = "https://fulcio.sigstore.dev"
+
+// This is the root in the fulcio project.
+//go:embed fulcio.pem
+var rootPem string
 
 func fulcioServer() string {
 	addr := os.Getenv("FULCIO_ADDRESS")
@@ -105,21 +110,6 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error
 	certPem := pem.EncodeToMemory(certBlock)
 	return string(certPem), string(chainPem), nil
 }
-
-// This is the root in the fulcio project.
-const rootPem = `-----BEGIN CERTIFICATE-----
-MIIB+DCCAX6gAwIBAgITNVkDZoCiofPDsy7dfm6geLbuhzAKBggqhkjOPQQDAzAq
-MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx
-MDMwNzAzMjAyOVoXDTMxMDIyMzAzMjAyOVowKjEVMBMGA1UEChMMc2lnc3RvcmUu
-ZGV2MREwDwYDVQQDEwhzaWdzdG9yZTB2MBAGByqGSM49AgEGBSuBBAAiA2IABLSy
-A7Ii5k+pNO8ZEWY0ylemWDowOkNa3kL+GZE5Z5GWehL9/A9bRNA3RbrsZ5i0Jcas
-taRL7Sp5fp/jD5dxqc/UdTVnlvS16an+2Yfswe/QuLolRUCrcOE2+2iA5+tzd6Nm
-MGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE
-FMjFHQBBmiQpMlEk6w2uSu1KBtPsMB8GA1UdIwQYMBaAFMjFHQBBmiQpMlEk6w2u
-Su1KBtPsMAoGCCqGSM49BAMDA2gAMGUCMH8liWJfMui6vXXBhjDgY4MwslmN/TJx
-Ve/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup
-Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
------END CERTIFICATE-----`
 
 var Roots *x509.CertPool
 
