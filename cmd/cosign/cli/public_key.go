@@ -45,6 +45,9 @@ func PublicKey() *ffcli.Command {
 		LongHelp:   "public-key gets a public key from the key-pair",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
+			if (*key == "" && *kmsVal == "") || (*key != "" && *kmsVal != "") {
+				return &KeyParseError{}
+			}
 			return GetPublicKey(ctx, *key, *kmsVal, GetPass)
 		},
 	}
