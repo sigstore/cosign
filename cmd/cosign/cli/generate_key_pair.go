@@ -46,8 +46,19 @@ func GenerateKeyPair() *ffcli.Command {
 		Name:       "generate-key-pair",
 		ShortUsage: "cosign generate-key-pair [-kms KMSPATH]",
 		ShortHelp:  "generate-key-pair generates a key-pair",
-		LongHelp:   "generate-key-pair generates a key-pair",
-		FlagSet:    flagset,
+		LongHelp: `generate-key-pair generates a key-pair for signing.
+
+EXAMPLES:
+  # generate key-pair and write to cosign.key and cosign.pub files
+  cosign generate-key-pair
+
+  # generate a key-pair in Google Cloud KMS
+  cosign generate-key-pair -kms gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
+
+CAVEATS:
+  This command interactively prompts for a password. You can use
+  the COSIGN_PASSWORD environment variable to provide one.`,
+		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			return GenerateKeyPairCmd(ctx, *kmsVal)
 		},
