@@ -1,0 +1,18 @@
+# action.yml
+name: 'Install Cosign'
+description: 'Install Cosign and put it on your path'
+# This is pinned to the last major release, we have to bump it for each action version.
+# TODO: We should version the action separately from the binary, and add a paramter for which cosign
+# version to install.
+runs:
+  using: "composite"
+  steps:
+    - run: curl -LO https://storage.googleapis.com/cosign-releases/v0.1.0/cosign
+      shell: bash
+    # We verify the version against a SHA **in the published action itself**, not in the GCS bucket.
+    - run: |
+        sha=$(shasum -a 256 cosign | cut -d' ' -f1);
+        if [[ $(shasum -a 256 cosign | cut -d' ' -f1) != "fd2e09bb1ca5f5342227b85a4d3b1c498df1ab2439cafb3636381bb82ad29cea" ]]; then exit 1; fi
+      shell: bash
+    - run: chmod +x cosign && mkdir -p $HOME/.cosign && mv cosign $HOME/.cosign/ && echo "$HOME/.cosign" >> $GITHUB_PATH
+      shell: bash
