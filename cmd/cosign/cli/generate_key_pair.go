@@ -123,14 +123,20 @@ func GetPass(confirm bool) ([]byte, error) {
 }
 
 func readPasswordFn() func() ([]byte, error) {
+	pw := os.Getenv("COSIGN_PASSWORD")
+	switch {
+	case pw != "":
+		return func() ([]byte, error) {
+			return []byte(os.Getenv("COSIGN_PASSWORD")), nil
+		}
+	case term.IsTerminal(0):
+		return func() ([]byte, error) {
+			return term.ReadPassword(0)
+		}
 	// Handle piped in passwords.
-	r := func() ([]byte, error) {
-		return term.ReadPassword(0)
-	}
-	if !term.IsTerminal(0) {
-		r = func() ([]byte, error) {
+	default:
+		return func() ([]byte, error) {
 			return ioutil.ReadAll(os.Stdin)
 		}
 	}
-	return r
 }

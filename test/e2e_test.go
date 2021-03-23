@@ -83,6 +83,17 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar", "baz": "bat"}), t)
 }
 
+func TestGenerateKeyPairEnvVar(t *testing.T) {
+	defer setenv(t, "COSIGN_PASSWORD", "foo")()
+	keys, err := cosign.GenerateKeyPair(cli.GetPass)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cosign.LoadPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestMultipleSignatures(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
