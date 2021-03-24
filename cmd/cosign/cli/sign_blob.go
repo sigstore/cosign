@@ -43,8 +43,19 @@ func SignBlob() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "sign-blob",
 		ShortUsage: "cosign sign-blob -key <key>|-kms <kms> [-sig <sig path>] <blob>",
-		ShortHelp:  "Sign the supplied blob, outputting the base64-nocded signature to stdout",
-		FlagSet:    flagset,
+		ShortHelp:  `Sign the supplied blob, outputting the base64-encoded signature to stdout.`,
+		LongHelp: `Sign the supplied blob, outputting the base64-encoded signature to stdout.
+
+EXAMPLES
+  # sign a blob with Google sign-in (experimental)
+  COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
+
+  # sign a blob with a local key pair file
+  cosign sign-blob -key cosign.pub <FILE>
+
+  # sign a blob with a key pair stored in Google Cloud KMS
+  cosign sign-blob -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <FILE>`,
+		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !cosign.Experimental() {

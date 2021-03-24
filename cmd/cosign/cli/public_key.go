@@ -42,8 +42,16 @@ func PublicKey() *ffcli.Command {
 		Name:       "public-key",
 		ShortUsage: "cosign public-key gets a public key from the key-pair [-kms KMSPATH]",
 		ShortHelp:  "public-key gets a public key from the key-pair",
-		LongHelp:   "public-key gets a public key from the key-pair",
-		FlagSet:    flagset,
+		LongHelp: `public-key gets a public key from the key-pair and
+writes to cosign.pub in the current directory.
+
+EXAMPLES
+  # extract public key from private key
+  cosign public-key -key <PRIVATE KEY FILE>
+
+  # extract public key from Google Cloud KMS key pair
+  cosign public-key -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>`,
+		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if (*key == "" && *kmsVal == "") || (*key != "" && *kmsVal != "") {
 				return &KeyParseError{}
