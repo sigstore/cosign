@@ -38,12 +38,12 @@ import (
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/pkg/cosign/fulcio"
-	"github.com/sigstore/cosign/pkg/cosign/kms"
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
+
+	"github.com/sigstore/cosign/pkg/cosign/kms"
 )
 
 const pubKeyPemType = "PUBLIC KEY"
@@ -358,7 +358,7 @@ func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
 		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
 		CurrentTime: cert.NotBefore,
-		Roots:       fulcio.Roots,
+		Roots:       roots,
 		KeyUsages: []x509.ExtKeyUsage{
 			x509.ExtKeyUsage(x509.KeyUsageDigitalSignature),
 			x509.ExtKeyUsageCodeSigning,
