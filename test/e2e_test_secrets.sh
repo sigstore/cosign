@@ -25,7 +25,7 @@ if (./cosign verify -key cosign.pub -a foo=bar $img); then false; fi
 ./cosign sign -key cosign.key -a foo=bar $img
 ./cosign verify -key cosign.pub -a foo=bar $img
 
-if (./cosign verify -key cosign.pub -a foo=bar bar=baz $img); then false; fi
+if (./cosign verify -key cosign.pub -a foo=bar -a bar=baz $img); then false; fi
 ./cosign sign -key cosign.key -a foo=bar -a bar=baz $img
 ./cosign verify -key cosign.pub -a foo=bar -a bar=baz $img
 ./cosign verify -key cosign.pub -a bar=baz $img
@@ -36,9 +36,22 @@ mkdir wrong && pushd wrong
 if (../cosign verify -key cosign.pub $img); then false; fi
 popd
 
-echo "SUCCESS"
+## sign-blob
+echo "myblob" > myblob
+echo "myblob2" > myblob2
+./cosign sign-blob -key cosign.key myblob > myblob.sig
+./cosign sign-blob -key cosign.key myblob2 > myblob2.sig
+
+./cosign verify-blob -key cosign.pub -signature myblob.sig myblob
+if (./cosign verify-blob -key cosign.pub -signature myblob.sig myblob2); then false; fi
+
+if (./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob); then false; fi
+./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob2
+
 
 # TODO: kms
 # TODO: tlog
-# TODO: sign-blob
+
+
 # What else needs auth?
+echo "SUCCESS"
