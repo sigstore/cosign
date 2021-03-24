@@ -128,11 +128,11 @@ func GetPass(confirm bool) ([]byte, error) {
 }
 
 func readPasswordFn() func() ([]byte, error) {
-	pw := os.Getenv("COSIGN_PASSWORD")
+	pw, ok := os.LookupEnv("COSIGN_PASSWORD")
 	switch {
-	case pw != "":
+	case ok:
 		return func() ([]byte, error) {
-			return []byte(os.Getenv("COSIGN_PASSWORD")), nil
+			return []byte(pw), nil
 		}
 	case term.IsTerminal(0):
 		return func() ([]byte, error) {
