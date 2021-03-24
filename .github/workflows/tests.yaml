@@ -32,16 +32,32 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      
+
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.16.2'
+          go-version: '1.16'
 
       - name: Run Go tests
         run: go test ./...
 
       - name: Run end-to-end tests
         run: ./test/e2e_test.sh
+
+  license-check:
+    name: license boilerplate check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+      - name: Install addlicense
+        run: go install github.com/google/addlicense@latest
+      - name: Check license headers
+        run: |
+          set -e
+          addlicense -l apache -c 'The Rekor Authors' -v *
+          git diff --exit-code
 
   golangci:
     name: lint
