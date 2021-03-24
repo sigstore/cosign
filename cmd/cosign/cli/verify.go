@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
+
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 )
@@ -53,10 +54,28 @@ func Verify() *ffcli.Command {
 
 	return &ffcli.Command{
 		Name:       "verify",
-		ShortUsage: "cosign verify -key <key> <image uri>",
+		ShortUsage: "cosign verify -key <key>|-kms <kms> <image uri>",
 		ShortHelp:  "Verify a signature on the supplied container image",
-		FlagSet:    flagset,
-		Exec:       cmd.Exec,
+		LongHelp: `Verify signature and annotations on an image by checking the claims
+against the transparency log.
+
+EXAMPLES
+  # verify cosign claims and signing certificates on the image
+  cosign verify <IMAGE>
+
+  # additionally verify specified annotations
+  cosign verify -a key1=val1 -a key2=val2 <IMAGE>
+
+  # (experimental) additionally, verify with the transparency log
+  COSIGN_EXPERIMENTAL=1 cosign verify <IMAGE>
+
+  # verify image with public key
+  cosign verify -key <FILE> <IMAGE>
+
+  # verify image with public key stored in Google Cloud KMS
+  cosign verify -kms  gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
+		FlagSet: flagset,
+		Exec:    cmd.Exec,
 	}
 }
 

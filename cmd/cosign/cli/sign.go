@@ -36,6 +36,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
+
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kms"
 )
@@ -79,8 +80,22 @@ func Sign() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "sign",
 		ShortUsage: "cosign sign -key <key> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
-		ShortHelp:  "Sign the supplied container image",
-		FlagSet:    flagset,
+		ShortHelp:  `Sign the supplied container image.`,
+		LongHelp: `Sign the supplied container image.
+
+EXAMPLES
+  # sign a container image with Google sign-in (experimental)
+  COSIGN_EXPERIMENTAL=1 cosign sign <IMAGE>
+
+  # sign a container image with a local key pair file
+  cosign sign -key cosign.pub <IMAGE>
+
+  # sign a container image and add annotations
+  cosign sign -key cosign.pub -a key1=value1 -a key2=value2 <IMAGE>
+
+  # sign a container image with a key pair stored in Google Cloud KMS
+  cosign sign -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
+		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			// A key file (or kms address) is required unless we're in experimental mode!
 			if !cosign.Experimental() {
