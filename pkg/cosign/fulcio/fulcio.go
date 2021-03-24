@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/fulcio/cmd/client/app"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -50,58 +51,87 @@ func fulcioServer() string {
 	return defaultFulcioAddress
 }
 
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error) {
-	fcli, err := app.GetFulcioClient(fulcioServer())
-	if err != nil {
-		return "", "", err
-	}
+type oidcIDToken struct {
+	*oauthflow.OIDCIDToken
+}
 
-	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
+func (o *oidcIDToken) email() (string, error) {
+	email, verified, err := oauthflow.EmailFromIDToken(o.ParsedToken)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	provider, err := oidc.NewProvider(ctx, "https://accounts.google.com")
-	if err != nil {
-		return "", "", err
+	if !verified {
+		return "", errors.New("email not verified by identity provider")
 	}
+	return email, nil
+}
 
+func (o *oidcIDToken) accessToken() string {
+	return o.RawString
+}
+
+type idToken interface {
+	email() (string, error)
+	accessToken() string
+}
+
+type oidcTokenGetter struct {
+	oidcp *oidc.Provider
+}
+
+func (tg *oidcTokenGetter) getIDToken() (idToken, error) {
 	// TODO: Switch these to be creds from the sigstore project.
 	config := oauth2.Config{
 		ClientID: "237800849078-rmntmr1b2tcu20kpid66q5dbh1vdt7aj.apps.googleusercontent.com",
 		// THIS IS NOT A SECRET - IT IS USED IN THE NATIVE/DESKTOP FLOW.
 		ClientSecret: "CkkuDoCgE2D_CCRRMyF_UIhS",
-		Endpoint:     provider.Endpoint(),
+		Endpoint:     tg.oidcp.Endpoint(),
 		RedirectURL:  "http://127.0.0.1:5556/auth/google/callback",
 		Scopes:       []string{oidc.ScopeOpenID, "email"},
 	}
+	token, err := oauthflow.GetIDToken(tg.oidcp, config)
+	if err != nil {
+		return nil, err
+	}
 
-	idToken, err := oauthflow.GetIDToken(provider, config)
+	return &oidcIDToken{token}, nil
+}
+
+type idTokenGetter interface {
+	getIDToken() (idToken, error)
+}
+
+type signingCertProvider interface {
+	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter) (*operations.SigningCertCreated, error)
+}
+
+func getCertForOauthID(priv *ecdsa.PrivateKey, idtg idTokenGetter, scp signingCertProvider) (string, string, error) {
+	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
 		return "", "", err
 	}
 
-	var claims struct {
-		Email    string `json:"email"`
-		Verified bool   `json:"email_verified"`
-	}
-	if err := idToken.ParsedToken.Claims(&claims); err != nil {
+	idToken, err := idtg.getIDToken()
+	if err != nil {
 		return "", "", err
 	}
-	if !claims.Verified {
-		return "", "", errors.New("email not verified by identity provider")
+
+	email, err := idToken.email()
+	if err != nil {
+		return "", "", err
 	}
 
 	// Sign the email address as part of the request
-	h := sha256.Sum256([]byte(claims.Email))
+	h := sha256.Sum256([]byte(email))
 	proof, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
 		return "", "", err
 	}
 
-	bearerAuth := httptransport.BearerToken(idToken.RawString)
+	bearerAuth := httptransport.BearerToken(idToken.accessToken())
 
 	content := strfmt.Base64(pubBytes)
-	email := strfmt.Base64(proof)
+	signedEmail := strfmt.Base64(proof)
 	params := operations.NewSigningCertParams()
 	params.SetCertificateRequest(
 		&models.CertificateRequest{
@@ -109,11 +139,11 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error
 				Algorithm: swag.String(models.CertificateRequestPublicKeyAlgorithmEcdsa),
 				Content:   &content,
 			},
-			SignedEmailAddress: &email,
+			SignedEmailAddress: &signedEmail,
 		},
 	)
 
-	resp, err := fcli.Operations.SigningCert(params, bearerAuth)
+	resp, err := scp.SigningCert(params, bearerAuth)
 	if err != nil {
 		return "", "", err
 	}
@@ -122,6 +152,21 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error
 	certBlock, chainPem := pem.Decode([]byte(resp.Payload))
 	certPem := pem.EncodeToMemory(certBlock)
 	return string(certPem), string(chainPem), nil
+}
+
+// GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error) {
+	fcli, err := app.GetFulcioClient(fulcioServer())
+	if err != nil {
+		return "", "", err
+	}
+
+	provider, err := oidc.NewProvider(ctx, "https://accounts.google.com")
+	if err != nil {
+		return "", "", err
+	}
+
+	return getCertForOauthID(priv, &oidcTokenGetter{provider}, fcli.Operations)
 }
 
 var Roots *x509.CertPool
