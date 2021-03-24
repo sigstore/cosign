@@ -49,7 +49,19 @@ if (./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob); then fa
 ./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob2
 
 
-# TODO: kms
+## KMS!
+kms="gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test"
+(crane delete $(./cosign triangulate $img)) || true
+./cosign generate-key-pair -kms $kms
+
+if (./cosign verify -key cosign.pub $img); then false; fi
+./cosign sign -kms $kms $img
+./cosign verify -key cosign.pub $img
+
+if (./cosign verify -a foo=bar -key cosign.pub $img); then false; fi
+./cosign sign -kms $kms -a foo=bar $img
+./cosign verify -key cosign.pub -a foo=bar $img
+
 # TODO: tlog
 
 
