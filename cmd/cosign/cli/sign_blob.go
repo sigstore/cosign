@@ -49,7 +49,7 @@ func SignBlob() *ffcli.Command {
 			// A key file is required unless we're in experimental mode!
 			if !cosign.Experimental() {
 				if *key == "" && *kmsVal == "" {
-					return flag.ErrHelp
+					return &KeyParseError{}
 				}
 			}
 
