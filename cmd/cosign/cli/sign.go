@@ -85,7 +85,7 @@ func Sign() *ffcli.Command {
 			// A key file (or kms address) is required unless we're in experimental mode!
 			if !cosign.Experimental() {
 				if *key == "" && *kmsVal == "" {
-					return flag.ErrHelp
+					return &KeyParseError{}
 				}
 			}
 			if len(args) != 1 {
