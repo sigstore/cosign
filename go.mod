@@ -3,7 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
-	cloud.google.com/go v0.79.0
+	cloud.google.com/go v0.80.0
 	github.com/coreos/go-oidc/v3 v3.0.0
 	github.com/go-openapi/runtime v0.19.27
 	github.com/go-openapi/strfmt v0.20.0
@@ -17,9 +17,9 @@ require (
 	github.com/sigstore/fulcio v0.0.0-20210319080054-d000804d8115
 	github.com/sigstore/rekor v0.1.1-0.20210228052401-f0b66bf3835c
 	github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
-	golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93
+	golang.org/x/oauth2 v0.0.0-20210313182246-cd4f82c27b84
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf
-	google.golang.org/genproto v0.0.0-20210310155132-4ce2db91004e
+	google.golang.org/genproto v0.0.0-20210323160006-e668133fea6a
 	google.golang.org/protobuf v1.26.0
 )
