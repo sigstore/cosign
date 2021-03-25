@@ -92,12 +92,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		Tlog:        cosign.Experimental(),
 		Roots:       fulcio.Roots,
 	}
+	pubKeyDescriptor := c.Key
+	if c.KmsVal != "" {
+		pubKeyDescriptor = c.KmsVal
+	}
 	// Keys are optional!
-	if c.Key != "" {
-		pubKeyDescriptor := c.Key
-		if c.KmsVal != "" {
-			pubKeyDescriptor = c.KmsVal
-		}
+	if pubKeyDescriptor != "" {
 		pubKey, err := cosign.LoadPublicKey(pubKeyDescriptor)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
