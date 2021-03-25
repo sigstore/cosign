@@ -16,10 +16,12 @@ package cli
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"os"
 
+	"github.com/go-piv/piv-go/piv"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -96,13 +98,35 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	if c.KmsVal != "" {
 		pubKeyDescriptor = c.KmsVal
 	}
-	// Keys are optional!
 	if pubKeyDescriptor != "" {
 		pubKey, err := cosign.LoadPublicKey(pubKeyDescriptor)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
 		co.PubKey = pubKey
+	}
+	if c.Key != "" { // Keys are optional!
+		pubKeyDescriptor := c.Key
+		if c.KmsVal != "" {
+			pubKeyDescriptor = c.KmsVal
+		}
+		if pubKeyDescriptor == "yubikey" {
+			yk, err := cosign.GetYubikey()
+			if err != nil {
+				return errors.Wrap(err, "loading public key")
+			}
+			cert, err := yk.Attest(piv.SlotSignature)
+			if err != nil {
+				return errors.Wrap(err, "loading public key")
+			}
+			co.PubKey = cert.PublicKey.(*ecdsa.PublicKey)
+		} else {
+			pubKey, err := cosign.LoadPublicKey(pubKeyDescriptor)
+			if err != nil {
+				return errors.Wrap(err, "loading public key")
+			}
+			co.PubKey = pubKey
+		}
 	}
 
 	imageRef := args[0]

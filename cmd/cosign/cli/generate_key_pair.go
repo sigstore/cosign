@@ -16,6 +16,8 @@ package cli
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -38,11 +40,12 @@ func GenerateKeyPair() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign generate-key-pair", flag.ExitOnError)
 		kmsVal  = flagset.String("kms", "", "create key pair in KMS service to use for signing")
+		ykVal   = flagset.Bool("yubikey", false, "create key pair in Yubikey")
 	)
 
 	return &ffcli.Command{
 		Name:       "generate-key-pair",
-		ShortUsage: "cosign generate-key-pair [-kms KMSPATH]",
+		ShortUsage: "cosign generate-key-pair [-kms KMSPATH], [-yubikey]",
 		ShortHelp:  "generate-key-pair generates a key-pair",
 		LongHelp: `generate-key-pair generates a key-pair for signing.
 
@@ -58,12 +61,12 @@ CAVEATS:
   the COSIGN_PASSWORD environment variable to provide one.`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return GenerateKeyPairCmd(ctx, *kmsVal)
+			return GenerateKeyPairCmd(ctx, *kmsVal, *ykVal)
 		},
 	}
 }
 
-func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
+func GenerateKeyPairCmd(ctx context.Context, kmsVal string, ykVal bool) error {
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
@@ -77,6 +80,46 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		if err != nil {
 			return err
 		}
+		if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
+			return err
+		}
+		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+		return nil
+	} else if ykVal {
+		yk, err := cosign.GetYubikey()
+		if err != nil {
+			return err
+		}
+		serial, err := yk.Serial()
+		if err != nil {
+			return err
+		}
+		v := yk.Version()
+		fmt.Fprintf(os.Stderr, "Generating private key on Yubikey %d with version: %d.%d.%d\n", serial, v.Major, v.Minor, v.Patch)
+		c, err := yk.AttestationCertificate()
+		if err != nil {
+			return err
+		}
+		cp := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw})
+
+		fmt.Fprintln(os.Stderr, "Yubikey attestion certificate:")
+		fmt.Fprintln(os.Stderr, string(cp))
+
+		defer yk.Close()
+
+		pk, err := cosign.GenYubikey(yk)
+		if err != nil {
+			return err
+		}
+
+		der, err := x509.MarshalPKIXPublicKey(pk)
+		if err != nil {
+			return err
+		}
+		pemBytes := pem.EncodeToMemory(&pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: der,
+		})
 		if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
 			return err
 		}

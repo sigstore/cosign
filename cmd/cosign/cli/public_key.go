@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-piv/piv-go/piv"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kms"
 
@@ -61,7 +62,8 @@ EXAMPLES
 
 func GetPublicKey(ctx context.Context, keyPath, kmsVal string, pf cosign.PassFunc) error {
 	var pub *ecdsa.PublicKey
-	if kmsVal != "" {
+	switch {
+	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
 			return err
@@ -70,7 +72,17 @@ func GetPublicKey(ctx context.Context, keyPath, kmsVal string, pf cosign.PassFun
 		if err != nil {
 			return err
 		}
-	} else {
+	case keyPath == "yubikey":
+		yk, err := cosign.GetYubikey()
+		if err != nil {
+			return err
+		}
+		c, err := yk.Attest(piv.SlotSignature)
+		if err != nil {
+			return err
+		}
+		pub = c.PublicKey.(*ecdsa.PublicKey)
+	default:
 		cl := filepath.Clean(keyPath)
 		if _, err := os.Stat(cl); os.IsNotExist(err) {
 			return fmt.Errorf("missing or invalid key path: %s", cl)

@@ -16,6 +16,7 @@ package cli
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
@@ -27,6 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-piv/piv-go/piv"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -154,6 +156,31 @@ func SignCmd(ctx context.Context, keyPath string,
 		publicKey, err = k.PublicKey(ctx)
 		if err != nil {
 			return errors.Wrap(err, "getting public key")
+		}
+	case keyPath == "yubikey":
+		yk, err := cosign.GetYubikey()
+		if err != nil {
+			return err
+		}
+		defer yk.Close()
+
+		pub, err := yk.Attest(piv.SlotSignature)
+		if err != nil {
+			return err
+		}
+		publicKey = pub.PublicKey.(*ecdsa.PublicKey)
+		auth := piv.KeyAuth{PIN: piv.DefaultPIN}
+		priv, err := yk.PrivateKey(piv.SlotSignature, publicKey, auth)
+		if err != nil {
+			return err
+		}
+		signer := priv.(crypto.Signer)
+
+		h := sha256.Sum256(payload)
+		fmt.Fprintln(os.Stderr, "Tap yubikey...")
+		signature, err = signer.Sign(rand.Reader, h[:], crypto.SHA256)
+		if err != nil {
+			return err
 		}
 	case keyPath != "":
 		signature, publicKey, err = sign(ctx, keyPath, payload, pf)

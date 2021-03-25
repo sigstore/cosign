@@ -15,12 +15,15 @@
 package cosign
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
+	"strings"
 
+	"github.com/go-piv/piv-go/piv"
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 )
@@ -79,4 +82,39 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 		PrivateBytes: privBytes,
 		PublicBytes:  pubBytes,
 	}, nil
+}
+
+func GetYubikey() (*piv.YubiKey, error) {
+
+	cards, err := piv.Cards()
+	if err != nil {
+		return nil, err
+	}
+
+	// Find a YubiKey and open the reader.
+	var yk *piv.YubiKey
+	for _, card := range cards {
+		if strings.Contains(strings.ToLower(card), "yubikey") {
+			if yk, err = piv.Open(card); err != nil {
+				return nil, err
+			}
+			return yk, nil
+		}
+	}
+	return nil, errors.New("no yubikey found")
+}
+
+func GenYubikey(yk *piv.YubiKey) (crypto.PublicKey, error) {
+
+	// Generate a private key on the YubiKey.
+	key := piv.Key{
+		Algorithm:   piv.AlgorithmEC256,
+		PINPolicy:   piv.PINPolicyAlways,
+		TouchPolicy: piv.TouchPolicyAlways,
+	}
+	pub, err := yk.GenerateKey(piv.DefaultManagementKey, piv.SlotSignature, key)
+	if err != nil {
+		return nil, err
+	}
+	return pub, nil
 }

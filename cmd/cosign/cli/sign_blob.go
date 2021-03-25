@@ -16,7 +16,10 @@ package cli
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -24,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-piv/piv-go/piv"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -89,6 +93,33 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 	var publicKey *ecdsa.PublicKey
 
 	switch {
+	case keyPath == "yubikey":
+		yk, err := cosign.GetYubikey()
+		if err != nil {
+			return nil, err
+		}
+		defer yk.Close()
+		cert, err := yk.Attest(piv.SlotSignature)
+		if err != nil {
+			return nil, err
+		}
+		publicKey = cert.PublicKey.(*ecdsa.PublicKey)
+
+		auth := piv.KeyAuth{
+			PIN: piv.DefaultPIN,
+		}
+		priv, err := yk.PrivateKey(piv.SlotSignature, publicKey, auth)
+		if err != nil {
+			return nil, err
+		}
+		signer := priv.(crypto.Signer)
+
+		dgst := sha256.Sum256(payload)
+		fmt.Fprintln(os.Stderr, "Tap yubikey...")
+		signature, err = signer.Sign(rand.Reader, dgst[:], crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
 	case keyPath != "":
 		signature, publicKey, err = sign(ctx, keyPath, payload, pf)
 		if err != nil {
@@ -120,6 +151,11 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		}
 		publicKey = &priv.PublicKey
 		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
+		dgst := sha256.Sum256(payload)
+		signature, err = priv.Sign(rand.Reader, dgst[:], crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if cosign.Experimental() {

@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-piv/piv-go/piv"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -66,6 +67,18 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 	var err error
 	var cert *x509.Certificate
 	switch {
+	case keyRef == "yubikey":
+		yk, err := cosign.GetYubikey()
+		if err != nil {
+			return err
+		}
+		defer yk.Close()
+		cert, err := yk.Attest(piv.SlotSignature)
+		if err != nil {
+			return err
+		}
+		pubKey = cert.PublicKey.(*ecdsa.PublicKey)
+
 	case keyRef != "":
 		pubKey, err = cosign.LoadPublicKey(keyRef)
 		if err != nil {
