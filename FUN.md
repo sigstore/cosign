@@ -40,7 +40,7 @@ Verified OK
 Store the signature in the Transparency Log, and store the public key somewhere else.
 
 ```
-$ TLOG=1 ./cosign sign-blob -key cosign.key <(git rev-parse HEAD)
+$ COSIGN_EXPERIMENTAL=1 ./cosign sign-blob -key cosign.key <(git rev-parse HEAD)
 Using payload from: /dev/fd/63
 Enter password for private key:
 MEYCIQDWX6RjU0Z2ynd1CdiAwo/JaC2Z5+vdx8H5spuDNu/r5wIhAPnP+87+knFEwbE8FgeXCrgkjWal3aBsNR3IVaBDT2XU
