@@ -149,6 +149,7 @@ Today, `cosign` has been tested and works against the following registries:
 * Docker Hub
 * Azure Container Registry
 * JFrog Artifactory Container Registry
+* The CNCF distribution/distribution Registry
 
 We aim for wide registry support.
 Please help test!
