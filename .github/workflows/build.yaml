@@ -4,7 +4,7 @@ name: CI-Build
 on:
   push:
     branches:
-      - main
+      - main, build
 jobs:
   # Set the job key. The key is displayed as the job name
   # when a job name is not provided
@@ -30,7 +30,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@master
         with:
           project_id: projectsigstore
-          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account_key: ${{ secrets.GCR_TOKEN }}
           export_default_credentials: true
       - name: creds
         run: gcloud auth configure-docker --quiet
