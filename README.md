@@ -151,6 +151,7 @@ Today, `cosign` has been tested and works against the following registries:
 * JFrog Artifactory Container Registry
 * The CNCF distribution/distribution Registry
 * Gitlab Container Registry
+* GitHub Container Registry
 
 We aim for wide registry support.
 Please help test!
