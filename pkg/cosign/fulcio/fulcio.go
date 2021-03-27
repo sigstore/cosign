@@ -37,7 +37,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const defaultFulcioAddress = "https://fulcio.sigstore.dev"
+const defaultFulcioAddress = "https://fulcio-dev.sigstore.dev"
 
 // This is the root in the fulcio project.
 //go:embed fulcio.pem
@@ -82,11 +82,10 @@ type oidcTokenGetter struct {
 func (tg *oidcTokenGetter) getIDToken() (idToken, error) {
 	// TODO: Switch these to be creds from the sigstore project.
 	config := oauth2.Config{
-		ClientID: "237800849078-rmntmr1b2tcu20kpid66q5dbh1vdt7aj.apps.googleusercontent.com",
-		// THIS IS NOT A SECRET - IT IS USED IN THE NATIVE/DESKTOP FLOW.
-		ClientSecret: "CkkuDoCgE2D_CCRRMyF_UIhS",
+		ClientID:     "sigstore",
+		ClientSecret: "", // Not needed with the PKCE flow.
 		Endpoint:     tg.oidcp.Endpoint(),
-		RedirectURL:  "http://127.0.0.1:5556/auth/google/callback",
+		RedirectURL:  "http://localhost:5556/auth/callback",
 		Scopes:       []string{oidc.ScopeOpenID, "email"},
 	}
 	token, err := oauthflow.GetIDToken(tg.oidcp, config)
@@ -161,7 +160,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error
 		return "", "", err
 	}
 
-	provider, err := oidc.NewProvider(ctx, "https://accounts.google.com")
+	provider, err := oidc.NewProvider(ctx, "https://oauth2.sigstore.dev/auth")
 	if err != nil {
 		return "", "", err
 	}

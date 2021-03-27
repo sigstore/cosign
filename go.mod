@@ -14,7 +14,7 @@ require (
 	github.com/open-policy-agent/opa v0.27.1
 	github.com/peterbourgon/ff/v3 v3.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/sigstore/fulcio v0.0.0-20210319080054-d000804d8115
+	github.com/sigstore/fulcio v0.0.0-20210326124948-da14a294bcc2
 	github.com/sigstore/rekor v0.1.1-0.20210228052401-f0b66bf3835c
 	github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
 	golang.org/x/oauth2 v0.0.0-20210313182246-cd4f82c27b84

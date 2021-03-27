@@ -793,8 +793,8 @@ github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4/go.mod h1:qsXQc7+bwAM3Q
 github.com/shurcooL/go v0.0.0-20180423040247-9e1955d9fb6e/go.mod h1:TDJrrUr11Vxrven61rcy3hJMUqaf/CLWYhHNPmT14Lk=
 github.com/shurcooL/go-goon v0.0.0-20170922171312-37c2f522c041/go.mod h1:N5mDOmsrJOB+vfqUK+7DmDyjhSLIIBnXo9lvZJj3MWQ=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
-github.com/sigstore/fulcio v0.0.0-20210319080054-d000804d8115 h1:U5TWGMn4yArhAnw6P2LKp8cX6gEVWdF9zvK27+iWOE4=
-github.com/sigstore/fulcio v0.0.0-20210319080054-d000804d8115/go.mod h1:9zlb9YGeErm/Ex5HuxkaOZO4nub2I1yLMRxGLk99ScI=
+github.com/sigstore/fulcio v0.0.0-20210326124948-da14a294bcc2 h1:6JthagmxFS8GVIWwrfvATAWdC8jtJRB24BR2V6KfcVg=
+github.com/sigstore/fulcio v0.0.0-20210326124948-da14a294bcc2/go.mod h1:6c1zAZo/0M7HxY9goE+P+WkKdU8KhQ0f4Nv/Bf5jaXk=
 github.com/sigstore/rekor v0.1.1-0.20210228052401-f0b66bf3835c h1:IvJiUKPAwRURE1ol/38gNCDNKmQox1jJ6br30LRB354=
 github.com/sigstore/rekor v0.1.1-0.20210228052401-f0b66bf3835c/go.mod h1:kaFX2YwaUsao+kA5AHJboTZwQ8mOVIyWuj6UNARX6ac=
 github.com/sirupsen/logrus v1.0.5/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
