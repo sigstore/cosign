@@ -78,7 +78,7 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 
 	var payload []byte
 	if payloadRef == "" {
-		payload, err = cosign.Payload(get.Descriptor, nil)
+		payload, err = (&cosign.ImagePayload{Img: get.Descriptor}).MarshalJSON()
 	} else {
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadRef))
 	}

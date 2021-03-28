@@ -83,18 +83,29 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	return ed, nil
 }
 
+type Verifier interface {
+	Verify(ctx context.Context, payload, signature []byte) error
+}
+
+type ECDSAVerifier struct {
+	PubKey *ecdsa.PublicKey
+}
+
+func (v *ECDSAVerifier) Verify(_ context.Context, payload, signature []byte) error {
+	h := sha256.Sum256(payload)
+	if !ecdsa.VerifyASN1(v.PubKey, h[:], signature) {
+		return errors.New("unable to verify signature")
+	}
+	return nil
+}
+
 func VerifySignature(pubkey *ecdsa.PublicKey, base64sig string, payload []byte) error {
+	verifier := &ECDSAVerifier{PubKey: pubkey}
 	signature, err := base64.StdEncoding.DecodeString(base64sig)
 	if err != nil {
 		return err
 	}
-
-	h := sha256.Sum256(payload)
-	if !ecdsa.VerifyASN1(pubkey, h[:], signature) {
-		return errors.New("unable to verify signature")
-	}
-
-	return nil
+	return verifier.Verify(context.TODO(), payload, signature)
 }
 
 func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {

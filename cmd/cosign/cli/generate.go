@@ -62,7 +62,7 @@ EXAMPLES
 	}
 }
 
-func GenerateCmd(_ context.Context, imageRef string, a map[string]string, w io.Writer) error {
+func GenerateCmd(_ context.Context, imageRef string, annotations map[string]string, w io.Writer) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func GenerateCmd(_ context.Context, imageRef string, a map[string]string, w io.W
 		return err
 	}
 
-	payload, err := cosign.Payload(get.Descriptor, a)
+	payload, err := (&cosign.ImagePayload{Img: get.Descriptor, Annotations: annotations}).MarshalJSON()
 	if err != nil {
 		return err
 	}

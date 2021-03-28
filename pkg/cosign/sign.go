@@ -15,11 +15,15 @@
 package cosign
 
 import (
+	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 )
@@ -74,4 +78,39 @@ type Identity struct {
 
 type Image struct {
 	DockerManifestDigest string `json:"Docker-manifest-digest"`
+}
+
+type Signer interface {
+	Sign(ctx context.Context, payload []byte) (signature []byte, err error)
+}
+
+func PayloadSignature(ctx context.Context, signer Signer, payload []byte) (signature []byte, err error) {
+	signature, err = signer.Sign(ctx, payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create signature: %v", err)
+	}
+	return signature, nil
+}
+
+func ImageSignature(ctx context.Context, signer Signer, img v1.Descriptor, payloadAnnotations map[string]string) (payload, signature []byte, err error) {
+	signable := &ImagePayload{Img: img, Annotations: payloadAnnotations}
+	payload, err = signable.MarshalJSON()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create image signature payload: %v", err)
+	}
+	signature, err = PayloadSignature(ctx, signer, payload)
+	if err != nil {
+		return nil, nil, err
+	}
+	return payload, signature, nil
+}
+
+type ECDSASigner struct {
+	Key *ecdsa.PrivateKey
+}
+
+// Sign returns an ASN.1-encoded signature of the SHA-256 hash of the given payload.
+func (s *ECDSASigner) Sign(_ context.Context, payload []byte) (signature []byte, err error) {
+	h := sha256.Sum256(payload)
+	return ecdsa.SignASN1(rand.Reader, s.Key, h[:])
 }

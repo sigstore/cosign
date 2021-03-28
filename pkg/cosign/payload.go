@@ -20,20 +20,22 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func Payload(img v1.Descriptor, a map[string]string) ([]byte, error) {
+type ImagePayload struct {
+	Img         v1.Descriptor
+	Annotations map[string]string
+}
+
+func (p *ImagePayload) MarshalJSON() ([]byte, error) {
 	simpleSigning := SimpleSigning{
 		Critical: Critical{
 			Image: Image{
-				DockerManifestDigest: img.Digest.String(),
+				DockerManifestDigest: p.Img.Digest.String(),
 			},
 			Type: "cosign container signature",
 		},
-		Optional: a,
+		Optional: p.Annotations,
 	}
-
-	b, err := json.Marshal(simpleSigning)
-	if err != nil {
-		return nil, err
-	}
-	return b, err
+	return json.Marshal(simpleSigning)
 }
+
+//TODO: Unmarshal JSON
