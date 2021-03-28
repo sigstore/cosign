@@ -3,8 +3,6 @@ name: CI-Build
 # Run this workflow every time a new commit pushed to your repository
 on:
   push:
-    branches:
-      - main
 jobs:
   # Set the job key. The key is displayed as the job name
   # when a job name is not provided
