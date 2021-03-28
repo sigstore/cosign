@@ -33,6 +33,7 @@ $ crane ls gcr.io/projectsigstore/cosign/ci/cosign
 749f896
 749f896bb378aca5cb45c5154fc0cb43f6728d48
 ```
+Details and instructions for crane are here https://github.com/google/go-containerregistry/tree/main/cmd/crane 
 
 ### Releases
 
