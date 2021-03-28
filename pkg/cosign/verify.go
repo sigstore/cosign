@@ -25,7 +25,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -53,29 +52,25 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	// First check if the file exists.
 	var pubBytes []byte
 	ctx := context.Background()
+
 	if k, err := kms.Get(ctx, keyRef); err == nil {
 		// KMS specified
 		return k.PublicKey(ctx)
-	} else if _, err := os.Stat(keyRef); os.IsNotExist(err) {
-		pubBytes, err = base64.StdEncoding.DecodeString(keyRef)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// PEM encoded file.
-		b, err := ioutil.ReadFile(filepath.Clean(keyRef))
-		if err != nil {
-			return nil, err
-		}
-		p, _ := pem.Decode(b)
-		if p == nil {
-			return nil, errors.New("pem.Decode failed")
-		}
-		if p.Type != pubKeyPemType {
-			return nil, fmt.Errorf("not public: %q", p.Type)
-		}
-		pubBytes = p.Bytes
 	}
+
+	// PEM encoded file.
+	b, err := ioutil.ReadFile(filepath.Clean(keyRef))
+	if err != nil {
+		return nil, err
+	}
+	p, _ := pem.Decode(b)
+	if p == nil {
+		return nil, errors.New("pem.Decode failed")
+	}
+	if p.Type != pubKeyPemType {
+		return nil, fmt.Errorf("not public: %q", p.Type)
+	}
+	pubBytes = p.Bytes
 
 	pub, err := x509.ParsePKIXPublicKey(pubBytes)
 	if err != nil {

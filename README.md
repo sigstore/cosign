@@ -232,14 +232,9 @@ They have a PEM header of `ENCRYPTED COSIGN PRIVATE KEY`:
 Public keys are stored on disk in PEM-encoded standard PKIX format with a header of `PUBLIC KEY`.
 ```
 -----BEGIN PUBLIC KEY-----
-NqfC4CpZiE4OGpuYFSSMzXHJqXQ6u1W55prrZIjjZJ0=
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELigCnlLNKgOglRTx1D7JhI7eRw99
+QolE9Jo4QUxnbMy5nUuBL+UZF9qqfm/Dg1BNeHRThHzWh2ki9vAEgWEDOw==
 -----END PUBLIC KEY-----
-```
-
-The inner (base64 encoded) data portion can be supplied directly on the command line without the PEM blocks:
-
-```
-$ cosign verify -key NqfC4CpZiE4OGpuYFSSMzXHJqXQ6u1W55prrZIjjZJ0= us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 ```
 
 ## Storage Specification
