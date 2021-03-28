@@ -116,6 +116,7 @@ Today, `cosign` has been tested and works against the following registries:
 * Gitlab Container Registry
 * GitHub Container Registry
 * The CNCF Harbor Registry
+* Digital Ocean Container Registry
 
 We aim for wide registry support.
 Please help test and file bugs if you see issues!
