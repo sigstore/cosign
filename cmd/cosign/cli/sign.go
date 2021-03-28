@@ -139,7 +139,7 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 
 	var signature []byte
-	var publicKey *ecdsa.PublicKey
+	var pemBytes []byte
 	var cert, chain string
 	switch {
 	case kmsVal != "":
@@ -151,15 +151,18 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
-		publicKey, err = k.PublicKey(ctx)
+		publicKey, err := k.PublicKey(ctx)
 		if err != nil {
 			return errors.Wrap(err, "getting public key")
 		}
+		pemBytes = cosign.KeyToPem(publicKey)
 	case keyPath != "":
-		signature, publicKey, err = sign(ctx, keyPath, payload, pf)
+		var pub *ecdsa.PublicKey
+		signature, pub, err = sign(ctx, keyPath, payload, pf)
 		if err != nil {
 			return errors.Wrap(err, "signing payload")
 		}
+		pemBytes = cosign.KeyToPem(pub)
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		priv, err := cosign.GeneratePrivateKey()
@@ -176,7 +179,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
-		publicKey = &priv.PublicKey
+		pemBytes = []byte(cert)
 	}
 
 	if !upload {
@@ -192,7 +195,7 @@ func SignCmd(ctx context.Context, keyPath string,
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
 
-	if err := cosign.Upload(signature, payload, dstTag, cert, chain); err != nil {
+	if err := cosign.Upload(signature, payload, dstTag, string(cert), string(chain)); err != nil {
 		return err
 	}
 
@@ -214,7 +217,7 @@ func SignCmd(ctx context.Context, keyPath string,
 			}
 		}
 	}
-	index, err := cosign.UploadTLog(signature, payload, publicKey)
+	index, err := cosign.UploadTLog(signature, payload, pemBytes)
 	if err != nil {
 		return err
 	}

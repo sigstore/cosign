@@ -83,21 +83,6 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	return ed, nil
 }
 
-func MarshalPublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
-	if pub == nil {
-		return nil, errors.New("empty key")
-	}
-	pubKey, err := x509.MarshalPKIXPublicKey(pub)
-	if err != nil {
-		return nil, err
-	}
-	pubBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubKey,
-	})
-	return pubBytes, nil
-}
-
 func VerifySignature(pubkey *ecdsa.PublicKey, base64sig string, payload []byte) error {
 	signature, err := base64.StdEncoding.DecodeString(base64sig)
 	if err != nil {
@@ -259,22 +244,15 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 		}
 
 		if co.Tlog {
-
 			// Get the right public key to use (key or cert)
-			var pk interface{}
+			var pemBytes []byte
 			if co.PubKey != nil {
-				pk = co.PubKey
+				pemBytes = KeyToPem(co.PubKey)
 			} else {
-				pk = sp.Cert.PublicKey
+				pemBytes = CertToPem(sp.Cert)
 			}
-			pub, err := MarshalPublicKey(pk.(*ecdsa.PublicKey))
-			if err != nil {
-				validationErrs = append(validationErrs, "missing or incorrect annotation")
-				continue
-			}
-
 			// Find the uuid then the entry.
-			uuid, err := sp.VerifyTlog(rekorClient, pub)
+			uuid, err := sp.VerifyTlog(rekorClient, pemBytes)
 			if err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue

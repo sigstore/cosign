@@ -131,29 +131,32 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 		return err
 	}
 
-	if pubKey == nil {
-		pubKey = cert.PublicKey.(*ecdsa.PublicKey)
-	}
-	if err := cosign.VerifySignature(pubKey, b64sig, blobBytes); err != nil {
-		return err
-	}
-	fmt.Fprintln(os.Stderr, "Verified OK")
-	if cert != nil {
+	if pubKey != nil {
+		if err := cosign.VerifySignature(pubKey, b64sig, blobBytes); err != nil {
+			return err
+		}
+	} else { // cert
+		if err := cosign.VerifySignature(cert.PublicKey.(*ecdsa.PublicKey), b64sig, blobBytes); err != nil {
+			return err
+		}
 		if err := cosign.TrustedCert(cert, fulcio.Roots); err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
 		fmt.Fprintln(os.Stderr, "Email:", cert.Subject.CommonName)
 	}
+	fmt.Fprintln(os.Stderr, "Verified OK")
 
 	if cosign.Experimental() {
 		rekorClient, err := app.GetRekorClient(cosign.TlogServer())
 		if err != nil {
 			return err
 		}
-		pubBytes, err := cosign.MarshalPublicKey(pubKey)
-		if err != nil {
-			return err
+		var pubBytes []byte
+		if pubKey != nil {
+			pubBytes = cosign.KeyToPem(pubKey)
+		} else {
+			pubBytes = cosign.CertToPem(cert)
 		}
 		index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
 		if err != nil {

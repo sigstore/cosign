@@ -15,7 +15,6 @@
 package cosign
 
 import (
-	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -67,17 +66,13 @@ func DestinationTag(ref name.Reference, img *remote.Descriptor) (name.Tag, error
 }
 
 // Upload will upload the signature, public key and payload to the tlog
-func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) (string, error) {
+func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
 	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
 		return "", err
 	}
-	wrappedKey, err := MarshalPublicKey(publicKey)
-	if err != nil {
-		return "", err
-	}
 
-	re := rekorEntry(payload, signature, wrappedKey)
+	re := rekorEntry(payload, signature, pemBytes)
 	returnVal := models.Rekord{
 		APIVersion: swag.String(re.APIVersion()),
 		Spec:       re.RekordObj,
@@ -95,7 +90,7 @@ func UploadTLog(signature, payload []byte, publicKey *ecdsa.PublicKey) (string, 
 			}
 			fmt.Println("Signature already exists. Displaying proof")
 
-			return FindTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, wrappedKey)
+			return FindTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, pemBytes)
 
 		}
 		return "", err
