@@ -101,6 +101,26 @@ The following checks were performed on these signatures:
 
 See the [Usage documentation](USAGE.md) for more commands!
 
+## Registry Support
+
+`cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
+interactions, which has excellent support, but some registries may have quirks.
+
+Today, `cosign` has been tested and works against the following registries:
+
+* GCP's Artifact Registry and Container Registry
+* Docker Hub
+* Azure Container Registry
+* JFrog Artifactory Container Registry
+* The CNCF distribution/distribution Registry
+* Gitlab Container Registry
+* GitHub Container Registry
+* The CNCF Harbor Registry
+
+We aim for wide registry support.
+Please help test and file bugs if you see issues!
+Instructions can be found in the [tracking issue](https://github.com/sigstore/cosign/issues/40).
+
 ## Rekor Support
 _Note: this is an experimental feature_
 
@@ -138,25 +158,6 @@ See https://github.com/sigstore/cosign/issues/34 for more info.
 
 `cosign` will integrate with even more transparency logs, and a PKI.
 See https://github.com/sigStore/fulcio for more info.
-
-### Registry Support
-
-`cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
-interactions, which has excellent support, but other registries may have quirks.
-
-Today, `cosign` has been tested and works against the following registries:
-
-* GCP's Artifact Registry and Container Registry
-* Docker Hub
-* Azure Container Registry
-* JFrog Artifactory Container Registry
-* The CNCF distribution/distribution Registry
-* Gitlab Container Registry
-* GitHub Container Registry
-
-We aim for wide registry support.
-Please help test!
-See https://github.com/sigstore/cosign/issues/40 for the tracking issue.
 
 ### Things That Should Probably Change
 
