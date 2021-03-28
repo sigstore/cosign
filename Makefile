@@ -61,5 +61,5 @@ ko:
 		github.com/sigstore/cosign/cmd/cosign
 
 .PHONY: sign-container
-sign-container: cosign ko
-	./cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
+sign-container: ko
+	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
