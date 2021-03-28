@@ -45,7 +45,26 @@ func VerifyBlob() *ffcli.Command {
 		Name:       "verify-blob",
 		ShortUsage: "cosign verify-blob -key <key>|-cert <cert>|-kms <kms> -signature <sig> <blob>",
 		ShortHelp:  "Verify a signature on the supplied blob",
-		FlagSet:    flagset,
+		LongHelp: `Verify a signature on the supplied blob input using the specified key reference.
+You may specify either a key, a certificate or a kms reference to verify against.
+	If you use a key or a certificate, you must specify the path to them on disk.
+
+The signature may be specified as a path to a file or a base64 encoded string.
+The blob may be specified as a path to a file or - for stdin.
+
+EXAMPLES
+	# Verify a simple blob and message
+	cosign verify-blob -key cosign.pub -signature sig msg
+
+	# Verify a signature from an environment variable
+	cosign verify-blob -key cosign.pub -signature $sig msg
+
+	# Verify a signature against a payload from another process using process redirection
+	cosign verify-blob -key cosign.pub -signature $sig <(git rev-parse HEAD)
+
+	# Verify a signature against a KMS reference
+	cosign verify-blob -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEYRING>/cryptoKeys/<KEY> -signature $sig <blob>`,
+		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
