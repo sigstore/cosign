@@ -65,7 +65,7 @@ EXAMPLES
 			if len(args) == 0 {
 				return flag.ErrHelp
 			}
-			for _, blob := range args[0:] {
+			for _, blob := range args {
 				if _, err := SignBlobCmd(ctx, *key, *kmsVal, blob, *b64, GetPass); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}

@@ -69,7 +69,7 @@ EXAMPLES
 			if len(args) == 0 {
 				return flag.ErrHelp
 			}
-			for _, blobRef := range args[0:] {
+			for _, blobRef := range args {
 				if err := VerifyBlobCmd(ctx, *key, *kmsVal, *cert, *signature, blobRef); err != nil {
 					return errors.Wrapf(err, "verifying blob %s", blobRef)
 				}

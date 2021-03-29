@@ -103,7 +103,7 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 
-			for _, img := range args[0:] {
+			for _, img := range args {
 				if err := SignCmd(ctx, *key, img, *upload, *payloadPath, annotations.annotations, *kmsVal, GetPass, *force); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}

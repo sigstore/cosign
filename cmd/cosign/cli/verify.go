@@ -105,7 +105,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		co.PubKey = pubKey
 	}
 
-	for _, imageRef := range args[0:] {
+	for _, imageRef := range args {
 		ref, err := name.ParseReference(imageRef)
 		if err != nil {
 			return err
