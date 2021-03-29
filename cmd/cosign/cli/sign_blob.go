@@ -96,7 +96,6 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 			return nil, errors.Wrap(err, "signing blob")
 		}
 		pemBytes = cosign.KeyToPem(pub)
-
 	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
@@ -145,4 +144,17 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		}
 	}
 	return signature, nil
+}
+
+func sign(ctx context.Context, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
+	k, err := loadKey(keyPath, pf)
+	if err != nil {
+		return nil, nil, err
+	}
+	publicKey = &k.Key.PublicKey
+	signature, err = k.Sign(ctx, payload)
+	if err != nil {
+		return nil, nil, err
+	}
+	return signature, publicKey, nil
 }

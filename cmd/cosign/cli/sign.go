@@ -17,8 +17,6 @@ package cli
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -132,12 +130,13 @@ func SignCmd(ctx context.Context, keyPath string,
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
 	} else {
-		payload, err = cosign.Payload(get.Descriptor, annotations)
+		payload, err = (&cosign.ImagePayload{Img: get.Descriptor, Annotations: annotations}).MarshalJSON()
 	}
 	if err != nil {
 		return errors.Wrap(err, "payload")
 	}
 
+	var signer cosign.Signer
 	var signature []byte
 	var pemBytes []byte
 	var cert, chain string
@@ -147,10 +146,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return err
 		}
-		signature, err = k.Sign(ctx, payload)
-		if err != nil {
-			return errors.Wrap(err, "signing")
-		}
+		signer = k
 		publicKey, err := k.PublicKey(ctx)
 		if err != nil {
 			return errors.Wrap(err, "getting public key")
@@ -158,7 +154,9 @@ func SignCmd(ctx context.Context, keyPath string,
 		pemBytes = cosign.KeyToPem(publicKey)
 	case keyPath != "":
 		var pub *ecdsa.PublicKey
-		signature, pub, err = sign(ctx, keyPath, payload, pf)
+		k, err := loadKey(keyPath, pf)
+		pub = &k.Key.PublicKey
+		signer = k
 		if err != nil {
 			return errors.Wrap(err, "signing payload")
 		}
@@ -169,17 +167,18 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return errors.Wrap(err, "generating cert")
 		}
+		signer = &cosign.ECDSASigner{Key: priv}
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 		cert, chain, err = fulcio.GetCert(ctx, priv) // TODO, use the chain.
 		if err != nil {
 			return errors.Wrap(err, "retrieving cert")
 		}
-		h := sha256.Sum256(payload)
-		signature, err = ecdsa.SignASN1(rand.Reader, priv, h[:])
-		if err != nil {
-			return errors.Wrap(err, "signing")
-		}
 		pemBytes = []byte(cert)
+	}
+
+	signature, err = signer.Sign(ctx, payload)
+	if err != nil {
+		return errors.Wrap(err, "signing")
 	}
 
 	if !upload {
@@ -225,25 +224,18 @@ func SignCmd(ctx context.Context, keyPath string,
 	return nil
 }
 
-func sign(ctx context.Context, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
+func loadKey(keyPath string, pf cosign.PassFunc) (*cosign.ECDSASigner, error) {
 	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
-		return
+		return nil, err
 	}
 	pass, err := pf(false)
 	if err != nil {
-		return
+		return nil, err
 	}
-	pk, err := cosign.LoadPrivateKey(kb, pass)
+	key, err := cosign.LoadPrivateKey(kb, pass)
 	if err != nil {
-		return
+		return nil, err
 	}
-	publicKey = &pk.PublicKey
-
-	h := sha256.Sum256(payload)
-	signature, err = ecdsa.SignASN1(rand.Reader, pk, h[:])
-	if err != nil {
-		return
-	}
-	return
+	return &cosign.ECDSASigner{Key: key}, nil
 }
