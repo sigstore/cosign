@@ -27,12 +27,21 @@ export COSIGN_PASSWORD=$pass
 # setup
 ./cosign generate-key-pair
 img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test"
-(crane delete $(./cosign triangulate $img)) || true
-crane cp busybox $img
+img2="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test-2"
+for image in $img $img2
+do
+    (crane delete $(./cosign triangulate $image)) || true
+    crane cp busybox $image
+done
+
 
 ## sign/verify
 ./cosign sign -key cosign.key $img
 ./cosign verify -key cosign.pub $img
+
+## sign/verify multiple images
+./cosign sign -key cosign.key -a multiple=true $img $img2
+./cosign verify -key cosign.pub -a multiple=true $img $img2
 
 # annotations
 if (./cosign verify -key cosign.pub -a foo=bar $img); then false; fi
@@ -62,6 +71,9 @@ if (./cosign verify-blob -key cosign.pub -signature myblob.sig myblob2); then fa
 if (./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob); then false; fi
 ./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob2
 
+## sign and verify multiple blobs
+./cosign sign-blob -key cosign.key -a multiple=true myblob myblob2
+./cosign verify-blob -key cosign.pub -a multiple=true myblob myblob2
 
 ## KMS!
 kms="gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test"

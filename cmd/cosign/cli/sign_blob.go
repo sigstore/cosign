@@ -62,12 +62,15 @@ EXAMPLES
 				}
 			}
 
-			if len(args) != 1 {
+			if len(args) == 0 {
 				return flag.ErrHelp
 			}
-
-			_, err := SignBlobCmd(ctx, *key, *kmsVal, args[0], *b64, GetPass)
-			return err
+			for _, blob := range args {
+				if _, err := SignBlobCmd(ctx, *key, *kmsVal, blob, *b64, GetPass); err != nil {
+					return errors.Wrapf(err, "signing %s", blob)
+				}
+			}
+			return nil
 		},
 	}
 }

@@ -99,11 +99,16 @@ EXAMPLES
 					return &KeyParseError{}
 				}
 			}
-			if len(args) != 1 {
+			if len(args) == 0 {
 				return flag.ErrHelp
 			}
 
-			return SignCmd(ctx, *key, args[0], *upload, *payloadPath, annotations.annotations, *kmsVal, GetPass, *force)
+			for _, img := range args {
+				if err := SignCmd(ctx, *key, img, *upload, *payloadPath, annotations.annotations, *kmsVal, GetPass, *force); err != nil {
+					return errors.Wrapf(err, "signing %s", img)
+				}
+			}
+			return nil
 		},
 	}
 }

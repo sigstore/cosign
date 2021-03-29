@@ -79,7 +79,7 @@ EXAMPLES
 
 // Exec runs the verification command
 func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
-	if len(args) != 1 {
+	if len(args) == 0 {
 		return flag.ErrHelp
 	}
 	if c.Key != "" && c.KmsVal != "" {
@@ -105,24 +105,26 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		co.PubKey = pubKey
 	}
 
-	imageRef := args[0]
+	for _, imageRef := range args {
+		ref, err := name.ParseReference(imageRef)
+		if err != nil {
+			return err
+		}
 
-	ref, err := name.ParseReference(imageRef)
-	if err != nil {
-		return err
+		verified, err := cosign.Verify(ctx, ref, co)
+		if err != nil {
+			return err
+		}
+
+		printVerification(imageRef, verified, co)
 	}
 
-	verified, err := cosign.Verify(ctx, ref, co)
-	if err != nil {
-		return err
-	}
-
-	printVerification(verified, co)
 	return nil
 }
 
 // printVerification logs details about the verification to stdout
-func printVerification(verified []cosign.SignedPayload, co cosign.CheckOpts) {
+func printVerification(imgRef string, verified []cosign.SignedPayload, co cosign.CheckOpts) {
+	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.Claims {
 		if co.Annotations != nil {
