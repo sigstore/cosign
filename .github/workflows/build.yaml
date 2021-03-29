@@ -14,7 +14,7 @@ jobs:
     steps:
       # Checks out a copy of your repository on the ubuntu-latest machine
       - uses: actions/checkout@v2
-      
+      - uses: sigstore/cosign-installer@main
       - uses: actions/setup-go@v2
         with:
           go-version: '1.16'
@@ -38,13 +38,13 @@ jobs:
       - name: container
         run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_DOCKER_REPO=gcr.io/projectsigstore/cosign/ci/cosign make sign-container
       - name: Print Info
-        run: ./cosign-linux-amd64 version && shasum -a 256 ./cosign-linux-amd64 > cosign.sha256 && cat cosign.sha256
+        run: shasum -a 256 ./cosign-* > cosign.sha256 && cat cosign.sha256
       - name: sign
         run: |
-          echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key ././cosign-linux-amd64 > cosign-linux-amd64.sig
-          echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key ././cosign-darwin-amd64 > cosign-darwin-amd64.sig
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key ./.github/workflows/cosign.key ././cosign-linux-amd64 > cosign-linux-amd64.sig
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key ./.github/workflows/cosign.key ././cosign-darwin-amd64 > cosign-darwin-amd64.sig
       - name: verify
-        run: ./cosign-linux-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-linux-amd64.sig ./cosign-linux-amd64
+        run: cosign verify-blob -key ./.github/workflows/cosign.pub -signature cosign-linux-amd64.sig ./cosign-linux-amd64
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
