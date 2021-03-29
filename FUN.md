@@ -51,7 +51,7 @@ Now find it from the log:
 
 ```
 $ uuid=$(rekor-cli search --artifact <(git rev-parse HEAD) | tail -n 1)
-$ sig=$(rekor-cli get --uuid=$uuid --format=json | jq -r .Body | base64 -D | jq -r .spec.signature.content)
+$ sig=$(rekor-cli get --uuid=$uuid --format=json | jq -r .Body.RekordObj.signature.content)
 $ cosign verify-blob -key cosign.pub -signature <(echo $sig) <(git rev-parse HEAD)
 Verified OK
 ```
