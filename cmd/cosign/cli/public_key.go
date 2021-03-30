@@ -19,6 +19,7 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -29,11 +30,17 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
+type NamedWriter struct {
+	Name string
+	io.Writer
+}
+
 func PublicKey() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign public-key", flag.ExitOnError)
 		key     = flagset.String("key", "", "path to the private key")
 		kmsVal  = flagset.String("kms", "", "sign via a private key stored in a KMS")
+		outFile = flagset.String("outfile", "", "file to write public key")
 	)
 
 	return &ffcli.Command{
@@ -41,11 +48,11 @@ func PublicKey() *ffcli.Command {
 		ShortUsage: "cosign public-key gets a public key from the key-pair [-kms KMSPATH]",
 		ShortHelp:  "public-key gets a public key from the key-pair",
 		LongHelp: `public-key gets a public key from the key-pair and
-writes to cosign.pub in the current directory.
+writes to a specified file. By default, it will write to standard out.
 
 EXAMPLES
-  # extract public key from private key
-  cosign public-key -key <PRIVATE KEY FILE>
+  # extract public key from private key to a specified out file.
+  cosign public-key -key <PRIVATE KEY FILE> -outfile <OUTPUT>
 
   # extract public key from Google Cloud KMS key pair
   cosign public-key -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>`,
@@ -54,12 +61,39 @@ EXAMPLES
 			if (*key == "" && *kmsVal == "") || (*key != "" && *kmsVal != "") {
 				return &KeyParseError{}
 			}
-			return GetPublicKey(ctx, *key, *kmsVal, GetPass)
+			// Get private key file.
+			var reader io.Reader
+			if *key != "" {
+				cl := filepath.Clean(*key)
+				var err error
+				reader, err = os.Open(cl)
+				if err != nil {
+					return err
+				}
+			}
+
+			writer := NamedWriter{Name: "", Writer: nil}
+			var f *os.File
+			// Open output file for public key if specified.
+			if *outFile != "" {
+				writer.Name = *outFile
+				var err error
+				f, err = os.OpenFile(*outFile, os.O_WRONLY|os.O_CREATE, 0600)
+				if err != nil {
+					return err
+				}
+				writer.Writer = f
+				defer f.Close()
+			} else {
+				writer.Writer = os.Stdout
+
+			}
+			return GetPublicKey(ctx, reader, *kmsVal, writer, GetPass)
 		},
 	}
 }
 
-func GetPublicKey(ctx context.Context, keyPath, kmsVal string, pf cosign.PassFunc) error {
+func GetPublicKey(ctx context.Context, reader io.Reader, kmsVal string, writer NamedWriter, pf cosign.PassFunc) error {
 	var pub *ecdsa.PublicKey
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal)
@@ -71,13 +105,7 @@ func GetPublicKey(ctx context.Context, keyPath, kmsVal string, pf cosign.PassFun
 			return err
 		}
 	} else {
-		cl := filepath.Clean(keyPath)
-		if _, err := os.Stat(cl); os.IsNotExist(err) {
-			return fmt.Errorf("missing or invalid key path: %s", cl)
-		} else if err != nil {
-			return err
-		}
-		kb, err := ioutil.ReadFile(cl)
+		kb, err := ioutil.ReadAll(reader)
 		if err != nil {
 			return err
 		}
@@ -92,9 +120,11 @@ func GetPublicKey(ctx context.Context, keyPath, kmsVal string, pf cosign.PassFun
 		pub = &pk.PublicKey
 	}
 	pemBytes := cosign.KeyToPem(pub)
-	if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
+	if _, err := writer.Write(pemBytes); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+	if writer.Name != "" {
+		fmt.Fprintln(os.Stderr, "Public key written to ", writer.Name)
+	}
 	return nil
 }
