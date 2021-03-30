@@ -345,6 +345,24 @@ func TestTlog(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
 
+func TestGetPublicKeyCustomOut(t *testing.T) {
+	td := t.TempDir()
+	keys, privKeyPath, _ := keypair(t, td)
+	ctx := context.Background()
+
+	f, err := os.Open(privKeyPath)
+	must(err, t)
+	outFile := "output.pub"
+	outPath := filepath.Join(td, outFile)
+	outWriter, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0600)
+	must(err, t)
+	must(cli.GetPublicKey(ctx, f, "", cli.NamedWriter{Name: outPath, Writer: outWriter}, passFunc), t)
+
+	output, err := ioutil.ReadFile(outFile)
+	must(err, t)
+	equals(keys.PublicBytes, output, t)
+}
+
 func mkfile(contents, td string, t *testing.T) string {
 	f, err := ioutil.TempFile(td, "")
 	if err != nil {

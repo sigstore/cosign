@@ -215,8 +215,6 @@ $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 KMS:
 ```
 $ cosign public-key -kms gcpkms://projects/someproject/locations/us-central1/keyRings/foo/cryptoKeys/bug
-Public key written to cosign.pub
-$ cat cosign.pub
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgrKKtyws86/APoULh/zXk4LONqII
 AcxvLtLEgRjRI4TKnMAXtIGp8K4X4CTWPEXMqSYZZUa2I1YvHyLLY2bEzA==
@@ -227,8 +225,6 @@ Private Key:
 ```
 $ ./cosign public-key -key cosign.key
 Enter password for private key:
-Public key written to cosign.pub
-$ cat cosign.pub
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjCxhhvb1KmIfe1J2ceT25kHepstb
 IDYuTA0U1ri4F0CXXazLiftzGlyfse1No4orr8w1ZIchQ8TJlyCSaSuR0Q==

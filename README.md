@@ -103,7 +103,7 @@ See the [Usage documentation](USAGE.md) for more commands!
 
 ## Registry Support
 
-`cosign` uses [go-containerregistry](github.com/google/go-containerregistry) for registry
+`cosign` uses [go-containerregistry](https://github.com/google/go-containerregistry) for registry
 interactions, which has excellent support, but some registries may have quirks.
 
 Today, `cosign` has been tested and works against the following registries:
