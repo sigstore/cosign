@@ -16,7 +16,6 @@ package cli
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -152,27 +151,30 @@ func SignCmd(ctx context.Context, keyPath string,
 			return err
 		}
 		signer = k
-		publicKey, err := k.PublicKey(ctx)
 		if err != nil {
 			return errors.Wrap(err, "getting public key")
 		}
-		pemBytes = cosign.KeyToPem(publicKey)
+		pemBytes, err = cosign.PublicKeyPem(ctx, k)
+		if err != nil {
+			return err
+		}
 	case keyPath != "":
-		var pub *ecdsa.PublicKey
 		k, err := loadKey(keyPath, pf)
-		pub = &k.Key.PublicKey
 		signer = k
 		if err != nil {
 			return errors.Wrap(err, "signing payload")
 		}
-		pemBytes = cosign.KeyToPem(pub)
+		pemBytes, err = cosign.PublicKeyPem(ctx, k)
+		if err != nil {
+			return err
+		}
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		priv, err := cosign.GeneratePrivateKey()
 		if err != nil {
 			return errors.Wrap(err, "generating cert")
 		}
-		signer = &cosign.ECDSASigner{Key: priv}
+		signer = cosign.WithECDSAKey(priv)
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 		cert, chain, err = fulcio.GetCert(ctx, priv) // TODO, use the chain.
 		if err != nil {
@@ -229,7 +231,7 @@ func SignCmd(ctx context.Context, keyPath string,
 	return nil
 }
 
-func loadKey(keyPath string, pf cosign.PassFunc) (*cosign.ECDSASigner, error) {
+func loadKey(keyPath string, pf cosign.PassFunc) (*cosign.ECDSAKey, error) {
 	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return nil, err
@@ -238,9 +240,5 @@ func loadKey(keyPath string, pf cosign.PassFunc) (*cosign.ECDSASigner, error) {
 	if err != nil {
 		return nil, err
 	}
-	key, err := cosign.LoadPrivateKey(kb, pass)
-	if err != nil {
-		return nil, err
-	}
-	return &cosign.ECDSASigner{Key: key}, nil
+	return cosign.LoadPrivateKey(kb, pass)
 }

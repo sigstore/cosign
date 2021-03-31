@@ -69,11 +69,10 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		if err != nil {
 			return err
 		}
-		pub, err := k.CreateKey(ctx)
+		pemBytes, err := cosign.PublicKeyPem(ctx, k)
 		if err != nil {
 			return err
 		}
-		pemBytes := cosign.KeyToPem(pub)
 		if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
 			return err
 		}

@@ -16,6 +16,7 @@ package gcp
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -131,7 +132,7 @@ func (g *KMS) Sign(ctx context.Context, payload []byte) (signature []byte, err e
 	return
 }
 
-func (g *KMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
+func (g *KMS) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
 	name, err := g.keyVersionName(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "key version")
@@ -151,11 +152,21 @@ func (g *KMS) PublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse public key")
 	}
-	ecKey, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("public key is not ecdsa")
+	return publicKey, nil
+}
+
+func (g *KMS) ECDSAPublicKey(ctx context.Context) (*ecdsa.PublicKey, error) {
+	k, err := g.PublicKey(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return ecKey, nil
+	pub, ok := k.(*ecdsa.PublicKey)
+	if !ok {
+		if err != nil {
+			return nil, fmt.Errorf("public key was not ECDSA: %#v", k)
+		}
+	}
+	return pub, nil
 }
 
 // keyVersionName returns the first key version found for a key in KMS
@@ -217,7 +228,11 @@ func (g *KMS) createKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 	}
 	if result, err := g.client.GetCryptoKey(ctx, getKeyRequest); err == nil {
 		fmt.Printf("Key %s already exists in GCP KMS, skipping creation.\n", result.GetName())
-		return g.PublicKey(ctx)
+		pub, err := g.ECDSAPublicKey(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "retrieving public key")
+		}
+		return pub, nil
 	}
 	createKeyRequest := &kmspb.CreateCryptoKeyRequest{
 		Parent:      fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", g.projectID, g.locationID, g.keyRing),
@@ -234,5 +249,27 @@ func (g *KMS) createKey(ctx context.Context) (*ecdsa.PublicKey, error) {
 		return nil, errors.Wrap(err, "creating crypto key")
 	}
 	fmt.Printf("Created key %s in GCP KMS\n", result.GetName())
-	return g.PublicKey(ctx)
+	pub, err := g.ECDSAPublicKey(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "retrieving public key")
+	}
+	return pub, nil
+}
+
+func (g *KMS) Verify(ctx context.Context, payload, signature []byte) error {
+	pub, err := g.PublicKey(ctx)
+	if err != nil {
+		return errors.Wrap(err, "retrieving public key")
+	}
+	switch k := pub.(type) {
+	case *ecdsa.PublicKey:
+		h := sha256.Sum256(payload)
+		if !ecdsa.VerifyASN1(k, h[:], signature) {
+			return errors.New("unable to verify signature")
+		}
+	default:
+		return fmt.Errorf("unknown public key type: %T", k)
+	}
+
+	return nil
 }

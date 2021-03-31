@@ -83,24 +83,19 @@ func isb64(data []byte) bool {
 }
 
 func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef string) error {
-
-	var pubKey *ecdsa.PublicKey
+	var pubKey cosign.PublicKey
 	var err error
 	var cert *x509.Certificate
 	switch {
 	case keyRef != "":
-		pubKey, err = cosign.LoadPublicKey(keyRef)
+		pubKey, err = cosign.LoadPublicKey(ctx, keyRef)
 		if err != nil {
 			return err
 		}
 	case kmsVal != "":
-		k, err := kms.Get(ctx, kmsVal)
+		pubKey, err = kms.Get(ctx, kmsVal)
 		if err != nil {
 			return errors.Wrap(err, "getting kms")
-		}
-		pubKey, err = k.PublicKey(ctx)
-		if err != nil {
-			return errors.Wrap(err, "kms public key")
 		}
 	case certRef != "": // KEYLESS MODE!
 		pems, err := ioutil.ReadFile(certRef)
@@ -116,7 +111,9 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 			return errors.New("no certs found in pem file")
 		}
 		cert = certs[0]
-		pubKey = cert.PublicKey.(*ecdsa.PublicKey)
+		pubKey = &cosign.ECDSAPublicKey{
+			Key: cert.PublicKey.(*ecdsa.PublicKey),
+		}
 	default:
 		return errors.New("one of -key and -cert required")
 	}
@@ -153,14 +150,15 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 		return err
 	}
 
-	if pubKey != nil {
-		if err := cosign.VerifySignature(pubKey, b64sig, blobBytes); err != nil {
-			return err
-		}
-	} else { // cert
-		if err := cosign.VerifySignature(cert.PublicKey.(*ecdsa.PublicKey), b64sig, blobBytes); err != nil {
-			return err
-		}
+	sig, err := base64.StdEncoding.DecodeString(b64sig)
+	if err != nil {
+		return err
+	}
+	if err := pubKey.Verify(ctx, blobBytes, sig); err != nil {
+		return err
+	}
+
+	if cert != nil { // cert
 		if err := cosign.TrustedCert(cert, fulcio.Roots); err != nil {
 			return err
 		}
@@ -176,8 +174,12 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 		}
 		var pubBytes []byte
 		if pubKey != nil {
-			pubBytes = cosign.KeyToPem(pubKey)
-		} else {
+			pubBytes, err = cosign.PublicKeyPem(ctx, pubKey)
+			if err != nil {
+				return err
+			}
+		}
+		if cert != nil {
 			pubBytes = cosign.CertToPem(cert)
 		}
 		index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
