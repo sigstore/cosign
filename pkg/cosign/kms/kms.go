@@ -16,6 +16,7 @@ package kms
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"fmt"
 
@@ -32,7 +33,10 @@ type KMS interface {
 	Sign(ctx context.Context, payload []byte) (signature []byte, err error)
 
 	// PublicKey returns the public key stored in the KMS
-	PublicKey(ctx context.Context) (*ecdsa.PublicKey, error)
+	PublicKey(ctx context.Context) (crypto.PublicKey, error)
+
+	// Verify the signature of the payload.
+	Verify(ctx context.Context, payload, signature []byte) error
 }
 
 func Get(ctx context.Context, keyResourceID string) (KMS, error) {

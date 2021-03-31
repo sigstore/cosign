@@ -16,7 +16,6 @@ package cli
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"io"
@@ -94,13 +93,13 @@ EXAMPLES
 }
 
 func GetPublicKey(ctx context.Context, reader io.Reader, kmsVal string, writer NamedWriter, pf cosign.PassFunc) error {
-	var pub *ecdsa.PublicKey
+	var pemBytes []byte
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
 			return err
 		}
-		pub, err = k.PublicKey(ctx)
+		pemBytes, err = cosign.PublicKeyPem(ctx, k)
 		if err != nil {
 			return err
 		}
@@ -117,9 +116,11 @@ func GetPublicKey(ctx context.Context, reader io.Reader, kmsVal string, writer N
 		if err != nil {
 			return err
 		}
-		pub = &pk.PublicKey
+		pemBytes, err = cosign.PublicKeyPem(ctx, pk)
+		if err != nil {
+			return err
+		}
 	}
-	pemBytes := cosign.KeyToPem(pub)
 	if _, err := writer.Write(pemBytes); err != nil {
 		return err
 	}

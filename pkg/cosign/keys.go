@@ -15,9 +15,12 @@
 package cosign
 
 import (
+	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 
@@ -34,7 +37,6 @@ type Keys struct {
 
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-
 }
 
 func GenerateKeyPair(pf PassFunc) (*Keys, error) {
@@ -64,7 +66,10 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 	})
 
 	// Now do the public key
-	pubBytes := KeyToPem(&priv.PublicKey)
+	pubBytes, err := KeyToPem(&priv.PublicKey)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Keys{
 		PrivateBytes: privBytes,
@@ -72,22 +77,66 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 	}, nil
 }
 
-func KeyToPem(pub *ecdsa.PublicKey) []byte {
-	// This can only panic if the key is not an actual crypto key, so we're safe
+type PublicKeyProvider interface {
+	PublicKey(context.Context) (crypto.PublicKey, error)
+}
+
+func PublicKeyPem(ctx context.Context, key PublicKeyProvider) ([]byte, error) {
+	pub, err := key.PublicKey(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return KeyToPem(pub)
+}
+
+func KeyToPem(pub crypto.PublicKey) ([]byte, error) {
 	b, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  "PUBLIC KEY",
 		Bytes: b,
-	})
+	}), nil
 }
 
 func CertToPem(c *x509.Certificate) []byte {
-	// This can only panic if the key is not an actual crypto key, so we're safe
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: c.Raw,
 	})
+}
+
+type ECDSAPublicKey struct {
+	Key *ecdsa.PublicKey
+}
+
+type ECDSAKey struct {
+	ECDSAPublicKey
+	Key *ecdsa.PrivateKey
+}
+
+// Sign returns an ASN.1-encoded signature of the SHA-256 hash of the given payload.
+func (k *ECDSAKey) Sign(_ context.Context, payload []byte) (signature []byte, err error) {
+	h := sha256.Sum256(payload)
+	return ecdsa.SignASN1(rand.Reader, k.Key, h[:])
+}
+
+func (k *ECDSAPublicKey) Verify(_ context.Context, payload, signature []byte) error {
+	h := sha256.Sum256(payload)
+	if !ecdsa.VerifyASN1(k.Key, h[:], signature) {
+		return errors.New("unable to verify signature")
+	}
+	return nil
+}
+
+func (k *ECDSAPublicKey) PublicKey(_ context.Context) (crypto.PublicKey, error) {
+	return k.Key, nil
+}
+
+func WithECDSAKey(key *ecdsa.PrivateKey) *ECDSAKey {
+	return &ECDSAKey{
+		ECDSAPublicKey: ECDSAPublicKey{Key: &key.PublicKey},
+		Key:            key,
+	}
 }

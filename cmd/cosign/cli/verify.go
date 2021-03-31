@@ -98,7 +98,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	}
 	// Keys are optional!
 	if pubKeyDescriptor != "" {
-		pubKey, err := cosign.LoadPublicKey(pubKeyDescriptor)
+		pubKey, err := cosign.LoadPublicKey(ctx, pubKeyDescriptor)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}

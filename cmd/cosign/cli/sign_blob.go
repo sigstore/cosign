@@ -16,7 +16,6 @@ package cli
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -93,12 +92,18 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 
 	switch {
 	case keyPath != "":
-		var pub *ecdsa.PublicKey
-		signature, pub, err = sign(ctx, keyPath, payload, pf)
+		k, err := loadKey(keyPath, pf)
+		if err != nil {
+			return nil, errors.Wrap(err, "loading key")
+		}
+		signature, err = k.Sign(ctx, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "signing blob")
 		}
-		pemBytes = cosign.KeyToPem(pub)
+		pemBytes, err = cosign.PublicKeyPem(ctx, k)
+		if err != nil {
+			return nil, errors.Wrap(err, "getting public key")
+		}
 	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
@@ -108,11 +113,10 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		if err != nil {
 			return nil, errors.Wrap(err, "signing")
 		}
-		publicKey, err := k.PublicKey(ctx)
+		pemBytes, err = cosign.PublicKeyPem(ctx, k)
 		if err != nil {
 			return nil, errors.Wrap(err, "getting public key")
 		}
-		pemBytes = cosign.KeyToPem(publicKey)
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		priv, err := cosign.GeneratePrivateKey()
@@ -147,17 +151,4 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		}
 	}
 	return signature, nil
-}
-
-func sign(ctx context.Context, keyPath string, payload []byte, pf cosign.PassFunc) (signature []byte, publicKey *ecdsa.PublicKey, err error) {
-	k, err := loadKey(keyPath, pf)
-	if err != nil {
-		return nil, nil, err
-	}
-	publicKey = &k.Key.PublicKey
-	signature, err = k.Sign(ctx, payload)
-	if err != nil {
-		return nil, nil, err
-	}
-	return signature, publicKey, nil
 }

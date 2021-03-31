@@ -16,8 +16,8 @@ package cosign
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -47,15 +47,23 @@ import (
 
 const pubKeyPemType = "PUBLIC KEY"
 
-func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
+type Verifier interface {
+	Verify(ctx context.Context, payload, signature []byte) error
+}
+
+type PublicKey interface {
+	Verifier
+	PublicKey(ctx context.Context) (crypto.PublicKey, error)
+}
+
+func LoadPublicKey(ctx context.Context, keyRef string) (PublicKey, error) {
 	// The key could be plaintext or in a file.
 	// First check if the file exists.
 	var pubBytes []byte
-	ctx := context.Background()
 
-	if k, err := kms.Get(ctx, keyRef); err == nil {
+	if kmsKey, err := kms.Get(ctx, keyRef); err == nil {
 		// KMS specified
-		return k.PublicKey(ctx)
+		return kmsKey, nil
 	}
 
 	// PEM encoded file.
@@ -80,32 +88,7 @@ func LoadPublicKey(keyRef string) (*ecdsa.PublicKey, error) {
 	if !ok {
 		return nil, errors.New("invalid public key")
 	}
-	return ed, nil
-}
-
-type Verifier interface {
-	Verify(ctx context.Context, payload, signature []byte) error
-}
-
-type ECDSAVerifier struct {
-	PubKey *ecdsa.PublicKey
-}
-
-func (v *ECDSAVerifier) Verify(_ context.Context, payload, signature []byte) error {
-	h := sha256.Sum256(payload)
-	if !ecdsa.VerifyASN1(v.PubKey, h[:], signature) {
-		return errors.New("unable to verify signature")
-	}
-	return nil
-}
-
-func VerifySignature(pubkey *ecdsa.PublicKey, base64sig string, payload []byte) error {
-	verifier := &ECDSAVerifier{PubKey: pubkey}
-	signature, err := base64.StdEncoding.DecodeString(base64sig)
-	if err != nil {
-		return err
-	}
-	return verifier.Verify(context.TODO(), payload, signature)
+	return &ECDSAPublicKey{ed}, nil
 }
 
 func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
@@ -182,7 +165,7 @@ type CheckOpts struct {
 	Annotations map[string]string
 	Claims      bool
 	Tlog        bool
-	PubKey      *ecdsa.PublicKey
+	PubKey      PublicKey
 	Roots       *x509.CertPool
 }
 
@@ -211,7 +194,7 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 		switch {
 		// We have a public key to check against.
 		case co.PubKey != nil:
-			if err := sp.VerifyKey(co.PubKey); err != nil {
+			if err := sp.VerifyKey(ctx, co.PubKey); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -222,8 +205,9 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 				validationErrs = append(validationErrs, "no certificate found on signature")
 				continue
 			}
+			pub := &ECDSAPublicKey{sp.Cert.PublicKey.(*ecdsa.PublicKey)}
 			// Now verify the signature, then the cert.
-			if err := sp.VerifyKey(sp.Cert.PublicKey.(*ecdsa.PublicKey)); err != nil {
+			if err := sp.VerifyKey(ctx, pub); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -258,7 +242,11 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 			// Get the right public key to use (key or cert)
 			var pemBytes []byte
 			if co.PubKey != nil {
-				pemBytes = KeyToPem(co.PubKey)
+				pemBytes, err = PublicKeyPem(ctx, co.PubKey)
+				if err != nil {
+					validationErrs = append(validationErrs, err.Error())
+					continue
+				}
 			} else {
 				pemBytes = CertToPem(sp.Cert)
 			}
@@ -306,18 +294,12 @@ func checkExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func (sp *SignedPayload) VerifyKey(pubKey *ecdsa.PublicKey) error {
+func (sp *SignedPayload) VerifyKey(ctx context.Context, pubKey PublicKey) error {
 	signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
 	if err != nil {
 		return err
 	}
-
-	h := sha256.Sum256(sp.Payload)
-	if !ecdsa.VerifyASN1(pubKey, h[:], signature) {
-		return errors.New("unable to verify signature")
-	}
-
-	return nil
+	return pubKey.Verify(ctx, sp.Payload, signature)
 }
 
 func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *SimpleSigning) error {

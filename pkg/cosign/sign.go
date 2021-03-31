@@ -17,8 +17,6 @@ package cosign
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -35,7 +33,7 @@ const (
 	chainkey = "dev.sigstore.cosign/chain"
 )
 
-func LoadPrivateKey(key []byte, pass []byte) (*ecdsa.PrivateKey, error) {
+func LoadPrivateKey(key []byte, pass []byte) (*ECDSAKey, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
@@ -58,7 +56,7 @@ func LoadPrivateKey(key []byte, pass []byte) (*ecdsa.PrivateKey, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid private key")
 	}
-	return epk, nil
+	return WithECDSAKey(epk), nil
 }
 
 type SimpleSigning struct {
@@ -103,14 +101,4 @@ func ImageSignature(ctx context.Context, signer Signer, img v1.Descriptor, paylo
 		return nil, nil, err
 	}
 	return payload, signature, nil
-}
-
-type ECDSASigner struct {
-	Key *ecdsa.PrivateKey
-}
-
-// Sign returns an ASN.1-encoded signature of the SHA-256 hash of the given payload.
-func (s *ECDSASigner) Sign(_ context.Context, payload []byte) (signature []byte, err error) {
-	h := sha256.Sum256(payload)
-	return ecdsa.SignASN1(rand.Reader, s.Key, h[:])
 }
