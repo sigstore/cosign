@@ -66,13 +66,11 @@ EXAMPLES
 	cosign verify-blob -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEYRING>/cryptoKeys/<KEY> -signature $sig <blob>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) == 0 {
+			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			for _, blobRef := range args {
-				if err := VerifyBlobCmd(ctx, *key, *kmsVal, *cert, *signature, blobRef); err != nil {
-					return errors.Wrapf(err, "verifying blob %s", blobRef)
-				}
+			if err := VerifyBlobCmd(ctx, *key, *kmsVal, *cert, *signature, args[0]); err != nil {
+				return errors.Wrapf(err, "verifying blob %s", args)
 			}
 			return nil
 		},
