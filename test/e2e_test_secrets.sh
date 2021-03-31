@@ -72,8 +72,9 @@ if (./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob); then fa
 ./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob2
 
 ## sign and verify multiple blobs
-./cosign sign-blob -key cosign.key myblob myblob2
-./cosign verify-blob -key cosign.pub myblob myblob2
+./cosign sign-blob -key cosign.key myblob myblob2 > sigs
+./cosign verify-blob -key cosign.pub -signature <(head -n 1 sigs) myblob
+./cosign verify-blob -key cosign.pub -signature <(tail -n 1 sigs) myblob2
 
 ## KMS!
 kms="gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test"
