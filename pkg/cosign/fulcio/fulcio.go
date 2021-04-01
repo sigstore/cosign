@@ -21,20 +21,18 @@ import (
 	"crypto/x509"
 	_ "embed" // To enable the `go:embed` directive.
 	"encoding/pem"
-	"errors"
 	"os"
+
+	"github.com/sigstore/sigstore/pkg/oauthflow"
 
 	"github.com/sigstore/fulcio/cmd/client/app"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/fulcio/pkg/generated/models"
-	"github.com/sigstore/fulcio/pkg/oauthflow"
-	"golang.org/x/oauth2"
 )
 
 const defaultFulcioAddress = "https://fulcio-dev.sigstore.dev"
@@ -51,71 +49,27 @@ func fulcioServer() string {
 	return defaultFulcioAddress
 }
 
-type oidcIDToken struct {
-	*oauthflow.OIDCIDToken
+type oidcFlow interface {
+	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, string, error)
 }
 
-func (o *oidcIDToken) email() (string, error) {
-	email, verified, err := oauthflow.EmailFromIDToken(o.ParsedToken)
-	if err != nil {
-		return "", err
-	}
-	if !verified {
-		return "", errors.New("email not verified by identity provider")
-	}
-	return email, nil
-}
+type defaultFlow struct{}
 
-func (o *oidcIDToken) accessToken() string {
-	return o.RawString
-}
-
-type idToken interface {
-	email() (string, error)
-	accessToken() string
-}
-
-type oidcTokenGetter struct {
-	oidcp *oidc.Provider
-}
-
-func (tg *oidcTokenGetter) getIDToken() (idToken, error) {
-	// TODO: Switch these to be creds from the sigstore project.
-	config := oauth2.Config{
-		ClientID:     "sigstore",
-		ClientSecret: "", // Not needed with the PKCE flow.
-		Endpoint:     tg.oidcp.Endpoint(),
-		RedirectURL:  "http://localhost:5556/auth/callback",
-		Scopes:       []string{oidc.ScopeOpenID, "email"},
-	}
-	token, err := oauthflow.GetIDToken(tg.oidcp, config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &oidcIDToken{token}, nil
-}
-
-type idTokenGetter interface {
-	getIDToken() (idToken, error)
+func (df *defaultFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, string, error) {
+	return oauthflow.OIDConnect(url, clientID, secret)
 }
 
 type signingCertProvider interface {
 	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter) (*operations.SigningCertCreated, error)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, idtg idTokenGetter, scp signingCertProvider) (string, string, error) {
+func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, flow oidcFlow) (string, string, error) {
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
 		return "", "", err
 	}
 
-	idToken, err := idtg.getIDToken()
-	if err != nil {
-		return "", "", err
-	}
-
-	email, err := idToken.email()
+	tok, email, err := flow.OIDConnect("https://oauth2.sigstore.dev/auth", "sigstore", "")
 	if err != nil {
 		return "", "", err
 	}
@@ -127,7 +81,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, idtg idTokenGetter, scp signingCe
 		return "", "", err
 	}
 
-	bearerAuth := httptransport.BearerToken(idToken.accessToken())
+	bearerAuth := httptransport.BearerToken(tok.RawString)
 
 	content := strfmt.Base64(pubBytes)
 	signedEmail := strfmt.Base64(proof)
@@ -160,12 +114,9 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error
 		return "", "", err
 	}
 
-	provider, err := oidc.NewProvider(ctx, "https://oauth2.sigstore.dev/auth")
-	if err != nil {
-		return "", "", err
-	}
+	flow := &defaultFlow{}
 
-	return getCertForOauthID(priv, &oidcTokenGetter{provider}, fcli.Operations)
+	return getCertForOauthID(priv, fcli.Operations, flow)
 }
 
 var Roots *x509.CertPool
