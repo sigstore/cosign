@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go v0.80.0
 	github.com/go-openapi/runtime v0.19.27
 	github.com/go-openapi/strfmt v0.20.1
-	github.com/go-openapi/swag v0.19.14
+	github.com/go-openapi/swag v0.19.15
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.4.1-0.20210206001656-4d068fbcb51f
 	github.com/google/trillian v1.3.13
