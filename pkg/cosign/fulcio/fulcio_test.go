@@ -25,28 +25,20 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
+	"github.com/sigstore/sigstore/pkg/oauthflow"
 )
 
-type testIDToken struct {
-	e, at    string
-	emailErr error
+type testFlow struct {
+	idt   *oauthflow.OIDCIDToken
+	email string
+	err   error
 }
 
-func (tidt *testIDToken) email() (string, error) {
-	return tidt.e, tidt.emailErr
-}
-
-func (tidt *testIDToken) accessToken() string {
-	return tidt.at
-}
-
-type testTokenGetter struct {
-	idt idToken
-	err error
-}
-
-func (ttg *testTokenGetter) getIDToken() (idToken, error) {
-	return ttg.idt, ttg.err
+func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, string, error) {
+	if tf.err != nil {
+		return nil, "", tf.err
+	}
+	return tf.idt, tf.email, nil
 }
 
 type testSigningCertProvider struct {
@@ -91,13 +83,6 @@ func TestGetCertForOauthID(t *testing.T) {
 			expectErr:      true,
 		},
 		{
-			desc:            "token.email() error",
-			email:           "example@oidc.id",
-			accessToken:     "abc123foobar",
-			idTokenEmailErr: errors.New("token.email() failed"),
-			expectErr:       true,
-		},
-		{
 			desc:           "SigningCert error",
 			email:          "example@oidc.id",
 			accessToken:    "abc123foobar",
@@ -108,15 +93,6 @@ func TestGetCertForOauthID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			tidt := &testIDToken{
-				e:        tc.email,
-				at:       tc.accessToken,
-				emailErr: tc.idTokenEmailErr,
-			}
-			ttg := &testTokenGetter{
-				idt: tidt,
-				err: tc.tokenGetterErr,
-			}
 			expectedCertPem := &pem.Block{
 				Type:  "CERTIFICATE",
 				Bytes: []byte("d34db33fd34db33fd34db33fd34db33f"),
@@ -128,7 +104,15 @@ func TestGetCertForOauthID(t *testing.T) {
 				err:     tc.signingCertErr,
 			}
 
-			cert, chain, err := getCertForOauthID(testKey, ttg, tscp)
+			tf := testFlow{
+				email: tc.email,
+				idt: &oauthflow.OIDCIDToken{
+					RawString: tc.accessToken,
+				},
+				err: tc.tokenGetterErr,
+			}
+
+			cert, chain, err := getCertForOauthID(testKey, tscp, &tf)
 
 			if err != nil {
 				if !tc.expectErr {
@@ -137,7 +121,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				return
 			}
 			if tc.expectErr {
-				t.Fatalf("getCertForOauthID got: %q, %q wanted and error", cert, chain)
+				t.Fatalf("getCertForOauthID got: %q, %q wanted error", cert, chain)
 			}
 
 			expectedCert := string(expectedCertBytes)
