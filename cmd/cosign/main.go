@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
 )
 
 var (
@@ -36,7 +37,8 @@ func main() {
 		ShortUsage: "cosign [flags] <subcommand>",
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
-			cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair(), cli.SignBlob(), cli.VerifyBlob(), cli.Triangulate(), cli.Version(), cli.PublicKey()},
+			cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair(), cli.SignBlob(),
+			cli.VerifyBlob(), cli.Triangulate(), cli.Version(), cli.PublicKey(), pivcli.PivKey()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},
