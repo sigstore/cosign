@@ -85,7 +85,6 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 }
 
 func GetYubikey() (*piv.YubiKey, error) {
-
 	cards, err := piv.Cards()
 	if err != nil {
 		return nil, err
