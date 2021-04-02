@@ -28,6 +28,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/kms"
+	"golang.org/x/term"
 )
 
 func SignBlob() *ffcli.Command {
@@ -124,7 +125,12 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 			return nil, errors.Wrap(err, "generating cert")
 		}
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-		pemBytes, _, err := fulcio.GetCert(ctx, priv) // TODO: use the chain
+		flow := fulcio.FlowNormal
+		if !term.IsTerminal(0) {
+			fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
+			flow = fulcio.FlowDevice
+		}
+		pemBytes, _, err := fulcio.GetCert(ctx, priv, flow) // TODO: use the chain
 		if err != nil {
 			return nil, errors.Wrap(err, "retrieving cert")
 		}
@@ -143,12 +149,9 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 	if b64 {
 		signature = []byte(base64.StdEncoding.EncodeToString(signature))
 		fmt.Println(string(signature))
-	} else {
+	} else if _, err := os.Stdout.Write(signature); err != nil {
 		// No newline if using the raw signature
-		_, err := os.Stdout.Write(signature)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 	return signature, nil
 }
