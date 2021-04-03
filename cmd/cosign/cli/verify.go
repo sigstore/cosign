@@ -16,6 +16,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -33,6 +34,7 @@ type VerifyCommand struct {
 	KmsVal      string
 	Key         string
 	CheckClaims bool
+	OutputJSON  bool
 	Annotations *map[string]string
 }
 
@@ -45,6 +47,7 @@ func Verify() *ffcli.Command {
 	flagset.StringVar(&cmd.Key, "key", "", "path to the public key")
 	flagset.StringVar(&cmd.KmsVal, "kms", "", "verify via a public key stored in a KMS")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
+	flagset.BoolVar(&cmd.OutputJSON, "json", true, "output the signing image information in JSON format")
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -116,14 +119,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 			return err
 		}
 
-		printVerification(imageRef, verified, co)
+		c.printVerification(imageRef, verified, co)
 	}
 
 	return nil
 }
 
 // printVerification logs details about the verification to stdout
-func printVerification(imgRef string, verified []cosign.SignedPayload, co cosign.CheckOpts) {
+func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.SignedPayload, co cosign.CheckOpts) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.Claims {
@@ -141,10 +144,33 @@ func printVerification(imgRef string, verified []cosign.SignedPayload, co cosign
 	}
 	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
 
+	var outputKeys []cosign.SimpleSigning
 	for _, vp := range verified {
 		if vp.Cert != nil {
 			fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
 		}
-		fmt.Println(string(vp.Payload))
+
+		if !c.OutputJSON {
+			fmt.Println(string(vp.Payload))
+			continue
+		}
+
+		ss := cosign.SimpleSigning{}
+		err := json.Unmarshal(vp.Payload, &ss)
+		if err != nil {
+			fmt.Println("error decoding the payload:", err.Error())
+			return
+		}
+		outputKeys = append(outputKeys, ss)
+	}
+
+	if c.OutputJSON {
+		b, err := json.Marshal(outputKeys)
+		if err != nil {
+			fmt.Println("error when generating the output:", err.Error())
+			return
+		}
+
+		fmt.Printf("\n%s\n", string(b))
 	}
 }
