@@ -41,7 +41,10 @@ const (
 )
 
 func Experimental() bool {
-	return os.Getenv(ExperimentalEnv) == "1"
+	if b, err := strconv.ParseBool(os.Getenv(ExperimentalEnv)); err == nil {
+		return b
+	}
+	return false
 }
 
 func DestinationTag(ref name.Reference, img *remote.Descriptor) (name.Tag, error) {
