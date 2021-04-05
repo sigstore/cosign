@@ -89,6 +89,13 @@ if (./cosign verify -a foo=bar -key cosign.pub $img); then false; fi
 ./cosign sign -kms $kms -a foo=bar $img
 ./cosign verify -key cosign.pub -a foo=bar $img
 
+# store signatures in a different repo
+export COSIGN_REPOSITORY=gcr.io/projectsigstore/subrepo
+(crane delete $(./cosign triangulate $img)) || true
+./cosign sign -kms $kms $img
+./cosign verify -key cosign.pub $img
+unset COSIGN_REPOSITORY
+
 # TODO: tlog
 
 

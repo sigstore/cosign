@@ -194,14 +194,14 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 
 	// sha256:... -> sha256-...
-	dstTag, err := cosign.DestinationTag(ref, get)
+	dstRef, err := cosign.DestinationRef(ref, get)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstTag.String())
+	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
 
-	if err := cosign.Upload(signature, payload, dstTag, string(cert), string(chain)); err != nil {
+	if err := cosign.Upload(signature, payload, dstRef, string(cert), string(chain)); err != nil {
 		return err
 	}
 

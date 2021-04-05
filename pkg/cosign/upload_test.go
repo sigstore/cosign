@@ -74,7 +74,7 @@ func TestDestinationTag(t *testing.T) {
 					},
 				},
 			}
-			got, err := DestinationTag(ref, img)
+			got, err := DestinationRef(ref, img)
 			if err != nil {
 				t.Fatalf("error destination tag: %v", err)
 			}
