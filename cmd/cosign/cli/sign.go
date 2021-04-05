@@ -201,12 +201,15 @@ func SignCmd(ctx context.Context, keyPath string,
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
 
-	if err := cosign.Upload(signature, payload, dstRef, string(cert), string(chain)); err != nil {
-		return err
+	uploadOpts := cosign.Options{
+		Signature: signature,
+		Payload:   payload,
+		Cert:      string(cert),
+		Chain:     string(chain),
 	}
 
 	if !cosign.Experimental() {
-		return nil
+		return cosign.Upload(dstRef, uploadOpts)
 	}
 
 	// Check if the image is public (no auth in Get)
@@ -228,7 +231,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		return err
 	}
 	fmt.Println("tlog entry created with index: ", index)
-	return nil
+	return cosign.Upload(dstRef, uploadOpts)
 }
 
 func loadKey(keyPath string, pf cosign.PassFunc) (*cosign.ECDSAKey, error) {

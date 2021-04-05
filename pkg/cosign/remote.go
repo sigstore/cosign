@@ -44,9 +44,16 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	return m.Layers, nil
 }
 
-func Upload(signature, payload []byte, dstTag name.Reference, cert, chain string) error {
+type Options struct {
+	Signature []byte
+	Payload   []byte
+	Cert      string
+	Chain     string
+}
+
+func Upload(dstTag name.Reference, opts Options) error {
 	l := &staticLayer{
-		b:  payload,
+		b:  opts.Payload,
 		mt: "application/vnd.dev.cosign.simplesigning.v1+json",
 	}
 	base, err := remote.Image(dstTag, remote.WithAuthFromKeychain(authn.DefaultKeychain))
@@ -62,11 +69,11 @@ func Upload(signature, payload []byte, dstTag name.Reference, cert, chain string
 	}
 
 	annotations := map[string]string{
-		sigkey: base64.StdEncoding.EncodeToString(signature),
+		sigkey: base64.StdEncoding.EncodeToString(opts.Signature),
 	}
-	if cert != "" {
-		annotations[certkey] = cert
-		annotations[chainkey] = chain
+	if opts.Cert != "" {
+		annotations[certkey] = opts.Cert
+		annotations[chainkey] = opts.Chain
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,
