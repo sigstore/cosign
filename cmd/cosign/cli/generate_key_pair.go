@@ -16,12 +16,12 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kms"
 
@@ -69,7 +69,11 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		if err != nil {
 			return err
 		}
-		pemBytes, err := cosign.PublicKeyPem(ctx, k)
+		pubKey, err := k.CreateKey(ctx)
+		if err != nil {
+			return errors.Wrap(err, "creating key")
+		}
+		pemBytes, err := cosign.KeyToPem(pubKey)
 		if err != nil {
 			return err
 		}

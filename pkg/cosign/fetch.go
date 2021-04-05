@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -54,21 +55,24 @@ func Munge(desc v1.Descriptor) string {
 }
 
 func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, *v1.Descriptor, error) {
-	var sigRef name.Reference
 	targetDesc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, nil, err
 	}
-	sigRef = ref.Context().Tag(Munge(targetDesc.Descriptor))
 
-	sigImg, err := remote.Image(sigRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	// first, see if signatures exist in an alternate location
+	dstRef, err := DestinationRef(ref, targetDesc)
 	if err != nil {
 		return nil, nil, err
+	}
+	sigImg, err := remote.Image(dstRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "remote image")
 	}
 
 	m, err := sigImg.Manifest()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "manifest")
 	}
 
 	g, ctx := errgroup.WithContext(ctx)

@@ -56,6 +56,11 @@ func MungeCmd(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	fmt.Println(ref.Context().Tag(cosign.Munge(desc.Descriptor)))
+	dstRef, err := cosign.DestinationRef(ref, desc)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(dstRef.Context().Tag(cosign.Munge(desc.Descriptor)))
 	return nil
 }

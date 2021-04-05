@@ -47,7 +47,7 @@ func Experimental() bool {
 	return false
 }
 
-func DestinationTag(ref name.Reference, img *remote.Descriptor) (name.Tag, error) {
+func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference, error) {
 	dstTag := ref.Context().Tag(Munge(img.Descriptor))
 	wantRepo := os.Getenv(repoEnv)
 	if wantRepo == "" {
@@ -65,7 +65,7 @@ func DestinationTag(ref name.Reference, img *remote.Descriptor) (name.Tag, error
 		subRepo[1] = strings.TrimPrefix(s[1], "/")
 	}
 	subbed := dstTag.RegistryStr() + strings.Join(subRepo, "/")
-	return name.NewTag(subbed)
+	return name.ParseReference(subbed)
 }
 
 // Upload will upload the signature, public key and payload to the tlog

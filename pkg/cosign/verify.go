@@ -185,7 +185,7 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 	// These are all the signatures attached to our image that we know how to parse.
 	allSignatures, desc, err := FetchSignatures(ctx, ref)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "fetching signatures")
 	}
 
 	validationErrs := []string{}
