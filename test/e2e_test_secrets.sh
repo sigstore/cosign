@@ -90,7 +90,7 @@ if (./cosign verify -a foo=bar -key cosign.pub $img); then false; fi
 ./cosign verify -key cosign.pub -a foo=bar $img
 
 # store signatures in a different repo
-export COSIGN_REPOSITORY=gcr.io/projectsigstore/subrepo
+export COSIGN_REPOSITORY=us-central1-docker.pkg.dev/projectsigstore/subrepo
 (crane delete $(./cosign triangulate $img)) || true
 ./cosign sign -kms $kms $img
 ./cosign verify -key cosign.pub $img

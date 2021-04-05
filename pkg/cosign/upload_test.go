@@ -54,6 +54,11 @@ func TestDestinationTag(t *testing.T) {
 			image: "test/image",
 			repo:  "newrepo",
 			want:  "index.docker.io/newrepo/image:sha256-digest.cosign",
+		}, {
+			desc:  "e2e test",
+			image: "us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test",
+			repo:  "us-central1-docker.pkg.dev/projectsigstore/subrepo",
+			want:  "us-central1-docker.pkg.dev/projectsigstore/subrepo/cosign-ci/test:sha256-digest.cosign",
 		},
 	}
 
