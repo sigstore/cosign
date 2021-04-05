@@ -27,10 +27,11 @@ import (
 )
 
 const (
-	pemType  = "ENCRYPTED COSIGN PRIVATE KEY"
-	sigkey   = "dev.cosignproject.cosign/signature"
-	certkey  = "dev.sigstore.cosign/certificate"
-	chainkey = "dev.sigstore.cosign/chain"
+	pemType             = "ENCRYPTED COSIGN PRIVATE KEY"
+	sigkey              = "dev.cosignproject.cosign/signature"
+	certkey             = "dev.sigstore.cosign/certificate"
+	chainkey            = "dev.sigstore.cosign/chain"
+	rekorInclusionProof = "dev.sigstore.cosign/rekor_inclusion_proof"
 )
 
 func LoadPrivateKey(key []byte, pass []byte) (*ECDSAKey, error) {

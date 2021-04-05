@@ -226,11 +226,11 @@ func SignCmd(ctx context.Context, keyPath string,
 			}
 		}
 	}
-	index, err := cosign.UploadTLog(signature, payload, pemBytes)
+	inclusionProof, err := cosign.UploadTLog(signature, payload, pemBytes)
 	if err != nil {
 		return err
 	}
-	fmt.Println("tlog entry created with index: ", index)
+	uploadOpts.RekorInclusionProof = base64.RawStdEncoding.EncodeToString([]byte(inclusionProof))
 	return cosign.Upload(dstRef, uploadOpts)
 }
 

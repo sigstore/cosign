@@ -91,7 +91,11 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	return cosign.Upload(sigBytes, payload, dstRef, "", "")
+	opts := cosign.Options{
+		Signature: sigBytes,
+		Payload:   payload,
+	}
+	return cosign.Upload(dstRef, opts)
 }
 
 type SignatureArgType uint8

@@ -25,7 +25,6 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/cmd/cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -98,11 +97,24 @@ func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
 		}
 		return "", err
 	}
-	// UUID is at the end of location
+
+	// index is at the end of location
+	var index string
 	for _, p := range resp.Payload {
-		return strconv.FormatInt(*p.LogIndex, 10), nil
+		index = strconv.FormatInt(*p.LogIndex, 10)
+		break
 	}
-	return "", errors.New("bad response from server")
+	fmt.Println("tlog entry created with index: ", index)
+
+	// get the signed inclusion proof
+	proofParams := entries.NewGetLogEntryProofParams()
+	proofParams.EntryUUID = resp.ETag
+	lep, err := rekorClient.Entries.GetLogEntryProof(proofParams)
+	if err != nil {
+		return "", err
+	}
+	inclusionProof, err := lep.GetPayload().MarshalBinary()
+	return string(inclusionProof), err
 }
 
 func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {

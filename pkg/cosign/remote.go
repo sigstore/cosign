@@ -45,10 +45,11 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 }
 
 type Options struct {
-	Signature []byte
-	Payload   []byte
-	Cert      string
-	Chain     string
+	Signature           []byte
+	Payload             []byte
+	Cert                string
+	Chain               string
+	RekorInclusionProof string
 }
 
 func Upload(dstTag name.Reference, opts Options) error {
@@ -74,6 +75,9 @@ func Upload(dstTag name.Reference, opts Options) error {
 	if opts.Cert != "" {
 		annotations[certkey] = opts.Cert
 		annotations[chainkey] = opts.Chain
+	}
+	if opts.RekorInclusionProof != "" {
+		annotations[rekorInclusionProof] = opts.RekorInclusionProof
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,
