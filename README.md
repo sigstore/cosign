@@ -12,7 +12,7 @@ Cosign aims to make signatures **invisible infrastructure**.
 We also use a slack [slack channel](https://sigstore.slack.com)!
 Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcfWn4XEyMqUUutbUQ) for the invite link.
 
-🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨 
+🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨
 
 ## Installation
 
@@ -265,7 +265,7 @@ The proposed mechanism is flexible enough to support signing arbitrary things.
 
 ### KMS Support
 `cosign` supports using a KMS provider to generate and sign keys.
-Right now we only support GCP KMS, but are hoping to support more in the future! 
+Right now we only support GCP KMS, but are hoping to support more in the future!
 
 To generate a key in GCP KMS (and a key ring, if necessary) run:
 ```
@@ -350,7 +350,7 @@ If you're aware of another system that does meet these, please let me know!
 * No external services for signature storage, querying, or retrieval
 * We aim for as much registry support as possible
 * Everything should work over the registry API
-* PGP should not be required at all. 
+* PGP should not be required at all.
 * Users must be able to find all signatures for an image
 * Signers can sign an image after push
 * Multiple entities can sign an image
@@ -535,3 +535,8 @@ $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa2
   ]
 }
 ```
+
+## Security
+
+Should you discover any security issues, please refer to sigstores [security
+process](https://github.com/sigstore/community/blob/main/SECURITY.md)
