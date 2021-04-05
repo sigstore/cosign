@@ -31,7 +31,8 @@ const (
 	sigkey              = "dev.cosignproject.cosign/signature"
 	certkey             = "dev.sigstore.cosign/certificate"
 	chainkey            = "dev.sigstore.cosign/chain"
-	rekorInclusionProof = "dev.sigstore.cosign/rekor_inclusion_proof"
+	rekorInclusionProof = "dev.sigstore.cosign/rekor/inclusion_proof"
+	rekorUUID           = "dev.sigstore.cosign/rekor/uuid"
 )
 
 func LoadPrivateKey(key []byte, pass []byte) (*ECDSAKey, error) {

@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -34,6 +35,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/trillian/merkle/logverifier"
+	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
@@ -250,12 +252,13 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 			} else {
 				pemBytes = CertToPem(sp.Cert)
 			}
-			// Find the uuid then the entry.
-			uuid, err := sp.VerifyTlog(rekorClient, pemBytes)
+
+			uuid, err := verifyTlog(rekorClient, pemBytes, sp)
 			if err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
+
 			// if we have a cert, we should check expiry
 			if sp.Cert != nil {
 				e, err := getTlogEntry(rekorClient, uuid)
@@ -342,4 +345,38 @@ func correctAnnotations(wanted, have map[string]string) bool {
 		}
 	}
 	return true
+}
+
+// verifyTlog verifies that the payload is in the tlog
+// and returns the uuid
+func verifyTlog(rekorClient *client.Rekor, pemBytes []byte, sp SignedPayload) (string, error) {
+	// if we don't have an inclusion proof, check the tlog
+	if sp.InclusionProof == "" {
+		return sp.VerifyTlog(rekorClient, pemBytes)
+	}
+
+	// first, try to verify the inclusion proof
+	// if anything fails, default to checking the tlog
+
+	ip := models.InclusionProof{}
+	if err := ip.UnmarshalBinary([]byte(sp.InclusionProof)); err != nil {
+		fmt.Fprintf(os.Stderr, "[unmarshal] Failed to verify inclusion proof (%v), checking tlog...\n", err)
+		return sp.VerifyTlog(rekorClient, pemBytes)
+	}
+
+	hashes := [][]byte{}
+	for _, h := range ip.Hashes {
+		hb, _ := hex.DecodeString(h)
+		hashes = append(hashes, hb)
+	}
+
+	rootHash, _ := hex.DecodeString(*ip.RootHash)
+	leafHash, _ := hex.DecodeString(sp.RekorUUID)
+
+	v := logverifier.New(rfc6962.DefaultHasher)
+	if err := v.VerifyInclusionProof(*ip.LogIndex, *ip.TreeSize, hashes, rootHash, leafHash); err != nil {
+		fmt.Fprintf(os.Stderr, "[verify inclusion proof] Failed to verify inclusion proof (%v), checking tlog...\n", err)
+		return sp.VerifyTlog(rekorClient, pemBytes)
+	}
+	return sp.RekorUUID, nil
 }

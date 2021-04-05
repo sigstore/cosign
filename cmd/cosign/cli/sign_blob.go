@@ -132,7 +132,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 	}
 
 	if cosign.Experimental() {
-		index, err := cosign.UploadTLog(signature, payload, pemBytes)
+		_, index, err := cosign.UploadTLog(signature, payload, pemBytes)
 		if err != nil {
 			return nil, err
 		}

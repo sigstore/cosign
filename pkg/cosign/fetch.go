@@ -36,6 +36,8 @@ type SignedPayload struct {
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
+	InclusionProof  string
+	RekorUUID       string
 }
 
 // TODO: marshal the cert correctly.
@@ -124,6 +126,11 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 					return err
 				}
 				sp.Chain = certs
+			}
+
+			if ip := desc.Annotations[rekorInclusionProof]; ip != "" {
+				sp.InclusionProof = ip
+				sp.RekorUUID = desc.Annotations[rekorUUID]
 			}
 
 			signatures[i] = sp

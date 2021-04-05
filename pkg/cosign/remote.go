@@ -50,6 +50,7 @@ type Options struct {
 	Cert                string
 	Chain               string
 	RekorInclusionProof string
+	RekorUUID           string
 }
 
 func Upload(dstTag name.Reference, opts Options) error {
@@ -78,6 +79,7 @@ func Upload(dstTag name.Reference, opts Options) error {
 	}
 	if opts.RekorInclusionProof != "" {
 		annotations[rekorInclusionProof] = opts.RekorInclusionProof
+		annotations[rekorUUID] = opts.RekorUUID
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,

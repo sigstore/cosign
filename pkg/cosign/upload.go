@@ -68,10 +68,10 @@ func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference,
 }
 
 // Upload will upload the signature, public key and payload to the tlog
-func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
+func UploadTLog(signature, payload []byte, pemBytes []byte) (string, string, error) {
 	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	re := rekorEntry(payload, signature, pemBytes)
@@ -92,10 +92,11 @@ func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
 			}
 			fmt.Println("Signature already exists. Displaying proof")
 
-			return FindTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, pemBytes)
+			uid, err := FindTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, pemBytes)
+			return "", uid, err
 
 		}
-		return "", err
+		return "", "", err
 	}
 
 	// index is at the end of location
@@ -111,10 +112,10 @@ func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
 	proofParams.EntryUUID = resp.ETag
 	lep, err := rekorClient.Entries.GetLogEntryProof(proofParams)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	inclusionProof, err := lep.GetPayload().MarshalBinary()
-	return string(inclusionProof), err
+	return string(inclusionProof), resp.ETag, err
 }
 
 func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
