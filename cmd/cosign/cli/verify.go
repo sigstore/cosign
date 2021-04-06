@@ -16,6 +16,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -30,9 +31,10 @@ import (
 
 // VerifyCommand verifies a signature on a supplied container image
 type VerifyCommand struct {
+	CheckClaims bool
 	KmsVal      string
 	Key         string
-	CheckClaims bool
+	Output      string
 	Annotations *map[string]string
 }
 
@@ -45,6 +47,7 @@ func Verify() *ffcli.Command {
 	flagset.StringVar(&cmd.Key, "key", "", "path to the public key")
 	flagset.StringVar(&cmd.KmsVal, "kms", "", "verify via a public key stored in a KMS")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
+	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -116,14 +119,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 			return err
 		}
 
-		printVerification(imageRef, verified, co)
+		c.printVerification(imageRef, verified, co)
 	}
 
 	return nil
 }
 
 // printVerification logs details about the verification to stdout
-func printVerification(imgRef string, verified []cosign.SignedPayload, co cosign.CheckOpts) {
+func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.SignedPayload, co cosign.CheckOpts) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.Claims {
@@ -141,10 +144,41 @@ func printVerification(imgRef string, verified []cosign.SignedPayload, co cosign
 	}
 	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
 
-	for _, vp := range verified {
-		if vp.Cert != nil {
-			fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
+	switch c.Output {
+	case "text":
+		for _, vp := range verified {
+			if vp.Cert != nil {
+				fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
+			}
+
+			fmt.Println(string(vp.Payload))
 		}
-		fmt.Println(string(vp.Payload))
+	default:
+		var outputKeys []cosign.SimpleSigning
+		for _, vp := range verified {
+			ss := cosign.SimpleSigning{}
+			err := json.Unmarshal(vp.Payload, &ss)
+			if err != nil {
+				fmt.Println("error decoding the payload:", err.Error())
+				return
+			}
+
+			if vp.Cert != nil {
+				if ss.Optional == nil {
+					ss.Optional = make(map[string]string)
+				}
+				ss.Optional["CommonName"] = vp.Cert.Subject.CommonName
+			}
+
+			outputKeys = append(outputKeys, ss)
+		}
+
+		b, err := json.Marshal(outputKeys)
+		if err != nil {
+			fmt.Println("error when generating the output:", err.Error())
+			return
+		}
+
+		fmt.Printf("\n%s\n", string(b))
 	}
 }
