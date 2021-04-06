@@ -46,7 +46,7 @@ type testSigningCertProvider struct {
 	err     error
 }
 
-func (p *testSigningCertProvider) SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter) (*operations.SigningCertCreated, error) {
+func (p *testSigningCertProvider) SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter, opts ...operations.ClientOption) (*operations.SigningCertCreated, error) {
 	return &operations.SigningCertCreated{
 		Payload: p.payload,
 	}, p.err

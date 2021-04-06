@@ -56,11 +56,11 @@ type oidcFlow interface {
 type defaultFlow struct{}
 
 func (df *defaultFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, string, error) {
-	return oauthflow.OIDConnect(url, clientID, secret)
+	return oauthflow.OIDConnect(url, clientID, secret, oauthflow.DefaultIDTokenGetter)
 }
 
 type signingCertProvider interface {
-	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter) (*operations.SigningCertCreated, error)
+	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter, opts ...operations.ClientOption) (*operations.SigningCertCreated, error)
 }
 
 func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, flow oidcFlow) (string, string, error) {
