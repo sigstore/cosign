@@ -20,12 +20,21 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
+	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/theupdateframework/go-tuf/encrypted"
+)
+
+const (
+	pemType  = "ENCRYPTED COSIGN PRIVATE KEY"
+	sigkey   = "dev.cosignproject.cosign/signature"
+	certkey  = "dev.sigstore.cosign/certificate"
+	chainkey = "dev.sigstore.cosign/chain"
 )
 
 type PassFunc func(bool) ([]byte, error)
@@ -81,7 +90,7 @@ type PublicKeyProvider interface {
 	PublicKey(context.Context) (crypto.PublicKey, error)
 }
 
-func PublicKeyPem(ctx context.Context, key PublicKeyProvider) ([]byte, error) {
+func PublicKeyPem(ctx context.Context, key signature.PublicKeyProvider) ([]byte, error) {
 	pub, err := key.PublicKey(ctx)
 	if err != nil {
 		return nil, err
@@ -107,36 +116,28 @@ func CertToPem(c *x509.Certificate) []byte {
 	})
 }
 
-type ECDSAPublicKey struct {
-	Key *ecdsa.PublicKey
-}
-
-type ECDSAKey struct {
-	ECDSAPublicKey
-	Key *ecdsa.PrivateKey
-}
-
-// Sign returns an ASN.1-encoded signature of the SHA-256 hash of the given payload.
-func (k *ECDSAKey) Sign(_ context.Context, payload []byte) (signature []byte, err error) {
-	h := sha256.Sum256(payload)
-	return ecdsa.SignASN1(rand.Reader, k.Key, h[:])
-}
-
-func (k *ECDSAPublicKey) Verify(_ context.Context, payload, signature []byte) error {
-	h := sha256.Sum256(payload)
-	if !ecdsa.VerifyASN1(k.Key, h[:], signature) {
-		return errors.New("unable to verify signature")
+func LoadECDSAPrivateKey(key []byte, pass []byte) (signature.ECDSASignerVerifier, error) {
+	// Decrypt first
+	p, _ := pem.Decode(key)
+	if p == nil {
+		return signature.ECDSASignerVerifier{}, errors.New("invalid pem block")
 	}
-	return nil
-}
-
-func (k *ECDSAPublicKey) PublicKey(_ context.Context) (crypto.PublicKey, error) {
-	return k.Key, nil
-}
-
-func WithECDSAKey(key *ecdsa.PrivateKey) *ECDSAKey {
-	return &ECDSAKey{
-		ECDSAPublicKey: ECDSAPublicKey{Key: &key.PublicKey},
-		Key:            key,
+	if p.Type != pemType {
+		return signature.ECDSASignerVerifier{}, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
+
+	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
+	if err != nil {
+		return signature.ECDSASignerVerifier{}, errors.Wrap(err, "decrypt")
+	}
+
+	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
+	if err != nil {
+		return signature.ECDSASignerVerifier{}, errors.Wrap(err, "parsing private key")
+	}
+	epk, ok := pk.(*ecdsa.PrivateKey)
+	if !ok {
+		return signature.ECDSASignerVerifier{}, fmt.Errorf("invalid private key")
+	}
+	return signature.NewECDSASignerVerifier(epk, crypto.SHA256), nil
 }

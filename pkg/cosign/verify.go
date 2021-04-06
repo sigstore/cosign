@@ -41,19 +41,17 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 
 	"github.com/sigstore/cosign/pkg/cosign/kms"
 )
 
 const pubKeyPemType = "PUBLIC KEY"
 
-type Verifier interface {
-	Verify(ctx context.Context, payload, signature []byte) error
-}
-
 type PublicKey interface {
-	Verifier
-	PublicKey(ctx context.Context) (crypto.PublicKey, error)
+	signature.Verifier
+	signature.PublicKeyProvider
 }
 
 func LoadPublicKey(ctx context.Context, keyRef string) (PublicKey, error) {
@@ -88,7 +86,7 @@ func LoadPublicKey(ctx context.Context, keyRef string) (PublicKey, error) {
 	if !ok {
 		return nil, errors.New("invalid public key")
 	}
-	return &ECDSAPublicKey{ed}, nil
+	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
 }
 
 func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
@@ -162,7 +160,7 @@ func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []b
 
 // There are only payloads. Some have certs, some don't.
 type CheckOpts struct {
-	Annotations map[string]string
+	Annotations map[string]interface{}
 	Claims      bool
 	Tlog        bool
 	PubKey      PublicKey
@@ -205,7 +203,7 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 				validationErrs = append(validationErrs, "no certificate found on signature")
 				continue
 			}
-			pub := &ECDSAPublicKey{sp.Cert.PublicKey.(*ecdsa.PublicKey)}
+			pub := &signature.ECDSAVerifier{Key: sp.Cert.PublicKey.(*ecdsa.PublicKey), HashAlg: crypto.SHA256}
 			// Now verify the signature, then the cert.
 			if err := sp.VerifyKey(ctx, pub); err != nil {
 				validationErrs = append(validationErrs, err.Error())
@@ -219,7 +217,7 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 
 		// We can't check annotations without claims, both require unmarshalling the payload.
 		if co.Claims {
-			ss := &SimpleSigning{}
+			ss := &payload.Simple{}
 			if err := json.Unmarshal(sp.Payload, ss); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
@@ -302,7 +300,7 @@ func (sp *SignedPayload) VerifyKey(ctx context.Context, pubKey PublicKey) error 
 	return pubKey.Verify(ctx, sp.Payload, signature)
 }
 
-func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *SimpleSigning) error {
+func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.Simple) error {
 	foundDgst := ss.Critical.Image.DockerManifestDigest
 	if foundDgst != d.Digest.String() {
 		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)
@@ -335,7 +333,7 @@ func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {
 	return nil
 }
 
-func correctAnnotations(wanted, have map[string]string) bool {
+func correctAnnotations(wanted, have map[string]interface{}) bool {
 	for k, v := range wanted {
 		if have[k] != v {
 			return false

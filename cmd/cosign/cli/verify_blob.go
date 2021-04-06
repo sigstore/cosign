@@ -16,7 +16,9 @@ package cli
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
+	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/base64"
 	"flag"
@@ -31,6 +33,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/kms"
 	"github.com/sigstore/rekor/cmd/cli/app"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 func VerifyBlob() *ffcli.Command {
@@ -111,8 +114,9 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 			return errors.New("no certs found in pem file")
 		}
 		cert = certs[0]
-		pubKey = &cosign.ECDSAPublicKey{
-			Key: cert.PublicKey.(*ecdsa.PublicKey),
+		pubKey = &signature.ECDSAVerifier{
+			Key:     cert.PublicKey.(*ecdsa.PublicKey),
+			HashAlg: crypto.SHA256,
 		}
 	default:
 		return errors.New("one of -key and -cert required")

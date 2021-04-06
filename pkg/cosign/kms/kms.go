@@ -16,27 +16,20 @@ package kms
 
 import (
 	"context"
-	"crypto"
 	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 type KMS interface {
+	signature.Signer
+	signature.Verifier
+
 	// CreateKey is responsible for creating an asymmetric key pair
 	// with the ECDSA algorithm on the P-256 Curve with a SHA-256 digest
 	CreateKey(context.Context) (*ecdsa.PublicKey, error)
-
-	// Sign is responsible for signing an image via the keys
-	// stored in KMS
-	Sign(ctx context.Context, payload []byte) (signature []byte, err error)
-
-	// PublicKey returns the public key stored in the KMS
-	PublicKey(ctx context.Context) (crypto.PublicKey, error)
-
-	// Verify the signature of the payload.
-	Verify(ctx context.Context, payload, signature []byte) error
 }
 
 func Get(ctx context.Context, keyResourceID string) (KMS, error) {

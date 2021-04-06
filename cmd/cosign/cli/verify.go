@@ -27,6 +27,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
@@ -35,7 +36,7 @@ type VerifyCommand struct {
 	KmsVal      string
 	Key         string
 	Output      string
-	Annotations *map[string]string
+	Annotations *map[string]interface{}
 }
 
 // Verify builds and returns an ffcli command
@@ -154,9 +155,9 @@ func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.Signe
 			fmt.Println(string(vp.Payload))
 		}
 	default:
-		var outputKeys []cosign.SimpleSigning
+		var outputKeys []payload.Simple
 		for _, vp := range verified {
-			ss := cosign.SimpleSigning{}
+			ss := payload.Simple{}
 			err := json.Unmarshal(vp.Payload, &ss)
 			if err != nil {
 				fmt.Println("error decoding the payload:", err.Error())
@@ -165,7 +166,7 @@ func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.Signe
 
 			if vp.Cert != nil {
 				if ss.Optional == nil {
-					ss.Optional = make(map[string]string)
+					ss.Optional = make(map[string]interface{})
 				}
 				ss.Optional["CommonName"] = vp.Cert.Subject.CommonName
 			}

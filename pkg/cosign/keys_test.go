@@ -25,7 +25,7 @@ func pass(s string) PassFunc {
 	}
 }
 
-func TestLoadPrivateKey(t *testing.T) {
+func TestLoadECDSAPrivateKey(t *testing.T) {
 	// Generate a valid keypair
 	keys, err := GenerateKeyPair(pass("hello"))
 	if err != nil {
@@ -33,12 +33,12 @@ func TestLoadPrivateKey(t *testing.T) {
 	}
 
 	// Load the private key with the right password
-	if _, err := LoadPrivateKey(keys.PrivateBytes, []byte("hello")); err != nil {
+	if _, err := LoadECDSAPrivateKey(keys.PrivateBytes, []byte("hello")); err != nil {
 		t.Errorf("unexpected error decrypting key: %s", err)
 	}
 
 	// Try it with the wrong one
-	if _, err := LoadPrivateKey(keys.PrivateBytes, []byte("wrong")); err == nil {
+	if _, err := LoadECDSAPrivateKey(keys.PrivateBytes, []byte("wrong")); err == nil {
 		t.Error("expected error decrypting key!")
 	}
 
@@ -47,8 +47,7 @@ func TestLoadPrivateKey(t *testing.T) {
 	if _, err := rand.Read(buf[:]); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := LoadPrivateKey(buf[:], []byte("wrong")); err == nil {
+	if _, err := LoadECDSAPrivateKey(buf[:], []byte("wrong")); err == nil {
 		t.Error("expected error decrypting key!")
 	}
-
 }
