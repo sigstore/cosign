@@ -15,7 +15,6 @@ jobs:
     steps:
       # Checks out a copy of your repository on the ubuntu-latest machine
       - uses: actions/checkout@v2
-      
       - uses: actions/setup-go@v2
         with:
           go-version: '1.16'
@@ -29,6 +28,5 @@ jobs:
         run: go install github.com/google/go-containerregistry/cmd/crane
       - name: creds
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
       - name: Run e2e tests that need secrets
         run: ./test/e2e_test_secrets.sh

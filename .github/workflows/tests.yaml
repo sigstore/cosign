@@ -1,21 +1,14 @@
 name: CI-Tests
 
-# Run this workflow every time a new commit pushed to your repository
 on: [push, pull_request]
 
 jobs:
-  # Set the job key. The key is displayed as the job name
-  # when a job name is not provided
   unit-tests:
-    # Name the Job
     name: Run tests
-    # Set the type of machine to run on
     runs-on: ubuntu-latest
 
     steps:
-      # Checks out a copy of your repository on the ubuntu-latest machine
       - uses: actions/checkout@v2
-
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
       - uses: actions/cache@v2
         with:
@@ -69,4 +62,4 @@ jobs:
         timeout-minutes: 5
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.29
+          version: v1.39
