@@ -112,7 +112,7 @@ func GetPublicKey(ctx context.Context, reader io.Reader, kmsVal string, writer N
 		if err != nil {
 			return nil
 		}
-		pk, err := cosign.LoadPrivateKey(kb, pass)
+		pk, err := cosign.LoadECDSAPrivateKey(kb, pass)
 		if err != nil {
 			return err
 		}

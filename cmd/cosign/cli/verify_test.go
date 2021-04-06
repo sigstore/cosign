@@ -30,7 +30,7 @@ func TestVerifyCmdLocalKeyAndKms(t *testing.T) {
 		KmsVal:      "testKmsVal",
 		Key:         "testLocalPath",
 		CheckClaims: false,
-		Annotations: &map[string]string{},
+		Annotations: &map[string]interface{}{},
 	}
 
 	err := cmd.Exec(ctx, []string{"testImage"})

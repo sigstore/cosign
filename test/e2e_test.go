@@ -30,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -47,7 +48,7 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
-var verify = func(key, imageRef string, checkClaims bool, annotations map[string]string) error {
+var verify = func(key, imageRef string, checkClaims bool, annotations map[string]interface{}) error {
 	cmd := cli.VerifyCommand{
 		Key:         key,
 		CheckClaims: checkClaims,
@@ -85,16 +86,16 @@ func TestSignVerify(t *testing.T) {
 	must(cli.DownloadCmd(ctx, imgName), t)
 
 	// Look for a specific annotation
-	mustErr(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar"}), t)
+	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
 
 	// Sign the image with an annotation
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", map[string]string{"foo": "bar"}, "", passFunc, false), t)
+	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", map[string]interface{}{"foo": "bar"}, "", passFunc, false), t)
 
 	// It should match this time.
-	must(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar"}), t)
+	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
 
 	// But two doesn't work
-	mustErr(verify(pubKeyPath, imgName, true, map[string]string{"foo": "bar", "baz": "bat"}), t)
+	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}), t)
 }
 
 func TestGenerateKeyPairEnvVar(t *testing.T) {
@@ -103,7 +104,7 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := cosign.LoadPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
+	if _, err := cosign.LoadECDSAPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -188,14 +189,14 @@ func TestGenerate(t *testing.T) {
 	// Generate the payload for the image, and check the digest.
 	b := bytes.Buffer{}
 	must(cli.GenerateCmd(context.Background(), imgName, nil, &b), t)
-	ss := cosign.SimpleSigning{}
+	ss := payload.Simple{}
 	must(json.Unmarshal(b.Bytes(), &ss), t)
 
 	equals(desc.Digest.String(), ss.Critical.Image.DockerManifestDigest, t)
 
 	// Now try with some annotations.
 	b.Reset()
-	a := map[string]string{"foo": "bar"}
+	a := map[string]interface{}{"foo": "bar"}
 	must(cli.GenerateCmd(context.Background(), imgName, a, &b), t)
 	must(json.Unmarshal(b.Bytes(), &ss), t)
 

@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 func Generate() *ffcli.Command {
@@ -62,7 +62,7 @@ EXAMPLES
 	}
 }
 
-func GenerateCmd(_ context.Context, imageRef string, annotations map[string]string, w io.Writer) error {
+func GenerateCmd(_ context.Context, imageRef string, annotations map[string]interface{}, w io.Writer) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -72,8 +72,10 @@ func GenerateCmd(_ context.Context, imageRef string, annotations map[string]stri
 	if err != nil {
 		return err
 	}
+	repo := ref.Context()
+	img := repo.Digest(get.Digest.String())
 
-	payload, err := (&cosign.ImagePayload{Img: get.Descriptor, Annotations: annotations}).MarshalJSON()
+	payload, err := (&payload.ImagePayload{Image: img, Claims: annotations}).MarshalJSON()
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,7 @@ func TestSignCmdLocalKeyAndKms(t *testing.T) {
 	keyPath := "testLocalPath"
 	kmsVal := "testKmsVal"
 
-	err := SignCmd(ctx, keyPath, "", false, "", map[string]string{}, kmsVal, GetPass, false)
+	err := SignCmd(ctx, keyPath, "", false, "", map[string]interface{}{}, kmsVal, GetPass, false)
 
 	if (errors.Is(err, &KeyParseError{}) == false) {
 		t.Fatal("expected KeyParseError")

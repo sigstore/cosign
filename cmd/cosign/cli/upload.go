@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 func Upload() *ffcli.Command {
@@ -70,6 +71,8 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
+	repo := ref.Context()
+	img := repo.Digest(get.Digest.String())
 
 	dstRef, err := cosign.DestinationRef(ref, get)
 	if err != nil {
@@ -78,7 +81,7 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 
 	var payload []byte
 	if payloadRef == "" {
-		payload, err = (&cosign.ImagePayload{Img: get.Descriptor}).MarshalJSON()
+		payload, err = (&sigPayload.ImagePayload{Image: img}).MarshalJSON()
 	} else {
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadRef))
 	}

@@ -16,6 +16,8 @@ package cli
 
 import (
 	"context"
+	"crypto"
+	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -25,6 +27,8 @@ import (
 	"strings"
 
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/sigstore/pkg/signature"
+	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -37,12 +41,12 @@ import (
 )
 
 type annotationsMap struct {
-	annotations map[string]string
+	annotations map[string]interface{}
 }
 
 func (a *annotationsMap) Set(s string) error {
 	if a.annotations == nil {
-		a.annotations = map[string]string{}
+		a.annotations = map[string]interface{}{}
 	}
 	kvp := strings.SplitN(s, "=", 2)
 	if len(kvp) != 2 {
@@ -114,7 +118,7 @@ EXAMPLES
 
 func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]string, kmsVal string, pf cosign.PassFunc, force bool) error {
+	annotations map[string]interface{}, kmsVal string, pf cosign.PassFunc, force bool) error {
 
 	if keyPath != "" && kmsVal != "" {
 		return &KeyParseError{}
@@ -128,20 +132,26 @@ func SignCmd(ctx context.Context, keyPath string,
 	if err != nil {
 		return errors.Wrap(err, "getting remote image")
 	}
+	repo := ref.Context()
+	img := repo.Digest(get.Digest.String())
 	// The payload can be specified via a flag to skip generation.
 	var payload []byte
 	if payloadPath != "" {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
 	} else {
-		payload, err = (&cosign.ImagePayload{Img: get.Descriptor, Annotations: annotations}).MarshalJSON()
+		payload, err = (&sigPayload.ImagePayload{
+			Type:   "cosign container image signature",
+			Image:  img,
+			Claims: annotations,
+		}).MarshalJSON()
 	}
 	if err != nil {
 		return errors.Wrap(err, "payload")
 	}
 
-	var signer cosign.Signer
-	var signature []byte
+	var signer signature.Signer
+	var sig []byte
 	var pemBytes []byte
 	var cert, chain string
 	switch {
@@ -174,7 +184,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		if err != nil {
 			return errors.Wrap(err, "generating cert")
 		}
-		signer = cosign.WithECDSAKey(priv)
+		signer = signature.NewECDSASignerVerifier(priv, crypto.SHA256)
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 		cert, chain, err = fulcio.GetCert(ctx, priv) // TODO, use the chain.
 		if err != nil {
@@ -183,13 +193,13 @@ func SignCmd(ctx context.Context, keyPath string,
 		pemBytes = []byte(cert)
 	}
 
-	signature, err = signer.Sign(ctx, payload)
+	sig, err = signer.Sign(ctx, payload)
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
 
 	if !upload {
-		fmt.Println(base64.StdEncoding.EncodeToString(signature))
+		fmt.Println(base64.StdEncoding.EncodeToString(sig))
 		return nil
 	}
 
@@ -201,7 +211,7 @@ func SignCmd(ctx context.Context, keyPath string,
 
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
 
-	if err := cosign.Upload(signature, payload, dstRef, string(cert), string(chain)); err != nil {
+	if err := cosign.Upload(sig, payload, dstRef, string(cert), string(chain)); err != nil {
 		return err
 	}
 
@@ -223,7 +233,7 @@ func SignCmd(ctx context.Context, keyPath string,
 			}
 		}
 	}
-	index, err := cosign.UploadTLog(signature, payload, pemBytes)
+	index, err := cosign.UploadTLog(sig, payload, pemBytes)
 	if err != nil {
 		return err
 	}
@@ -231,14 +241,14 @@ func SignCmd(ctx context.Context, keyPath string,
 	return nil
 }
 
-func loadKey(keyPath string, pf cosign.PassFunc) (*cosign.ECDSAKey, error) {
+func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier, error) {
 	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
-		return nil, err
+		return signature.ECDSASignerVerifier{}, err
 	}
 	pass, err := pf(false)
 	if err != nil {
-		return nil, err
+		return signature.ECDSASignerVerifier{}, err
 	}
-	return cosign.LoadPrivateKey(kb, pass)
+	return cosign.LoadECDSAPrivateKey(kb, pass)
 }
