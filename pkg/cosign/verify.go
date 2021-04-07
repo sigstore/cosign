@@ -25,7 +25,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -253,10 +252,15 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 				pemBytes = CertToPem(sp.Cert)
 			}
 
-			uuid, err := verifyTlog(rekorClient, pemBytes, sp)
-			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
+			// try to verify the bundle, if it fails then try to find the
+			// entry in the tlog
+			uuid := sp.Bundle.UUID
+			if verified, err := verifyBundle(sp.Bundle); err != nil || !verified {
+				uuid, err = sp.VerifyTlog(rekorClient, pemBytes)
+				if err != nil {
+					validationErrs = append(validationErrs, err.Error())
+					continue
+				}
 			}
 
 			// if we have a cert, we should check expiry
@@ -347,21 +351,19 @@ func correctAnnotations(wanted, have map[string]string) bool {
 	return true
 }
 
-// verifyTlog verifies that the payload is in the tlog
-// and returns the uuid
-func verifyTlog(rekorClient *client.Rekor, pemBytes []byte, sp SignedPayload) (string, error) {
-	// if we don't have an inclusion proof, check the tlog
-	if sp.Bundle.InclusionProof == "" {
-		return sp.VerifyTlog(rekorClient, pemBytes)
+func verifyBundle(bundle Bundle) (bool, error) {
+
+	// TODO: Verify the signed inclusion proof against rekor public key
+
+	// TODO: verify rekor intermediate cert came from fulcio via https://github.com/google/certificate-transparency-go/blob/109466f2efc1e5eeb78c9bc25cbc6069b8afa40b/trillian/ctfe/cert_checker.go#L49
+
+	if bundle.InclusionProof == "" {
+		return false, nil
 	}
 
-	// first, try to verify the inclusion proof
-	// if anything fails, default to checking the tlog
-
 	ip := models.InclusionProof{}
-	if err := ip.UnmarshalBinary([]byte(sp.Bundle.InclusionProof)); err != nil {
-		fmt.Fprintf(os.Stderr, "[unmarshal] Failed to verify inclusion proof (%v), checking tlog...\n", err)
-		return sp.VerifyTlog(rekorClient, pemBytes)
+	if err := ip.UnmarshalBinary([]byte(bundle.InclusionProof)); err != nil {
+		return false, errors.Wrap(err, "unmarshalling binary")
 	}
 
 	hashes := [][]byte{}
@@ -371,12 +373,12 @@ func verifyTlog(rekorClient *client.Rekor, pemBytes []byte, sp SignedPayload) (s
 	}
 
 	rootHash, _ := hex.DecodeString(*ip.RootHash)
-	leafHash, _ := hex.DecodeString(sp.Bundle.UUID)
+	leafHash, _ := hex.DecodeString(bundle.UUID)
 
 	v := logverifier.New(rfc6962.DefaultHasher)
 	if err := v.VerifyInclusionProof(*ip.LogIndex, *ip.TreeSize, hashes, rootHash, leafHash); err != nil {
-		fmt.Fprintf(os.Stderr, "[verify inclusion proof] Failed to verify inclusion proof (%v), checking tlog...\n", err)
-		return sp.VerifyTlog(rekorClient, pemBytes)
+		return false, errors.Wrap(err, "verifying inclusion proof")
 	}
-	return sp.Bundle.UUID, nil
+
+	return true, nil
 }

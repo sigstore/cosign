@@ -231,8 +231,10 @@ func SignCmd(ctx context.Context, keyPath string,
 		return err
 	}
 	uploadOpts.Bundle = &cosign.Bundle{
+		// TODO: this will be SignedInclusionProof
 		InclusionProof: inclusionProof,
 		UUID:           uuid,
+		// TODO: get the rekor intermediate cert and store it here
 	}
 	return cosign.Upload(dstRef, uploadOpts)
 }
