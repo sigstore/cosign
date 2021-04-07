@@ -17,9 +17,12 @@ package cosign
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -45,12 +48,11 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 }
 
 type Options struct {
-	Signature           []byte
-	Payload             []byte
-	Cert                string
-	Chain               string
-	RekorInclusionProof string
-	RekorUUID           string
+	Signature []byte
+	Payload   []byte
+	Cert      string
+	Chain     string
+	Bundle    *Bundle
 }
 
 func Upload(dstTag name.Reference, opts Options) error {
@@ -77,9 +79,13 @@ func Upload(dstTag name.Reference, opts Options) error {
 		annotations[certkey] = opts.Cert
 		annotations[chainkey] = opts.Chain
 	}
-	if opts.RekorInclusionProof != "" {
-		annotations[rekorInclusionProof] = opts.RekorInclusionProof
-		annotations[rekorUUID] = opts.RekorUUID
+	if opts.Bundle != nil {
+		data, err := json.Marshal(opts.Bundle)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "unable to marshal bundle, skipping: %v", err)
+		} else {
+			annotations[bundle] = string(data)
+		}
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,

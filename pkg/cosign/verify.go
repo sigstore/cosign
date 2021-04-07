@@ -351,7 +351,7 @@ func correctAnnotations(wanted, have map[string]string) bool {
 // and returns the uuid
 func verifyTlog(rekorClient *client.Rekor, pemBytes []byte, sp SignedPayload) (string, error) {
 	// if we don't have an inclusion proof, check the tlog
-	if sp.InclusionProof == "" {
+	if sp.Bundle.InclusionProof == "" {
 		return sp.VerifyTlog(rekorClient, pemBytes)
 	}
 
@@ -359,7 +359,7 @@ func verifyTlog(rekorClient *client.Rekor, pemBytes []byte, sp SignedPayload) (s
 	// if anything fails, default to checking the tlog
 
 	ip := models.InclusionProof{}
-	if err := ip.UnmarshalBinary([]byte(sp.InclusionProof)); err != nil {
+	if err := ip.UnmarshalBinary([]byte(sp.Bundle.InclusionProof)); err != nil {
 		fmt.Fprintf(os.Stderr, "[unmarshal] Failed to verify inclusion proof (%v), checking tlog...\n", err)
 		return sp.VerifyTlog(rekorClient, pemBytes)
 	}
@@ -371,12 +371,12 @@ func verifyTlog(rekorClient *client.Rekor, pemBytes []byte, sp SignedPayload) (s
 	}
 
 	rootHash, _ := hex.DecodeString(*ip.RootHash)
-	leafHash, _ := hex.DecodeString(sp.RekorUUID)
+	leafHash, _ := hex.DecodeString(sp.Bundle.UUID)
 
 	v := logverifier.New(rfc6962.DefaultHasher)
 	if err := v.VerifyInclusionProof(*ip.LogIndex, *ip.TreeSize, hashes, rootHash, leafHash); err != nil {
 		fmt.Fprintf(os.Stderr, "[verify inclusion proof] Failed to verify inclusion proof (%v), checking tlog...\n", err)
 		return sp.VerifyTlog(rekorClient, pemBytes)
 	}
-	return sp.RekorUUID, nil
+	return sp.Bundle.UUID, nil
 }

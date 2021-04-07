@@ -230,8 +230,10 @@ func SignCmd(ctx context.Context, keyPath string,
 	if err != nil {
 		return err
 	}
-	uploadOpts.RekorInclusionProof = inclusionProof
-	uploadOpts.RekorUUID = uuid
+	uploadOpts.Bundle = &cosign.Bundle{
+		InclusionProof: inclusionProof,
+		UUID:           uuid,
+	}
 	return cosign.Upload(dstRef, uploadOpts)
 }
 

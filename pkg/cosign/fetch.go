@@ -17,8 +17,11 @@ package cosign
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"runtime"
 	"strings"
 
@@ -31,13 +34,19 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+type Bundle struct {
+	InclusionProof     string
+	UUID               string
+	RekorCert          string
+	SignedRootTreeHash string
+}
+
 type SignedPayload struct {
 	Base64Signature string
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
-	InclusionProof  string
-	RekorUUID       string
+	Bundle          Bundle
 }
 
 // TODO: marshal the cert correctly.
@@ -128,9 +137,12 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 				sp.Chain = certs
 			}
 
-			if ip := desc.Annotations[rekorInclusionProof]; ip != "" {
-				sp.InclusionProof = ip
-				sp.RekorUUID = desc.Annotations[rekorUUID]
+			if b := desc.Annotations[bundle]; b != "" {
+				var bund Bundle
+				if err := json.Unmarshal([]byte(b), &bund); err != nil {
+					fmt.Fprintf(os.Stderr, "error unmarshalling bundle, will attempt to verify without it: %v", err)
+				}
+				sp.Bundle = bund
 			}
 
 			signatures[i] = sp
