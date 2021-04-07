@@ -29,6 +29,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+	"golang.org/x/term"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -186,7 +187,13 @@ func SignCmd(ctx context.Context, keyPath string,
 		}
 		signer = signature.NewECDSASignerVerifier(priv, crypto.SHA256)
 		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-		cert, chain, err = fulcio.GetCert(ctx, priv) // TODO, use the chain.
+
+		flow := fulcio.FlowNormal
+		if !term.IsTerminal(0) {
+			fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
+			flow = fulcio.FlowDevice
+		}
+		cert, chain, err = fulcio.GetCert(ctx, priv, flow) // TODO, use the chain.
 		if err != nil {
 			return errors.Wrap(err, "retrieving cert")
 		}

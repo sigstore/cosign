@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	_ "embed" // To enable the `go:embed` directive.
 	"encoding/pem"
+	"fmt"
 	"os"
 
 	"github.com/sigstore/sigstore/pkg/oauthflow"
@@ -35,7 +36,16 @@ import (
 	"github.com/sigstore/fulcio/pkg/generated/models"
 )
 
-const defaultFulcioAddress = "https://fulcio-dev.sigstore.dev"
+const (
+	defaultFulcioAddress = "https://fulcio-dev.sigstore.dev"
+	oauthAddress         = "https://oauth2.sigstore.dev/auth"
+	clientID             = "sigstore"
+)
+
+const (
+	FlowNormal = "normal"
+	FlowDevice = "device"
+)
 
 // This is the root in the fulcio project.
 //go:embed fulcio.pem
@@ -49,27 +59,29 @@ func fulcioServer() string {
 	return defaultFulcioAddress
 }
 
-type oidcFlow interface {
+type oidcConnector interface {
 	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, string, error)
 }
 
-type defaultFlow struct{}
+type realConnector struct {
+	flow oauthflow.TokenGetter
+}
 
-func (df *defaultFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, string, error) {
-	return oauthflow.OIDConnect(url, clientID, secret, oauthflow.DefaultIDTokenGetter)
+func (rf *realConnector) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, string, error) {
+	return oauthflow.OIDConnect(url, clientID, secret, rf.flow)
 }
 
 type signingCertProvider interface {
 	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter, opts ...operations.ClientOption) (*operations.SigningCertCreated, error)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, flow oidcFlow) (string, string, error) {
+func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connector oidcConnector) (string, string, error) {
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
 		return "", "", err
 	}
 
-	tok, email, err := flow.OIDConnect("https://oauth2.sigstore.dev/auth", "sigstore", "")
+	tok, email, err := connector.OIDConnect(oauthAddress, clientID, "")
 	if err != nil {
 		return "", "", err
 	}
@@ -108,15 +120,24 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, flow oid
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey) (string, string, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, flow string) (string, string, error) {
 	fcli, err := app.GetFulcioClient(fulcioServer())
 	if err != nil {
 		return "", "", err
 	}
 
-	flow := &defaultFlow{}
+	c := &realConnector{}
+	switch flow {
+	case FlowDevice:
+		c.flow = oauthflow.NewDeviceFlowTokenGetter(
+			oauthAddress, oauthflow.SigstoreDeviceURL, oauthflow.SigstoreTokenURL)
+	case FlowNormal:
+		c.flow = oauthflow.DefaultIDTokenGetter
+	default:
+		return "", "", fmt.Errorf("unsupported oauth flow: %s", flow)
+	}
 
-	return getCertForOauthID(priv, fcli.Operations, flow)
+	return getCertForOauthID(priv, fcli.Operations, c)
 }
 
 var Roots *x509.CertPool

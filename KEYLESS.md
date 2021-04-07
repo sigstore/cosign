@@ -50,6 +50,14 @@ The root CA keys are hard-coded in `cosign` today.
 They can only be changed by recompiling the binary.
 This will be made more configurable in the future.
 
+### Oauth Flows
+
+Cosign supports two oauth flows today: the standard flow and the device flow.
+
+When there is no terminal attached (non-interactive mode), `cosign` will automatically use the device flow
+where a link is printed to stdout.
+This link must be opened in a browser to complete the flow.
+
 ### Timestamps
 
 Signature timestamps are checked in the [rekor](https://github.com/sigstore/rekor) transparency log.
