@@ -43,5 +43,7 @@ jobs:
         run: go install github.com/google/go-containerregistry/cmd/crane
       - name: creds
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      - name: deps
+        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: Run e2e tests that need secrets
         run: ./test/e2e_test_secrets.sh
