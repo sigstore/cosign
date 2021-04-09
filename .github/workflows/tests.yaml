@@ -40,11 +40,12 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
       - uses: actions/setup-go@v2
         with:
           go-version: '1.16'
 
+      - name: deps
+        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: Run Go tests
         run: go test ./...
 
@@ -72,6 +73,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: deps
+        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         timeout-minutes: 5

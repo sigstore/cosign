@@ -57,7 +57,7 @@ gs://cosign-releases/v0.1.0/cosign.sha256
 gs://cosign-releases/v0.1.0/cosign.sig
 ```
 
-Cross platform builds will start in v0.2.0.
+Cross platform builds started in v0.2.0.
 
 ## Quick Start
 
@@ -110,6 +110,10 @@ The following checks were performed on these signatures:
 ## Detailed Usage
 
 See the [Usage documentation](USAGE.md) for more commands!
+
+## Hardware-based Tokens
+
+See the [Hardware Tokens documentation](TOKENS.md) for information on how to use `cosign` with hardware.
 
 ## Registry Support
 
