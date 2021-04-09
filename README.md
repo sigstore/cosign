@@ -35,6 +35,16 @@ $ crane ls gcr.io/projectsigstore/cosign/ci/cosign
 ```
 Further details on Crane and instructions on install provided here: https://github.com/google/go-containerregistry/tree/main/cmd/crane
 
+Signed release containers are available at `gcr.io/projectsigstore/cosign`.
+They are tagged with the release name.
+They can be found with `crane ls`:
+
+```
+$ crane ls gcr.io/projectsigstore/cosign
+sha256-b9e72eb217dd93d2144b8143d8c9812e62b32903e790b325116641e89df03e5f.cosign
+v0.2.0
+```
+
 ### Releases
 
 Releases are published in this repository under the Releases page, and hosted in the GCS bucket `cosign-releases`.
