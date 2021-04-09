@@ -216,7 +216,7 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 
 		// We can't check annotations without claims, both require unmarshalling the payload.
 		if co.Claims {
-			ss := &payload.Simple{}
+			ss := &payload.SimpleContainerImage{}
 			if err := json.Unmarshal(sp.Payload, ss); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
@@ -299,7 +299,7 @@ func (sp *SignedPayload) VerifyKey(ctx context.Context, pubKey PublicKey) error 
 	return pubKey.Verify(ctx, sp.Payload, signature)
 }
 
-func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.Simple) error {
+func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContainerImage) error {
 	foundDgst := ss.Critical.Image.DockerManifestDigest
 	if foundDgst != d.Digest.String() {
 		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)

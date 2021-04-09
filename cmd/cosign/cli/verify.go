@@ -156,9 +156,9 @@ func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.Signe
 			fmt.Println(string(vp.Payload))
 		}
 	default:
-		var outputKeys []payload.Simple
+		var outputKeys []payload.SimpleContainerImage
 		for _, vp := range verified {
-			ss := payload.Simple{}
+			ss := payload.SimpleContainerImage{}
 			err := json.Unmarshal(vp.Payload, &ss)
 			if err != nil {
 				fmt.Println("error decoding the payload:", err.Error())

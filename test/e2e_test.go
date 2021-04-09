@@ -189,7 +189,7 @@ func TestGenerate(t *testing.T) {
 	// Generate the payload for the image, and check the digest.
 	b := bytes.Buffer{}
 	must(cli.GenerateCmd(context.Background(), imgName, nil, &b), t)
-	ss := payload.Simple{}
+	ss := payload.SimpleContainerImage{}
 	must(json.Unmarshal(b.Bytes(), &ss), t)
 
 	equals(desc.Digest.String(), ss.Critical.Image.DockerManifestDigest, t)

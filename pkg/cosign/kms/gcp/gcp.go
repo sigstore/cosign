@@ -87,50 +87,48 @@ func NewGCP(ctx context.Context, keyResourceID string) (*KMS, error) {
 	}, nil
 }
 
-func (g *KMS) Sign(ctx context.Context, payload []byte) (signature []byte, err error) {
+func (g *KMS) Sign(ctx context.Context, rawPayload []byte) (signature, signed []byte, err error) {
 	// Calculate the digest of the message.
-	digest := sha256.New()
-	_, err = digest.Write(payload)
+	hash := sha256.New()
+	_, err = hash.Write(rawPayload)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
+	digest := hash.Sum(nil)
 	// Optional but recommended: Compute digest's CRC32C.
 	crc32c := func(data []byte) uint32 {
 		t := crc32.MakeTable(crc32.Castagnoli)
 		return crc32.Checksum(data, t)
 	}
-	digestCRC32C := crc32c(digest.Sum(nil))
+	digestCRC32C := crc32c(digest)
 
 	name, err := g.keyVersionName(ctx)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 	req := &kmspb.AsymmetricSignRequest{
 		Name: name,
 		Digest: &kmspb.Digest{
 			Digest: &kmspb.Digest_Sha256{
-				Sha256: digest.Sum(nil),
+				Sha256: digest,
 			},
 		},
 		DigestCrc32C: wrapperspb.Int64(int64(digestCRC32C)),
 	}
 	result, err := g.client.AsymmetricSign(ctx, req)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 	// Optional, but recommended: perform integrity verification on result.
 	// For more details on ensuring E2E in-transit integrity to and from Cloud KMS visit:
 	// https://cloud.google.com/kms/docs/data-integrity-guidelines
 	if !result.VerifiedDigestCrc32C {
-		err = fmt.Errorf("AsymmetricSign: request corrupted in-transit")
-		return
+		return nil, nil, fmt.Errorf("AsymmetricSign: request corrupted in-transit")
 	}
 	if int64(crc32c(result.Signature)) != result.SignatureCrc32C.Value {
-		err = fmt.Errorf("AsymmetricSign: response corrupted in-transit")
-		return
+		return nil, nil, fmt.Errorf("AsymmetricSign: response corrupted in-transit")
 	}
-	signature = result.GetSignature()
-	return
+	return result.GetSignature(), digest, nil
 }
 
 func (g *KMS) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
