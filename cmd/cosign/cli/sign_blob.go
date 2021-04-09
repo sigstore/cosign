@@ -99,7 +99,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		if err != nil {
 			return nil, errors.Wrap(err, "loading key")
 		}
-		signature, err = k.Sign(ctx, payload)
+		signature, _, err = k.Sign(ctx, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "signing blob")
 		}
@@ -112,7 +112,7 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		if err != nil {
 			return nil, err
 		}
-		signature, err = k.Sign(ctx, payload)
+		signature, _, err = k.Sign(ctx, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "signing")
 		}

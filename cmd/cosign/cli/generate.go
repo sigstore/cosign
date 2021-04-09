@@ -77,7 +77,7 @@ func GenerateCmd(_ context.Context, imageRef string, annotations map[string]inte
 	repo := ref.Context()
 	img := repo.Digest(get.Digest.String())
 
-	payload, err := (&payload.ImagePayload{Image: img, Claims: annotations}).MarshalJSON()
+	payload, err := (&payload.Cosign{Image: img, Annotations: annotations}).MarshalJSON()
 	if err != nil {
 		return err
 	}

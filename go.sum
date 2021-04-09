@@ -200,6 +200,7 @@ github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMo
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fullstorydev/grpcurl v1.6.0/go.mod h1:ZQ+ayqbKMJNhzLmbpCiurTVlaK2M/3nqZCxaQ2Ze/sM=
+github.com/gabriel-vasile/mimetype v1.2.0 h1:A6z5J8OhjiWFV91sQ3dMI8apYu/tvP9keDaMM3Xu6p4=
 github.com/gabriel-vasile/mimetype v1.2.0/go.mod h1:6CDPel/o/3/s4+bp6kIbsWATq8pmgOisOPG40CJa6To=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
@@ -806,6 +807,8 @@ github.com/sigstore/rekor v0.1.1 h1:KCMKXwzpwnRwhxQojpFFEOMP4Hepp4exncv4EzVUIFY=
 github.com/sigstore/rekor v0.1.1/go.mod h1:b+T8TvGKWgaFbtPRQgF/gXjbj/R9HdJ5lA93cnGT3Sc=
 github.com/sigstore/sigstore v0.0.0-20210405172749-e614ea31ba83 h1:cFQDstQVlvJ/fY4wubvacS8VGrKzSXW5M6dgRWqYaLE=
 github.com/sigstore/sigstore v0.0.0-20210405172749-e614ea31ba83/go.mod h1:sgfbsomHSkH3315v572HAbiWoA8n58MBqRB4YgJI7X0=
+github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074 h1:HUEWEpBoKQy9AIB2Q+6X73cAc+720DvWO+VqACa7wxI=
+github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074/go.mod h1:sgfbsomHSkH3315v572HAbiWoA8n58MBqRB4YgJI7X0=
 github.com/sirupsen/logrus v1.0.5/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

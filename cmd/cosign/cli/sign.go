@@ -141,10 +141,9 @@ func SignCmd(ctx context.Context, keyPath string,
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
 	} else {
-		payload, err = (&sigPayload.ImagePayload{
-			Type:   "cosign container image signature",
-			Image:  img,
-			Claims: annotations,
+		payload, err = (&sigPayload.Cosign{
+			Image:       img,
+			Annotations: annotations,
 		}).MarshalJSON()
 	}
 	if err != nil {
@@ -200,7 +199,7 @@ func SignCmd(ctx context.Context, keyPath string,
 		pemBytes = []byte(cert)
 	}
 
-	sig, err = signer.Sign(ctx, payload)
+	sig, _, err = signer.Sign(ctx, payload)
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
