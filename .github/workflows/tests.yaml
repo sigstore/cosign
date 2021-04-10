@@ -65,7 +65,7 @@ jobs:
       - name: Check license headers
         run: |
           set -e
-          addlicense -l apache -c 'The Sigstore Authors' -v -check *
+          addlicense -l apache -c 'The Sigstore Authors' -v *
           git diff --exit-code
 
   golangci:
