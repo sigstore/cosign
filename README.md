@@ -4,6 +4,13 @@ Container Signing, Verification and Storage in an OCI registry.
 
 Cosign aims to make signatures **invisible infrastructure**.
 
+Cosign supports:
+
+* Hardware and KMS signing
+* Bring-your-own PKI
+* Our free OIDC PKI (Fulcio)
+* Built-in binary transparency and timestamping service (Rekor)
+
 ![intro](images/intro.gif)
 
 ## Info
