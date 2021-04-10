@@ -28,6 +28,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -35,6 +36,7 @@ import (
 type VerifyCommand struct {
 	CheckClaims bool
 	KeyRef      string
+	Sk          bool
 	Output      string
 	Annotations *map[string]interface{}
 }
@@ -46,6 +48,8 @@ func Verify() *ffcli.Command {
 	annotations := annotationsMap{}
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
+	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
+
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
 
@@ -89,6 +93,10 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		return flag.ErrHelp
 	}
 
+	if !oneOf(c.KeyRef, c.Sk) {
+		return &KeyParseError{}
+	}
+
 	co := cosign.CheckOpts{
 		Annotations: *c.Annotations,
 		Claims:      c.CheckClaims,
@@ -100,6 +108,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	// Keys are optional!
 	if keyRef != "" {
 		pubKey, err := publicKeyFromKeyRef(ctx, keyRef)
+		if err != nil {
+			return errors.Wrap(err, "loading public key")
+		}
+		co.PubKey = pubKey
+	} else if c.Sk {
+		pubKey, err := pivkey.NewPublicKeyProvider()
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}

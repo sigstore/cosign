@@ -31,6 +31,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 )
 
 func SignBlob() *ffcli.Command {
@@ -38,6 +39,7 @@ func SignBlob() *ffcli.Command {
 		flagset = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
 		key     = flagset.String("key", "", "path to the private key file or a KMS URI")
 		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
+		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
@@ -56,17 +58,22 @@ EXAMPLES
   cosign sign-blob -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <FILE>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			keyRef := *key
 			// A key file is required unless we're in experimental mode!
-			if keyRef == "" && !cosign.Experimental() {
-				return &KeyParseError{}
+			if !cosign.Experimental() {
+				if !oneOf(*key, *sk) {
+					return &KeyParseError{}
+				}
 			}
 
 			if len(args) == 0 {
 				return flag.ErrHelp
 			}
+			ko := KeyOpts{
+				KeyRef: *key,
+				Sk:     *sk,
+			}
 			for _, blob := range args {
-				if _, err := SignBlobCmd(ctx, keyRef, blob, *b64, GetPass); err != nil {
+				if _, err := SignBlobCmd(ctx, ko, blob, *b64, GetPass); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
@@ -75,7 +82,12 @@ EXAMPLES
 	}
 }
 
-func SignBlobCmd(ctx context.Context, keyRef, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
+type KeyOpts struct {
+	Sk     bool
+	KeyRef string
+}
+
+func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -90,12 +102,20 @@ func SignBlobCmd(ctx context.Context, keyRef, payloadPath string, b64 bool, pf c
 
 	var cert string
 	var signer signature.Signer
-	if keyRef != "" {
-		signer, err = signerFromKeyRef(ctx, keyRef, pf)
+	switch {
+	case ko.KeyRef != "":
+		k, err := signerFromKeyRef(ctx, ko.KeyRef, pf)
+		if err != nil {
+			return nil, errors.Wrap(err, "loading key")
+		}
+		signer = k
+	case ko.Sk:
+		k, err := pivkey.NewSigner()
 		if err != nil {
 			return nil, err
 		}
-	} else {
+		signer = k
+	default:
 		// Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		k, err := fulcio.NewSigner(ctx)

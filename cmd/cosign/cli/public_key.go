@@ -25,6 +25,8 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 type NamedWriter struct {
@@ -36,6 +38,7 @@ func PublicKey() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign public-key", flag.ExitOnError)
 		key     = flagset.String("key", "", "path to the private key file, public key URL, or KMS URI")
+		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
 		outFile = flagset.String("outfile", "", "file to write public key")
 	)
 
@@ -57,6 +60,11 @@ EXAMPLES
   cosign public-key -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
+
+			if !oneOf(*key, *sk) {
+				return &KeyParseError{}
+			}
+
 			writer := NamedWriter{Name: "", Writer: nil}
 			var f *os.File
 			// Open output file for public key if specified.
@@ -72,21 +80,42 @@ EXAMPLES
 			} else {
 				writer.Writer = os.Stdout
 			}
-
-			return GetPublicKey(ctx, *key, writer, GetPass)
+			pk := Pkopts{
+				KeyRef: *key,
+				Sk:     *sk,
+			}
+			return GetPublicKey(ctx, pk, writer, GetPass)
 		},
 	}
 }
 
-func GetPublicKey(ctx context.Context, keyRef string, writer NamedWriter, pf cosign.PassFunc) error {
-	k, err := signerFromKeyRef(ctx, keyRef, pf)
-	if err != nil {
-		return err
+type Pkopts struct {
+	KeyRef string
+	Sk     bool
+}
+
+func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosign.PassFunc) error {
+	var k signature.PublicKeyProvider
+	switch {
+	case opts.KeyRef != "":
+		s, err := signerFromKeyRef(ctx, opts.KeyRef, pf)
+		if err != nil {
+			return err
+		}
+		k = s
+	case opts.Sk:
+		sk, err := pivkey.NewPublicKeyProvider()
+		if err != nil {
+			return err
+		}
+		k = sk
 	}
+
 	pemBytes, err := cosign.PublicKeyPem(ctx, k)
 	if err != nil {
 		return err
 	}
+
 	if _, err := writer.Write(pemBytes); err != nil {
 		return err
 	}
