@@ -17,7 +17,6 @@ package cli
 
 import (
 	"context"
-	"crypto"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/base64"
 	"flag"
@@ -32,7 +31,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
-	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
@@ -151,8 +149,6 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 
 	var signer signature.Signer
-	var sig []byte
-	var pemBytes []byte
 	var cert, chain string
 	switch {
 	case kmsVal != "":
@@ -161,45 +157,24 @@ func SignCmd(ctx context.Context, keyPath string,
 			return err
 		}
 		signer = k
-		if err != nil {
-			return errors.Wrap(err, "getting public key")
-		}
-		pemBytes, err = cosign.PublicKeyPem(ctx, k)
-		if err != nil {
-			return err
-		}
+
 	case keyPath != "":
 		k, err := loadKey(keyPath, pf)
+		if err != nil {
+			return errors.Wrap(err, "reading key")
+		}
 		signer = k
-		if err != nil {
-			return errors.Wrap(err, "signing payload")
-		}
-		pemBytes, err = cosign.PublicKeyPem(ctx, k)
-		if err != nil {
-			return err
-		}
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		priv, err := cosign.GeneratePrivateKey()
+		k, err := fulcio.NewSigner(ctx)
 		if err != nil {
-			return errors.Wrap(err, "generating cert")
+			return errors.Wrap(err, "getting key from Fulcio")
 		}
-		signer = signature.NewECDSASignerVerifier(priv, crypto.SHA256)
-		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-
-		flow := fulcio.FlowNormal
-		if !term.IsTerminal(0) {
-			fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
-			flow = fulcio.FlowDevice
-		}
-		cert, chain, err = fulcio.GetCert(ctx, priv, flow) // TODO, use the chain.
-		if err != nil {
-			return errors.Wrap(err, "retrieving cert")
-		}
-		pemBytes = []byte(cert)
+		signer = k
+		cert, chain = k.Cert, k.Chain
 	}
 
-	sig, _, err = signer.Sign(ctx, payload)
+	sig, _, err := signer.Sign(ctx, payload)
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
@@ -214,9 +189,7 @@ func SignCmd(ctx context.Context, keyPath string,
 	if err != nil {
 		return err
 	}
-
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
-
 	if err := cosign.Upload(sig, payload, dstRef, string(cert), string(chain)); err != nil {
 		return err
 	}
@@ -239,7 +212,19 @@ func SignCmd(ctx context.Context, keyPath string,
 			}
 		}
 	}
-	index, err := cosign.UploadTLog(sig, payload, pemBytes)
+
+	// Upload the cert or the public key, depending on what we have
+	var rekorBytes []byte
+	if cert != "" {
+		rekorBytes = []byte(cert)
+	} else {
+		pemBytes, err := cosign.PublicKeyPem(ctx, signer)
+		if err != nil {
+			return nil
+		}
+		rekorBytes = pemBytes
+	}
+	index, err := cosign.UploadTLog(sig, payload, rekorBytes)
 	if err != nil {
 		return err
 	}
