@@ -38,7 +38,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/cosign/kms"
-	"github.com/sigstore/rekor/cmd/cli/app"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -102,7 +102,6 @@ func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon,
 }
 
 func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (string, error) {
-	params := entries.NewGetLogEntryProofParams()
 	searchParams := entries.NewSearchLogQueryParams()
 	searchLogQuery := models.SearchLogQuery{}
 	signature, err := base64.StdEncoding.DecodeString(b64Sig)
@@ -115,8 +114,7 @@ func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []b
 		Spec:       re.RekordObj,
 	}
 
-	entries := []models.ProposedEntry{entry}
-	searchLogQuery.SetEntries(entries)
+	searchLogQuery.SetEntries([]models.ProposedEntry{entry})
 
 	searchParams.SetEntry(&searchLogQuery)
 	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
@@ -133,25 +131,31 @@ func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []b
 		return "", errors.New("UUID value can not be extracted")
 	}
 
+	params := entries.NewGetLogEntryByUUIDParams()
 	for k := range logEntry {
 		params.EntryUUID = k
 	}
-	lep, err := rekorClient.Entries.GetLogEntryProof(params)
+	lep, err := rekorClient.Entries.GetLogEntryByUUID(params)
 	if err != nil {
 		return "", err
 	}
 
+	if len(lep.Payload) != 1 {
+		return "", errors.New("UUID value can not be extracted")
+	}
+	e := lep.Payload[params.EntryUUID]
+
 	hashes := [][]byte{}
-	for _, h := range lep.Payload.Hashes {
+	for _, h := range e.InclusionProof.Hashes {
 		hb, _ := hex.DecodeString(h)
 		hashes = append(hashes, hb)
 	}
 
-	rootHash, _ := hex.DecodeString(*lep.Payload.RootHash)
+	rootHash, _ := hex.DecodeString(*e.InclusionProof.RootHash)
 	leafHash, _ := hex.DecodeString(params.EntryUUID)
 
 	v := logverifier.New(hasher.DefaultHasher)
-	if err := v.VerifyInclusionProof(*lep.Payload.LogIndex, *lep.Payload.TreeSize, hashes, rootHash, leafHash); err != nil {
+	if err := v.VerifyInclusionProof(*e.InclusionProof.LogIndex, *e.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
 		return "", errors.Wrap(err, "verifying inclusion proof")
 	}
 	return params.EntryUUID, nil

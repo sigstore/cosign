@@ -34,7 +34,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/kms"
-	"github.com/sigstore/rekor/cmd/cli/app"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
