@@ -28,7 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/rekor/cmd/cli/app"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
