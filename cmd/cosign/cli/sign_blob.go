@@ -24,9 +24,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sigstore/sigstore/pkg/signature"
+
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
-	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
@@ -90,70 +91,63 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 		return nil, err
 	}
 
-	var signature []byte
-	var pemBytes []byte
-
+	var cert string
+	var signer signature.Signer
 	switch {
 	case keyPath != "":
 		k, err := loadKey(keyPath, pf)
 		if err != nil {
 			return nil, errors.Wrap(err, "loading key")
 		}
-		signature, _, err = k.Sign(ctx, payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "signing blob")
-		}
-		pemBytes, err = cosign.PublicKeyPem(ctx, k)
-		if err != nil {
-			return nil, errors.Wrap(err, "getting public key")
-		}
+		signer = k
 	case kmsVal != "":
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
 			return nil, err
 		}
-		signature, _, err = k.Sign(ctx, payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "signing")
-		}
-		pemBytes, err = cosign.PublicKeyPem(ctx, k)
-		if err != nil {
-			return nil, errors.Wrap(err, "getting public key")
-		}
+		signer = k
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		priv, err := cosign.GeneratePrivateKey()
+		k, err := fulcio.NewSigner(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "generating cert")
+			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
-		fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-		flow := fulcio.FlowNormal
-		if !term.IsTerminal(0) {
-			fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
-			flow = fulcio.FlowDevice
-		}
-		pemBytes, _, err := fulcio.GetCert(ctx, priv, flow) // TODO: use the chain
-		if err != nil {
-			return nil, errors.Wrap(err, "retrieving cert")
-		}
-		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", string(pemBytes))
+		signer = k
+		cert = k.Cert
+		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
+	}
+
+	sig, _, err := signer.Sign(ctx, payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "signing blob")
 	}
 
 	if cosign.Experimental() {
-		index, err := cosign.UploadTLog(signature, payload, pemBytes)
+		// TODO: Refactor with sign.go
+		var rekorBytes []byte
+		if cert != "" {
+			rekorBytes = []byte(cert)
+		} else {
+			pemBytes, err := cosign.PublicKeyPem(ctx, signer)
+			if err != nil {
+				return nil, err
+			}
+			rekorBytes = pemBytes
+		}
+		index, err := cosign.UploadTLog(sig, payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}
 		fmt.Println("tlog entry created with index: ", index)
-		return signature, nil
+		return sig, nil
 	}
 
 	if b64 {
-		signature = []byte(base64.StdEncoding.EncodeToString(signature))
-		fmt.Println(string(signature))
-	} else if _, err := os.Stdout.Write(signature); err != nil {
+		sig = []byte(base64.StdEncoding.EncodeToString(sig))
+		fmt.Println(string(sig))
+	} else if _, err := os.Stdout.Write(sig); err != nil {
 		// No newline if using the raw signature
 		return nil, err
 	}
-	return signature, nil
+	return sig, nil
 }

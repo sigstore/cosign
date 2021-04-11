@@ -17,6 +17,7 @@ package fulcio
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
@@ -30,11 +31,15 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/pkg/errors"
+	"golang.org/x/term"
 
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/fulcio/cmd/client/app"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/fulcio/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
@@ -138,6 +143,45 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, flow string) (string, 
 
 	return getCertForOauthID(priv, fcli.Operations, c)
 }
+
+type Signer struct {
+	Cert  string
+	Chain string
+	pub   *ecdsa.PublicKey
+	signature.ECDSASignerVerifier
+}
+
+func NewSigner(ctx context.Context) (*Signer, error) {
+	priv, err := cosign.GeneratePrivateKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "generating cert")
+	}
+	signer := signature.NewECDSASignerVerifier(priv, crypto.SHA256)
+	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
+	flow := FlowNormal
+	if !term.IsTerminal(0) {
+		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
+		flow = FlowDevice
+	}
+	cert, chain, err := GetCert(ctx, priv, flow) // TODO, use the chain.
+	if err != nil {
+		return nil, errors.Wrap(err, "retrieving cert")
+	}
+	f := &Signer{
+		pub:                 &priv.PublicKey,
+		ECDSASignerVerifier: signer,
+		Cert:                cert,
+		Chain:               chain,
+	}
+	return f, nil
+
+}
+
+func (f *Signer) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
+	return &f.pub, nil
+}
+
+var _ signature.Signer = &Signer{}
 
 var Roots *x509.CertPool
 
