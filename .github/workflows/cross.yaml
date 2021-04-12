@@ -1,0 +1,66 @@
+on:
+  push:
+    branches:
+      - main
+      - release-*
+    tags:
+      - '*'
+name: Cross
+jobs:
+  linux:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.3
+    - uses: sigstore/cosign-installer@v0.1.0
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: install deps
+      run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
+    - name: build
+      run: CGO_ENABLED=1 go build -o cosign-linux-amd64 ./cmd/cosign/
+    - name: sign
+      run: |
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key ./.github/workflows/cosign.key ./cosign-linux-amd64 > cosign-linux-amd64.sig
+    - name: Print Info
+      run: shasum -a 256 ./cosign-linux-amd64 > cosign-linux-amd64.sha256 && cat cosign-linux-amd64.sha256
+    - name: verify
+      run: cosign verify-blob -key ./.github/workflows/cosign.pub -signature cosign-linux-amd64.sig ./cosign-linux-amd64
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: artifacts
+        path: |
+          cosign-*
+          cosign.-*sha256
+          cosign-*.sig
+  darwin:
+    name: build
+    runs-on: macos-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.3
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: build
+      run: CGO_ENABLED=1 go build -o cosign-darwin-amd64 ./cmd/cosign/
+    - name: sign
+      run: |
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-darwin-amd64 sign-blob -key ./.github/workflows/cosign.key ./cosign-darwin-amd64 > cosign-darwin-amd64.sig
+    - name: Print Info
+      run: shasum -a 256 ./cosign-darwin-amd64 > cosign-darwin-amd64.sha256 && cat cosign-darwin-amd64.sha256
+    - name: verify
+      run: cosign verify-blob -key ./.github/workflows/cosign.pub -signature cosign-darwin-amd64.sig ./cosign-darwin-amd64
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: artifacts
+        path: |
+          cosign-*
+          cosign.-*sha256
+          cosign-*.sig
