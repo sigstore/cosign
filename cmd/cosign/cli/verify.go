@@ -87,7 +87,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return flag.ErrHelp
 	}
-	if c.Key != "" && c.KmsVal != "" {
+	if !oneOf(c.Key, c.KmsVal) {
 		return &KeyParseError{}
 	}
 

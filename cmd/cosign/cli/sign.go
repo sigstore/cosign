@@ -97,7 +97,7 @@ EXAMPLES
 		Exec: func(ctx context.Context, args []string) error {
 			// A key file (or kms address) is required unless we're in experimental mode!
 			if !cosign.Experimental() {
-				if *key == "" && *kmsVal == "" {
+				if !oneOf(*kmsVal, *key) {
 					return &KeyParseError{}
 				}
 			}
@@ -119,7 +119,7 @@ func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
 	annotations map[string]interface{}, kmsVal string, pf cosign.PassFunc, force bool) error {
 
-	if keyPath != "" && kmsVal != "" {
+	if !oneOf(keyPath, kmsVal) {
 		return &KeyParseError{}
 	}
 

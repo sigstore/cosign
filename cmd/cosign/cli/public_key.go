@@ -58,7 +58,7 @@ EXAMPLES
   cosign public-key -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if (*key == "" && *kmsVal == "") || (*key != "" && *kmsVal != "") {
+			if !oneOf(*key, *kmsVal) {
 				return &KeyParseError{}
 			}
 			// Get private key file.
