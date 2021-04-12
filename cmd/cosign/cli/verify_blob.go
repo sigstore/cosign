@@ -33,7 +33,6 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
-	"github.com/sigstore/cosign/pkg/cosign/kms"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -91,18 +90,23 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 	var pubKey cosign.PublicKey
 	var err error
 	var cert *x509.Certificate
-	switch {
-	case keyRef != "":
-		pubKey, err = cosign.LoadPublicKey(ctx, keyRef)
+
+	if !oneOf(keyRef, kmsVal, certRef) {
+		return &KeyParseError{}
+	}
+
+	pubKeyDescriptor := keyRef
+	if kmsVal != "" {
+		pubKeyDescriptor = kmsVal
+	}
+
+	// Keys are optional!
+	if pubKeyDescriptor != "" {
+		pubKey, err = cosign.LoadPublicKey(ctx, pubKeyDescriptor)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "loading public key")
 		}
-	case kmsVal != "":
-		pubKey, err = kms.Get(ctx, kmsVal)
-		if err != nil {
-			return errors.Wrap(err, "getting kms")
-		}
-	case certRef != "": // KEYLESS MODE!
+	} else {
 		pems, err := ioutil.ReadFile(certRef)
 		if err != nil {
 			return err
@@ -120,8 +124,6 @@ func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef
 			Key:     cert.PublicKey.(*ecdsa.PublicKey),
 			HashAlg: crypto.SHA256,
 		}
-	default:
-		return errors.New("one of -key and -cert required")
 	}
 
 	var b64sig string
