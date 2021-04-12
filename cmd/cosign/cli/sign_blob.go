@@ -60,7 +60,7 @@ EXAMPLES
 		Exec: func(ctx context.Context, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !cosign.Experimental() {
-				if *key == "" && *kmsVal == "" {
+				if !oneOf(*kmsVal, *key) {
 					return &KeyParseError{}
 				}
 			}
