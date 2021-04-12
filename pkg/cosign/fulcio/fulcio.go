@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	defaultFulcioAddress = "https://fulcio-dev.sigstore.dev"
+	defaultFulcioAddress = "https://fulcio.sigstore.dev"
 	oauthAddress         = "https://oauth2.sigstore.dev/auth"
 	clientID             = "sigstore"
 
