@@ -34,8 +34,7 @@ import (
 // VerifyCommand verifies a signature on a supplied container image
 type VerifyCommand struct {
 	CheckClaims bool
-	KmsVal      string
-	Key         string
+	KeyRef      string
 	Output      string
 	Annotations *map[string]interface{}
 }
@@ -46,8 +45,7 @@ func Verify() *ffcli.Command {
 	flagset := flag.NewFlagSet("cosign verify", flag.ExitOnError)
 	annotations := annotationsMap{}
 
-	flagset.StringVar(&cmd.Key, "key", "", "path to the public key")
-	flagset.StringVar(&cmd.KmsVal, "kms", "", "verify via a public key stored in a KMS")
+	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
 
@@ -57,7 +55,7 @@ func Verify() *ffcli.Command {
 
 	return &ffcli.Command{
 		Name:       "verify",
-		ShortUsage: "cosign verify -key <key>|-kms <kms> <image uri>",
+		ShortUsage: "cosign verify -key <key path>|<key url>|<kms uri> <image uri>",
 		ShortHelp:  "Verify a signature on the supplied container image",
 		LongHelp: `Verify signature and annotations on an image by checking the claims
 against the transparency log.
@@ -75,8 +73,11 @@ EXAMPLES
   # verify image with public key
   cosign verify -key <FILE> <IMAGE>
 
+  # verify image with public key provided by URL
+  cosign verify -key https://host.for/<FILE> <IMAGE>
+
   # verify image with public key stored in Google Cloud KMS
-  cosign verify -kms  gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
+  cosign verify -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
 	}
@@ -87,9 +88,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return flag.ErrHelp
 	}
-	if !oneOf(c.Key, c.KmsVal) {
-		return &KeyParseError{}
-	}
 
 	co := cosign.CheckOpts{
 		Annotations: *c.Annotations,
@@ -97,10 +95,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		Tlog:        cosign.Experimental(),
 		Roots:       fulcio.Roots,
 	}
-	pubKeyDescriptor := c.Key
-	if c.KmsVal != "" {
-		pubKeyDescriptor = c.KmsVal
-	}
+	pubKeyDescriptor := c.KeyRef
+
 	// Keys are optional!
 	if pubKeyDescriptor != "" {
 		pubKey, err := cosign.LoadPublicKey(ctx, pubKeyDescriptor)

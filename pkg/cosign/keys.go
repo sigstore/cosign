@@ -90,10 +90,6 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 	}, nil
 }
 
-type PublicKeyProvider interface {
-	PublicKey(context.Context) (crypto.PublicKey, error)
-}
-
 func PublicKeyPem(ctx context.Context, key signature.PublicKeyProvider) ([]byte, error) {
 	pub, err := key.PublicKey(ctx)
 	if err != nil {

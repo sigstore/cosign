@@ -26,6 +26,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -53,37 +54,47 @@ type PublicKey interface {
 	signature.PublicKeyProvider
 }
 
-func LoadPublicKey(ctx context.Context, keyRef string) (PublicKey, error) {
-	// The key could be plaintext or in a file.
-	// First check if the file exists.
-	var pubBytes []byte
-
+func LoadPublicKey(ctx context.Context, keyRef string) (pub PublicKey, err error) {
+	// The key could be plaintext, in a file, at a URL, or in KMS.
 	if kmsKey, err := kms.Get(ctx, keyRef); err == nil {
 		// KMS specified
 		return kmsKey, nil
 	}
 
-	// PEM encoded file.
-	b, err := ioutil.ReadFile(filepath.Clean(keyRef))
-	if err != nil {
+	var raw []byte
+
+	if strings.HasPrefix(keyRef, "http://") || strings.HasPrefix(keyRef, "https://") {
+		// key-url specified
+		// #nosec G107
+		resp, err := http.Get(keyRef)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		raw, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else if raw, err = ioutil.ReadFile(filepath.Clean(keyRef)); err != nil {
 		return nil, err
 	}
-	p, _ := pem.Decode(b)
+
+	// PEM encoded file.
+	p, _ := pem.Decode(raw)
 	if p == nil {
 		return nil, errors.New("pem.Decode failed")
 	}
 	if p.Type != pubKeyPemType {
 		return nil, fmt.Errorf("not public: %q", p.Type)
 	}
-	pubBytes = p.Bytes
 
-	pub, err := x509.ParsePKIXPublicKey(pubBytes)
+	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
 	if err != nil {
 		return nil, err
 	}
-	ed, ok := pub.(*ecdsa.PublicKey)
+	ed, ok := decoded.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, errors.New("invalid public key")
+		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
 	}
 	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
 }
