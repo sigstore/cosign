@@ -55,7 +55,7 @@ jobs:
     - name: Print Info
       run: shasum -a 256 ./cosign-darwin-amd64 > cosign-darwin-amd64.sha256 && cat cosign-darwin-amd64.sha256
     - name: verify
-      run: cosign verify-blob -key ./.github/workflows/cosign.pub -signature cosign-darwin-amd64.sig ./cosign-darwin-amd64
+      run: ./cosign-darwin-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-darwin-amd64.sig ./cosign-darwin-amd64
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
