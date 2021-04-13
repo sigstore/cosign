@@ -48,9 +48,9 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
-var verify = func(key, imageRef string, checkClaims bool, annotations map[string]interface{}) error {
+var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}) error {
 	cmd := cli.VerifyCommand{
-		Key:         key,
+		KeyRef:      keyRef,
 		CheckClaims: checkClaims,
 		Annotations: &annotations,
 	}
@@ -96,6 +96,14 @@ func TestSignVerify(t *testing.T) {
 
 	// But two doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}), t)
+}
+
+func TestKeyURLVerify(t *testing.T) {
+	// Verify that an image can be verified via key url
+	keyRef := "https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub"
+	img := "gcr.io/distroless/base:latest"
+
+	must(verify(keyRef, img, true, nil), t)
 }
 
 func TestGenerateKeyPairEnvVar(t *testing.T) {
