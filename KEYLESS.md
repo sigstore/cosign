@@ -3,7 +3,7 @@
 The full design document for this can be found [here](https://docs.google.com/document/d/189w4Fp1GEA1b2P633HyqTwtcWFNTu_Af4meolMa_1_8/edit?resourcekey=0-QoqNqcHXvSuPnMUdn8RGOQ#heading=h.2mtrw7byet02)
 (join sigstore-dev@googlegroups.com for access).
 
-🚨 🚨 **ExPeRiMeNtAl** 🚨 🚨 
+🚨 🚨 **ExPeRiMeNtAl** 🚨 🚨
 
 This document explains how the experimental `keyless` signatures work in `cosign`.
 Try it out!
