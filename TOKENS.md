@@ -103,6 +103,7 @@ This set of commands has been tested against the following hardware:
 
 * YubiKey 5C
 * YuibiKey 5C Nano FIPS
+* YubiKey 4 Series
 
 **Note**: We aim to expand this list.
 If you have hardware and can test it out, please send a PR with your results!
