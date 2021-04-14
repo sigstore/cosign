@@ -890,6 +890,8 @@ github.com/sigstore/rekor v0.1.2-0.20210410002954-cce6cabf1a88 h1:8BimpUoUG7x9Wv
 github.com/sigstore/rekor v0.1.2-0.20210410002954-cce6cabf1a88/go.mod h1:4vPst+j1qes+LBMabwDPw7I/Wjmg/tSJv0Neq+0KBBo=
 github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074 h1:HUEWEpBoKQy9AIB2Q+6X73cAc+720DvWO+VqACa7wxI=
 github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074/go.mod h1:sgfbsomHSkH3315v572HAbiWoA8n58MBqRB4YgJI7X0=
+github.com/sigstore/sigstore v0.0.0-20210414175954-786234debb5a h1:j5BbvUZ1tkZMf48Pn2PZaDHssRt2t5i4RU0cpvwBxyM=
+github.com/sigstore/sigstore v0.0.0-20210414175954-786234debb5a/go.mod h1:EoLIp5JbrCE2VZqdCCIemNEdNYiOcdwF0igIvorqo1o=
 github.com/sirupsen/logrus v1.0.5/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

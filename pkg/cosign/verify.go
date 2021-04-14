@@ -38,11 +38,11 @@ import (
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/pkg/cosign/kms"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
