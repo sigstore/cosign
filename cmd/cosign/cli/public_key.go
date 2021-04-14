@@ -27,7 +27,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/kms"
+	"github.com/sigstore/sigstore/pkg/kms"
 )
 
 type NamedWriter struct {

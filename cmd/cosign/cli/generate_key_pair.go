@@ -27,7 +27,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/kms"
+	"github.com/sigstore/sigstore/pkg/kms"
 )
 
 var (
