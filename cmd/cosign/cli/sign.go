@@ -95,12 +95,6 @@ EXAMPLES
   cosign sign -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			// A key file (or kms address) is required unless we're in experimental mode!
-			if !cosign.Experimental() {
-				if !oneOf(*kmsVal, *key) {
-					return &KeyParseError{}
-				}
-			}
 			if len(args) == 0 {
 				return flag.ErrHelp
 			}
@@ -119,7 +113,12 @@ func SignCmd(ctx context.Context, keyPath string,
 	imageRef string, upload bool, payloadPath string,
 	annotations map[string]interface{}, kmsVal string, pf cosign.PassFunc, force bool) error {
 
-	if !oneOf(keyPath, kmsVal) {
+	// A key file (or kms address) is required unless we're in experimental mode!
+	if !cosign.Experimental() {
+		if !oneOf(keyPath, kmsVal) {
+			return &KeyParseError{}
+		}
+	} else if allOf(keyPath, kmsVal) {
 		return &KeyParseError{}
 	}
 
