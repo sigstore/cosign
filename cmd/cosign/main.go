@@ -23,15 +23,16 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
 )
 
 var (
-	rootFlagSet = flag.NewFlagSet("cosign", flag.ExitOnError)
-	debug       = rootFlagSet.Bool("d", false, "log debug output to stderr")
-	verbose     = rootFlagSet.Bool("v", false, "increase log verbosity")
+	rootFlagSet    = flag.NewFlagSet("cosign", flag.ExitOnError)
+	debug          = rootFlagSet.Bool("d", false, "log debug output")
+	outputFilename = rootFlagSet.String("output-file", "", "log output to a file")
 )
 
 func main() {
@@ -47,11 +48,21 @@ func main() {
 	}
 
 	if err := root.Parse(os.Args[1:]); err != nil {
-		if *verbose {
-			fmt.Print("verbose!")
+		printErrAndExit(err)
+	}
+
+	if *outputFilename != "" {
+		out, err := os.Create(*outputFilename)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", errors.Wrapf(err, "Error creating output file %s", *outputFilename))
+			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		stdout := os.Stdout
+		defer func() {
+			os.Stdout = stdout
+			out.Close()
+		}()
+		os.Stdout = out
 	}
 
 	if *debug {
@@ -59,10 +70,11 @@ func main() {
 	}
 
 	if err := root.Run(context.Background()); err != nil {
-		if *verbose {
-			fmt.Print("verbose!")
-		}
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		printErrAndExit(err)
 	}
+}
+
+func printErrAndExit(err error) {
+	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	os.Exit(1)
 }
