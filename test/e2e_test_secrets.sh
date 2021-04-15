@@ -85,17 +85,17 @@ kms="gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/crypto
 ./cosign generate-key-pair -kms $kms
 
 if (./cosign verify -key cosign.pub $img); then false; fi
-./cosign sign -kms $kms $img
+./cosign sign -key $kms $img
 ./cosign verify -key cosign.pub $img
 
 if (./cosign verify -a foo=bar -key cosign.pub $img); then false; fi
-./cosign sign -kms $kms -a foo=bar $img
+./cosign sign -key $kms -a foo=bar $img
 ./cosign verify -key cosign.pub -a foo=bar $img
 
 # store signatures in a different repo
 export COSIGN_REPOSITORY=us-central1-docker.pkg.dev/projectsigstore/subrepo
 (crane delete $(./cosign triangulate $img)) || true
-./cosign sign -kms $kms $img
+./cosign sign -key $kms $img
 ./cosign verify -key cosign.pub $img
 unset COSIGN_REPOSITORY
 
