@@ -31,19 +31,17 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
-	"github.com/sigstore/sigstore/pkg/kms"
 )
 
 func SignBlob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
-		key     = flagset.String("key", "", "path to the private key")
-		kmsVal  = flagset.String("kms", "", "sign via a private key stored in a KMS")
+		key     = flagset.String("key", "", "path to the private key file or a KMS URI")
 		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
-		ShortUsage: "cosign sign-blob -key <key>|-kms <kms> [-sig <sig path>] <blob>",
+		ShortUsage: "cosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>",
 		ShortHelp:  `Sign the supplied blob, outputting the base64-encoded signature to stdout.`,
 		LongHelp: `Sign the supplied blob, outputting the base64-encoded signature to stdout.
 
@@ -55,21 +53,20 @@ EXAMPLES
   cosign sign-blob -key cosign.pub <FILE>
 
   # sign a blob with a key pair stored in Google Cloud KMS
-  cosign sign-blob -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <FILE>`,
+  cosign sign-blob -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <FILE>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
+			keyRef := *key
 			// A key file is required unless we're in experimental mode!
-			if !cosign.Experimental() {
-				if !oneOf(*kmsVal, *key) {
-					return &KeyParseError{}
-				}
+			if keyRef == "" && !cosign.Experimental() {
+				return &KeyParseError{}
 			}
 
 			if len(args) == 0 {
 				return flag.ErrHelp
 			}
 			for _, blob := range args {
-				if _, err := SignBlobCmd(ctx, *key, *kmsVal, blob, *b64, GetPass); err != nil {
+				if _, err := SignBlobCmd(ctx, keyRef, blob, *b64, GetPass); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
@@ -78,7 +75,7 @@ EXAMPLES
 	}
 }
 
-func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, keyRef, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -93,20 +90,13 @@ func SignBlobCmd(ctx context.Context, keyPath, kmsVal, payloadPath string, b64 b
 
 	var cert string
 	var signer signature.Signer
-	switch {
-	case keyPath != "":
-		k, err := loadKey(keyPath, pf)
-		if err != nil {
-			return nil, errors.Wrap(err, "loading key")
-		}
-		signer = k
-	case kmsVal != "":
-		k, err := kms.Get(ctx, kmsVal)
+	if keyRef != "" {
+		signer, err = signerFromKeyRef(ctx, keyRef, pf)
 		if err != nil {
 			return nil, err
 		}
-		signer = k
-	default: // Keyless!
+	} else {
+		// Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		k, err := fulcio.NewSigner(ctx)
 		if err != nil {

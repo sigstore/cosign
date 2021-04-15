@@ -34,7 +34,6 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
-	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -67,8 +66,7 @@ func (a *annotationsMap) String() string {
 func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
-		key         = flagset.String("key", "", "path to the private key")
-		kmsVal      = flagset.String("kms", "", "sign via a private key stored in a KMS")
+		key         = flagset.String("key", "", "path to the private key file or KMS URI")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force       = flagset.Bool("f", false, "skip warnings and confirmations")
@@ -77,7 +75,7 @@ func Sign() *ffcli.Command {
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
-		ShortUsage: "cosign sign -key <key> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
+		ShortUsage: "cosign sign -key <key path>|<kms uri> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
 		ShortHelp:  `Sign the supplied container image.`,
 		LongHelp: `Sign the supplied container image.
 
@@ -92,7 +90,7 @@ EXAMPLES
   cosign sign -key cosign.pub -a key1=value1 -a key2=value2 <IMAGE>
 
   # sign a container image with a key pair stored in Google Cloud KMS
-  cosign sign -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
+  cosign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) == 0 {
@@ -100,7 +98,7 @@ EXAMPLES
 			}
 
 			for _, img := range args {
-				if err := SignCmd(ctx, *key, img, *upload, *payloadPath, annotations.annotations, *kmsVal, GetPass, *force); err != nil {
+				if err := SignCmd(ctx, *key, img, *upload, *payloadPath, annotations.annotations, GetPass, *force); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
@@ -109,16 +107,12 @@ EXAMPLES
 	}
 }
 
-func SignCmd(ctx context.Context, keyPath string,
+func SignCmd(ctx context.Context, keyRef string,
 	imageRef string, upload bool, payloadPath string,
-	annotations map[string]interface{}, kmsVal string, pf cosign.PassFunc, force bool) error {
+	annotations map[string]interface{}, pf cosign.PassFunc, force bool) error {
 
 	// A key file (or kms address) is required unless we're in experimental mode!
-	if !cosign.Experimental() {
-		if !oneOf(keyPath, kmsVal) {
-			return &KeyParseError{}
-		}
-	} else if allOf(keyPath, kmsVal) {
+	if keyRef == "" && !cosign.Experimental() {
 		return &KeyParseError{}
 	}
 
@@ -149,21 +143,13 @@ func SignCmd(ctx context.Context, keyPath string,
 
 	var signer signature.Signer
 	var cert, chain string
-	switch {
-	case kmsVal != "":
-		k, err := kms.Get(ctx, kmsVal)
+	if keyRef != "" {
+		signer, err = signerFromKeyRef(ctx, keyRef, pf)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "getting signer from keyref")
 		}
-		signer = k
-
-	case keyPath != "":
-		k, err := loadKey(keyPath, pf)
-		if err != nil {
-			return errors.Wrap(err, "reading key")
-		}
-		signer = k
-	default: // Keyless!
+	} else {
+		// Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		k, err := fulcio.NewSigner(ctx)
 		if err != nil {
@@ -229,16 +215,4 @@ func SignCmd(ctx context.Context, keyPath string,
 	}
 	fmt.Println("tlog entry created with index: ", index)
 	return nil
-}
-
-func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier, error) {
-	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
-	if err != nil {
-		return signature.ECDSASignerVerifier{}, err
-	}
-	pass, err := pf(false)
-	if err != nil {
-		return signature.ECDSASignerVerifier{}, err
-	}
-	return cosign.LoadECDSAPrivateKey(kb, pass)
 }

@@ -40,14 +40,13 @@ import (
 func VerifyBlob() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign verify-blob", flag.ExitOnError)
-		key       = flagset.String("key", "", "path to the public key")
-		kmsVal    = flagset.String("kms", "", "verify via a public key stored in a KMS")
+		key       = flagset.String("key", "", "path to the public key file, URL, or KMS URI")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "path to the signature")
 	)
 	return &ffcli.Command{
 		Name:       "verify-blob",
-		ShortUsage: "cosign verify-blob -key <key>|-cert <cert>|-kms <kms> -signature <sig> <blob>",
+		ShortUsage: "cosign verify-blob (-key <key path>|<key url>|<kms uri>)|(-cert <cert>) -signature <sig> <blob>",
 		ShortHelp:  "Verify a signature on the supplied blob",
 		LongHelp: `Verify a signature on the supplied blob input using the specified key reference.
 You may specify either a key, a certificate or a kms reference to verify against.
@@ -67,13 +66,13 @@ EXAMPLES
 	cosign verify-blob -key cosign.pub -signature $sig <(git rev-parse HEAD)
 
 	# Verify a signature against a KMS reference
-	cosign verify-blob -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEYRING>/cryptoKeys/<KEY> -signature $sig <blob>`,
+	cosign verify-blob -key gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEYRING>/cryptoKeys/<KEY> -signature $sig <blob>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			if err := VerifyBlobCmd(ctx, *key, *kmsVal, *cert, *signature, args[0]); err != nil {
+			if err := VerifyBlobCmd(ctx, *key, *cert, *signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)
 			}
 			return nil
@@ -86,23 +85,18 @@ func isb64(data []byte) bool {
 	return err == nil
 }
 
-func VerifyBlobCmd(ctx context.Context, keyRef, kmsVal, certRef, sigRef, blobRef string) error {
+func VerifyBlobCmd(ctx context.Context, keyRef, certRef, sigRef, blobRef string) error {
 	var pubKey cosign.PublicKey
 	var err error
 	var cert *x509.Certificate
 
-	if !oneOf(keyRef, kmsVal, certRef) {
+	if !oneOf(keyRef, certRef) {
 		return &KeyParseError{}
 	}
 
-	pubKeyDescriptor := keyRef
-	if kmsVal != "" {
-		pubKeyDescriptor = kmsVal
-	}
-
 	// Keys are optional!
-	if pubKeyDescriptor != "" {
-		pubKey, err = cosign.LoadPublicKey(ctx, pubKeyDescriptor)
+	if keyRef != "" {
+		pubKey, err = publicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}

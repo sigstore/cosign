@@ -20,14 +20,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/sigstore/pkg/kms"
 )
 
 type NamedWriter struct {
@@ -38,14 +35,13 @@ type NamedWriter struct {
 func PublicKey() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign public-key", flag.ExitOnError)
-		key     = flagset.String("key", "", "path to the private key")
-		kmsVal  = flagset.String("kms", "", "sign via a private key stored in a KMS")
+		key     = flagset.String("key", "", "path to the private key file, public key URL, or KMS URI")
 		outFile = flagset.String("outfile", "", "file to write public key")
 	)
 
 	return &ffcli.Command{
 		Name:       "public-key",
-		ShortUsage: "cosign public-key gets a public key from the key-pair [-kms KMSPATH]",
+		ShortUsage: "cosign public-key gets a public key from the key-pair",
 		ShortHelp:  "public-key gets a public key from the key-pair",
 		LongHelp: `public-key gets a public key from the key-pair and
 writes to a specified file. By default, it will write to standard out.
@@ -54,24 +50,13 @@ EXAMPLES
   # extract public key from private key to a specified out file.
   cosign public-key -key <PRIVATE KEY FILE> -outfile <OUTPUT>
 
+  # extract public key from URL.
+  cosign public-key -key https://host.for/<FILE> -outfile <OUTPUT>
+
   # extract public key from Google Cloud KMS key pair
-  cosign public-key -kms gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>`,
+  cosign public-key -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if !oneOf(*key, *kmsVal) {
-				return &KeyParseError{}
-			}
-			// Get private key file.
-			var reader io.Reader
-			if *key != "" {
-				cl := filepath.Clean(*key)
-				var err error
-				reader, err = os.Open(cl)
-				if err != nil {
-					return err
-				}
-			}
-
 			writer := NamedWriter{Name: "", Writer: nil}
 			var f *os.File
 			// Open output file for public key if specified.
@@ -86,41 +71,21 @@ EXAMPLES
 				defer f.Close()
 			} else {
 				writer.Writer = os.Stdout
-
 			}
-			return GetPublicKey(ctx, reader, *kmsVal, writer, GetPass)
+
+			return GetPublicKey(ctx, *key, writer, GetPass)
 		},
 	}
 }
 
-func GetPublicKey(ctx context.Context, reader io.Reader, kmsVal string, writer NamedWriter, pf cosign.PassFunc) error {
-	var pemBytes []byte
-	if kmsVal != "" {
-		k, err := kms.Get(ctx, kmsVal)
-		if err != nil {
-			return err
-		}
-		pemBytes, err = cosign.PublicKeyPem(ctx, k)
-		if err != nil {
-			return err
-		}
-	} else {
-		kb, err := ioutil.ReadAll(reader)
-		if err != nil {
-			return err
-		}
-		pass, err := pf(false)
-		if err != nil {
-			return nil
-		}
-		pk, err := cosign.LoadECDSAPrivateKey(kb, pass)
-		if err != nil {
-			return err
-		}
-		pemBytes, err = cosign.PublicKeyPem(ctx, pk)
-		if err != nil {
-			return err
-		}
+func GetPublicKey(ctx context.Context, keyRef string, writer NamedWriter, pf cosign.PassFunc) error {
+	k, err := signerFromKeyRef(ctx, keyRef, pf)
+	if err != nil {
+		return err
+	}
+	pemBytes, err := cosign.PublicKeyPem(ctx, k)
+	if err != nil {
+		return err
 	}
 	if _, err := writer.Write(pemBytes); err != nil {
 		return err

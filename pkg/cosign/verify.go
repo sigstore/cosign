@@ -23,11 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -42,62 +38,9 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
-
-const pubKeyPemType = "PUBLIC KEY"
-
-type PublicKey interface {
-	signature.Verifier
-	signature.PublicKeyProvider
-}
-
-func LoadPublicKey(ctx context.Context, keyRef string) (pub PublicKey, err error) {
-	// The key could be plaintext, in a file, at a URL, or in KMS.
-	if kmsKey, err := kms.Get(ctx, keyRef); err == nil {
-		// KMS specified
-		return kmsKey, nil
-	}
-
-	var raw []byte
-
-	if strings.HasPrefix(keyRef, "http://") || strings.HasPrefix(keyRef, "https://") {
-		// key-url specified
-		// #nosec G107
-		resp, err := http.Get(keyRef)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		raw, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-	} else if raw, err = ioutil.ReadFile(filepath.Clean(keyRef)); err != nil {
-		return nil, err
-	}
-
-	// PEM encoded file.
-	p, _ := pem.Decode(raw)
-	if p == nil {
-		return nil, errors.New("pem.Decode failed")
-	}
-	if p.Type != pubKeyPemType {
-		return nil, fmt.Errorf("not public: %q", p.Type)
-	}
-
-	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	ed, ok := decoded.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
-	}
-	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
-}
 
 func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParams()
