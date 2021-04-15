@@ -30,15 +30,3 @@ func oneOf(args ...interface{}) bool {
 	}
 	return foundOne
 }
-
-// allOf ensures that all of the supplied interfaces are set to a non-zero value.
-func allOf(args ...interface{}) bool {
-	foundAll := false
-	for _, arg := range args {
-		if reflect.ValueOf(arg).IsZero() {
-			return false
-		}
-		foundAll = true
-	}
-	return foundAll
-}
