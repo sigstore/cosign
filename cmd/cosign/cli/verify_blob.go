@@ -33,6 +33,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -41,6 +42,7 @@ func VerifyBlob() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign verify-blob", flag.ExitOnError)
 		key       = flagset.String("key", "", "path to the public key file, URL, or KMS URI")
+		sk        = flagset.Bool("sk", false, "whether to use a hardware security key")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "path to the signature")
 	)
@@ -72,7 +74,11 @@ EXAMPLES
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			if err := VerifyBlobCmd(ctx, *key, *cert, *signature, args[0]); err != nil {
+			ko := KeyOpts{
+				KeyRef: *key,
+				Sk:     *sk,
+			}
+			if err := VerifyBlobCmd(ctx, ko, *cert, *signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)
 			}
 			return nil
@@ -85,22 +91,28 @@ func isb64(data []byte) bool {
 	return err == nil
 }
 
-func VerifyBlobCmd(ctx context.Context, keyRef, certRef, sigRef, blobRef string) error {
+func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef string) error {
 	var pubKey cosign.PublicKey
 	var err error
 	var cert *x509.Certificate
 
-	if !oneOf(keyRef, certRef) {
+	if !oneOf(ko.KeyRef, ko.Sk, certRef) {
 		return &KeyParseError{}
 	}
 
 	// Keys are optional!
-	if keyRef != "" {
-		pubKey, err = publicKeyFromKeyRef(ctx, keyRef)
+	switch {
+	case ko.KeyRef != "":
+		pubKey, err = publicKeyFromKeyRef(ctx, ko.KeyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
-	} else {
+	case ko.Sk:
+		pubKey, err = pivkey.NewPublicKeyProvider()
+		if err != nil {
+			return errors.Wrap(err, "loading public key from token")
+		}
+	case certRef != "":
 		pems, err := ioutil.ReadFile(certRef)
 		if err != nil {
 			return err

@@ -22,12 +22,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
-func pass(s string) cosign.PassFunc {
-	return func(_ bool) ([]byte, error) {
-		return []byte(s), nil
-	}
-}
-
 func generateKeyFile(t *testing.T, tmpDir string, pf cosign.PassFunc) (privFile, pubFile string) {
 	t.Helper()
 

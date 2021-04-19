@@ -27,10 +27,11 @@ import (
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/manifoldco/promptui"
+	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 )
 
 func SetManagementKeyCmd(_ context.Context, oldKey, newKey string, randomKey bool) error {
-	yk, err := getKey()
+	yk, err := pivkey.GetKey()
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,7 @@ func SetManagementKeyCmd(_ context.Context, oldKey, newKey string, randomKey boo
 }
 
 func SetPukCmd(_ context.Context, oldPuk, newPuk string) error {
-	yk, err := getKey()
+	yk, err := pivkey.GetKey()
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func SetPukCmd(_ context.Context, oldPuk, newPuk string) error {
 }
 
 func UnblockCmd(_ context.Context, oldPuk, newPin string) error {
-	yk, err := getKey()
+	yk, err := pivkey.GetKey()
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func UnblockCmd(_ context.Context, oldPuk, newPin string) error {
 }
 
 func SetPinCmd(_ context.Context, oldPin, newPin string) error {
-	yk, err := getKey()
+	yk, err := pivkey.GetKey()
 	if err != nil {
 		return err
 	}
@@ -123,7 +124,7 @@ type Attestations struct {
 }
 
 func AttestationCmd(_ context.Context) (*Attestations, error) {
-	yk, err := getKey()
+	yk, err := pivkey.GetKey()
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +178,7 @@ func AttestationCmd(_ context.Context) (*Attestations, error) {
 }
 
 func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool) error {
-	yk, err := getKey()
+	yk, err := pivkey.GetKey()
 	if err != nil {
 		return err
 	}
@@ -230,7 +231,7 @@ func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool) e
 }
 
 func ResetKeyCmd(ctx context.Context) error {
-	yk, err := getKey()
+	yk, err := pivkey.GetKey()
 	if err != nil {
 		return err
 	}
@@ -240,24 +241,6 @@ func ResetKeyCmd(ctx context.Context) error {
 	}
 
 	return yk.Reset()
-}
-
-func getKey() (*piv.YubiKey, error) {
-	cards, err := piv.Cards()
-	if err != nil {
-		return nil, err
-	}
-	if len(cards) == 0 {
-		return nil, errors.New("no cards found")
-	}
-	if len(cards) > 1 {
-		return nil, fmt.Errorf("found %d cards, please attach only one", len(cards))
-	}
-	yk, err := piv.Open(cards[0])
-	if err != nil {
-		return nil, err
-	}
-	return yk, nil
 }
 
 func keyBytes(s string) (*[24]byte, error) {

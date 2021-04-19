@@ -34,6 +34,8 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+
+	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -68,6 +70,7 @@ func Sign() *ffcli.Command {
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
 		key         = flagset.String("key", "", "path to the private key file or KMS URI")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
+		sk          = flagset.Bool("sk", false, "whether to use a hardware security key")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force       = flagset.Bool("f", false, "skip warnings and confirmations")
 		annotations = annotationsMap{}
@@ -97,8 +100,14 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 
+			so := SignOpts{
+				KeyRef:      *key,
+				Annotations: annotations.annotations,
+				Pf:          GetPass,
+				Sk:          *sk,
+			}
 			for _, img := range args {
-				if err := SignCmd(ctx, *key, img, *upload, *payloadPath, annotations.annotations, GetPass, *force); err != nil {
+				if err := SignCmd(ctx, so, img, *upload, *payloadPath, *force); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
@@ -107,13 +116,25 @@ EXAMPLES
 	}
 }
 
-func SignCmd(ctx context.Context, keyRef string,
-	imageRef string, upload bool, payloadPath string,
-	annotations map[string]interface{}, pf cosign.PassFunc, force bool) error {
+type SignOpts struct {
+	Annotations map[string]interface{}
+	KeyRef      string
+	Sk          bool
+	Pf          cosign.PassFunc
+}
 
-	// A key file (or kms address) is required unless we're in experimental mode!
-	if keyRef == "" && !cosign.Experimental() {
-		return &KeyParseError{}
+func SignCmd(ctx context.Context, so SignOpts,
+	imageRef string, upload bool, payloadPath string, force bool) error {
+
+	// A key file or token is required unless we're in experimental mode!
+	if cosign.Experimental() {
+		if nOf(so.KeyRef, so.Sk) > 1 {
+			return &KeyParseError{}
+		}
+	} else {
+		if !oneOf(so.KeyRef, so.Sk) {
+			return &KeyParseError{}
+		}
 	}
 
 	ref, err := name.ParseReference(imageRef)
@@ -134,7 +155,7 @@ func SignCmd(ctx context.Context, keyRef string,
 	} else {
 		payload, err = (&sigPayload.Cosign{
 			Image:       img,
-			Annotations: annotations,
+			Annotations: so.Annotations,
 		}).MarshalJSON()
 	}
 	if err != nil {
@@ -143,13 +164,20 @@ func SignCmd(ctx context.Context, keyRef string,
 
 	var signer signature.Signer
 	var cert, chain string
-	if keyRef != "" {
-		signer, err = signerFromKeyRef(ctx, keyRef, pf)
+	switch {
+	case so.Sk:
+		sk, err := pivkey.NewSigner()
 		if err != nil {
-			return errors.Wrap(err, "getting signer from keyref")
+			return err
 		}
-	} else {
-		// Keyless!
+		signer = sk
+	case so.KeyRef != "":
+		k, err := signerFromKeyRef(ctx, so.KeyRef, so.Pf)
+		if err != nil {
+			return errors.Wrap(err, "reading key")
+		}
+		signer = k
+	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		k, err := fulcio.NewSigner(ctx)
 		if err != nil {

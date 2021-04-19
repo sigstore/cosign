@@ -15,10 +15,28 @@
 
 package cli
 
-// KeyParseError is an error returned when an incorrect set of key flags
-// are parsed by the CLI
-type KeyParseError struct{}
+import (
+	"context"
+	"errors"
+	"testing"
+)
 
-func (e *KeyParseError) Error() string {
-	return "exactly one of: key reference (-key), or hardware token (-sk) must be provided"
+// TestSignCmdLocalKeyAndSk verifies the SignCmd returns an error
+// if both a local key path and a sk are specified
+func TestSignCmdLocalKeyAndSk(t *testing.T) {
+	ctx := context.Background()
+
+	for _, so := range []SignOpts{
+		// local and sk keys
+		{
+			KeyRef: "testLocalPath",
+			Pf:     GetPass,
+			Sk:     true,
+		},
+	} {
+		err := SignCmd(ctx, so, "", false, "", false)
+		if (errors.Is(err, &KeyParseError{}) == false) {
+			t.Fatal("expected KeyParseError")
+		}
+	}
 }

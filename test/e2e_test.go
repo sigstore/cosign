@@ -79,7 +79,8 @@ func TestSignVerify(t *testing.T) {
 	mustErr(cli.DownloadCmd(ctx, imgName), t)
 
 	// Now sign the image
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc, false), t)
+	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -89,7 +90,8 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
 
 	// Sign the image with an annotation
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", map[string]interface{}{"foo": "bar"}, passFunc, false), t)
+	so.Annotations = map[string]interface{}{"foo": "bar"}
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
 
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
@@ -139,13 +141,15 @@ func TestMultipleSignatures(t *testing.T) {
 	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign the image with one key
-	must(cli.SignCmd(ctx, priv1, imgName, true, "", nil, passFunc, false), t)
+	so := cli.SignOpts{KeyRef: priv1, Pf: passFunc}
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil), t)
 	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign with the other key too
-	must(cli.SignCmd(ctx, priv2, imgName, true, "", nil, passFunc, false), t)
+	so.KeyRef = priv2
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
 
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil), t)
@@ -172,18 +176,24 @@ func TestSignBlob(t *testing.T) {
 
 	ctx := context.Background()
 
+	ko1 := cli.KeyOpts{
+		KeyRef: pubKeyPath1,
+	}
+	ko2 := cli.KeyOpts{
+		KeyRef: pubKeyPath2,
+	}
 	// Verify should fail on a bad input
-	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath1, "", "badsig", blob), t)
-	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath2, "", "badsig", blob), t)
+	mustErr(cli.VerifyBlobCmd(ctx, ko1, "", "badsig", blob), t)
+	mustErr(cli.VerifyBlobCmd(ctx, ko2, "", "badsig", blob), t)
 
 	// Now sign the blob with one key
-	sig, err := cli.SignBlobCmd(ctx, privKeyPath1, bp, true, passFunc)
+	sig, err := cli.SignBlobCmd(ctx, cli.KeyOpts{KeyRef: privKeyPath1}, bp, true, passFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cli.VerifyBlobCmd(ctx, pubKeyPath1, "", string(sig), bp), t)
-	mustErr(cli.VerifyBlobCmd(ctx, pubKeyPath2, "", string(sig), bp), t)
+	must(cli.VerifyBlobCmd(ctx, ko1, "", string(sig), bp), t)
+	mustErr(cli.VerifyBlobCmd(ctx, ko2, "", string(sig), bp), t)
 }
 
 func TestGenerate(t *testing.T) {
@@ -337,7 +347,11 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now sign the image without the tlog
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc, false), t)
+	so := cli.SignOpts{
+		KeyRef: privKeyPath,
+		Pf:     passFunc,
+	}
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -349,7 +363,7 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Sign again with the tlog env var on
-	must(cli.SignCmd(ctx, privKeyPath, imgName, true, "", nil, passFunc, false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
 	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
@@ -363,7 +377,11 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	outPath := filepath.Join(td, outFile)
 	outWriter, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0600)
 	must(err, t)
-	must(cli.GetPublicKey(ctx, privKeyPath, cli.NamedWriter{Name: outPath, Writer: outWriter}, passFunc), t)
+
+	pk := cli.Pkopts{
+		KeyRef: privKeyPath,
+	}
+	must(cli.GetPublicKey(ctx, pk, cli.NamedWriter{Name: outPath, Writer: outWriter}, passFunc), t)
 
 	output, err := ioutil.ReadFile(outFile)
 	must(err, t)

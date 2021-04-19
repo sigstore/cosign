@@ -19,14 +19,16 @@ import "reflect"
 
 // oneOf ensures that only one of the supplied interfaces is set to a non-zero value.
 func oneOf(args ...interface{}) bool {
-	foundOne := false
+	return nOf(args...) == 1
+}
+
+// nOf returns how many of the fields are non-zero
+func nOf(args ...interface{}) int {
+	n := 0
 	for _, arg := range args {
 		if !reflect.ValueOf(arg).IsZero() {
-			if foundOne {
-				return false
-			}
-			foundOne = true
+			n++
 		}
 	}
-	return foundOne
+	return n
 }
