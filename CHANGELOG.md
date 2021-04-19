@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.0 (pending)
+
+### Enhancements
+
+### Bug Fixes
+
+### Contributors
+
+
 ## v0.3.0
 
 This is the third release of `cosign`!
