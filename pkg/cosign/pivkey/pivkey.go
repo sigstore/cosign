@@ -1,4 +1,5 @@
-//
+// +build !pivkeydisabled
+
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -125,3 +127,36 @@ func (ps *PIVSigner) PublicKey(context.Context) (crypto.PublicKey, error) {
 }
 
 var _ signature.Signer = &PIVSigner{}
+
+func GetYubikey() (*piv.YubiKey, error) {
+	cards, err := piv.Cards()
+	if err != nil {
+		return nil, err
+	}
+
+	// Find a YubiKey and open the reader.
+	var yk *piv.YubiKey
+	for _, card := range cards {
+		if strings.Contains(strings.ToLower(card), "yubikey") {
+			if yk, err = piv.Open(card); err != nil {
+				return nil, err
+			}
+			return yk, nil
+		}
+	}
+	return nil, errors.New("no yubikey found")
+}
+
+func GenYubikey(yk *piv.YubiKey) (crypto.PublicKey, error) {
+	// Generate a private key on the YubiKey.
+	key := piv.Key{
+		Algorithm:   piv.AlgorithmEC256,
+		PINPolicy:   piv.PINPolicyAlways,
+		TouchPolicy: piv.TouchPolicyAlways,
+	}
+	pub, err := yk.GenerateKey(piv.DefaultManagementKey, piv.SlotSignature, key)
+	if err != nil {
+		return nil, err
+	}
+	return pub, nil
+}

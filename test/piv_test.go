@@ -14,6 +14,7 @@
 
 // +build resetyubikey
 // +build e2e
+// +build !pivkeydisabled
 
 // DANGER
 // This test requires a yubikey to be present. It WILL reset the yubikey to exercise functionality.
