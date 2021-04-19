@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.3.0
+
+This is the third release of `cosign`!
+
+We still expect many flags, commands, and formats to change going forward, but we're getting closer.
+No backwards compatiblity is promised or implied yet, though we are hoping to formalize this policy in the next release.
+See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
+
+### Enhancements
+
+* The `-output-file` flag supports writing output to a specific file
+* The `-key` flag now supports `kms` references and URLs, the `kms` specific flag has been removed
+* Yubikey/PIV hardware support is now included!
+* Support for signing and verifying multiple images in one invocation
+
+### Bug Fixes
+
+* Bug fixes in KMS keypair generation
+* Bug fixes in key type parsing
+
+### Contributors
+
+* Dan Lorenc
+* Priya Wadhwa
+* Ivan Font
+* Depandabot!
+* Mark Bestavros
+* Jake Sanders
+* Carlos Tadeu Panato Junior 
+
 ## v0.2.0
 
 This is the second release of `cosign`!
