@@ -326,8 +326,9 @@ github.com/go-openapi/runtime v0.19.15/go.mod h1:dhGWCTKRXlAfGnQG0ONViOZpjfg0m2g
 github.com/go-openapi/runtime v0.19.16/go.mod h1:5P9104EJgYcizotuXhEuUrzVc+j1RiSjahULvYmlv98=
 github.com/go-openapi/runtime v0.19.24/go.mod h1:Lm9YGCeecBnUUkFTxPC4s1+lwrkJ0pthx8YvyjCfkgk=
 github.com/go-openapi/runtime v0.19.26/go.mod h1:BvrQtn6iVb2QmiVXRsFAm6ZCAZBpbVKFfN6QWCp582M=
-github.com/go-openapi/runtime v0.19.27 h1:4zrQCJoP7rqNCUaApDv1MdPkaa5TuPfO05Lq5WLhX9I=
 github.com/go-openapi/runtime v0.19.27/go.mod h1:BvrQtn6iVb2QmiVXRsFAm6ZCAZBpbVKFfN6QWCp582M=
+github.com/go-openapi/runtime v0.19.28 h1:9lYu6axek8LJrVkMVViVirRcpoaCxXX7+sSvmizGVnA=
+github.com/go-openapi/runtime v0.19.28/go.mod h1:BvrQtn6iVb2QmiVXRsFAm6ZCAZBpbVKFfN6QWCp582M=
 github.com/go-openapi/spec v0.0.0-20160808142527-6aced65f8501/go.mod h1:J8+jY1nAiCcj+friV/PDoE1/3eeccG9LYBs0tYvLOWc=
 github.com/go-openapi/spec v0.17.0/go.mod h1:XkF/MOi14NmjsfZ8VtAKf8pIlbZzyoTvZsdfssdxcBI=
 github.com/go-openapi/spec v0.18.0/go.mod h1:XkF/MOi14NmjsfZ8VtAKf8pIlbZzyoTvZsdfssdxcBI=
@@ -888,8 +889,6 @@ github.com/sigstore/fulcio v0.0.0-20210405115948-e7630f533fca/go.mod h1:l16xJtui
 github.com/sigstore/rekor v0.1.1/go.mod h1:b+T8TvGKWgaFbtPRQgF/gXjbj/R9HdJ5lA93cnGT3Sc=
 github.com/sigstore/rekor v0.1.2-0.20210410002954-cce6cabf1a88 h1:8BimpUoUG7x9WvuhCcUChKPc3Y1BwM2z16cXetqQUik=
 github.com/sigstore/rekor v0.1.2-0.20210410002954-cce6cabf1a88/go.mod h1:4vPst+j1qes+LBMabwDPw7I/Wjmg/tSJv0Neq+0KBBo=
-github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074 h1:HUEWEpBoKQy9AIB2Q+6X73cAc+720DvWO+VqACa7wxI=
-github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074/go.mod h1:sgfbsomHSkH3315v572HAbiWoA8n58MBqRB4YgJI7X0=
 github.com/sigstore/sigstore v0.0.0-20210414175954-786234debb5a h1:j5BbvUZ1tkZMf48Pn2PZaDHssRt2t5i4RU0cpvwBxyM=
 github.com/sigstore/sigstore v0.0.0-20210414175954-786234debb5a/go.mod h1:EoLIp5JbrCE2VZqdCCIemNEdNYiOcdwF0igIvorqo1o=
 github.com/sirupsen/logrus v1.0.5/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
