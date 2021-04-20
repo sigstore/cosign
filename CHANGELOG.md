@@ -8,6 +8,12 @@
 
 ### Contributors
 
+## v0.3.1
+
+### Bug Fixes
+
+* Fixed CI container image breakage introduced in v0.3.0
+* Fixed lack of version information in release binaries
 
 ## v0.3.0
 
