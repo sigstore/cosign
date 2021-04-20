@@ -21,7 +21,7 @@ jobs:
     - name: install deps
       run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
     - name: build
-      run: CGO_ENABLED=1 go build -o cosign-linux-amd64 ./cmd/cosign/
+      run: make cosign && mv ./cosign ./cosign-linux-amd64
     - name: sign
       run: |
           echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key ./.github/workflows/cosign.key ./cosign-linux-amd64 > cosign-linux-amd64.sig
@@ -48,7 +48,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: build
-      run: CGO_ENABLED=1 go build -o cosign-darwin-amd64 ./cmd/cosign/
+      run: make cosign && mv ./cosign ./cosign-darwin-amd64
     - name: sign
       run: |
           echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-darwin-amd64 sign-blob -key ./.github/workflows/cosign.key ./cosign-darwin-amd64 > cosign-darwin-amd64.sig
