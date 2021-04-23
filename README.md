@@ -129,6 +129,7 @@ interactions, which has excellent support, but some registries may have quirks.
 
 Today, `cosign` has been tested and works against the following registries:
 
+* AWS Elastic Container Registry
 * GCP's Artifact Registry and Container Registry
 * Docker Hub
 * Azure Container Registry
