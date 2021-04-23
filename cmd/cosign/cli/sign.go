@@ -163,20 +163,23 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 
 	var signer signature.Signer
+	var dupeDetector signature.Verifier
 	var cert, chain string
 	switch {
 	case so.Sk:
-		sk, err := pivkey.NewSigner()
+		sk, err := pivkey.NewSignerVerifier()
 		if err != nil {
 			return err
 		}
 		signer = sk
+		dupeDetector = sk
 	case so.KeyRef != "":
-		k, err := signerFromKeyRef(ctx, so.KeyRef, so.Pf)
+		k, err := signerVerifierFromKeyRef(ctx, so.KeyRef, so.Pf)
 		if err != nil {
 			return errors.Wrap(err, "reading key")
 		}
 		signer = k
+		dupeDetector = k
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		k, err := fulcio.NewSigner(ctx)
@@ -203,7 +206,8 @@ func SignCmd(ctx context.Context, so SignOpts,
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
-	if err := cosign.Upload(sig, payload, dstRef, string(cert), string(chain)); err != nil {
+	sig, err = cosign.Upload(ctx, sig, payload, dstRef, string(cert), string(chain), dupeDetector)
+	if err != nil {
 		return err
 	}
 

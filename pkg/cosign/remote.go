@@ -17,6 +17,7 @@ package cosign
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"io"
 	"io/ioutil"
@@ -30,7 +31,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
+
+const SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
 
 func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
@@ -45,20 +49,66 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	return m.Layers, nil
 }
 
-func Upload(signature, payload []byte, dstTag name.Reference, cert, chain string) error {
-	l := &staticLayer{
-		b:  payload,
-		mt: "application/vnd.dev.cosign.simplesigning.v1+json",
-	}
-	base, err := remote.Image(dstTag, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+// SignatureImage
+func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, error) {
+	base, err := remote.Image(dstTag, opts...)
 	if err != nil {
 		if te, ok := err.(*transport.Error); ok {
 			if te.StatusCode != http.StatusNotFound {
-				return te
+				return nil, te
 			}
 			base = empty.Image
 		} else {
-			return err
+			return nil, err
+		}
+	}
+	return base, nil
+}
+
+func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier) ([]byte, error) {
+	l := &staticLayer{
+		b:  payload,
+		mt: SimpleSigningMediaType,
+	}
+
+	sigDigest, err := l.Digest()
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := sigImage.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, layer := range manifest.Layers {
+		if layer.MediaType == SimpleSigningMediaType && layer.Digest == sigDigest && layer.Annotations[sigkey] != "" {
+			uploadedSig, err := base64.StdEncoding.DecodeString(layer.Annotations[sigkey])
+			if err != nil {
+				return nil, err
+			}
+			if err := dupeDetector.Verify(ctx, payload, uploadedSig); err == nil {
+				// An equivalent signature has already been uploaded.
+				return uploadedSig, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, cert, chain string, dupeDetector signature.Verifier) (uploadedSig []byte, err error) {
+	l := &staticLayer{
+		b:  payload,
+		mt: SimpleSigningMediaType,
+	}
+
+	base, err := SignatureImage(dst, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, err
+	}
+
+	if dupeDetector != nil {
+		if uploadedSig, err = findDuplicate(ctx, base, payload, dupeDetector); err != nil || uploadedSig != nil {
+			return uploadedSig, err
 		}
 	}
 
@@ -74,13 +124,13 @@ func Upload(signature, payload []byte, dstTag name.Reference, cert, chain string
 		Annotations: annotations,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := remote.Write(dstTag, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
-		return err
+	if err := remote.Write(dst, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+		return nil, err
 	}
-	return nil
+	return signature, nil
 }
 
 type staticLayer struct {

@@ -100,6 +100,44 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}), t)
 }
 
+func TestDuplicateSign(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	ref, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+	// Verify should fail at first
+	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+	// So should download
+	mustErr(cli.DownloadCmd(ctx, imgName), t)
+
+	// Now sign the image
+	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+
+	// Now verify and download should work!
+	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(cli.DownloadCmd(ctx, imgName), t)
+
+	// Signing again should work just fine...
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	// but a duplicate signature should not be a uploaded
+	signatures, _, err := cosign.FetchSignatures(ctx, ref)
+	if err != nil {
+		t.Fatalf("failed to fetch signatures: %v", err)
+	}
+	if len(signatures) > 1 {
+		t.Errorf("expected there to only be one signature, got %v", signatures)
+	}
+}
+
 func TestKeyURLVerify(t *testing.T) {
 	// Verify that an image can be verified via key url
 	keyRef := "https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub"

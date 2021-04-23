@@ -196,11 +196,11 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 		if cert != nil {
 			pubBytes = cosign.CertToPem(cert)
 		}
-		index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
+		uuid, index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, "tlog entry verified with index: ", index)
+		fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, index)
 		return nil
 	}
 
