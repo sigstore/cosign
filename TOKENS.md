@@ -6,7 +6,9 @@ and the [go-piv](https://github.com/go-piv/piv-go) library.
 
 We recommend using an application provided by your hardware vendor to manage keys and permissions for advanced use-cases, but `cosign piv-tool` should work well for most users.
 
-## Overview
+## Quick Start
+
+### Setup
 
 To get started, insert a key to your computer and run the `cosign generate-key` command.
 We recommend using the `--random-management-key=true` flag.
@@ -73,6 +75,47 @@ Device info:
   PIN Policy: Always
   Serial number: 10550341
   Version: 4.4.5
+```
+
+### Signing
+
+You can then use the normal `cosign` commands to sign images and blobs with your security key and PIN.
+**NOTE**: The default PIN is `123456`.
+
+```shell
+$ cosign sign -sk gcr.io/dlorenc-vmtest2/demo
+Enter PIN for security key:
+Please tap security key...
+Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.cosign
+```
+
+To verify, you can either use the hardware key directly:
+
+```shell
+$ cosign verify -sk gcr.io/dlorenc-vmtest2/demo
+
+Verification for gcr.io/dlorenc-vmtest2/demo --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+  - Any certificates were verified against the Fulcio roots.
+
+[{"critical":{"identity":{"docker-reference":"gcr.io/dlorenc-vmtest2/demo"},"image":{"docker-manifest-digest":"sha256:410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd"},"type":"cosign container image signature"},"optional":null}]
+```
+
+Or export the public key and verify against that:
+
+```shell
+$ cosign public-key -sk > pub.key
+$ cosign verify -key pub.key gcr.io/dlorenc-vmtest2/demo
+
+Verification for gcr.io/dlorenc-vmtest2/demo --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+  - Any certificates were verified against the Fulcio roots.
+
+[{"critical":{"identity":{"docker-reference":"gcr.io/dlorenc-vmtest2/demo"},"image":{"docker-manifest-digest":"sha256:410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd"},"type":"cosign container image signature"},"optional":null}]
 ```
 
 ## CLI Usage
