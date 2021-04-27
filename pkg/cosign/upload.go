@@ -16,7 +16,6 @@
 package cosign
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
@@ -87,15 +86,16 @@ func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
 	if err != nil {
 		// If the entry already exists, we get a specific error.
 		// Here, we display the proof and succeed.
-		if _, ok := err.(*entries.CreateLogEntryConflict); ok {
-			cs := SignedPayload{
-				Base64Signature: base64.StdEncoding.EncodeToString(signature),
-				Payload:         payload,
-			}
+		if existsErr, ok := err.(*entries.CreateLogEntryConflict); ok {
+
 			fmt.Println("Signature already exists. Displaying proof")
-
-			return FindTlogEntry(rekorClient, cs.Base64Signature, cs.Payload, pemBytes)
-
+			uriSplit := strings.Split(existsErr.Location.String(), "/")
+			uuid := uriSplit[len(uriSplit)-1]
+			index, err := VerifyTLogEntry(rekorClient, uuid)
+			if err != nil {
+				return "", err
+			}
+			return strconv.FormatInt(index, 10), nil
 		}
 		return "", err
 	}

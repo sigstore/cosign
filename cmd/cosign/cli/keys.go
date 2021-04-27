@@ -38,6 +38,10 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier,
 }
 
 func signerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
+	return signerVerifierFromKeyRef(ctx, keyRef, pf)
+}
+
+func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
 	for prefix := range kms.ProvidersMux().Providers() {
 		if strings.HasPrefix(keyRef, prefix) {
 			return kms.Get(ctx, keyRef)

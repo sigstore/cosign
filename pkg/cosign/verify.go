@@ -55,12 +55,12 @@ func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon,
 	return nil, errors.New("empty response")
 }
 
-func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (string, error) {
+func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (uuid string, index int64, err error) {
 	searchParams := entries.NewSearchLogQueryParams()
 	searchLogQuery := models.SearchLogQuery{}
 	signature, err := base64.StdEncoding.DecodeString(b64Sig)
 	if err != nil {
-		return "", errors.Wrap(err, "decoding base64 signature")
+		return "", 0, errors.Wrap(err, "decoding base64 signature")
 	}
 	re := rekorEntry(payload, signature, pubKey)
 	entry := &models.Rekord{
@@ -73,29 +73,39 @@ func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []b
 	searchParams.SetEntry(&searchLogQuery)
 	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
 	if err != nil {
-		return "", errors.Wrap(err, "searching log query")
+		return "", 0, errors.Wrap(err, "searching log query")
 	}
 	if len(resp.Payload) == 0 {
-		return "", errors.New("signature not found in transparency log")
+		return "", 0, errors.New("signature not found in transparency log")
 	} else if len(resp.Payload) > 1 {
-		return "", errors.New("multiple entries returned; this should not happen")
+		return "", 0, errors.New("multiple entries returned; this should not happen")
 	}
 	logEntry := resp.Payload[0]
 	if len(logEntry) != 1 {
-		return "", errors.New("UUID value can not be extracted")
+		return "", 0, errors.New("UUID value can not be extracted")
 	}
 
-	params := entries.NewGetLogEntryByUUIDParams()
 	for k := range logEntry {
-		params.EntryUUID = k
+		uuid = k
 	}
+	index, err = VerifyTLogEntry(rekorClient, uuid)
+	if err != nil {
+		return "", 0, err
+	}
+	return uuid, index, nil
+}
+
+func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (index int64, err error) {
+	params := entries.NewGetLogEntryByUUIDParams()
+	params.EntryUUID = uuid
+
 	lep, err := rekorClient.Entries.GetLogEntryByUUID(params)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
 	if len(lep.Payload) != 1 {
-		return "", errors.New("UUID value can not be extracted")
+		return 0, errors.New("UUID value can not be extracted")
 	}
 	e := lep.Payload[params.EntryUUID]
 
@@ -110,9 +120,9 @@ func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []b
 
 	v := logverifier.New(hasher.DefaultHasher)
 	if err := v.VerifyInclusionProof(*e.InclusionProof.LogIndex, *e.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
-		return "", errors.Wrap(err, "verifying inclusion proof")
+		return 0, errors.Wrap(err, "verifying inclusion proof")
 	}
-	return params.EntryUUID, nil
+	return *e.InclusionProof.LogIndex, nil
 }
 
 // There are only payloads. Some have certs, some don't.
@@ -206,7 +216,7 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 				pemBytes = CertToPem(sp.Cert)
 			}
 			// Find the uuid then the entry.
-			uuid, err := sp.VerifyTlog(rekorClient, pemBytes)
+			uuid, _, err := sp.VerifyTlog(rekorClient, pemBytes)
 			if err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
@@ -265,7 +275,7 @@ func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContai
 	return nil
 }
 
-func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (string, error) {
+func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (uuid string, index int64, err error) {
 	return FindTlogEntry(rc, sp.Base64Signature, sp.Payload, publicKeyPem)
 }
 

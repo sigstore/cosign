@@ -110,7 +110,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		}
 		signer = k
 	case ko.Sk:
-		k, err := pivkey.NewSigner()
+		k, err := pivkey.NewSignerVerifier()
 		if err != nil {
 			return nil, err
 		}

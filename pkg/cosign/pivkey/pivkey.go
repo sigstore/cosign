@@ -70,7 +70,7 @@ func NewPublicKeyProvider() (cosign.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PIVSigner{
+	return &PIVSignerVerifier{
 		Pub: cert.PublicKey,
 		ECDSAVerifier: signature.ECDSAVerifier{
 			Key:     cert.PublicKey.(*ecdsa.PublicKey),
@@ -79,7 +79,7 @@ func NewPublicKeyProvider() (cosign.PublicKey, error) {
 	}, nil
 }
 
-func NewSigner() (signature.Signer, error) {
+func NewSignerVerifier() (signature.SignerVerifier, error) {
 	pk, err := GetKey()
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func NewSigner() (signature.Signer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PIVSigner{
+	return &PIVSignerVerifier{
 		Priv: privKey,
 		Pub:  cert.PublicKey,
 		ECDSAVerifier: signature.ECDSAVerifier{
@@ -106,13 +106,13 @@ func NewSigner() (signature.Signer, error) {
 	}, nil
 }
 
-type PIVSigner struct {
+type PIVSignerVerifier struct {
 	Priv crypto.PrivateKey
 	Pub  crypto.PrivateKey
 	signature.ECDSAVerifier
 }
 
-func (ps *PIVSigner) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
+func (ps *PIVSignerVerifier) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
 	signer := ps.Priv.(crypto.Signer)
 	h := sha256.Sum256(rawPayload)
 	sig, err := signer.Sign(rand.Reader, h[:], crypto.SHA256)
@@ -122,11 +122,11 @@ func (ps *PIVSigner) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byt
 	return sig, h[:], err
 }
 
-func (ps *PIVSigner) PublicKey(context.Context) (crypto.PublicKey, error) {
+func (ps *PIVSignerVerifier) PublicKey(context.Context) (crypto.PublicKey, error) {
 	return ps.Pub, nil
 }
 
-var _ signature.Signer = &PIVSigner{}
+var _ signature.Signer = &PIVSignerVerifier{}
 
 func GetYubikey() (*piv.YubiKey, error) {
 	cards, err := piv.Cards()
