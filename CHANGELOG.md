@@ -4,6 +4,8 @@
 
 ### Enhancements
 
+* Support for Hashicorp vault as a KMS provider has been added
+
 ### Bug Fixes
 
 ### Contributors

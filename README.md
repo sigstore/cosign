@@ -286,23 +286,12 @@ registry, an explicit reference to a signature index, a new registry API, grafea
 The proposed mechanism is flexible enough to support signing arbitrary things.
 
 ### KMS Support
+
 `cosign` supports using a KMS provider to generate and sign keys.
-Right now we only support GCP KMS, but are hoping to support more in the future!
+Right now cosign supports Vault and GCP KMS, but are hoping to support more in the future!
 
-To generate a key in GCP KMS (and a key ring, if necessary) run:
-```
-cosign generate-key-pair -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEY_RING>/cryptoKeys/<KEY_NAME>
-```
-This command will also save the public key to a file locally, which can be used for verification later on.
+See the [KMS docs](KMS.md) for more details.
 
-To sign an image run:
-```
-cosign sign -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEY_RING>/cryptoKeys/<KEY_NAME> dlorenc/demo
-```
-
-and to verify with the public key in KMS:
-```
-cosign verify -kms gcpkms://projects/<PROJECT ID>/locations/<LOCATION>/keyRings/<KEY_RING>/cryptoKeys/<KEY_NAME> dlorenc/demo
 ```
 
 ### OCI Artifacts
