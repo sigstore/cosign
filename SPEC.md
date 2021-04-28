@@ -99,7 +99,20 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
 -----END CERTIFICATE-----
 ```
 
-* `bundle` TODO
+* `bundle` string
+  This OPTIONAL property contains a JSON formatted `bundle` type, which can be used for offline verification.
+  Example `bundle`:
+
+```json
+{
+  "body": "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJzcGVjIjp7ImRhdGEiOnsiaGFzaCI6eyJhbGdvcml0aG0iOiJzaGEyNTYiLCJ2YWx1ZSI6IjQwZGI5ZmE1MjkxNDM0NjU4NDNkYzI2MTZjMDI0YmQ2MzA2Mjg4NzUzMzJhM2UyMjg1MTA1MzczYmFjZWZlMDIifX0sInNpZ25hdHVyZSI6eyJjb250ZW50IjoiTUVRQ0lEcnRNMDZ4c2szNTBKWEtyd1lYb0VPU3Q5QndncmNqdDl0djdReUdiOFNUQWlCYW9IKzFIVDlSb0dVK05XVHJXdFFQbVJZZElFZTBIb1lhUjFLeVZNUm43dz09IiwiZm9ybWF0IjoieDUwOSIsInB1YmxpY0tleSI6eyJjb250ZW50IjoiTFMwdExTMUNSVWRKVGlCUVZVSk1TVU1nUzBWWkxTMHRMUzBLVFVacmQwVjNXVWhMYjFwSmVtb3dRMEZSV1VsTGIxcEplbW93UkVGUlkwUlJaMEZGV0dVMVlYRjRibVpHY21KNFpUQnJkM1UxU0ZOa09VUTFhUzlJVkFwVVdUQjVSelJEWVd4NVJHNHlWbVpGT1hSVlYzbHZVVlIzU0V0dlZVVlpZamc1VW5WQk5tMU1SM05wV1hCMVQyNW9lR3RQUkUxcmJXOW5QVDBLTFMwdExTMUZUa1FnVUZWQ1RFbERJRXRGV1MwdExTMHRDZz09In19fSwia2luZCI6InJla29yZCJ9",
+  "integratedTime": 1619645907,
+  "logIndex": 3348,
+  "verification": {
+    "signedEntryTimestamp": "MEQCIDgmRVAV1IZCL9rUs/af6yLgXgjHbY6Ipa1kb019yrFiAiAS3R9K/TJwYh2yDASUe3GnM/wNmNj+/yDW0G5GvuyJvw=="
+  }
+}
+```
 
 ## Storage
 
