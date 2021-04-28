@@ -110,19 +110,19 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (index int64, err e
 	e := lep.Payload[params.EntryUUID]
 
 	hashes := [][]byte{}
-	for _, h := range e.InclusionProof.Hashes {
+	for _, h := range e.Verification.InclusionProof.Hashes {
 		hb, _ := hex.DecodeString(h)
 		hashes = append(hashes, hb)
 	}
 
-	rootHash, _ := hex.DecodeString(*e.InclusionProof.RootHash)
+	rootHash, _ := hex.DecodeString(*e.Verification.InclusionProof.RootHash)
 	leafHash, _ := hex.DecodeString(params.EntryUUID)
 
 	v := logverifier.New(hasher.DefaultHasher)
-	if err := v.VerifyInclusionProof(*e.InclusionProof.LogIndex, *e.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
+	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
 		return 0, errors.Wrap(err, "verifying inclusion proof")
 	}
-	return *e.InclusionProof.LogIndex, nil
+	return *e.Verification.InclusionProof.LogIndex, nil
 }
 
 // There are only payloads. Some have certs, some don't.
