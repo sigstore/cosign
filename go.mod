@@ -22,7 +22,7 @@ require (
 	github.com/peterbourgon/ff/v3 v3.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.0.0-20210405115948-e7630f533fca
-	github.com/sigstore/rekor v0.1.2-0.20210422173947-d52685fc3178
+	github.com/sigstore/rekor v0.1.2-0.20210428010952-9e3e56d52dd0
 	github.com/sigstore/sigstore v0.0.0-20210427115853-11e6eaab7cdc
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/stretchr/testify v1.7.0
