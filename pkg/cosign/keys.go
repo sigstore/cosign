@@ -42,7 +42,7 @@ const (
 	sigkey    = "dev.cosignproject.cosign/signature"
 	certkey   = "dev.sigstore.cosign/certificate"
 	chainkey  = "dev.sigstore.cosign/chain"
-	bundleKey = "dev.sigstore.cosign/bundle"
+	BundleKey = "dev.sigstore.cosign/bundle"
 )
 
 type PassFunc func(bool) ([]byte, error)

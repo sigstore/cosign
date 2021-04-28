@@ -129,7 +129,7 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 				sp.Chain = certs
 			}
 
-			bundle := desc.Annotations[bundleKey]
+			bundle := desc.Annotations[BundleKey]
 			if bundle != "" {
 				var b Bundle
 				if err := json.Unmarshal([]byte(bundle), &b); err != nil {

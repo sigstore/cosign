@@ -68,7 +68,7 @@ func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, err
 	return base, nil
 }
 
-func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier) ([]byte, error) {
+func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations []string) ([]byte, error) {
 	l := &staticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
@@ -83,7 +83,14 @@ func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeD
 		return nil, err
 	}
 
+LayerLoop:
 	for _, layer := range manifest.Layers {
+		// if there are any new annotations, then this isn't a duplicate
+		for _, a := range annotations {
+			if _, ok := layer.Annotations[a]; !ok {
+				continue LayerLoop
+			}
+		}
 		if layer.MediaType == SimpleSigningMediaType && layer.Digest == sigDigest && layer.Annotations[sigkey] != "" {
 			uploadedSig, err := base64.StdEncoding.DecodeString(layer.Annotations[sigkey])
 			if err != nil {
@@ -103,13 +110,14 @@ type Bundle struct {
 }
 
 type UploadOpts struct {
-	Signature    []byte
-	Payload      []byte
-	Dst          name.Reference
-	Cert         string
-	Chain        string
-	DupeDetector signature.Verifier
-	Bundle       *Bundle
+	Signature             []byte
+	Payload               []byte
+	Dst                   name.Reference
+	Cert                  string
+	Chain                 string
+	DupeDetector          signature.Verifier
+	Bundle                *Bundle
+	AdditionalAnnotations []string
 }
 
 func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error) {
@@ -124,7 +132,7 @@ func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error
 	}
 
 	if opts.DupeDetector != nil {
-		if uploadedSig, err = findDuplicate(ctx, base, opts.Payload, opts.DupeDetector); err != nil || uploadedSig != nil {
+		if uploadedSig, err = findDuplicate(ctx, base, opts.Payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
 			return uploadedSig, err
 		}
 	}
@@ -141,7 +149,7 @@ func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error
 		if err != nil {
 			return nil, errors.Wrap(err, "marshaling bundle")
 		}
-		annotations[bundleKey] = string(b)
+		annotations[BundleKey] = string(b)
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,

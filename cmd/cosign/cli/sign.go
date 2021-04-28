@@ -254,6 +254,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	fmt.Println("tlog entry created with index: ", *entry.LogIndex)
 
 	uo.Bundle = bundle(entry)
+	uo.AdditionalAnnotations = annotations(entry)
 	if _, err = cosign.Upload(ctx, uo); err != nil {
 		return errors.Wrap(err, "uploading")
 	}
@@ -265,4 +266,12 @@ func bundle(entry *models.LogEntryAnon) *cosign.Bundle {
 		return nil
 	}
 	return &cosign.Bundle{LogEntryAnon: entry}
+}
+
+func annotations(entry *models.LogEntryAnon) []string {
+	var annts []string
+	if bundle(entry) != nil {
+		annts = append(annts, cosign.BundleKey)
+	}
+	return annts
 }
