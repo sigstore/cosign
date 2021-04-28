@@ -17,7 +17,7 @@ require (
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/manifoldco/promptui v0.8.0
-	github.com/open-policy-agent/opa v0.27.1
+	github.com/open-policy-agent/opa v0.28.0
 	github.com/pelletier/go-toml v1.9.0 // indirect
 	github.com/peterbourgon/ff/v3 v3.0.0
 	github.com/pkg/errors v0.9.1
