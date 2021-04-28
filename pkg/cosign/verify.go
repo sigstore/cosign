@@ -24,9 +24,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	_ "embed" // To enable the `go:embed` directive.
+
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -41,6 +45,10 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
+
+// This is rekor's public key
+//go:embed rekor.pub
+var rekorPub string
 
 func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParams()
@@ -206,6 +214,11 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 			}
 		}
 
+		verified, err := sp.VerifyBundle()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to verify offline (%v), checking tlog instead...", err)
+		}
+
 		if co.Tlog {
 			// Get the right public key to use (key or cert)
 			var pemBytes []byte
@@ -218,12 +231,20 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 			} else {
 				pemBytes = CertToPem(sp.Cert)
 			}
-			// Find the uuid then the entry.
-			uuid, _, err := sp.VerifyTlog(rekorClient, pemBytes)
-			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
+
+			// Verify against the tlog if:
+			//  1. We were unable to verify the bundle OR
+			//  2. We need to verify the cert (we can remove this once bundling for keyless mode is implemented)
+			var uuid string
+			if !verified || sp.Cert != nil {
+				// Find the uuid then the entry.
+				uuid, _, err = sp.VerifyTlog(rekorClient, pemBytes)
+				if err != nil {
+					validationErrs = append(validationErrs, err.Error())
+					continue
+				}
 			}
+
 			// if we have a cert, we should check expiry
 			if sp.Cert != nil {
 				e, err := getTlogEntry(rekorClient, uuid)
@@ -276,6 +297,42 @@ func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContai
 		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)
 	}
 	return nil
+}
+
+func (sp *SignedPayload) VerifyBundle() (bool, error) {
+	if sp.Bundle == nil || sp.Bundle.LogEntryAnon == nil || sp.Bundle.LogEntryAnon.Verification == nil {
+		return false, nil
+	}
+	// verify the entry against the provided SignedEntryTimestamp
+	sig := sp.Bundle.LogEntryAnon.Verification.SignedEntryTimestamp
+	le := &models.LogEntryAnon{
+		Body:           sp.Bundle.Body,
+		IntegratedTime: sp.Bundle.IntegratedTime,
+		LogIndex:       sp.Bundle.LogIndex,
+	}
+	payload, err := le.MarshalBinary()
+	if err != nil {
+		return false, errors.Wrap(err, "marshaling log entry")
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return false, errors.Wrap(err, "canonicalizing")
+	}
+	rekorPubKey, err := PemToECDSAKey([]byte(rekorPub))
+	if err != nil {
+		return false, errors.Wrap(err, "pem to ecdsa")
+	}
+	// verify the signature against the public key
+	h := crypto.SHA256.New()
+	if _, err := h.Write(canonicalized); err != nil {
+		return false, err
+	}
+	sum := h.Sum(nil)
+
+	if !ecdsa.VerifyASN1(rekorPubKey, sum, []byte(sig)) {
+		return false, fmt.Errorf("unable to verify")
+	}
+	return true, nil
 }
 
 func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (uuid string, index int64, err error) {

@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -34,6 +33,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -99,8 +99,7 @@ func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeD
 }
 
 type Bundle struct {
-	// SignedEntryTimestamp, used to verify an entry is in rekor's log
-	SignedEntryTimestamp strfmt.Base64
+	*models.LogEntryAnon
 }
 
 type UploadOpts struct {

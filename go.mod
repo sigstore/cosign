@@ -3,6 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
+	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4 // indirect
 	github.com/go-openapi/analysis v0.20.1 // indirect
 	github.com/go-openapi/runtime v0.19.28
 	github.com/go-openapi/strfmt v0.20.1

@@ -96,6 +96,12 @@ func TestSignVerify(t *testing.T) {
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
 
+	// Make sure offline verification works with bundling
+	original := os.Getenv(cosign.ServerEnv)
+	os.Setenv(cosign.ServerEnv, "notreal")
+	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
+	os.Setenv(cosign.ServerEnv, original)
+
 	// But two doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}), t)
 }

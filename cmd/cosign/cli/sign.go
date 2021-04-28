@@ -264,7 +264,5 @@ func bundle(entry *models.LogEntryAnon) *cosign.Bundle {
 	if entry.Verification == nil {
 		return nil
 	}
-	return &cosign.Bundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-	}
+	return &cosign.Bundle{LogEntryAnon: entry}
 }

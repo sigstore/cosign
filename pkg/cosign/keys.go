@@ -179,6 +179,14 @@ func LoadPublicKey(ctx context.Context, keyRef string) (pub PublicKey, err error
 	}
 
 	// PEM encoded file.
+	ed, err := PemToECDSAKey(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "pem to ecdsa")
+	}
+	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
+}
+
+func PemToECDSAKey(raw []byte) (*ecdsa.PublicKey, error) {
 	p, _ := pem.Decode(raw)
 	if p == nil {
 		return nil, errors.New("pem.Decode failed")
@@ -193,7 +201,7 @@ func LoadPublicKey(ctx context.Context, keyRef string) (pub PublicKey, err error
 	}
 	ed, ok := decoded.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
+		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", raw)
 	}
-	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
+	return ed, nil
 }
