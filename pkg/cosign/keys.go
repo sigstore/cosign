@@ -38,10 +38,11 @@ import (
 )
 
 const (
-	pemType  = "ENCRYPTED COSIGN PRIVATE KEY"
-	sigkey   = "dev.cosignproject.cosign/signature"
-	certkey  = "dev.sigstore.cosign/certificate"
-	chainkey = "dev.sigstore.cosign/chain"
+	pemType   = "ENCRYPTED COSIGN PRIVATE KEY"
+	sigkey    = "dev.cosignproject.cosign/signature"
+	certkey   = "dev.sigstore.cosign/certificate"
+	chainkey  = "dev.sigstore.cosign/chain"
+	bundleKey = "dev.sigstore.cosign/bundle"
 )
 
 type PassFunc func(bool) ([]byte, error)

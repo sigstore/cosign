@@ -34,6 +34,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -206,13 +207,18 @@ func SignCmd(ctx context.Context, so SignOpts,
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
-	sig, err = cosign.Upload(ctx, sig, payload, dstRef, string(cert), string(chain), dupeDetector)
-	if err != nil {
-		return err
+	uo := cosign.UploadOpts{
+		Signature:    sig,
+		Payload:      payload,
+		Dst:          dstRef,
+		Cert:         string(cert),
+		Chain:        string(chain),
+		DupeDetector: dupeDetector,
 	}
 
 	if !cosign.Experimental() {
-		return nil
+		_, err := cosign.Upload(ctx, uo)
+		return err
 	}
 
 	// Check if the image is public (no auth in Get)
@@ -241,10 +247,24 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 		rekorBytes = pemBytes
 	}
-	index, err := cosign.UploadTLog(sig, payload, rekorBytes)
+	entry, err := cosign.UploadTLog(sig, payload, rekorBytes)
 	if err != nil {
 		return err
 	}
-	fmt.Println("tlog entry created with index: ", index)
+	fmt.Println("tlog entry created with index: ", *entry.LogIndex)
+
+	uo.Bundle = bundle(entry)
+	if _, err = cosign.Upload(ctx, uo); err != nil {
+		return errors.Wrap(err, "uploading")
+	}
 	return nil
+}
+
+func bundle(entry *models.LogEntryAnon) *cosign.Bundle {
+	if entry.Verification == nil {
+		return nil
+	}
+	return &cosign.Bundle{
+		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
+	}
 }

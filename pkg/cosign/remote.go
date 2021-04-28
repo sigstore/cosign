@@ -19,10 +19,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -31,6 +33,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -95,29 +98,51 @@ func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeD
 	return nil, nil
 }
 
-func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, cert, chain string, dupeDetector signature.Verifier) (uploadedSig []byte, err error) {
+type Bundle struct {
+	// SignedEntryTimestamp, used to verify an entry is in rekor's log
+	SignedEntryTimestamp strfmt.Base64
+}
+
+type UploadOpts struct {
+	Signature    []byte
+	Payload      []byte
+	Dst          name.Reference
+	Cert         string
+	Chain        string
+	DupeDetector signature.Verifier
+	Bundle       *Bundle
+}
+
+func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error) {
 	l := &staticLayer{
-		b:  payload,
+		b:  opts.Payload,
 		mt: SimpleSigningMediaType,
 	}
 
-	base, err := SignatureImage(dst, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	base, err := SignatureImage(opts.Dst, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, err
 	}
 
-	if dupeDetector != nil {
-		if uploadedSig, err = findDuplicate(ctx, base, payload, dupeDetector); err != nil || uploadedSig != nil {
+	if opts.DupeDetector != nil {
+		if uploadedSig, err = findDuplicate(ctx, base, opts.Payload, opts.DupeDetector); err != nil || uploadedSig != nil {
 			return uploadedSig, err
 		}
 	}
 
 	annotations := map[string]string{
-		sigkey: base64.StdEncoding.EncodeToString(signature),
+		sigkey: base64.StdEncoding.EncodeToString(opts.Signature),
 	}
-	if cert != "" {
-		annotations[certkey] = cert
-		annotations[chainkey] = chain
+	if opts.Cert != "" {
+		annotations[certkey] = opts.Cert
+		annotations[chainkey] = opts.Chain
+	}
+	if opts.Bundle != nil {
+		b, err := json.Marshal(opts.Bundle)
+		if err != nil {
+			return nil, errors.Wrap(err, "marshaling bundle")
+		}
+		annotations[bundleKey] = string(b)
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,
@@ -127,10 +152,10 @@ func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, 
 		return nil, err
 	}
 
-	if err := remote.Write(dst, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+	if err := remote.Write(opts.Dst, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
 		return nil, err
 	}
-	return signature, nil
+	return opts.Signature, nil
 }
 
 type staticLayer struct {
