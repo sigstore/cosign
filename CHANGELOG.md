@@ -2,6 +2,10 @@
 
 ## v0.4.0 (pending)
 
+### Action Required
+
+* Signatures created with `cosign` before v0.4.0 are not compatible with those created after
+
 ### Enhancements
 
 * Support for Hashicorp vault as a KMS provider has been added

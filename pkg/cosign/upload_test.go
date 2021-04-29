@@ -34,32 +34,32 @@ func TestDestinationTag(t *testing.T) {
 		{
 			desc:  "don't specify repo",
 			image: "gcr.io/test/test",
-			want:  "gcr.io/test/test:sha256-digest.cosign",
+			want:  "gcr.io/test/test:sha256-digest.sig",
 		}, {
 			desc:  "replace repo",
 			image: "gcr.io/test/image",
 			repo:  "gcr.io/new",
-			want:  "gcr.io/new/image:sha256-digest.cosign",
+			want:  "gcr.io/new/image:sha256-digest.sig",
 		}, {
 			desc:  "image has subrepos",
 			image: "gcr.io/test/image/sub",
 			repo:  "gcr.io/new",
-			want:  "gcr.io/new/image/sub:sha256-digest.cosign",
+			want:  "gcr.io/new/image/sub:sha256-digest.sig",
 		}, {
 			desc:  "repo has subrepos",
 			image: "gcr.io/test/image/sub",
 			repo:  "gcr.io/new/subrepo",
-			want:  "gcr.io/new/subrepo/image/sub:sha256-digest.cosign",
+			want:  "gcr.io/new/subrepo/image/sub:sha256-digest.sig",
 		}, {
 			desc:  "replace not gcr repo",
 			image: "test/image",
 			repo:  "newrepo",
-			want:  "index.docker.io/newrepo/image:sha256-digest.cosign",
+			want:  "index.docker.io/newrepo/image:sha256-digest.sig",
 		}, {
 			desc:  "e2e test",
 			image: "us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test",
 			repo:  "us-central1-docker.pkg.dev/projectsigstore/subrepo",
-			want:  "us-central1-docker.pkg.dev/projectsigstore/subrepo/cosign-ci/test:sha256-digest.cosign",
+			want:  "us-central1-docker.pkg.dev/projectsigstore/subrepo/cosign-ci/test:sha256-digest.sig",
 		},
 	}
 

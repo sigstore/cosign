@@ -124,14 +124,14 @@ If the object is referenced by tag, the tag must first be resolved to a digest.
 Then the digest of the object (of the form `sha256:abcdef...`) is encoded into a tag name using the following rules:
 
 * Replace the `:` character with a `-`
-* Append the `.cosign` suffix
+* Append the `.sig` suffix
 
 Example digest->tag mapping:
 
 1. Start with `gcr.io/dlorenc-vmtest2/demo:latest`
 2. Resolve this to a digest: `sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36`
-3. Follow the encoding rules: `sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign`
-4. Signature can be found at `gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.cosign`
+3. Follow the encoding rules: `sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.sig`
+4. Signature can be found at `gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.sig`
 
 Implementations MAY store signatures objects in the same OCI repository as the target image or a different one.
 
