@@ -138,16 +138,17 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 
 // There are only payloads. Some have certs, some don't.
 type CheckOpts struct {
-	Annotations map[string]interface{}
-	Claims      bool
-	Tlog        bool
-	PubKey      PublicKey
-	Roots       *x509.CertPool
+	Annotations  map[string]interface{}
+	Claims       bool
+	VerifyBundle bool
+	Tlog         bool
+	PubKey       PublicKey
+	Roots        *x509.CertPool
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
-func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
+func Verify(ctx context.Context, ref name.Reference, co *CheckOpts) ([]SignedPayload, error) {
 	// Enforce this up front.
 	if co.Roots == nil && co.PubKey == nil {
 		return nil, errors.New("one of public key or cert roots is required")
@@ -218,6 +219,7 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to verify offline (%v), checking tlog instead...", err)
 		}
+		co.VerifyBundle = verified
 
 		if co.Tlog {
 			// Get the right public key to use (key or cert)

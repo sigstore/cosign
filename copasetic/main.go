@@ -176,7 +176,7 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			co := cosign.CheckOpts{
+			co := &cosign.CheckOpts{
 				PubKey: pubKey,
 				Claims: true,
 				Roots:  fulcio.Roots,
