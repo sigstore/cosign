@@ -48,3 +48,7 @@ func (ps *PIVSigner) PublicKey(context.Context) (crypto.PublicKey, error) {
 }
 
 var _ signature.Signer = &PIVSigner{}
+
+func NewSignerVerifier() (signature.SignerVerifier, error) {
+	return nil, errors.New("unimplemented")
+}

@@ -117,6 +117,7 @@ type UploadOpts struct {
 	Cert                  string
 	Chain                 string
 	DupeDetector          signature.Verifier
+	Auth                  authn.Keychain
 	Bundle                *Bundle
 	AdditionalAnnotations map[string]string
 }
@@ -127,7 +128,7 @@ func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error
 		mt: SimpleSigningMediaType,
 	}
 
-	base, err := SignatureImage(opts.Dst, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	base, err := SignatureImage(opts.Dst, remote.WithAuthFromKeychain(opts.Auth))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error
 		return nil, err
 	}
 
-	if err := remote.Write(opts.Dst, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+	if err := remote.Write(opts.Dst, img, remote.WithAuthFromKeychain(opts.Auth)); err != nil {
 		return nil, err
 	}
 	return opts.Signature, nil

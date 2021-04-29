@@ -216,6 +216,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		Cert:         string(cert),
 		Chain:        string(chain),
 		DupeDetector: dupeDetector,
+		Auth:         authn.DefaultKeychain,
 	}
 
 	if !cosign.Experimental() {
