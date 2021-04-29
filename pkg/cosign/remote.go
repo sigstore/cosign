@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -33,7 +34,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -106,7 +106,8 @@ LayerLoop:
 }
 
 type Bundle struct {
-	*models.LogEntryAnon
+	SignedEntryTimestamp strfmt.Base64
+	CanonicalizedPayload []byte
 }
 
 type UploadOpts struct {

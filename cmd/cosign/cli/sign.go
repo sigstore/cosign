@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -253,7 +254,11 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 	fmt.Println("tlog entry created with index: ", *entry.LogIndex)
 
-	uo.Bundle = bundle(entry)
+	bund, err := bundle(entry)
+	if err != nil {
+		return errors.Wrap(err, "bundle")
+	}
+	uo.Bundle = bund
 	uo.AdditionalAnnotations = annotations(entry)
 	if _, err = cosign.Upload(ctx, uo); err != nil {
 		return errors.Wrap(err, "uploading")
@@ -261,16 +266,32 @@ func SignCmd(ctx context.Context, so SignOpts,
 	return nil
 }
 
-func bundle(entry *models.LogEntryAnon) *cosign.Bundle {
+func bundle(entry *models.LogEntryAnon) (*cosign.Bundle, error) {
 	if entry.Verification == nil {
-		return nil
+		return nil, nil
 	}
-	return &cosign.Bundle{LogEntryAnon: entry}
+	le := &models.LogEntryAnon{
+		Body:           entry.Body,
+		IntegratedTime: entry.IntegratedTime,
+		LogIndex:       entry.LogIndex,
+	}
+	payload, err := le.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return nil, err
+	}
+	return &cosign.Bundle{
+		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
+		CanonicalizedPayload: canonicalized,
+	}, nil
 }
 
 func annotations(entry *models.LogEntryAnon) []string {
 	var annts []string
-	if bundle(entry) != nil {
+	if bund, err := bundle(entry); err == nil && bund != nil {
 		annts = append(annts, cosign.BundleKey)
 	}
 	return annts

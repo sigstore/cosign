@@ -30,7 +30,6 @@ import (
 
 	_ "embed" // To enable the `go:embed` directive.
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -46,7 +45,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-// This is rekor's public key
+// This is rekor's public key, via `curl -L api.rekor.dev/api/v1/log/publicKey`
+// rekor.pub should be updated whenever the Rekor public key is rotated & the bundle annotation should be up-versioned
 //go:embed rekor.pub
 var rekorPub string
 
@@ -300,36 +300,19 @@ func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContai
 }
 
 func (sp *SignedPayload) VerifyBundle() (bool, error) {
-	if sp.Bundle == nil || sp.Bundle.LogEntryAnon == nil || sp.Bundle.LogEntryAnon.Verification == nil {
+	if sp.Bundle == nil {
 		return false, nil
-	}
-	// verify the entry against the provided SignedEntryTimestamp
-	sig := sp.Bundle.LogEntryAnon.Verification.SignedEntryTimestamp
-	le := &models.LogEntryAnon{
-		Body:           sp.Bundle.Body,
-		IntegratedTime: sp.Bundle.IntegratedTime,
-		LogIndex:       sp.Bundle.LogIndex,
-	}
-	payload, err := le.MarshalBinary()
-	if err != nil {
-		return false, errors.Wrap(err, "marshaling log entry")
-	}
-	canonicalized, err := jsoncanonicalizer.Transform(payload)
-	if err != nil {
-		return false, errors.Wrap(err, "canonicalizing")
 	}
 	rekorPubKey, err := PemToECDSAKey([]byte(rekorPub))
 	if err != nil {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
-	// verify the signature against the public key
+	// verify the SET against the public key
 	h := crypto.SHA256.New()
-	if _, err := h.Write(canonicalized); err != nil {
+	if _, err := h.Write(sp.Bundle.CanonicalizedPayload); err != nil {
 		return false, err
 	}
-	sum := h.Sum(nil)
-
-	if !ecdsa.VerifyASN1(rekorPubKey, sum, []byte(sig)) {
+	if !ecdsa.VerifyASN1(rekorPubKey, h.Sum(nil), []byte(sp.Bundle.SignedEntryTimestamp)) {
 		return false, fmt.Errorf("unable to verify")
 	}
 	return true, nil
