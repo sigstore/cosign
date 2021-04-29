@@ -95,13 +95,13 @@ func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeD
 	return nil, nil
 }
 
-func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, cert, chain string, dupeDetector signature.Verifier) (uploadedSig []byte, err error) {
+func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, cert, chain string, dupeDetector signature.Verifier, auth authn.Keychain) (uploadedSig []byte, err error) {
 	l := &staticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
 	}
 
-	base, err := SignatureImage(dst, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	base, err := SignatureImage(dst, remote.WithAuthFromKeychain(auth))
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, 
 		return nil, err
 	}
 
-	if err := remote.Write(dst, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+	if err := remote.Write(dst, img, remote.WithAuthFromKeychain(auth)); err != nil {
 		return nil, err
 	}
 	return signature, nil
