@@ -206,7 +206,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
-	sig, err = cosign.Upload(ctx, sig, payload, dstRef, string(cert), string(chain), dupeDetector)
+	sig, err = cosign.Upload(ctx, sig, payload, dstRef, string(cert), string(chain), dupeDetector, authn.DefaultKeychain)
 	if err != nil {
 		return err
 	}
