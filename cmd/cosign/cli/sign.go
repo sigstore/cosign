@@ -19,6 +19,7 @@ import (
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -289,10 +290,11 @@ func bundle(entry *models.LogEntryAnon) (*cosign.Bundle, error) {
 	}, nil
 }
 
-func annotations(entry *models.LogEntryAnon) []string {
-	var annts []string
+func annotations(entry *models.LogEntryAnon) map[string]string {
+	annts := map[string]string{}
 	if bund, err := bundle(entry); err == nil && bund != nil {
-		annts = append(annts, cosign.BundleKey)
+		contents, _ := json.Marshal(bund)
+		annts[cosign.BundleKey] = string(contents)
 	}
 	return annts
 }

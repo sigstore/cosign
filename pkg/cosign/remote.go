@@ -68,7 +68,7 @@ func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, err
 	return base, nil
 }
 
-func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations []string) ([]byte, error) {
+func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
 	l := &staticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
@@ -86,8 +86,8 @@ func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeD
 LayerLoop:
 	for _, layer := range manifest.Layers {
 		// if there are any new annotations, then this isn't a duplicate
-		for _, a := range annotations {
-			if _, ok := layer.Annotations[a]; !ok {
+		for a, value := range annotations {
+			if val, ok := layer.Annotations[a]; !ok || val != value {
 				continue LayerLoop
 			}
 		}
@@ -118,7 +118,7 @@ type UploadOpts struct {
 	Chain                 string
 	DupeDetector          signature.Verifier
 	Bundle                *Bundle
-	AdditionalAnnotations []string
+	AdditionalAnnotations map[string]string
 }
 
 func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error) {

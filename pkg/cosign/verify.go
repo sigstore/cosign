@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -310,11 +311,8 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
 	// verify the SET against the public key
-	h := crypto.SHA256.New()
-	if _, err := h.Write(sp.Bundle.CanonicalizedPayload); err != nil {
-		return false, err
-	}
-	if !ecdsa.VerifyASN1(rekorPubKey, h.Sum(nil), []byte(sp.Bundle.SignedEntryTimestamp)) {
+	hash := sha256.Sum256(sp.Bundle.CanonicalizedPayload)
+	if !ecdsa.VerifyASN1(rekorPubKey, hash[:], []byte(sp.Bundle.SignedEntryTimestamp)) {
 		return false, fmt.Errorf("unable to verify")
 	}
 	return true, nil
