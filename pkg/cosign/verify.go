@@ -31,6 +31,7 @@ import (
 
 	_ "embed" // To enable the `go:embed` directive.
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -222,7 +223,7 @@ func Verify(ctx context.Context, ref name.Reference, co *CheckOpts) ([]SignedPay
 		}
 		co.VerifyBundle = verified
 
-		if co.Tlog {
+		if co.Tlog && !verified {
 			// Get the right public key to use (key or cert)
 			var pemBytes []byte
 			if co.PubKey != nil {
@@ -235,17 +236,11 @@ func Verify(ctx context.Context, ref name.Reference, co *CheckOpts) ([]SignedPay
 				pemBytes = CertToPem(sp.Cert)
 			}
 
-			// Verify against the tlog if:
-			//  1. We were unable to verify the bundle OR
-			//  2. We need to verify the cert (we can remove this once bundling for keyless mode is implemented)
-			var uuid string
-			if !verified || sp.Cert != nil {
-				// Find the uuid then the entry.
-				uuid, _, err = sp.VerifyTlog(rekorClient, pemBytes)
-				if err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
+			// Find the uuid then the entry.
+			uuid, _, err := sp.VerifyTlog(rekorClient, pemBytes)
+			if err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
 			}
 
 			// if we have a cert, we should check expiry
@@ -310,10 +305,32 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
+	le := &models.LogEntryAnon{
+		LogIndex:       sp.Bundle.LogIndex,
+		Body:           sp.Bundle.Body,
+		IntegratedTime: sp.Bundle.IntegratedTime,
+	}
+	contents, err := le.MarshalBinary()
+	if err != nil {
+		return false, errors.Wrap(err, "marshaling")
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(contents)
+	if err != nil {
+		return false, errors.Wrap(err, "canonicalizing")
+	}
 	// verify the SET against the public key
-	hash := sha256.Sum256(sp.Bundle.CanonicalizedPayload)
+	hash := sha256.Sum256(canonicalized)
 	if !ecdsa.VerifyASN1(rekorPubKey, hash[:], []byte(sp.Bundle.SignedEntryTimestamp)) {
 		return false, fmt.Errorf("unable to verify")
+	}
+
+	if sp.Cert == nil {
+		return true, nil
+	}
+
+	// verify the cert against the integrated time
+	if err := checkExpiry(sp.Cert, time.Unix(sp.Bundle.IntegratedTime, 0)); err != nil {
+		return false, errors.Wrap(err, "checking expiry on cert")
 	}
 	return true, nil
 }

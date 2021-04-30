@@ -107,7 +107,9 @@ LayerLoop:
 
 type Bundle struct {
 	SignedEntryTimestamp strfmt.Base64
-	CanonicalizedPayload []byte
+	Body                 interface{}
+	IntegratedTime       int64
+	LogIndex             *int64
 }
 
 type UploadOpts struct {

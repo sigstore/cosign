@@ -149,8 +149,7 @@ func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.Signe
 	}
 	if co.VerifyBundle {
 		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
-	}
-	if co.Tlog {
+	} else if co.Tlog {
 		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
 		fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
 	}
