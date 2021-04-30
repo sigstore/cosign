@@ -30,6 +30,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -98,7 +99,7 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := cosign.Upload(ctx, sigBytes, payload, dstRef, cosign.UploadOpts{RemoteOpts: []remote.Option{auth}}); err != nil {
+	if _, err := cremote.UploadSignature(ctx, sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: []remote.Option{auth}}); err != nil {
 		return err
 	}
 	return nil

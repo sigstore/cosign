@@ -35,6 +35,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
@@ -305,7 +306,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 			return err
 		}
 
-		uo := cosign.UploadOpts{
+		uo := cremote.UploadOpts{
 			Cert:         cert,
 			Chain:        chain,
 			DupeDetector: dupeDetector,
@@ -324,7 +325,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 
 		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())
-		if _, err = cosign.Upload(ctx, sig, payload, sigRef, uo); err != nil {
+		if _, err = cremote.UploadSignature(ctx, sig, payload, sigRef, uo); err != nil {
 			return errors.Wrap(err, "uploading")
 		}
 	}
@@ -332,12 +333,11 @@ func SignCmd(ctx context.Context, so SignOpts,
 	return nil
 }
 
-func bundle(entry *models.LogEntryAnon) *cosign.Bundle {
+func bundle(entry *models.LogEntryAnon) *cremote.Bundle {
 	if entry.Verification == nil {
 		return nil
 	}
-
-	return &cosign.Bundle{
+	return &cremote.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
 		Body:                 entry.Body,
 		IntegratedTime:       entry.IntegratedTime,
