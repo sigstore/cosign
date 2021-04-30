@@ -51,7 +51,7 @@ type SignedPayload struct {
 func Munge(desc v1.Descriptor) string {
 	// sha256:... -> sha256-...
 	munged := strings.ReplaceAll(desc.Digest.String(), ":", "-")
-	munged += ".cosign"
+	munged += ".sig"
 	return munged
 }
 
