@@ -111,36 +111,32 @@ type Bundle struct {
 }
 
 type UploadOpts struct {
-	Signature             []byte
-	Payload               []byte
-	Dst                   name.Reference
 	Cert                  string
 	Chain                 string
 	DupeDetector          signature.Verifier
-	Auth                  authn.Keychain
 	Bundle                *Bundle
 	AdditionalAnnotations map[string]string
 }
 
-func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error) {
+func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, auth authn.Keychain, opts UploadOpts) (uploadedSig []byte, err error) {
 	l := &staticLayer{
-		b:  opts.Payload,
+		b:  payload,
 		mt: SimpleSigningMediaType,
 	}
 
-	base, err := SignatureImage(opts.Dst, remote.WithAuthFromKeychain(opts.Auth))
+	base, err := SignatureImage(dst, remote.WithAuthFromKeychain(auth))
 	if err != nil {
 		return nil, err
 	}
 
 	if opts.DupeDetector != nil {
-		if uploadedSig, err = findDuplicate(ctx, base, opts.Payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
+		if uploadedSig, err = findDuplicate(ctx, base, payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
 			return uploadedSig, err
 		}
 	}
 
 	annotations := map[string]string{
-		sigkey: base64.StdEncoding.EncodeToString(opts.Signature),
+		sigkey: base64.StdEncoding.EncodeToString(signature),
 	}
 	if opts.Cert != "" {
 		annotations[certkey] = opts.Cert
@@ -161,10 +157,10 @@ func Upload(ctx context.Context, opts UploadOpts) (uploadedSig []byte, err error
 		return nil, err
 	}
 
-	if err := remote.Write(opts.Dst, img, remote.WithAuthFromKeychain(opts.Auth)); err != nil {
+	if err := remote.Write(dst, img, remote.WithAuthFromKeychain(auth)); err != nil {
 		return nil, err
 	}
-	return opts.Signature, nil
+	return signature, nil
 }
 
 type staticLayer struct {

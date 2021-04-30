@@ -210,17 +210,13 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
 	uo := cosign.UploadOpts{
-		Signature:    sig,
-		Payload:      payload,
-		Dst:          dstRef,
 		Cert:         string(cert),
 		Chain:        string(chain),
 		DupeDetector: dupeDetector,
-		Auth:         authn.DefaultKeychain,
 	}
 
 	if !cosign.Experimental() {
-		_, err := cosign.Upload(ctx, uo)
+		_, err := cosign.Upload(ctx, sig, payload, dstRef, authn.DefaultKeychain, uo)
 		return err
 	}
 
@@ -262,7 +258,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 	uo.Bundle = bund
 	uo.AdditionalAnnotations = annotations(entry)
-	if _, err = cosign.Upload(ctx, uo); err != nil {
+	if _, err = cosign.Upload(ctx, sig, payload, dstRef, authn.DefaultKeychain, uo); err != nil {
 		return errors.Wrap(err, "uploading")
 	}
 	return nil

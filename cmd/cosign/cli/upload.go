@@ -96,13 +96,7 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	uo := cosign.UploadOpts{
-		Signature: sigBytes,
-		Payload:   payload,
-		Dst:       dstRef,
-		Auth:      authn.DefaultKeychain,
-	}
-	if _, err := cosign.Upload(ctx, uo); err != nil {
+	if _, err := cosign.Upload(ctx, sigBytes, payload, dstRef, authn.DefaultKeychain, cosign.UploadOpts{}); err != nil {
 		return err
 	}
 	return nil
