@@ -19,6 +19,7 @@ import (
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -34,6 +36,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -206,13 +209,15 @@ func SignCmd(ctx context.Context, so SignOpts,
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
-	sig, err = cosign.Upload(ctx, sig, payload, dstRef, string(cert), string(chain), dupeDetector, authn.DefaultKeychain)
-	if err != nil {
-		return err
+	uo := cosign.UploadOpts{
+		Cert:         string(cert),
+		Chain:        string(chain),
+		DupeDetector: dupeDetector,
 	}
 
 	if !cosign.Experimental() {
-		return nil
+		_, err := cosign.Upload(ctx, sig, payload, dstRef, authn.DefaultKeychain, uo)
+		return err
 	}
 
 	// Check if the image is public (no auth in Get)
@@ -241,10 +246,52 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 		rekorBytes = pemBytes
 	}
-	index, err := cosign.UploadTLog(sig, payload, rekorBytes)
+	entry, err := cosign.UploadTLog(sig, payload, rekorBytes)
 	if err != nil {
 		return err
 	}
-	fmt.Println("tlog entry created with index: ", index)
+	fmt.Println("tlog entry created with index: ", *entry.LogIndex)
+
+	bund, err := bundle(entry)
+	if err != nil {
+		return errors.Wrap(err, "bundle")
+	}
+	uo.Bundle = bund
+	uo.AdditionalAnnotations = annotations(entry)
+	if _, err = cosign.Upload(ctx, sig, payload, dstRef, authn.DefaultKeychain, uo); err != nil {
+		return errors.Wrap(err, "uploading")
+	}
 	return nil
+}
+
+func bundle(entry *models.LogEntryAnon) (*cosign.Bundle, error) {
+	if entry.Verification == nil {
+		return nil, nil
+	}
+	le := &models.LogEntryAnon{
+		Body:           entry.Body,
+		IntegratedTime: entry.IntegratedTime,
+		LogIndex:       entry.LogIndex,
+	}
+	payload, err := le.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return nil, err
+	}
+	return &cosign.Bundle{
+		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
+		CanonicalizedPayload: canonicalized,
+	}, nil
+}
+
+func annotations(entry *models.LogEntryAnon) map[string]string {
+	annts := map[string]string{}
+	if bund, err := bundle(entry); err == nil && bund != nil {
+		contents, _ := json.Marshal(bund)
+		annts[cosign.BundleKey] = string(contents)
+	}
+	return annts
 }

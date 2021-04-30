@@ -18,6 +18,7 @@ package cosign
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"io/ioutil"
 	"runtime"
@@ -37,6 +38,7 @@ type SignedPayload struct {
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
+	Bundle          *Bundle
 }
 
 // TODO: marshal the cert correctly.
@@ -125,6 +127,15 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 					return err
 				}
 				sp.Chain = certs
+			}
+
+			bundle := desc.Annotations[BundleKey]
+			if bundle != "" {
+				var b Bundle
+				if err := json.Unmarshal([]byte(bundle), &b); err != nil {
+					return errors.Wrap(err, "unmarshaling bundle")
+				}
+				sp.Bundle = &b
 			}
 
 			signatures[i] = sp

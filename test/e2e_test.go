@@ -100,6 +100,40 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}), t)
 }
 
+func TestBundle(t *testing.T) {
+	// use rekor prod since we have hardcoded the public key
+	defer setenv(t, cosign.ServerEnv, "https://api.rekor.dev")()
+	// turn on the tlog
+	defer setenv(t, cosign.ExperimentalEnv, "1")()
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	so := cli.SignOpts{
+		KeyRef: privKeyPath,
+		Pf:     passFunc,
+	}
+
+	// Sign the image
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	// Make sure verify works
+	must(verify(pubKeyPath, imgName, true, nil), t)
+
+	// Make sure offline verification works with bundling
+	os.Setenv(cosign.ServerEnv, "notreal")
+	must(verify(pubKeyPath, imgName, true, nil), t)
+}
+
 func TestDuplicateSign(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()

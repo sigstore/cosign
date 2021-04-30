@@ -97,7 +97,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		return &KeyParseError{}
 	}
 
-	co := cosign.CheckOpts{
+	co := &cosign.CheckOpts{
 		Annotations: *c.Annotations,
 		Claims:      c.CheckClaims,
 		Tlog:        cosign.Experimental(),
@@ -138,7 +138,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 }
 
 // printVerification logs details about the verification to stdout
-func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.SignedPayload, co cosign.CheckOpts) {
+func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.SignedPayload, co *cosign.CheckOpts) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.Claims {
@@ -146,6 +146,9 @@ func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.Signe
 			fmt.Fprintln(os.Stderr, "  - The specified annotations were verified.")
 		}
 		fmt.Fprintln(os.Stderr, "  - The cosign claims were validated")
+	}
+	if co.VerifyBundle {
+		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
 	}
 	if co.Tlog {
 		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")

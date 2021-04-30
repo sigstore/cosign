@@ -99,7 +99,19 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
 -----END CERTIFICATE-----
 ```
 
-* `bundle` TODO
+* `bundle` string
+  This OPTIONAL property contains a JSON formatted `bundle` type, which can be used for offline verification.
+  Example `bundle`:
+
+```json
+{
+  "SignedEntryTimestamp": "MEUCIB31Q9vol8f9UXz6ppNkyQeDv5qAEMLJdhlonWpB7VEnAiEA7t9rcHnfN9FO2rJMKK7g633EJk8CwN+TptwgnvRkyxM=",
+  "CanonicalizedPayload": "cHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlhcHJpeWFwcml5YXByaXlh"
+}
+```
+  The following are REQUIRED properties of the bundle:
+    - The `SignedEntryTimestamp` is a rekor-signed signature over the logIndex, body and integratedTime of the Rekor Log Entry
+    - The `CanonicalizedPayload` is a JSON document following RFC 8785 rules consisting of the logIndex, body and integratedTime of the Rekor Log Entry
 
 ## Storage
 

@@ -19,13 +19,17 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
+
+	_ "embed" // To enable the `go:embed` directive.
 
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -41,6 +45,11 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
+
+// This is rekor's public key, via `curl -L api.rekor.dev/api/v1/log/publicKey`
+// rekor.pub should be updated whenever the Rekor public key is rotated & the bundle annotation should be up-versioned
+//go:embed rekor.pub
+var rekorPub string
 
 func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParams()
@@ -88,24 +97,24 @@ func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []b
 	for k := range logEntry {
 		uuid = k
 	}
-	index, err = VerifyTLogEntry(rekorClient, uuid)
+	verifiedEntry, err := VerifyTLogEntry(rekorClient, uuid)
 	if err != nil {
 		return "", 0, err
 	}
-	return uuid, index, nil
+	return uuid, *verifiedEntry.Verification.InclusionProof.LogIndex, nil
 }
 
-func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (index int64, err error) {
+func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParams()
 	params.EntryUUID = uuid
 
 	lep, err := rekorClient.Entries.GetLogEntryByUUID(params)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	if len(lep.Payload) != 1 {
-		return 0, errors.New("UUID value can not be extracted")
+		return nil, errors.New("UUID value can not be extracted")
 	}
 	e := lep.Payload[params.EntryUUID]
 
@@ -119,24 +128,28 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (index int64, err e
 	leafHash, _ := hex.DecodeString(params.EntryUUID)
 
 	v := logverifier.New(hasher.DefaultHasher)
-	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
-		return 0, errors.Wrap(err, "verifying inclusion proof")
+	if e.Verification == nil || e.Verification.InclusionProof == nil {
+		return nil, fmt.Errorf("inclusion proof not provided")
 	}
-	return *e.Verification.InclusionProof.LogIndex, nil
+	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
+		return nil, errors.Wrap(err, "verifying inclusion proof")
+	}
+	return &e, nil
 }
 
 // There are only payloads. Some have certs, some don't.
 type CheckOpts struct {
-	Annotations map[string]interface{}
-	Claims      bool
-	Tlog        bool
-	PubKey      PublicKey
-	Roots       *x509.CertPool
+	Annotations  map[string]interface{}
+	Claims       bool
+	VerifyBundle bool
+	Tlog         bool
+	PubKey       PublicKey
+	Roots        *x509.CertPool
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
-func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayload, error) {
+func Verify(ctx context.Context, ref name.Reference, co *CheckOpts) ([]SignedPayload, error) {
 	// Enforce this up front.
 	if co.Roots == nil && co.PubKey == nil {
 		return nil, errors.New("one of public key or cert roots is required")
@@ -203,6 +216,12 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 			}
 		}
 
+		verified, err := sp.VerifyBundle()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to verify offline (%v), checking tlog instead...", err)
+		}
+		co.VerifyBundle = verified
+
 		if co.Tlog {
 			// Get the right public key to use (key or cert)
 			var pemBytes []byte
@@ -215,12 +234,20 @@ func Verify(ctx context.Context, ref name.Reference, co CheckOpts) ([]SignedPayl
 			} else {
 				pemBytes = CertToPem(sp.Cert)
 			}
-			// Find the uuid then the entry.
-			uuid, _, err := sp.VerifyTlog(rekorClient, pemBytes)
-			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
+
+			// Verify against the tlog if:
+			//  1. We were unable to verify the bundle OR
+			//  2. We need to verify the cert (we can remove this once bundling for keyless mode is implemented)
+			var uuid string
+			if !verified || sp.Cert != nil {
+				// Find the uuid then the entry.
+				uuid, _, err = sp.VerifyTlog(rekorClient, pemBytes)
+				if err != nil {
+					validationErrs = append(validationErrs, err.Error())
+					continue
+				}
 			}
+
 			// if we have a cert, we should check expiry
 			if sp.Cert != nil {
 				e, err := getTlogEntry(rekorClient, uuid)
@@ -273,6 +300,22 @@ func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContai
 		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)
 	}
 	return nil
+}
+
+func (sp *SignedPayload) VerifyBundle() (bool, error) {
+	if sp.Bundle == nil {
+		return false, nil
+	}
+	rekorPubKey, err := PemToECDSAKey([]byte(rekorPub))
+	if err != nil {
+		return false, errors.Wrap(err, "pem to ecdsa")
+	}
+	// verify the SET against the public key
+	hash := sha256.Sum256(sp.Bundle.CanonicalizedPayload)
+	if !ecdsa.VerifyASN1(rekorPubKey, hash[:], []byte(sp.Bundle.SignedEntryTimestamp)) {
+		return false, fmt.Errorf("unable to verify")
+	}
+	return true, nil
 }
 
 func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (uuid string, index int64, err error) {

@@ -19,10 +19,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -31,6 +33,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -65,7 +68,7 @@ func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, err
 	return base, nil
 }
 
-func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier) ([]byte, error) {
+func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
 	l := &staticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
@@ -80,7 +83,14 @@ func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeD
 		return nil, err
 	}
 
+LayerLoop:
 	for _, layer := range manifest.Layers {
+		// if there are any new annotations, then this isn't a duplicate
+		for a, value := range annotations {
+			if val, ok := layer.Annotations[a]; !ok || val != value {
+				continue LayerLoop
+			}
+		}
 		if layer.MediaType == SimpleSigningMediaType && layer.Digest == sigDigest && layer.Annotations[sigkey] != "" {
 			uploadedSig, err := base64.StdEncoding.DecodeString(layer.Annotations[sigkey])
 			if err != nil {
@@ -95,7 +105,20 @@ func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeD
 	return nil, nil
 }
 
-func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, cert, chain string, dupeDetector signature.Verifier, auth authn.Keychain) (uploadedSig []byte, err error) {
+type Bundle struct {
+	SignedEntryTimestamp strfmt.Base64
+	CanonicalizedPayload []byte
+}
+
+type UploadOpts struct {
+	Cert                  string
+	Chain                 string
+	DupeDetector          signature.Verifier
+	Bundle                *Bundle
+	AdditionalAnnotations map[string]string
+}
+
+func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, auth authn.Keychain, opts UploadOpts) (uploadedSig []byte, err error) {
 	l := &staticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
@@ -106,8 +129,8 @@ func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, 
 		return nil, err
 	}
 
-	if dupeDetector != nil {
-		if uploadedSig, err = findDuplicate(ctx, base, payload, dupeDetector); err != nil || uploadedSig != nil {
+	if opts.DupeDetector != nil {
+		if uploadedSig, err = findDuplicate(ctx, base, payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
 			return uploadedSig, err
 		}
 	}
@@ -115,9 +138,16 @@ func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, 
 	annotations := map[string]string{
 		sigkey: base64.StdEncoding.EncodeToString(signature),
 	}
-	if cert != "" {
-		annotations[certkey] = cert
-		annotations[chainkey] = chain
+	if opts.Cert != "" {
+		annotations[certkey] = opts.Cert
+		annotations[chainkey] = opts.Chain
+	}
+	if opts.Bundle != nil {
+		b, err := json.Marshal(opts.Bundle)
+		if err != nil {
+			return nil, errors.Wrap(err, "marshaling bundle")
+		}
+		annotations[BundleKey] = string(b)
 	}
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,

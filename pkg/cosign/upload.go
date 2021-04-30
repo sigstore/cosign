@@ -69,10 +69,10 @@ func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference,
 }
 
 // Upload will upload the signature, public key and payload to the tlog
-func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
+func UploadTLog(signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
 	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	re := rekorEntry(payload, signature, pemBytes)
@@ -91,19 +91,15 @@ func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
 			fmt.Println("Signature already exists. Displaying proof")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
 			uuid := uriSplit[len(uriSplit)-1]
-			index, err := VerifyTLogEntry(rekorClient, uuid)
-			if err != nil {
-				return "", err
-			}
-			return strconv.FormatInt(index, 10), nil
+			return VerifyTLogEntry(rekorClient, uuid)
 		}
-		return "", err
+		return nil, err
 	}
 	// UUID is at the end of location
 	for _, p := range resp.Payload {
-		return strconv.FormatInt(*p.LogIndex, 10), nil
+		return &p, nil
 	}
-	return "", errors.New("bad response from server")
+	return nil, errors.New("bad response from server")
 }
 
 func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
