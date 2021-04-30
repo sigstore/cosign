@@ -93,7 +93,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		return flag.ErrHelp
 	}
 
-	if !oneOf(c.KeyRef, c.Sk) {
+	if !oneOf(c.KeyRef, c.Sk) && !cosign.Experimental() {
 		return &KeyParseError{}
 	}
 
