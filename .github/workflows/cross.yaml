@@ -16,10 +16,13 @@ jobs:
         include:
           - os: macos-latest
             TARGET: darwin
+            COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: ubuntu-latest
             TARGET: linux
+            COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: windows-latest
             TARGET: windows
+            COSIGN_PASSWORD: COSIGN_PASSWORD
     steps:
       - name: Install Go
         uses: actions/setup-go@v2
@@ -34,7 +37,7 @@ jobs:
         run: make cosign && mv ./cosign ./cosign-${{matrix.TARGET}}-amd64
       - name: sign
         run: |
-          echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-${{matrix.TARGET}}-amd64 sign-blob -key ./.github/workflows/cosign.key ./cosign-${{matrix.TARGET}}-amd64 > cosign-${{matrix.TARGET}}-amd64.sig
+          echo -n "${{secrets[matrix.COSIGN_PASSWORD]}}" | ./cosign-${{matrix.TARGET}}-amd64 sign-blob -key ./.github/workflows/cosign.key ./cosign-${{matrix.TARGET}}-amd64 > cosign-${{matrix.TARGET}}-amd64.sig
       - name: Print Info
         shell: pwsh
         run: |
