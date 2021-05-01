@@ -34,7 +34,7 @@ jobs:
         run: make cosign && mv ./cosign ./cosign-${{matrix.TARGET}}-amd64
       - name: sign
         run: |
-          echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key ./.github/workflows/cosign.key ./cosign-${{matrix.TARGET}}-amd64 > cosign-${{matrix.TARGET}}-amd64.sig
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | ./cosign-${{matrix.TARGET}}-amd64 sign-blob -key ./.github/workflows/cosign.key ./cosign-${{matrix.TARGET}}-amd64 > cosign-${{matrix.TARGET}}-amd64.sig
       - name: Print Info
         shell: pwsh
         run: |
