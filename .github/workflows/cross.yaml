@@ -40,14 +40,14 @@ jobs:
         run: |
           $(Get-FileHash -Path ./cosign-${{matrix.TARGET}}-amd64).Hash | Tee-Object -Path cosign-${{matrix.TARGET}}-amd64.sha256
       - name: sign
-        if: (github.repository_owner == 'sigstore')
+        if: github.event_name != 'pull_request'
         run: |
           echo -n "${{secrets[matrix.COSIGN_PASSWORD]}}" | ./cosign-${{matrix.TARGET}}-amd64 sign-blob -key ./.github/workflows/cosign.key ./cosign-${{matrix.TARGET}}-amd64 > cosign-${{matrix.TARGET}}-amd64.sig
       - name: verify
-        if: (github.repository_owner == 'sigstore')
+        if: github.event_name != 'pull_request'
         run: ./cosign-${{matrix.TARGET}}-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-${{matrix.TARGET}}-amd64.sig ./cosign-${{matrix.TARGET}}-amd64
       - name: Upload artifacts
-        if: (github.repository_owner == 'sigstore')
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v2
         with:
           name: artifacts
