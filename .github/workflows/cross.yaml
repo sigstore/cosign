@@ -4,8 +4,8 @@ on:
       - main
       - release-*
     tags:
-      - '*'
-    pull_request:
+      - "*"
+  pull_request:
 name: Cross
 jobs:
   build:
@@ -14,38 +14,38 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         include:
-        - os: macos-latest
-          TARGET: darwin
-        - os: ubuntu-latest
-          TARGET: linux
-        - os: windows-latest
-          TARGET: windows
+          - os: macos-latest
+            TARGET: darwin
+          - os: ubuntu-latest
+            TARGET: linux
+          - os: windows-latest
+            TARGET: windows
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16.3
-    - name: Checkout code
-      uses: actions/checkout@v2  
-    - name: install deps
-      if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
-    - name: build
-      run: make cosign && mv ./cosign ./cosign-${{matrix.TARGET}}-amd64
-    - name: sign
-      run: |
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.3
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: install deps
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
+      - name: build
+        run: make cosign && mv ./cosign ./cosign-${{matrix.TARGET}}-amd64
+      - name: sign
+        run: |
           echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key ./.github/workflows/cosign.key ./cosign-${{matrix.TARGET}}-amd64 > cosign-${{matrix.TARGET}}-amd64.sig
-    - name: Print Info
-      shell: pwsh
-      run: |
-      $(Get-FileHash -Path ./cosign-${{matrix.TARGET}}-amd64).Hash | Tee-Object -Path cosign-${{matrix.TARGET}}-amd64.sha256
-    - name: verify
-      run: ./cosign-${{matrix.TARGET}}-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-${{matrix.TARGET}}-amd64.sig ./cosign-${{matrix.TARGET}}-amd64
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: artifacts
-        path: |
-          cosign-*
-          cosign.-*sha256
-          cosign-*.sig
+      - name: Print Info
+        shell: pwsh
+        run: |
+          $(Get-FileHash -Path ./cosign-${{matrix.TARGET}}-amd64).Hash | Tee-Object -Path cosign-${{matrix.TARGET}}-amd64.sha256
+      - name: verify
+        run: ./cosign-${{matrix.TARGET}}-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-${{matrix.TARGET}}-amd64.sig ./cosign-${{matrix.TARGET}}-amd64
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts
+          path: |
+            cosign-*
+            cosign.-*sha256
+            cosign-*.sig
