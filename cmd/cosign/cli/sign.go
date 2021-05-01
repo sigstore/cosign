@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -268,22 +267,11 @@ func bundle(entry *models.LogEntryAnon) (*cosign.Bundle, error) {
 	if entry.Verification == nil {
 		return nil, nil
 	}
-	le := &models.LogEntryAnon{
-		Body:           entry.Body,
-		IntegratedTime: entry.IntegratedTime,
-		LogIndex:       entry.LogIndex,
-	}
-	payload, err := le.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	canonicalized, err := jsoncanonicalizer.Transform(payload)
-	if err != nil {
-		return nil, err
-	}
 	return &cosign.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		CanonicalizedPayload: canonicalized,
+		Body:                 entry.Body,
+		IntegratedTime:       entry.IntegratedTime,
+		LogIndex:             entry.LogIndex,
 	}, nil
 }
 
