@@ -114,7 +114,7 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
   The following are REQUIRED properties of the bundle:
     - The `SignedEntryTimestamp` is a rekor-signed signature over the logIndex, body and integratedTime of the Rekor Log Entry
     - The `Body` is the body of the Rekor Log Entry
-    - The `IntegratedTime` is the time the log entry was integrated into the transparency log
+    - The `IntegratedTime` is the UNIX timestamp the log entry was integrated into the transparency log
     - The `LogIndex` is the index of the log entry in the transparency log
 
 ## Storage
