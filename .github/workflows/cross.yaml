@@ -3,6 +3,7 @@ on:
     branches:
       - main
       - release-*
+      - pearcec-issue-243-cross-compile-build-windows
     tags:
       - "*"
   pull_request:
