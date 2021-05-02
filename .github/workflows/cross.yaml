@@ -15,13 +15,13 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
         include:
           - os: macos-latest
-            TARGET: darwin
+            TARGET: cosign-darwin-amd64
             COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: ubuntu-latest
-            TARGET: linux
+            TARGET: cosign-linux-amd64
             COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: windows-latest
-            TARGET: windows
+            TARGET: cosign-windows-amd64.exe
             COSIGN_PASSWORD: COSIGN_PASSWORD
     steps:
       - name: Install Go
@@ -34,21 +34,21 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: build
-        run: make cosign && mv ./cosign ./cosign-${{matrix.TARGET}}-amd64
+        run: make cosign && mv ./cosign ./${{matrix.TARGET}}
       - name: Print Info
         shell: pwsh
         run: |
-          $(Get-FileHash -Path ./cosign-${{matrix.TARGET}}-amd64).Hash | Tee-Object -Path cosign-${{matrix.TARGET}}-amd64.sha256
+          $(Get-FileHash -Path ./${{matrix.TARGET}}).Hash | Tee-Object -Path ${{matrix.TARGET}}.sha256
       - name: sign
         shell: bash
         env:
           COSIGN_PASSWORD: ${{secrets[matrix.COSIGN_PASSWORD]}}
         if: github.event_name != 'pull_request'
         run: |
-          ./cosign-${{matrix.TARGET}}-amd64 sign-blob -key ./.github/workflows/cosign.key ./cosign-${{matrix.TARGET}}-amd64 > cosign-${{matrix.TARGET}}-amd64.sig
+          ./${{matrix.TARGET}} sign-blob -key ./.github/workflows/cosign.key ./${{matrix.TARGET}} > ${{matrix.TARGET}}.sig
       - name: verify
         if: github.event_name != 'pull_request'
-        run: ./cosign-${{matrix.TARGET}}-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-${{matrix.TARGET}}-amd64.sig ./cosign-${{matrix.TARGET}}-amd64
+        run: ./${{matrix.TARGET}} verify-blob -key ./.github/workflows/cosign.pub -signature ${{matrix.TARGET}}.sig ./${{matrix.TARGET}}
       - name: Upload artifacts
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v2
