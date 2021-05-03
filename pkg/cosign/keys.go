@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	pemType   = "ENCRYPTED COSIGN PRIVATE KEY"
+	PemType   = "ENCRYPTED COSIGN PRIVATE KEY"
 	sigkey    = "dev.cosignproject.cosign/signature"
 	certkey   = "dev.sigstore.cosign/certificate"
 	chainkey  = "dev.sigstore.cosign/chain"
@@ -79,7 +79,7 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 
 	privBytes := pem.EncodeToMemory(&pem.Block{
 		Bytes: encBytes,
-		Type:  "ENCRYPTED COSIGN PRIVATE KEY",
+		Type:  PemType,
 	})
 
 	// Now do the public key
@@ -126,7 +126,7 @@ func LoadECDSAPrivateKey(key []byte, pass []byte) (signature.ECDSASignerVerifier
 	if p == nil {
 		return signature.ECDSASignerVerifier{}, errors.New("invalid pem block")
 	}
-	if p.Type != pemType {
+	if p.Type != PemType {
 		return signature.ECDSASignerVerifier{}, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
