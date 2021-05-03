@@ -183,6 +183,12 @@ func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.Signe
 				}
 				ss.Optional["CommonName"] = vp.Cert.Subject.CommonName
 			}
+			if vp.Bundle != nil {
+				if ss.Optional == nil {
+					ss.Optional = make(map[string]interface{})
+				}
+				ss.Optional["Bundle"] = vp.Bundle
+			}
 
 			outputKeys = append(outputKeys, ss)
 		}
