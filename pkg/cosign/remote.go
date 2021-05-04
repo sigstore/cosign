@@ -52,7 +52,7 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	return m.Layers, nil
 }
 
-// SignatureImage
+// SignatureImage returns the existing destination image, or a new, empty one.
 func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, error) {
 	base, err := remote.Image(dstTag, opts...)
 	if err != nil {
@@ -60,7 +60,15 @@ func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, err
 			if te.StatusCode != http.StatusNotFound {
 				return nil, te
 			}
-			base = empty.Image
+			if !DockerMediaTypes() {
+				base = mutate.MediaType(empty.Image, types.OCIManifestSchema1)
+				m, err := base.Manifest()
+				if err != nil {
+					// should never happen...?
+					return nil, err
+				}
+				m.Config.MediaType = types.OCIConfigJSON
+			}
 		} else {
 			return nil, err
 		}

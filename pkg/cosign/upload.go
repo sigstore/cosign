@@ -34,14 +34,22 @@ import (
 )
 
 const (
-	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
-	repoEnv         = "COSIGN_REPOSITORY"
-	ServerEnv       = "REKOR_SERVER"
-	rekorServer     = "https://api.rekor.dev"
+	ExperimentalEnv     = "COSIGN_EXPERIMENTAL"
+	repoEnv             = "COSIGN_REPOSITORY"
+	DockerMediaTypesEnv = "COSIGN_DOCKER_MEDIA_TYPES"
+	ServerEnv           = "REKOR_SERVER"
+	rekorServer         = "https://api.rekor.dev"
 )
 
 func Experimental() bool {
 	if b, err := strconv.ParseBool(os.Getenv(ExperimentalEnv)); err == nil {
+		return b
+	}
+	return false
+}
+
+func DockerMediaTypes() bool {
+	if b, err := strconv.ParseBool(os.Getenv(DockerMediaTypesEnv)); err == nil {
 		return b
 	}
 	return false
