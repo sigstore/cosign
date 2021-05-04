@@ -46,6 +46,10 @@ cd $GITHUB_WORKSPACE
 go build -o cosign ./cmd/cosign
 go test -tags=e2e -race ./...
 
+# Run the built container to make sure it doesn't crash
+make ko-local
+img="ko.local:$(git rev-parse HEAD)"
+docker run $img version
 
 echo "cleanup"
 cd $HOME/rekor

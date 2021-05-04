@@ -81,6 +81,13 @@ ko:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
 
+.PHONY: ko-local
+ko-local:
+	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
+	CGO_ENABLED=0 GOFLAGS="-tags=pivkeydisabled -ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		github.com/sigstore/cosign/cmd/cosign
+
 .PHONY: sign-container
 sign-container: ko
 	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
