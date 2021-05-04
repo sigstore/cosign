@@ -156,11 +156,12 @@ Implementations MAY store signatures objects in the same OCI repository as the t
 This section describes the way the properties from above are embedded into OCI objects that can be stored in a registry.
 Implementations MUST support storing signatures in at least the following object types:
 
-* [Image Manifest V2 Schema 2](https://docs.docker.com/registry/spec/manifest-v2-2/)
+* [OCI Image Manifest V1](#oci-image-manifest-v1)
 
-#### Image Manifest V2 Schema 2
+#### OCI Image Manifest V1
 
-This section describes the way the mandatory and optional signature properties are embedded into an Image Manifest V2 Schema 2 object.
+This section describes the way the mandatory and optional signature properties are embedded into an
+[OCI Image Manifest V1](https://github.com/opencontainers/image-spec/blob/master/manifest.md) object.
 
 Only one image manifest is created for every signed object.
 Multiple signatures can be embedded in one image manifest.
@@ -177,8 +178,8 @@ Example `payload`:
 ```
 {
   "schemaVersion": 2,
-  "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
   "config": {
+    "mediaType": "application/vnd.oci.image.config.v1+json",
     <omitted for brevity>
   },
   "layers": [

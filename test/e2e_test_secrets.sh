@@ -31,7 +31,8 @@ export COSIGN_PASSWORD=$pass
 ./cosign generate-key-pair
 img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test"
 img2="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test-2"
-for image in $img $img2
+legacy_img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/legacy-test"
+for image in $img $img2 $legacy_img
 do
     (crane delete $(./cosign triangulate $image)) || true
     crane cp busybox $image
@@ -41,6 +42,9 @@ done
 ## sign/verify
 ./cosign sign -key cosign.key $img
 ./cosign verify -key cosign.pub $img
+
+## confirm use of OCI media type in signature image
+crane manifest $(./cosign triangulate $img) | grep -q "application/vnd.oci.image.config.v1+json"
 
 ## sign/verify multiple images
 ./cosign sign -key cosign.key -a multiple=true $img $img2
@@ -55,6 +59,13 @@ if (./cosign verify -key cosign.pub -a foo=bar -a bar=baz $img); then false; fi
 ./cosign sign -key cosign.key -a foo=bar -a bar=baz $img
 ./cosign verify -key cosign.pub -a foo=bar -a bar=baz $img
 ./cosign verify -key cosign.pub -a bar=baz $img
+
+# confirm the use of legacy (Docker) media types
+COSIGN_DOCKER_MEDIA_TYPES=1 ./cosign sign -key cosign.key $legacy_img
+./cosign verify -key cosign.pub $legacy_img
+legacy_manifest=$(crane manifest $(./cosign triangulate $legacy_img))
+echo $legacy_manifest | grep -q "application/vnd.docker.distribution.manifest.v2+json"
+echo $legacy_manifest | grep -q "application/vnd.docker.container.image.v1+json"
 
 # wrong keys
 mkdir wrong && pushd wrong
