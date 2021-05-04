@@ -139,11 +139,13 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 	}
 
+	remoteAuth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
+
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	get, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	get, err := remote.Get(ref, remoteAuth)
 	if err != nil {
 		return errors.Wrap(err, "getting remote image")
 	}
@@ -212,10 +214,11 @@ func SignCmd(ctx context.Context, so SignOpts,
 		Cert:         string(cert),
 		Chain:        string(chain),
 		DupeDetector: dupeDetector,
+		RemoteOpts:   []remote.Option{remoteAuth},
 	}
 
 	if !cosign.Experimental() {
-		_, err := cosign.Upload(ctx, sig, payload, dstRef, authn.DefaultKeychain, uo)
+		_, err := cosign.Upload(ctx, sig, payload, dstRef, uo)
 		return err
 	}
 
@@ -257,7 +260,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 	uo.Bundle = bund
 	uo.AdditionalAnnotations = annotations(entry)
-	if _, err = cosign.Upload(ctx, sig, payload, dstRef, authn.DefaultKeychain, uo); err != nil {
+	if _, err = cosign.Upload(ctx, sig, payload, dstRef, uo); err != nil {
 		return errors.Wrap(err, "uploading")
 	}
 	return nil
