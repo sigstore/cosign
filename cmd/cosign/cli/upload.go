@@ -69,7 +69,9 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 		return err
 	}
 
-	get, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	auth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
+
+	get, err := remote.Get(ref, auth)
 	if err != nil {
 		return err
 	}
@@ -96,7 +98,7 @@ func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := cosign.Upload(ctx, sigBytes, payload, dstRef, authn.DefaultKeychain, cosign.UploadOpts{}); err != nil {
+	if _, err := cosign.Upload(ctx, sigBytes, payload, dstRef, cosign.UploadOpts{RemoteOpts: []remote.Option{auth}}); err != nil {
 		return err
 	}
 	return nil

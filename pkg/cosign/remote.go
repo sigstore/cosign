@@ -118,15 +118,16 @@ type UploadOpts struct {
 	DupeDetector          signature.Verifier
 	Bundle                *Bundle
 	AdditionalAnnotations map[string]string
+	RemoteOpts            []remote.Option
 }
 
-func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, auth authn.Keychain, opts UploadOpts) (uploadedSig []byte, err error) {
+func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
 	l := &staticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
 	}
 
-	base, err := SignatureImage(dst, remote.WithAuthFromKeychain(auth))
+	base, err := SignatureImage(dst, opts.RemoteOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +160,7 @@ func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, 
 		return nil, err
 	}
 
-	if err := remote.Write(dst, img, remote.WithAuthFromKeychain(auth)); err != nil {
+	if err := remote.Write(dst, img, opts.RemoteOpts...); err != nil {
 		return nil, err
 	}
 	return signature, nil
