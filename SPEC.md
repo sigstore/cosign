@@ -175,7 +175,7 @@ The `mediaType` property for the `payload` is included in the same descriptor.
 
 Example `payload`:
 
-```
+```json
 {
   "schemaVersion": 2,
   "config": {
@@ -190,7 +190,7 @@ Example `payload`:
     },
     <other layers here>
   ]
-)
+}
 ```
 
 ##### Signature
@@ -200,7 +200,7 @@ The `annotation` key is `dev.cosignproject.cosign/signature`.
 
 Example `signature`:
 
-```
+```json
 "annotations": {
     "dev.cosignproject.cosign/signature": "MEUCIBKI9FIC+YD3m/lWViyPxsJsbnIHj86sSbb7L3qvpEFoAiEA2ZChO/67CuAPQKJLBVsAc7bs9hBK8RpsdfjBsByGKJM="
 }
@@ -213,7 +213,7 @@ The `annotation` key is `dev.cosignproject.cosign/certificate`.
 
 Example `certificate`:
 
-```
+```json
 "annotations": {
      "dev.sigstore.cosign/certificate": "-----BEGIN CERTIFICATE-----\nMIICrjCCAjSgAwIBAgIUAM4mURWUSkg06fmHmFfTmerYKaUwCgYIKoZIzj0EAwMw\nKjEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MREwDwYDVQQDEwhzaWdzdG9yZTAeFw0y\nMTA0MDExNTU5MDZaFw0yMTA0MDExNjE4NTlaMDoxGzAZBgNVBAoMEmRsb3JlbmNA\nZ29vZ2xlLmNvbTEbMBkGA1UEAwwSZGxvcmVuY0Bnb29nbGUuY29tMFkwEwYHKoZI\nzj0CAQYIKoZIzj0DAQcDQgAE3R0ZtpfBd3Y8DaXuB1gM8JPlhsDIEfXO/WsMJEN1\n4hEn8wajX2HklqL7igZPFICv6tBUGylIHp2mTH2Nhv38mqOCASYwggEiMA4GA1Ud\nDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAzAMBgNVHRMBAf8EAjAAMB0G\nA1UdDgQWBBTy3UWIop0bNrdNgSrVHHD10qSASTAfBgNVHSMEGDAWgBTIxR0AQZok\nKTJRJOsNrkrtSgbT7DCBjQYIKwYBBQUHAQEEgYAwfjB8BggrBgEFBQcwAoZwaHR0\ncDovL3ByaXZhdGVjYS1jb250ZW50LTYwM2ZlN2U3LTAwMDAtMjIyNy1iZjc1LWY0\nZjVlODBkMjk1NC5zdG9yYWdlLmdvb2dsZWFwaXMuY29tL2NhMzZhMWU5NjI0MmI5\nZmNiMTQ2L2NhLmNydDAdBgNVHREEFjAUgRJkbG9yZW5jQGdvb2dsZS5jb20wCgYI\nKoZIzj0EAwMDaAAwZQIwC15Gtd9F6W9lmJuoXMym9DfWlBpK5HEPak38WPXqowRp\n6p+2/3jSLkFT5Nn5fuISAjEAouVlX4zH2rlkfg45HnDJax7o6ZV+E0/6BdAms44D\nEj6T/GLK6XJSB28haSPRWB7k\n-----END CERTIFICATE-----\n",
 }
@@ -226,7 +226,7 @@ The `annotation` key is `dev.cosignproject.cosign/chain`.
 
 Example `chain`:
 
-```
+```json
 "annotations": {
       "dev.sigstore.cosign/chain": "-----BEGIN CERTIFICATE-----\nMIIB+DCCAX6gAwIBAgITNVkDZoCiofPDsy7dfm6geLbuhzAKBggqhkjOPQQDAzAq\nMRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx\nMDMwNzAzMjAyOVoXDTMxMDIyMzAzMjAyOVowKjEVMBMGA1UEChMMc2lnc3RvcmUu\nZGV2MREwDwYDVQQDEwhzaWdzdG9yZTB2MBAGByqGSM49AgEGBSuBBAAiA2IABLSy\nA7Ii5k+pNO8ZEWY0ylemWDowOkNa3kL+GZE5Z5GWehL9/A9bRNA3RbrsZ5i0Jcas\ntaRL7Sp5fp/jD5dxqc/UdTVnlvS16an+2Yfswe/QuLolRUCrcOE2+2iA5+tzd6Nm\nMGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE\nFMjFHQBBmiQpMlEk6w2uSu1KBtPsMB8GA1UdIwQYMBaAFMjFHQBBmiQpMlEk6w2u\nSu1KBtPsMAoGCCqGSM49BAMDA2gAMGUCMH8liWJfMui6vXXBhjDgY4MwslmN/TJx\nVe/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup\nHr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==\n-----END CERTIFICATE-----"
 }
@@ -249,6 +249,25 @@ The following additional semantics are applied:
 * The `critical.identity.docker-reference` field is ignored.
 * Optional user-specified claims may be included in the `Optional` section.
 
+For example:
+```json
+{
+    "critical": {
+           "identity": {
+               "docker-reference": "testing/manifest"
+           },
+           "image": {
+               "Docker-manifest-digest": "sha256:20be...fe55"
+           },
+           "type": "cosign container image signature"
+    },
+    "optional": {
+           "creator": "atomic",
+           "timestamp": 1458239713
+    }
+}
+```
+
 ## Signature Schemes
 
 Implementations must support at least the following schemes:
@@ -268,7 +287,7 @@ When the payload is stored as a `blob` in the OCI registry, it is exposed and re
 
 Example referenced payload:
 
-```
+```json
 {
   "mediaType": "application/vnd.dev.cosign.simplesigning.v1+json",
   "size": 210,

@@ -66,7 +66,7 @@ This section contains the provider-specific documentation.
 GCP KMS keys can be used in `cosign` for signing and verification.
 The URI format for GCP KMS is:
 
-`gcpkms://projects/$PROJECT/locations/$LOCATION/keyRings/$KEYRING/cryptoKeys/$KEY`
+`gcpkms://projects/$PROJECT/locations/$LOCATION/keyRings/$KEYRING/cryptoKeys/$KEY/versions/$KEY_VERSION`
 
 where PROJECT, LOCATION, KEYRUNG and KEY are replaced with the correct values.
 
@@ -94,7 +94,7 @@ For a local setup, you can run Vault yourself or use the `docker-compose` file f
 
 After running it:
 
-```
+```shell
 $ export VAULT_ADDR=http://localhost:8200
 $ export VAULT_TOKEN=testtoken
 $ vault secrets enable transit

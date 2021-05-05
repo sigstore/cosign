@@ -4,14 +4,14 @@
 
 Multiple signatures can be "attached" to a single container image:
 
-```
+```shell
 $ cosign sign -key cosign.key dlorenc/demo
 Enter password for private key:
-Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.cosign
+Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 
 $ cosign sign -key other.key dlorenc/demo
 Enter password for private key:
-Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.cosign
+Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
 We only actually sign the digest, but you can pass by tag or digest.
@@ -19,16 +19,16 @@ We only actually sign the digest, but you can pass by tag or digest.
 The `-a` flag can be used to add annotations to the generated, signed payload.
 This flag can be repeated:
 
-```
+```shell
 $ cosign sign -key other.key -a foo=bar dlorenc/demo
 Enter password for private key:
-Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.cosign
+Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
 These values are included in the signed payload under the `Optional` section.
 (More on this later):
 
-```
+```json
 "Optional":{"baz":"bat","foo":"bar"}
 ```
 
@@ -38,11 +38,11 @@ they can be verified with the `-a` flag to `cosign verify`.
 
 The payload must be specified as a path to a file:
 
-```
+```shell
 $ cosign sign -key cosign.key -payload README.md dlorenc/demo
 Using payload from: README.md
 Enter password for private key:
-Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.cosign
+Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
 ## Signature Location and Management
@@ -52,7 +52,7 @@ This name can be located with the `cosign triangulate` command:
 
 ```shell
 cosign triangulate dlorenc/demo
-index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.cosign
+index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
 They can be viewed with `crane`:
@@ -99,7 +99,7 @@ $ crane delete $(cosign triangulate gcr.io/dlorenc-vmtest2/demo)
 The base64 encoded signature is printed to stdout.
 This can be stored somewhere else.
 
-```
+```shell
 $ cosign sign -key key.pem --upload=false dlorenc/demo
 Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ==
 ```
@@ -108,14 +108,14 @@ Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJi
 
 The json payload is printed to stdout:
 
-```
+```shell
 $ cosign generate dlorenc/demo
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":""},"Optional":null}
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
 
 This can be piped directly into openssl:
 
-```
+```shell
 $ cosign generate dlorenc/demo | openssl...
 ```
 
@@ -124,23 +124,23 @@ $ cosign generate dlorenc/demo | openssl...
 The signature is passed via the -signature flag.
 It can be a file:
 
-```
+```shell
 $ cosign upload -signature file.sig dlorenc/demo
-Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8
+Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
 the base64-encoded signature:
 
-```
+```shell
 $ cosign upload -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== dlorenc/demo
-Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
+Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def.sig
 ```
 
 or, `-` for stdin for chaining from other commands:
 
-```
+```shell
 $ cosign generate dlorenc/demo | openssl... | cosign upload -signature -- dlorenc/demo
-Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def
+Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def.sig
 ```
 
 ## Verifying claims
@@ -152,10 +152,10 @@ By default, `cosign` validates that this digest matches the container during `co
 
 If you are using other payload formats with `cosign`, you can use the `-check-claims=false` flag:
 
-```
-$ cosign verify -check-claims=false -key public-key.pem dlorenc/demo
+```shell
+$ cosign verify -check-claims=false -key cosign.pub dlorenc/demo
 Warning: the following claims have not been verified:
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container signature"},"Optional":null}
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
 
 This will still verify the signature and payload against the supplied public key, but will not
@@ -173,7 +173,7 @@ $ cosign verify -key cosign.pub  dlorenc/demo | jq .
     "Image": {
       "Docker-manifest-digest": "97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"
     },
-    "Type": "cosign container signature"
+    "Type": "cosign container image signature"
   },
   "Optional": {
     "sig": "original"
@@ -188,11 +188,11 @@ The payload may contain other key-value pairs.
 ```shell
 # This works
 $ cosign verify -a -key cosign.pub  dlorenc/demo
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container signature"},"Optional":{"sig":"original"}}
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container image signature"},"Optional":{"sig":"original"}}
 
 # This works too
 $ cosign verify -a sig=original -key cosign.pub  dlorenc/demo
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container signature"},"Optional":{"sig":"original"}}
+{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container image signature"},"Optional":{"sig":"original"}}
 
 # This doesn't work
 $ cosign verify -a sig=original -a=foo=bar -key cosign.pub  dlorenc/demo
@@ -213,8 +213,8 @@ $ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 
 
 KMS:
-```
-$ cosign public-key -kms gcpkms://projects/someproject/locations/us-central1/keyRings/foo/cryptoKeys/bug
+```shell
+$ cosign public-key -key gcpkms://projects/someproject/locations/us-central1/keyRings/foo/cryptoKeys/bug/versions/1
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgrKKtyws86/APoULh/zXk4LONqII
 AcxvLtLEgRjRI4TKnMAXtIGp8K4X4CTWPEXMqSYZZUa2I1YvHyLLY2bEzA==
@@ -222,7 +222,7 @@ AcxvLtLEgRjRI4TKnMAXtIGp8K4X4CTWPEXMqSYZZUa2I1YvHyLLY2bEzA==
 ```
 
 Private Key:
-```
+```shell
 $ ./cosign public-key -key cosign.key
 Enter password for private key:
 -----BEGIN PUBLIC KEY-----

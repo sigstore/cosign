@@ -86,7 +86,7 @@ You can then use the normal `cosign` commands to sign images and blobs with your
 $ cosign sign -sk gcr.io/dlorenc-vmtest2/demo
 Enter PIN for security key:
 Please tap security key...
-Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.cosign
+Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.sig
 ```
 
 To verify, you can either use the hardware key directly:
