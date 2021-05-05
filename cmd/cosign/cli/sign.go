@@ -95,7 +95,7 @@ EXAMPLES
   cosign sign -key cosign.pub -a key1=value1 -a key2=value2 <IMAGE>
 
   # sign a container image with a key pair stored in Google Cloud KMS
-  cosign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>`,
+  cosign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>/versions/[VERSION] <IMAGE>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) == 0 {

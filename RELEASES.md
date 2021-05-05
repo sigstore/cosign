@@ -2,16 +2,16 @@
 * Release notes: Create a PR to update and review release notes in CHANGELOG.md.
   - Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
 * Create the `v${VERSION}` tag and create a release
-```
+```shell
 git tag -a v${VERSION}
 ```
 * Upload binaries: After post-submit CI completes for the final PR, download binary artifacts from the “Cross” CI run. Unzip into an artifacts directory and upload to GCS:
-```
+```shell
 gsutil cp -r artifacts gs://cosign-releases
 ```
 * Tag the release container: Copy the container and signature uploaded by CI from `cosign/ci` to `cosign`
 
-```
+```shell
 $ crane cp gcr.io/projectsigstore/cosign/ci/cosign:v${VERSION} gcr.io/projectsigstore/cosign:v${VERSION}
 cosign triangulate gcr.io/projectsigstore/cosign/ci/cosign:v${VERSION}
 $ crane cp gcr.io/projectsigstore/cosign/ci/cosign:sha256-${SHA_VERSION}.cosign gcr.io/projectsigstore/cosign:sha256-${SHA_VERSION}.cosign
