@@ -60,8 +60,9 @@ func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, err
 			if te.StatusCode != http.StatusNotFound {
 				return nil, te
 			}
+			base = empty.Image
 			if !DockerMediaTypes() {
-				base = mutate.MediaType(empty.Image, types.OCIManifestSchema1)
+				base = mutate.MediaType(base, types.OCIManifestSchema1)
 				m, err := base.Manifest()
 				if err != nil {
 					// should never happen...?
