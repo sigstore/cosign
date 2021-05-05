@@ -1,18 +1,32 @@
 # Changelog
 
-## v0.4.0 (pending)
+## v0.5.0 (pending)
+
+## v0.4.0
 
 ### Action Required
 
 * Signatures created with `cosign` before v0.4.0 are not compatible with those created after
+    * The signature image's manifest now uses OCI mediaTypes ([#300](https://github.com/sigstore/cosign/pull/300))
+    * The signature image's tag is now terminated with `.sig` (instead of `.cosign`, [#287](https://github.com/sigstore/cosign/pull/287))
 
 ### Enhancements
 
-* Support for Hashicorp vault as a KMS provider has been added
+* 🎉 Added support for "offline" verification of Rekor signatures 🎉 (ありがとう, priyawadhwa! [#285](https://github.com/sigstore/cosign/pull/285))
+* Support for Hashicorp vault as a KMS provider has been added (Danke, RichiCoder1! [sigstore/sigstore #44](https://github.com/sigstore/sigstore/pull/44), [sigstore/sigstore #49](https://github.com/sigstore/sigstore/pull/44))
 
 ### Bug Fixes
 
+* GCP KMS URIs now include the key version ([#45](https://github.com/sigstore/sigstore/pull/45))
+
 ### Contributors
+
+* Christian Pearce (@pearcec)
+* Dan Lorenc (@dlorenc)
+* Jake Sanders (@dekkagaijin)
+* Priya Wadhwa (@priyawadhwa)
+* Richard Simpson (@RichiCoder1)
+* Ross Timson (@rosstimson)
 
 ## v0.3.1
 
