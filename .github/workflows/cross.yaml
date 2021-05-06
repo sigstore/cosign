@@ -34,7 +34,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: build
+        if: matrix.os != 'ubuntu-latest'
         run: make cosign && mv ./cosign ./${{matrix.TARGET}}
+      - name: build-static
+        if: matrix.os == 'ubuntu-latest'
+        run: make cosign-static && mv ./cosign ./${{matrix.TARGET}}
       - name: Print Info
         shell: pwsh
         run: |

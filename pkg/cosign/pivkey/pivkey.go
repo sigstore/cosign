@@ -1,4 +1,5 @@
 // +build !pivkeydisabled
+// +build cgo
 
 // Copyright 2021 The Sigstore Authors.
 //

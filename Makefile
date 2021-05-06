@@ -49,6 +49,9 @@ SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 cosign: $(SRCS)
 	CGO_ENABLED=1 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
 
+cosign-static: $(SRCS)
+	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
+
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 golangci-lint:
 	rm -f $(GOLANGCI_LINT) || :
