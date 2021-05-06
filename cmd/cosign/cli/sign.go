@@ -95,7 +95,11 @@ EXAMPLES
   cosign sign -key cosign.pub -a key1=value1 -a key2=value2 <IMAGE>
 
   # sign a container image with a key pair stored in Google Cloud KMS
-  cosign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>/versions/[VERSION] <IMAGE>`,
+  cosign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>/versions/[VERSION] <IMAGE>
+  
+  # sign a container in a registry which does not fully support OCI media types
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign -key cosign.key legacy-registry.example.com/my/image
+  `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) == 0 {
