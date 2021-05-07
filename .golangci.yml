@@ -23,6 +23,8 @@ linters:
   - gocritic
   - golint
   - misspell
+  - unconvert
+  - unparam
 output:
   uniq-by-line: false
 issues:

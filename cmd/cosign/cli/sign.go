@@ -215,8 +215,8 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 	fmt.Fprintln(os.Stderr, "Pushing signature to:", dstRef.String())
 	uo := cosign.UploadOpts{
-		Cert:         string(cert),
-		Chain:        string(chain),
+		Cert:         cert,
+		Chain:        chain,
 		DupeDetector: dupeDetector,
 		RemoteOpts:   []remote.Option{remoteAuth},
 	}
@@ -258,11 +258,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 	fmt.Println("tlog entry created with index: ", *entry.LogIndex)
 
-	bund, err := bundle(entry)
-	if err != nil {
-		return errors.Wrap(err, "bundle")
-	}
-	uo.Bundle = bund
+	uo.Bundle = bundle(entry)
 	uo.AdditionalAnnotations = annotations(entry)
 	if _, err = cosign.Upload(ctx, sig, payload, dstRef, uo); err != nil {
 		return errors.Wrap(err, "uploading")
@@ -270,21 +266,22 @@ func SignCmd(ctx context.Context, so SignOpts,
 	return nil
 }
 
-func bundle(entry *models.LogEntryAnon) (*cosign.Bundle, error) {
+func bundle(entry *models.LogEntryAnon) *cosign.Bundle {
 	if entry.Verification == nil {
-		return nil, nil
+		return nil
 	}
+
 	return &cosign.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
 		Body:                 entry.Body,
 		IntegratedTime:       entry.IntegratedTime,
 		LogIndex:             entry.LogIndex,
-	}, nil
+	}
 }
 
 func annotations(entry *models.LogEntryAnon) map[string]string {
 	annts := map[string]string{}
-	if bund, err := bundle(entry); err == nil && bund != nil {
+	if bund := bundle(entry); bund != nil {
 		contents, _ := json.Marshal(bund)
 		annts[cosign.BundleKey] = string(contents)
 	}
