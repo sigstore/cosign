@@ -75,7 +75,7 @@ EXAMPLES
   COSIGN_EXPERIMENTAL=1 cosign verify <IMAGE>
 
   # verify image with public key
-  cosign verify -key <FILE> <IMAGE>
+  cosign verify -key cosign.pub <IMAGE>
 
   # verify image with public key provided by URL
   cosign verify -key https://host.for/<FILE> <IMAGE>

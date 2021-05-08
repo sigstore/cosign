@@ -92,7 +92,7 @@ $ cosign generate-key-pair
 Enter password for private key:
 Enter again:
 Private key written to cosign.key
-Public key written to cosign.key
+Public key written to cosign.pub
 ```
 
 ### Sign a container and store the signature in the registry

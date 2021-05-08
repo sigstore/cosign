@@ -52,7 +52,7 @@ EXAMPLES
   COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
 
   # sign a blob with a local key pair file
-  cosign sign-blob -key cosign.pub <FILE>
+  cosign sign-blob -key cosign.key <FILE>
 
   # sign a blob with a key pair stored in Google Cloud KMS
   cosign sign-blob -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <FILE>`,
