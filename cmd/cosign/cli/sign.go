@@ -89,10 +89,10 @@ EXAMPLES
   COSIGN_EXPERIMENTAL=1 cosign sign <IMAGE>
 
   # sign a container image with a local key pair file
-  cosign sign -key cosign.pub <IMAGE>
+  cosign sign -key cosign.key <IMAGE>
 
   # sign a container image and add annotations
-  cosign sign -key cosign.pub -a key1=value1 -a key2=value2 <IMAGE>
+  cosign sign -key cosign.key -a key1=value1 -a key2=value2 <IMAGE>
 
   # sign a container image with a key pair stored in Google Cloud KMS
   cosign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>/versions/[VERSION] <IMAGE>
