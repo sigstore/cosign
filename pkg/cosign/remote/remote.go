@@ -95,8 +95,8 @@ func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, err
 
 func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
 	l := &StaticLayer{
-		b:  payload,
-		mt: SimpleSigningMediaType,
+		B:  payload,
+		Mt: SimpleSigningMediaType,
 	}
 
 	sigDigest, err := l.Digest()
@@ -153,8 +153,8 @@ type UploadOpts struct {
 
 func UploadSignature(ctx context.Context, signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
 	l := &StaticLayer{
-		b:  payload,
-		mt: SimpleSigningMediaType,
+		B:  payload,
+		Mt: SimpleSigningMediaType,
 	}
 
 	base, err := SignatureImage(dst, opts.RemoteOpts...)
@@ -197,37 +197,37 @@ func UploadSignature(ctx context.Context, signature, payload []byte, dst name.Re
 }
 
 type StaticLayer struct {
-	b  []byte
-	mt types.MediaType
+	B  []byte
+	Mt types.MediaType
 }
 
 func (l *StaticLayer) Digest() (v1.Hash, error) {
-	h, _, err := v1.SHA256(bytes.NewReader(l.b))
+	h, _, err := v1.SHA256(bytes.NewReader(l.B))
 	return h, err
 }
 
 // DiffID returns the Hash of the uncompressed layer.
 func (l *StaticLayer) DiffID() (v1.Hash, error) {
-	h, _, err := v1.SHA256(bytes.NewReader(l.b))
+	h, _, err := v1.SHA256(bytes.NewReader(l.B))
 	return h, err
 }
 
 // Compressed returns an io.ReadCloser for the compressed layer contents.
 func (l *StaticLayer) Compressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
+	return ioutil.NopCloser(bytes.NewReader(l.B)), nil
 }
 
 // Uncompressed returns an io.ReadCloser for the uncompressed layer contents.
 func (l *StaticLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
+	return ioutil.NopCloser(bytes.NewReader(l.B)), nil
 }
 
 // Size returns the compressed size of the Layer.
 func (l *StaticLayer) Size() (int64, error) {
-	return int64(len(l.b)), nil
+	return int64(len(l.B)), nil
 }
 
 // MediaType returns the media type of the Layer.
 func (l *StaticLayer) MediaType() (types.MediaType, error) {
-	return l.mt, nil
+	return l.Mt, nil
 }
