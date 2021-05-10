@@ -35,11 +35,9 @@ import (
 var (
 	// Output of "git describe". The prerequisite is that the branch should be
 	// tagged using the correct versioning strategy.
-	gitVersion = "unknown"
+	version = "unknown"
 	// SHA1 from git, output of $(git rev-parse HEAD)
-	gitCommit = "unknown"
-	// State of git tree, either "clean" or "dirty"
-	gitTreeState = "unknown"
+	commit = "unknown"
 	// Build date in ISO8601 format, output of $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 	buildDate = "unknown"
 )
@@ -72,26 +70,24 @@ func Version() *ffcli.Command {
 }
 
 type Info struct {
-	GitVersion   string
-	GitCommit    string
-	GitTreeState string
-	BuildDate    string
-	GoVersion    string
-	Compiler     string
-	Platform     string
+	Version   string
+	Commit    string
+	BuildDate string
+	GoVersion string
+	Compiler  string
+	Platform  string
 }
 
 func VersionInfo() Info {
 	// These variables typically come from -ldflags settings and in
 	// their absence fallback to the global defaults set above.
 	return Info{
-		GitVersion:   gitVersion,
-		GitCommit:    gitCommit,
-		GitTreeState: gitTreeState,
-		BuildDate:    buildDate,
-		GoVersion:    runtime.Version(),
-		Compiler:     runtime.Compiler,
-		Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		Version:   version,
+		Commit:    commit,
+		BuildDate: buildDate,
+		GoVersion: runtime.Version(),
+		Compiler:  runtime.Compiler,
+		Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 	}
 }
 
@@ -100,9 +96,8 @@ func (i *Info) String() string {
 	b := strings.Builder{}
 	w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
 
-	fmt.Fprintf(w, "GitVersion:\t%s\n", i.GitVersion)
-	fmt.Fprintf(w, "GitCommit:\t%s\n", i.GitCommit)
-	fmt.Fprintf(w, "GitTreeState:\t%s\n", i.GitTreeState)
+	fmt.Fprintf(w, "Version:\t%s\n", i.Version)
+	fmt.Fprintf(w, "Commit:\t%s\n", i.Commit)
 	fmt.Fprintf(w, "BuildDate:\t%s\n", i.BuildDate)
 	fmt.Fprintf(w, "GoVersion:\t%s\n", i.GoVersion)
 	fmt.Fprintf(w, "Compiler:\t%s\n", i.Compiler)

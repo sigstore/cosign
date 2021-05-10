@@ -13,74 +13,98 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: CI-Tests
+name: tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'main'
+      - 'release-*'
+    tags:
+      - 'v*'
+  pull_request:
 
 jobs:
-  unit-tests:
-    name: Run tests
+  unit:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
-      # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@v2
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Test
+        uses: docker/bake-action@v1
         with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          # * Build cache (Mac)
-          # * Build cache (Windows)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-            ~/Library/Caches/go-build
-            %LocalAppData%\go-build
+          targets: test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Deps
+        run: |
+          sudo apt-get install -y libpcsclite-dev
+          curl -L https://github.com/google/ko/releases/download/v0.8.1/ko_0.8.1_Linux_x86_64.tar.gz | tar xzf - ko
+          chmod +x ./ko
+          sudo mv ko /usr/local/bin/
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      -
+        name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16.3'
-      - name: install ko
-        run: |
-          curl -L https://github.com/google/ko/releases/download/v0.8.1/ko_0.8.1_Linux_x86_64.tar.gz | tar xzf - ko && \
-          chmod +x ./ko && sudo mv ko /usr/local/bin/
-      - name: deps
-        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
-      - name: Run Go tests
-        run: go test ./...
-
-      - name: Run end-to-end tests
+      -
+        name: Test
         run: ./test/e2e_test.sh
 
-  license-check:
-    name: license boilerplate check
+  e2e-secrets:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
         with:
-          go-version: '1.16'
-      - name: Install addlicense
-        run: go install github.com/google/addlicense@latest
-      - name: Check license headers
+          go-version: 1.16
+      -
+        name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      -
+        name: Deps
         run: |
-          set -e
-          addlicense -l apache -c 'The Sigstore Authors' -v *
-          git diff --exit-code
-
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: deps
-        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        timeout-minutes: 5
+          sudo apt-get install -y libpcsclite-dev
+          go install github.com/google/go-containerregistry/cmd/crane
+      -
+        name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@master
         with:
-          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.39
+          project_id: projectsigstore
+          service_account_key: ${{ secrets.GCP_CI_SERVICE_ACCOUNT }}
+          export_default_credentials: true
+      -
+        name: Creds
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      -
+        name: Test
+        run: ./test/e2e_test_secrets.sh

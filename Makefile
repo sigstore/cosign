@@ -23,56 +23,38 @@ endif
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
-DATE_FMT = +'%Y-%m-%dT%H:%M:%SZ'
-SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
-ifdef SOURCE_DATE_EPOCH
-    BUILD_DATE ?= $(shell date -u -d "@$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u -r "$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u "$(DATE_FMT)")
-else
-    BUILD_DATE ?= $(shell date "$(DATE_FMT)")
-endif
-GIT_TREESTATE = "clean"
-DIFF = $(shell git diff --quiet >/dev/null 2>&1; if [ $$? -eq 1 ]; then echo "1"; fi)
-ifeq ($(DIFF), 1)
-    GIT_TREESTATE = "dirty"
-endif
 
+BUILDER=cosign-builder
 PKG=github.com/sigstore/cosign/cmd/cosign/cli
 
-LDFLAGS="-X $(PKG).gitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE) -X $(PKG).buildDate=$(BUILD_DATE)"
-
-.PHONY: all lint test clean cosign cross
+.PHONY: all create-builder lint license-check vendor-validate test clean cosign cross
 
 all: cosign
 
-SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
+create-builder:
+	docker buildx create --name $(BUILDER) --driver docker-container || true
+	docker buildx inspect --bootstrap --builder $(BUILDER) || true
 
-cosign: $(SRCS)
-	CGO_ENABLED=1 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
+cosign: create-builder
+	docker buildx bake --progress plain --builder $(BUILDER) artifact
 
-cosign-static: $(SRCS)
-	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
+cosign-all: create-builder
+	docker buildx bake --progress plain --builder $(BUILDER) artifact-all
 
-GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
-golangci-lint:
-	rm -f $(GOLANGCI_LINT) || :
-	set -e ;\
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell dirname $(GOLANGCI_LINT)) v1.36.0 ;\
+lint: create-builder
+	docker buildx bake --progress plain --builder $(BUILDER) lint
 
-lint: golangci-lint ## Runs golangci-lint linter
-	$(GOLANGCI_LINT) run  -n
+license-check: create-builder
+	docker buildx bake --progress plain --builder $(BUILDER) license-check
 
+vendor-validate: create-builder
+	docker buildx bake --progress plain --builder $(BUILDER) vendor-validate
 
-PLATFORMS=darwin linux
-ARCHITECTURES=amd64
+vendor-update: create-builder
+	docker buildx bake --progress plain --builder $(BUILDER) vendor-update
 
-cross:
-	$(foreach GOOS, $(PLATFORMS),\
-		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
-	go build -ldflags $(LDFLAGS) -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign)))
-	shasum -a 256 cosign-* > cosign.sha2556
-
-test:
-	go test ./...
+test: create-builder
+	docker buildx bake --progress plain --builder $(BUILDER) test
 
 clean:
 	rm -rf cosign

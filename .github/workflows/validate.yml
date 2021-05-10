@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: codeql
+name: validate
 
 on:
-  schedule:
-    - cron: '0 12 * * 6'
   push:
     branches:
       - 'main'
@@ -27,20 +25,27 @@ on:
   pull_request:
 
 jobs:
-  codeql:
+  validate:
     runs-on: ubuntu-latest
     steps:
       -
         name: Checkout
         uses: actions/checkout@v2
       -
-        name: Initialize CodeQL
-        uses: github/codeql-action/init@v1
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Vendor
+        uses: docker/bake-action@v1
         with:
-          languages: go
+          targets: vendor-validate
       -
-        name: Autobuild
-        uses: github/codeql-action/autobuild@v1
+        name: Lint
+        uses: docker/bake-action@v1
+        with:
+          targets: lint
       -
-        name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v1
+        name: License check
+        uses: docker/bake-action@v1
+        with:
+          targets: license-check

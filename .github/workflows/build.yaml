@@ -13,43 +13,116 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: CI-Container-Build
+name: build
 
 on:
   push:
     branches:
-      - main
-      - release-*
+      - 'main'
+      - 'release-*'
     tags:
-      - '*'
+      - 'v*'
+  pull_request:
 
 jobs:
-  build:
-    name: build
+  artifact:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
-      - uses: sigstore/cosign-installer@main
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Build artifacts
+        uses: docker/bake-action@v1
+        with:
+          targets: artifact-all
+      -
+        name: Move artifacts
+        run: |
+          mv ./bin/**/* ./bin/
+      -
+        name: Sign artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          COSIGN_BIN=$(find ./bin -type f -name "*linux_amd64")
+          chmod +x "$COSIGN_BIN"
+          for bin in ./bin/*; do
+            if [[ "$bin" == *.sha256 ]] || [[ ! -f "$bin" ]]; then
+              continue
+            fi
+            echo "Signing ${bin}..."
+            ${COSIGN_BIN} sign-blob -key ./.github/workflows/cosign.key "$bin" > "$bin.sig"
+            echo "Checking signture of ${bin}..."
+            ${COSIGN_BIN} verify-blob -key ./.github/workflows/cosign.pub -signature "$bin.sig" "$bin"
+          done
+      -
+        name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: cosign
+          path: ./bin/*
+          if-no-files-found: error
+      -
+        name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          draft: true
+          files: bin/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  container:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        uses: sigstore/cosign-installer@main
         with:
           cosign-release: 'v0.4.0'
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16.3'
-      - name: deps
-        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
-      - name: install ko
+      -
+        name: Deps
         run: |
-          curl -L https://github.com/google/ko/releases/download/v0.8.1/ko_0.8.1_Linux_x86_64.tar.gz | tar xzf - ko && \
-          chmod +x ./ko && sudo mv ko /usr/local/bin/
-
-      - name: Set up Cloud SDK
+          sudo apt-get install -y libpcsclite-dev
+          curl -L https://github.com/google/ko/releases/download/v0.8.1/ko_0.8.1_Linux_x86_64.tar.gz | tar xzf - ko
+          chmod +x ./ko
+          sudo mv ko /usr/local/bin/
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      -
+        name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      -
+        name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@master
         with:
           project_id: projectsigstore
           service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           export_default_credentials: true
-      - name: creds
+      -
+        name: Creds
         run: gcloud auth configure-docker --quiet
-      - name: container
+      -
+        name: Container
         run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_DOCKER_REPO=gcr.io/projectsigstore/cosign/ci/cosign make sign-container

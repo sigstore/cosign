@@ -1,5 +1,9 @@
 # cosign
 
+[![Build Status](https://github.com/sigstore/cosign/workflows/build/badge.svg)](https://github.com/sigstore/cosign/actions?query=workflow%3Abuild)
+[![Tests Status](https://github.com/sigstore/cosign/workflows/tests/badge.svg)](https://github.com/sigstore/cosign/actions?query=workflow%3Atests)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sigstore/cosign)](https://goreportcard.com/report/github.com/sigstore/cosign)
+
 Container Signing, Verification and Storage in an OCI registry.
 
 Cosign aims to make signatures **invisible infrastructure**.
