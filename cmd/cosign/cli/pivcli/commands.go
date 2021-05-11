@@ -121,9 +121,41 @@ func SetPinCmd(_ context.Context, oldPin, newPin string) error {
 }
 
 type Attestations struct {
-	DeviceCert     *x509.Certificate
-	KeyCert        *x509.Certificate
+	// Skip these for JSON, use the byte form instead
+	DeviceCert     *x509.Certificate `json:"-"`
+	KeyCert        *x509.Certificate `json:"-"`
+	DeviceCertPem  string
+	KeyCertPem     string
 	KeyAttestation *piv.Attestation
+}
+
+func (a *Attestations) Output() {
+	fmt.Fprintln(os.Stderr, "Printing device attestation certificate")
+	b := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: a.DeviceCert.Raw,
+	})
+	fmt.Println(string(b))
+
+	fmt.Fprintln(os.Stderr, "Printing key attestation certificate")
+	b = pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: a.KeyCert.Raw,
+	})
+	fmt.Println(string(b))
+
+	fmt.Fprintln(os.Stderr, "Verifying certificates...")
+
+	fmt.Fprintln(os.Stderr, "Verified ok")
+	fmt.Println()
+
+	fmt.Fprintln(os.Stderr, "Device info:")
+	fmt.Println("  Issuer:", a.DeviceCert.Issuer)
+	fmt.Println("  Form factor:", formFactorString(a.KeyAttestation.Formfactor))
+	fmt.Println("  PIN Policy:", pinPolicyStr(a.KeyAttestation.PINPolicy))
+
+	fmt.Printf("  Serial number: %d\n", a.KeyAttestation.Serial)
+	fmt.Printf("  Version: %d.%d.%d\n", a.KeyAttestation.Version.Major, a.KeyAttestation.Version.Minor, a.KeyAttestation.Version.Patch)
 }
 
 func AttestationCmd(_ context.Context) (*Attestations, error) {
@@ -137,47 +169,33 @@ func AttestationCmd(_ context.Context) (*Attestations, error) {
 		return nil, err
 	}
 
-	fmt.Fprintln(os.Stderr, "Printing device attestation certificate")
-	b := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: deviceCert.Raw,
-	})
-	fmt.Println(string(b))
-
 	keyCert, err := yk.Attest(piv.SlotSignature)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Fprintln(os.Stderr, "Printing key attestation certificate")
-	b = pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: keyCert.Raw,
-	})
-	fmt.Println(string(b))
 
-	fmt.Println("Verifying certificates...")
 	a, err := piv.Verify(deviceCert, keyCert)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Verified ok")
-	fmt.Println()
-
-	fmt.Fprintln(os.Stderr, "Device info:")
-	fmt.Println("  Issuer:", deviceCert.Issuer)
-	fmt.Println("  Form factor:", formFactorString(a.Formfactor))
-	fmt.Println("  PIN Policy:", pinPolicyStr(a.PINPolicy))
-
-	fmt.Printf("  Serial number: %d\n", a.Serial)
-	fmt.Printf("  Version: %d.%d.%d\n", a.Version.Major, a.Version.Minor, a.Version.Patch)
 
 	ret := &Attestations{
 		DeviceCert:     deviceCert,
+		DeviceCertPem:  toPem(deviceCert),
 		KeyCert:        keyCert,
+		KeyCertPem:     toPem(keyCert),
 		KeyAttestation: a,
 	}
 
 	return ret, nil
+}
+
+func toPem(c *x509.Certificate) string {
+	b := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: c.Raw,
+	})
+	return string(b)
 }
 
 func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool) error {
@@ -229,8 +247,13 @@ func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool) e
 
 	fmt.Println(string(pemBytes))
 	yk.Close()
-	_, err = AttestationCmd(ctx)
-	return err
+
+	att, err := AttestationCmd(ctx)
+	if err != nil {
+		return err
+	}
+	att.Output()
+	return nil
 }
 
 func ResetKeyCmd(ctx context.Context) error {
