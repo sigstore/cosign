@@ -19,7 +19,9 @@ package pivcli
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
@@ -126,6 +128,7 @@ func Unblock() *ffcli.Command {
 func Attestation() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool attestation", flag.ExitOnError)
+		output  = flagset.String("output", "text", "format to output attestation information in. text|json, default text.")
 	)
 
 	return &ffcli.Command{
@@ -134,7 +137,17 @@ func Attestation() *ffcli.Command {
 		ShortHelp:  "attestation contains commands to manage a hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			_, err := AttestationCmd(ctx)
+			a, err := AttestationCmd(ctx)
+			switch *output {
+			case "text":
+				a.Output()
+			case "json":
+				b, err := json.Marshal(a)
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(b))
+			}
 			return err
 		},
 	}
