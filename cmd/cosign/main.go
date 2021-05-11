@@ -41,7 +41,7 @@ func main() {
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
 			cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair(), cli.SignBlob(),
-			cli.VerifyBlob(), cli.Triangulate(), cli.Version(), cli.PublicKey(), pivcli.PivKey()},
+			cli.VerifyBlob(), cli.Triangulate(), cli.Version(), cli.PublicKey(), pivcli.PivKey(), cli.Copy()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},

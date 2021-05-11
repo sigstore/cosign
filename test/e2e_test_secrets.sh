@@ -32,16 +32,22 @@ export COSIGN_PASSWORD=$pass
 img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test"
 img2="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test-2"
 legacy_img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/legacy-test"
+img_copy="${img}/copy"
 for image in $img $img2 $legacy_img
 do
     (crane delete $(./cosign triangulate $image)) || true
     crane cp busybox $image
 done
+crane ls $img_copy | while read tag ; do crane delete $tag ; done
 
 
 ## sign/verify
 ./cosign sign -key cosign.key $img
 ./cosign verify -key cosign.pub $img
+
+# copy
+./cosign copy -source $img -destination $img_copy
+./cosign verify -key cosign.pub $img_copy
 
 ## confirm use of OCI media type in signature image
 crane manifest $(./cosign triangulate $img) | grep -q "application/vnd.oci.image.config.v1+json"
