@@ -109,10 +109,6 @@ func copyImage(src, dest name.Reference, overwrite bool, opts ...remote.Option) 
 	if err != nil {
 		return err
 	}
-	img, err := got.Image()
-	if err != nil {
-		return err
-	}
 
 	if !overwrite {
 		if dstDesc, err := remote.Head(dest, opts...); err == nil {
@@ -123,5 +119,17 @@ func copyImage(src, dest name.Reference, overwrite bool, opts ...remote.Option) 
 		}
 	}
 
+	if got.MediaType.IsIndex() {
+		imgIdx, err := got.ImageIndex()
+		if err != nil {
+			return err
+		}
+		return remote.WriteIndex(dest, imgIdx, opts...)
+	}
+
+	img, err := got.Image()
+	if err != nil {
+		return err
+	}
 	return remote.Write(dest, img, opts...)
 }
