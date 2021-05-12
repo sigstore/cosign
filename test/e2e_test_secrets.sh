@@ -38,7 +38,7 @@ do
     (crane delete $(./cosign triangulate $image)) || true
     crane cp busybox $image
 done
-crane ls $img_copy | while read tag ; do crane delete $tag ; done
+crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; done
 
 
 ## sign/verify
@@ -46,7 +46,7 @@ crane ls $img_copy | while read tag ; do crane delete $tag ; done
 ./cosign verify -key cosign.pub $img
 
 # copy
-./cosign copy -source $img -destination $img_copy
+./cosign copy $img $img_copy
 ./cosign verify -key cosign.pub $img_copy
 
 ## confirm use of OCI media type in signature image
