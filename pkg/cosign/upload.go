@@ -72,7 +72,12 @@ func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference,
 	} else {
 		subRepo[1] = strings.TrimPrefix(s[1], "/")
 	}
-	subbed := dstTag.RegistryStr() + strings.Join(subRepo, "/")
+	newRepo := strings.Join(subRepo, "/")
+	// add the tag back in if we lost it
+	if !strings.Contains(newRepo, ":") {
+		newRepo = newRepo + ":" + dstTag.TagStr()
+	}
+	subbed := dstTag.RegistryStr() + newRepo
 	return name.ParseReference(subbed)
 }
 
