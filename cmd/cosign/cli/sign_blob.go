@@ -144,11 +144,11 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 			}
 			rekorBytes = pemBytes
 		}
-		index, err := cosign.UploadTLog(sig, payload, rekorBytes)
+		entry, err := cosign.UploadTLog(sig, payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("tlog entry created with index: ", index)
+		fmt.Println("tlog entry created with index:", *entry.LogIndex)
 		return sig, nil
 	}
 
