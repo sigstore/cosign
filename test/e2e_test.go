@@ -102,7 +102,7 @@ func TestSignVerify(t *testing.T) {
 
 func TestBundle(t *testing.T) {
 	// use rekor prod since we have hardcoded the public key
-	defer setenv(t, cosign.ServerEnv, "https://api.rekor.dev")()
+	defer setenv(t, cosign.ServerEnv, "https://rekor.sigstore.dev")()
 	// turn on the tlog
 	defer setenv(t, cosign.ExperimentalEnv, "1")()
 

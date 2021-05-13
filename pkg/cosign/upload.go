@@ -38,7 +38,7 @@ const (
 	repoEnv             = "COSIGN_REPOSITORY"
 	DockerMediaTypesEnv = "COSIGN_DOCKER_MEDIA_TYPES"
 	ServerEnv           = "REKOR_SERVER"
-	rekorServer         = "https://api.sigstore.dev"
+	rekorServer         = "https://rekor.sigstore.dev"
 )
 
 func Experimental() bool {
