@@ -61,6 +61,12 @@ func TestDestinationTag(t *testing.T) {
 			repo:  "us-central1-docker.pkg.dev/projectsigstore/subrepo",
 			want:  "us-central1-docker.pkg.dev/projectsigstore/subrepo/cosign-ci/test:sha256-digest.sig",
 		},
+		{
+			desc:  "ecr test",
+			image: "myaccount.dkr.ecr.us-west-2.amazonaws.com/repo1:tag",
+			repo:  "myaccount.dkr.ecr.us-west-2.amazonaws.com/repo2",
+			want:  "myaccount.dkr.ecr.us-west-2.amazonaws.com/repo2:sha256-digest.sig",
+		},
 	}
 
 	for _, test := range tests {
