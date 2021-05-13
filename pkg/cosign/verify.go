@@ -47,7 +47,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-// This is rekor's public key, via `curl -L api.rekor.dev/api/v1/log/publicKey`
+// This is rekor's public key, via `curl -L rekor.sigstore.dev/api/v1/log/publicKey`
 // rekor.pub should be updated whenever the Rekor public key is rotated & the bundle annotation should be up-versioned
 //go:embed rekor.pub
 var rekorPub string
