@@ -100,6 +100,34 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}), t)
 }
 
+func TestSignVerifyClean(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, _ = mkimage(t, imgName)
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Now sign the image
+	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
+	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+
+	// Now verify and download should work!
+	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(cli.DownloadCmd(ctx, imgName), t)
+
+	// Now clean signature from the given image
+	must(cli.CleanCmd(ctx, imgName), t)
+
+	// It doesn't work
+	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+}
+
 func TestBundle(t *testing.T) {
 	// use rekor prod since we have hardcoded the public key
 	defer setenv(t, cosign.ServerEnv, "https://rekor.sigstore.dev")()
