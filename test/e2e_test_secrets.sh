@@ -32,14 +32,16 @@ export COSIGN_PASSWORD=$pass
 img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test"
 img2="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test-2"
 legacy_img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/legacy-test"
-img_copy="${img}/copy"
 for image in $img $img2 $legacy_img
 do
     (crane delete $(./cosign triangulate $image)) || true
     crane cp busybox $image
 done
+img_copy="${img}/copy"
 crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; done
-
+multiarch_img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/multiarch-test"
+crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${tag}" ; done
+crane cp gcr.io/distroless/base $multiarch_img
 
 ## sign/verify
 ./cosign sign -key cosign.key $img
@@ -48,6 +50,15 @@ crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; don
 # copy
 ./cosign copy $img $img_copy
 ./cosign verify -key cosign.pub $img_copy
+
+# sign recursively
+./cosign sign -key cosign.key -r $multiarch_img
+./cosign verify -key cosign.pub $multiarch_img # verify image index
+for arch in "linux/amd64" "linux/arm64" "linux/s390x"
+do
+    # verify sigs on discrete images
+    ./cosign verify -key cosign.pub "${multiarch_img}@$(crane digest --platform=$arch ${multiarch_img})"
+done
 
 ## confirm use of OCI media type in signature image
 crane manifest $(./cosign triangulate $img) | grep -q "application/vnd.oci.image.config.v1+json"

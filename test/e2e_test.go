@@ -80,7 +80,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Now sign the image
 	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -91,7 +91,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Sign the image with an annotation
 	so.Annotations = map[string]interface{}{"foo": "bar"}
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
@@ -115,7 +115,7 @@ func TestSignVerifyClean(t *testing.T) {
 
 	// Now sign the image
 	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -153,7 +153,7 @@ func TestBundle(t *testing.T) {
 	}
 
 	// Sign the image
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 	// Make sure verify works
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
@@ -182,14 +182,14 @@ func TestDuplicateSign(t *testing.T) {
 
 	// Now sign the image
 	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 	must(cli.DownloadCmd(ctx, imgName), t)
 
 	// Signing again should work just fine...
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 	// but a duplicate signature should not be a uploaded
 	signatures, _, err := cosign.FetchSignatures(ctx, ref)
 	if err != nil {
@@ -244,14 +244,14 @@ func TestMultipleSignatures(t *testing.T) {
 
 	// Now sign the image with one key
 	so := cli.SignOpts{KeyRef: priv1, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil), t)
 	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign with the other key too
 	so.KeyRef = priv2
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil), t)
@@ -453,7 +453,7 @@ func TestTlog(t *testing.T) {
 		KeyRef: privKeyPath,
 		Pf:     passFunc,
 	}
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -465,7 +465,7 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Sign again with the tlog env var on
-	must(cli.SignCmd(ctx, so, imgName, true, "", false), t)
+	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
