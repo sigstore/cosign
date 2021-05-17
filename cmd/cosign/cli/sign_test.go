@@ -34,7 +34,7 @@ func TestSignCmdLocalKeyAndSk(t *testing.T) {
 			Sk:     true,
 		},
 	} {
-		err := SignCmd(ctx, so, "", false, "", false)
+		err := SignCmd(ctx, so, "", false, "", false, false)
 		if (errors.Is(err, &KeyParseError{}) == false) {
 			t.Fatal("expected KeyParseError")
 		}
