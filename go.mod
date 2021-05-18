@@ -3,7 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
-	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4 // indirect
+	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4
 	github.com/go-openapi/analysis v0.20.1 // indirect
 	github.com/go-openapi/runtime v0.19.28
 	github.com/go-openapi/strfmt v0.20.1
@@ -12,7 +12,7 @@ require (
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/google/certificate-transparency-go v1.1.1 // indirect
 	github.com/google/go-cmp v0.5.5
-	github.com/google/go-containerregistry v0.5.0
+	github.com/google/go-containerregistry v0.5.1
 	github.com/google/trillian v1.3.14-0.20210413093047-5e12fb368c8f
 	github.com/jedisct1/go-minisign v0.0.0-20210414164026-819d7e2534ac // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
