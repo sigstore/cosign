@@ -16,6 +16,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -45,19 +46,15 @@ func main() {
 				return err
 			}
 			defer rc.Close()
-			var w io.Writer
-			if *o == "" {
-				w = os.Stdout
-			} else {
-				f, err := os.Create(*o)
-				if err != nil {
-					return err
-				}
-				defer f.Close()
-				w = f
+			wc, err := createSink(*o)
+			if err != nil {
+				return err
 			}
-			_, err = io.Copy(w, rc)
-			return err
+			_, err = io.Copy(wc, rc)
+			if err != nil {
+				return err
+			}
+			return wc.Close()
 		},
 	}
 
@@ -73,4 +70,27 @@ func main() {
 func printErrAndExit(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	os.Exit(1)
+}
+
+func createSink(path string) (io.WriteCloser, error) {
+	if path == "" {
+		// When writing to stdout, buffer so we can check the digest first.
+		return &buffered{os.Stdout, nil}, nil
+	}
+
+	return os.Create(path)
+}
+
+type buffered struct {
+	w   io.Writer
+	buf *bytes.Buffer
+}
+
+func (b *buffered) Write(p []byte) (n int, err error) {
+	return b.buf.Write(p)
+}
+
+func (b *buffered) Close() error {
+	_, err := io.Copy(b.w, b.buf)
+	return err
 }
