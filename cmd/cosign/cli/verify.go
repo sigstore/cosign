@@ -131,14 +131,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 			return err
 		}
 
-		c.printVerification(imageRef, verified, co)
+		PrintVerification(imageRef, verified, co, "text")
 	}
 
 	return nil
 }
 
-// printVerification logs details about the verification to stdout
-func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.SignedPayload, co *cosign.CheckOpts) {
+// PrintVerification logs details about the verification to stdout
+func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosign.CheckOpts, output string) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.Claims {
@@ -158,7 +158,7 @@ func (c *VerifyCommand) printVerification(imgRef string, verified []cosign.Signe
 	}
 	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
 
-	switch c.Output {
+	switch output {
 	case "text":
 		for _, vp := range verified {
 			if vp.Cert != nil {

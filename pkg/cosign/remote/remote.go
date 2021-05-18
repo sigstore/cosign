@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosign
+package remote
 
 import (
 	"bytes"
@@ -23,6 +23,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -37,7 +39,14 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-const SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
+const (
+	SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
+	sigkey                 = "dev.cosignproject.cosign/signature"
+	certkey                = "dev.sigstore.cosign/certificate"
+	chainkey               = "dev.sigstore.cosign/chain"
+	BundleKey              = "dev.sigstore.cosign/bundle"
+	DockerMediaTypesEnv    = "COSIGN_DOCKER_MEDIA_TYPES"
+)
 
 func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
@@ -50,6 +59,13 @@ func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
 	}
 
 	return m.Layers, nil
+}
+
+func DockerMediaTypes() bool {
+	if b, err := strconv.ParseBool(os.Getenv(DockerMediaTypesEnv)); err == nil {
+		return b
+	}
+	return false
 }
 
 // SignatureImage returns the existing destination image, or a new, empty one.
@@ -78,7 +94,7 @@ func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, err
 }
 
 func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
-	l := &staticLayer{
+	l := &StaticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
 	}
@@ -130,8 +146,8 @@ type UploadOpts struct {
 	RemoteOpts            []remote.Option
 }
 
-func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
-	l := &staticLayer{
+func UploadSignature(ctx context.Context, signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
+	l := &StaticLayer{
 		b:  payload,
 		mt: SimpleSigningMediaType,
 	}
@@ -175,38 +191,38 @@ func Upload(ctx context.Context, signature, payload []byte, dst name.Reference, 
 	return signature, nil
 }
 
-type staticLayer struct {
+type StaticLayer struct {
 	b  []byte
 	mt types.MediaType
 }
 
-func (l *staticLayer) Digest() (v1.Hash, error) {
+func (l *StaticLayer) Digest() (v1.Hash, error) {
 	h, _, err := v1.SHA256(bytes.NewReader(l.b))
 	return h, err
 }
 
 // DiffID returns the Hash of the uncompressed layer.
-func (l *staticLayer) DiffID() (v1.Hash, error) {
+func (l *StaticLayer) DiffID() (v1.Hash, error) {
 	h, _, err := v1.SHA256(bytes.NewReader(l.b))
 	return h, err
 }
 
 // Compressed returns an io.ReadCloser for the compressed layer contents.
-func (l *staticLayer) Compressed() (io.ReadCloser, error) {
+func (l *StaticLayer) Compressed() (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
 }
 
 // Uncompressed returns an io.ReadCloser for the uncompressed layer contents.
-func (l *staticLayer) Uncompressed() (io.ReadCloser, error) {
+func (l *StaticLayer) Uncompressed() (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
 }
 
 // Size returns the compressed size of the Layer.
-func (l *staticLayer) Size() (int64, error) {
+func (l *StaticLayer) Size() (int64, error) {
 	return int64(len(l.b)), nil
 }
 
 // MediaType returns the media type of the Layer.
-func (l *staticLayer) MediaType() (types.MediaType, error) {
+func (l *StaticLayer) MediaType() (types.MediaType, error) {
 	return l.mt, nil
 }

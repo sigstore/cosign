@@ -17,6 +17,7 @@
 # cosign stuff
 /cosign*
 .vscode
+/sget*
 
 # fuzzing artifacts
 *.libfuzzer

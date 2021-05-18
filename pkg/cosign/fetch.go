@@ -29,6 +29,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -38,7 +39,7 @@ type SignedPayload struct {
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
-	Bundle          *Bundle
+	Bundle          *cremote.Bundle
 }
 
 // TODO: marshal the cert correctly.
@@ -133,7 +134,7 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 
 			bundle := desc.Annotations[BundleKey]
 			if bundle != "" {
-				var b Bundle
+				var b cremote.Bundle
 				if err := json.Unmarshal([]byte(bundle), &b); err != nil {
 					return errors.Wrap(err, "unmarshaling bundle")
 				}

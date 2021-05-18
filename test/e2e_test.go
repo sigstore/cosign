@@ -38,7 +38,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
+	sget "github.com/sigstore/cosign/cmd/sget/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -419,6 +421,56 @@ func TestUploadDownload(t *testing.T) {
 		})
 	}
 
+}
+
+func TestUploadBlob(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+	ctx := context.Background()
+
+	imgName := path.Join(repo, "/cosign-upload-e2e")
+	payload := "testpayload"
+	payloadPath := mkfile(payload, td, t)
+
+	// Upload it!
+	files := []cremote.File{{
+		Path: payloadPath,
+	}}
+	must(cli.UploadBlobCmd(ctx, files, "", imgName), t)
+
+	// Check it
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now download it with sget (this should fail by tag)
+	if _, err := sget.SgetCmd(ctx, imgName, ""); err == nil {
+		t.Error("expected download to fail")
+	}
+
+	img, err := remote.Image(ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dgst, err := img.Digest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// But pass by digest
+	rc, err := sget.SgetCmd(ctx, imgName+"@"+dgst.String(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := ioutil.ReadAll(rc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != payload {
+		t.Errorf("expected contents to be %s, got %s", payload, string(b))
+	}
 }
 
 func setenv(t *testing.T, k, v string) func() {
