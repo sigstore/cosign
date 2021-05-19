@@ -41,7 +41,7 @@ func main() {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			rc, err := cli.SgetCmd(ctx, os.Args[0], *keyRef)
+			rc, err := cli.SgetCmd(ctx, args[0], *keyRef)
 			if err != nil {
 				return err
 			}
@@ -75,7 +75,7 @@ func printErrAndExit(err error) {
 func createSink(path string) (io.WriteCloser, error) {
 	if path == "" {
 		// When writing to stdout, buffer so we can check the digest first.
-		return &buffered{os.Stdout, nil}, nil
+		return &buffered{os.Stdout, &bytes.Buffer{}}, nil
 	}
 
 	return os.Create(path)
