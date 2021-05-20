@@ -251,7 +251,7 @@ func Verify(ctx context.Context, ref name.Reference, co *CheckOpts) ([]SignedPay
 					continue
 				}
 				// Expiry check is only enabled with Tlog support
-				if err := checkExpiry(sp.Cert, time.Unix(e.IntegratedTime, 0)); err != nil {
+				if err := checkExpiry(sp.Cert, time.Unix(*e.IntegratedTime, 0)); err != nil {
 					validationErrs = append(validationErrs, err.Error())
 					continue
 				}
@@ -308,7 +308,8 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	le := &models.LogEntryAnon{
 		LogIndex:       sp.Bundle.LogIndex,
 		Body:           sp.Bundle.Body,
-		IntegratedTime: sp.Bundle.IntegratedTime,
+		IntegratedTime: &sp.Bundle.IntegratedTime,
+		LogID:          &sp.Bundle.LogID,
 	}
 	contents, err := le.MarshalBinary()
 	if err != nil {

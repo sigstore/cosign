@@ -340,8 +340,9 @@ func bundle(entry *models.LogEntryAnon) *cremote.Bundle {
 	return &cremote.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
 		Body:                 entry.Body,
-		IntegratedTime:       entry.IntegratedTime,
+		IntegratedTime:       *entry.IntegratedTime,
 		LogIndex:             entry.LogIndex,
+		LogID:                *entry.LogID,
 	}
 }
 
