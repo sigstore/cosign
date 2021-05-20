@@ -135,6 +135,7 @@ type Bundle struct {
 	Body                 interface{}
 	IntegratedTime       int64
 	LogIndex             *int64
+	LogID                string
 }
 
 type UploadOpts struct {
