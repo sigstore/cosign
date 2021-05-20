@@ -1,4 +1,4 @@
-// +build !pivkeydisabled
+// +build pivkey
 // +build cgo
 
 // Copyright 2021 The Sigstore Authors
