@@ -47,10 +47,10 @@ all: cosign
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 
 cosign: $(SRCS)
-	CGO_ENABLED=1 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
+	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
 
-cosign-static: $(SRCS)
-	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
+cosign-pivkey: $(SRCS)
+	CGO_ENABLED=1 go build -tags=pivkey -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 golangci-lint:
@@ -80,14 +80,14 @@ clean:
 .PHONY: ko
 ko:
 	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
-	CGO_ENABLED=0 GOFLAGS="-tags=pivkeydisabled -ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
+	CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
 
 .PHONY: ko-local
 ko-local:
 	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
-	CGO_ENABLED=0 GOFLAGS="-tags=pivkeydisabled -ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
+	CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/cosign/cmd/cosign
 
