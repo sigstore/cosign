@@ -77,6 +77,7 @@ func Sign() *ffcli.Command {
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force       = flagset.Bool("f", false, "skip warnings and confirmations")
 		recursive   = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
+		idToken     = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		annotations = annotationsMap{}
 	)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -116,6 +117,7 @@ EXAMPLES
 				Annotations: annotations.annotations,
 				Pf:          GetPass,
 				Sk:          *sk,
+				IDToken:     *idToken,
 			}
 			for _, img := range args {
 				if err := SignCmd(ctx, so, img, *upload, *payloadPath, *force, *recursive); err != nil {
@@ -132,6 +134,7 @@ type SignOpts struct {
 	KeyRef      string
 	Sk          bool
 	Pf          cosign.PassFunc
+	IDToken     string
 }
 
 func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opts ...remote.Option) ([]name.Digest, error) {
@@ -227,7 +230,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		dupeDetector = k
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		k, err := fulcio.NewSigner(ctx)
+		k, err := fulcio.NewSigner(ctx, so.IDToken)
 		if err != nil {
 			return errors.Wrap(err, "getting key from Fulcio")
 		}

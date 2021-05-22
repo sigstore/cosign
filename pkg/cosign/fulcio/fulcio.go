@@ -49,6 +49,7 @@ const (
 
 	FlowNormal = "normal"
 	FlowDevice = "device"
+	FlowToken  = "token"
 )
 
 // This is the root in the fulcio project.
@@ -64,14 +65,14 @@ func fulcioServer() string {
 }
 
 type oidcConnector interface {
-	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, string, error)
+	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, error)
 }
 
 type realConnector struct {
 	flow oauthflow.TokenGetter
 }
 
-func (rf *realConnector) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, string, error) {
+func (rf *realConnector) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, error) {
 	return oauthflow.OIDConnect(url, clientID, secret, rf.flow)
 }
 
@@ -85,13 +86,13 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 		return "", "", err
 	}
 
-	tok, email, err := connector.OIDConnect(oauthAddress, clientID, "")
+	tok, err := connector.OIDConnect(oauthAddress, clientID, "")
 	if err != nil {
 		return "", "", err
 	}
 
 	// Sign the email address as part of the request
-	h := sha256.Sum256([]byte(email))
+	h := sha256.Sum256([]byte(tok.Email))
 	proof, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
 		return "", "", err
@@ -124,7 +125,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, flow string) (string, string, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow string) (string, string, error) {
 	fcli, err := app.GetFulcioClient(fulcioServer())
 	if err != nil {
 		return "", "", err
@@ -137,6 +138,8 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, flow string) (string, 
 			oauthAddress, oauthflow.SigstoreDeviceURL, oauthflow.SigstoreTokenURL)
 	case FlowNormal:
 		c.flow = oauthflow.DefaultIDTokenGetter
+	case FlowToken:
+		c.flow = &oauthflow.StaticTokenGetter{RawToken: idToken}
 	default:
 		return "", "", fmt.Errorf("unsupported oauth flow: %s", flow)
 	}
@@ -151,19 +154,25 @@ type Signer struct {
 	signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
 	}
 	signer := signature.NewECDSASignerVerifier(priv, crypto.SHA256)
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-	flow := FlowNormal
-	if !term.IsTerminal(0) {
+
+	var flow string
+	switch {
+	case idToken != "":
+		flow = FlowToken
+	case !term.IsTerminal(0):
 		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
 		flow = FlowDevice
+	default:
+		flow = FlowNormal
 	}
-	cert, chain, err := GetCert(ctx, priv, flow) // TODO, use the chain.
+	cert, chain, err := GetCert(ctx, priv, idToken, flow) // TODO, use the chain.
 	if err != nil {
 		return nil, errors.Wrap(err, "retrieving cert")
 	}
