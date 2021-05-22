@@ -19,8 +19,10 @@
 set -ex
 
 go build -o cosign ./cmd/cosign
+go build -o sget ./cmd/sget
 tmp=$(mktemp -d)
 cp cosign $tmp/
+cp sget $tmp/
 
 pushd $tmp
 
@@ -127,6 +129,25 @@ export COSIGN_REPOSITORY=us-central1-docker.pkg.dev/projectsigstore/subrepo
 ./cosign verify -key cosign.pub $img
 unset COSIGN_REPOSITORY
 
+
+# upload blob/sget
+
+blobimg="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/blob"
+# make a random blob
+cat /dev/urandom | head -n 10 | base64 > randomblob
+
+dgst=$(./cosign upload-blob -f randomblob $blobimg)
+
+# this should fail by tag
+if (./sget $blobimg); then false; fi
+
+# but work by digest:
+./sget $dgst -o randomblob2
+
+# Make sure they're the same
+if ( ! cmp -s randomblob randomblob2 ); then false; fi
+
+./sget $blobimg
 # TODO: tlog
 
 

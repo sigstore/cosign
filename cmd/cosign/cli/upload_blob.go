@@ -23,18 +23,21 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
 func fileFromFlag(s string) cremote.File {
-	split := strings.Split(s, "/")
+	split := strings.Split(s, ":")
 	f := cremote.File{
 		Path: split[0],
 	}
 	if len(split) > 1 {
 		split = strings.Split(split[1], "/")
-		f.Platform.OS = split[0]
+		f.Platform = &v1.Platform{
+			OS: split[0],
+		}
 		if len(split) > 1 {
 			f.Platform.Architecture = split[1]
 		}
@@ -125,7 +128,8 @@ func UploadBlobCmd(ctx context.Context, files []cremote.File, contentType, image
 	if len(files) > 1 {
 		fmt.Fprintf(os.Stderr, "Uploading multi-platform index to %s\n", dgstAddr)
 	} else {
-		fmt.Fprintf(os.Stderr, "Uploaded image to %s\n", dgstAddr)
+		fmt.Fprintln(os.Stderr, "Uploaded image to:")
+		fmt.Println(dgstAddr)
 	}
 	return nil
 }
