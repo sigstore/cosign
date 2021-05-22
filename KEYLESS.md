@@ -29,7 +29,8 @@ The following checks were performed on all of these signatures:
   - The cosign claims were validated
   - The claims were present in the transparency log
   - The signatures were integrated into the transparency log when the certificate was valid
-  - Any certificates were verified against the Fulcio roots.Certificate common name:  dlorenc@google.com
+  - Any certificates were verified against the Fulcio roots.
+Certificate subject:  dlorenc@google.com
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36"},"Type":"cosign container image signature"},"Optional":null}
 ```
 

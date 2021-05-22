@@ -162,7 +162,7 @@ func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosig
 	case "text":
 		for _, vp := range verified {
 			if vp.Cert != nil {
-				fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
+				fmt.Println("Certificate subject: ", vp.Cert.EmailAddresses)
 			}
 
 			fmt.Println(string(vp.Payload))
@@ -181,7 +181,7 @@ func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosig
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["CommonName"] = vp.Cert.Subject.CommonName
+				ss.Optional["Subject"] = vp.Cert.EmailAddresses
 			}
 			if vp.Bundle != nil {
 				if ss.Optional == nil {
