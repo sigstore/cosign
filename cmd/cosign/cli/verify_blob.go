@@ -177,7 +177,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			return err
 		}
 		fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
-		fmt.Fprintln(os.Stderr, "Email:", cert.Subject.CommonName)
+		fmt.Fprintln(os.Stderr, "Email:", cert.EmailAddresses)
 	}
 	fmt.Fprintln(os.Stderr, "Verified OK")
 
