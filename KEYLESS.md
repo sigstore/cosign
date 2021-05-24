@@ -59,6 +59,18 @@ When there is no terminal attached (non-interactive mode), `cosign` will automat
 where a link is printed to stdout.
 This link must be opened in a browser to complete the flow.
 
+### Identity Tokens
+
+In automated environments, cosign also supports directly using OIDC Identity Tokens from specific issuers.
+These can be supplied on the command line with the `--identity-token` flag.
+The `audiences` field must contain `fulcio`.
+
+One example usage is:
+
+```shell
+$ cosign sign --identity-token=$(gcloud auth print-identity-token --audiences=fulcio) gcr.io/dlorenc-vmtest2/demo
+```
+
 ### Timestamps
 
 Signature timestamps are checked in the [rekor](https://github.com/sigstore/rekor) transparency log.

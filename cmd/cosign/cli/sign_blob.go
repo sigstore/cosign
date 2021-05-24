@@ -40,6 +40,7 @@ func SignBlob() *ffcli.Command {
 		key     = flagset.String("key", "", "path to the private key file or a KMS URI")
 		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
 		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
+		idToken = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
@@ -73,7 +74,7 @@ EXAMPLES
 				Sk:     *sk,
 			}
 			for _, blob := range args {
-				if _, err := SignBlobCmd(ctx, ko, blob, *b64, GetPass); err != nil {
+				if _, err := SignBlobCmd(ctx, ko, blob, *b64, GetPass, *idToken); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
@@ -87,7 +88,7 @@ type KeyOpts struct {
 	KeyRef string
 }
 
-func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, pf cosign.PassFunc) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, pf cosign.PassFunc, idToken string) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -118,7 +119,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 	default:
 		// Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		k, err := fulcio.NewSigner(ctx)
+		k, err := fulcio.NewSigner(ctx, idToken)
 		if err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}

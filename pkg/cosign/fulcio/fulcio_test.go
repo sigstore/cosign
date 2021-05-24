@@ -35,11 +35,11 @@ type testFlow struct {
 	err   error
 }
 
-func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, string, error) {
+func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, error) {
 	if tf.err != nil {
-		return nil, "", tf.err
+		return nil, tf.err
 	}
-	return tf.idt, tf.email, nil
+	return tf.idt, nil
 }
 
 type testSigningCertProvider struct {
