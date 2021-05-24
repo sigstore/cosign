@@ -1,8 +1,16 @@
 # Hardware Tokens
 
-The `cosign` command line tool supports hardware tokens for signing and key management.
+The `cosign` command line tool optionally supports hardware tokens for signing and key management.
 This support is enabled through the [PIV protocol](https://csrc.nist.gov/projects/piv/piv-standards-and-supporting-documentation)
-and the [go-piv](https://github.com/go-piv/piv-go) library.
+and the [go-piv](https://github.com/go-piv/piv-go) library, which is not included in the standard release. Use [`make cosign-pivkey`](https://github.com/sigstore/cosign/blob/a8d1cc1132d4a019a62ff515b9375c8c5b98a5c5/Makefile#L52), or `go build -tags=pivkey`, to build `cosign` with support for hardware tokens.
+
+---
+**NOTE**
+
+`cosign`'s hardware token support requires `libpcsclite` on platforms other than Windows and OSX.
+See [`go-piv`'s installation instructions for your platform.](https://github.com/go-piv/piv-go#installation)
+
+---
 
 We recommend using an application provided by your hardware vendor to manage keys and permissions for advanced use-cases, but `cosign piv-tool` should work well for most users.
 
