@@ -181,8 +181,8 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	}
 	fmt.Fprintln(os.Stderr, "Verified OK")
 
-	if cosign.Experimental() {
-		rekorClient, err := app.GetRekorClient(cosign.TlogServer())
+	if EnableExperimental() {
+		rekorClient, err := app.GetRekorClient(TlogServer())
 		if err != nil {
 			return err
 		}

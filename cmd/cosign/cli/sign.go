@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
@@ -176,7 +177,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	imageRef string, upload bool, payloadPath string, force bool, recursive bool) error {
 
 	// A key file or token is required unless we're in experimental mode!
-	if cosign.Experimental() {
+	if EnableExperimental() {
 		if nOf(so.KeyRef, so.Sk) > 1 {
 			return &KeyParseError{}
 		}
@@ -239,7 +240,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	}
 
 	// Check if the image is public (no auth in Get)
-	uploadTLog := cosign.Experimental()
+	uploadTLog := EnableExperimental()
 	if uploadTLog && !force {
 		if _, err := remote.Get(ref); err != nil {
 			fmt.Print("warning: uploading to the public transparency log for a private image, please confirm [Y/N]: ")
@@ -317,7 +318,11 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 
 		if uploadTLog {
-			entry, err := cosign.UploadTLog(sig, payload, rekorBytes)
+			rekorClient, err := app.GetRekorClient(TlogServer())
+			if err != nil {
+				return err
+			}
+			entry, err := cosign.UploadTLog(rekorClient, sig, payload, rekorBytes)
 			if err != nil {
 				return err
 			}

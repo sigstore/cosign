@@ -37,6 +37,7 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/types"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 )
@@ -181,7 +182,7 @@ func main() {
 				Claims: true,
 				Roots:  fulcio.Roots,
 			}
-			sps, err := cosign.Verify(context.Background(), ref, co)
+			sps, err := cosign.Verify(context.Background(), ref, co, cli.TlogServer())
 			if err != nil {
 				return nil, err
 			}

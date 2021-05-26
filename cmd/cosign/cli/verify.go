@@ -93,14 +93,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		return flag.ErrHelp
 	}
 
-	if !oneOf(c.KeyRef, c.Sk) && !cosign.Experimental() {
+	if !oneOf(c.KeyRef, c.Sk) && !EnableExperimental() {
 		return &KeyParseError{}
 	}
 
 	co := &cosign.CheckOpts{
 		Annotations: *c.Annotations,
 		Claims:      c.CheckClaims,
-		Tlog:        cosign.Experimental(),
+		Tlog:        EnableExperimental(),
 		Roots:       fulcio.Roots,
 	}
 	keyRef := c.KeyRef
@@ -126,7 +126,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 			return err
 		}
 
-		verified, err := cosign.Verify(ctx, ref, co)
+		verified, err := cosign.Verify(ctx, ref, co, TlogServer())
 		if err != nil {
 			return err
 		}

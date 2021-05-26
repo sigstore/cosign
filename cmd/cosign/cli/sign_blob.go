@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -60,7 +61,7 @@ EXAMPLES
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			// A key file is required unless we're in experimental mode!
-			if !cosign.Experimental() {
+			if !EnableExperimental() {
 				if !oneOf(*key, *sk) {
 					return &KeyParseError{}
 				}
@@ -133,7 +134,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		return nil, errors.Wrap(err, "signing blob")
 	}
 
-	if cosign.Experimental() {
+	if EnableExperimental() {
 		// TODO: Refactor with sign.go
 		var rekorBytes []byte
 		if cert != "" {
@@ -145,7 +146,11 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 			}
 			rekorBytes = pemBytes
 		}
-		entry, err := cosign.UploadTLog(sig, payload, rekorBytes)
+		rekorClient, err := app.GetRekorClient(TlogServer())
+		if err != nil {
+			return nil, err
+		}
+		entry, err := cosign.UploadTLog(rekorClient, sig, payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}

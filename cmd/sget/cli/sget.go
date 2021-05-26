@@ -35,7 +35,7 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 	}
 
 	if _, ok := ref.(name.Tag); ok {
-		if keyRef == "" && !cosign.Experimental() {
+		if keyRef == "" && !cli.EnableExperimental() {
 			return nil, errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
 		}
 	}
@@ -54,8 +54,8 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 		co.PubKey = pub
 	}
 
-	if co.PubKey != nil || cosign.Experimental() {
-		sp, err := cosign.Verify(ctx, ref, co)
+	if co.PubKey != nil || cli.EnableExperimental() {
+		sp, err := cosign.Verify(ctx, ref, co, cli.TlogServer())
 		if err != nil {
 			return nil, err
 		}

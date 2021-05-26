@@ -18,7 +18,6 @@ package cosign
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/go-openapi/strfmt"
@@ -27,25 +26,15 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 )
 
 const (
-	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
-	repoEnv         = "COSIGN_REPOSITORY"
-	ServerEnv       = "REKOR_SERVER"
-	rekorServer     = "https://rekor.sigstore.dev"
+	repoEnv = "COSIGN_REPOSITORY"
 )
-
-func Experimental() bool {
-	if b, err := strconv.ParseBool(os.Getenv(ExperimentalEnv)); err == nil {
-		return b
-	}
-	return false
-}
 
 func substituteRepo(img name.Reference) (name.Reference, error) {
 	wantRepo := os.Getenv(repoEnv)
@@ -83,12 +72,7 @@ func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference,
 }
 
 // Upload will upload the signature, public key and payload to the tlog
-func UploadTLog(signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
-	rekorClient, err := app.GetRekorClient(TlogServer())
-	if err != nil {
-		return nil, err
-	}
-
+func UploadTLog(rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
 	re := rekorEntry(payload, signature, pemBytes)
 	returnVal := models.Rekord{
 		APIVersion: swag.String(re.APIVersion()),
@@ -131,12 +115,4 @@ func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
 			},
 		},
 	}
-}
-
-// tlogServer returns the name of the tlog server, can be overwritten via env var
-func TlogServer() string {
-	if s := os.Getenv(ServerEnv); s != "" {
-		return s
-	}
-	return rekorServer
 }
