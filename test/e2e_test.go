@@ -132,9 +132,9 @@ func TestSignVerifyClean(t *testing.T) {
 
 func TestBundle(t *testing.T) {
 	// use rekor prod since we have hardcoded the public key
-	defer setenv(t, cosign.ServerEnv, "https://rekor.sigstore.dev")()
+	defer setenv(t, cli.ServerEnv, "https://rekor.sigstore.dev")()
 	// turn on the tlog
-	defer setenv(t, cosign.ExperimentalEnv, "1")()
+	defer setenv(t, cli.ExperimentalEnv, "1")()
 
 	repo, stop := reg(t)
 	defer stop()
@@ -160,7 +160,7 @@ func TestBundle(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Make sure offline verification works with bundling
-	os.Setenv(cosign.ServerEnv, "notreal")
+	os.Setenv(cli.ServerEnv, "notreal")
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
 
@@ -483,7 +483,7 @@ func setenv(t *testing.T, k, v string) func() {
 }
 
 func TestTlog(t *testing.T) {
-	defer setenv(t, cosign.ServerEnv, "http://127.0.0.1:3000")()
+	defer setenv(t, cli.ServerEnv, "http://127.0.0.1:3000")()
 
 	repo, stop := reg(t)
 	defer stop()
@@ -511,7 +511,7 @@ func TestTlog(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now we turn on the tlog!
-	defer setenv(t, cosign.ExperimentalEnv, "1")()
+	defer setenv(t, cli.ExperimentalEnv, "1")()
 
 	// Verify shouldn't work since we haven't put anything in it yet.
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
