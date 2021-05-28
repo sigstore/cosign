@@ -214,6 +214,7 @@ Today, `cosign` has been tested and works against the following registries:
 * GitHub Container Registry
 * The CNCF Harbor Registry
 * Digital Ocean Container Registry
+* Sonatype Nexus Container Registry
 
 We aim for wide registry support. To `sign` images in registries which do not yet fully support [OCI media types](https://github.com/sigstore/cosign/blob/main/SPEC.md#object-types), one may need to use `COSIGN_DOCKER_MEDIA_TYPES` to fall back to legacy equivalents. For example:
 ```shell
