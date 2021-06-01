@@ -27,6 +27,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/kms"
 )
 
@@ -39,6 +40,7 @@ func GenerateKeyPair() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign generate-key-pair", flag.ExitOnError)
 		kmsVal  = flagset.String("kms", "", "create key pair in KMS service to use for signing")
+		k8sRef  = flagset.String("k8s", "", "create key pair and store in Kubernetes secret, format as <namespace>/<secret name>")
 	)
 
 	return &ffcli.Command{
@@ -59,12 +61,12 @@ CAVEATS:
   the COSIGN_PASSWORD environment variable to provide one.`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return GenerateKeyPairCmd(ctx, *kmsVal)
+			return GenerateKeyPairCmd(ctx, *kmsVal, *k8sRef)
 		},
 	}
 }
 
-func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
+func GenerateKeyPairCmd(ctx context.Context, kmsVal, k8sRef string) error {
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
@@ -83,6 +85,9 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string) error {
 		}
 		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
 		return nil
+	}
+	if k8sRef != "" {
+		return kubernetes.KeyPairSecret(k8sRef, GetPass)
 	}
 
 	keys, err := cosign.GenerateKeyPair(GetPass)
