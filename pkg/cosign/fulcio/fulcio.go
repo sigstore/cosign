@@ -92,7 +92,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 	}
 
 	// Sign the email address as part of the request
-	h := sha256.Sum256([]byte(tok.Email))
+	h := sha256.Sum256([]byte(tok.Subject))
 	proof, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
 		return "", "", err
@@ -101,7 +101,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 	bearerAuth := httptransport.BearerToken(tok.RawString)
 
 	content := strfmt.Base64(pubBytes)
-	signedEmail := strfmt.Base64(proof)
+	signedChallenge := strfmt.Base64(proof)
 	params := operations.NewSigningCertParams()
 	params.SetCertificateRequest(
 		&models.CertificateRequest{
@@ -109,7 +109,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 				Algorithm: swag.String(models.CertificateRequestPublicKeyAlgorithmEcdsa),
 				Content:   &content,
 			},
-			SignedEmailAddress: &signedEmail,
+			SignedEmailAddress: &signedChallenge,
 		},
 	)
 

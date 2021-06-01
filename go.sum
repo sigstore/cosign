@@ -1244,8 +1244,8 @@ github.com/sigstore/rekor v0.1.2-0.20210514231425-7e3d950f34c6/go.mod h1:3q5eM6+
 github.com/sigstore/rekor v0.1.2-0.20210519014330-b5480728bde6 h1:i2JW972EVgp7QBy18MObuRsixWznaC1G+sett9t9Fks=
 github.com/sigstore/rekor v0.1.2-0.20210519014330-b5480728bde6/go.mod h1:RXi1E+oCIFTKmJQxSGJMLQXB3/+kzpFhrUYXMCNiGHM=
 github.com/sigstore/sigstore v0.0.0-20210415112811-cb2061113e4a/go.mod h1:EoLIp5JbrCE2VZqdCCIemNEdNYiOcdwF0igIvorqo1o=
-github.com/sigstore/sigstore v0.0.0-20210522133621-faee93288971 h1:czUq0do7PUogI1O1kEH4uJNdNHSp8SCrFGHOLgMD2+w=
-github.com/sigstore/sigstore v0.0.0-20210522133621-faee93288971/go.mod h1:0vz3m+D9st0Quc4WVqLQFo5pKTDrdH0j4dithJhtLsc=
+github.com/sigstore/sigstore v0.0.0-20210530211317-99216b8b86a6 h1:GS/+79XAjNnddSpFO+G5xNWCsY2mSJ9S0QCTh7sVN3E=
+github.com/sigstore/sigstore v0.0.0-20210530211317-99216b8b86a6/go.mod h1:0vz3m+D9st0Quc4WVqLQFo5pKTDrdH0j4dithJhtLsc=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.0.5/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

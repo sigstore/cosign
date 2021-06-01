@@ -22,7 +22,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.0.0-20210405115948-e7630f533fca
 	github.com/sigstore/rekor v0.1.2-0.20210519014330-b5480728bde6
-	github.com/sigstore/sigstore v0.0.0-20210522133621-faee93288971
+	github.com/sigstore/sigstore v0.0.0-20210530211317-99216b8b86a6
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
