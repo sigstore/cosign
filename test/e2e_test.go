@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
@@ -40,8 +41,12 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	sget "github.com/sigstore/cosign/cmd/sget/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+
+	kubernetesclient "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var keyPass = []byte("hello")
@@ -220,6 +225,33 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 	}
 	if _, err := cosign.LoadECDSAPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGenerateKeyPairK8s(t *testing.T) {
+	td := t.TempDir()
+	if err := os.Chdir(td); err != nil {
+		t.Fatal(err)
+	}
+	password := "foo"
+	defer setenv(t, "COSIGN_PASSWORD", password)()
+	ctx := context.Background()
+	name := "cosign-secret"
+	namespace := "default"
+	if err := kubernetes.KeyPairSecret(fmt.Sprintf("%s/%s", namespace, name), cli.GetPass); err != nil {
+		t.Fatal(err)
+	}
+	// make sure the secret actually exists
+	client, err := kubernetesclient.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v, ok := s.Data["cosign.password"]; !ok || string(v) != password {
+		t.Fatalf("password is incorrect, got %v expected %v", v, "foo")
 	}
 }
 
