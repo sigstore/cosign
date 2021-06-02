@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -96,7 +97,7 @@ func UploadFile(fileRef string, ref name.Reference, kc authn.Keychain) (v1.Image
 	if err != nil {
 		return nil, err
 	}
-	mt := http.DetectContentType(b)
+	mt := strings.Split(http.DetectContentType(b), ";")[0]
 	l := &StaticLayer{
 		b:  b,
 		mt: types.MediaType(mt),
