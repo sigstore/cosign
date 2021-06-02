@@ -27,7 +27,6 @@ func TestSecret(t *testing.T) {
 	keys := &cosign.Keys{
 		PrivateBytes: []byte("private"),
 		PublicBytes:  []byte("public"),
-		Password:     []byte("pw"),
 	}
 	name := "secret"
 	namespace := "default"
@@ -39,7 +38,7 @@ func TestSecret(t *testing.T) {
 		Data: map[string][]byte{
 			"cosign.key":      []byte("private"),
 			"cosign.pub":      []byte("public"),
-			"cosign.password": []byte("pw"),
+			"cosign.password": nil,
 		},
 	}
 	actual := secret(keys, namespace, name)

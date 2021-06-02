@@ -71,7 +71,7 @@ func secret(keys *cosign.Keys, namespace, name string) *v1.Secret {
 		Data: map[string][]byte{
 			"cosign.key":      keys.PrivateBytes,
 			"cosign.pub":      keys.PublicBytes,
-			"cosign.password": keys.Password,
+			"cosign.password": keys.Password(),
 		},
 	}
 }

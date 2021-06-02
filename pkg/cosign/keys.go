@@ -50,7 +50,7 @@ type PassFunc func(bool) ([]byte, error)
 type Keys struct {
 	PrivateBytes []byte
 	PublicBytes  []byte
-	Password     []byte
+	password     []byte
 }
 
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
@@ -92,8 +92,12 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 	return &Keys{
 		PrivateBytes: privBytes,
 		PublicBytes:  pubBytes,
-		Password:     password,
+		password:     password,
 	}, nil
+}
+
+func (k *Keys) Password() []byte {
+	return k.password
 }
 
 func PublicKeyPem(ctx context.Context, key signature.PublicKeyProvider) ([]byte, error) {
