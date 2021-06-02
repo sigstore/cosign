@@ -1,8 +1,8 @@
 # Other cosign examples
 
-## GCP KMS
+## GCP KMS with `gcloud`
 
-Use `cosign` to generate the payload, sign it with GCP KMS, then use `cosign` to upload it.
+Use `cosign` to generate the payload, sign it with `gcloud kms`, then use `cosign` to upload it.
 
 ```shell
 $ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun > payload.json
