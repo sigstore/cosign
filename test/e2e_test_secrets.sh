@@ -131,23 +131,24 @@ unset COSIGN_REPOSITORY
 
 
 # upload blob/sget
+# TODO: fix and re-enable
 
-blobimg="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/blob"
+# blobimg="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/blob"
 # make a random blob
-cat /dev/urandom | head -n 10 | base64 > randomblob
+# cat /dev/urandom | head -n 10 | base64 > randomblob
 
-dgst=$(./cosign upload-blob -f randomblob $blobimg)
+# dgst=$(./cosign upload-blob -f randomblob $blobimg)
 
 # this should fail by tag
-if (./sget $blobimg); then false; fi
+# if (./sget $blobimg); then false; fi
 
 # but work by digest:
-./sget $dgst -o randomblob2
+# ./sget $dgst -o randomblob2
 
 # Make sure they're the same
-if ( ! cmp -s randomblob randomblob2 ); then false; fi
+# if ( ! cmp -s randomblob randomblob2 ); then false; fi
 
-./sget $blobimg
+# ./sget $blobimg
 # TODO: tlog
 
 
