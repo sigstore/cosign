@@ -6,7 +6,7 @@ require (
 	github.com/GoogleContainerTools/skaffold v1.25.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4
 	github.com/go-openapi/analysis v0.20.1 // indirect
-	github.com/go-openapi/runtime v0.19.28
+	github.com/go-openapi/runtime v0.19.29
 	github.com/go-openapi/strfmt v0.20.1
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-piv/piv-go v1.7.0
