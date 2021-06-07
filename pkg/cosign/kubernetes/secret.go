@@ -23,9 +23,11 @@ import (
 
 	kubernetesclient "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client"
 	"github.com/pkg/errors"
-	"github.com/sigstore/cosign/pkg/cosign"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 func KeyPairSecret(k8sRef string, pf cosign.PassFunc) error {
@@ -45,9 +47,21 @@ func KeyPairSecret(k8sRef string, pf cosign.PassFunc) error {
 	if err != nil {
 		return errors.Wrap(err, "new for config")
 	}
-	s, err := client.CoreV1().Secrets(namespace).Create(ctx, secret(keys, namespace, name), metav1.CreateOptions{})
-	if err != nil {
-		return errors.Wrapf(err, "creating secret %s in ns %s", name, namespace)
+	var s *v1.Secret
+	if s, err = client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
+		if k8serrors.IsNotFound(err) {
+			s, err = client.CoreV1().Secrets(namespace).Create(ctx, secret(keys, namespace, name, nil), metav1.CreateOptions{})
+			if err != nil {
+				return errors.Wrapf(err, "creating secret %s in ns %s", name, namespace)
+			}
+		} else {
+			return errors.Wrap(err, "checking if secret exists")
+		}
+	} else { // Update the existing secret
+		s, err = client.CoreV1().Secrets(namespace).Update(ctx, secret(keys, namespace, name, s.Data), metav1.UpdateOptions{})
+		if err != nil {
+			return errors.Wrapf(err, "updating secret %s in ns %s", name, namespace)
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "Successfully created secret %s in namespace %s\n", s.Name, s.Namespace)
@@ -62,17 +76,20 @@ func KeyPairSecret(k8sRef string, pf cosign.PassFunc) error {
 // * cosign.key
 // * cosign.pub
 // * cosign.password
-func secret(keys *cosign.Keys, namespace, name string) *v1.Secret {
+func secret(keys *cosign.Keys, namespace, name string, data map[string][]byte) *v1.Secret {
+	if data == nil {
+		data = map[string][]byte{}
+	}
+	data["cosign.key"] = keys.PrivateBytes
+	data["cosign.pub"] = keys.PublicBytes
+	data["cosign.password"] = keys.Password()
+
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Data: map[string][]byte{
-			"cosign.key":      keys.PrivateBytes,
-			"cosign.pub":      keys.PublicBytes,
-			"cosign.password": keys.Password(),
-		},
+		Data: data,
 	}
 }
 

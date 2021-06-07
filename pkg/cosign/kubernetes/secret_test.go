@@ -41,7 +41,38 @@ func TestSecret(t *testing.T) {
 			"cosign.password": nil,
 		},
 	}
-	actual := secret(keys, namespace, name)
+	actual := secret(keys, namespace, name, nil)
+	if !reflect.DeepEqual(actual, expect) {
+		t.Errorf("secret: %v, want %v", expect, actual)
+	}
+}
+
+func TestSecretUpdate(t *testing.T) {
+	keys := &cosign.Keys{
+		PrivateBytes: []byte("private"),
+		PublicBytes:  []byte("public"),
+	}
+	name := "secret"
+	namespace := "default"
+	existing := map[string][]byte{
+		"foobar":     []byte("hi"),
+		"cosign.key": []byte("myoldkey"),
+	}
+
+	// Make sure old keys are preserved but the cosign ones are updated
+	expect := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "secret",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"foobar":          []byte("hi"),
+			"cosign.key":      []byte("private"),
+			"cosign.pub":      []byte("public"),
+			"cosign.password": nil,
+		},
+	}
+	actual := secret(keys, namespace, name, existing)
 	if !reflect.DeepEqual(actual, expect) {
 		t.Errorf("secret: %v, want %v", expect, actual)
 	}
