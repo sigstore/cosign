@@ -99,3 +99,9 @@ $ export VAULT_ADDR=http://localhost:8200
 $ export VAULT_TOKEN=testtoken
 $ vault secrets enable transit
 ```
+
+If you enabled `transit` secret engine at different path with the use of `-path` flag (i.e., `$ vault secrets enable -path="someotherpath" transit`), you can use `TRANSIT_SECRET_ENGINE_PATH` environment variable to specify this path while generating a key pair like the following:
+
+```shell
+$ TRANSIT_SECRET_ENGINE_PATH="someotherpath" cosign generate-key-pair -kms hashivault://testkey
+```
