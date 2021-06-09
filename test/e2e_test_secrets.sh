@@ -109,6 +109,37 @@ if (./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob); then fa
 ./cosign verify-blob -key cosign.pub -signature <(head -n 1 sigs) myblob
 ./cosign verify-blob -key cosign.pub -signature <(tail -n 1 sigs) myblob2
 
+## upload blob/sget
+blobimg="${BASE_TEST_REPO}/blob"
+crane ls ${blobimg} | while read tag ; do crane delete "${blobimg}:${tag}" ; done
+
+# make a random blob
+cat /dev/urandom | head -n 10 | base64 > randomblob
+
+# upload-blob and sign it
+dgst=$(./cosign upload-blob -f randomblob ${blobimg})
+./cosign sign -key cosign.key ${dgst}
+./cosign verify -key cosign.pub ${dgst} # For sanity
+
+# sget w/ signature verification should work via tag or digest
+./sget -key cosign.pub -o verified_randomblob_from_digest $dgst
+./sget -key cosign.pub -o verified_randomblob_from_tag $blobimg
+
+# sget w/o signature verification should only work for ref by digest
+./sget -key cosign.pub -o randomblob_from_digest $dgst
+if (./sget -o randomblob_from_tag $blobimg); then false; fi
+
+# clean up a bit
+crane delete $blobimg || true
+crane delete $dgst || true
+
+# Make sure they're the same
+if ( ! cmp -s randomblob verified_randomblob_from_digest ); then false; fi
+if ( ! cmp -s randomblob verified_randomblob_from_tag ); then false; fi
+if ( ! cmp -s randomblob randomblob_from_digest ); then false; fi
+
+# TODO: tlog
+
 ## KMS!
 kms="gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test"
 (crane delete $(./cosign triangulate $img)) || true
@@ -123,34 +154,11 @@ if (./cosign verify -a foo=bar -key cosign.pub $img); then false; fi
 ./cosign verify -key cosign.pub -a foo=bar $img
 
 # store signatures in a different repo
-export COSIGN_REPOSITORY=us-central1-docker.pkg.dev/projectsigstore/subrepo
+export COSIGN_REPOSITORY=${BASE_TEST_REPO}/subrepo
 (crane delete $(./cosign triangulate $img)) || true
 ./cosign sign -key $kms $img
 ./cosign verify -key cosign.pub $img
 unset COSIGN_REPOSITORY
-
-
-# upload blob/sget
-# TODO: fix and re-enable
-
-# blobimg="${BASE_TEST_REPO}/blob"
-# make a random blob
-# cat /dev/urandom | head -n 10 | base64 > randomblob
-
-# dgst=$(./cosign upload-blob -f randomblob $blobimg)
-
-# this should fail by tag
-# if (./sget $blobimg); then false; fi
-
-# but work by digest:
-# ./sget $dgst -o randomblob2
-
-# Make sure they're the same
-# if ( ! cmp -s randomblob randomblob2 ); then false; fi
-
-# ./sget $blobimg
-# TODO: tlog
-
 
 # What else needs auth?
 echo "SUCCESS"
