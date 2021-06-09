@@ -48,6 +48,7 @@ crane cp gcr.io/distroless/base $multiarch_img
 ## sign/verify
 ./cosign sign -key cosign.key $img
 ./cosign verify -key cosign.pub $img
+./cosign verify -key cosign.pub ${img}@$(crane digest ${img})
 
 # copy
 ./cosign copy $img $img_copy
