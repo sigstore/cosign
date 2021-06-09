@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
 set -ex
 
 go build -o cosign ./cmd/cosign
@@ -27,13 +25,15 @@ cp sget $tmp/
 pushd $tmp
 
 pass="$RANDOM"
-
 export COSIGN_PASSWORD=$pass
+
+BASE_TEST_REPO=${BASE_TEST_REPO:-us-central1-docker.pkg.dev/projectsigstore/cosign-ci}
+
 # setup
 ./cosign generate-key-pair
-img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test"
-img2="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/test-2"
-legacy_img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/legacy-test"
+img="${BASE_TEST_REPO}/test"
+img2="${BASE_TEST_REPO}/test-2"
+legacy_img="${BASE_TEST_REPO}/legacy-test"
 for image in $img $img2 $legacy_img
 do
     (crane delete $(./cosign triangulate $image)) || true
@@ -41,7 +41,7 @@ do
 done
 img_copy="${img}/copy"
 crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; done
-multiarch_img="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/multiarch-test"
+multiarch_img="${BASE_TEST_REPO}/multiarch-test"
 crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${tag}" ; done
 crane cp gcr.io/distroless/base $multiarch_img
 
@@ -133,7 +133,7 @@ unset COSIGN_REPOSITORY
 # upload blob/sget
 # TODO: fix and re-enable
 
-# blobimg="us-central1-docker.pkg.dev/projectsigstore/cosign-ci/blob"
+# blobimg="${BASE_TEST_REPO}/blob"
 # make a random blob
 # cat /dev/urandom | head -n 10 | base64 > randomblob
 
