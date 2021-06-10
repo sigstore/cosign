@@ -56,6 +56,9 @@ EXAMPLES:
   # generate a key-pair in Google Cloud KMS
   cosign generate-key-pair -kms gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
 
+  # generate a key-pair in Kubernetes Secret
+  cosign generate-key-pair -k8s [NAMESPACE]/[SECRET_NAME]
+
 CAVEATS:
   This command interactively prompts for a password. You can use
   the COSIGN_PASSWORD environment variable to provide one.`,
