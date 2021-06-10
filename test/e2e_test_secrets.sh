@@ -31,6 +31,8 @@ BASE_TEST_REPO=${BASE_TEST_REPO:-us-central1-docker.pkg.dev/projectsigstore/cosi
 
 # setup
 ./cosign generate-key-pair
+signing_key=cosign.key
+verification_key=cosign.pub
 img="${BASE_TEST_REPO}/test"
 img2="${BASE_TEST_REPO}/test-2"
 legacy_img="${BASE_TEST_REPO}/legacy-test"
@@ -46,42 +48,42 @@ crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${t
 crane cp gcr.io/distroless/base $multiarch_img
 
 ## sign/verify
-./cosign sign -key cosign.key $img
-./cosign verify -key cosign.pub $img
+./cosign sign -key ${signing_key} $img
+./cosign verify -key ${verification_key} $img
 
 # copy
 ./cosign copy $img $img_copy
-./cosign verify -key cosign.pub $img_copy
+./cosign verify -key ${verification_key} $img_copy
 
 # sign recursively
-./cosign sign -key cosign.key -r $multiarch_img
-./cosign verify -key cosign.pub $multiarch_img # verify image index
+./cosign sign -key ${signing_key} -r $multiarch_img
+./cosign verify -key ${verification_key} $multiarch_img # verify image index
 for arch in "linux/amd64" "linux/arm64" "linux/s390x"
 do
     # verify sigs on discrete images
-    ./cosign verify -key cosign.pub "${multiarch_img}@$(crane digest --platform=$arch ${multiarch_img})"
+    ./cosign verify -key ${verification_key} "${multiarch_img}@$(crane digest --platform=$arch ${multiarch_img})"
 done
 
 ## confirm use of OCI media type in signature image
 crane manifest $(./cosign triangulate $img) | grep -q "application/vnd.oci.image.config.v1+json"
 
 ## sign/verify multiple images
-./cosign sign -key cosign.key -a multiple=true $img $img2
-./cosign verify -key cosign.pub -a multiple=true $img $img2
+./cosign sign -key ${signing_key} -a multiple=true $img $img2
+./cosign verify -key ${verification_key} -a multiple=true $img $img2
 
 # annotations
-if (./cosign verify -key cosign.pub -a foo=bar $img); then false; fi
-./cosign sign -key cosign.key -a foo=bar $img
-./cosign verify -key cosign.pub -a foo=bar $img
+if (./cosign verify -key ${verification_key} -a foo=bar $img); then false; fi
+./cosign sign -key ${signing_key} -a foo=bar $img
+./cosign verify -key ${verification_key} -a foo=bar $img
 
-if (./cosign verify -key cosign.pub -a foo=bar -a bar=baz $img); then false; fi
-./cosign sign -key cosign.key -a foo=bar -a bar=baz $img
-./cosign verify -key cosign.pub -a foo=bar -a bar=baz $img
-./cosign verify -key cosign.pub -a bar=baz $img
+if (./cosign verify -key ${verification_key} -a foo=bar -a bar=baz $img); then false; fi
+./cosign sign -key ${signing_key} -a foo=bar -a bar=baz $img
+./cosign verify -key ${verification_key} -a foo=bar -a bar=baz $img
+./cosign verify -key ${verification_key} -a bar=baz $img
 
 # confirm the use of legacy (Docker) media types
-COSIGN_DOCKER_MEDIA_TYPES=1 ./cosign sign -key cosign.key $legacy_img
-./cosign verify -key cosign.pub $legacy_img
+COSIGN_DOCKER_MEDIA_TYPES=1 ./cosign sign -key ${signing_key} $legacy_img
+./cosign verify -key ${verification_key} $legacy_img
 legacy_manifest=$(crane manifest $(./cosign triangulate $legacy_img))
 echo $legacy_manifest | grep -q "application/vnd.docker.distribution.manifest.v2+json"
 echo $legacy_manifest | grep -q "application/vnd.docker.container.image.v1+json"
@@ -89,25 +91,25 @@ echo $legacy_manifest | grep -q "application/vnd.docker.container.image.v1+json"
 # wrong keys
 mkdir wrong && pushd wrong
 ../cosign generate-key-pair
-if (../cosign verify -key cosign.pub $img); then false; fi
+if (../cosign verify -key ${verification_key} $img); then false; fi
 popd
 
 ## sign-blob
 echo "myblob" > myblob
 echo "myblob2" > myblob2
-./cosign sign-blob -key cosign.key myblob > myblob.sig
-./cosign sign-blob -key cosign.key myblob2 > myblob2.sig
+./cosign sign-blob -key ${signing_key} myblob > myblob.sig
+./cosign sign-blob -key ${signing_key} myblob2 > myblob2.sig
 
-./cosign verify-blob -key cosign.pub -signature myblob.sig myblob
-if (./cosign verify-blob -key cosign.pub -signature myblob.sig myblob2); then false; fi
+./cosign verify-blob -key ${verification_key} -signature myblob.sig myblob
+if (./cosign verify-blob -key ${verification_key} -signature myblob.sig myblob2); then false; fi
 
-if (./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob); then false; fi
-./cosign verify-blob -key cosign.pub -signature myblob2.sig myblob2
+if (./cosign verify-blob -key ${verification_key} -signature myblob2.sig myblob); then false; fi
+./cosign verify-blob -key ${verification_key} -signature myblob2.sig myblob2
 
 ## sign and verify multiple blobs
-./cosign sign-blob -key cosign.key myblob myblob2 > sigs
-./cosign verify-blob -key cosign.pub -signature <(head -n 1 sigs) myblob
-./cosign verify-blob -key cosign.pub -signature <(tail -n 1 sigs) myblob2
+./cosign sign-blob -key ${signing_key} myblob myblob2 > sigs
+./cosign verify-blob -key ${verification_key} -signature <(head -n 1 sigs) myblob
+./cosign verify-blob -key ${verification_key} -signature <(tail -n 1 sigs) myblob2
 
 ## upload blob/sget
 blobimg="${BASE_TEST_REPO}/blob"
@@ -118,15 +120,15 @@ cat /dev/urandom | head -n 10 | base64 > randomblob
 
 # upload-blob and sign it
 dgst=$(./cosign upload-blob -f randomblob ${blobimg})
-./cosign sign -key cosign.key ${dgst}
-./cosign verify -key cosign.pub ${dgst} # For sanity
+./cosign sign -key ${signing_key} ${dgst}
+./cosign verify -key ${verification_key} ${dgst} # For sanity
 
 # sget w/ signature verification should work via tag or digest
-./sget -key cosign.pub -o verified_randomblob_from_digest $dgst
-./sget -key cosign.pub -o verified_randomblob_from_tag $blobimg
+./sget -key ${verification_key} -o verified_randomblob_from_digest $dgst
+./sget -key ${verification_key} -o verified_randomblob_from_tag $blobimg
 
 # sget w/o signature verification should only work for ref by digest
-./sget -key cosign.pub -o randomblob_from_digest $dgst
+./sget -key ${verification_key} -o randomblob_from_digest $dgst
 if (./sget -o randomblob_from_tag $blobimg); then false; fi
 
 # clean up a bit
@@ -141,23 +143,24 @@ if ( ! cmp -s randomblob randomblob_from_digest ); then false; fi
 # TODO: tlog
 
 ## KMS!
-kms="gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test"
+TEST_KMS=${TEST_KMS:-gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test}
 (crane delete $(./cosign triangulate $img)) || true
-./cosign generate-key-pair -kms $kms
+./cosign generate-key-pair -kms $TEST_KMS
+signing_key=$TEST_KMS
 
-if (./cosign verify -key cosign.pub $img); then false; fi
-./cosign sign -key $kms $img
-./cosign verify -key cosign.pub $img
+if (./cosign verify -key ${verification_key} $img); then false; fi
+./cosign sign -key ${signing_key} $img
+./cosign verify -key ${verification_key} $img
 
-if (./cosign verify -a foo=bar -key cosign.pub $img); then false; fi
-./cosign sign -key $kms -a foo=bar $img
-./cosign verify -key cosign.pub -a foo=bar $img
+if (./cosign verify -a foo=bar -key ${verification_key} $img); then false; fi
+./cosign sign -key ${signing_key} -a foo=bar $img
+./cosign verify -key ${verification_key} -a foo=bar $img
 
 # store signatures in a different repo
 export COSIGN_REPOSITORY=${BASE_TEST_REPO}/subrepo
 (crane delete $(./cosign triangulate $img)) || true
-./cosign sign -key $kms $img
-./cosign verify -key cosign.pub $img
+./cosign sign -key ${signing_key} $img
+./cosign verify -key ${verification_key} $img
 unset COSIGN_REPOSITORY
 
 # What else needs auth?
