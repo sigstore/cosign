@@ -1,6 +1,35 @@
 # Changelog
 
-## v0.5.0 (pending)
+## v0.6.0 (pending)
+
+### Enhancements
+
+### Bug Fixes
+
+### Contributors
+
+## v0.5.0
+
+### Enhancements
+
+* Added `cosign copy` to easily move images and signatures between repositories (https://github.com/sigstore/cosign/pull/317)
+* Added `-r` flag to `cosign sign` for recursively signing multi-arch images (https://github.com/sigstore/cosign/pull/320)
+* Added `cosign clean` to delete signatures for an image (Thanks, @developer-guy! https://github.com/sigstore/cosign/pull/324)
+* Added `-k8s` flag to `cosign generate-key-pair` to create a Kubernetes secret (Hell yeah, @priyawadhwa! https://github.com/sigstore/cosign/pull/345)
+
+### Bug Fixes
+
+* Fixed an issue with misdirected image signatures when `COSIGN_REPOSITORY` was used (https://github.com/sigstore/cosign/pull/323)
+
+### Contributors
+
+* Balazs Zachar (@Cajga)
+* Batuhan Apaydın (@developer-guy)
+* Dan Lorenc (@dlorenc)
+* Furkan Turkal (@Dentrax)
+* Jake Sanders (@dekkagaijin)
+* Jon Johnson (@jonjohnsonjr)
+* Priya Wadhwa (@priyawadhwa)
 
 ## v0.4.0
 
