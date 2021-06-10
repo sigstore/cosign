@@ -35,7 +35,7 @@ jobs:
           cosign-release: 'v0.4.0'
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.16.4'
+          go-version: '1.16.5'
       # Required for `make cosign-pivkey`
       # - name: deps
       #   run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
