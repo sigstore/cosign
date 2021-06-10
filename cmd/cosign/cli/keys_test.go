@@ -81,7 +81,7 @@ func TestSignerFromPrivateKeyFileRef(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			testFile, _ := generateKeyFile(t, tmpDir, tc.writePw)
 
-			signer, err := signerFromKeyRef(ctx, testFile, tc.readPw)
+			signer, err := SignerFromKeyRef(ctx, testFile, tc.readPw)
 			if err != nil {
 				if tc.expectErr {
 					// Task failed successfully

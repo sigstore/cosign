@@ -37,7 +37,7 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier,
 	return cosign.LoadECDSAPrivateKey(kb, pass)
 }
 
-func signerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
+func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
 	return signerVerifierFromKeyRef(ctx, keyRef, pf)
 }
 

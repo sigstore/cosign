@@ -27,6 +27,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/tuf"
 )
 
 var (
@@ -41,7 +42,7 @@ func main() {
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
 			cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair(), cli.SignBlob(),
-			cli.UploadBlob(), cli.Copy(), cli.Clean(), cli.VerifyBlob(), cli.Triangulate(), cli.Version(), cli.PublicKey(), pivcli.PivKey()},
+			cli.UploadBlob(), cli.Copy(), cli.Clean(), cli.VerifyBlob(), cli.Triangulate(), cli.Version(), cli.PublicKey(), pivcli.PivKey(), tuf.Tuf()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},

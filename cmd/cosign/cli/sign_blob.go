@@ -104,7 +104,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 	var signer signature.Signer
 	switch {
 	case ko.KeyRef != "":
-		k, err := signerFromKeyRef(ctx, ko.KeyRef, pf)
+		k, err := SignerFromKeyRef(ctx, ko.KeyRef, pf)
 		if err != nil {
 			return nil, errors.Wrap(err, "loading key")
 		}

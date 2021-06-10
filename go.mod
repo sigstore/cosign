@@ -27,6 +27,7 @@ require (
 	github.com/sigstore/sigstore v0.0.0-20210427115853-11e6eaab7cdc
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/stretchr/testify v1.7.0
+	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 // indirect
 	github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6 // indirect

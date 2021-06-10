@@ -115,3 +115,24 @@ func UploadFile(fileRef string, ref name.Reference, kc authn.Keychain) (v1.Image
 	}
 	return img, nil
 }
+
+func GetFile(ref name.Reference) ([]byte, error) {
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, err
+	}
+	layers, err := img.Layers()
+	if err != nil {
+		return nil, err
+	}
+	if len(layers) != 1 {
+		return nil, err
+	}
+
+	r, err := layers[0].Compressed()
+	if err != nil {
+		return nil, err
+
+	}
+	return ioutil.ReadAll(r)
+}
