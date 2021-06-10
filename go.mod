@@ -36,6 +36,6 @@ require (
 	golang.org/x/sys v0.0.0-20210608053332-aa57babbf139 // indirect
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
 	google.golang.org/genproto v0.0.0-20210608205507-b6d2f5bf0d7d // indirect
-	k8s.io/api v0.19.11
+	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
 )
