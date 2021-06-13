@@ -43,6 +43,7 @@ func VerifyBlob() *ffcli.Command {
 		flagset   = flag.NewFlagSet("cosign verify-blob", flag.ExitOnError)
 		key       = flagset.String("key", "", "path to the public key file, URL, or KMS URI")
 		sk        = flagset.Bool("sk", false, "whether to use a hardware security key")
+		slot      = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "path to the signature")
 	)
@@ -77,6 +78,7 @@ EXAMPLES
 			ko := KeyOpts{
 				KeyRef: *key,
 				Sk:     *sk,
+				Slot:   *slot,
 			}
 			if err := VerifyBlobCmd(ctx, ko, *cert, *signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)
@@ -108,7 +110,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			return errors.Wrap(err, "loading public key")
 		}
 	case ko.Sk:
-		pubKey, err = pivkey.NewPublicKeyProvider()
+		pubKey, err = pivkey.NewPublicKeyProvider(ko.Slot)
 		if err != nil {
 			return errors.Wrap(err, "loading public key from token")
 		}

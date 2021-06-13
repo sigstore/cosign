@@ -39,6 +39,7 @@ func PublicKey() *ffcli.Command {
 		flagset = flag.NewFlagSet("cosign public-key", flag.ExitOnError)
 		key     = flagset.String("key", "", "path to the private key file, public key URL, or KMS URI")
 		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
+		slot    = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
 		outFile = flagset.String("outfile", "", "file to write public key")
 	)
 
@@ -83,6 +84,7 @@ EXAMPLES
 			pk := Pkopts{
 				KeyRef: *key,
 				Sk:     *sk,
+				Slot:   *slot,
 			}
 			return GetPublicKey(ctx, pk, writer, GetPass)
 		},
@@ -92,6 +94,7 @@ EXAMPLES
 type Pkopts struct {
 	KeyRef string
 	Sk     bool
+	Slot   string
 }
 
 func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosign.PassFunc) error {
@@ -104,7 +107,7 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		}
 		k = s
 	case opts.Sk:
-		sk, err := pivkey.NewPublicKeyProvider()
+		sk, err := pivkey.NewPublicKeyProvider(opts.Slot)
 		if err != nil {
 			return err
 		}

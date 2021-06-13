@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -158,7 +159,12 @@ func (a *Attestations) Output() {
 	fmt.Printf("  Version: %d.%d.%d\n", a.KeyAttestation.Version.Major, a.KeyAttestation.Version.Minor, a.KeyAttestation.Version.Patch)
 }
 
-func AttestationCmd(_ context.Context) (*Attestations, error) {
+func AttestationCmd(_ context.Context, slotArg string) (*Attestations, error) {
+	slot := pivkey.SlotForName(slotArg)
+	if slot == nil {
+		return nil, flag.ErrHelp
+	}
+
 	yk, err := pivkey.GetKey()
 	if err != nil {
 		return nil, err
@@ -169,7 +175,7 @@ func AttestationCmd(_ context.Context) (*Attestations, error) {
 		return nil, err
 	}
 
-	keyCert, err := yk.Attest(piv.SlotSignature)
+	keyCert, err := yk.Attest(*slot)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +204,22 @@ func toPem(c *x509.Certificate) string {
 	return string(b)
 }
 
-func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool) error {
+func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool, slotArg string, pinPolicyArg string, touchPolicyArg string) error {
+	slot := pivkey.SlotForName(slotArg)
+	if slot == nil {
+		return flag.ErrHelp
+	}
+
+	pinPolicy := pivkey.PINPolicyForName(pinPolicyArg, *slot)
+	if pinPolicy < 0 {
+		return flag.ErrHelp
+	}
+
+	touchPolicy := pivkey.TouchPolicyForName(pinPolicyArg, *slot)
+	if touchPolicy < 0 {
+		return flag.ErrHelp
+	}
+
 	yk, err := pivkey.GetKey()
 	if err != nil {
 		return err
@@ -225,13 +246,13 @@ func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool) e
 
 	key := piv.Key{
 		Algorithm:   piv.AlgorithmEC256,
-		PINPolicy:   piv.PINPolicyAlways,
-		TouchPolicy: piv.TouchPolicyAlways,
+		PINPolicy:   pinPolicy,
+		TouchPolicy: touchPolicy,
 	}
 	if !Confirm("Generating new signing key. This will destroy any previous keys.") {
 		return nil
 	}
-	pubKey, err := yk.GenerateKey(*keyBytes, piv.SlotSignature, key)
+	pubKey, err := yk.GenerateKey(*keyBytes, *slot, key)
 	if err != nil {
 		return err
 	}
@@ -248,7 +269,7 @@ func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool) e
 	fmt.Println(string(pemBytes))
 	yk.Close()
 
-	att, err := AttestationCmd(ctx)
+	att, err := AttestationCmd(ctx, slotArg)
 	if err != nil {
 		return err
 	}

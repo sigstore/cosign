@@ -62,12 +62,18 @@ func getPin() (string, error) {
 	return string(b), err
 }
 
-func NewPublicKeyProvider() (cosign.PublicKey, error) {
+func NewPublicKeyProvider(slotName string) (cosign.PublicKey, error) {
 	pk, err := GetKey()
 	if err != nil {
 		return nil, err
 	}
-	cert, err := pk.Attest(piv.SlotSignature)
+
+	slot := SlotForName(slotName)
+	if slot == nil {
+		return nil, errors.New("invalid slot name")
+	}
+	
+	cert, err := pk.Attest(*slot)
 	if err != nil {
 		return nil, err
 	}
@@ -80,12 +86,18 @@ func NewPublicKeyProvider() (cosign.PublicKey, error) {
 	}, nil
 }
 
-func NewSignerVerifier() (signature.SignerVerifier, error) {
+func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
 	pk, err := GetKey()
 	if err != nil {
 		return nil, err
 	}
-	cert, err := pk.Attest(piv.SlotSignature)
+
+	slot := SlotForName(slotName)
+	if slot == nil {
+		return nil, errors.New("invalid slot name")
+	}
+	
+	cert, err := pk.Attest(*slot)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +105,7 @@ func NewSignerVerifier() (signature.SignerVerifier, error) {
 	auth := piv.KeyAuth{
 		PINPrompt: getPin,
 	}
-	privKey, err := pk.PrivateKey(piv.SlotSignature, cert.PublicKey, auth)
+	privKey, err := pk.PrivateKey(*slot, cert.PublicKey, auth)
 	if err != nil {
 		return nil, err
 	}
