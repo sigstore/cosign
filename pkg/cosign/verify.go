@@ -42,6 +42,7 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -137,10 +138,15 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 	}
 
 	// Verify rekor's signature over the SET.
-	rekorPubKey, err := PemToECDSAKey([]byte(rekorPub))
+	resp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParams())
+	if err != nil {
+		return nil, errors.Wrap(err, "rekor public key")
+	}
+	rekorPubKey, err := PemToECDSAKey([]byte(resp.Payload))
 	if err != nil {
 		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
 	}
+
 	if err := VerifySET(&e, []byte(e.Verification.SignedEntryTimestamp), rekorPubKey); err != nil {
 		return nil, errors.Wrap(err, "verifying signedEntryTimestamp")
 	}
@@ -340,10 +346,14 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 }
 
 func VerifySET(entry *models.LogEntryAnon, signature []byte, pub *ecdsa.PublicKey) error {
-	// need to take the hash over the rest
-	entry.Verification = nil
-
-	contents, err := entry.MarshalBinary()
+	// need to exclude entry.Verification
+	le := &models.LogEntryAnon{
+		IntegratedTime: entry.IntegratedTime,
+		LogIndex:       entry.LogIndex,
+		Body:           entry.Body,
+		LogID:          entry.LogID,
+	}
+	contents, err := le.MarshalBinary()
 	if err != nil {
 		return errors.Wrap(err, "marshaling")
 	}
