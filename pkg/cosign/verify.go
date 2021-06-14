@@ -340,6 +340,9 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 }
 
 func VerifySET(entry *models.LogEntryAnon, signature []byte, pub *ecdsa.PublicKey) error {
+	// need to take the hash over the rest
+	entry.Verification = nil
+
 	contents, err := entry.MarshalBinary()
 	if err != nil {
 		return errors.Wrap(err, "marshaling")
