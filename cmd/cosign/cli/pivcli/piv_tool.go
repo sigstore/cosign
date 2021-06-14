@@ -129,6 +129,7 @@ func Attestation() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool attestation", flag.ExitOnError)
 		output  = flagset.String("output", "text", "format to output attestation information in. text|json, default text.")
+		slot    = flagset.String("slot", "", "Slot to use for generated key (authentication|signature|card-authentication|key-management)")
 	)
 
 	return &ffcli.Command{
@@ -137,7 +138,7 @@ func Attestation() *ffcli.Command {
 		ShortHelp:  "attestation contains commands to manage a hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			a, err := AttestationCmd(ctx)
+			a, err := AttestationCmd(ctx, *slot)
 			switch *output {
 			case "text":
 				a.Output()
@@ -158,6 +159,9 @@ func GenerateKey() *ffcli.Command {
 		flagset       = flag.NewFlagSet("cosign piv-tool generate-key", flag.ExitOnError)
 		managementKey = flagset.String("management-key", "", "management key, uses default if empty")
 		randomKey     = flagset.Bool("random-management-key", false, "if set to true, generates a new random management key and deletes it after")
+		slot          = flagset.String("slot", "", "Slot to use for generated key (authentication|signature|card-authentication|key-management)")
+		pinPolicy     = flagset.String("pin-policy", "", "PIN policy for slot (never|once|always)")
+		touchPolicy   = flagset.String("touch-policy", "", "Touch policy for slot (never|always|cached)")
 	)
 
 	return &ffcli.Command{
@@ -166,7 +170,8 @@ func GenerateKey() *ffcli.Command {
 		ShortHelp:  "generate-key generates a new signing key on the hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return GenerateKeyCmd(ctx, *managementKey, *randomKey)
+			return GenerateKeyCmd(ctx, *managementKey, *randomKey,
+				*slot, *pinPolicy, *touchPolicy)
 		},
 	}
 }

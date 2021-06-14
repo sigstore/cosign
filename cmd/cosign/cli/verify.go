@@ -37,6 +37,7 @@ type VerifyCommand struct {
 	CheckClaims bool
 	KeyRef      string
 	Sk          bool
+	Slot        string
 	Output      string
 	Annotations *map[string]interface{}
 }
@@ -49,7 +50,7 @@ func Verify() *ffcli.Command {
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
-
+	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
 
@@ -113,7 +114,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		}
 		co.PubKey = pubKey
 	} else if c.Sk {
-		pubKey, err := pivkey.NewPublicKeyProvider()
+		pubKey, err := pivkey.NewPublicKeyProvider(c.Slot)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}

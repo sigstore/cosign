@@ -25,7 +25,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func NewPublicKeyProvider() (cosign.PublicKey, error) {
+func NewPublicKeyProvider(slotName string) (cosign.PublicKey, error) {
 	return nil, errors.New("unimplemented")
 }
 
@@ -49,6 +49,6 @@ func (ps *PIVSigner) PublicKey(context.Context) (crypto.PublicKey, error) {
 
 var _ signature.Signer = &PIVSigner{}
 
-func NewSignerVerifier() (signature.SignerVerifier, error) {
+func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
 	return nil, errors.New("unimplemented")
 }

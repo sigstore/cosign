@@ -75,6 +75,7 @@ func Sign() *ffcli.Command {
 		key         = flagset.String("key", "", "path to the private key file or KMS URI")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		sk          = flagset.Bool("sk", false, "whether to use a hardware security key")
+		slot        = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force       = flagset.Bool("f", false, "skip warnings and confirmations")
 		recursive   = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
@@ -118,6 +119,7 @@ EXAMPLES
 				Annotations: annotations.annotations,
 				Pf:          GetPass,
 				Sk:          *sk,
+				Slot:        *slot,
 				IDToken:     *idToken,
 			}
 			for _, img := range args {
@@ -134,6 +136,7 @@ type SignOpts struct {
 	Annotations map[string]interface{}
 	KeyRef      string
 	Sk          bool
+	Slot        string
 	Pf          cosign.PassFunc
 	IDToken     string
 }
@@ -216,7 +219,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	var cert, chain string
 	switch {
 	case so.Sk:
-		sk, err := pivkey.NewSignerVerifier()
+		sk, err := pivkey.NewSignerVerifier(so.Slot)
 		if err != nil {
 			return err
 		}

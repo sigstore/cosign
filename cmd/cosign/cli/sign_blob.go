@@ -41,6 +41,7 @@ func SignBlob() *ffcli.Command {
 		key     = flagset.String("key", "", "path to the private key file or a KMS URI")
 		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
 		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
+		slot    = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
 		idToken = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 	)
 	return &ffcli.Command{
@@ -73,6 +74,7 @@ EXAMPLES
 			ko := KeyOpts{
 				KeyRef: *key,
 				Sk:     *sk,
+				Slot:   *slot,
 			}
 			for _, blob := range args {
 				if _, err := SignBlobCmd(ctx, ko, blob, *b64, GetPass, *idToken); err != nil {
@@ -86,6 +88,7 @@ EXAMPLES
 
 type KeyOpts struct {
 	Sk     bool
+	Slot   string
 	KeyRef string
 }
 
@@ -112,7 +115,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		}
 		signer = k
 	case ko.Sk:
-		k, err := pivkey.NewSignerVerifier()
+		k, err := pivkey.NewSignerVerifier(ko.Slot)
 		if err != nil {
 			return nil, err
 		}

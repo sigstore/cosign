@@ -115,19 +115,19 @@ func TestGenerateKeyCmd(t *testing.T) {
 	must(ResetKeyCmd(ctx), t)
 
 	// This should work with the default key
-	must(GenerateKeyCmd(ctx, "", false), t)
+	must(GenerateKeyCmd(ctx, "", false, "", "", ""), t)
 
 	// Set the key to something other than the default
 	must(SetManagementKeyCmd(ctx, "", "mynewkey", false), t)
 	// Now this should fail
-	mustErr(GenerateKeyCmd(ctx, "", false), t)
+	mustErr(GenerateKeyCmd(ctx, "", false, "", "", ""), t)
 	// Unless we use the right key
-	must(GenerateKeyCmd(ctx, "mynewkey", false), t)
+	must(GenerateKeyCmd(ctx, "mynewkey", false, "", "", ""), t)
 
 	// Now if we use a random key it should set a new one
-	must(GenerateKeyCmd(ctx, "mynewkey", true), t)
+	must(GenerateKeyCmd(ctx, "mynewkey", true, "", "", ""), t)
 	// The old one shouldn't work.
-	mustErr(GenerateKeyCmd(ctx, "mynewkey", false), t)
+	mustErr(GenerateKeyCmd(ctx, "mynewkey", false, "", "", ""), t)
 }
 
 func TestAttestationCmd(t *testing.T) {
@@ -135,9 +135,9 @@ func TestAttestationCmd(t *testing.T) {
 
 	Confirm = func(_ string) bool { return true }
 	must(ResetKeyCmd(ctx), t)
-	must(GenerateKeyCmd(ctx, "", false), t)
+	must(GenerateKeyCmd(ctx, "", false, "", "", ""), t)
 
-	attestations, err := AttestationCmd(ctx)
+	attestations, err := AttestationCmd(ctx, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +161,16 @@ func TestAttestationCmd(t *testing.T) {
 		Roots:         root,
 		Intermediates: intermediate,
 	}); err != nil {
-		t.Fatal(err)
+		// This is known to fail on YubiKey firmware 4.3
+		// See https://labanskoller.se/blog/2019/12/30/pki-is-hard-how-yubico-trusted-openssl-and-got-it-wrong/
+		//
+		if attestations.KeyAttestation.Version.Major == 4 &&
+			attestations.KeyAttestation.Version.Minor == 3 {
+			t.Skipf("key attestation cert chain verification is known to be broken on firmware 4.3")
+		} else {
+			t.Fatal(err)
+		}
+
 	}
 
 }
