@@ -3,7 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
-	github.com/GoogleContainerTools/skaffold v1.26.0
+	github.com/GoogleContainerTools/skaffold v1.26.1
 	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4
 	github.com/go-openapi/analysis v0.20.1 // indirect
 	github.com/go-openapi/runtime v0.19.29
