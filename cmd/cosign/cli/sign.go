@@ -246,7 +246,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	uploadTLog := EnableExperimental()
 	if uploadTLog && !force {
 		if _, err := remote.Get(ref); err != nil {
-			fmt.Print("warning: uploading to the public transparency log for a private image, please confirm [Y/N]: ")
+			fmt.Printf("warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", TlogServer())
 
 			var tlogConfirmResponse string
 			if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
