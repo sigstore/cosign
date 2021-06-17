@@ -42,6 +42,7 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -135,6 +136,21 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
 		return nil, errors.Wrap(err, "verifying inclusion proof")
 	}
+
+	// Verify rekor's signature over the SET.
+	resp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParams())
+	if err != nil {
+		return nil, errors.Wrap(err, "rekor public key")
+	}
+	rekorPubKey, err := PemToECDSAKey([]byte(resp.Payload))
+	if err != nil {
+		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
+	}
+
+	if err := VerifySET(&e, []byte(e.Verification.SignedEntryTimestamp), rekorPubKey); err != nil {
+		return nil, errors.Wrap(err, "verifying signedEntryTimestamp")
+	}
+
 	return &e, nil
 }
 
@@ -244,12 +260,14 @@ func Verify(ctx context.Context, ref name.Reference, co *CheckOpts, rekorServerU
 			}
 
 			// if we have a cert, we should check expiry
+			// The IntegratedTime verified in VerifyTlog
 			if sp.Cert != nil {
 				e, err := getTlogEntry(rekorClient, uuid)
 				if err != nil {
 					validationErrs = append(validationErrs, err.Error())
 					continue
 				}
+
 				// Expiry check is only enabled with Tlog support
 				if err := checkExpiry(sp.Cert, time.Unix(*e.IntegratedTime, 0)); err != nil {
 					validationErrs = append(validationErrs, err.Error())
@@ -311,18 +329,9 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 		IntegratedTime: &sp.Bundle.IntegratedTime,
 		LogID:          &sp.Bundle.LogID,
 	}
-	contents, err := le.MarshalBinary()
-	if err != nil {
-		return false, errors.Wrap(err, "marshaling")
-	}
-	canonicalized, err := jsoncanonicalizer.Transform(contents)
-	if err != nil {
-		return false, errors.Wrap(err, "canonicalizing")
-	}
-	// verify the SET against the public key
-	hash := sha256.Sum256(canonicalized)
-	if !ecdsa.VerifyASN1(rekorPubKey, hash[:], []byte(sp.Bundle.SignedEntryTimestamp)) {
-		return false, fmt.Errorf("unable to verify")
+
+	if err := VerifySET(le, []byte(sp.Bundle.SignedEntryTimestamp), rekorPubKey); err != nil {
+		return false, err
 	}
 
 	if sp.Cert == nil {
@@ -334,6 +343,30 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 		return false, errors.Wrap(err, "checking expiry on cert")
 	}
 	return true, nil
+}
+
+func VerifySET(entry *models.LogEntryAnon, signature []byte, pub *ecdsa.PublicKey) error {
+	// need to exclude entry.Verification
+	le := &models.LogEntryAnon{
+		IntegratedTime: entry.IntegratedTime,
+		LogIndex:       entry.LogIndex,
+		Body:           entry.Body,
+		LogID:          entry.LogID,
+	}
+	contents, err := le.MarshalBinary()
+	if err != nil {
+		return errors.Wrap(err, "marshaling")
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(contents)
+	if err != nil {
+		return errors.Wrap(err, "canonicalizing")
+	}
+	// verify the SET against the public key
+	hash := sha256.Sum256(canonicalized)
+	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
+		return fmt.Errorf("unable to verify")
+	}
+	return nil
 }
 
 func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (uuid string, index int64, err error) {
