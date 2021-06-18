@@ -37,5 +37,5 @@ require (
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
 	google.golang.org/genproto v0.0.0-20210614182748-5b3b54cad159 // indirect
 	k8s.io/api v0.19.11
-	k8s.io/apimachinery v0.21.1
+	k8s.io/apimachinery v0.21.2
 )
