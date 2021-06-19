@@ -26,7 +26,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 )
 
 var (
@@ -40,8 +42,19 @@ func main() {
 		ShortUsage: "cosign [flags] <subcommand>",
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
-			cli.Verify(), cli.Sign(), cli.Upload(), cli.Generate(), cli.Download(), cli.GenerateKeyPair(), cli.SignBlob(),
-			cli.UploadBlob(), cli.Copy(), cli.Clean(), cli.VerifyBlob(), cli.Triangulate(), cli.Version(), cli.PublicKey(), pivcli.PivKey()},
+			// Key Management
+			cli.PublicKey(), cli.GenerateKeyPair(),
+			// Signing
+			cli.Verify(), cli.Sign(), cli.Generate(), cli.SignBlob(), cli.VerifyBlob(),
+			// Upload sub-tree
+			upload.Upload(),
+			// Upload sub-tree
+			attach.Attach(),
+			// PIV sub-tree
+			pivcli.PivKey(),
+			// PIV sub-tree
+			cli.Copy(), cli.Clean(), cli.Triangulate(), cli.Download(),
+			cli.Version()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},

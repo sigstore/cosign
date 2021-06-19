@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package upload
 
 import (
 	"context"
@@ -72,31 +72,31 @@ func (fs *Files) String() string {
 	return strings.Join(s, ",")
 }
 
-func UploadBlob() *ffcli.Command {
+func Blob() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign upload-blob", flag.ExitOnError)
+		flagset = flag.NewFlagSet("cosign upload blob", flag.ExitOnError)
 		ct      = flagset.String("ct", "", "content type to set")
 	)
 	fmap := Files{}
 	flagset.Var(&fmap, "f", "<filepath>:[platform/arch]")
 	return &ffcli.Command{
-		Name:       "upload-blob",
-		ShortUsage: "cosign upload-blob -f <blob ref> <image uri>",
+		Name:       "blob",
+		ShortUsage: "cosign upload blob -f <blob ref> <image uri>",
 		ShortHelp:  "Upload one or more blobs to the supplied container image address",
 		LongHelp: `Upload one or more blobs to the supplied container image address.
 
 EXAMPLES
   # upload a blob named foo to the location specified by <IMAGE>
-  cosign upload-blob -f foo <IMAGE>
+  cosign upload blob -f foo <IMAGE>
 
   # upload a blob named foo to the location specified by <IMAGE>, setting the os field to "MYOS".
-  cosign upload-blob -f foo:MYOS <IMAGE>
+  cosign upload blob -f foo:MYOS <IMAGE>
 
   # upload a blob named foo to the location specified by <IMAGE>, setting the os field to "MYOS" and the platform field to "MYPLATFORM".
-  cosign upload-blob -f foo:MYOS/MYPLATFORM <IMAGE>
+  cosign upload blob -f foo:MYOS/MYPLATFORM <IMAGE>
 
   # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting the os fields
-  cosign upload-blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
+  cosign upload blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
@@ -104,12 +104,12 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 
-			return UploadBlobCmd(ctx, fmap.Files, *ct, args[0])
+			return BlobCmd(ctx, fmap.Files, *ct, args[0])
 		},
 	}
 }
 
-func UploadBlobCmd(ctx context.Context, files []cremote.File, contentType, imageRef string) error {
+func BlobCmd(ctx context.Context, files []cremote.File, contentType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

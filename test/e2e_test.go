@@ -39,6 +39,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
+	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	sget "github.com/sigstore/cosign/cmd/sget/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
@@ -387,22 +389,22 @@ func TestUploadDownload(t *testing.T) {
 
 	testCases := map[string]struct {
 		signature     string
-		signatureType cli.SignatureArgType
+		signatureType attach.SignatureArgType
 		expectedErr   bool
 	}{
 		"file containing signature": {
 			signature:     "testsignaturefile",
-			signatureType: cli.FileSignature,
+			signatureType: attach.FileSignature,
 			expectedErr:   false,
 		},
 		"raw signature as argument": {
 			signature:     "testsignatureraw",
-			signatureType: cli.RawSignature,
+			signatureType: attach.RawSignature,
 			expectedErr:   false,
 		},
 		"empty signature as argument": {
 			signature:     "",
-			signatureType: cli.RawSignature,
+			signatureType: attach.RawSignature,
 			expectedErr:   true,
 		},
 	}
@@ -416,14 +418,14 @@ func TestUploadDownload(t *testing.T) {
 			signature := base64.StdEncoding.EncodeToString([]byte(testCase.signature))
 
 			var sigRef string
-			if testCase.signatureType == cli.FileSignature {
+			if testCase.signatureType == attach.FileSignature {
 				sigRef = mkfile(signature, td, t)
 			} else {
 				sigRef = signature
 			}
 
 			// Upload it!
-			err := cli.UploadCmd(ctx, sigRef, payloadPath, imgName)
+			err := attach.SignatureCmd(ctx, sigRef, payloadPath, imgName)
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
@@ -469,7 +471,7 @@ func TestUploadBlob(t *testing.T) {
 	files := []cremote.File{{
 		Path: payloadPath,
 	}}
-	must(cli.UploadBlobCmd(ctx, files, "", imgName), t)
+	must(upload.BlobCmd(ctx, files, "", imgName), t)
 
 	// Check it
 	ref, err := name.ParseReference(imgName)

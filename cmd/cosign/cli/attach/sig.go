@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package attach
 
 import (
 	"context"
@@ -34,28 +34,28 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func Upload() *ffcli.Command {
+func Signature() *ffcli.Command {
 	var (
-		flagset   = flag.NewFlagSet("cosign upload", flag.ExitOnError)
+		flagset   = flag.NewFlagSet("cosign attach signature", flag.ExitOnError)
 		signature = flagset.String("signature", "", "the signature, path to the signature, or {-} for stdin")
 		payload   = flagset.String("payload", "", "path to the payload covered by the signature (if using another format)")
 	)
 	return &ffcli.Command{
-		Name:       "upload",
-		ShortUsage: "cosign upload <image uri>",
-		ShortHelp:  "upload signatures to the supplied container image",
+		Name:       "signature",
+		ShortUsage: "cosign attach signature <image uri>",
+		ShortHelp:  "attach signatures to the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
 
-			return UploadCmd(ctx, *signature, *payload, args[0])
+			return SignatureCmd(ctx, *signature, *payload, args[0])
 		},
 	}
 }
 
-func UploadCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
 	var b64SigBytes []byte
 
 	b64SigBytes, err := signatureBytes(sigRef)
