@@ -45,7 +45,6 @@ import (
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 
-	kubernetesclient "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -238,11 +237,11 @@ func TestGenerateKeyPairK8s(t *testing.T) {
 	ctx := context.Background()
 	name := "cosign-secret"
 	namespace := "default"
-	if err := kubernetes.KeyPairSecret(fmt.Sprintf("%s/%s", namespace, name), cli.GetPass); err != nil {
+	if err := kubernetes.KeyPairSecret(ctx, fmt.Sprintf("%s/%s", namespace, name), cli.GetPass); err != nil {
 		t.Fatal(err)
 	}
 	// make sure the secret actually exists
-	client, err := kubernetesclient.Client()
+	client, err := kubernetes.Client()
 	if err != nil {
 		t.Fatal(err)
 	}

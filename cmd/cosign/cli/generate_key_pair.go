@@ -90,7 +90,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal, k8sRef string) error {
 		return nil
 	}
 	if k8sRef != "" {
-		return kubernetes.KeyPairSecret(k8sRef, GetPass)
+		return kubernetes.KeyPairSecret(ctx, k8sRef, GetPass)
 	}
 
 	keys, err := cosign.GenerateKeyPair(GetPass)

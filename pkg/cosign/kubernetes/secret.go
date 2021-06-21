@@ -21,7 +21,6 @@ import (
 	"os"
 	"strings"
 
-	kubernetesclient "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,7 +29,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
-func KeyPairSecret(k8sRef string, pf cosign.PassFunc) error {
+func KeyPairSecret(ctx context.Context, k8sRef string, pf cosign.PassFunc) error {
 	namespace, name, err := parseRef(k8sRef)
 	if err != nil {
 		return err
@@ -41,9 +40,8 @@ func KeyPairSecret(k8sRef string, pf cosign.PassFunc) error {
 		return errors.Wrap(err, "generating key pair")
 	}
 
-	ctx := context.TODO()
-	// create the client
-	client, err := kubernetesclient.Client()
+	// create the k8s client
+	client, err := Client()
 	if err != nil {
 		return errors.Wrap(err, "new for config")
 	}
