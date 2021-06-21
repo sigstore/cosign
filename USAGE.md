@@ -125,21 +125,21 @@ The signature is passed via the -signature flag.
 It can be a file:
 
 ```shell
-$ cosign upload -signature file.sig dlorenc/demo
+$ cosign attach signature -signature file.sig dlorenc/demo
 Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
 the base64-encoded signature:
 
 ```shell
-$ cosign upload -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== dlorenc/demo
+$ cosign attach signature -signature Qr883oPOj0dj82PZ0d9mQ2lrdM0lbyLSXUkjt6ejrxtHxwe7bU6Gr27Sysgk1jagf1htO/gvkkg71oJiwWryCQ== dlorenc/demo
 Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def.sig
 ```
 
 or, `-` for stdin for chaining from other commands:
 
 ```shell
-$ cosign generate dlorenc/demo | openssl... | cosign upload -signature -- dlorenc/demo
+$ cosign generate dlorenc/demo | openssl... | cosign attach signature -signature -- dlorenc/demo
 Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def.sig
 ```
 

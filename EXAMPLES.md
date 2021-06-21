@@ -8,7 +8,7 @@ Use `cosign` to generate the payload, sign it with `gcloud kms`, then use `cosig
 $ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun > payload.json
 $ gcloud kms asymmetric-sign --digest-algorithm=sha256 --input-file=payload.json --signature-file=gcpkms.sig --key=foo --keyring=foo --version=1 --location=us-central
 # We have to base64 encode the signature
-$ cat gcpkms.sig | base64 | cosign upload -signature - us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cat gcpkms.sig | base64 | cosign attach signature -signature - us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 ```
 
 Now (on another machine) download the public key, payload, signatures and verify it!

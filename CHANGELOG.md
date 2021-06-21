@@ -4,6 +4,9 @@
 
 ### Enhancements
 
+* BREAKING: Move `cosign upload-blob` to `cosign upload blob`.
+* BREAKING: Move `cosign upload` to `cosign attach signature`.
+
 ### Bug Fixes
 
 ### Contributors
