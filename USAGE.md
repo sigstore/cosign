@@ -236,7 +236,7 @@ IDYuTA0U1ri4F0CXXazLiftzGlyfse1No4orr8w1ZIchQ8TJlyCSaSuR0Q==
 ## Verify a signature was added to the transparency log
 There are two options for verifying a cosign signature was added to a transparency log:
 1. Check the log to make sure the entry exists in the log
-2. If it exists, use the `bundle` annotation on a cosign signature to verify an element was added to the log without hitting the log
+2. Use the `bundle` annotation on a cosign signature to verify an element was added to the log without hitting the log
 
 The cosign `bundle` annotation contains a Signed Entry Timestamp (SET), which is conceptually similar to an SCT in a Web PKI system.
 The SET is a signed inclusion promise provided by the transparency log, which acts as a guarantee by the log that an element has been included in it.
@@ -245,11 +245,6 @@ The SET can be verified with the logs public key and used to prove that an eleme
 For more details on how the `bundle` annotation is formatted, see the cosign [spec](SPEC.md).
 
 To verify the `bundle` annotation, follow these steps:
-1. Create a rekor [LogEntryAnon](https://github.com/sigstore/rekor/blob/main/pkg/generated/models/log_entry.go#L84) type, and initialize with the following values from the `bundle`:
-* IntegratedTime
-* LogIndex
-* Body
-* LogID
-1. Marshal the LogEntryAnon type into JSON to create your payload
+1. Marshal the `bundle` Payload into JSON
 1. Canonicalize the payload by following RFC 8785 rules
 1. Verify the canonicalized payload and signedEntryTimestamp against the transparency logs public key

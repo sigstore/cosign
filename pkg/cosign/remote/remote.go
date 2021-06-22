@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +26,7 @@ import (
 	"strconv"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -130,12 +130,16 @@ LayerLoop:
 	return nil, nil
 }
 
+type BundlePayload struct {
+	Body           interface{} `json:"body"`
+	IntegratedTime int64       `json:"integratedTime"`
+	LogIndex       int64       `json:"logIndex"`
+	LogID          string      `json:"logID"`
+}
+
 type Bundle struct {
 	SignedEntryTimestamp strfmt.Base64
-	Body                 interface{}
-	IntegratedTime       int64
-	LogIndex             *int64
-	LogID                string
+	Payload              BundlePayload
 }
 
 type UploadOpts struct {
@@ -172,7 +176,7 @@ func UploadSignature(ctx context.Context, signature, payload []byte, dst name.Re
 		annotations[chainkey] = opts.Chain
 	}
 	if opts.Bundle != nil {
-		b, err := json.Marshal(opts.Bundle)
+		b, err := swag.WriteJSON(opts.Bundle)
 		if err != nil {
 			return nil, errors.Wrap(err, "marshaling bundle")
 		}
