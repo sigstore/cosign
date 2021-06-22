@@ -126,6 +126,11 @@ The following checks were performed on these signatures:
 OCI registries are useful for storing more than just container images!
 `Cosign` also includes some utilities for publishing generic artifacts, including binaries, scripts, and configuration files using the OCI protocol.
 
+### Blobs
+
+OCI registries are useful for storing more than just container images!
+`Cosign` also includes some utilities for publishing generic artifacts, including binaries, scripts, and configuration files using the OCI protocol.
+
 This section shows how to leverage these for an easy-to-use, backwards-compatible artifact distribution system that integrates well with the rest of Sigstore.
 
 You can publish an artifact with `cosign upload blob`:
@@ -188,6 +193,27 @@ The following checks were performed on each of these signatures:
 The signature, claims and transparency log proofs are all verified automatically by sget as part of the download.
 
 `curl | bash` isn't a great idea, but `sget | bash` is less-bad.
+
+#### Tekton Bundles
+
+(Tekton)[https://tekton.dev] bundles can be uploaded and managed within an OCI registry.
+The specification is [here]https://tekton.dev/docs/pipelines/tekton-bundle-contracts/.
+This means they can also be signed and verified with `cosign`.
+
+Tekon Bundles can curently be uploaded with the [tkn cli](github.com/tekton/cli), but we may add this support to
+`cosign` in the future.
+
+```shell
+$ tkn bundle push us.gcr.io/dlorenc-vmtest2/pipeline:latest -f task-output-image.yaml
+Creating Tekton Bundle:
+        - Added TaskRun:  to image
+
+Pushed Tekton Bundle to us.gcr.io/dlorenc-vmtest2/pipeline@sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155
+$ cosign sign -key cosign.key us.gcr.io/dlorenc-vmtest2/pipeline:latest
+Enter password for private key:
+tlog entry created with index:  5086
+Pushing signature to: us.gcr.io/dlorenc-vmtest2/demo:sha256-124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155.sig
+```
 
 ## Detailed Usage
 
