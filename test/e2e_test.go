@@ -608,7 +608,7 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 
 	cleanup := func() {
 		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-		munged := cosign.Munge(remoteImage.Descriptor)
+		munged := cosign.Munge(remoteImage.Descriptor, cosign.SuffixSignature)
 		ref, _ := name.ParseReference(munged)
 		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	}

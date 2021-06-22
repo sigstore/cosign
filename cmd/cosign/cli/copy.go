@@ -76,7 +76,7 @@ func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) er
 		return err
 	}
 
-	sigSrcRef, err := cosign.DestinationRef(srcRef, gotSrc)
+	sigSrcRef, err := cosign.DestinationRef(srcRef, gotSrc, cosign.SuffixSignature)
 	if err != nil {
 		return err
 	}

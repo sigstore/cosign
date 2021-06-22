@@ -58,11 +58,11 @@ func MungeCmd(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	dstRef, err := cosign.DestinationRef(ref, desc)
+	dstRef, err := cosign.DestinationRef(ref, desc, cosign.SuffixSignature)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(dstRef.Context().Tag(cosign.Munge(desc.Descriptor)))
+	fmt.Println(dstRef.Context().Tag(cosign.Munge(desc.Descriptor, cosign.SuffixSignature)))
 	return nil
 }

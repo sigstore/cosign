@@ -58,12 +58,12 @@ func CleanCmd(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	dstRef, err := cosign.DestinationRef(ref, desc)
+	dstRef, err := cosign.DestinationRef(ref, desc, cosign.SuffixSignature)
 	if err != nil {
 		return err
 	}
 
-	signRef := dstRef.Context().Tag(cosign.Munge(desc.Descriptor))
+	signRef := dstRef.Context().Tag(cosign.Munge(desc.Descriptor, cosign.SuffixSignature))
 	fmt.Println(signRef)
 
 	fmt.Println("Deleting signature metadata...")

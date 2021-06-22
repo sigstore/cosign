@@ -86,7 +86,7 @@ func TestDestinationTag(t *testing.T) {
 					},
 				},
 			}
-			got, err := DestinationRef(ref, img)
+			got, err := DestinationRef(ref, img, SuffixSignature)
 			if err != nil {
 				t.Fatalf("error destination tag: %v", err)
 			}

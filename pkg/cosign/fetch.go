@@ -51,13 +51,13 @@ type SignedPayload struct {
 // 	})
 // }
 
-func Munge(desc v1.Descriptor) string {
-	return signatureImageTagForDigest(desc.Digest.String())
+func Munge(desc v1.Descriptor, suffix string) string {
+	return imageTagForDigest(desc.Digest.String()) + suffix
 }
 
-func signatureImageTagForDigest(digest string) string {
+func imageTagForDigest(digest string) string {
 	// sha256:... -> sha256-...
-	return strings.ReplaceAll(digest, ":", "-") + ".sig"
+	return strings.ReplaceAll(digest, ":", "-")
 }
 
 func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, *v1.Descriptor, error) {
@@ -67,7 +67,7 @@ func FetchSignatures(ctx context.Context, ref name.Reference) ([]SignedPayload, 
 	}
 
 	// first, see if signatures exist in an alternate location
-	dstRef, err := DestinationRef(ref, targetDesc)
+	dstRef, err := DestinationRef(ref, targetDesc, SuffixSignature)
 	if err != nil {
 		return nil, nil, err
 	}

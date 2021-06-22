@@ -79,7 +79,7 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	repo := ref.Context()
 	img := repo.Digest(get.Digest.String())
 
-	dstRef, err := cosign.DestinationRef(ref, get)
+	dstRef, err := cosign.DestinationRef(ref, get, cosign.SuffixSignature)
 	if err != nil {
 		return err
 	}

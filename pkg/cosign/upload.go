@@ -63,11 +63,16 @@ func substituteRepo(img name.Reference) (name.Reference, error) {
 }
 
 func SignaturesRef(signed name.Digest) (name.Reference, error) {
-	return substituteRepo(signed.Context().Tag(signatureImageTagForDigest(signed.DigestStr())))
+	return substituteRepo(signed.Context().Tag(imageTagForDigest(signed.DigestStr())))
 }
 
-func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference, error) {
-	dstTag := ref.Context().Tag(Munge(img.Descriptor))
+const (
+	SuffixSignature = ".sig"
+)
+
+func DestinationRef(ref name.Reference, img *remote.Descriptor, suffix string) (name.Reference, error) {
+	tag := Munge(img.Descriptor, suffix)
+	dstTag := ref.Context().Tag(tag)
 	return substituteRepo(dstTag)
 }
 
