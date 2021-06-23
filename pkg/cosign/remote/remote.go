@@ -69,8 +69,8 @@ func DockerMediaTypes() bool {
 }
 
 // SignatureImage returns the existing destination image, or a new, empty one.
-func SignatureImage(dstTag name.Reference, opts ...remote.Option) (v1.Image, error) {
-	base, err := remote.Image(dstTag, opts...)
+func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error) {
+	base, err := remote.Image(ref, opts...)
 	if err != nil {
 		if te, ok := err.(*transport.Error); ok {
 			if te.StatusCode != http.StatusNotFound {

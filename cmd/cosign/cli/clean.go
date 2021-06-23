@@ -58,17 +58,16 @@ func CleanCmd(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	dstRef, err := cosign.DestinationRef(ref, desc)
+	sigRepo, err := SignatureRepositoryForImage(ref)
 	if err != nil {
 		return err
 	}
-
-	signRef := dstRef.Context().Tag(cosign.Munge(desc.Descriptor))
-	fmt.Println(signRef)
+	sigRef := cosign.SignatureImageTag(sigRepo, desc)
+	fmt.Println(sigRef)
 
 	fmt.Println("Deleting signature metadata...")
 
-	err = remote.Delete(signRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	err = remote.Delete(sigRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return err
 	}

@@ -157,7 +157,7 @@ if (./cosign verify -a foo=bar -key ${verification_key} $img); then false; fi
 ./cosign verify -key ${verification_key} -a foo=bar $img
 
 # store signatures in a different repo
-export COSIGN_REPOSITORY=${BASE_TEST_REPO}/subrepo
+export COSIGN_REPOSITORY=${BASE_TEST_REPO}/subbedrepo
 (crane delete $(./cosign triangulate $img)) || true
 ./cosign sign -key ${signing_key} $img
 ./cosign verify -key ${verification_key} $img

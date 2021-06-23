@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
@@ -99,10 +101,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	}
 
 	co := &cosign.CheckOpts{
-		Annotations: *c.Annotations,
-		Claims:      c.CheckClaims,
-		Tlog:        EnableExperimental(),
-		Roots:       fulcio.Roots,
+		Annotations:        *c.Annotations,
+		Claims:             c.CheckClaims,
+		Tlog:               EnableExperimental(),
+		Roots:              fulcio.Roots,
+		RegistryClientOpts: []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain)},
 	}
 	keyRef := c.KeyRef
 
@@ -126,8 +129,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
+		sigRepo, err := SignatureRepositoryForImage(ref)
+		if err != nil {
+			return err
+		}
 
-		verified, err := cosign.Verify(ctx, ref, co, TlogServer())
+		verified, err := cosign.Verify(ctx, ref, sigRepo, co, TlogServer())
 		if err != nil {
 			return err
 		}

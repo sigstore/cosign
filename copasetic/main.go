@@ -134,8 +134,12 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
+			sigRepo, err := cli.SignatureRepositoryForImage(ref)
+			if err != nil {
+				return nil, err
+			}
 
-			sps, _, err := cosign.FetchSignatures(context.Background(), ref)
+			sps, _, err := cosign.FetchSignaturesForImage(context.Background(), ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 			if err != nil {
 				return nil, err
 			}
@@ -172,17 +176,22 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
+			sigRepo, err := cli.SignatureRepositoryForImage(ref)
+			if err != nil {
+				return nil, err
+			}
 
 			pubKey, err := cosign.LoadPublicKey(bctx.Context, key)
 			if err != nil {
 				return nil, err
 			}
 			co := &cosign.CheckOpts{
-				PubKey: pubKey,
-				Claims: true,
-				Roots:  fulcio.Roots,
+				PubKey:             pubKey,
+				Claims:             true,
+				Roots:              fulcio.Roots,
+				RegistryClientOpts: []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain)},
 			}
-			sps, err := cosign.Verify(context.Background(), ref, co, cli.TlogServer())
+			sps, err := cosign.Verify(context.Background(), ref, sigRepo, co, cli.TlogServer())
 			if err != nil {
 				return nil, err
 			}

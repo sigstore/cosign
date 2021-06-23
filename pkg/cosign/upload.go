@@ -17,13 +17,10 @@ package cosign
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/pkg/generated/client"
@@ -31,45 +28,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 )
-
-const (
-	repoEnv = "COSIGN_REPOSITORY"
-)
-
-func substituteRepo(img name.Reference) (name.Reference, error) {
-	wantRepo := os.Getenv(repoEnv)
-	if wantRepo == "" {
-		return img, nil
-	}
-	reg := img.Context().RegistryStr()
-	// strip registry from image
-	oldImage := strings.TrimPrefix(img.Name(), reg)
-	newSubrepo := strings.TrimPrefix(wantRepo, reg)
-
-	// replace old subrepo with new one
-	subRepo := strings.Split(oldImage, "/")
-	if s := strings.SplitAfterN(newSubrepo, "/", 1); len(s) == 1 {
-		subRepo[1] = strings.TrimPrefix(s[0], "/")
-	} else {
-		subRepo[1] = strings.TrimPrefix(s[1], "/")
-	}
-	newRepo := strings.Join(subRepo, "/")
-	// add the tag back in if we lost it
-	if dstTag, isTag := img.(name.Tag); isTag && !strings.Contains(newRepo, ":") {
-		newRepo = newRepo + ":" + dstTag.TagStr()
-	}
-	subbed := reg + newRepo
-	return name.ParseReference(subbed)
-}
-
-func SignaturesRef(signed name.Digest) (name.Reference, error) {
-	return substituteRepo(signed.Context().Tag(signatureImageTagForDigest(signed.DigestStr())))
-}
-
-func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference, error) {
-	dstTag := ref.Context().Tag(Munge(img.Descriptor))
-	return substituteRepo(dstTag)
-}
 
 // Upload will upload the signature, public key and payload to the tlog
 func UploadTLog(rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {

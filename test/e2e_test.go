@@ -199,7 +199,12 @@ func TestDuplicateSign(t *testing.T) {
 	// Signing again should work just fine...
 	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 	// but a duplicate signature should not be a uploaded
-	signatures, _, err := cosign.FetchSignatures(ctx, ref)
+	sigRepo, err := cli.SignatureRepositoryForImage(ref)
+	if err != nil {
+		t.Fatalf("failed to get signature repository: %v", err)
+	}
+
+	signatures, _, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		t.Fatalf("failed to fetch signatures: %v", err)
 	}
@@ -432,7 +437,11 @@ func TestUploadDownload(t *testing.T) {
 			}
 
 			// Now download it!
-			signatures, _, err := cosign.FetchSignatures(ctx, ref)
+			sigRepo, err := cli.SignatureRepositoryForImage(ref)
+			if err != nil {
+				t.Fatalf("failed to get signature repository: %v", err)
+			}
+			signatures, _, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
@@ -608,8 +617,7 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 
 	cleanup := func() {
 		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-		munged := cosign.Munge(remoteImage.Descriptor)
-		ref, _ := name.ParseReference(munged)
+		ref := cosign.SignatureImageTag(ref.Context(), remoteImage)
 		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	}
 	return ref, remoteImage, cleanup
