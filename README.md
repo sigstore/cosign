@@ -215,6 +215,20 @@ tlog entry created with index:  5086
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/demo:sha256-124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155.sig
 ```
 
+#### WASM
+
+Web Assembly Modules can also be stored in an OCI registry, using this [specification](https://github.com/solo-io/wasm/tree/master/spec).
+
+Cosign can upload these using the `cosign wasm upload` command:
+
+```shell
+$ cosign upload wasm -f hello.wasm us.gcr.io/dlorenc-vmtest2/wasm
+$ cosign sign -key cosign.key us.gcr.io/dlorenc-vmtest2/wasm
+Enter password for private key:
+tlog entry created with index:  5198
+Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812.sig
+```
+
 ## Detailed Usage
 
 See the [Usage documentation](USAGE.md) for more commands!

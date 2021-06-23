@@ -99,8 +99,8 @@ func UploadFile(fileRef string, ref name.Reference, kc authn.Keychain) (v1.Image
 	}
 	mt := strings.Split(http.DetectContentType(b), ";")[0]
 	l := &StaticLayer{
-		b:  b,
-		mt: types.MediaType(mt),
+		B:  b,
+		Mt: types.MediaType(mt),
 	}
 	fmt.Fprintf(os.Stderr, "Uploading file from [%s] to [%s] with media type [%s]\n", fileRef, ref.Name(), mt)
 
