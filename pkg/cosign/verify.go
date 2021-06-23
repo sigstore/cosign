@@ -39,6 +39,7 @@ import (
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -147,7 +148,13 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
 	}
 
-	if err := VerifySET(&e, []byte(e.Verification.SignedEntryTimestamp), rekorPubKey); err != nil {
+	payload := remote.BundlePayload{
+		Body:           e.Body,
+		IntegratedTime: *e.IntegratedTime,
+		LogIndex:       *e.LogIndex,
+		LogID:          *e.LogID,
+	}
+	if err := VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), rekorPubKey); err != nil {
 		return nil, errors.Wrap(err, "verifying signedEntryTimestamp")
 	}
 
@@ -323,14 +330,8 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
-	le := &models.LogEntryAnon{
-		LogIndex:       sp.Bundle.LogIndex,
-		Body:           sp.Bundle.Body,
-		IntegratedTime: &sp.Bundle.IntegratedTime,
-		LogID:          &sp.Bundle.LogID,
-	}
 
-	if err := VerifySET(le, []byte(sp.Bundle.SignedEntryTimestamp), rekorPubKey); err != nil {
+	if err := VerifySET(sp.Bundle.Payload, []byte(sp.Bundle.SignedEntryTimestamp), rekorPubKey); err != nil {
 		return false, err
 	}
 
@@ -339,21 +340,14 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	}
 
 	// verify the cert against the integrated time
-	if err := checkExpiry(sp.Cert, time.Unix(sp.Bundle.IntegratedTime, 0)); err != nil {
+	if err := checkExpiry(sp.Cert, time.Unix(sp.Bundle.Payload.IntegratedTime, 0)); err != nil {
 		return false, errors.Wrap(err, "checking expiry on cert")
 	}
 	return true, nil
 }
 
-func VerifySET(entry *models.LogEntryAnon, signature []byte, pub *ecdsa.PublicKey) error {
-	// need to exclude entry.Verification
-	le := &models.LogEntryAnon{
-		IntegratedTime: entry.IntegratedTime,
-		LogIndex:       entry.LogIndex,
-		Body:           entry.Body,
-		LogID:          entry.LogID,
-	}
-	contents, err := le.MarshalBinary()
+func VerifySET(bundlePayload remote.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
+	contents, err := json.Marshal(bundlePayload)
 	if err != nil {
 		return errors.Wrap(err, "marshaling")
 	}
@@ -361,6 +355,7 @@ func VerifySET(entry *models.LogEntryAnon, signature []byte, pub *ecdsa.PublicKe
 	if err != nil {
 		return errors.Wrap(err, "canonicalizing")
 	}
+
 	// verify the SET against the public key
 	hash := sha256.Sum256(canonicalized)
 	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
