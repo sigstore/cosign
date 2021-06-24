@@ -57,7 +57,7 @@ func DownloadCmd(ctx context.Context, imageRef string) error {
 		return err
 	}
 
-	signatures, _, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return err
 	}

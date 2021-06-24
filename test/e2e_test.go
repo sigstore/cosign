@@ -204,7 +204,7 @@ func TestDuplicateSign(t *testing.T) {
 		t.Fatalf("failed to get signature repository: %v", err)
 	}
 
-	signatures, _, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		t.Fatalf("failed to fetch signatures: %v", err)
 	}
@@ -441,7 +441,7 @@ func TestUploadDownload(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to get signature repository: %v", err)
 			}
-			signatures, _, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
