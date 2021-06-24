@@ -51,12 +51,13 @@ type SignedPayload struct {
 
 const (
 	SuffixSignature = ".sig"
+	SuffixSBOM      = ".sbom"
 )
 
-func AttachedImageTag(sigRepo name.Repository, signedImgDesc *remote.Descriptor, suffix string) name.Tag {
+func AttachedImageTag(repo name.Repository, imgDesc *remote.Descriptor, suffix string) name.Tag {
 	// sha256:d34db33f -> sha256-d34db33f.sig
-	tagStr := strings.ReplaceAll(signedImgDesc.Digest.String(), ":", "-") + suffix
-	return sigRepo.Tag(tagStr)
+	tagStr := strings.ReplaceAll(imgDesc.Digest.String(), ":", "-") + suffix
+	return repo.Tag(tagStr)
 }
 
 func GetAttachedManifestForImage(imgDesc *remote.Descriptor, repo name.Repository, suffix string, opts ...remote.Option) (*remote.Descriptor, error) {

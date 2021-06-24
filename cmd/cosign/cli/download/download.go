@@ -32,7 +32,7 @@ func Download() *ffcli.Command {
 		ShortUsage:  "cosign download",
 		ShortHelp:   "download contains tools to download artifacts and attached artifacts in a registry",
 		FlagSet:     flagset,
-		Subcommands: []*ffcli.Command{Signature()},
+		Subcommands: []*ffcli.Command{Signature(), SBOM()},
 		Exec: func(ctx context.Context, args []string) error {
 			return flag.ErrHelp
 		},
