@@ -58,11 +58,12 @@ func MungeCmd(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	dstRef, err := cosign.DestinationRef(ref, desc)
+	sigRepo, err := SignatureRepositoryForImage(ref)
 	if err != nil {
 		return err
 	}
+	dstRef := cosign.SignatureImageTag(sigRepo, desc)
 
-	fmt.Println(dstRef.Context().Tag(cosign.Munge(desc.Descriptor)))
+	fmt.Println(dstRef.Name())
 	return nil
 }

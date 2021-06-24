@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
@@ -79,10 +80,11 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	repo := ref.Context()
 	img := repo.Digest(get.Digest.String())
 
-	dstRef, err := cosign.DestinationRef(ref, get)
+	sigRepo, err := cli.SignatureRepositoryForImage(ref)
 	if err != nil {
 		return err
 	}
+	dstRef := cosign.SignatureImageTag(sigRepo, get)
 
 	var payload []byte
 	if payloadRef == "" {

@@ -17,12 +17,15 @@ package cli
 import (
 	"os"
 	"strconv"
+
+	"github.com/google/go-containerregistry/pkg/name"
 )
 
 const (
 	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
 	ServerEnv       = "REKOR_SERVER"
 	rekorServer     = "https://rekor.sigstore.dev"
+	repoEnv         = "COSIGN_REPOSITORY"
 )
 
 func EnableExperimental() bool {
@@ -38,4 +41,12 @@ func TlogServer() string {
 		return s
 	}
 	return rekorServer
+}
+
+func SignatureRepositoryForImage(signedImg name.Reference) (name.Repository, error) {
+	wantRepo := os.Getenv(repoEnv)
+	if wantRepo == "" {
+		return signedImg.Context(), nil
+	}
+	return name.NewRepository(wantRepo)
 }

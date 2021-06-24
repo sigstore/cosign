@@ -29,6 +29,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	ggcrV1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -307,11 +308,19 @@ func SignCmd(ctx context.Context, so SignOpts,
 			continue
 		}
 
-		// sha256:... -> sha256-...
-		sigRef, err := cosign.SignaturesRef(img)
+		sigRepo, err := SignatureRepositoryForImage(ref)
 		if err != nil {
 			return err
 		}
+		imgHash, err := ggcrV1.NewHash(img.Identifier())
+		if err != nil {
+			return err
+		}
+		sigRef := cosign.SignatureImageTag(sigRepo, &remote.Descriptor{
+			Descriptor: ggcrV1.Descriptor{
+				Digest: imgHash,
+			},
+		})
 
 		uo := cremote.UploadOpts{
 			Cert:         cert,

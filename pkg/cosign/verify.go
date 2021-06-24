@@ -35,11 +35,12 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/pkg/cosign/remote"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -49,7 +50,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-// This is rekor's public key, via `curl -L rekor.sigstore.dev/api/v1/log/publicKey`
+// This is rekor's public key, via `curl -L rekor.sigstore.dev/api/ggcrv1/log/publicKey`
 // rekor.pub should be updated whenever the Rekor public key is rotated & the bundle annotation should be up-versioned
 //go:embed rekor.pub
 var rekorPub string
@@ -148,7 +149,7 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
 	}
 
-	payload := remote.BundlePayload{
+	payload := cremote.BundlePayload{
 		Body:           e.Body,
 		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       *e.LogIndex,
@@ -163,17 +164,18 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 
 // There are only payloads. Some have certs, some don't.
 type CheckOpts struct {
-	Annotations  map[string]interface{}
-	Claims       bool
-	VerifyBundle bool
-	Tlog         bool
-	PubKey       PublicKey
-	Roots        *x509.CertPool
+	Annotations        map[string]interface{}
+	Claims             bool
+	VerifyBundle       bool
+	Tlog               bool
+	PubKey             PublicKey
+	Roots              *x509.CertPool
+	RegistryClientOpts []remote.Option
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
-func Verify(ctx context.Context, ref name.Reference, co *CheckOpts, rekorServerURL string) ([]SignedPayload, error) {
+func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name.Repository, co *CheckOpts, rekorServerURL string) ([]SignedPayload, error) {
 	// Enforce this up front.
 	if co.Roots == nil && co.PubKey == nil {
 		return nil, errors.New("one of public key or cert roots is required")
@@ -185,7 +187,7 @@ func Verify(ctx context.Context, ref name.Reference, co *CheckOpts, rekorServerU
 	}
 
 	// These are all the signatures attached to our image that we know how to parse.
-	allSignatures, desc, err := FetchSignatures(ctx, ref)
+	allSignatures, desc, err := FetchSignaturesForImage(ctx, signedImgRef, signatureRepo, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}
@@ -346,7 +348,7 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	return true, nil
 }
 
-func VerifySET(bundlePayload remote.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
+func VerifySET(bundlePayload cremote.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
 	contents, err := json.Marshal(bundlePayload)
 	if err != nil {
 		return errors.Wrap(err, "marshaling")
