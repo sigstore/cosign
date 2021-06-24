@@ -139,7 +139,7 @@ func main() {
 				return nil, err
 			}
 
-			sps, _, err := cosign.FetchSignaturesForImage(context.Background(), ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+			sps, err := cosign.FetchSignaturesForImage(context.Background(), ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 			if err != nil {
 				return nil, err
 			}

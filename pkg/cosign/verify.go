@@ -187,7 +187,11 @@ func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name
 	}
 
 	// These are all the signatures attached to our image that we know how to parse.
-	allSignatures, desc, err := FetchSignaturesForImage(ctx, signedImgRef, signatureRepo, co.RegistryClientOpts...)
+	signedImgDesc, err := remote.Get(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, err
+	}
+	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, signatureRepo, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}
@@ -229,7 +233,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name
 				continue
 			}
 
-			if err := sp.VerifyClaims(desc, ss); err != nil {
+			if err := sp.VerifyClaims(&signedImgDesc.Descriptor, ss); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}

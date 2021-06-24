@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -60,23 +59,27 @@ func GetSignatureManifestForImage(signedImgDesc *remote.Descriptor, sigRepo name
 	return remote.Get(SignatureImageTag(sigRepo, signedImgDesc), opts...)
 }
 
-func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, *v1.Descriptor, error) {
+func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, error) {
 	signedImgDesc, err := remote.Get(signedImgRef, opts...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	sigImgDesc, err := GetSignatureManifestForImage(signedImgDesc, sigRepo, opts...)
+	return FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, opts...)
+}
+
+func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.Descriptor, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, error) {
+	sigImgDesc, err := GetSignatureManifestForImage(signedDescriptor, sigRepo, opts...)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "getting signature manifest")
+		return nil, errors.Wrap(err, "getting signature manifest")
 	}
 	sigImg, err := sigImgDesc.Image()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "remote image")
+		return nil, errors.Wrap(err, "remote image")
 	}
 
 	m, err := sigImg.Manifest()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "manifest")
+		return nil, errors.Wrap(err, "manifest")
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -144,10 +147,10 @@ func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, s
 		})
 	}
 	if err := g.Wait(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	// TODO: returning the descriptor for the signed image here makes for a weird API, might just want to take the signed image descriptor as an arg
-	return signatures, &signedImgDesc.Descriptor, nil
+	return signatures, nil
+
 }
 
 func LoadCerts(pemStr string) ([]*x509.Certificate, error) {
