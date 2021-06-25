@@ -49,14 +49,18 @@ type SignedPayload struct {
 // 	})
 // }
 
-func SignatureImageTag(sigRepo name.Repository, signedImgDesc *remote.Descriptor) name.Tag {
+const (
+	SuffixSignature = ".sig"
+)
+
+func AttachedImageTag(sigRepo name.Repository, signedImgDesc *remote.Descriptor, suffix string) name.Tag {
 	// sha256:d34db33f -> sha256-d34db33f.sig
-	tagStr := strings.ReplaceAll(signedImgDesc.Digest.String(), ":", "-") + ".sig"
+	tagStr := strings.ReplaceAll(signedImgDesc.Digest.String(), ":", "-") + suffix
 	return sigRepo.Tag(tagStr)
 }
 
-func GetSignatureManifestForImage(signedImgDesc *remote.Descriptor, sigRepo name.Repository, opts ...remote.Option) (*remote.Descriptor, error) {
-	return remote.Get(SignatureImageTag(sigRepo, signedImgDesc), opts...)
+func GetAttachedManifestForImage(imgDesc *remote.Descriptor, repo name.Repository, suffix string, opts ...remote.Option) (*remote.Descriptor, error) {
+	return remote.Get(AttachedImageTag(repo, imgDesc, suffix), opts...)
 }
 
 func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, error) {
@@ -68,7 +72,7 @@ func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, s
 }
 
 func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.Descriptor, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, error) {
-	sigImgDesc, err := GetSignatureManifestForImage(signedDescriptor, sigRepo, opts...)
+	sigImgDesc, err := GetAttachedManifestForImage(signedDescriptor, sigRepo, SuffixSignature, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting signature manifest")
 	}

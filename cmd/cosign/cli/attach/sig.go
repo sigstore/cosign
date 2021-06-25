@@ -84,7 +84,7 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.SignatureImageTag(sigRepo, get)
+	dstRef := cosign.AttachedImageTag(sigRepo, get, cosign.SuffixSignature)
 
 	var payload []byte
 	if payloadRef == "" {
