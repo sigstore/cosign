@@ -81,7 +81,7 @@ func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) er
 		return err
 	}
 
-	sigSrcRef := cosign.SignatureImageTag(srcSigRepo, gotSrc)
+	sigSrcRef := cosign.AttachedImageTag(srcSigRepo, gotSrc, cosign.SuffixSignature)
 
 	dstRepoRef := dstRef.Context()
 	sigDstRef := dstRepoRef.Tag(sigSrcRef.Identifier())

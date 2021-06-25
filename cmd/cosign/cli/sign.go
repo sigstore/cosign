@@ -316,11 +316,11 @@ func SignCmd(ctx context.Context, so SignOpts,
 		if err != nil {
 			return err
 		}
-		sigRef := cosign.SignatureImageTag(sigRepo, &remote.Descriptor{
+		sigRef := cosign.AttachedImageTag(sigRepo, &remote.Descriptor{
 			Descriptor: ggcrV1.Descriptor{
 				Digest: imgHash,
 			},
-		})
+		}, cosign.SuffixSignature)
 
 		uo := cremote.UploadOpts{
 			Cert:         cert,
