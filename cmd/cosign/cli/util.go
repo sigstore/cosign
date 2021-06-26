@@ -43,10 +43,10 @@ func TlogServer() string {
 	return rekorServer
 }
 
-func SignatureRepositoryForImage(signedImg name.Reference) (name.Repository, error) {
+func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
 	wantRepo := os.Getenv(repoEnv)
 	if wantRepo == "" {
-		return signedImg.Context(), nil
+		return img.Context(), nil
 	}
 	return name.NewRepository(wantRepo)
 }

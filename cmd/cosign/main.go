@@ -27,6 +27,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
+	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 )
@@ -48,12 +49,14 @@ func main() {
 			cli.Verify(), cli.Sign(), cli.Generate(), cli.SignBlob(), cli.VerifyBlob(),
 			// Upload sub-tree
 			upload.Upload(),
-			// Upload sub-tree
+			// Download sub-tree
+			download.Download(),
+			// Attach sub-tree
 			attach.Attach(),
 			// PIV sub-tree
 			pivcli.PivKey(),
 			// PIV sub-tree
-			cli.Copy(), cli.Clean(), cli.Triangulate(), cli.Download(),
+			cli.Copy(), cli.Clean(), cli.Triangulate(),
 			cli.Version()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp

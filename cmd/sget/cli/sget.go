@@ -56,7 +56,7 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 	}
 
 	if co.PubKey != nil || cli.EnableExperimental() {
-		sigRepo, err := cli.SignatureRepositoryForImage(ref)
+		sigRepo, err := cli.TargetRepositoryForImage(ref)
 		if err != nil {
 			return nil, err
 		}

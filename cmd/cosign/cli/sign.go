@@ -308,7 +308,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 			continue
 		}
 
-		sigRepo, err := SignatureRepositoryForImage(ref)
+		sigRepo, err := TargetRepositoryForImage(ref)
 		if err != nil {
 			return err
 		}

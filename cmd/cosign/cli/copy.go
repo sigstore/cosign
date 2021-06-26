@@ -76,7 +76,7 @@ func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) er
 		return err
 	}
 
-	srcSigRepo, err := SignatureRepositoryForImage(srcRef)
+	srcSigRepo, err := TargetRepositoryForImage(srcRef)
 	if err != nil {
 		return err
 	}

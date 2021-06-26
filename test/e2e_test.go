@@ -40,6 +40,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
+	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	sget "github.com/sigstore/cosign/cmd/sget/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -84,7 +85,7 @@ func TestSignVerify(t *testing.T) {
 	// Verify should fail at first
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 	// So should download
-	mustErr(cli.DownloadCmd(ctx, imgName), t)
+	mustErr(download.SignatureCmd(ctx, imgName), t)
 
 	// Now sign the image
 	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
@@ -92,7 +93,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
-	must(cli.DownloadCmd(ctx, imgName), t)
+	must(download.SignatureCmd(ctx, imgName), t)
 
 	// Look for a specific annotation
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
@@ -127,7 +128,7 @@ func TestSignVerifyClean(t *testing.T) {
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
-	must(cli.DownloadCmd(ctx, imgName), t)
+	must(download.SignatureCmd(ctx, imgName), t)
 
 	// Now clean signature from the given image
 	must(cli.CleanCmd(ctx, imgName), t)
@@ -186,7 +187,7 @@ func TestDuplicateSign(t *testing.T) {
 	// Verify should fail at first
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 	// So should download
-	mustErr(cli.DownloadCmd(ctx, imgName), t)
+	mustErr(download.SignatureCmd(ctx, imgName), t)
 
 	// Now sign the image
 	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
@@ -194,12 +195,12 @@ func TestDuplicateSign(t *testing.T) {
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
-	must(cli.DownloadCmd(ctx, imgName), t)
+	must(download.SignatureCmd(ctx, imgName), t)
 
 	// Signing again should work just fine...
 	must(cli.SignCmd(ctx, so, imgName, true, "", false, false), t)
 	// but a duplicate signature should not be a uploaded
-	sigRepo, err := cli.SignatureRepositoryForImage(ref)
+	sigRepo, err := cli.TargetRepositoryForImage(ref)
 	if err != nil {
 		t.Fatalf("failed to get signature repository: %v", err)
 	}
@@ -437,7 +438,7 @@ func TestUploadDownload(t *testing.T) {
 			}
 
 			// Now download it!
-			sigRepo, err := cli.SignatureRepositoryForImage(ref)
+			sigRepo, err := cli.TargetRepositoryForImage(ref)
 			if err != nil {
 				t.Fatalf("failed to get signature repository: %v", err)
 			}

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package download
 
 import (
 	"context"
@@ -25,34 +25,34 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
-
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
-func Download() *ffcli.Command {
+func Signature() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign download", flag.ExitOnError)
+		flagset = flag.NewFlagSet("cosign download signature", flag.ExitOnError)
 	)
 	return &ffcli.Command{
-		Name:       "download",
-		ShortUsage: "cosign download <image uri>",
+		Name:       "signature",
+		ShortUsage: "cosign download signature <image uri>",
 		ShortHelp:  "Download signatures from the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return DownloadCmd(ctx, args[0])
+			return SignatureCmd(ctx, args[0])
 		},
 	}
 }
 
-func DownloadCmd(ctx context.Context, imageRef string) error {
+func SignatureCmd(ctx context.Context, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
-	sigRepo, err := SignatureRepositoryForImage(ref)
+	sigRepo, err := cli.TargetRepositoryForImage(ref)
 	if err != nil {
 		return err
 	}

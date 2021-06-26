@@ -21,7 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
-func TestSignatureRepositoryForImage(t *testing.T) {
+func TestTargetRepositoryForImage(t *testing.T) {
 	tests := []struct {
 		desc    string
 		image   name.Reference
@@ -71,9 +71,9 @@ func TestSignatureRepositoryForImage(t *testing.T) {
 			os.Setenv(repoEnv, test.envRepo)
 			defer os.Unsetenv(repoEnv)
 
-			got, err := SignatureRepositoryForImage(test.image)
+			got, err := TargetRepositoryForImage(test.image)
 			if err != nil {
-				t.Fatalf("SignatureRepositoryForImage returned error: %v", err)
+				t.Fatalf("TargetRepositoryForImage returned error: %v", err)
 			}
 			if got.Name() != test.want.Name() {
 				t.Errorf("expected %s got %s", test.want, got.Name())

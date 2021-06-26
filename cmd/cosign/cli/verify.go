@@ -129,7 +129,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		sigRepo, err := SignatureRepositoryForImage(ref)
+		sigRepo, err := TargetRepositoryForImage(ref)
 		if err != nil {
 			return err
 		}

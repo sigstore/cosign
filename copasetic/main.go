@@ -134,7 +134,7 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			sigRepo, err := cli.SignatureRepositoryForImage(ref)
+			sigRepo, err := cli.TargetRepositoryForImage(ref)
 			if err != nil {
 				return nil, err
 			}
@@ -176,7 +176,7 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			sigRepo, err := cli.SignatureRepositoryForImage(ref)
+			sigRepo, err := cli.TargetRepositoryForImage(ref)
 			if err != nil {
 				return nil, err
 			}
