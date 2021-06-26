@@ -6,6 +6,7 @@
 
 * BREAKING: Move `cosign upload-blob` to `cosign upload blob`.
 * BREAKING: Move `cosign upload` to `cosign attach signature`.
+* BREAKING: Move `cosign download` to `cosign download signature`.
 
 ### Bug Fixes
 

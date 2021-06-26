@@ -14,7 +14,7 @@ $ cat gcpkms.sig | base64 | cosign attach signature -signature - us-central1-doc
 Now (on another machine) download the public key, payload, signatures and verify it!
 
 ```shell
-$ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun > signatures.json
+$ cosign download signature us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun > signatures.json
 # There could be multiple signatures, let's pretend it's the last one.
 # Extract the payload and signature, base64 decoding them.
 $ cat signatures.json | tail -1 | jq -r .Payload | base64 -D > payload

@@ -58,7 +58,7 @@ func MungeCmd(_ context.Context, imageRef string) error {
 		return err
 	}
 
-	sigRepo, err := SignatureRepositoryForImage(ref)
+	sigRepo, err := TargetRepositoryForImage(ref)
 	if err != nil {
 		return err
 	}

@@ -205,7 +205,7 @@ invalid or missing annotation in claim: map[sig:original]
 Each signature is printed to stdout in a json format:
 
 ```
-$ cosign download us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cosign download signature us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 {"Base64Signature":"Ejy6ipGJjUzMDoQFePWixqPBYF0iSnIvpMWps3mlcYNSEcRRZelL7GzimKXaMjxfhy5bshNGvDT5QoUJ0tqUAg==","Payload":"eyJDcml0aWNhbCI6eyJJZGVudGl0eSI6eyJkb2NrZXItcmVmZXJlbmNlIjoiIn0sIkltYWdlIjp7IkRvY2tlci1tYW5pZmVzdC1kaWdlc3QiOiI4N2VmNjBmNTU4YmFkNzliZWVhNjQyNWEzYjI4OTg5ZjAxZGQ0MTcxNjQxNTBhYjNiYWFiOThkY2JmMDRkZWY4In0sIlR5cGUiOiIifSwiT3B0aW9uYWwiOm51bGx9"}
 ```
 
