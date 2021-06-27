@@ -18,12 +18,12 @@ package attach
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -74,39 +74,19 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	s := &cremote.StaticLayer{
-		B:  b,
-		Mt: types.MediaType(sbomType),
-	}
-
-	img := mutate.MediaType(empty.Image, types.OCIManifestSchema1)
-	img, err = mutate.Append(img, mutate.Addendum{
-		Layer: s,
-	})
-	if err != nil {
-		return err
-	}
-
-	// This doesn't work on DockerHub
-	m, err := img.Manifest()
-	if err != nil {
-		return err
-	}
-	// Setting it to an artifact type doesn't work on media types
-	m.Config.MediaType = types.OCIConfigJSON
 
 	auth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-
 	get, err := remote.Get(ref, auth)
 	if err != nil {
 		return err
 	}
 	repo := ref.Context()
-
 	dstRef := cosign.AttachedImageTag(repo, get, cosign.SuffixSBOM)
 
-	if err := remote.Write(dstRef, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
+	if _, err := cremote.UploadFile(b, dstRef, authn.DefaultKeychain, types.MediaType(sbomType), types.OCIConfigJSON); err != nil {
 		return err
 	}
+
 	return nil
 }

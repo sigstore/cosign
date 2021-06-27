@@ -17,7 +17,7 @@
 set -ex
 
 echo "copying rekor repo"
-cd $HOME
+pushd $HOME
 git clone https://github.com/sigstore/rekor.git
 cd rekor
 
@@ -42,7 +42,7 @@ done
 echo
 echo "running tests"
 
-cd $GITHUB_WORKSPACE
+popd
 go build -o cosign ./cmd/cosign
 go test -tags=e2e -race ./...
 

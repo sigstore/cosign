@@ -42,49 +42,52 @@ func SBOM() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return SBOMCmd(ctx, args[0])
+			_, err := SBOMCmd(ctx, args[0])
+			return err
 		},
 	}
 }
 
-func SBOMCmd(ctx context.Context, imageRef string) error {
+func SBOMCmd(ctx context.Context, imageRef string) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	auth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
 
 	get, err := remote.Get(ref, auth)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	repo := ref.Context()
 	dstRef := cosign.AttachedImageTag(repo, get, cosign.SuffixSBOM)
 	img, err := remote.Image(dstRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	layers, err := img.Layers()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	sboms := []string{}
 	for _, l := range layers {
 		mt, err := l.MediaType()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fmt.Fprintf(os.Stderr, "Found SBOM of media type: %s\n", mt)
 		r, err := l.Compressed()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sbom, err := ioutil.ReadAll(r)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		sboms = append(sboms, string(sbom))
 		fmt.Println(string(sbom))
 	}
-	return nil
+	return sboms, nil
 }

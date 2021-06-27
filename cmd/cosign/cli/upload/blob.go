@@ -115,7 +115,7 @@ func BlobCmd(ctx context.Context, files []cremote.File, contentType, imageRef st
 		return err
 	}
 
-	dgster, err := cremote.UploadFiles(ref, files)
+	dgster, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter)
 	if err != nil {
 		return err
 	}
