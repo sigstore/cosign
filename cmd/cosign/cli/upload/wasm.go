@@ -18,14 +18,12 @@ package upload
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
@@ -50,38 +48,26 @@ func Wasm() *ffcli.Command {
 	}
 }
 
+const (
+	wasmLayerMediaType  = "application/vnd.wasm.content.layer.v1+wasm"
+	wasmConfigMediaType = "application/vnd.wasm.config.v1+json"
+)
+
 func WasmCmd(ctx context.Context, wasmPath, imageRef string) error {
-
-	img := mutate.MediaType(empty.Image, types.OCIManifestSchema1)
-
 	b, err := ioutil.ReadFile(wasmPath)
 	if err != nil {
 		return err
 	}
-	s := &cremote.StaticLayer{
-		B:  b,
-		Mt: types.MediaType("application/vnd.wasm.content.layer.v1+wasm"),
-	}
-
-	img, err = mutate.Append(img, mutate.Addendum{
-		Layer: s,
-	})
-	if err != nil {
-		return err
-	}
-
-	m, err := img.Manifest()
-	if err != nil {
-		return err
-	}
-	m.Config.MediaType = "application/vnd.wasm.config.v1+json"
 
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
-	if err := remote.Write(ref, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+
+	fmt.Fprintf(os.Stderr, "Uploading wasm file from [%s] to [%s].\n", wasmPath, ref.Name())
+	if _, err := cremote.UploadFile(b, ref, authn.DefaultKeychain, wasmLayerMediaType, wasmConfigMediaType); err != nil {
 		return err
 	}
+
 	return nil
 }

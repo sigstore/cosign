@@ -237,9 +237,16 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 
 func TestGenerateKeyPairK8s(t *testing.T) {
 	td := t.TempDir()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Chdir(td); err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		os.Chdir(wd)
+	}()
 	password := "foo"
 	defer setenv(t, "COSIGN_PASSWORD", password)()
 	ctx := context.Background()
@@ -366,9 +373,16 @@ func TestGenerate(t *testing.T) {
 }
 
 func keypair(t *testing.T, td string) (*cosign.Keys, string, string) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Chdir(td); err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		os.Chdir(wd)
+	}()
 	keys, err := cosign.GenerateKeyPair(passFunc)
 	if err != nil {
 		t.Fatal(err)
@@ -516,6 +530,39 @@ func TestUploadBlob(t *testing.T) {
 	}
 }
 
+func TestAttachSBOM(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	ctx := context.Background()
+
+	imgName := path.Join(repo, "sbom-image")
+	img, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, err := download.SBOMCmd(ctx, img.Name())
+	if err == nil {
+		t.Fatal("Expected error")
+	}
+
+	// Upload it!
+	must(attach.SBOMCmd(ctx, "./testdata/bom-go-mod.spdx", "spdx", imgName), t)
+
+	sboms, err := download.SBOMCmd(ctx, imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sboms) != 1 {
+		t.Fatalf("Expected one sbom, got %d", len(sboms))
+	}
+	want, err := ioutil.ReadFile("./testdata/bom-go-mod.spdx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
+		t.Errorf("diff: %s", diff)
+	}
+}
+
 func setenv(t *testing.T, k, v string) func() {
 	if err := os.Setenv(k, v); err != nil {
 		t.Fatalf("error setitng env: %v", err)
@@ -580,7 +627,7 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	}
 	must(cli.GetPublicKey(ctx, pk, cli.NamedWriter{Name: outPath, Writer: outWriter}, passFunc), t)
 
-	output, err := ioutil.ReadFile(outFile)
+	output, err := ioutil.ReadFile(outPath)
 	must(err, t)
 	equals(keys.PublicBytes, output, t)
 }

@@ -1,0 +1,2990 @@
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: github.com/sigstore/cosign
+DocumentNamespace: http://spdx.org/spdxpackages/github.com/sigstore/cosign-9a615223-fdf6-40cc-8156-666d7da86672
+Creator: Tool: spdx-sbom-generator-0.0.1
+Created: 2021-06-27T13:42:53Z
+
+##### Package representing the github.com/sigstore/cosign
+
+PackageName: github.com/sigstore/cosign
+SPDXID: SPDXRef-Package-github.com.sigstore.cosign
+PackageVersion: ddd9132
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0d8975f6ff7067f2adad485924e0854caec9c5d46306bf5b901d311c2fb05a7a
+PackageHomePage: https://github.com/sigstore/cosign
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-github.com.sigstore.cosign 
+
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-k8s.io.apimachinery-v0.21.2 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.leodido.go-urn-v1.2.1 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.peterbourgon.ff.v3-v3.0.0 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.cyberphone.json-canonicalization-v0.0.0-20210303052042-6bc126869bf4 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.spf13.afero-v1.6.0 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.theupdateframework.go-tuf-v0.0.0-20201230183259-aee6270feb55 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.google.gofuzz-v1.2.0 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.prometheus.common-v0.29.0 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-go.uber.org.multierr-v1.7.0 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-golang.org.x.term-v0.0.0-20210615171337-6886f2dfbf5b 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-k8s.io.api-v0.21.2 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-k8s.io.client-go-v0.21.2 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.jedisct1.go-minisign-v0.0.0-20210414164026-819d7e2534ac 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.magiconair.properties-v1.8.5 
+Relationship SPDXRef-Package-github.com.sigstore.cosign DEPENDS_ON SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 
+
+##### Package representing the github.com/google/go-containerregistry
+
+PackageName: github.com/google/go-containerregistry
+SPDXID: SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1
+PackageVersion: v0.5.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9f611b3f2b625e9f4af823b9833dfd4317f575a270cd6c156ee9f5b89ec49454
+PackageHomePage: https://github.com/google/go-containerregistry
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-cloud.google.com.go-v0.81.0 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.docker.cli-v0.0.0-20191017083524-a8ff7f821017 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.opencontainers.image-spec-v1.0.1 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-k8s.io.klog.v2-v2.8.0 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.containerd.stargz-snapshotter.estargz-v0.4.1 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.docker.docker-v1.4.2-0.20200319182547-c7ad2b866182 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.docker.docker-credential-helpers-v0.6.3 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.spf13.cobra-v1.1.3 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.gorilla.mux-v1.8.0 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.docker.distribution-v2.7.1+incompatible 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+
+##### Package representing the github.com/peterbourgon/ff/v3
+
+PackageName: github.com/peterbourgon/ff/v3
+SPDXID: SPDXRef-Package-github.com.peterbourgon.ff.v3-v3.0.0
+PackageVersion: v3.0.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 717d2deecd326f89ac03355a0c60e7af8cec09cdf35c739c9db64677b7f767ae
+PackageHomePage: https://github.com/peterbourgon/ff/v3
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.peterbourgon.ff.v3-v3.0.0 DEPENDS_ON SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 
+Relationship SPDXRef-Package-github.com.peterbourgon.ff.v3-v3.0.0 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+
+##### Package representing the github.com/pkg/errors
+
+PackageName: github.com/pkg/errors
+SPDXID: SPDXRef-Package-github.com.pkg.errors-v0.9.1
+PackageVersion: v0.9.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e984effb1b0eef5e6cfefb3f37f23bfaee28d5180f11c64fb43a46b7f7421edb
+PackageHomePage: https://github.com/pkg/errors
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/docker/cli
+
+PackageName: github.com/docker/cli
+SPDXID: SPDXRef-Package-github.com.docker.cli-v0.0.0-20191017083524-a8ff7f821017
+PackageVersion: v0.0.0-20191017083524-a8ff7f821017
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0e16595382ffbd6bd8cd20be937e87ad48d5e20d678fb52b4913740565cb5e26
+PackageHomePage: https://github.com/docker/cli
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/docker/docker-credential-helpers
+
+PackageName: github.com/docker/docker-credential-helpers
+SPDXID: SPDXRef-Package-github.com.docker.docker-credential-helpers-v0.6.3
+PackageVersion: v0.6.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0a83f71929507b20f2c695a3a5833519fcf606d470948b083847e31c09433bee
+PackageHomePage: https://github.com/docker/docker-credential-helpers
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/docker/docker
+
+PackageName: github.com/docker/docker
+SPDXID: SPDXRef-Package-github.com.docker.docker-v1.4.2-0.20200319182547-c7ad2b866182
+PackageVersion: v1.4.2-0.20200319182547-c7ad2b866182
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: b48d221328853f35e846891d066cbfbbfd0f0e8e15d37745d68215d4bfa663c5
+PackageHomePage: https://github.com/docker/docker
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/opencontainers/go-digest
+
+PackageName: github.com/opencontainers/go-digest
+SPDXID: SPDXRef-Package-github.com.opencontainers.go-digest-v1.0.0
+PackageVersion: v1.0.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 06744ce2bb1c85d4117a2ba9e9a817665e52ed5f36e9722e8fada53867a9fae1
+PackageHomePage: https://github.com/opencontainers/go-digest
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/opencontainers/image-spec
+
+PackageName: github.com/opencontainers/image-spec
+SPDXID: SPDXRef-Package-github.com.opencontainers.image-spec-v1.0.1
+PackageVersion: v1.0.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e3790a1082e695077024de83b32cfc198508585d3e37d430aaa325cfbe0c4a0f
+PackageHomePage: https://github.com/opencontainers/image-spec
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/docker/distribution
+
+PackageName: github.com/docker/distribution
+SPDXID: SPDXRef-Package-github.com.docker.distribution-v2.7.1+incompatible
+PackageVersion: v2.7.1+incompatible
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 1e591e4b18738469da7205179340f527fe732e0c3cba080abd084828a3a16d7f
+PackageHomePage: https://github.com/docker/distribution
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the golang.org/x/sync
+
+PackageName: golang.org/x/sync
+SPDXID: SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c
+PackageVersion: v0.0.0-20210220032951-036812b2e83c
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: c2c8d8b8e332215da159aa126456187286e44d97353e0566e77e350e5a8522f7
+PackageHomePage: https://golang.org/x/sync
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/cyberphone/json-canonicalization
+
+PackageName: github.com/cyberphone/json-canonicalization
+SPDXID: SPDXRef-Package-github.com.cyberphone.json-canonicalization-v0.0.0-20210303052042-6bc126869bf4
+PackageVersion: v0.0.0-20210303052042-6bc126869bf4
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: c7ebd3e43ca55f29f282acbf5e9194741d64f027cf57cc6d8136c0e6a30451a6
+PackageHomePage: https://github.com/cyberphone/json-canonicalization
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/asaskevich/govalidator
+
+PackageName: github.com/asaskevich/govalidator
+SPDXID: SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d
+PackageVersion: v0.0.0-20210307081110-f21760c49a8d
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 903cd7f5e7c6ac40eb2de2d6dfe3be0622f9bce5ad6c422fad4966939fcabf94
+PackageHomePage: https://github.com/asaskevich/govalidator
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/go-openapi/errors
+
+PackageName: github.com/go-openapi/errors
+SPDXID: SPDXRef-Package-github.com.go-openapi.errors-v0.20.0
+PackageVersion: v0.20.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 51ad642cf65adce9300b5ea390808246e8feeed0bcd81fbbb88e1b070a1238d2
+PackageHomePage: https://github.com/go-openapi/errors
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the github.com/mitchellh/mapstructure
+
+PackageName: github.com/mitchellh/mapstructure
+SPDXID: SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1
+PackageVersion: v1.4.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 3b17e495d6eceeb7e78bedaca087bcfc81f454c9a8dbce3ccec9071a0ecea479
+PackageHomePage: https://github.com/mitchellh/mapstructure
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/oklog/ulid
+
+PackageName: github.com/oklog/ulid
+SPDXID: SPDXRef-Package-github.com.oklog.ulid-v1.3.1
+PackageVersion: v1.3.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: d906eb8403330115effa40cdde3173f4187286eea72acd78a7f0383c437b875d
+PackageHomePage: https://github.com/oklog/ulid
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the go.mongodb.org/mongo-driver
+
+PackageName: go.mongodb.org/mongo-driver
+SPDXID: SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3
+PackageVersion: v1.5.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: a4ccad268cfd8a059f9b68ccd6f1ca5ae83cdab8c974dad74d75e53b9748fcb9
+PackageHomePage: https://go.mongodb.org/mongo-driver
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-github.com.go-stack.stack-v1.8.0 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-github.com.golang.snappy-v0.0.3 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 
+Relationship SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+
+##### Package representing the github.com/go-stack/stack
+
+PackageName: github.com/go-stack/stack
+SPDXID: SPDXRef-Package-github.com.go-stack.stack-v1.8.0
+PackageVersion: v1.8.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: fd3f25fb63423cea94320198b7efaa88ed8e38cd2862f1be66b644e263c751d9
+PackageHomePage: https://github.com/go-stack/stack
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/go-openapi/strfmt
+
+PackageName: github.com/go-openapi/strfmt
+SPDXID: SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1
+PackageVersion: v0.20.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 60fb8854b5971069860ab2102510a7eb28790a49eb2fb9d1aeb98a3f34833525
+PackageHomePage: https://github.com/go-openapi/strfmt
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.oklog.ulid-v1.3.1 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-stack.stack-v1.8.0 
+Relationship SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+
+##### Package representing the github.com/josharian/intern
+
+PackageName: github.com/josharian/intern
+SPDXID: SPDXRef-Package-github.com.josharian.intern-v1.0.0
+PackageVersion: v1.0.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 02952b87b56340b825e2381df45a0b5eff5dd1bf290fdfada7dbe6e993a42076
+PackageHomePage: https://github.com/josharian/intern
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/mailru/easyjson
+
+PackageName: github.com/mailru/easyjson
+SPDXID: SPDXRef-Package-github.com.mailru.easyjson-v0.7.7
+PackageVersion: v0.7.7
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 827a48dc29ec1ff4c2b1ec78221db470416ed364dac6a878893e9d21cefa6918
+PackageHomePage: https://github.com/mailru/easyjson
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 DEPENDS_ON SPDXRef-Package-github.com.josharian.intern-v1.0.0 
+
+##### Package representing the gopkg.in/yaml.v2
+
+PackageName: gopkg.in/yaml.v2
+SPDXID: SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0
+PackageVersion: v2.4.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 3aed1e3fc7b0a044fb38213f8c11cb20d5b45fd673e45de14c537648c446e6be
+PackageHomePage: https://gopkg.in/yaml.v2
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/go-openapi/swag
+
+PackageName: github.com/go-openapi/swag
+SPDXID: SPDXRef-Package-github.com.go-openapi.swag-v0.19.15
+PackageVersion: v0.19.15
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e725f85ebbbcc1e303a950fe6dfb589e4a6003989316fda6ac5514b818bc0830
+PackageHomePage: https://github.com/go-openapi/swag
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the github.com/google/trillian
+
+PackageName: github.com/google/trillian
+SPDXID: SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f
+PackageVersion: v1.3.14-0.20210413093047-5e12fb368c8f
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 4dab9fd4947a0cb0710d75145cf7eeb32462b10c5a422170dff8aa54f0b64ae3
+PackageHomePage: https://github.com/google/trillian
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.olekukonko.tablewriter-v0.0.5 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-model-v0.2.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-go.uber.org.zap-v1.16.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.mattn.go-runewidth-v0.0.9 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.spf13.cobra-v1.1.3 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-go.opencensus.io-v0.23.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-go.uber.org.multierr-v1.7.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.gogo.protobuf-v1.3.2 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-github.com.imdario.mergo-v0.3.9 
+Relationship SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f DEPENDS_ON SPDXRef-Package-google.golang.org.api-v0.46.0 
+
+##### Package representing the github.com/containerd/stargz-snapshotter/estargz
+
+PackageName: github.com/containerd/stargz-snapshotter/estargz
+SPDXID: SPDXRef-Package-github.com.containerd.stargz-snapshotter.estargz-v0.4.1
+PackageVersion: v0.4.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 7c5efb46f869997b7bd0902b05024d6b3d8575e9d42a5ea11e37855aa8a8f8ae
+PackageHomePage: https://github.com/containerd/stargz-snapshotter/estargz
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.containerd.stargz-snapshotter.estargz-v0.4.1 DEPENDS_ON SPDXRef-Package-github.com.opencontainers.go-digest-v1.0.0 
+Relationship SPDXRef-Package-github.com.containerd.stargz-snapshotter.estargz-v0.4.1 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.containerd.stargz-snapshotter.estargz-v0.4.1 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+
+##### Package representing the github.com/sigstore/sigstore
+
+PackageName: github.com/sigstore/sigstore
+SPDXID: SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64
+PackageVersion: v0.0.0-20210609084117-386ea718fc64
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: ce32f696897cc9eea099740ba18e1f2e345516f1c1a8ddf294c2662a7fca2c68
+PackageHomePage: https://github.com/sigstore/sigstore
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.google.go-containerregistry-v0.5.1 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.spf13.cobra-v1.1.3 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.pierrec.lz4-v2.6.0+incompatible 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.errwrap-v1.1.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-gopkg.in.square.go-jose.v2-v2.5.1 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-multierror-v1.1.1 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-cleanhttp-v0.5.2 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.segmentio.ksuid-v1.0.3 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-cloud.google.com.go-v0.81.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.coreos.go-oidc.v3-v3.0.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.go-homedir-v1.1.0 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.skratchdot.open-golang-v0.0.0-20200116055534-eef842397966 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.spf13.viper-v1.7.1 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-retryablehttp-v0.6.8 
+Relationship SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 DEPENDS_ON SPDXRef-Package-github.com.golang.snappy-v0.0.3 
+
+##### Package representing the github.com/go-openapi/runtime
+
+PackageName: github.com/go-openapi/runtime
+SPDXID: SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29
+PackageVersion: v0.19.29
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 06262c89eea66a0d240bb2e2dcf20608e29cee7d946804545266e2e195f0399c
+PackageHomePage: https://github.com/go-openapi/runtime
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.opentracing.opentracing-go-v1.2.0 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.PuerkitoBio.purell-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+
+##### Package representing the github.com/go-openapi/analysis
+
+PackageName: github.com/go-openapi/analysis
+SPDXID: SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1
+PackageVersion: v0.20.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 44e10c5f201ef8dd4a7700d7a8729665fe0b8e22a506c381cda0f1b95d2cbf7f
+PackageHomePage: https://github.com/go-openapi/analysis
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+
+##### Package representing the github.com/go-openapi/jsonpointer
+
+PackageName: github.com/go-openapi/jsonpointer
+SPDXID: SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5
+PackageVersion: v0.19.5
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 1d3f0415980a62cec07254fc3e99ff4aebaa1f510b37968d6c44f7755520f3f0
+PackageHomePage: https://github.com/go-openapi/jsonpointer
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the github.com/PuerkitoBio/urlesc
+
+PackageName: github.com/PuerkitoBio/urlesc
+SPDXID: SPDXRef-Package-github.com.PuerkitoBio.urlesc-v0.0.0-20170810143723-de5bf2ad4578
+PackageVersion: v0.0.0-20170810143723-de5bf2ad4578
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: cf5a45a083cd213c91fb7d67e61188f8eaa1d362903b9ec91d8cf8d2494a050e
+PackageHomePage: https://github.com/PuerkitoBio/urlesc
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the golang.org/x/text
+
+PackageName: golang.org/x/text
+SPDXID: SPDXRef-Package-golang.org.x.text-v0.3.6
+PackageVersion: v0.3.6
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: d880df5dea6c92d960d64f6fe6c27d88f226838eccbf4736497a5c9f1f7072fd
+PackageHomePage: https://golang.org/x/text
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the golang.org/x/net
+
+PackageName: golang.org/x/net
+SPDXID: SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5
+PackageVersion: v0.0.0-20210525063256-abc453219eb5
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 7796fea5e6483954436c0df99da0a78100ee5157c3b2e8fd99dcdaf157e7e398
+PackageHomePage: https://golang.org/x/net
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 DEPENDS_ON SPDXRef-Package-golang.org.x.term-v0.0.0-20210615171337-6886f2dfbf5b 
+Relationship SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+
+##### Package representing the github.com/PuerkitoBio/purell
+
+PackageName: github.com/PuerkitoBio/purell
+SPDXID: SPDXRef-Package-github.com.PuerkitoBio.purell-v1.1.1
+PackageVersion: v1.1.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 8c01b4b8b4e77bd82080a9a2072c7a9b8539d43b88cd419ee9dc3a04d4b905e0
+PackageHomePage: https://github.com/PuerkitoBio/purell
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/go-openapi/jsonreference
+
+PackageName: github.com/go-openapi/jsonreference
+SPDXID: SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5
+PackageVersion: v0.19.5
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: c9b645f4b15ac8886ae3f1f2ce467af096ecc6b74d0c89cfcb044ec90a05161a
+PackageHomePage: https://github.com/go-openapi/jsonreference
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.PuerkitoBio.urlesc-v0.0.0-20170810143723-de5bf2ad4578 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.PuerkitoBio.purell-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 
+
+##### Package representing the github.com/go-openapi/spec
+
+PackageName: github.com/go-openapi/spec
+SPDXID: SPDXRef-Package-github.com.go-openapi.spec-v0.20.3
+PackageVersion: v0.20.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: de8a34d1f7e6459c9343a159264930fcc394d1cf38d33505638e5713306cf684
+PackageHomePage: https://github.com/go-openapi/spec
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-github.com.PuerkitoBio.purell-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-github.com.PuerkitoBio.urlesc-v0.0.0-20170810143723-de5bf2ad4578 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+
+##### Package representing the github.com/go-openapi/loads
+
+PackageName: github.com/go-openapi/loads
+SPDXID: SPDXRef-Package-github.com.go-openapi.loads-v0.20.2
+PackageVersion: v0.20.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 93af64986aaf16f34f4a9fb02445573eda636219ecf4e5c03eece7d4b05a1231
+PackageHomePage: https://github.com/go-openapi/loads
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonreference-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.PuerkitoBio.purell-v1.1.1 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.PuerkitoBio.urlesc-v0.0.0-20170810143723-de5bf2ad4578 
+
+##### Package representing the github.com/go-openapi/validate
+
+PackageName: github.com/go-openapi/validate
+SPDXID: SPDXRef-Package-github.com.go-openapi.validate-v0.20.2
+PackageVersion: v0.20.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 57a89cb5a4af0a5df24c668749126006f2c0beb29e77d6915cdf54f07f1671b4
+PackageHomePage: https://github.com/go-openapi/validate
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-go.mongodb.org.mongo-driver-v1.5.3 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.analysis-v0.20.1 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.jsonpointer-v0.19.5 
+Relationship SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 
+
+##### Package representing the github.com/opentracing/opentracing-go
+
+PackageName: github.com/opentracing/opentracing-go
+SPDXID: SPDXRef-Package-github.com.opentracing.opentracing-go-v1.2.0
+PackageVersion: v1.2.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: dceb5ae504b6c9ad9d36469642fa86f586698d17cc5fd156f9019c688a6b246d
+PackageHomePage: https://github.com/opentracing/opentracing-go
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/go-playground/locales
+
+PackageName: github.com/go-playground/locales
+SPDXID: SPDXRef-Package-github.com.go-playground.locales-v0.13.0
+PackageVersion: v0.13.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 5d0fbcd46768d469dcb9c098b5332a765f0ba65aeb4d46837f3a58aadf2d5f7c
+PackageHomePage: https://github.com/go-playground/locales
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-playground.locales-v0.13.0 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+
+##### Package representing the github.com/go-playground/universal-translator
+
+PackageName: github.com/go-playground/universal-translator
+SPDXID: SPDXRef-Package-github.com.go-playground.universal-translator-v0.17.0
+PackageVersion: v0.17.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e4729059a54c41612abd564f297f8b81c23a652da796a100243904de0621e292
+PackageHomePage: https://github.com/go-playground/universal-translator
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.go-playground.universal-translator-v0.17.0 DEPENDS_ON SPDXRef-Package-github.com.go-playground.locales-v0.13.0 
+
+##### Package representing the github.com/leodido/go-urn
+
+PackageName: github.com/leodido/go-urn
+SPDXID: SPDXRef-Package-github.com.leodido.go-urn-v1.2.1
+PackageVersion: v1.2.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9ddea28cd322b11a0794bdbc9ef7c08e2e0a5756536c1e16dacfa5a2dacc1ed4
+PackageHomePage: https://github.com/leodido/go-urn
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/go-playground/validator
+
+PackageName: github.com/go-playground/validator
+SPDXID: SPDXRef-Package-github.com.go-playground.validator-v9.31.0+incompatible
+PackageVersion: v9.31.0+incompatible
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: f408f3474f4e7fc4db8a260b696a4907cd03fecf1e216aca2304230e1514392d
+PackageHomePage: https://github.com/go-playground/validator
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/mitchellh/go-homedir
+
+PackageName: github.com/mitchellh/go-homedir
+SPDXID: SPDXRef-Package-github.com.mitchellh.go-homedir-v1.1.0
+PackageVersion: v1.1.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 756f9483a6678379c27563b85c209466b5b22c2006c88ece4ac5eb122edf05e7
+PackageHomePage: https://github.com/mitchellh/go-homedir
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/spf13/pflag
+
+PackageName: github.com/spf13/pflag
+SPDXID: SPDXRef-Package-github.com.spf13.pflag-v1.0.5
+PackageVersion: v1.0.5
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 1da4c58c01b8de4af39bf5292cf75da8788105be7316cf33bfb9083bd7cc0f68
+PackageHomePage: https://github.com/spf13/pflag
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/spf13/cobra
+
+PackageName: github.com/spf13/cobra
+SPDXID: SPDXRef-Package-github.com.spf13.cobra-v1.1.3
+PackageVersion: v1.1.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 13dae614a8a2f787f92a9e954ca6e630257bb651bd16bb47db56cd9307682759
+PackageHomePage: https://github.com/spf13/cobra
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.spf13.cobra-v1.1.3 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.go-homedir-v1.1.0 
+Relationship SPDXRef-Package-github.com.spf13.cobra-v1.1.3 DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+Relationship SPDXRef-Package-github.com.spf13.cobra-v1.1.3 DEPENDS_ON SPDXRef-Package-github.com.spf13.viper-v1.7.1 
+Relationship SPDXRef-Package-github.com.spf13.cobra-v1.1.3 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+
+##### Package representing the golang.org/x/sys
+
+PackageName: golang.org/x/sys
+SPDXID: SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1
+PackageVersion: v0.0.0-20210615035016-665e8c7367d1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 094383cb925a141474b7d2dcff3d41acda43f0054ad69c3edf280dd185ddb14d
+PackageHomePage: https://golang.org/x/sys
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/fsnotify/fsnotify
+
+PackageName: github.com/fsnotify/fsnotify
+SPDXID: SPDXRef-Package-github.com.fsnotify.fsnotify-v1.4.9
+PackageVersion: v1.4.9
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 5f5fc2b994c0deb384de9002d35c224d469876760f4380d19fda6831c69ee708
+PackageHomePage: https://github.com/fsnotify/fsnotify
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.fsnotify.fsnotify-v1.4.9 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+
+##### Package representing the github.com/hashicorp/hcl
+
+PackageName: github.com/hashicorp/hcl
+SPDXID: SPDXRef-Package-github.com.hashicorp.hcl-v1.0.0
+PackageVersion: v1.0.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 895bcea8d965251000f22fadd48cfafbe9540fd5d1bb53a412df05f4eb9ee209
+PackageHomePage: https://github.com/hashicorp/hcl
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.hashicorp.hcl-v1.0.0 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the github.com/magiconair/properties
+
+PackageName: github.com/magiconair/properties
+SPDXID: SPDXRef-Package-github.com.magiconair.properties-v1.8.5
+PackageVersion: v1.8.5
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 8279b773031b12daaff1682a11727d765b41ea7f8ba07d82f41c2151dabf50cf
+PackageHomePage: https://github.com/magiconair/properties
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/pelletier/go-toml
+
+PackageName: github.com/pelletier/go-toml
+SPDXID: SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3
+PackageVersion: v1.9.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: f21c71d15e543d7bf5ab0de02b01d438920f9cf8c82f6e0eea6ebf4e2f71dfca
+PackageHomePage: https://github.com/pelletier/go-toml
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+
+##### Package representing the github.com/spf13/afero
+
+PackageName: github.com/spf13/afero
+SPDXID: SPDXRef-Package-github.com.spf13.afero-v1.6.0
+PackageVersion: v1.6.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0ad525eccf932adf4198a0f145cf92b2ee2dde1f372115a082060411ebc02567
+PackageHomePage: https://github.com/spf13/afero
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.spf13.afero-v1.6.0 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.spf13.afero-v1.6.0 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+
+##### Package representing the github.com/spf13/cast
+
+PackageName: github.com/spf13/cast
+SPDXID: SPDXRef-Package-github.com.spf13.cast-v1.3.1
+PackageVersion: v1.3.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 62b31a6b804bd52025bc90c20ebfb9330cc7d6d763fbdc4275daf18351526921
+PackageHomePage: https://github.com/spf13/cast
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.spf13.cast-v1.3.1 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the github.com/spf13/jwalterweatherman
+
+PackageName: github.com/spf13/jwalterweatherman
+SPDXID: SPDXRef-Package-github.com.spf13.jwalterweatherman-v1.1.0
+PackageVersion: v1.1.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 3a1bde328c7d9a65571ab45c07aedcc3a5ef9259fba27695e8b9b1e74332fd2b
+PackageHomePage: https://github.com/spf13/jwalterweatherman
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.spf13.jwalterweatherman-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the github.com/subosito/gotenv
+
+PackageName: github.com/subosito/gotenv
+SPDXID: SPDXRef-Package-github.com.subosito.gotenv-v1.2.0
+PackageVersion: v1.2.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 100a4810859d117550e36abab7faacf5469ec9a5063af11c2eaf515e4788250f
+PackageHomePage: https://github.com/subosito/gotenv
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the gopkg.in/ini.v1
+
+PackageName: gopkg.in/ini.v1
+SPDXID: SPDXRef-Package-gopkg.in.ini.v1-v1.62.0
+PackageVersion: v1.62.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: cc6da295ac6329f0763b4d19e87016b801b044bf966e77dbe27bea5b7923d6d7
+PackageHomePage: https://gopkg.in/ini.v1
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/spf13/viper
+
+PackageName: github.com/spf13/viper
+SPDXID: SPDXRef-Package-github.com.spf13.viper-v1.7.1
+PackageVersion: v1.7.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 46ff1c376bdd16a5b299764c028eceeb618852e1e0b08e50d000e54e12000410
+PackageHomePage: https://github.com/spf13/viper
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.golang.groupcache-v0.0.0-20210331224755-41bb18bfe9da 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.spf13.cast-v1.3.1 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.subosito.gotenv-v1.2.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-go.uber.org.atomic-v1.7.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.spf13.jwalterweatherman-v1.1.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.fsnotify.fsnotify-v1.4.9 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.gogo.protobuf-v1.3.2 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.spf13.afero-v1.6.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.magiconair.properties-v1.8.5 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-gopkg.in.ini.v1-v1.62.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-go.uber.org.multierr-v1.7.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-go.uber.org.zap-v1.16.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.hcl-v1.0.0 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 
+Relationship SPDXRef-Package-github.com.spf13.viper-v1.7.1 DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+
+##### Package representing the github.com/sigstore/rekor
+
+PackageName: github.com/sigstore/rekor
+SPDXID: SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6
+PackageVersion: v0.1.2-0.20210519014330-b5480728bde6
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 80f722ace48bbeb352bdf56fc02058f966d5cf924243194631b322f93a0208df
+PackageHomePage: https://github.com/sigstore/rekor
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.blang.semver-v3.5.1+incompatible 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.cavaliercoder.go-rpm-v0.0.0-20200122174316-8cb9fd9c31a8 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.howeyc.gopass-v0.0.0-20190910152052-7cb4b85ec19c 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.spf13.afero-v1.6.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.spf13.cast-v1.3.1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-chi.chi-v4.1.2+incompatible 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.ghodss.yaml-v1.0.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-playground.validator-v9.31.0+incompatible 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-go.uber.org.zap-v1.16.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.magiconair.properties-v1.8.5 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.spf13.jwalterweatherman-v1.1.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-gopkg.in.ini.v1-v1.62.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.asaskevich.govalidator-v0.0.0-20210307081110-f21760c49a8d 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.jedisct1.go-minisign-v0.0.0-20210414164026-819d7e2534ac 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.zalando.go-keyring-v0.1.1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-golang.org.x.term-v0.0.0-20210615171337-6886f2dfbf5b 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.cyberphone.json-canonicalization-v0.0.0-20210303052042-6bc126869bf4 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.sigstore.sigstore-v0.0.0-20210609084117-386ea718fc64 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.spf13.viper-v1.7.1 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.go-homedir-v1.1.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.sassoftware.relic-v7.2.1+incompatible 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.spf13.cobra-v1.1.3 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-github.com.sigstore.rekor-v0.1.2-0.20210519014330-b5480728bde6 DEPENDS_ON SPDXRef-Package-github.com.fsnotify.fsnotify-v1.4.9 
+
+##### Package representing the github.com/google/certificate-transparency-go
+
+PackageName: github.com/google/certificate-transparency-go
+SPDXID: SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1
+PackageVersion: v1.1.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 095ae65cdc8f710c01a841546db2d13d47decc49a7270c94e86351ef3a0cad8f
+PackageHomePage: https://github.com/google/certificate-transparency-go
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.golang.groupcache-v0.0.0-20210331224755-41bb18bfe9da 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.google.trillian-v1.3.14-0.20210413093047-5e12fb368c8f 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.spf13.cobra-v1.1.3 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-google.golang.org.api-v0.46.0 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.mattn.go-runewidth-v0.0.9 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-go.uber.org.multierr-v1.7.0 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-go.uber.org.zap-v1.16.0 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.olekukonko.tablewriter-v0.0.5 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-go.uber.org.atomic-v1.7.0 
+Relationship SPDXRef-Package-github.com.google.certificate-transparency-go-v1.1.1 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+
+##### Package representing the google.golang.org/protobuf
+
+PackageName: google.golang.org/protobuf
+SPDXID: SPDXRef-Package-google.golang.org.protobuf-v1.26.0
+PackageVersion: v1.26.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 121dc87761410a8622800b896b6f77b5b8ce26bd2484bcf85c8d6fd177116df1
+PackageHomePage: https://google.golang.org/protobuf
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-google.golang.org.protobuf-v1.26.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-google.golang.org.protobuf-v1.26.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-google.golang.org.protobuf-v1.26.0 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+
+##### Package representing the github.com/golang/protobuf
+
+PackageName: github.com/golang/protobuf
+SPDXID: SPDXRef-Package-github.com.golang.protobuf-v1.5.2
+PackageVersion: v1.5.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 6f2a16bbef47f86415aa7ab887df08d30c1d4e79917c370fe163dbf5b8bde6b8
+PackageHomePage: https://github.com/golang/protobuf
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.golang.protobuf-v1.5.2 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-github.com.golang.protobuf-v1.5.2 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+
+##### Package representing the google.golang.org/genproto
+
+PackageName: google.golang.org/genproto
+SPDXID: SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced
+PackageVersion: v0.0.0-20210617175327-b9e0b3197ced
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: fb5b2471725d8be3b0a0d39775d6379681c484e5320f1c28007c425e0dccda4c
+PackageHomePage: https://google.golang.org/genproto
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+
+##### Package representing the google.golang.org/grpc
+
+PackageName: google.golang.org/grpc
+SPDXID: SPDXRef-Package-google.golang.org.grpc-v1.38.0
+PackageVersion: v1.38.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 28897ebd9d678ee15f24ce7808810c9c1ae39317687b00a4bb5555ae1627ee8d
+PackageHomePage: https://google.golang.org/grpc
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-cloud.google.com.go-v0.81.0 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-github.com.gogo.protobuf-v1.3.2 
+Relationship SPDXRef-Package-google.golang.org.grpc-v1.38.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+
+##### Package representing the github.com/go-chi/chi
+
+PackageName: github.com/go-chi/chi
+SPDXID: SPDXRef-Package-github.com.go-chi.chi-v4.1.2+incompatible
+PackageVersion: v4.1.2+incompatible
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 6c946a8dec9d21da32b4210fa7978a5cb94dfc2b1fb036486163d2da9c089ff9
+PackageHomePage: https://github.com/go-chi/chi
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the go.uber.org/atomic
+
+PackageName: go.uber.org/atomic
+SPDXID: SPDXRef-Package-go.uber.org.atomic-v1.7.0
+PackageVersion: v1.7.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 82f23ad2d95732cc976adb89249921f6115a4dd137b10fd3032b1bd71474c7f5
+PackageHomePage: https://go.uber.org/atomic
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-go.uber.org.atomic-v1.7.0 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the go.uber.org/multierr
+
+PackageName: go.uber.org/multierr
+SPDXID: SPDXRef-Package-go.uber.org.multierr-v1.7.0
+PackageVersion: v1.7.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 4bb6aa0b6cfb40ba982ee2226c46e4c582181690d25a68e8656b44e5013caeca
+PackageHomePage: https://go.uber.org/multierr
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-go.uber.org.multierr-v1.7.0 DEPENDS_ON SPDXRef-Package-go.uber.org.atomic-v1.7.0 
+
+##### Package representing the go.uber.org/zap
+
+PackageName: go.uber.org/zap
+SPDXID: SPDXRef-Package-go.uber.org.zap-v1.16.0
+PackageVersion: v1.16.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: cfd512fe5f2bc6c885d192cbe1db866a46527acce9adebaf598e8928418b9c08
+PackageHomePage: https://go.uber.org/zap
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-go.uber.org.zap-v1.16.0 DEPENDS_ON SPDXRef-Package-go.uber.org.multierr-v1.7.0 
+Relationship SPDXRef-Package-go.uber.org.zap-v1.16.0 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-go.uber.org.zap-v1.16.0 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-go.uber.org.zap-v1.16.0 DEPENDS_ON SPDXRef-Package-go.uber.org.atomic-v1.7.0 
+
+##### Package representing the github.com/blang/semver
+
+PackageName: github.com/blang/semver
+SPDXID: SPDXRef-Package-github.com.blang.semver-v3.5.1+incompatible
+PackageVersion: v3.5.1+incompatible
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 668ac29febf2c8c7e99d84eb10030d39ca9042980df35475ef75ea1b5145d258
+PackageHomePage: https://github.com/blang/semver
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the golang.org/x/term
+
+PackageName: golang.org/x/term
+SPDXID: SPDXRef-Package-golang.org.x.term-v0.0.0-20210615171337-6886f2dfbf5b
+PackageVersion: v0.0.0-20210615171337-6886f2dfbf5b
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 8ee37192f7d4533352609092a0ce86b686643bae42cb6eb70eeaa09b46a50666
+PackageHomePage: https://golang.org/x/term
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-golang.org.x.term-v0.0.0-20210615171337-6886f2dfbf5b DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+
+##### Package representing the golang.org/x/crypto
+
+PackageName: golang.org/x/crypto
+SPDXID: SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e
+PackageVersion: v0.0.0-20210616213533-5ff15b29337e
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 711b1960550951ba9f896f4a6cf9b9277385e2acc66930be13a94323edd1c81f
+PackageHomePage: https://golang.org/x/crypto
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e DEPENDS_ON SPDXRef-Package-golang.org.x.term-v0.0.0-20210615171337-6886f2dfbf5b 
+Relationship SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+
+##### Package representing the github.com/howeyc/gopass
+
+PackageName: github.com/howeyc/gopass
+SPDXID: SPDXRef-Package-github.com.howeyc.gopass-v0.0.0-20190910152052-7cb4b85ec19c
+PackageVersion: v0.0.0-20190910152052-7cb4b85ec19c
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9d00d401b09f8d272a15d65b242541ed5acbf7b91a9dda6a75e58e5e1248f79f
+PackageHomePage: https://github.com/howeyc/gopass
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/zalando/go-keyring
+
+PackageName: github.com/zalando/go-keyring
+SPDXID: SPDXRef-Package-github.com.zalando.go-keyring-v0.1.1
+PackageVersion: v0.1.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 8a3f321827a4aeb85811bae37d83c6e438242a888f45552e22b596e8285168c3
+PackageHomePage: https://github.com/zalando/go-keyring
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/sassoftware/relic
+
+PackageName: github.com/sassoftware/relic
+SPDXID: SPDXRef-Package-github.com.sassoftware.relic-v7.2.1+incompatible
+PackageVersion: v7.2.1+incompatible
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 1ba58336c70227b09e6b95fee0fe3dd77e3e7e75538635595eb8caba7788eadb
+PackageHomePage: https://github.com/sassoftware/relic
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/jedisct1/go-minisign
+
+PackageName: github.com/jedisct1/go-minisign
+SPDXID: SPDXRef-Package-github.com.jedisct1.go-minisign-v0.0.0-20210414164026-819d7e2534ac
+PackageVersion: v0.0.0-20210414164026-819d7e2534ac
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 5c51edc535c9ef254999ddd03ca153a667e97ceebc9d78810dd74407186dd5c6
+PackageHomePage: https://github.com/jedisct1/go-minisign
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.jedisct1.go-minisign-v0.0.0-20210414164026-819d7e2534ac DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+
+##### Package representing the github.com/ghodss/yaml
+
+PackageName: github.com/ghodss/yaml
+SPDXID: SPDXRef-Package-github.com.ghodss.yaml-v1.0.0
+PackageVersion: v1.0.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 8a601d3cc973a9e45f3c1c56f28377edf7d28cabaaca1668dce782c4607afdaa
+PackageHomePage: https://github.com/ghodss/yaml
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/cavaliercoder/go-rpm
+
+PackageName: github.com/cavaliercoder/go-rpm
+SPDXID: SPDXRef-Package-github.com.cavaliercoder.go-rpm-v0.0.0-20200122174316-8cb9fd9c31a8
+PackageVersion: v0.0.0-20200122174316-8cb9fd9c31a8
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 57cfc0c523cf3587fa4bc6430836c8da25b057b26826fb08b5d8b80964ae4ced
+PackageHomePage: https://github.com/cavaliercoder/go-rpm
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/googleapis/gax-go/v2
+
+PackageName: github.com/googleapis/gax-go/v2
+SPDXID: SPDXRef-Package-github.com.googleapis.gax-go.v2-v2.0.5
+PackageVersion: v2.0.5
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: b8b7e67cfe0beb74db70984ea7278c8a2644f7190000b0230a603cf73db9be94
+PackageHomePage: https://github.com/googleapis/gax-go/v2
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.googleapis.gax-go.v2-v2.0.5 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+
+##### Package representing the cloud.google.com/go
+
+PackageName: cloud.google.com/go
+SPDXID: SPDXRef-Package-cloud.google.com.go-v0.81.0
+PackageVersion: v0.81.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 459733de8ac4d0d69eba97f5e4f4050395c9d9d05e6cba633e9247c7588232e9
+PackageHomePage: https://cloud.google.com/go
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-go.opencensus.io-v0.23.0 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-github.com.googleapis.gax-go.v2-v2.0.5 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-google.golang.org.api-v0.46.0 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-github.com.golang.groupcache-v0.0.0-20210331224755-41bb18bfe9da 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-cloud.google.com.go-v0.81.0 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+
+##### Package representing the google.golang.org/api
+
+PackageName: google.golang.org/api
+SPDXID: SPDXRef-Package-google.golang.org.api-v0.46.0
+PackageVersion: v0.46.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9c27d3b7b736de1570971331811b59458ba57cf5d2cb57263c5c1b9cc1c4c474
+PackageHomePage: https://google.golang.org/api
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-go.opencensus.io-v0.23.0 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-cloud.google.com.go-v0.81.0 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-github.com.googleapis.gax-go.v2-v2.0.5 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-google.golang.org.api-v0.46.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+
+##### Package representing the golang.org/x/oauth2
+
+PackageName: golang.org/x/oauth2
+SPDXID: SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c
+PackageVersion: v0.0.0-20210514164344-f6687ab2804c
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 334a2a1b320de68c665dfdb61282dad09b343cd93b494ac1241522898bf253d3
+PackageHomePage: https://golang.org/x/oauth2
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c DEPENDS_ON SPDXRef-Package-cloud.google.com.go-v0.81.0 
+Relationship SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+
+##### Package representing the go.opencensus.io
+
+PackageName: go.opencensus.io
+SPDXID: SPDXRef-Package-go.opencensus.io-v0.23.0
+PackageVersion: v0.23.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 7c86fbad22be2d27398183a1288e4c2aabd20d14271492cd47651f23d3139bd6
+PackageHomePage: https://go.opencensus.io
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-google.golang.org.api-v0.46.0 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-github.com.golang.groupcache-v0.0.0-20210331224755-41bb18bfe9da 
+Relationship SPDXRef-Package-go.opencensus.io-v0.23.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+
+##### Package representing the github.com/golang/groupcache
+
+PackageName: github.com/golang/groupcache
+SPDXID: SPDXRef-Package-github.com.golang.groupcache-v0.0.0-20210331224755-41bb18bfe9da
+PackageVersion: v0.0.0-20210331224755-41bb18bfe9da
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 03f65147877c2e0084097490c88ede91762bc954dd9dcf77ddaf822ffc1ac168
+PackageHomePage: https://github.com/golang/groupcache
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/google/go-cmp
+
+PackageName: github.com/google/go-cmp
+SPDXID: SPDXRef-Package-github.com.google.go-cmp-v0.5.6
+PackageVersion: v0.5.6
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e95afd232d9a38271d4252ccccc027ddc13aaea55345ca12be0df6462bb75687
+PackageHomePage: https://github.com/google/go-cmp
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/hashicorp/errwrap
+
+PackageName: github.com/hashicorp/errwrap
+SPDXID: SPDXRef-Package-github.com.hashicorp.errwrap-v1.1.0
+PackageVersion: v1.1.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 047a321b836f7f66764f46fc2887ac21a3eac0b22b6c8fb8896fab7db6da622f
+PackageHomePage: https://github.com/hashicorp/errwrap
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/hashicorp/go-cleanhttp
+
+PackageName: github.com/hashicorp/go-cleanhttp
+SPDXID: SPDXRef-Package-github.com.hashicorp.go-cleanhttp-v0.5.2
+PackageVersion: v0.5.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 850ecf5976cd640a31d2c94b7fe0fddeb3b40186965f372ad54a254e3bd0dd8f
+PackageHomePage: https://github.com/hashicorp/go-cleanhttp
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/hashicorp/go-multierror
+
+PackageName: github.com/hashicorp/go-multierror
+SPDXID: SPDXRef-Package-github.com.hashicorp.go-multierror-v1.1.1
+PackageVersion: v1.1.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: f903a790c3fd699e65977baa2c4bb911282266395b92a232e0ceeafc38b1eaf2
+PackageHomePage: https://github.com/hashicorp/go-multierror
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.hashicorp.go-multierror-v1.1.1 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.errwrap-v1.1.0 
+
+##### Package representing the github.com/hashicorp/go-retryablehttp
+
+PackageName: github.com/hashicorp/go-retryablehttp
+SPDXID: SPDXRef-Package-github.com.hashicorp.go-retryablehttp-v0.6.8
+PackageVersion: v0.6.8
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 7b1c176e794c9eac1776346636ac0f6a6e4b592a092d6263d518e2a230d7461c
+PackageHomePage: https://github.com/hashicorp/go-retryablehttp
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.hashicorp.go-retryablehttp-v0.6.8 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-cleanhttp-v0.5.2 
+
+##### Package representing the github.com/hashicorp/go-rootcerts
+
+PackageName: github.com/hashicorp/go-rootcerts
+SPDXID: SPDXRef-Package-github.com.hashicorp.go-rootcerts-v1.0.2
+PackageVersion: v1.0.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: d42cdbf7b568f432127ee9d549060acbfb08ab2a527d059e0e12e84224d9b590
+PackageHomePage: https://github.com/hashicorp/go-rootcerts
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.hashicorp.go-rootcerts-v1.0.2 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.go-homedir-v1.1.0 
+
+##### Package representing the github.com/hashicorp/vault/sdk
+
+PackageName: github.com/hashicorp/vault/sdk
+SPDXID: SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0
+PackageVersion: v0.2.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 21e28009edebedb97dc5fc5d340838c747e25934dc1606af952be083cd9c6c66
+PackageHomePage: https://github.com/hashicorp/vault/sdk
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.errwrap-v1.1.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-cleanhttp-v0.5.2 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.opencontainers.image-spec-v1.0.1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.pierrec.lz4-v2.6.0+incompatible 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.docker.distribution-v2.7.1+incompatible 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.gorilla.mux-v1.8.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.opencontainers.go-digest-v1.0.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-sockaddr-v1.0.2 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.ryanuber.go-glob-v1.0.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.docker.docker-v1.4.2-0.20200319182547-c7ad2b866182 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-multierror-v1.1.1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.hcl-v1.0.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-google.golang.org.grpc-v1.38.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-gopkg.in.square.go-jose.v2-v2.5.1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.golang.snappy-v0.0.3 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-retryablehttp-v0.6.8 
+
+##### Package representing the github.com/golang/snappy
+
+PackageName: github.com/golang/snappy
+SPDXID: SPDXRef-Package-github.com.golang.snappy-v0.0.3
+PackageVersion: v0.0.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: ec86cb9791c62c2bc5f0f9dd332d61198c4cf6f40818e67135a45cde051b40b4
+PackageHomePage: https://github.com/golang/snappy
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/pierrec/lz4
+
+PackageName: github.com/pierrec/lz4
+SPDXID: SPDXRef-Package-github.com.pierrec.lz4-v2.6.0+incompatible
+PackageVersion: v2.6.0+incompatible
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 4de292b0e083fe4176c7b02ae284a4b4c24c88744cfa0398f94b0d2229184192
+PackageHomePage: https://github.com/pierrec/lz4
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/hashicorp/go-sockaddr
+
+PackageName: github.com/hashicorp/go-sockaddr
+SPDXID: SPDXRef-Package-github.com.hashicorp.go-sockaddr-v1.0.2
+PackageVersion: v1.0.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 3b91d4c2b863af23838e2f6b983ffe9c2cf4741995ce97e6ecf781876443ccc9
+PackageHomePage: https://github.com/hashicorp/go-sockaddr
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.hashicorp.go-sockaddr-v1.0.2 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.errwrap-v1.1.0 
+
+##### Package representing the github.com/ryanuber/go-glob
+
+PackageName: github.com/ryanuber/go-glob
+SPDXID: SPDXRef-Package-github.com.ryanuber.go-glob-v1.0.0
+PackageVersion: v1.0.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e4a59b9bcddd0bfaebb26f2cd34aae2c85f80acf9d97c5cc6e98a262a3deefbd
+PackageHomePage: https://github.com/ryanuber/go-glob
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the golang.org/x/time
+
+PackageName: golang.org/x/time
+SPDXID: SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba
+PackageVersion: v0.0.0-20210220033141-f8bda1e9f3ba
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9eb556e6f8c487b07629dbd90cf04320501894e9f491d2a22b89593e28e24df2
+PackageHomePage: https://golang.org/x/time
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the gopkg.in/square/go-jose.v2
+
+PackageName: gopkg.in/square/go-jose.v2
+SPDXID: SPDXRef-Package-gopkg.in.square.go-jose.v2-v2.5.1
+PackageVersion: v2.5.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: b35860f881c48c56d045f6600a446bc8ccb4d849932abdb2a4b5bb8d3efd14a2
+PackageHomePage: https://gopkg.in/square/go-jose.v2
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/hashicorp/vault/api
+
+PackageName: github.com/hashicorp/vault/api
+SPDXID: SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0
+PackageVersion: v1.1.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 7384684d18b6cdf97e9ac93b246657168a65f656a5ef7501e5972de8f20b25b6
+PackageHomePage: https://github.com/hashicorp/vault/api
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-cleanhttp-v0.5.2 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-multierror-v1.1.1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-retryablehttp-v0.6.8 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.go-rootcerts-v1.0.2 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.vault.sdk-v0.2.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.errwrap-v1.1.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.hashicorp.hcl-v1.0.0 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-github.com.hashicorp.vault.api-v1.1.0 DEPENDS_ON SPDXRef-Package-gopkg.in.square.go-jose.v2-v2.5.1 
+
+##### Package representing the github.com/theupdateframework/go-tuf
+
+PackageName: github.com/theupdateframework/go-tuf
+SPDXID: SPDXRef-Package-github.com.theupdateframework.go-tuf-v0.0.0-20201230183259-aee6270feb55
+PackageVersion: v0.0.0-20201230183259-aee6270feb55
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: ed391d786e0359002979453c3fc82a8eadf5e3e275ef4a15027a9e9147644262
+PackageHomePage: https://github.com/theupdateframework/go-tuf
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.theupdateframework.go-tuf-v0.0.0-20201230183259-aee6270feb55 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+
+##### Package representing the github.com/coreos/go-oidc/v3
+
+PackageName: github.com/coreos/go-oidc/v3
+SPDXID: SPDXRef-Package-github.com.coreos.go-oidc.v3-v3.0.0
+PackageVersion: v3.0.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9b01858cab936242c2c4957f7c158cd678af5eb7151bd2af80f33eef9ec12ad2
+PackageHomePage: https://github.com/coreos/go-oidc/v3
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.coreos.go-oidc.v3-v3.0.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.coreos.go-oidc.v3-v3.0.0 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-github.com.coreos.go-oidc.v3-v3.0.0 DEPENDS_ON SPDXRef-Package-gopkg.in.square.go-jose.v2-v2.5.1 
+Relationship SPDXRef-Package-github.com.coreos.go-oidc.v3-v3.0.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+
+##### Package representing the github.com/sigstore/fulcio
+
+PackageName: github.com/sigstore/fulcio
+SPDXID: SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca
+PackageVersion: v0.0.0-20210405115948-e7630f533fca
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e9fed9477691b8fbffc2f6bef6ca60b9f167db0cb53898280b49cfd930a54e05
+PackageHomePage: https://github.com/sigstore/fulcio
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-google.golang.org.genproto-v0.0.0-20210617175327-b9e0b3197ced 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-go.uber.org.zap-v1.16.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.pelletier.go-toml-v1.9.3 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-cloud.google.com.go-v0.81.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-openapi.loads-v0.20.2 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-openapi.errors-v0.20.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-openapi.strfmt-v0.20.1 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.mailru.easyjson-v0.7.7 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.spf13.afero-v1.6.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.spf13.jwalterweatherman-v1.1.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.spf13.cobra-v1.1.3 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.mitchellh.mapstructure-v1.4.1 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-openapi.spec-v0.20.3 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-openapi.runtime-v0.19.29 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.spf13.viper-v1.7.1 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-openapi.swag-v0.19.15 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-chi.chi-v4.1.2+incompatible 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.fsnotify.fsnotify-v1.4.9 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.coreos.go-oidc.v3-v3.0.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.magiconair.properties-v1.8.5 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.segmentio.ksuid-v1.0.3 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.mitchellh.go-homedir-v1.1.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-gopkg.in.ini.v1-v1.62.0 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.spf13.cast-v1.3.1 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.skratchdot.open-golang-v0.0.0-20200116055534-eef842397966 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-github.com.go-openapi.validate-v0.20.2 
+Relationship SPDXRef-Package-github.com.sigstore.fulcio-v0.0.0-20210405115948-e7630f533fca DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+
+##### Package representing the github.com/segmentio/ksuid
+
+PackageName: github.com/segmentio/ksuid
+SPDXID: SPDXRef-Package-github.com.segmentio.ksuid-v1.0.3
+PackageVersion: v1.0.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 58179fe001a088e616b1848aec64d6fd5c8a8e79e88856e58812b58f3835500d
+PackageHomePage: https://github.com/segmentio/ksuid
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/skratchdot/open-golang
+
+PackageName: github.com/skratchdot/open-golang
+SPDXID: SPDXRef-Package-github.com.skratchdot.open-golang-v0.0.0-20200116055534-eef842397966
+PackageVersion: v0.0.0-20200116055534-eef842397966
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0977118b561a46782a4ec19fcf21d79280b78fde20bc3c77219e70d5aa878e46
+PackageHomePage: https://github.com/skratchdot/open-golang
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/gogo/protobuf
+
+PackageName: github.com/gogo/protobuf
+SPDXID: SPDXRef-Package-github.com.gogo.protobuf-v1.3.2
+PackageVersion: v1.3.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 95d3fe25fc8e393da0e7135467b6699f4d0bf5f62ac93014def07a6ebc840536
+PackageHomePage: https://github.com/gogo/protobuf
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the gopkg.in/inf.v0
+
+PackageName: gopkg.in/inf.v0
+SPDXID: SPDXRef-Package-gopkg.in.inf.v0-v0.9.1
+PackageVersion: v0.9.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 771fadad552618ff0ae1e08892c4c5e06bab75c14304e2dccdfa390dc2db2a86
+PackageHomePage: https://gopkg.in/inf.v0
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the k8s.io/apimachinery
+
+PackageName: k8s.io/apimachinery
+SPDXID: SPDXRef-Package-k8s.io.apimachinery-v0.21.2
+PackageVersion: v0.21.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 99a73f202aa86722321431e4bd1cd3f88ed1d4e680cddbe4d1d16c1794a02c4e
+PackageHomePage: https://k8s.io/apimachinery
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-k8s.io.klog.v2-v2.8.0 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-gopkg.in.inf.v0-v0.9.1 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-sigs.k8s.io.yaml-v1.2.0 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.json-iterator.go-v1.1.11 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.google.gofuzz-v1.2.0 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.gogo.protobuf-v1.3.2 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.modern-go.reflect2-v1.0.1 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.golang.groupcache-v0.0.0-20210331224755-41bb18bfe9da 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.googleapis.gnostic-v0.4.1 
+Relationship SPDXRef-Package-k8s.io.apimachinery-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+
+##### Package representing the github.com/google/gofuzz
+
+PackageName: github.com/google/gofuzz
+SPDXID: SPDXRef-Package-github.com.google.gofuzz-v1.2.0
+PackageVersion: v1.2.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9f90c7a974671a73dfacee0304a7b34959a807ae0dced51d0aa6f4883b296827
+PackageHomePage: https://github.com/google/gofuzz
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/go-logr/logr
+
+PackageName: github.com/go-logr/logr
+SPDXID: SPDXRef-Package-github.com.go-logr.logr-v0.4.0
+PackageVersion: v0.4.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 729410377448d47553cbc0b4dd2894ca3c1aa69e6426e18aa31f2bae3ab6a1c8
+PackageHomePage: https://github.com/go-logr/logr
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the k8s.io/klog/v2
+
+PackageName: k8s.io/klog/v2
+SPDXID: SPDXRef-Package-k8s.io.klog.v2-v2.8.0
+PackageVersion: v2.8.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: f3843055d8b518fac6bd96d36d10cda14ef347848023df47e0ae510cfc668c9d
+PackageHomePage: https://k8s.io/klog/v2
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-k8s.io.klog.v2-v2.8.0 DEPENDS_ON SPDXRef-Package-github.com.go-logr.logr-v0.4.0 
+
+##### Package representing the github.com/modern-go/concurrent
+
+PackageName: github.com/modern-go/concurrent
+SPDXID: SPDXRef-Package-github.com.modern-go.concurrent-v0.0.0-20180306012644-bacd9c7ef1dd
+PackageVersion: v0.0.0-20180306012644-bacd9c7ef1dd
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: c6081e6ce83b52eb5415b1eaaa3920fcbdff17d1c3fa789b5b89d2cbbc6ace2e
+PackageHomePage: https://github.com/modern-go/concurrent
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/modern-go/reflect2
+
+PackageName: github.com/modern-go/reflect2
+SPDXID: SPDXRef-Package-github.com.modern-go.reflect2-v1.0.1
+PackageVersion: v1.0.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 95aa5db9774824ade90b1b53c29f23e331139bed8b757f2c715ea0efc7399fc8
+PackageHomePage: https://github.com/modern-go/reflect2
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/json-iterator/go
+
+PackageName: github.com/json-iterator/go
+SPDXID: SPDXRef-Package-github.com.json-iterator.go-v1.1.11
+PackageVersion: v1.1.11
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 254625d8d2b1f7077ee5b424343f8a20c77e36b8d825fae1edf817949c9b3e84
+PackageHomePage: https://github.com/json-iterator/go
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.json-iterator.go-v1.1.11 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-github.com.json-iterator.go-v1.1.11 DEPENDS_ON SPDXRef-Package-github.com.google.gofuzz-v1.2.0 
+Relationship SPDXRef-Package-github.com.json-iterator.go-v1.1.11 DEPENDS_ON SPDXRef-Package-github.com.modern-go.concurrent-v0.0.0-20180306012644-bacd9c7ef1dd 
+Relationship SPDXRef-Package-github.com.json-iterator.go-v1.1.11 DEPENDS_ON SPDXRef-Package-github.com.modern-go.reflect2-v1.0.1 
+
+##### Package representing the sigs.k8s.io/structured-merge-diff/v4
+
+PackageName: sigs.k8s.io/structured-merge-diff/v4
+SPDXID: SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0
+PackageVersion: v4.1.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 223818142048052ae7e0e13055d154f4e681983fa3fabd380ed59d459f9bbea7
+PackageHomePage: https://sigs.k8s.io/structured-merge-diff/v4
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0 DEPENDS_ON SPDXRef-Package-github.com.modern-go.concurrent-v0.0.0-20180306012644-bacd9c7ef1dd 
+Relationship SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0 DEPENDS_ON SPDXRef-Package-github.com.modern-go.reflect2-v1.0.1 
+Relationship SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0 DEPENDS_ON SPDXRef-Package-github.com.google.gofuzz-v1.2.0 
+Relationship SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0 DEPENDS_ON SPDXRef-Package-github.com.json-iterator.go-v1.1.11 
+
+##### Package representing the k8s.io/api
+
+PackageName: k8s.io/api
+SPDXID: SPDXRef-Package-k8s.io.api-v0.21.2
+PackageVersion: v0.21.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0f91c64066f5e8b2de142b2d3b155d66d6edcf720aa0f30af9929be542aa6ffe
+PackageHomePage: https://k8s.io/api
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-k8s.io.api-v0.21.2 DEPENDS_ON SPDXRef-Package-k8s.io.apimachinery-v0.21.2 
+Relationship SPDXRef-Package-k8s.io.api-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.gogo.protobuf-v1.3.2 
+
+##### Package representing the github.com/googleapis/gnostic
+
+PackageName: github.com/googleapis/gnostic
+SPDXID: SPDXRef-Package-github.com.googleapis.gnostic-v0.4.1
+PackageVersion: v0.4.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 2e1455e8d4d3a3ca2c1429f4dfd223227c5d875a0b9fec12c7a8b6540e606a58
+PackageHomePage: https://github.com/googleapis/gnostic
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.googleapis.gnostic-v0.4.1 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.googleapis.gnostic-v0.4.1 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+
+##### Package representing the sigs.k8s.io/yaml
+
+PackageName: sigs.k8s.io/yaml
+SPDXID: SPDXRef-Package-sigs.k8s.io.yaml-v1.2.0
+PackageVersion: v1.2.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 76d8cd575a926fc427aa57cf0574548aac399ee84e3e313e841c1cccf99ffac7
+PackageHomePage: https://sigs.k8s.io/yaml
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-sigs.k8s.io.yaml-v1.2.0 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-sigs.k8s.io.yaml-v1.2.0 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the k8s.io/client-go
+
+PackageName: k8s.io/client-go
+SPDXID: SPDXRef-Package-k8s.io.client-go-v0.21.2
+PackageVersion: v0.21.2
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 49c966ba6a48e4cb8e520ae8c8285d0d19fdf7706b4ba3f7e50acdcddaa560f3
+PackageHomePage: https://k8s.io/client-go
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.googleapis.gnostic-v0.4.1 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.imdario.mergo-v0.3.9 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.autorest-v0.11.18 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.gogo.protobuf-v1.3.2 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.google.gofuzz-v1.2.0 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.term-v0.0.0-20210615171337-6886f2dfbf5b 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-k8s.io.apimachinery-v0.21.2 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-cloud.google.com.go-v0.81.0 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.golang.groupcache-v0.0.0-20210331224755-41bb18bfe9da 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-sigs.k8s.io.yaml-v1.2.0 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-k8s.io.utils-v0.0.0-20201110183641-67b214c5f920 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-k8s.io.klog.v2-v2.8.0 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-sigs.k8s.io.structured-merge-diff.v4-v4.1.0 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-k8s.io.api-v0.21.2 
+Relationship SPDXRef-Package-k8s.io.client-go-v0.21.2 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+
+##### Package representing the github.com/davecgh/go-spew
+
+PackageName: github.com/davecgh/go-spew
+SPDXID: SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1
+PackageVersion: v1.1.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 77d53af0a568b8c213c0a761194a7cb44abeb0c005359ec1b41ffdab10d7bb13
+PackageHomePage: https://github.com/davecgh/go-spew
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the k8s.io/utils
+
+PackageName: k8s.io/utils
+SPDXID: SPDXRef-Package-k8s.io.utils-v0.0.0-20201110183641-67b214c5f920
+PackageVersion: v0.0.0-20201110183641-67b214c5f920
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e27d3708c47807fa1e142d0d0043af60498463f429ea0932ffc50249e3efa6c6
+PackageHomePage: https://k8s.io/utils
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-k8s.io.utils-v0.0.0-20201110183641-67b214c5f920 DEPENDS_ON SPDXRef-Package-k8s.io.klog.v2-v2.8.0 
+Relationship SPDXRef-Package-k8s.io.utils-v0.0.0-20201110183641-67b214c5f920 DEPENDS_ON SPDXRef-Package-github.com.spf13.afero-v1.6.0 
+Relationship SPDXRef-Package-k8s.io.utils-v0.0.0-20201110183641-67b214c5f920 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+
+##### Package representing the github.com/Azure/go-autorest/autorest/date
+
+PackageName: github.com/Azure/go-autorest/autorest/date
+SPDXID: SPDXRef-Package-github.com.Azure.go-autorest.autorest.date-v0.3.0
+PackageVersion: v0.3.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e6ac66ef043540fb1bd849b36ae1582dc360d9a274cbd9cc9768d1659f9e59fa
+PackageHomePage: https://github.com/Azure/go-autorest/autorest/date
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/Azure/go-autorest/logger
+
+PackageName: github.com/Azure/go-autorest/logger
+SPDXID: SPDXRef-Package-github.com.Azure.go-autorest.logger-v0.2.1
+PackageVersion: v0.2.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 6f980aaf27fee26a7f7017d638e0b9092a26c1c7af79b8263bf4a6e2a20452c6
+PackageHomePage: https://github.com/Azure/go-autorest/logger
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/Azure/go-autorest/tracing
+
+PackageName: github.com/Azure/go-autorest/tracing
+SPDXID: SPDXRef-Package-github.com.Azure.go-autorest.tracing-v0.6.0
+PackageVersion: v0.6.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: e9b2a988aca23d841384a17068de9dcd59ccb7032cd6eadf05430edd426134c2
+PackageHomePage: https://github.com/Azure/go-autorest/tracing
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/form3tech-oss/jwt-go
+
+PackageName: github.com/form3tech-oss/jwt-go
+SPDXID: SPDXRef-Package-github.com.form3tech-oss.jwt-go-v3.2.2+incompatible
+PackageVersion: v3.2.2+incompatible
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 4a559f8950d5014570c484552049fa65e1c9eaa3ee5aac02920020103d345f9c
+PackageHomePage: https://github.com/form3tech-oss/jwt-go
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/Azure/go-autorest/autorest/adal
+
+PackageName: github.com/Azure/go-autorest/autorest/adal
+SPDXID: SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13
+PackageVersion: v0.9.13
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 1d8888e699a769d032389aa3de1f49bbdda2bf7c250baf1376146ec54228851b
+PackageHomePage: https://github.com/Azure/go-autorest/autorest/adal
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.autorest.date-v0.3.0 
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.tracing-v0.6.0 
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13 DEPENDS_ON SPDXRef-Package-github.com.form3tech-oss.jwt-go-v3.2.2+incompatible 
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.logger-v0.2.1 
+
+##### Package representing the github.com/Azure/go-autorest/autorest
+
+PackageName: github.com/Azure/go-autorest/autorest
+SPDXID: SPDXRef-Package-github.com.Azure.go-autorest.autorest-v0.11.18
+PackageVersion: v0.11.18
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 7b85debcce807a016fbdae358971274f74c396ab20b58a73e8fa69fcaed58912
+PackageHomePage: https://github.com/Azure/go-autorest/autorest
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest-v0.11.18 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.autorest.adal-v0.9.13 
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest-v0.11.18 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.logger-v0.2.1 
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest-v0.11.18 DEPENDS_ON SPDXRef-Package-github.com.Azure.go-autorest.tracing-v0.6.0 
+Relationship SPDXRef-Package-github.com.Azure.go-autorest.autorest-v0.11.18 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+
+##### Package representing the github.com/imdario/mergo
+
+PackageName: github.com/imdario/mergo
+SPDXID: SPDXRef-Package-github.com.imdario.mergo-v0.3.9
+PackageVersion: v0.3.9
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0ee96fdd2abc1d04b65d2bc2fcc2de4ae71b231e9543893db38016cd6822ae5c
+PackageHomePage: https://github.com/imdario/mergo
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/OneOfOne/xxhash
+
+PackageName: github.com/OneOfOne/xxhash
+SPDXID: SPDXRef-Package-github.com.OneOfOne.xxhash-v1.2.8
+PackageVersion: v1.2.8
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 72ca3234e0a2f98565da9eef27df8a5a3f8652e74066cd454feba34fe160787e
+PackageHomePage: https://github.com/OneOfOne/xxhash
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/open-policy-agent/opa
+
+PackageName: github.com/open-policy-agent/opa
+SPDXID: SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4
+PackageVersion: v0.29.4
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: d45f3fe23dd8e18a1bd1ef0aa85ab059ed17d7a27bfd3d060d0c625186729110
+PackageHomePage: https://github.com/open-policy-agent/opa
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.yashtewari.glob-intersection-v0.0.0-20180916065949-5c77d914dd0b 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.xeipuuv.gojsonreference-v0.0.0-20180127040603-bd5ef7bd5415 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.spf13.cobra-v1.1.3 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.peterh.liner-v0.0.0-20170211195444-bf27d3ba8e1d 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.gorilla.mux-v1.8.0 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-golang.org.x.time-v0.0.0-20210220033141-f8bda1e9f3ba 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.prometheus.common-v0.29.0 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.olekukonko.tablewriter-v0.0.5 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.fsnotify.fsnotify-v1.4.9 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.xeipuuv.gojsonpointer-v0.0.0-20190905194746-02993c407bfb 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.gobwas.glob-v0.2.3 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.prometheus.procfs-v0.6.0 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-go.uber.org.automaxprocs-v1.4.0 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.spf13.pflag-v1.0.5 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.rcrowley.go-metrics-v0.0.0-20200313005456-10cdbea86bc0 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.ghodss.yaml-v1.0.0 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-github.com.OneOfOne.xxhash-v1.2.8 
+Relationship SPDXRef-Package-github.com.open-policy-agent.opa-v0.29.4 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+
+##### Package representing the github.com/xeipuuv/gojsonpointer
+
+PackageName: github.com/xeipuuv/gojsonpointer
+SPDXID: SPDXRef-Package-github.com.xeipuuv.gojsonpointer-v0.0.0-20190905194746-02993c407bfb
+PackageVersion: v0.0.0-20190905194746-02993c407bfb
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 63a2e8a1e3a190e1bc3280e3940d846c646ef3e908736ae72db9076029fcc706
+PackageHomePage: https://github.com/xeipuuv/gojsonpointer
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/xeipuuv/gojsonreference
+
+PackageName: github.com/xeipuuv/gojsonreference
+SPDXID: SPDXRef-Package-github.com.xeipuuv.gojsonreference-v0.0.0-20180127040603-bd5ef7bd5415
+PackageVersion: v0.0.0-20180127040603-bd5ef7bd5415
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0200ca87486b0155e8c199eec9323c321665bb4938eccbac72d8547ed2082d6b
+PackageHomePage: https://github.com/xeipuuv/gojsonreference
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/rcrowley/go-metrics
+
+PackageName: github.com/rcrowley/go-metrics
+SPDXID: SPDXRef-Package-github.com.rcrowley.go-metrics-v0.0.0-20200313005456-10cdbea86bc0
+PackageVersion: v0.0.0-20200313005456-10cdbea86bc0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: bd748d8975427958e55da8adae7bcbe43186d696e49a4804df848d113506ca45
+PackageHomePage: https://github.com/rcrowley/go-metrics
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/mattn/go-runewidth
+
+PackageName: github.com/mattn/go-runewidth
+SPDXID: SPDXRef-Package-github.com.mattn.go-runewidth-v0.0.9
+PackageVersion: v0.0.9
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: c0e249b2e49600457b866fa58f7075c833cd697601317bc0d8814817a4546987
+PackageHomePage: https://github.com/mattn/go-runewidth
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/olekukonko/tablewriter
+
+PackageName: github.com/olekukonko/tablewriter
+SPDXID: SPDXRef-Package-github.com.olekukonko.tablewriter-v0.0.5
+PackageVersion: v0.0.5
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 9e2c85817b12fce5ea554bb854c62ce8c10ae5124532ea9c3abee1c8d76f4105
+PackageHomePage: https://github.com/olekukonko/tablewriter
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.olekukonko.tablewriter-v0.0.5 DEPENDS_ON SPDXRef-Package-github.com.mattn.go-runewidth-v0.0.9 
+Relationship SPDXRef-Package-github.com.olekukonko.tablewriter-v0.0.5 DEPENDS_ON SPDXRef-Package-github.com.olekukonko.tablewriter-v0.0.5 
+
+##### Package representing the github.com/gobwas/glob
+
+PackageName: github.com/gobwas/glob
+SPDXID: SPDXRef-Package-github.com.gobwas.glob-v0.2.3
+PackageVersion: v0.2.3
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 15b4a39767c64f15c6f6bc35d96f85768413a25bdfa4e46fa49a6374c9b7968b
+PackageHomePage: https://github.com/gobwas/glob
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/yashtewari/glob-intersection
+
+PackageName: github.com/yashtewari/glob-intersection
+SPDXID: SPDXRef-Package-github.com.yashtewari.glob-intersection-v0.0.0-20180916065949-5c77d914dd0b
+PackageVersion: v0.0.0-20180916065949-5c77d914dd0b
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 4ff4c9ffae6f6732584eb088757d9fcb30d0dc960c5b4e00c0cd4e05bacc04e4
+PackageHomePage: https://github.com/yashtewari/glob-intersection
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/sirupsen/logrus
+
+PackageName: github.com/sirupsen/logrus
+SPDXID: SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1
+PackageVersion: v1.8.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: adea913fb1c1be8bf12e8b69d1da7f226c014c55caf8e56335bbe4e114e41b50
+PackageHomePage: https://github.com/sirupsen/logrus
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1 DEPENDS_ON SPDXRef-Package-github.com.davecgh.go-spew-v1.1.1 
+Relationship SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1 DEPENDS_ON SPDXRef-Package-golang.org.x.crypto-v0.0.0-20210616213533-5ff15b29337e 
+
+##### Package representing the github.com/gorilla/mux
+
+PackageName: github.com/gorilla/mux
+SPDXID: SPDXRef-Package-github.com.gorilla.mux-v1.8.0
+PackageVersion: v1.8.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 2dffd95dd340d7e6948873a146da12fd4146c08eb6eb8c420f76e8d9a742814c
+PackageHomePage: https://github.com/gorilla/mux
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/beorn7/perks
+
+PackageName: github.com/beorn7/perks
+SPDXID: SPDXRef-Package-github.com.beorn7.perks-v1.0.1
+PackageVersion: v1.0.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 3f909457dc97a398f2d35bf26e5a7ba7af74a4b47f83b79dea360415ed24a98e
+PackageHomePage: https://github.com/beorn7/perks
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/cespare/xxhash/v2
+
+PackageName: github.com/cespare/xxhash/v2
+SPDXID: SPDXRef-Package-github.com.cespare.xxhash.v2-v2.1.1
+PackageVersion: v2.1.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 7d5ac3d632362d4e19965eb9745b4092e9e62bd9bccde15d4975cc5a97649c63
+PackageHomePage: https://github.com/cespare/xxhash/v2
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/prometheus/client_model
+
+PackageName: github.com/prometheus/client_model
+SPDXID: SPDXRef-Package-github.com.prometheus.client-model-v0.2.0
+PackageVersion: v0.2.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 4cc56642e11499313e9e0c16d30a8ba751e2f9c591dc6a1e7d675cf0e09e03d0
+PackageHomePage: https://github.com/prometheus/client_model
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.prometheus.client-model-v0.2.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.prometheus.client-model-v0.2.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+
+##### Package representing the github.com/prometheus/client_golang
+
+PackageName: github.com/prometheus/client_golang
+SPDXID: SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0
+PackageVersion: v1.11.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: ed14dd907bac61d8ae65bcb0211771c661e1cf1f7fd2b1394b9b124893705177
+PackageHomePage: https://github.com/prometheus/client_golang
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.beorn7.perks-v1.0.1 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.modern-go.reflect2-v1.0.1 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.matttproud.golang-protobuf-extensions-v1.0.1 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.json-iterator.go-v1.1.11 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.prometheus.common-v0.29.0 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.modern-go.concurrent-v0.0.0-20180306012644-bacd9c7ef1dd 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-model-v0.2.0 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.prometheus.procfs-v0.6.0 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-golang.org.x.text-v0.3.6 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-google.golang.org.protobuf-v1.26.0 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.cespare.xxhash.v2-v2.1.1 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+
+##### Package representing the github.com/matttproud/golang_protobuf_extensions
+
+PackageName: github.com/matttproud/golang_protobuf_extensions
+SPDXID: SPDXRef-Package-github.com.matttproud.golang-protobuf-extensions-v1.0.1
+PackageVersion: v1.0.1
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: d8a0ce3a4b0ec610a7ee215ad6b63ee7f83fa14f7ecea46ad86dad3f8f3b99e7
+PackageHomePage: https://github.com/matttproud/golang_protobuf_extensions
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the github.com/prometheus/common
+
+PackageName: github.com/prometheus/common
+SPDXID: SPDXRef-Package-github.com.prometheus.common-v0.29.0
+PackageVersion: v0.29.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: dab655f661cec4b716fb97640b5c38306ce26552865eeacab4a3bc73d43966e7
+PackageHomePage: https://github.com/prometheus/common
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.gogo.protobuf-v1.3.2 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.prometheus.procfs-v0.6.0 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.matttproud.golang-protobuf-extensions-v1.0.1 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-golang-v1.11.0 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.prometheus.client-model-v0.2.0 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-golang.org.x.net-v0.0.0-20210525063256-abc453219eb5 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.beorn7.perks-v1.0.1 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.go-stack.stack-v1.8.0 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.golang.protobuf-v1.5.2 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.sirupsen.logrus-v1.8.1 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-gopkg.in.yaml.v2-v2.4.0 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-golang.org.x.oauth2-v0.0.0-20210514164344-f6687ab2804c 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-github.com.pkg.errors-v0.9.1 
+Relationship SPDXRef-Package-github.com.prometheus.common-v0.29.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+
+##### Package representing the github.com/prometheus/procfs
+
+PackageName: github.com/prometheus/procfs
+SPDXID: SPDXRef-Package-github.com.prometheus.procfs-v0.6.0
+PackageVersion: v0.6.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 86bd64823e49f5c1bedae11007fb801c88d3b28ac5e712d4002355a3101a2ddd
+PackageHomePage: https://github.com/prometheus/procfs
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+Relationship SPDXRef-Package-github.com.prometheus.procfs-v0.6.0 DEPENDS_ON SPDXRef-Package-github.com.google.go-cmp-v0.5.6 
+Relationship SPDXRef-Package-github.com.prometheus.procfs-v0.6.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sync-v0.0.0-20210220032951-036812b2e83c 
+Relationship SPDXRef-Package-github.com.prometheus.procfs-v0.6.0 DEPENDS_ON SPDXRef-Package-golang.org.x.sys-v0.0.0-20210615035016-665e8c7367d1 
+
+##### Package representing the github.com/peterh/liner
+
+PackageName: github.com/peterh/liner
+SPDXID: SPDXRef-Package-github.com.peterh.liner-v0.0.0-20170211195444-bf27d3ba8e1d
+PackageVersion: v0.0.0-20170211195444-bf27d3ba8e1d
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 246b8db15eff422e821053ea3d13e8d076779b5c62fcdbefdd1f18b71235b67f
+PackageHomePage: https://github.com/peterh/liner
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
+##### Package representing the go.uber.org/automaxprocs
+
+PackageName: go.uber.org/automaxprocs
+SPDXID: SPDXRef-Package-go.uber.org.automaxprocs-v1.4.0
+PackageVersion: v1.4.0
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 32be51bf668d3280000ab7aa1f970025fb49ef841201405a37d4cc98aaf7c71f
+PackageHomePage: https://go.uber.org/automaxprocs
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseComments: NOASSERTION
+PackageComment: NOASSERTION
+
