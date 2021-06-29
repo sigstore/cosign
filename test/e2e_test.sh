@@ -46,6 +46,16 @@ popd
 go build -o cosign ./cmd/cosign
 go test -tags=e2e -race ./...
 
+export DISTROLESS_PUB_KEY=distroless.pub
+wget -O ${DISTROLESS_PUB_KEY} https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub
+./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/single_stage.Dockerfile
+if (./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_build_stage.Dockerfile); then false; fi
+./cosign verify-dockerfile -base-image-only -key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_build_stage.Dockerfile
+./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/fancy_from.Dockerfile
+test_image="gcr.io/distroless/base" ./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile
+# Image exists, but is unsigned
+if (test_image="ubuntu" ./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile); then false; fi
+
 # Run the built container to make sure it doesn't crash
 make ko-local
 img="ko.local:$(git rev-parse HEAD)"
