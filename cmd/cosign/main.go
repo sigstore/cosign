@@ -44,9 +44,15 @@ func main() {
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
 			// Key Management
-			cli.PublicKey(), cli.GenerateKeyPair(),
+			cli.PublicKey(),
+			cli.GenerateKeyPair(),
 			// Signing
-			cli.Verify(), cli.Sign(), cli.Generate(), cli.SignBlob(), cli.VerifyBlob(),
+			cli.Verify(),
+			cli.Sign(),
+			cli.Generate(),
+			cli.SignBlob(),
+			cli.VerifyBlob(),
+			cli.VerifyDockerfile(),
 			// Upload sub-tree
 			upload.Upload(),
 			// Download sub-tree
@@ -56,7 +62,10 @@ func main() {
 			// PIV sub-tree
 			pivcli.PivKey(),
 			// PIV sub-tree
-			cli.Copy(), cli.Clean(), cli.Triangulate(),
+			cli.Copy(),
+			cli.Clean(),
+			cli.Triangulate(),
+			// Version
 			cli.Version()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp

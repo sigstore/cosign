@@ -44,12 +44,8 @@ type VerifyCommand struct {
 	Annotations *map[string]interface{}
 }
 
-// Verify builds and returns an ffcli command
-func Verify() *ffcli.Command {
-	cmd := VerifyCommand{}
-	flagset := flag.NewFlagSet("cosign verify", flag.ExitOnError)
+func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	annotations := annotationsMap{}
-
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
 	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
@@ -59,10 +55,17 @@ func Verify() *ffcli.Command {
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	cmd.Annotations = &annotations.annotations
+}
+
+// Verify builds and returns an ffcli command
+func Verify() *ffcli.Command {
+	cmd := VerifyCommand{}
+	flagset := flag.NewFlagSet("cosign verify", flag.ExitOnError)
+	applyVerifyFlags(&cmd, flagset)
 
 	return &ffcli.Command{
 		Name:       "verify",
-		ShortUsage: "cosign verify -key <key path>|<key url>|<kms uri> <image uri>",
+		ShortUsage: "cosign verify -key <key path>|<key url>|<kms uri> <image uri> [<image uri> ...]",
 		ShortHelp:  "Verify a signature on the supplied container image",
 		LongHelp: `Verify signature and annotations on an image by checking the claims
 against the transparency log.
@@ -70,6 +73,9 @@ against the transparency log.
 EXAMPLES
   # verify cosign claims and signing certificates on the image
   cosign verify <IMAGE>
+
+  # verify multiple images
+  cosign verify <IMAGE_1> <IMAGE_2> ...
 
   # additionally verify specified annotations
   cosign verify -a key1=val1 -a key2=val2 <IMAGE>
