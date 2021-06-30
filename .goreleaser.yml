@@ -1,0 +1,13 @@
+builds:
+  - skip: true
+
+release:
+  prerelease: true # remove this when we start publishin non-prerelease or set to auto
+  github:
+    owner: cpanato
+    name: cosign
+
+  extra_files:
+      - glob: "cosign-*"
+      - glob: "cosign-*.sig"
+      - glob: "*.sha256"

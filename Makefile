@@ -62,14 +62,14 @@ lint: golangci-lint ## Runs golangci-lint linter
 	$(GOLANGCI_LINT) run  -n
 
 
-PLATFORMS=darwin linux
+PLATFORMS=darwin linux windows
 ARCHITECTURES=amd64
 
 cross:
 	$(foreach GOOS, $(PLATFORMS),\
 		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
-	go build -ldflags $(LDFLAGS) -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign)))
-	shasum -a 256 cosign-* > cosign.sha2556
+	go build -ldflags $(LDFLAGS) -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
+	shasum -a 256 cosign-$(GOOS)-$(GOARCH) > cosign-$(GOOS)-$(GOARCH).sha256 ))) \
 
 test:
 	go test ./...
@@ -84,6 +84,13 @@ ko:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
 
+.PHONY: ko-cloudbuild
+ko-cloudbuild:
+	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
+	CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
+		--tags $(GIT_TAG) --tags $(GIT_HASH) \
+		github.com/sigstore/cosign/cmd/cosign
+
 .PHONY: ko-local
 ko-local:
 	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
@@ -94,3 +101,8 @@ ko-local:
 .PHONY: sign-container
 sign-container: ko
 	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
+
+.PHONY: sign-container-cloudbuild
+sign-container-cloudbuild: ko-cloudbuild
+	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
+	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) ${KO_DOCKER_REPO}:$(GIT_TAG)
