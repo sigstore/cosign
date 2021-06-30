@@ -20,9 +20,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier, error) {
@@ -47,6 +51,24 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 			return kms.Get(ctx, keyRef)
 		}
 	}
+
+	s := strings.Split(keyRef, "/") // <namespace>/<secret>
+	if len(s) == 2 {
+		namespace, name := s[0], s[1]
+		// create the k8s client
+		client, err := kubernetes.Client()
+		if err != nil {
+			return nil, errors.Wrap(err, "new for config")
+		}
+
+		var s *v1.Secret
+		if s, err = client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
+			return nil, errors.Wrap(err, "checking if secret exists")
+		} else {
+			return cosign.LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
+		}
+	}
+
 	return loadKey(keyRef, pf)
 }
 
