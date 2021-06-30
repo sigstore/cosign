@@ -22,12 +22,32 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/sigstore/cosign/pkg/cosign"
 )
+
+const KeyReference = "k8s://"
+
+func GetKeyPairSecret(ctx context.Context, k8sRef string) (*v1.Secret, error) {
+	namespace, name, err := parseRef(k8sRef)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := Client()
+	if err != nil {
+		return nil, errors.Wrap(err, "new for config")
+	}
+
+	var s *v1.Secret
+	if s, err = client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
+		return nil, errors.Wrap(err, "checking if secret exists")
+	}
+
+	return s, nil
+}
 
 func KeyPairSecret(ctx context.Context, k8sRef string, pf cosign.PassFunc) error {
 	namespace, name, err := parseRef(k8sRef)
@@ -93,9 +113,9 @@ func secret(keys *cosign.Keys, namespace, name string, data map[string][]byte) *
 
 // the reference should be formatted as <namespace>/<secret name>
 func parseRef(k8sRef string) (string, string, error) {
-	s := strings.Split(k8sRef, "/")
+	s := strings.Split(strings.TrimPrefix(k8sRef, KeyReference), "/")
 	if len(s) != 2 {
-		return "", "", errors.New("please format the k8s secret reference as <namespace>/<secret name>")
+		return "", "", errors.New("kubernetes specification should be in the format k8s://<namespace>/<secret>")
 	}
 	return s[0], s[1], nil
 }

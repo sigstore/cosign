@@ -16,6 +16,7 @@ package cli
 
 import (
 	"context"
+	"crypto"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -25,8 +26,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier, error) {
@@ -41,6 +40,15 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier,
 	return cosign.LoadECDSAPrivateKey(kb, pass)
 }
 
+func loadPublicKey(raw []byte) (cosign.PublicKey, error) {
+	// PEM encoded file.
+	ed, err := cosign.PemToECDSAKey(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "pem to ecdsa")
+	}
+	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
+}
+
 func signerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
 	return signerVerifierFromKeyRef(ctx, keyRef, pf)
 }
@@ -52,19 +60,13 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 	}
 
-	s := strings.Split(keyRef, "/") // <namespace>/<secret>
-	if len(s) == 2 {
-		namespace, name := s[0], s[1]
-		// create the k8s client
-		client, err := kubernetes.Client()
+	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
+		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
 		if err != nil {
-			return nil, errors.Wrap(err, "new for config")
+			return nil, err
 		}
 
-		var s *v1.Secret
-		if s, err = client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
-			return nil, errors.Wrap(err, "checking if secret exists")
-		} else {
+		if len(s.Data) > 0 {
 			return cosign.LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
 		}
 	}
@@ -73,5 +75,16 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 }
 
 func publicKeyFromKeyRef(ctx context.Context, keyRef string) (cosign.PublicKey, error) {
+	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
+		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(s.Data) > 0 {
+			return loadPublicKey(s.Data["cosign.pub"])
+		}
+	}
+
 	return cosign.LoadPublicKey(ctx, keyRef)
 }
