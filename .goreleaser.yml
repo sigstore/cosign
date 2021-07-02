@@ -4,10 +4,13 @@ builds:
 release:
   prerelease: true # remove this when we start publishin non-prerelease or set to auto
   github:
-    owner: cpanato
+    owner: sigstore
     name: cosign
+  footer: |
+    ### Thanks for all contributors!
 
   extra_files:
       - glob: "cosign-*"
       - glob: "cosign-*.sig"
       - glob: "*.sha256"
+      - glob: "./.github/workflows/cosign.pub"

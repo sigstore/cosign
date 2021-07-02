@@ -104,5 +104,5 @@ sign-container: ko
 
 .PHONY: sign-container-cloudbuild
 sign-container-cloudbuild: ko-cloudbuild
-	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
-	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) ${KO_DOCKER_REPO}:$(GIT_TAG)
+	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
+	cosign sign -key .github/workflows/cosign.key -a GIT_TAG=$(GIT_TAG) ${KO_DOCKER_REPO}:$(GIT_TAG)
