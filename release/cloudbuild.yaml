@@ -1,0 +1,119 @@
+#
+# Copyright 2021 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+timeout: 3600s
+
+steps:
+- name: gcr.io/cloud-builders/git
+  dir: "go/src/sigstore"
+  args:
+  - "clone"
+  - "https://github.com/${_TOOL_ORG}/${_TOOL_REPO}"
+
+- name: gcr.io/cloud-builders/git
+  entrypoint: "bash"
+  dir: "go/src/sigstore/cosign"
+  args:
+  - '-c'
+  - |
+    git fetch
+    echo "Checking out ${_TOOL_REF}"
+    git checkout ${_TOOL_REF}
+
+# maybe use gcr.io/cloud-builders/go when it have go1.16
+- name: gcr.io/k8s-staging-releng/releng-ci:latest-go1.16
+  dir: "go/src/sigstore/cosign"
+  entrypoint: "bash"
+  env:
+  - "GOPATH=/workspace/go"
+  - "GOBIN=/workspace/bin"
+  - PROJECT_ID=${PROJECT_ID}
+  - GIT_VERSION=${_GIT_TAG}
+  secretEnv:
+  - COSIGN_PASSWORD
+  args:
+  - '-c'
+  - |
+    make cross
+
+    mv cosign-windows-amd64 cosign-windows-amd64.exe
+    mv cosign-windows-amd64.sha256 cosign-windows-amd64.exe.sha256
+
+    ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key cosign-linux-amd64 > cosign-linux-amd64.sig
+    ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key cosign-darwin-amd64 > cosign-darwin-amd64.sig
+    ./cosign-linux-amd64 sign-blob -key ./.github/workflows/cosign.key cosign-windows-amd64.exe > cosign-windows-amd64.exe.sig
+
+    ./cosign-linux-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-linux-amd64.sig cosign-linux-amd64
+    ./cosign-linux-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-darwin-amd64.sig cosign-darwin-amd64
+    ./cosign-linux-amd64 verify-blob -key ./.github/workflows/cosign.pub -signature cosign-windows-amd64.exe.sig cosign-windows-amd64.exe
+
+    curl -L https://github.com/google/ko/releases/download/v0.8.3/ko_0.8.3_Linux_x86_64.tar.gz | tar xzf - ko
+    chmod +x ./ko
+    mv ko /usr/local/bin/
+
+    # copy the just build cosign to use here
+    chmod +x ./cosign-linux-amd64
+    cp cosign-linux-amd64 /usr/local/bin/cosign
+
+    export KO_DOCKER_REPO=gcr.io/${PROJECT_ID}/cosign
+    export GIT_TAG=${_GIT_TAG}
+    make sign-container-cloudbuild
+
+# Create github release.
+- name: goreleaser/goreleaser
+  entrypoint: /bin/sh
+  dir: "go/src/sigstore/cosign"
+  env:
+  - "GOPATH=/workspace/go"
+  - "GOBIN=/workspace/bin"
+  secretEnv:
+  - GITHUB_TOKEN
+  args:
+    - '-c'
+    - |
+      git tag ${_GIT_TAG}
+      goreleaser release
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/${PROJECT_NUMBER}/secrets/GITHUB_TOKEN/versions/latest
+    env: GITHUB_TOKEN
+  - versionName: projects/${PROJECT_NUMBER}/secrets/COSIGN_PASSWORD/versions/latest
+    env: COSIGN_PASSWORD
+
+artifacts:
+  objects:
+    location: 'gs://${_STORAGE_LOCATION}/${_GIT_TAG}'
+    paths:
+    - "go/src/sigstore/cosign/cosign-*"
+    - "go/src/sigstore/cosign/*.sha256"
+    - "go/src/sigstore/cosign/cosign-*.sig"
+
+options:
+  machineType: E2_HIGHCPU_8
+
+tags:
+- cosign-release
+- ${_GIT_TAG}
+- ${_TOOL_ORG}
+- ${_TOOL_REPO}
+- ${_TOOL_REF}
+
+substitutions:
+  _GIT_TAG: 'v1.23.45'
+  _TOOL_ORG: 'honk'
+  _TOOL_REPO: 'honk-repo'
+  _TOOL_REF: 'release-honk'
+  _STORAGE_LOCATION: 'honk'

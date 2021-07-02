@@ -1,0 +1,39 @@
+# Release
+
+This directory contain the files and scripts to run a cosign release.
+
+# Cutting a Sigstore Release
+
+1. Release notes: Create a PR to update and review release notes in CHANGELOG.md.
+  - Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
+
+2. Submit the cloudbuild Job using the following command:
+
+```shell
+$ gcloud builds submit --config <PATH_TO_CLOUDBUILD> \
+   --substitutions _GIT_TAG=<_GIT_TAG>,_TOOL_ORG=sigstore,_TOOL_REPO=cosign,_TOOL_REF=main,_STORAGE_LOCATION=cosign-releases \
+   --project <GCP_PROJECT>
+```
+
+Where:
+
+- `PATH_TO_CLOUDBUILD` is the path where the cloudbuild.yaml can be found.
+- `GCP_PROJECT` is the GCP project where we will run the job.
+- `_GIT_TAG` is the release version we are publishing, this will also create the GitHub Tag.
+- `_TOOL_ORG` is the GitHub Org we will use. Default `sigstore`.
+- `_TOOL_REPO` is the repository we will use to clone. Default `cosign`.
+- `_TOOL_REF` is the branch we will use to cut a release. Default `main`.
+- `_STORAGE_LOCATION` where to push the built artifacts. Default `cosign-releases`.
+
+3. When the job finish, whithout issues, you should be able to see in GitHub a draft release.
+You now can review the release, make any changes if needed and then publish to make it an official release.
+
+4. Send an annoucement email to `sigstore-dev@googlegroups.com` mailling list
+
+5. Tweet about the new release with a fun new trigonometry pun!
+
+6. Honk!
+
+#### After the release:
+
+* Add a pending new section in CHANGELOG.md to set up for the next release

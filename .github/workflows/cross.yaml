@@ -3,9 +3,8 @@ on:
     branches:
       - main
       - release-*
-    tags:
-      - "*"
   pull_request:
+
 name: Cross
 jobs:
   build:
