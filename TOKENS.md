@@ -115,6 +115,7 @@ Or export the public key and verify against that:
 
 ```shell
 $ cosign public-key -sk > pub.key
+
 $ cosign verify -key pub.key gcr.io/dlorenc-vmtest2/demo
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
@@ -135,7 +136,7 @@ This will **DESTROY** any keys on the device, you cannot recover them.
 
 The default management key, PIN and PUK will be configured after this command.
 
-The `cosign generate-key` command is used to provision a key compatible with `cosign` and the rest of `sigstore`.
+The `cosign piv-tool generate-key` command is used to provision a key compatible with `cosign` and the rest of `sigstore`.
 We recommend using the `--random-management-key=true` flag.
 
 ### Access Control
