@@ -46,6 +46,7 @@ popd
 go build -o cosign ./cmd/cosign
 go test -tags=e2e -race ./...
 
+# Test `cosign verify-dockerfile`
 export DISTROLESS_PUB_KEY=distroless.pub
 wget -O ${DISTROLESS_PUB_KEY} https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub
 ./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/single_stage.Dockerfile

@@ -44,8 +44,10 @@ func VerifyDockerfile() *ffcli.Command {
 		Name:       "verify-dockerfile",
 		ShortUsage: "cosign verify-dockerfile -key <key path>|<key url>|<kms uri> <path/to/Dockerfile>",
 		ShortHelp:  "Verify a signature on the base image specified in the Dockerfile",
-		LongHelp: `Verify signature and annotations on a Dockerfile's base image by checking the claims
+		LongHelp: `Verify signature and annotations on images in a Dockerfile by checking claims
 against the transparency log.
+
+Shell-like variables in the Dockerfile's FROM lines will be substituted with values from the OS ENV.
 
 EXAMPLES
   # verify cosign claims and signing certificates on the FROM images in the Dockerfile
