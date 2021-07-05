@@ -133,11 +133,11 @@ OCI registries are useful for storing more than just container images!
 
 This section shows how to leverage these for an easy-to-use, backwards-compatible artifact distribution system that integrates well with the rest of Sigstore.
 
-You can publish an artifact with `cosign upload blob`:
+You can publish an artifact with `cosign upload-blob`:
 
 ```shell
 $ echo "my first artifact" > artifact
-$ cosign upload blob -f artifact gcr.io/dlorenc-vmtest2/artifact
+$ cosign upload-blob -f artifact gcr.io/dlorenc-vmtest2/artifact
 Uploading file from [artifact] to [gcr.io/dlorenc-vmtest2/artifact:latest] with media type [text/plain; charset=utf-8]
 File is available directly at [us.gcr.io/v2/dlorenc-vmtest2/readme/blobs/sha256:b57400c0ad852a7c2f6f7da4a1f94547692c61f3e921a49ba3a41805ae8e1e99]
 us.gcr.io/dlorenc-vmtest2/readme@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec
