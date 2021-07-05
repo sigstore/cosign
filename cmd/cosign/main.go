@@ -53,6 +53,8 @@ func main() {
 			cli.SignBlob(),
 			cli.VerifyBlob(),
 			cli.VerifyDockerfile(),
+			// policy initialize
+			cli.PolicyInit(),
 			// Upload sub-tree
 			upload.Upload(),
 			// Download sub-tree
