@@ -20,11 +20,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/mail"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
