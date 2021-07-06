@@ -62,6 +62,7 @@ func PolicyInit() *ffcli.Command {
 		nameSpace   = flagset.String("ns", "", "The registry namespace")
 		mainTainers = flagset.String("maintainers", "", "Comma separated list of maintainers")
 		threshHold  = flagset.Int("threshold", 2, "Threshold")
+		outFile  = flagset.String("out", "root.json", "Output policy locally")
 	)
 
 	return &ffcli.Command{
@@ -121,10 +122,11 @@ EXAMPLES
 				return errors.Wrapf(err, "failed to marshal policy json")
 			}
 
-			fmt.Println(string(byteArray))
-			err = ioutil.WriteFile("root.json", byteArray, 0600)
-			if err != nil {
-				return errors.Wrapf(err, "error writing to root.json")
+			if *outFile != "" {
+				err = ioutil.WriteFile(*outFile, byteArray, 0600)
+				if err != nil {
+					return errors.Wrapf(err, "error writing to root.json")
+				}
 			}
 			return nil
 		},
