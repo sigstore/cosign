@@ -252,7 +252,7 @@ func TestGenerateKeyPairK8s(t *testing.T) {
 	ctx := context.Background()
 	name := "cosign-secret"
 	namespace := "default"
-	if err := kubernetes.KeyPairSecret(ctx, fmt.Sprintf("%s/%s", namespace, name), cli.GetPass); err != nil {
+	if err := kubernetes.KeyPairSecret(ctx, fmt.Sprintf("k8s://%s/%s", namespace, name), cli.GetPass); err != nil {
 		t.Fatal(err)
 	}
 	// make sure the secret actually exists

@@ -88,16 +88,16 @@ func TestParseRef(t *testing.T) {
 	}{
 		{
 			desc:      "valid",
-			ref:       "default/cosign-secret",
+			ref:       "k8s://default/cosign-secret",
 			name:      "cosign-secret",
 			namespace: "default",
 		}, {
 			desc:      "invalid, 1 field",
-			ref:       "something",
+			ref:       "k8s://something",
 			shouldErr: true,
 		}, {
 			desc:      "invalid, more than 2 fields",
-			ref:       "yet/another/arg",
+			ref:       "k8s://yet/another/arg",
 			shouldErr: true,
 		},
 	}
