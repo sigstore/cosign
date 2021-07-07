@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 type NamedWriter struct {
@@ -114,7 +115,7 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		k = sk
 	}
 
-	pemBytes, err := cosign.PublicKeyPem(ctx, k)
+	pemBytes, err := cosign.PublicKeyPem(k, options.WithContext(ctx))
 	if err != nil {
 		return err
 	}

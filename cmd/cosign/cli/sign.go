@@ -42,6 +42,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -269,7 +270,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		if cert != "" {
 			rekorBytes = []byte(cert)
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(ctx, signer)
+			pemBytes, err := cosign.PublicKeyPem(signer, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}

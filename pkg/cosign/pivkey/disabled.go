@@ -26,7 +26,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func NewPublicKeyProvider(slotName string) (cosign.PublicKey, error) {
+func NewPublicKeyProvider(slotName string) (cosign.TransparentVerifier, error) {
 	return nil, errors.New("unimplemented")
 }
 

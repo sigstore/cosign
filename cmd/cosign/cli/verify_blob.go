@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func VerifyBlob() *ffcli.Command {
@@ -95,7 +96,7 @@ func isb64(data []byte) bool {
 }
 
 func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef string) error {
-	var pubKey cosign.PublicKey
+	var pubKey cosign.TransparentVerifier
 	var err error
 	var cert *x509.Certificate
 
@@ -191,7 +192,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 		}
 		var pubBytes []byte
 		if pubKey != nil {
-			pubBytes, err = cosign.PublicKeyPem(ctx, pubKey)
+			pubBytes, err = cosign.PublicKeyPem(pubKey, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}
