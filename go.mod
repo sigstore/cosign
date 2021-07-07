@@ -22,10 +22,12 @@ require (
 	github.com/peterbourgon/ff/v3 v3.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.29.0 // indirect
+	github.com/sassoftware/relic v7.2.1+incompatible // indirect
 	github.com/sigstore/fulcio v0.0.0-20210405115948-e7630f533fca
-	github.com/sigstore/rekor v0.1.2-0.20210519014330-b5480728bde6
-	github.com/sigstore/sigstore v0.0.0-20210609084117-386ea718fc64
+	github.com/sigstore/rekor v0.2.1-0.20210701170443-6c013a583403
+	github.com/sigstore/sigstore v0.0.0-20210706115932-8df43087505f
 	github.com/spf13/afero v1.6.0 // indirect
+	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/theupdateframework/go-tuf v0.0.0-20201230183259-aee6270feb55
 	go.mongodb.org/mongo-driver v1.5.3 // indirect

@@ -16,12 +16,21 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/sigstore/sigstore/pkg/httpclients"
+	"github.com/sigstore/sigstore/pkg/oauthflow"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/tlog"
+	"github.com/spf13/viper"
 	"io/ioutil"
+	"net/http"
 	"net/mail"
+	"os"
 	"strings"
 	"time"
 
@@ -116,14 +125,99 @@ EXAMPLES
 				SignedStruct: signed,
 			}
 
-			byteArray, err := json.MarshalIndent(policyJSON, "", "  ")
-
+			policyByteArray, err := json.MarshalIndent(policyJSON, "", "  ")
 			if err != nil {
 				return errors.Wrapf(err, "failed to marshal policy json")
 			}
 
+			// Retrieve idToken from oidc provider
+			idToken, err := oauthflow.OIDConnect(
+				viper.GetString("oidc-issuer"),
+				viper.GetString("oidc-client-id"),
+				viper.GetString("oidc-client-secret"),
+				oauthflow.DefaultIDTokenGetter,
+			)
+			if err != nil {
+				return err
+			}
+			fmt.Println("\nReceived OpenID Scope retrieved for account:", idToken.Subject)
+
+			signer, _, err := signature.NewDefaultECDSASignerVerifier()
+			if err != nil {
+				return err
+			}
+
+			pub, err := signer.PublicKey()
+			if err != nil {
+				return err
+			}
+			pubBytes, err := cryptoutils.MarshalPublicKeyToDER(pub)
+			if err != nil {
+				return err
+			}
+
+			proof, err := signer.SignMessage(strings.NewReader(idToken.Subject))
+			if err != nil {
+				return err
+			}
+
+			certResp, err := httpclients.GetCert(idToken, proof, pubBytes, viper.GetString("fulcio-server"))
+			if err != nil {
+				switch t := err.(type) {
+				case *operations.SigningCertDefault:
+					if t.Code() == http.StatusInternalServerError {
+						return err
+					}
+				default:
+					return err
+				}
+				os.Exit(1)
+			}
+
+			certs, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(certResp.Payload))
+			if err != nil {
+				return err
+			} else if len(certs) == 0 {
+				return errors.New("no certificates were found in response")
+			}
+			signingCert := certs[0]
+			signingCertPEM, err := cryptoutils.MarshalCertificateToPEM(signingCert)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Received signing cerificate with serial number: ", signingCert.SerialNumber)
+
+			fmt.Printf("Received signing Cerificate: %+v\n", signingCert.Subject)
+
+			signature, err := signer.SignMessage(bytes.NewReader(payload))
+			if err != nil {
+				panic(fmt.Sprintf("Error occurred while during artifact signing: %s", err))
+			}
+
+			// Send to rekor
+			fmt.Println("Sending entry to transparency log")
+			tlogEntry, err := tlog.UploadToRekor(
+				signingCertPEM,
+				signature,
+				viper.GetString("rekor-server"),
+				payload,
+			)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Rekor entry successful. URL: ", tlogEntry)
+
+			if viper.IsSet("output") {
+				err = ioutil.WriteFile(viper.GetString("output"), signingCertPEM, 0600)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+
 			if *outFile != "" {
-				err = ioutil.WriteFile(*outFile, byteArray, 0600)
+				err = ioutil.WriteFile(*outFile, policyByteArray, 0600)
 				if err != nil {
 					return errors.Wrapf(err, "error writing to root.json")
 				}
