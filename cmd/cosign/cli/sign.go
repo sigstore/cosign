@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/base64"
@@ -302,7 +303,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 			}
 		}
 
-		sig, _, err := signer.Sign(ctx, payload)
+		sig, err := signer.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
@@ -330,7 +331,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 			Cert:         cert,
 			Chain:        chain,
 			DupeDetector: dupeDetector,
-			RemoteOpts:   []remote.Option{remoteAuth},
+			RemoteOpts:   []remote.Option{remoteAuth, remote.WithContext(ctx)},
 		}
 
 		if uploadTLog {

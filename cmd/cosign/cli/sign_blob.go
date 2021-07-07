@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"flag"
@@ -134,7 +135,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
 	}
 
-	sig, _, err := signer.Sign(ctx, payload)
+	sig, err := signer.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 	if err != nil {
 		return nil, errors.Wrap(err, "signing blob")
 	}
