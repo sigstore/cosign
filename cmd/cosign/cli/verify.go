@@ -101,7 +101,7 @@ EXAMPLES
 }
 
 // Exec runs the verification command
-func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
+func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	if len(args) == 0 {
 		return flag.ErrHelp
 	}
@@ -111,28 +111,34 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 	}
 
 	co := &cosign.CheckOpts{
-		Annotations:        *c.Annotations,
-		Claims:             c.CheckClaims,
-		Tlog:               EnableExperimental(),
-		Roots:              fulcio.Roots,
-		RegistryClientOpts: []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain)},
+		Annotations: *c.Annotations,
+		Claims:      c.CheckClaims,
+		RootCerts:   fulcio.Roots,
+		RegistryClientOpts: []remote.Option{
+			remote.WithAuthFromKeychain(authn.DefaultKeychain),
+			remote.WithContext(ctx),
+		},
+	}
+	if EnableExperimental() {
+		co.RekorURL = TlogServer()
 	}
 	keyRef := c.KeyRef
 
 	// Keys are optional!
+	var pubKey cosign.TransparentVerifier
 	if keyRef != "" {
-		pubKey, err := publicKeyFromKeyRef(ctx, keyRef)
+		pubKey, err = publicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
-		co.PubKey = pubKey
 	} else if c.Sk {
-		pubKey, err := pivkey.NewPublicKeyProvider(c.Slot)
+		pubKey, err = pivkey.NewPublicKeyProvider(c.Slot)
 		if err != nil {
-			return errors.Wrap(err, "loading public key")
+			return errors.Wrap(err, "initializing security key")
 		}
-		co.PubKey = pubKey
 	}
+	co.SigVerifier = pubKey
+	co.TransparentPub = pubKey
 
 	for _, imageRef := range args {
 		ref, err := name.ParseReference(imageRef)
@@ -143,8 +149,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
+		co.SignatureRepo = sigRepo
+		//TODO: this is really confusing, it's actually a return value for the printed verification below
+		co.VerifyBundle = false
 
-		verified, err := cosign.Verify(ctx, ref, sigRepo, co, TlogServer())
+		verified, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
 			return err
 		}
@@ -167,11 +176,11 @@ func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosig
 	}
 	if co.VerifyBundle {
 		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
-	} else if co.Tlog {
+	} else if co.RekorURL != "" {
 		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
 		fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
 	}
-	if co.PubKey != nil {
+	if co.SigVerifier != nil {
 		fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 	}
 	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")

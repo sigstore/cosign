@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -144,7 +145,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		if cert != "" {
 			rekorBytes = []byte(cert)
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(ctx, signer)
+			pemBytes, err := cosign.PublicKeyPem(signer, options.WithContext(ctx))
 			if err != nil {
 				return nil, err
 			}

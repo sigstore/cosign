@@ -40,6 +40,8 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func main() {
@@ -62,8 +64,7 @@ func main() {
 				return nil, err
 			}
 
-			creds := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-			img, err := remote.Image(ref, creds)
+			img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(bctx.Context))
 			if err != nil {
 				return nil, err
 			}
@@ -102,8 +103,7 @@ func main() {
 				return nil, err
 			}
 
-			creds := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-			img, err := remote.Image(ref, creds)
+			img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(bctx.Context))
 			if err != nil {
 				return nil, err
 			}
@@ -185,13 +185,22 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
+			ctxOpt := options.WithContext(bctx.Context)
 			co := &cosign.CheckOpts{
-				PubKey:             pubKey,
-				Claims:             true,
-				Roots:              fulcio.Roots,
-				RegistryClientOpts: []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain)},
+				SigVerifier:    pubKey,
+				VerifyOpts:     []signature.VerifyOption{ctxOpt},
+				TransparentPub: pubKey,
+				PKOpts:         []signature.PublicKeyOption{ctxOpt},
+				Claims:         true,
+				RootCerts:      fulcio.Roots,
+				RegistryClientOpts: []remote.Option{
+					remote.WithAuthFromKeychain(authn.DefaultKeychain),
+					remote.WithContext(bctx.Context),
+				},
+				RekorURL:      cli.TlogServer(),
+				SignatureRepo: sigRepo,
 			}
-			sps, err := cosign.Verify(context.Background(), ref, sigRepo, co, cli.TlogServer())
+			sps, err := cosign.Verify(bctx.Context, ref, co)
 			if err != nil {
 				return nil, err
 			}
