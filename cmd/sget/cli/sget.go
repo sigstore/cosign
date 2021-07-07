@@ -55,7 +55,6 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 			return nil, err
 		}
 		co.SigVerifier = pub
-		co.TransparentPub = pub
 	}
 
 	if co.SigVerifier != nil || cli.EnableExperimental() {

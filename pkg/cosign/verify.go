@@ -173,10 +173,9 @@ type CheckOpts struct {
 
 	RekorURL string
 
-	SigVerifier    signature.Verifier
-	VerifyOpts     []signature.VerifyOption
-	TransparentPub signature.PublicKeyProvider
-	PKOpts         []signature.PublicKeyOption
+	SigVerifier signature.Verifier
+	VerifyOpts  []signature.VerifyOption
+	PKOpts      []signature.PublicKeyOption
 
 	RootCerts *x509.CertPool
 }
@@ -275,8 +274,8 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			}
 			// Get the right public key to use (key or cert)
 			var pemBytes []byte
-			if co.TransparentPub != nil {
-				pemBytes, err = PublicKeyPem(co.TransparentPub, co.PKOpts...)
+			if co.SigVerifier != nil {
+				pemBytes, err = PublicKeyPem(co.SigVerifier, co.PKOpts...)
 				if err != nil {
 					validationErrs = append(validationErrs, err.Error())
 					continue

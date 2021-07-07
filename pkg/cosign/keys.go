@@ -154,13 +154,7 @@ func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifie
 
 const pubKeyPemType = "PUBLIC KEY"
 
-// TransparentVerifier is a Verifier which can also provide the public key to verify against a transparency log.
-type TransparentVerifier interface {
-	signature.Verifier
-	signature.PublicKeyProvider
-}
-
-func LoadPublicKey(ctx context.Context, keyRef string) (tv TransparentVerifier, err error) {
+func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
 	// The key could be plaintext, in a file, at a URL, or in KMS.
 	if kmsKey, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
 		// KMS specified

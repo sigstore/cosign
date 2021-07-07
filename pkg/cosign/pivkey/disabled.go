@@ -22,11 +22,10 @@ import (
 	"errors"
 	"io"
 
-	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func NewPublicKeyProvider(slotName string) (cosign.TransparentVerifier, error) {
+func NewPublicKeyProvider(slotName string) (signature.Verifier, error) {
 	return nil, errors.New("unimplemented")
 }
 
