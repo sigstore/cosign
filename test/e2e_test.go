@@ -337,7 +337,7 @@ func TestSignBlob(t *testing.T) {
 	mustErr(cli.VerifyBlobCmd(ctx, ko2, "", "badsig", blob), t)
 
 	// Now sign the blob with one key
-	sig, err := cli.SignBlobCmd(ctx, cli.KeyOpts{KeyRef: privKeyPath1}, bp, true, passFunc, "")
+	sig, err := cli.SignBlobCmd(ctx, cli.KeyOpts{KeyRef: privKeyPath1}, bp, true, passFunc, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
