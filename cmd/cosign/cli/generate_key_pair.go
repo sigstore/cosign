@@ -40,7 +40,6 @@ func GenerateKeyPair() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign generate-key-pair", flag.ExitOnError)
 		kmsVal  = flagset.String("kms", "", "create key pair in KMS service to use for signing")
-		k8sRef  = flagset.String("k8s", "", "create key pair and store in Kubernetes secret, format as <namespace>/<secret name>")
 	)
 
 	return &ffcli.Command{
@@ -60,19 +59,19 @@ EXAMPLES:
   cosign generate-key-pair -kms hashivault://[KEY]
 
   # generate a key-pair in Kubernetes Secret
-  cosign generate-key-pair -k8s [NAMESPACE]/[SECRET_NAME]
+  cosign generate-key-pair k8s://[NAMESPACE]/[NAME]
 
 CAVEATS:
   This command interactively prompts for a password. You can use
   the COSIGN_PASSWORD environment variable to provide one.`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return GenerateKeyPairCmd(ctx, *kmsVal, *k8sRef)
+			return GenerateKeyPairCmd(ctx, *kmsVal, args)
 		},
 	}
 }
 
-func GenerateKeyPairCmd(ctx context.Context, kmsVal, k8sRef string) error {
+func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal)
 		if err != nil {
@@ -92,8 +91,8 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal, k8sRef string) error {
 		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
 		return nil
 	}
-	if k8sRef != "" {
-		return kubernetes.KeyPairSecret(ctx, k8sRef, GetPass)
+	if len(args) > 0 {
+		return kubernetes.KeyPairSecret(ctx, args[0], GetPass)
 	}
 
 	keys, err := cosign.GenerateKeyPair(GetPass)

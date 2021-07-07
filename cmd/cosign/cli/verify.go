@@ -46,7 +46,7 @@ type VerifyCommand struct {
 
 func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	annotations := annotationsMap{}
-	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
+	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
 	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")

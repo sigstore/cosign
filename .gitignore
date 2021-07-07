@@ -25,3 +25,4 @@ root.json
 *fuzz.a
 
 bin*
+release/cosign.pub

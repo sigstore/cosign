@@ -16,11 +16,14 @@ package cli
 
 import (
 	"context"
+	"crypto"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -37,6 +40,15 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier,
 	return cosign.LoadECDSAPrivateKey(kb, pass)
 }
 
+func loadPublicKey(raw []byte) (cosign.PublicKey, error) {
+	// PEM encoded file.
+	ed, err := cosign.PemToECDSAKey(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "pem to ecdsa")
+	}
+	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
+}
+
 func signerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
 	return signerVerifierFromKeyRef(ctx, keyRef, pf)
 }
@@ -47,9 +59,32 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 			return kms.Get(ctx, keyRef)
 		}
 	}
+
+	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
+		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(s.Data) > 0 {
+			return cosign.LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
+		}
+	}
+
 	return loadKey(keyRef, pf)
 }
 
 func publicKeyFromKeyRef(ctx context.Context, keyRef string) (cosign.PublicKey, error) {
+	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
+		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(s.Data) > 0 {
+			return loadPublicKey(s.Data["cosign.pub"])
+		}
+	}
+
 	return cosign.LoadPublicKey(ctx, keyRef)
 }

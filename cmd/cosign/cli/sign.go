@@ -73,7 +73,7 @@ func (a *annotationsMap) String() string {
 func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
-		key         = flagset.String("key", "", "path to the private key file or KMS URI")
+		key         = flagset.String("key", "", "path to the private key file, KMS URI or Kubernetes Secret")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		sk          = flagset.Bool("sk", false, "whether to use a hardware security key")
 		slot        = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
