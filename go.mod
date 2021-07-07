@@ -18,7 +18,7 @@ require (
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/manifoldco/promptui v0.8.0
 	github.com/open-policy-agent/opa v0.30.1
-	github.com/peterbourgon/ff/v3 v3.0.0
+	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.29.0 // indirect
 	github.com/sigstore/fulcio v0.0.0-20210405115948-e7630f533fca
