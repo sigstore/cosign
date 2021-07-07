@@ -108,7 +108,7 @@ EXAMPLES
 
   # sign a container image with a key pair stored in Hashicorp Vault
   cosign sign -key hashivault://<KEY> <IMAGE>
-  
+
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign -key cosign.key legacy-registry.example.com/my/image
   `,
