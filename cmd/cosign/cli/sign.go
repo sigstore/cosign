@@ -37,10 +37,10 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -333,7 +333,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 
 		if uploadTLog {
-			rekorClient, err := app.GetRekorClient(TlogServer())
+			rekorClient, err := rekorClient.GetRekorClient(TlogServer())
 			if err != nil {
 				return err
 			}

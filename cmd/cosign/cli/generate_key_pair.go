@@ -17,6 +17,7 @@ package cli
 
 import (
 	"context"
+	"crypto"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -28,7 +29,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
-	"github.com/sigstore/sigstore/pkg/kms"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
 var (
@@ -73,11 +74,11 @@ CAVEATS:
 
 func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
 	if kmsVal != "" {
-		k, err := kms.Get(ctx, kmsVal)
+		k, err := kms.Get(ctx, kmsVal, crypto.SHA256)
 		if err != nil {
 			return err
 		}
-		pubKey, err := k.CreateKey(ctx)
+		pubKey, err := k.CreateKey(ctx, k.DefaultAlgorithm())
 		if err != nil {
 			return errors.Wrap(err, "creating key")
 		}

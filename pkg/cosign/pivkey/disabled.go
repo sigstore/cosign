@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"errors"
+	"io"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -43,7 +44,11 @@ func (ps *PIVSigner) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byt
 	return nil, nil, errors.New("unimplemented")
 }
 
-func (ps *PIVSigner) PublicKey(context.Context) (crypto.PublicKey, error) {
+func (ps *PIVSigner) SignMessage(rawPayload io.Reader, opts ...signature.SignOption) ([]byte, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (ps *PIVSigner) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
 	return nil, errors.New("unimplemented")
 }
 

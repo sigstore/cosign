@@ -33,8 +33,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 
-	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
 const (
@@ -101,7 +101,7 @@ func (k *Keys) Password() []byte {
 }
 
 func PublicKeyPem(ctx context.Context, key signature.PublicKeyProvider) ([]byte, error) {
-	pub, err := key.PublicKey(ctx)
+	pub, err := key.PublicKey()
 	if err != nil {
 		return nil, err
 	}
@@ -126,30 +126,30 @@ func CertToPem(c *x509.Certificate) []byte {
 	})
 }
 
-func LoadECDSAPrivateKey(key []byte, pass []byte) (signature.ECDSASignerVerifier, error) {
+func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
-		return signature.ECDSASignerVerifier{}, errors.New("invalid pem block")
+		return nil, errors.New("invalid pem block")
 	}
 	if p.Type != PemType {
-		return signature.ECDSASignerVerifier{}, fmt.Errorf("unsupported pem type: %s", p.Type)
+		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
 	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
 	if err != nil {
-		return signature.ECDSASignerVerifier{}, errors.Wrap(err, "decrypt")
+		return nil, errors.Wrap(err, "decrypt")
 	}
 
 	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return signature.ECDSASignerVerifier{}, errors.Wrap(err, "parsing private key")
+		return nil, errors.Wrap(err, "parsing private key")
 	}
 	epk, ok := pk.(*ecdsa.PrivateKey)
 	if !ok {
-		return signature.ECDSASignerVerifier{}, fmt.Errorf("invalid private key")
+		return nil, fmt.Errorf("invalid private key")
 	}
-	return signature.NewECDSASignerVerifier(epk, crypto.SHA256), nil
+	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
 }
 
 const pubKeyPemType = "PUBLIC KEY"
@@ -161,7 +161,7 @@ type PublicKey interface {
 
 func LoadPublicKey(ctx context.Context, keyRef string) (pub PublicKey, err error) {
 	// The key could be plaintext, in a file, at a URL, or in KMS.
-	if kmsKey, err := kms.Get(ctx, keyRef); err == nil {
+	if kmsKey, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
 		// KMS specified
 		return kmsKey, nil
 	}
@@ -189,7 +189,7 @@ func LoadPublicKey(ctx context.Context, keyRef string) (pub PublicKey, err error
 	if err != nil {
 		return nil, errors.Wrap(err, "pem to ecdsa")
 	}
-	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
+	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
 }
 
 func PemToECDSAKey(raw []byte) (*ecdsa.PublicKey, error) {

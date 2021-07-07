@@ -16,6 +16,7 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -41,7 +42,7 @@ import (
 	"github.com/pkg/errors"
 
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
+	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
@@ -181,7 +182,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name
 		return nil, errors.New("one of public key or cert roots is required")
 	}
 	// TODO: Figure out if we'll need a client before creating one.
-	rekorClient, err := app.GetRekorClient(rekorServerURL)
+	rekorClient, err := rekorClient.GetRekorClient(rekorServerURL)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +214,11 @@ func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name
 				validationErrs = append(validationErrs, "no certificate found on signature")
 				continue
 			}
-			pub := &signature.ECDSAVerifier{Key: sp.Cert.PublicKey.(*ecdsa.PublicKey), HashAlg: crypto.SHA256}
+			pub, err := signature.LoadECDSAVerifier(sp.Cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			if err != nil {
+				validationErrs = append(validationErrs, "invalid certificate found on signature")
+				continue
+			}
 			// Now verify the signature, then the cert.
 			if err := sp.VerifyKey(ctx, pub); err != nil {
 				validationErrs = append(validationErrs, err.Error())
@@ -317,7 +322,7 @@ func (sp *SignedPayload) VerifyKey(ctx context.Context, pubKey PublicKey) error 
 	if err != nil {
 		return err
 	}
-	return pubKey.Verify(ctx, sp.Payload, signature)
+	return pubKey.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload))
 }
 
 func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContainerImage) error {
