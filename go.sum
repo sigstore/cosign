@@ -352,6 +352,7 @@ github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fullstorydev/grpcurl v1.6.0/go.mod h1:ZQ+ayqbKMJNhzLmbpCiurTVlaK2M/3nqZCxaQ2Ze/sM=
 github.com/fullstorydev/grpcurl v1.8.0/go.mod h1:Mn2jWbdMrQGJQ8UD62uNyMumT2acsZUCkZIqFxsQf1o=
+github.com/gabriel-vasile/mimetype v1.2.0 h1:A6z5J8OhjiWFV91sQ3dMI8apYu/tvP9keDaMM3Xu6p4=
 github.com/gabriel-vasile/mimetype v1.2.0/go.mod h1:6CDPel/o/3/s4+bp6kIbsWATq8pmgOisOPG40CJa6To=
 github.com/getsentry/raven-go v0.2.0/go.mod h1:KungGk8q33+aIAZUIVWZDr2OfAEBsO49PX4NzFV5kcQ=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
@@ -1185,6 +1186,8 @@ github.com/sigstore/rekor v0.2.1-0.20210705133645-dbbbff597bc2/go.mod h1:R2IbR1/
 github.com/sigstore/sigstore v0.0.0-20210415112811-cb2061113e4a/go.mod h1:EoLIp5JbrCE2VZqdCCIemNEdNYiOcdwF0igIvorqo1o=
 github.com/sigstore/sigstore v0.0.0-20210706214059-9f37c836c049 h1:yvbg2Wc4g3tYwmCqDMBR38Fw9JSeTpV8jPGdBo9zMHM=
 github.com/sigstore/sigstore v0.0.0-20210706214059-9f37c836c049/go.mod h1:1grnVUDnR8Y8e24D7pW0D6fn2y3/93PnuAj5qVViph4=
+github.com/sigstore/sigstore v0.0.0-20210707163508-5b6fffda16e4 h1:IdplBZ8ViQsPMD2uGfgjrzlb7mtv6MzSXj2hy4MpD8I=
+github.com/sigstore/sigstore v0.0.0-20210707163508-5b6fffda16e4/go.mod h1:1grnVUDnR8Y8e24D7pW0D6fn2y3/93PnuAj5qVViph4=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.0.5/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
