@@ -196,13 +196,16 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 	}
 
-	remoteAuth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
+	remoteOpts := []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithContext(ctx),
+	}
 
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	get, err := remote.Get(ref, remoteAuth)
+	get, err := remote.Get(ref, remoteOpts...)
 	if err != nil {
 		return errors.Wrap(err, "getting remote image")
 	}
@@ -213,7 +216,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	toSign := []name.Digest{img}
 
 	if recursive && get.MediaType.IsIndex() {
-		imgs, err := getTransitiveImages(get, repo, remoteAuth)
+		imgs, err := getTransitiveImages(get, repo, remoteOpts...)
 		if err != nil {
 			return err
 		}
@@ -331,7 +334,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 			Cert:         cert,
 			Chain:        chain,
 			DupeDetector: dupeDetector,
-			RemoteOpts:   []remote.Option{remoteAuth, remote.WithContext(ctx)},
+			RemoteOpts:   remoteOpts,
 		}
 
 		if uploadTLog {
@@ -350,7 +353,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 
 		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())
-		if _, err = cremote.UploadSignature(ctx, sig, payload, sigRef, uo); err != nil {
+		if _, err = cremote.UploadSignature(sig, payload, sigRef, uo); err != nil {
 			return errors.Wrap(err, "uploading")
 		}
 	}

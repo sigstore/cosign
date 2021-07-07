@@ -17,7 +17,6 @@ package remote
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"io"
 	"io/ioutil"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -48,8 +46,8 @@ const (
 	DockerMediaTypesEnv    = "COSIGN_DOCKER_MEDIA_TYPES"
 )
 
-func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+func Descriptors(ref name.Reference, remoteOpts ...remote.Option) ([]v1.Descriptor, error) {
+	img, err := remote.Image(ref, remoteOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +149,7 @@ type UploadOpts struct {
 	RemoteOpts            []remote.Option
 }
 
-func UploadSignature(ctx context.Context, signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
+func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
 	l := &StaticLayer{
 		B:  payload,
 		Mt: SimpleSigningMediaType,
