@@ -151,7 +151,7 @@ type Signer struct {
 	Cert  string
 	Chain string
 	pub   *ecdsa.PublicKey
-	signature.ECDSASignerVerifier
+	*signature.ECDSASignerVerifier
 }
 
 func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
@@ -159,7 +159,10 @@ func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
 	}
-	signer := signature.NewECDSASignerVerifier(priv, crypto.SHA256)
+	signer, err := signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
 	var flow string
@@ -186,7 +189,7 @@ func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
 
 }
 
-func (f *Signer) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
+func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
 	return &f.pub, nil
 }
 

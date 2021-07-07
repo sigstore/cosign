@@ -24,7 +24,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -33,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	rekorClient "github.com/sigstore/rekor/pkg/client"
 )
 
 func SignBlob() *ffcli.Command {
@@ -149,7 +149,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 			}
 			rekorBytes = pemBytes
 		}
-		rekorClient, err := app.GetRekorClient(TlogServer())
+		rekorClient, err := rekorClient.GetRekorClient(TlogServer())
 		if err != nil {
 			return nil, err
 		}
