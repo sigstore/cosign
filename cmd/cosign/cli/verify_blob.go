@@ -96,7 +96,7 @@ func isb64(data []byte) bool {
 }
 
 func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef string) error {
-	var pubKey cosign.TransparentVerifier
+	var pubKey signature.Verifier
 	var err error
 	var cert *x509.Certificate
 

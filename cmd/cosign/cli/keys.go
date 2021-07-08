@@ -40,7 +40,7 @@ func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier
 	return cosign.LoadECDSAPrivateKey(kb, pass)
 }
 
-func loadPublicKey(raw []byte) (cosign.TransparentVerifier, error) {
+func loadPublicKey(raw []byte) (signature.Verifier, error) {
 	// PEM encoded file.
 	ed, err := cosign.PemToECDSAKey(raw)
 	if err != nil {
@@ -74,7 +74,7 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 	return loadKey(keyRef, pf)
 }
 
-func publicKeyFromKeyRef(ctx context.Context, keyRef string) (cosign.TransparentVerifier, error) {
+func publicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier, error) {
 	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
 		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
 		if err != nil {

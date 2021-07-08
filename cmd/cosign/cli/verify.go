@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -125,7 +126,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	keyRef := c.KeyRef
 
 	// Keys are optional!
-	var pubKey cosign.TransparentVerifier
+	var pubKey signature.Verifier
 	if keyRef != "" {
 		pubKey, err = publicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
@@ -138,7 +139,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		}
 	}
 	co.SigVerifier = pubKey
-	co.TransparentPub = pubKey
 
 	for _, imageRef := range args {
 		ref, err := name.ParseReference(imageRef)
