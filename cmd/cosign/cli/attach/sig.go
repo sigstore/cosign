@@ -71,9 +71,9 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 		return err
 	}
 
-	auth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
+	remoteOpts := []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)}
 
-	get, err := remote.Get(ref, auth)
+	get, err := remote.Get(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	if err != nil {
 		return err
 	}
-	if _, err := cremote.UploadSignature(ctx, sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: []remote.Option{auth}}); err != nil {
+	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts}); err != nil {
 		return err
 	}
 	return nil

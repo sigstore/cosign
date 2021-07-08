@@ -47,13 +47,15 @@ func Clean() *ffcli.Command {
 	}
 }
 
-func CleanCmd(_ context.Context, imageRef string) error {
+func CleanCmd(ctx context.Context, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
+
+	remoteOpts := []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)}
 	// TODO: just return the descriptor directly if we have a digest reference.
-	desc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	desc, err := remote.Get(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -67,7 +69,7 @@ func CleanCmd(_ context.Context, imageRef string) error {
 
 	fmt.Println("Deleting signature metadata...")
 
-	err = remote.Delete(sigRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	err = remote.Delete(sigRef, remoteOpts...)
 	if err != nil {
 		return err
 	}
