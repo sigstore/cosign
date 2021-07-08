@@ -91,7 +91,7 @@ crane manifest $(cosign triangulate gcr.io/dlorenc-vmtest2/demo) | jq .
 Some registries support deletion too (DockerHub does not):
 
 ```shell
-$ crane clean gcr.io/dlorenc-vmtest2/demo
+$ cosign clean gcr.io/dlorenc-vmtest2/demo
 ```
 
 ## Sign but skip upload (to store somewhere else)
