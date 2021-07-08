@@ -16,6 +16,7 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -25,7 +26,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -41,7 +41,7 @@ import (
 	"github.com/pkg/errors"
 
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
+	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
@@ -162,28 +162,30 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 	return &e, nil
 }
 
-// There are only payloads. Some have certs, some don't.
+// CheckOpts are the options for checking
 type CheckOpts struct {
-	Annotations        map[string]interface{}
-	Claims             bool
-	VerifyBundle       bool
-	Tlog               bool
-	PubKey             PublicKey
-	Roots              *x509.CertPool
+	SignatureRepo      name.Repository
 	RegistryClientOpts []remote.Option
+
+	Annotations  map[string]interface{}
+	Claims       bool
+	VerifyBundle bool
+
+	RekorURL string
+
+	SigVerifier signature.Verifier
+	VerifyOpts  []signature.VerifyOption
+	PKOpts      []signature.PublicKeyOption
+
+	RootCerts *x509.CertPool
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
-func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name.Repository, co *CheckOpts, rekorServerURL string) ([]SignedPayload, error) {
+func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]SignedPayload, error) {
 	// Enforce this up front.
-	if co.Roots == nil && co.PubKey == nil {
-		return nil, errors.New("one of public key or cert roots is required")
-	}
-	// TODO: Figure out if we'll need a client before creating one.
-	rekorClient, err := app.GetRekorClient(rekorServerURL)
-	if err != nil {
-		return nil, err
+	if co.RootCerts == nil && co.SigVerifier == nil {
+		return nil, errors.New("one of verifier or root certs is required")
 	}
 
 	// These are all the signatures attached to our image that we know how to parse.
@@ -191,35 +193,44 @@ func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name
 	if err != nil {
 		return nil, err
 	}
-	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, signatureRepo, co.RegistryClientOpts...)
+	sigRepo := co.SignatureRepo
+	if (sigRepo == name.Repository{}) {
+		sigRepo = signedImgRef.Context()
+	}
+	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}
 
 	validationErrs := []string{}
 	checkedSignatures := []SignedPayload{}
+	var rekorClient *client.Rekor
 	for _, sp := range allSignatures {
 		switch {
 		// We have a public key to check against.
-		case co.PubKey != nil:
-			if err := sp.VerifyKey(ctx, co.PubKey); err != nil {
+		case co.SigVerifier != nil:
+			if err := sp.VerifySignature(co.SigVerifier, co.VerifyOpts...); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
 		// If we don't have a public key to check against, we can try a root cert.
-		case co.Roots != nil:
+		case co.RootCerts != nil:
 			// There might be signatures with a public key instead of a cert, though
 			if sp.Cert == nil {
 				validationErrs = append(validationErrs, "no certificate found on signature")
 				continue
 			}
-			pub := &signature.ECDSAVerifier{Key: sp.Cert.PublicKey.(*ecdsa.PublicKey), HashAlg: crypto.SHA256}
+			pub, err := signature.LoadECDSAVerifier(sp.Cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			if err != nil {
+				validationErrs = append(validationErrs, "invalid certificate found on signature")
+				continue
+			}
 			// Now verify the signature, then the cert.
-			if err := sp.VerifyKey(ctx, pub); err != nil {
+			if err := sp.VerifySignature(pub); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
-			if err := sp.TrustedCert(co.Roots); err != nil {
+			if err := sp.TrustedCert(co.RootCerts); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -247,16 +258,24 @@ func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name
 		}
 
 		verified, err := sp.VerifyBundle()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to verify offline (%v), checking tlog instead...", err)
+		if err != nil && co.RekorURL == "" {
+			validationErrs = append(validationErrs, "unable to verify bundle: "+err.Error())
+			continue
 		}
 		co.VerifyBundle = verified
 
-		if co.Tlog && !verified {
+		if !verified && co.RekorURL != "" {
+			if rekorClient == nil {
+				rekorClient, err = rekor.GetRekorClient(co.RekorURL)
+				if err != nil {
+					validationErrs = append(validationErrs, "creating rekor client: "+err.Error())
+					continue
+				}
+			}
 			// Get the right public key to use (key or cert)
 			var pemBytes []byte
-			if co.PubKey != nil {
-				pemBytes, err = PublicKeyPem(ctx, co.PubKey)
+			if co.SigVerifier != nil {
+				pemBytes, err = PublicKeyPem(co.SigVerifier, co.PKOpts...)
 				if err != nil {
 					validationErrs = append(validationErrs, err.Error())
 					continue
@@ -297,6 +316,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, signatureRepo name
 	}
 	return checkedSignatures, nil
 }
+
 func checkExpiry(cert *x509.Certificate, it time.Time) error {
 	ft := func(t time.Time) string {
 		return t.Format(time.RFC3339)
@@ -312,12 +332,12 @@ func checkExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func (sp *SignedPayload) VerifyKey(ctx context.Context, pubKey PublicKey) error {
+func (sp *SignedPayload) VerifySignature(verifier signature.Verifier, verifyOpts ...signature.VerifyOption) error {
 	signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
 	if err != nil {
 		return err
 	}
-	return pubKey.Verify(ctx, sp.Payload, signature)
+	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload), verifyOpts...)
 }
 
 func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContainerImage) error {

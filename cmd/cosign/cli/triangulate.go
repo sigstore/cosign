@@ -46,14 +46,14 @@ func Triangulate() *ffcli.Command {
 	}
 }
 
-func MungeCmd(_ context.Context, imageRef string) error {
+func MungeCmd(ctx context.Context, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
 	// TODO: just return the descriptor directly if we have a digest reference.
-	desc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	desc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx))
 	if err != nil {
 		return err
 	}

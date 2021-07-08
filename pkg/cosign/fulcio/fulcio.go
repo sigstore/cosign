@@ -25,17 +25,17 @@ import (
 	_ "embed" // To enable the `go:embed` directive.
 	"encoding/pem"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
 	"github.com/pkg/errors"
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/fulcio/cmd/client/app"
+	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/fulcio/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
@@ -106,7 +106,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 	params.SetCertificateRequest(
 		&models.CertificateRequest{
 			PublicKey: &models.CertificateRequestPublicKey{
-				Algorithm: swag.String(models.CertificateRequestPublicKeyAlgorithmEcdsa),
+				Algorithm: models.CertificateRequestPublicKeyAlgorithmEcdsa,
 				Content:   &content,
 			},
 			SignedEmailAddress: &signedChallenge,
@@ -124,9 +124,20 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 	return string(certPem), string(chainPem), nil
 }
 
+func getFulcioClient(addr string) (*fulcioClient.Fulcio, error) {
+	url, err := url.Parse(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	rt := httptransport.New(url.Host, fulcioClient.DefaultBasePath, []string{url.Scheme})
+	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
+	return fulcioClient.New(rt, strfmt.Default), nil
+}
+
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
 func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow string) (string, string, error) {
-	fcli, err := app.GetFulcioClient(fulcioServer())
+	fcli, err := getFulcioClient(fulcioServer())
 	if err != nil {
 		return "", "", err
 	}
@@ -151,7 +162,7 @@ type Signer struct {
 	Cert  string
 	Chain string
 	pub   *ecdsa.PublicKey
-	signature.ECDSASignerVerifier
+	*signature.ECDSASignerVerifier
 }
 
 func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
@@ -159,7 +170,10 @@ func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
 	}
-	signer := signature.NewECDSASignerVerifier(priv, crypto.SHA256)
+	signer, err := signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
 	var flow string
@@ -186,7 +200,7 @@ func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
 
 }
 
-func (f *Signer) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
+func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
 	return &f.pub, nil
 }
 

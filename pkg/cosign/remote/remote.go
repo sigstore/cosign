@@ -17,7 +17,6 @@ package remote
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"io"
 	"io/ioutil"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -48,8 +46,8 @@ const (
 	DockerMediaTypesEnv    = "COSIGN_DOCKER_MEDIA_TYPES"
 )
 
-func Descriptors(ref name.Reference) ([]v1.Descriptor, error) {
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+func Descriptors(ref name.Reference, remoteOpts ...remote.Option) ([]v1.Descriptor, error) {
+	img, err := remote.Image(ref, remoteOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +91,7 @@ func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error)
 	return base, nil
 }
 
-func findDuplicate(ctx context.Context, sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
+func findDuplicate(sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
 	l := &StaticLayer{
 		B:  payload,
 		Mt: SimpleSigningMediaType,
@@ -121,7 +119,7 @@ LayerLoop:
 			if err != nil {
 				return nil, err
 			}
-			if err := dupeDetector.Verify(ctx, payload, uploadedSig); err == nil {
+			if err := dupeDetector.VerifySignature(bytes.NewReader(uploadedSig), bytes.NewReader(payload)); err == nil {
 				// An equivalent signature has already been uploaded.
 				return uploadedSig, nil
 			}
@@ -151,7 +149,7 @@ type UploadOpts struct {
 	RemoteOpts            []remote.Option
 }
 
-func UploadSignature(ctx context.Context, signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
+func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
 	l := &StaticLayer{
 		B:  payload,
 		Mt: SimpleSigningMediaType,
@@ -163,7 +161,7 @@ func UploadSignature(ctx context.Context, signature, payload []byte, dst name.Re
 	}
 
 	if opts.DupeDetector != nil {
-		if uploadedSig, err = findDuplicate(ctx, base, payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
+		if uploadedSig, err = findDuplicate(base, payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
 			return uploadedSig, err
 		}
 	}

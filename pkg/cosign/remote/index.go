@@ -59,7 +59,7 @@ func DefaultMediaTypeGetter(b []byte) types.MediaType {
 	return types.MediaType(strings.Split(http.DetectContentType(b), ";")[0])
 }
 
-func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter) (Digester, error) {
+func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remoteOpts ...remote.Option) (Digester, error) {
 	var img v1.Image
 	var idx v1.ImageIndex = empty.Index
 
@@ -70,7 +70,7 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter) (Diges
 		}
 		mt := getMt(b)
 		fmt.Fprintf(os.Stderr, "Uploading file from [%s] to [%s] with media type [%s]\n", f.Path, ref.Name(), mt)
-		_img, err := UploadFile(b, ref, authn.DefaultKeychain, mt, types.OCIConfigJSON)
+		_img, err := UploadFile(b, ref, mt, types.OCIConfigJSON, remoteOpts...)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +104,7 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter) (Diges
 	return img, nil
 }
 
-func UploadFile(b []byte, ref name.Reference, kc authn.Keychain, layerMt, configMt types.MediaType) (v1.Image, error) {
+func UploadFile(b []byte, ref name.Reference, layerMt, configMt types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {
 	l := &StaticLayer{
 		B:  b,
 		Mt: layerMt,
@@ -122,7 +122,7 @@ func UploadFile(b []byte, ref name.Reference, kc authn.Keychain, layerMt, config
 		return nil, err
 	}
 	mfst.Config.MediaType = configMt
-	if err := remote.Write(ref, img, remote.WithAuthFromKeychain(kc)); err != nil {
+	if err := remote.Write(ref, img, remoteOpts...); err != nil {
 		return nil, err
 	}
 	return img, nil

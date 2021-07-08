@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/base64"
@@ -37,11 +38,12 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -108,7 +110,7 @@ EXAMPLES
 
   # sign a container image with a key pair stored in Hashicorp Vault
   cosign sign -key hashivault://<KEY> <IMAGE>
-  
+
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign -key cosign.key legacy-registry.example.com/my/image
   `,
@@ -194,13 +196,16 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 	}
 
-	remoteAuth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
+	remoteOpts := []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithContext(ctx),
+	}
 
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	get, err := remote.Get(ref, remoteAuth)
+	get, err := remote.Get(ref, remoteOpts...)
 	if err != nil {
 		return errors.Wrap(err, "getting remote image")
 	}
@@ -211,7 +216,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 	toSign := []name.Digest{img}
 
 	if recursive && get.MediaType.IsIndex() {
-		imgs, err := getTransitiveImages(get, repo, remoteAuth)
+		imgs, err := getTransitiveImages(get, repo, remoteOpts...)
 		if err != nil {
 			return err
 		}
@@ -269,7 +274,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		if cert != "" {
 			rekorBytes = []byte(cert)
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(ctx, signer)
+			pemBytes, err := cosign.PublicKeyPem(signer, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}
@@ -301,7 +306,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 			}
 		}
 
-		sig, _, err := signer.Sign(ctx, payload)
+		sig, err := signer.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
@@ -329,11 +334,11 @@ func SignCmd(ctx context.Context, so SignOpts,
 			Cert:         cert,
 			Chain:        chain,
 			DupeDetector: dupeDetector,
-			RemoteOpts:   []remote.Option{remoteAuth},
+			RemoteOpts:   remoteOpts,
 		}
 
 		if uploadTLog {
-			rekorClient, err := app.GetRekorClient(TlogServer())
+			rekorClient, err := rekorClient.GetRekorClient(TlogServer())
 			if err != nil {
 				return err
 			}
@@ -348,7 +353,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 
 		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())
-		if _, err = cremote.UploadSignature(ctx, sig, payload, sigRef, uo); err != nil {
+		if _, err = cremote.UploadSignature(sig, payload, sigRef, uo); err != nil {
 			return errors.Wrap(err, "uploading")
 		}
 	}

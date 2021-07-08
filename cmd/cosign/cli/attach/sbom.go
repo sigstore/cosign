@@ -75,8 +75,8 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 		return err
 	}
 
-	auth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-	get, err := remote.Get(ref, auth)
+	remoteOpts := []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)}
+	get, err := remote.Get(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 	dstRef := cosign.AttachedImageTag(repo, get, cosign.SuffixSBOM)
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
-	if _, err := cremote.UploadFile(b, dstRef, authn.DefaultKeychain, types.MediaType(sbomType), types.OCIConfigJSON); err != nil {
+	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, remoteOpts...); err != nil {
 		return err
 	}
 

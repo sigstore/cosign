@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"flag"
@@ -24,8 +25,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -33,6 +34,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	rekorClient "github.com/sigstore/rekor/pkg/client"
 )
 
 func SignBlob() *ffcli.Command {
@@ -43,6 +45,7 @@ func SignBlob() *ffcli.Command {
 		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
 		slot    = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
 		idToken = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
+		output  = flagset.String("output", "", "write the signature to FILE")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
@@ -77,7 +80,7 @@ EXAMPLES
 				Slot:   *slot,
 			}
 			for _, blob := range args {
-				if _, err := SignBlobCmd(ctx, ko, blob, *b64, GetPass, *idToken); err != nil {
+				if _, err := SignBlobCmd(ctx, ko, blob, *b64, GetPass, *idToken, *output); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
@@ -92,7 +95,7 @@ type KeyOpts struct {
 	KeyRef string
 }
 
-func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, pf cosign.PassFunc, idToken string) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, pf cosign.PassFunc, idToken, output string) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -132,7 +135,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
 	}
 
-	sig, _, err := signer.Sign(ctx, payload)
+	sig, err := signer.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 	if err != nil {
 		return nil, errors.Wrap(err, "signing blob")
 	}
@@ -143,13 +146,13 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		if cert != "" {
 			rekorBytes = []byte(cert)
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(ctx, signer)
+			pemBytes, err := cosign.PublicKeyPem(signer, options.WithContext(ctx))
 			if err != nil {
 				return nil, err
 			}
 			rekorBytes = pemBytes
 		}
-		rekorClient, err := app.GetRekorClient(TlogServer())
+		rekorClient, err := rekorClient.GetRekorClient(TlogServer())
 		if err != nil {
 			return nil, err
 		}
@@ -161,12 +164,35 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		return sig, nil
 	}
 
-	if b64 {
-		sig = []byte(base64.StdEncoding.EncodeToString(sig))
-		fmt.Println(string(sig))
-	} else if _, err := os.Stdout.Write(sig); err != nil {
-		// No newline if using the raw signature
-		return nil, err
+	if output != "" {
+		f, err := os.Create(output)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+
+		if b64 {
+			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(sig)))
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			_, err = f.Write(sig)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		fmt.Printf("Signature wrote in the file %s\n", f.Name())
+	} else {
+		if b64 {
+			sig = []byte(base64.StdEncoding.EncodeToString(sig))
+			fmt.Println(string(sig))
+		} else if _, err := os.Stdout.Write(sig); err != nil {
+			// No newline if using the raw signature
+			return nil, err
+		}
 	}
+
 	return sig, nil
 }

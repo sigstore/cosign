@@ -24,29 +24,29 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
-	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
-func loadKey(keyPath string, pf cosign.PassFunc) (signature.ECDSASignerVerifier, error) {
+func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier, error) {
 	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
-		return signature.ECDSASignerVerifier{}, err
+		return nil, err
 	}
 	pass, err := pf(false)
 	if err != nil {
-		return signature.ECDSASignerVerifier{}, err
+		return nil, err
 	}
 	return cosign.LoadECDSAPrivateKey(kb, pass)
 }
 
-func loadPublicKey(raw []byte) (cosign.PublicKey, error) {
+func loadPublicKey(raw []byte) (signature.Verifier, error) {
 	// PEM encoded file.
 	ed, err := cosign.PemToECDSAKey(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "pem to ecdsa")
 	}
-	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
+	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
 }
 
 func signerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
@@ -56,7 +56,7 @@ func signerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (s
 func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
 	for prefix := range kms.ProvidersMux().Providers() {
 		if strings.HasPrefix(keyRef, prefix) {
-			return kms.Get(ctx, keyRef)
+			return kms.Get(ctx, keyRef, crypto.SHA256)
 		}
 	}
 
@@ -74,7 +74,7 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 	return loadKey(keyRef, pf)
 }
 
-func publicKeyFromKeyRef(ctx context.Context, keyRef string) (cosign.PublicKey, error) {
+func publicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier, error) {
 	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
 		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
 		if err != nil {

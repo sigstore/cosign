@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -34,8 +35,9 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
+	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func VerifyBlob() *ffcli.Command {
@@ -94,7 +96,7 @@ func isb64(data []byte) bool {
 }
 
 func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef string) error {
-	var pubKey cosign.PublicKey
+	var pubKey signature.Verifier
 	var err error
 	var cert *x509.Certificate
 
@@ -128,9 +130,9 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			return errors.New("no certs found in pem file")
 		}
 		cert = certs[0]
-		pubKey = &signature.ECDSAVerifier{
-			Key:     cert.PublicKey.(*ecdsa.PublicKey),
-			HashAlg: crypto.SHA256,
+		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -170,7 +172,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	if err != nil {
 		return err
 	}
-	if err := pubKey.Verify(ctx, blobBytes, sig); err != nil {
+	if err := pubKey.VerifySignature(bytes.NewReader(sig), bytes.NewReader(blobBytes)); err != nil {
 		return err
 	}
 
@@ -184,13 +186,13 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	fmt.Fprintln(os.Stderr, "Verified OK")
 
 	if EnableExperimental() {
-		rekorClient, err := app.GetRekorClient(TlogServer())
+		rekorClient, err := rekorClient.GetRekorClient(TlogServer())
 		if err != nil {
 			return err
 		}
 		var pubBytes []byte
 		if pubKey != nil {
-			pubBytes, err = cosign.PublicKeyPem(ctx, pubKey)
+			pubBytes, err = cosign.PublicKeyPem(pubKey, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}

@@ -41,34 +41,37 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 	}
 
 	co := &cosign.CheckOpts{
-		Claims:             true,
-		VerifyBundle:       true,
-		Tlog:               false,
-		Roots:              fulcio.Roots,
-		RegistryClientOpts: []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain)},
+		Claims:       true,
+		VerifyBundle: true,
+		RootCerts:    fulcio.Roots,
+		RegistryClientOpts: []remote.Option{
+			remote.WithAuthFromKeychain(authn.DefaultKeychain),
+			remote.WithContext(ctx),
+		},
 	}
 	if keyRef != "" {
 		pub, err := cosign.LoadPublicKey(ctx, keyRef)
 		if err != nil {
 			return nil, err
 		}
-		co.PubKey = pub
+		co.SigVerifier = pub
 	}
 
-	if co.PubKey != nil || cli.EnableExperimental() {
+	if co.SigVerifier != nil || cli.EnableExperimental() {
 		sigRepo, err := cli.TargetRepositoryForImage(ref)
 		if err != nil {
 			return nil, err
 		}
+		co.SignatureRepo = sigRepo
 
-		sp, err := cosign.Verify(ctx, ref, sigRepo, co, cli.TlogServer())
+		sp, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
 			return nil, err
 		}
 		cli.PrintVerification(imageRef, sp, co, "text")
 	}
 
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	img, err := remote.Image(ref, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, err
 	}
