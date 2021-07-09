@@ -23,7 +23,7 @@ require (
 	github.com/prometheus/common v0.29.0 // indirect
 	github.com/sigstore/fulcio v0.0.0-20210705024150-f64f6358e3a8
 	github.com/sigstore/rekor v0.2.1-0.20210705133645-dbbbff597bc2
-	github.com/sigstore/sigstore v0.0.0-20210708111253-ff2f2ab801d2
+	github.com/sigstore/sigstore v0.0.0-20210709190449-2ab5ec881a5f
 	github.com/stretchr/testify v1.7.0
 	github.com/theupdateframework/go-tuf v0.0.0-20210630170422-22a94818d17b
 	go.mongodb.org/mongo-driver v1.5.4 // indirect

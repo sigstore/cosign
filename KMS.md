@@ -1,16 +1,16 @@
 # KMS Integrations
 
 This page contains detailed instructions on how to configure `cosign` to work with KMS providers.
-Right now `cosign` supports Vault and GCP KMS, but are hoping to support more in the future!
+Right now `cosign` supports Hashicorp Vault, AWS KMS, and GCP KMS, and we are hoping to support more in the future!
 
 ## Basic Usage
 
 When referring to a key managed by a KMS provider, `cosign` takes a [go-cloud](https://gocloud.dev) style URI to refer to the specific provider.
 For example:
 
-`gcpkms://` or `hashivault://`
+`gcpkms://`, `awskms://`, or `hashivault://`
 
-The URI path sytnax is provider specific and explained in the section for each provider.
+The URI path syntax is provider specific and explained in the section for each provider.
 
 ### Key Generation and Management
 
@@ -60,6 +60,40 @@ $ cosign verify -key kms.pub gcr.io/dlorenc-vmtest2/demo
 ### Providers
 
 This section contains the provider-specific documentation.
+
+
+### AWS
+
+AWS KMS keys can be used in `cosign` for signing and verification.
+The URI format for AWS KMS is:
+
+`awskms://$ENDPOINT/$KEYID`
+
+where ENDPOINT and KEYID are replaced with the correct values.
+
+The ENDPOINT value is left blank in most scenerios, but can be set for testing with KMS-compatible servers such as [localstack](https://localstack.cloud/).
+If omiting a custom endpoint, it is mandatory to prefix the URI with `awskms:///` (with three slashes).
+
+If a custom endpoint is used, you may disable TLS verification by setting an environment variable: `AWS_TLS_INSECURE_SKIP_VERIFY=1`.
+
+AWS credentials are provided using standard configuration as [described in AWS docs](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
+
+The KEYID value must conform to any [AWS KMS key identifier](https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id)
+format as described in the linked document (Key ARN, Key ID, Alias ARN, or Alias ID).
+
+Note that key creation is not supported by cosign if using the Key ARN or Key ID formats, so it is recommended to use [Key Aliases](https://docs.aws.amazon.com/kms/latest/developerguide/kms-alias.html)
+for most situations.
+
+The following URIs are valid:
+
+- Key ID: `awskms:///1234abcd-12ab-34cd-56ef-1234567890ab`
+- Key ID with endpoint: `awskms://localhost:4566/1234abcd-12ab-34cd-56ef-1234567890ab`
+- Key ARN: `awskms:///arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab`
+- Key ARN with endpoint: `awskms://localhost:4566/arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab`
+- Alias name: `awskms:///alias/ExampleAlias`
+- Alias name with endpoint: `awskms://localhost:4566/alias/ExampleAlias`
+- Alias ARN: `awskms:///arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias`
+- Alias ARN with endpoint: `awskms://localhost:4566/arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias`
 
 ### GCP
 
