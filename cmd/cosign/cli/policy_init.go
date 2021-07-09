@@ -18,13 +18,15 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/generated/client/operations"
 	"github.com/sigstore/sigstore/pkg/httpclients"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/tlog"
 	"github.com/spf13/viper"
 	"io/ioutil"
@@ -41,7 +43,7 @@ import (
 
 type MainPolicyStruct struct {
 	BodyStruct   BodyStruct `json:"body"`
-	SignedStruct Signed     `json:"signed"`
+	SignedStruct SignedStruct     `json:"signed"`
 }
 
 type BodyStruct struct {
@@ -115,26 +117,18 @@ EXAMPLES
 				Expires:           time.Now(),
 			}
 
-			// Signed is empty on first initialization of the policy
-			// We signed over this as maintainers
-			signed := Signed{}
-
-			// Construct the complete policy
-			policyJSON := MainPolicyStruct{
-				BodyStruct:   body,
-				SignedStruct: signed,
-			}
-
-			policyByteArray, err := json.MarshalIndent(policyJSON, "", "  ")
+			bodyByte, err := json.Marshal(body)
 			if err != nil {
-				return errors.Wrapf(err, "failed to marshal policy json")
+				return errors.Wrapf(err, "failed to marshal policy body json")
 			}
 
-			// Retrieve idToken from oidc provider
+
+
+			// Retrieve idToken from oidc provider re"
 			idToken, err := oauthflow.OIDConnect(
-				viper.GetString("oidc-issuer"),
-				viper.GetString("oidc-client-id"),
-				viper.GetString("oidc-client-secret"),
+				"https://oauth2.sigstore.dev/auth",
+				"sigstore",
+				"",
 				oauthflow.DefaultIDTokenGetter,
 			)
 			if err != nil {
@@ -161,7 +155,7 @@ EXAMPLES
 				return err
 			}
 
-			certResp, err := httpclients.GetCert(idToken, proof, pubBytes, viper.GetString("fulcio-server"))
+			certResp, err := httpclients.GetCert(idToken, proof, pubBytes, "http://127.0.0.1:5555")
 			if err != nil {
 				switch t := err.(type) {
 				case *operations.SigningCertDefault:
@@ -186,27 +180,47 @@ EXAMPLES
 				return err
 			}
 
-			fmt.Println("Received signing cerificate with serial number: ", signingCert.SerialNumber)
-
-			fmt.Printf("Received signing Cerificate: %+v\n", signingCert.Subject)
-
-			signature, err := signer.SignMessage(bytes.NewReader(payload))
+			sig, err := signer.SignMessage(bytes.NewReader(bodyByte))
 			if err != nil {
 				panic(fmt.Sprintf("Error occurred while during artifact signing: %s", err))
 			}
 
+			sigb64 := base64.StdEncoding.EncodeToString(sig)
+			certb64 := base64.StdEncoding.EncodeToString(signingCertPEM)
+
+			// We signed over this as maintainers
+			signed := SignedStruct{
+				Signature: sigb64,
+				FulcioCert: certb64,
+				Email: idToken.Subject,
+
+			}
+
+			// Construct the complete policy
+			policyJSON := MainPolicyStruct{
+				BodyStruct:   body,
+				SignedStruct: signed,
+			}// Signed is empty on first initialization of the policy
+
+
+			policyByteArray, err := json.MarshalIndent(policyJSON, "", "  ")
+			if err != nil {
+				return errors.Wrapf(err, "failed to marshal policy json")
+			}
+			//fmt.Println(string(policyByteArray))
+
 			// Send to rekor
-			fmt.Println("Sending entry to transparency log")
+			fmt.Println("Sending policy to transparency log")
 			tlogEntry, err := tlog.UploadToRekor(
 				signingCertPEM,
-				signature,
-				viper.GetString("rekor-server"),
-				payload,
+				sig,
+				"http://127.0.0.1:3000",
+				bodyByte,
 			)
 			if err != nil {
 				return err
 			}
-			fmt.Println("Rekor entry successful. URL: ", tlogEntry)
+			fmt.Printf("Rekor entry successful. URL: http://127.0.0.1:3000%v\n", tlogEntry)
 
 			if viper.IsSet("output") {
 				err = ioutil.WriteFile(viper.GetString("output"), signingCertPEM, 0600)
@@ -214,7 +228,6 @@ EXAMPLES
 					return err
 				}
 			}
-			return nil
 
 			if *outFile != "" {
 				err = ioutil.WriteFile(*outFile, policyByteArray, 0600)
