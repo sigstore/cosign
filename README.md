@@ -408,7 +408,7 @@ The proposed mechanism is flexible enough to support signing arbitrary things.
 ### KMS Support
 
 `cosign` supports using a KMS provider to generate and sign keys.
-Right now cosign supports Vault and GCP KMS, but are hoping to support more in the future!
+Right now cosign supports Hashicorp Vault, AWS KMS, and GCP KMS, and we are hoping to support more in the future!
 
 See the [KMS docs](KMS.md) for more details.
 
