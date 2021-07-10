@@ -25,11 +25,11 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/go-piv/piv-go/piv"
-	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/term"
 )
@@ -62,7 +62,7 @@ func getPin() (string, error) {
 	return string(b), err
 }
 
-func NewPublicKeyProvider(slotName string) (cosign.PublicKey, error) {
+func NewPublicKeyProvider(slotName string) (signature.Verifier, error) {
 	pk, err := GetKey()
 	if err != nil {
 		return nil, err
@@ -72,17 +72,18 @@ func NewPublicKeyProvider(slotName string) (cosign.PublicKey, error) {
 	if slot == nil {
 		return nil, errors.New("invalid slot name")
 	}
-	
+
 	cert, err := pk.Attest(*slot)
 	if err != nil {
 		return nil, err
 	}
+	ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
 	return &PIVSignerVerifier{
-		Pub: cert.PublicKey,
-		ECDSAVerifier: signature.ECDSAVerifier{
-			Key:     cert.PublicKey.(*ecdsa.PublicKey),
-			HashAlg: crypto.SHA256,
-		},
+		Pub:           cert.PublicKey,
+		ECDSAVerifier: ev,
 	}, nil
 }
 
@@ -96,7 +97,7 @@ func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
 	if slot == nil {
 		return nil, errors.New("invalid slot name")
 	}
-	
+
 	cert, err := pk.Attest(*slot)
 	if err != nil {
 		return nil, err
@@ -109,20 +110,21 @@ func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, err
 	}
+	ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
 	return &PIVSignerVerifier{
-		Priv: privKey,
-		Pub:  cert.PublicKey,
-		ECDSAVerifier: signature.ECDSAVerifier{
-			Key:     cert.PublicKey.(*ecdsa.PublicKey),
-			HashAlg: crypto.SHA256,
-		},
+		Priv:          privKey,
+		Pub:           cert.PublicKey,
+		ECDSAVerifier: ev,
 	}, nil
 }
 
 type PIVSignerVerifier struct {
 	Priv crypto.PrivateKey
 	Pub  crypto.PrivateKey
-	signature.ECDSAVerifier
+	*signature.ECDSAVerifier
 }
 
 func (ps *PIVSignerVerifier) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
@@ -135,7 +137,21 @@ func (ps *PIVSignerVerifier) Sign(ctx context.Context, rawPayload []byte) ([]byt
 	return sig, h[:], err
 }
 
-func (ps *PIVSignerVerifier) PublicKey(context.Context) (crypto.PublicKey, error) {
+func (ps *PIVSignerVerifier) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) {
+	signer := ps.Priv.(crypto.Signer)
+
+	h := sha256.New()
+	if _, err := io.Copy(h, message); err != nil {
+		return nil, err
+	}
+	sig, err := signer.Sign(rand.Reader, h.Sum(nil), crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
+	return sig, err
+}
+
+func (ps *PIVSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
 	return ps.Pub, nil
 }
 
