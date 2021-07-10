@@ -21,6 +21,8 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 # Set version variables for LDFLAGS
+PROJECT_ID ?= projectsigstore
+GIT_TAG ?= dirty-tag
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
 DATE_FMT = +'%Y-%m-%dT%H:%M:%SZ'
@@ -84,13 +86,6 @@ ko:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
 
-.PHONY: ko-cloudbuild
-ko-cloudbuild:
-	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
-	CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--tags $(GIT_TAG) --tags $(GIT_HASH) \
-		github.com/sigstore/cosign/cmd/cosign
-
 .PHONY: ko-local
 ko-local:
 	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
@@ -102,7 +97,19 @@ ko-local:
 sign-container: ko
 	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
 
+# used when releasing together with GCP CloudBuild
+.PHONY: release
+release:
+	LDFLAGS=$(LDFLAGS) goreleaser release
+
+.PHONY: docker-cloudbuild
+docker-cloudbuild:
+	docker build -t "gcr.io/$(PROJECT_ID)/cosign:$(GIT_TAG)" \
+		-t "gcr.io/$(PROJECT_ID)/cosign:$(GIT_HASH)" .
+
 .PHONY: sign-container-cloudbuild
-sign-container-cloudbuild: ko-cloudbuild
-	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
-	cosign sign -key .github/workflows/cosign.key -a GIT_TAG=$(GIT_TAG) ${KO_DOCKER_REPO}:$(GIT_TAG)
+sign-container-cloudbuild: docker-cloudbuild
+	docker push gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
+	docker push gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
+	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
+	cosign sign -key .github/workflows/cosign.key -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)

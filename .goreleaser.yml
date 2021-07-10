@@ -1,5 +1,90 @@
+project_name: cosign
+
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=1
+
 builds:
-  - skip: true
+- id: cosign-linux
+  binary: cosign_{{ .Target }}
+  main: ./cmd/cosign
+  goos:
+    - linux
+  goarch:
+    - amd64
+  tags:
+    - pivkey
+  ldflags:
+    - "{{ .Env.LDFLAGS }}"
+  hooks:
+    pre:
+      - apt-get update
+      - apt-get -y install libpcsclite-dev
+  env:
+    - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
+
+- id: cosign-darwin-amd64
+  binary: cosign_{{ .Target }}
+  env:
+    - CC=o64-clang
+    - CXX=o64-clang++
+  main: ./cmd/cosign
+  goos:
+    - darwin
+  goarch:
+    - amd64
+  ldflags:
+    - "{{ .Env.LDFLAGS }}"
+  tags:
+    - pivkey
+
+- id: cosign-darwin-arm64
+  binary: cosign_{{ .Target }}
+  env:
+    - CC=aarch64-apple-darwin20.2-clang
+    - CXX=aarch64-apple-darwin20.2-clang++
+  main: ./cmd/cosign
+  goos:
+    - darwin
+  goarch:
+    - arm64
+  tags:
+    - pivkey
+  ldflags:
+    - "{{.Env.LDFLAGS}}"
+
+- id: cosign-windows-x64
+  binary: cosign_{{.Target}}
+  env:
+    - CC=x86_64-w64-mingw32-gcc
+    - CXX=x86_64-w64-mingw32-g++
+  main: ./cmd/cosign
+  goos:
+    - windows
+  goarch:
+    - amd64
+  ldflags:
+    - -buildmode=exe
+    - "{{ .Env.LDFLAGS }}"
+  tags:
+    - pivkey
+
+signs:
+  - id: cosign
+    signature: "${artifact}.sig"
+    cmd: ./dist/cosign-linux_linux_amd64/cosign_linux_amd64
+    args: ["sign-blob", "-output", "${artifact}.sig", "-key", "./.github/workflows/cosign.key", "${artifact}"]
+    artifacts: binary
+    stdin: "{{ .Env.COSIGN_PASSWORD }}"
+
+archives:
+- format: binary
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+
+snapshot:
+  name_template: SNAPSHOT-{{.ShortCommit}}
 
 release:
   prerelease: true # remove this when we start publishin non-prerelease or set to auto
@@ -10,7 +95,4 @@ release:
     ### Thanks for all contributors!
 
   extra_files:
-      - glob: "cosign-*"
-      - glob: "cosign-*.sig"
-      - glob: "*.sha256"
-      - glob: "./.github/workflows/cosign.pub"
+    - glob: "./.github/workflows/cosign.pub"
