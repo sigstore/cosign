@@ -1,16 +1,37 @@
 # Changelog
 
-## v0.6.0 (pending)
+## v0.6.0
 
 ### Enhancements
 
-* BREAKING: Move `cosign upload-blob` to `cosign upload blob`.
-* BREAKING: Move `cosign upload` to `cosign attach signature`.
-* BREAKING: Move `cosign download` to `cosign download signature`.
+* BREAKING: Moved `cosign upload-blob` to `cosign upload blob` (https://github.com/sigstore/cosign/pull/378)
+* BREAKING: Moved `cosign upload` to `cosign attach signature` (https://github.com/sigstore/cosign/pull/378)
+* BREAKING: Moved `cosign download` to `cosign download signature` (https://github.com/sigstore/cosign/pull/392)
+* Added flags to specify slot, PIN, and touch policies for security keys (Thank you @ddz https://github.com/sigstore/cosign/pull/369)
+* Added `cosign verify-dockerfile` command (https://github.com/sigstore/cosign/pull/395)
+* Added SBOM support in `cosign attach` and `cosign download sbom` (https://github.com/sigstore/cosign/pull/387)
+* Sign & verify images using Kubernetes secrets (A muchas muchas gracias to @developer-guy and @Dentrax https://github.com/sigstore/cosign/pull/398)
+* Added support for AWS KMS (谢谢, @codysoyland https://github.com/sigstore/cosign/pull/426)
+* Numerous enhancements to our build & release process, courtesy @cpanato
 
 ### Bug Fixes
 
+* Verify entry timestamp signatures of fetched Tlog entries (https://github.com/sigstore/cosign/pull/371)
+
 ### Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Panato (@cpanato)
+* Cody Soyland (@codysoyland)
+* Dan Lorenc (@dlorenc)
+* Dino A. Dai Zovi (@ddz)
+* Furkan Türkal (@Dentrax)
+* Jason Hall (@imjasonh)
+* Paris Zoumpouloglou (@zuBux)
+* Priya Wadhwa (@priyawadhwa)
+* Rémy Greinhofer (@rgreinho)
+* Russell Brown (@rjbrown57)
 
 ## v0.5.0
 
