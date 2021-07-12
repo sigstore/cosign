@@ -4,18 +4,36 @@ env:
   - GO111MODULE=on
   - CGO_ENABLED=1
 
+# Prevents parallel builds from stepping on eachothers toes downloading modules
+before:
+  hooks:
+  - go mod tidy
+
 builds:
-- id: cosign-linux
-  binary: cosign_{{ .Target }}
+- id: linux
+  binary: cosign-linux-{{ .Arch }}
+  no_unique_dist_dir: true
   main: ./cmd/cosign
   goos:
     - linux
   goarch:
     - amd64
-  tags:
-    - pivkey
   ldflags:
     - "{{ .Env.LDFLAGS }}"
+  env:
+    - CGO_ENABLED=0
+
+- id: linux-pivkey-amd64
+  binary: cosign-linux-pivkey-amd64
+  main: ./cmd/cosign
+  goos:
+    - linux
+  goarch:
+    - amd64
+  ldflags:
+    - "{{ .Env.LDFLAGS }}"
+  tags:
+    - pivkey
   hooks:
     pre:
       - apt-get update
@@ -23,8 +41,9 @@ builds:
   env:
     - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
 
-- id: cosign-darwin-amd64
-  binary: cosign_{{ .Target }}
+- id: darwin-amd64
+  binary: cosign-darwin-amd64
+  no_unique_dist_dir: true
   env:
     - CC=o64-clang
     - CXX=o64-clang++
@@ -38,8 +57,9 @@ builds:
   tags:
     - pivkey
 
-- id: cosign-darwin-arm64
-  binary: cosign_{{ .Target }}
+- id: darwin-arm64
+  binary: cosign-darwin-arm64
+  no_unique_dist_dir: true
   env:
     - CC=aarch64-apple-darwin20.2-clang
     - CXX=aarch64-apple-darwin20.2-clang++
@@ -53,8 +73,9 @@ builds:
   ldflags:
     - "{{.Env.LDFLAGS}}"
 
-- id: cosign-windows-x64
-  binary: cosign_{{.Target}}
+- id: windows-amd64
+  binary: cosign-windows-amd64
+  no_unique_dist_dir: true
   env:
     - CC=x86_64-w64-mingw32-gcc
     - CXX=x86_64-w64-mingw32-g++
@@ -72,13 +93,14 @@ builds:
 signs:
   - id: cosign
     signature: "${artifact}.sig"
-    cmd: ./dist/cosign-linux_linux_amd64/cosign_linux_amd64
+    cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "-output", "${artifact}.sig", "-key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
     stdin: "{{ .Env.COSIGN_PASSWORD }}"
 
 archives:
 - format: binary
+  name_template: "{{ .Binary }}"
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
@@ -88,6 +110,7 @@ snapshot:
 
 release:
   prerelease: true # remove this when we start publishin non-prerelease or set to auto
+  draft: true # allow for manual edits
   github:
     owner: sigstore
     name: cosign

@@ -67,7 +67,7 @@ steps:
   - |
     apt-get update
     apt-get install libpcsclite-dev -y
-    cp ./dist/cosign-linux_linux_amd64/cosign_linux_amd64 /usr/local/bin/cosign
+    cp ./dist/cosign-linux-amd64 /usr/local/bin/cosign
     make sign-container-cloudbuild
 
 availableSecrets:
@@ -79,8 +79,8 @@ artifacts:
   objects:
     location: 'gs://${_STORAGE_LOCATION}/${_GIT_TAG}'
     paths:
-    - "go/src/sigstore/cosign/dist/*/cosign*"
-    - "go/src/sigstore/cosign/.github/workflows/cosign.pub"
+    - "go/src/sigstore/cosign/dist/cosign*"
+    - "go/src/sigstore/cosign/release/release-cosign.pub"
 
 options:
   machineType: E2_HIGHCPU_8
