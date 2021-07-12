@@ -28,7 +28,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/tlog"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
 	"net/mail"
@@ -41,9 +40,10 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
-type MainPolicyStruct struct {
-	BodyStruct   BodyStruct `json:"body"`
-	SignedStruct SignedStruct     `json:"signed"`
+type SignedStruct struct {
+	Email       string  `json:"email"`
+	FuclioCert  string  `json:"fuclio_cert"`
+	Signature   string  `json:"signature"`
 }
 
 type BodyStruct struct {
@@ -53,11 +53,11 @@ type BodyStruct struct {
 	Expires           time.Time `json:"expires"`
 }
 
-type SignedStruct struct {
-	Email      string `json:"email"`
-	FulcioCert string `json:"fuclio_cert"`
-	Signature  string `json:"signature"`
+type MainStruct struct {
+	Body BodyStruct `json:"body"`
+	Signed []SignedStruct `json:"signed"`
 }
+
 
 type Signed []*SignedStruct
 
@@ -121,8 +121,6 @@ EXAMPLES
 			if err != nil {
 				return errors.Wrapf(err, "failed to marshal policy body json")
 			}
-
-
 
 			// Retrieve idToken from oidc provider re"
 			idToken, err := oauthflow.OIDConnect(
@@ -188,26 +186,27 @@ EXAMPLES
 			sigb64 := base64.StdEncoding.EncodeToString(sig)
 			certb64 := base64.StdEncoding.EncodeToString(signingCertPEM)
 
-			// We signed over this as maintainers
-			signed := SignedStruct{
-				Signature: sigb64,
-				FulcioCert: certb64,
-				Email: idToken.Subject,
+			policyJSON := MainStruct{
+				Body: BodyStruct{
+					Maintainers:       emailList,
+					RegistryNamespace: *nameSpace,
+					Threshold:         *threshHold,
+					Expires:           time.Now(),
+				},
+				Signed: []SignedStruct{
+					{
+						Email: idToken.Subject,
+						FuclioCert: certb64,
+						Signature: sigb64,
 
+					},
+				},
 			}
-
-			// Construct the complete policy
-			policyJSON := MainPolicyStruct{
-				BodyStruct:   body,
-				SignedStruct: signed,
-			}// Signed is empty on first initialization of the policy
-
 
 			policyByteArray, err := json.MarshalIndent(policyJSON, "", "  ")
 			if err != nil {
 				return errors.Wrapf(err, "failed to marshal policy json")
 			}
-			//fmt.Println(string(policyByteArray))
 
 			// Send to rekor
 			fmt.Println("Sending policy to transparency log")
@@ -221,13 +220,6 @@ EXAMPLES
 				return err
 			}
 			fmt.Printf("Rekor entry successful. URL: http://127.0.0.1:3000%v\n", tlogEntry)
-
-			if viper.IsSet("output") {
-				err = ioutil.WriteFile(viper.GetString("output"), signingCertPEM, 0600)
-				if err != nil {
-					return err
-				}
-			}
 
 			if *outFile != "" {
 				err = ioutil.WriteFile(*outFile, policyByteArray, 0600)
