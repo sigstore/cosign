@@ -39,9 +39,13 @@ steps:
   env:
   - "GOPATH=/workspace/go"
   - "GOBIN=/workspace/bin"
+  - PROJECT_ID=${PROJECT_ID}
+  - KEY_LOCATION=${_KEY_LOCATION}
+  - KEY_RING=${_KEY_RING}
+  - KEY_NAME=${_KEY_NAME}
+  - KEY_VERSION=${_KEY_VERSION}
   secretEnv:
   - GITHUB_TOKEN
-  - COSIGN_PASSWORD
   args:
     - '-c'
     - |
@@ -54,6 +58,10 @@ steps:
   env:
   - GIT_TAG=${_GIT_TAG}
   - PROJECT_ID=${PROJECT_ID}
+  - KEY_LOCATION=${_KEY_LOCATION}
+  - KEY_RING=${_KEY_RING}
+  - KEY_NAME=${_KEY_NAME}
+  - KEY_VERSION=${_KEY_VERSION}
   args:
   - '-c'
   - |
@@ -61,15 +69,11 @@ steps:
     apt-get install libpcsclite-dev -y
     cp ./dist/cosign-linux_linux_amd64/cosign_linux_amd64 /usr/local/bin/cosign
     make sign-container-cloudbuild
-  secretEnv:
-  - COSIGN_PASSWORD
 
 availableSecrets:
   secretManager:
   - versionName: projects/${PROJECT_NUMBER}/secrets/GITHUB_TOKEN/versions/latest
     env: GITHUB_TOKEN
-  - versionName: projects/${PROJECT_NUMBER}/secrets/COSIGN_PASSWORD/versions/latest
-    env: COSIGN_PASSWORD
 
 artifacts:
   objects:
@@ -94,3 +98,7 @@ substitutions:
   _TOOL_REPO: 'honk-repo'
   _TOOL_REF: 'release-honk'
   _STORAGE_LOCATION: 'honk'
+  _KEY_RING: 'honk-ring'
+  _KEY_NAME: 'honk-crypto'
+  _KEY_VERSION: '1'
+  _KEY_LOCATION: 'global'
