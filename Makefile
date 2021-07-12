@@ -111,5 +111,5 @@ docker-cloudbuild:
 sign-container-cloudbuild: docker-cloudbuild
 	docker push gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
 	docker push gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
-	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
-	cosign sign -key .github/workflows/cosign.key -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
+	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
+	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
