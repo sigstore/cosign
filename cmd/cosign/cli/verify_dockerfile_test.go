@@ -39,8 +39,8 @@ func TestGetImagesFromDockerfile(t *testing.T) {
 		},
 		{
 			name:         "tag with as",
-			fileContents: `FROM golang:1.16.5 as build`,
-			expected:     []string{"gcr.io/test/image:latest"},
+			fileContents: `FROM gcr.io/test/image:1.16.5 as build`,
+			expected:     []string{"gcr.io/test/image:1.16.5"},
 		},
 		{
 			name:         "digest",

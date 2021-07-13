@@ -122,9 +122,10 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 }
 
 func getImageFromLine(line string) string {
-	line = strings.TrimPrefix(line, "FROM") // Remove "FROM" prefix
-	line = os.ExpandEnv(line)               // Substitute templated vars
-	line = strings.Split(line, " AS ")[0]   // Remove the "AS" portion of line
+	line = strings.TrimPrefix(line, "FROM")     // Remove "FROM" prefix
+	line = os.ExpandEnv(line)                   // Substitute templated vars
+	line = strings.ReplaceAll(line, "as", "AS") // replace lower "as" with "AS"
+	line = strings.Split(line, " AS ")[0]       // Remove the "AS" portion of line
 	fields := strings.Fields(line)
 	return fields[len(fields)-1] // The image should be the last portion of the line that remains
 }
