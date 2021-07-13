@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.16.5 as build
+FROM golang:1.16.6 as build
 
 WORKDIR /go/src/cosign
 ADD . /go/src/cosign
