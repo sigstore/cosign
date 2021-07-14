@@ -62,12 +62,14 @@ steps:
   - KEY_RING=${_KEY_RING}
   - KEY_NAME=${_KEY_NAME}
   - KEY_VERSION=${_KEY_VERSION}
+  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
   args:
   - '-c'
   - |
     apt-get update
     apt-get install libpcsclite-dev -y
     cp ./dist/cosign-linux-amd64 /usr/local/bin/cosign
+    cosign verify-dockerfile -base-image-only -key https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub ./Dockerfile
     make sign-container-cloudbuild
 
 availableSecrets:
@@ -102,3 +104,4 @@ substitutions:
   _KEY_NAME: 'honk-crypto'
   _KEY_VERSION: '1'
   _KEY_LOCATION: 'global'
+  _RUNTIME_IMAGE: 'gcr.io/distroless/static'
