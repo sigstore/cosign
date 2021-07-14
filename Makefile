@@ -102,9 +102,12 @@ sign-container: ko
 release:
 	LDFLAGS=$(LDFLAGS) goreleaser release
 
+RUNTIME_IMAGE ?= gcr.io/distroless/static
+
 .PHONY: docker-cloudbuild
 docker-cloudbuild:
-	docker build -t "gcr.io/$(PROJECT_ID)/cosign:$(GIT_TAG)" \
+	docker build --build-arg RUNTIME_IMAGE=$(RUNTIME_IMAGE) \
+		-t "gcr.io/$(PROJECT_ID)/cosign:$(GIT_TAG)" \
 		-t "gcr.io/$(PROJECT_ID)/cosign:$(GIT_HASH)" .
 
 .PHONY: sign-container-cloudbuild

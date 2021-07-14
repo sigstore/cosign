@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG RUNTIME_IMAGE=gcr.io/distroless/base:debug
+
 FROM golang:1.16.6 as build
 
 WORKDIR /go/src/cosign
@@ -19,7 +21,7 @@ ADD . /go/src/cosign
 
 RUN make cosign
 
-FROM gcr.io/distroless/base:debug
+FROM $RUNTIME_IMAGE
 
 COPY --from=build /go/src/cosign/cosign /bin/
 
