@@ -126,12 +126,9 @@ The following checks were performed on these signatures:
 OCI registries are useful for storing more than just container images!
 `Cosign` also includes some utilities for publishing generic artifacts, including binaries, scripts, and configuration files using the OCI protocol.
 
-### Blobs
-
-OCI registries are useful for storing more than just container images!
-`Cosign` also includes some utilities for publishing generic artifacts, including binaries, scripts, and configuration files using the OCI protocol.
-
 This section shows how to leverage these for an easy-to-use, backwards-compatible artifact distribution system that integrates well with the rest of Sigstore.
+
+### Blobs
 
 You can publish an artifact with `cosign upload blob`:
 
@@ -196,11 +193,11 @@ The signature, claims and transparency log proofs are all verified automatically
 
 #### Tekton Bundles
 
-(Tekton)[https://tekton.dev] bundles can be uploaded and managed within an OCI registry.
-The specification is [here]https://tekton.dev/docs/pipelines/tekton-bundle-contracts/.
+[Tekton](https://tekton.dev) bundles can be uploaded and managed within an OCI registry.
+The specification is [here](https://tekton.dev/docs/pipelines/tekton-bundle-contracts/).
 This means they can also be signed and verified with `cosign`.
 
-Tekon Bundles can curently be uploaded with the [tkn cli](github.com/tekton/cli), but we may add this support to
+Tekton Bundles can currently be uploaded with the [tkn cli](github.com/tekton/cli), but we may add this support to
 `cosign` in the future.
 
 ```shell
@@ -250,7 +247,7 @@ Today, `cosign` has been tested and works against the following registries:
 * Azure Container Registry
 * JFrog Artifactory Container Registry
 * The CNCF distribution/distribution Registry
-* Gitlab Container Registry
+* GitLab Container Registry
 * GitHub Container Registry
 * The CNCF Harbor Registry
 * Digital Ocean Container Registry
@@ -325,7 +322,7 @@ That looks like:
 **Note:** This can be generated for an image reference using `cosign generate <image>`.
 
 I'm happy to switch this format to something else if it makes sense.
-See [https://github.com/notaryproject/nv2/issues/40] for one option.
+See https://github.com/notaryproject/nv2/issues/40 for one option.
 
 
 #### Registry Details
@@ -338,7 +335,7 @@ Similarly, they **can** easily be copied from one environment to another, but th
 automatic.
 
 Multiple signatures are stored in a list which is unfortunately "racy" today.
-To add a signtaure, clients orchestrate a "read-append-write" operation, so the last write
+To add a signature, clients orchestrate a "read-append-write" operation, so the last write
 will win in the case of contention.
 
 ##### Specifying Registry
@@ -406,8 +403,6 @@ The proposed mechanism is flexible enough to support signing arbitrary things.
 Right now cosign supports Hashicorp Vault, AWS KMS, and GCP KMS, and we are hoping to support more in the future!
 
 See the [KMS docs](KMS.md) for more details.
-
-```
 
 ### OCI Artifacts
 
@@ -630,8 +625,11 @@ $ cosign verify -key cosign.pub dlorenc/demo | jq .
     "sig": "original"
   }
 }
+```
 
-# Now give that signature a memorable name, then sign that
+Now give that signature a memorable name, then sign that:
+
+```shell
 $ crane tag $(cosign triangulate dlorenc/demo) mysignature
 2021/02/15 20:22:55 dlorenc/demo:mysignature: digest: sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e size: 556
 $ cosign sign -key cosign.key -a sig=counter dlorenc/demo:mysignature
@@ -639,8 +637,11 @@ Enter password for private key:
 Pushing signature to: dlorenc/demo:sha256-71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e.sig
 $ cosign verify -key cosign.pub dlorenc/demo:mysignature
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e"},"Type":"cosign container image signature"},"Optional":{"sig":"counter"}}
+```
 
-# Finally, check the original signature
+Finally, check the original signature:
+
+```shell
 $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e
 {
   "schemaVersion": 2,
