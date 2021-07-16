@@ -59,7 +59,10 @@ EXAMPLES
   cosign public-key -key https://host.for/<FILE> -outfile <OUTPUT>
 
   # extract public key from Google Cloud KMS key pair
-  cosign public-key -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>`,
+  cosign public-key -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>
+
+  # extract public key from Hashicorp Vault KMS key pair
+  cosign public-key -key hashivault://<KEY>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 
