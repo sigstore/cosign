@@ -133,11 +133,11 @@ OCI registries are useful for storing more than just container images!
 
 This section shows how to leverage these for an easy-to-use, backwards-compatible artifact distribution system that integrates well with the rest of Sigstore.
 
-You can publish an artifact with `cosign upload-blob`:
+You can publish an artifact with `cosign upload blob`:
 
 ```shell
 $ echo "my first artifact" > artifact
-$ cosign upload-blob -f artifact gcr.io/dlorenc-vmtest2/artifact
+$ cosign upload blob -f artifact gcr.io/dlorenc-vmtest2/artifact
 Uploading file from [artifact] to [gcr.io/dlorenc-vmtest2/artifact:latest] with media type [text/plain; charset=utf-8]
 File is available directly at [us.gcr.io/v2/dlorenc-vmtest2/readme/blobs/sha256:b57400c0ad852a7c2f6f7da4a1f94547692c61f3e921a49ba3a41805ae8e1e99]
 us.gcr.io/dlorenc-vmtest2/readme@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec
@@ -286,14 +286,6 @@ To configure the rekor server, set the `REKOR_SERVER` env variable.
 Keys are stored in PEM-encoded PKCS8 format.
 However, you can use `cosign` to store and retrieve signatures in any format, from any algorithm.
 
-`cosign` does not handle key-distribution or PKI.
-
-`cosign` does not handle expiry or revocation.
-See [here](https://github.com/notaryproject/requirements/pull/47) for some discussion on the topic.
-
-`cosign` does not handle public-key management or storage.
-There are no keyrings or local state.
-
 ### Unintentionally Missing Features
 
 `cosign` will integrate with transparency logs!
@@ -301,6 +293,9 @@ See https://github.com/sigstore/cosign/issues/34 for more info.
 
 `cosign` will integrate with even more transparency logs, and a PKI.
 See https://github.com/sigStore/fulcio for more info.
+
+`cosign` will also support The Update Framework for delegations, key discovery and expiration.
+See https://github.com/sigstore/cosign/issues/86 for more info!
 
 ### Things That Should Probably Change
 
