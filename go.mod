@@ -33,5 +33,5 @@ require (
 	google.golang.org/genproto v0.0.0-20210713002101-d411969a0d9a // indirect
 	k8s.io/api v0.21.3
 	k8s.io/apimachinery v0.21.3
-	k8s.io/client-go v0.21.2
+	k8s.io/client-go v0.21.3
 )
