@@ -45,7 +45,7 @@ func VerifyBlob() *ffcli.Command {
 		flagset   = flag.NewFlagSet("cosign verify-blob", flag.ExitOnError)
 		key       = flagset.String("key", "", "path to the public key file, URL, or KMS URI")
 		sk        = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot      = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
+		slot      = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "path to the signature")
 	)

@@ -78,7 +78,7 @@ func Sign() *ffcli.Command {
 		key         = flagset.String("key", "", "path to the private key file, KMS URI or Kubernetes Secret")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		sk          = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot        = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
+		slot        = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force       = flagset.Bool("f", false, "skip warnings and confirmations")
 		recursive   = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
