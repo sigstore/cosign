@@ -18,14 +18,12 @@
 package pivkey
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
+	"crypto/rsa"
+	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -77,14 +75,30 @@ func NewPublicKeyProvider(slotName string) (signature.Verifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-	if err != nil {
-		return nil, err
+
+	switch cert.PublicKeyAlgorithm {
+	case x509.ECDSA:
+		ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
+		return &ECSignerVerifier{
+			Pub:           cert.PublicKey,
+			ECDSAVerifier: ev,
+		}, nil
+
+	case x509.RSA:
+		rv, err := signature.LoadRSAPKCS1v15Verifier(cert.PublicKey.(*rsa.PublicKey), crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
+		return &RSASignerVerifier{
+			Pub:                 cert.PublicKey,
+			RSAPKCS1v15Verifier: rv,
+		}, nil
 	}
-	return &PIVSignerVerifier{
-		Pub:           cert.PublicKey,
-		ECDSAVerifier: ev,
-	}, nil
+
+	return nil, fmt.Errorf("unsupported key type: %T", cert.PublicKey)
 }
 
 func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
@@ -110,52 +124,33 @@ func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-	if err != nil {
-		return nil, err
+
+	switch cert.PublicKeyAlgorithm {
+	case x509.ECDSA:
+		ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
+		return &ECSignerVerifier{
+			Priv:          privKey,
+			Pub:           cert.PublicKey,
+			ECDSAVerifier: ev,
+		}, nil
+
+	case x509.RSA:
+		rv, err := signature.LoadRSAPKCS1v15Verifier(cert.PublicKey.(*rsa.PublicKey), crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
+		return &RSASignerVerifier{
+			Priv:                privKey,
+			Pub:                 cert.PublicKey,
+			RSAPKCS1v15Verifier: rv,
+		}, nil
 	}
-	return &PIVSignerVerifier{
-		Priv:          privKey,
-		Pub:           cert.PublicKey,
-		ECDSAVerifier: ev,
-	}, nil
+
+	return nil, fmt.Errorf("unsupported key type: %T", cert.PublicKey)
 }
-
-type PIVSignerVerifier struct {
-	Priv crypto.PrivateKey
-	Pub  crypto.PrivateKey
-	*signature.ECDSAVerifier
-}
-
-func (ps *PIVSignerVerifier) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
-	signer := ps.Priv.(crypto.Signer)
-	h := sha256.Sum256(rawPayload)
-	sig, err := signer.Sign(rand.Reader, h[:], crypto.SHA256)
-	if err != nil {
-		return nil, nil, err
-	}
-	return sig, h[:], err
-}
-
-func (ps *PIVSignerVerifier) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) {
-	signer := ps.Priv.(crypto.Signer)
-
-	h := sha256.New()
-	if _, err := io.Copy(h, message); err != nil {
-		return nil, err
-	}
-	sig, err := signer.Sign(rand.Reader, h.Sum(nil), crypto.SHA256)
-	if err != nil {
-		return nil, err
-	}
-	return sig, err
-}
-
-func (ps *PIVSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
-	return ps.Pub, nil
-}
-
-var _ signature.Signer = &PIVSignerVerifier{}
 
 func GetYubikey() (*piv.YubiKey, error) {
 	cards, err := piv.Cards()
