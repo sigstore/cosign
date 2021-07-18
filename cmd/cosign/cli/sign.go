@@ -18,9 +18,13 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	_ "crypto/sha256" // for `crypto.SHA256`
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -76,6 +80,7 @@ func Sign() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
 		key         = flagset.String("key", "", "path to the private key file, KMS URI or Kubernetes Secret")
+		cert        = flagset.String("cert", "", "Path to the x509 certificate to include in the Signature")
 		upload      = flagset.Bool("upload", true, "whether to upload the signature")
 		sk          = flagset.Bool("sk", false, "whether to use a hardware security key")
 		slot        = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
@@ -129,7 +134,7 @@ EXAMPLES
 				IDToken:     *idToken,
 			}
 			for _, img := range args {
-				if err := SignCmd(ctx, so, img, *upload, *payloadPath, *force, *recursive); err != nil {
+				if err := SignCmd(ctx, so, img, *cert, *upload, *payloadPath, *force, *recursive); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
@@ -183,7 +188,7 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 }
 
 func SignCmd(ctx context.Context, so SignOpts,
-	imageRef string, upload bool, payloadPath string, force bool, recursive bool) error {
+	imageRef string, certPath string, upload bool, payloadPath string, force bool, recursive bool) error {
 
 	// A key file or token is required unless we're in experimental mode!
 	if EnableExperimental() {
@@ -229,16 +234,28 @@ func SignCmd(ctx context.Context, so SignOpts,
 	switch {
 	case so.Sk:
 		sk, err := pivkey.GetKeyWithSlot(so.Slot)
+		defer sk.Close()
 		if err != nil {
 			return err
 		}
-		defer sk.Close()
 		skSigner, err := sk.SignerVerifier()
 		if err != nil {
 			return err
 		}
 		signer = skSigner
 		dupeDetector = skSigner
+
+		// Handle the -cert flag.
+		// With PIV, we assume the certificate is in the same slot on the PIV
+		// token as the private key. If it's not there, show a warning to the
+		// user.
+		certFromPIV, err := sk.Certificate()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
+			break
+		}
+		cert = string(cosign.CertToPem(certFromPIV))
+
 	case so.KeyRef != "":
 		k, err := signerVerifierFromKeyRef(ctx, so.KeyRef, so.Pf)
 		if err != nil {
@@ -246,6 +263,45 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 		signer = k
 		dupeDetector = k
+
+		// Handle the -cert flag
+		if certPath == "" {
+			break
+		}
+		certBytes, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			return errors.Wrap(err, "read certificate")
+		}
+		// Handle PEM.
+		if bytes.HasPrefix(certBytes, []byte("-----")) {
+			decoded, _ := pem.Decode(certBytes)
+			if decoded.Type != "CERTIFICATE" {
+				return fmt.Errorf("supplied PEM file is not a certificate: %s", certPath)
+			}
+			certBytes = decoded.Bytes
+		}
+		parsedCert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			return errors.Wrap(err, "parse x509 certificate")
+		}
+		pk, err := k.PublicKey()
+		if err != nil {
+			return errors.Wrap(err, "get public key")
+		}
+		switch kt := parsedCert.PublicKey.(type) {
+		case *ecdsa.PublicKey:
+			if !kt.Equal(pk) {
+				return errors.New("public key in certificate does not match that in the signing key")
+			}
+		case *rsa.PublicKey:
+			if !kt.Equal(pk) {
+				return errors.New("public key in certificate does not match that in the signing key")
+			}
+		default:
+			return fmt.Errorf("unsupported key type: %T", parsedCert.PublicKey)
+		}
+		cert = string(cosign.CertToPem(parsedCert))
+
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
 		k, err := fulcio.NewSigner(ctx, so.IDToken)

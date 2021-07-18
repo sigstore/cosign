@@ -23,7 +23,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-type empty struct{}
+// The empty struct is used so this file never imports piv-go which is
+// dependent on cgo and will fail to build if imported.
+type empty struct{} //nolint
 
 type Key struct{}
 
@@ -69,7 +71,7 @@ func (k *Key) Unblock(puk, newPIN string) error {
 	return errors.New("unimplemented")
 }
 
-func (k *Key) GenerateKey(mgmtKey [24]byte, slot *empty, opts *empty) (*empty, error) {
+func (k *Key) GenerateKey(mgmtKey [24]byte, slot *empty, opts *empty) (*empty, error) { //nolint
 	return nil, errors.New("unimplemented")
 }
 
