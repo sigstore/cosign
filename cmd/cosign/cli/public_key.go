@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
@@ -111,11 +112,16 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		}
 		k = s
 	case opts.Sk:
-		sk, err := pivkey.NewPublicKeyProvider(opts.Slot)
+		sk, err := pivkey.GetKeyWithSlot(opts.Slot)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "opening piv token")
 		}
-		k = sk
+		defer sk.Close()
+		pk, err := sk.Verifier()
+		if err != nil {
+			return errors.Wrap(err, "initializing piv token verifier")
+		}
+		k = pk
 	}
 
 	pemBytes, err := cosign.PublicKeyPem(k, options.WithContext(ctx))

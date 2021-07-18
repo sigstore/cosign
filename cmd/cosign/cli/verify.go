@@ -133,9 +133,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 			return errors.Wrap(err, "loading public key")
 		}
 	} else if c.Sk {
-		pubKey, err = pivkey.NewPublicKeyProvider(c.Slot)
+		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
-			return errors.Wrap(err, "initializing security key")
+			return errors.Wrap(err, "opening piv token")
+		}
+		defer sk.Close()
+		pubKey, err = sk.Verifier()
+		if err != nil {
+			return errors.Wrap(err, "initializing piv token verifier")
 		}
 	}
 	co.SigVerifier = pubKey

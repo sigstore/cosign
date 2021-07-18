@@ -228,12 +228,17 @@ func SignCmd(ctx context.Context, so SignOpts,
 	var cert, chain string
 	switch {
 	case so.Sk:
-		sk, err := pivkey.NewSignerVerifier(so.Slot)
+		sk, err := pivkey.GetKeyWithSlot(so.Slot)
 		if err != nil {
 			return err
 		}
-		signer = sk
-		dupeDetector = sk
+		defer sk.Close()
+		skSigner, err := sk.SignerVerifier()
+		if err != nil {
+			return err
+		}
+		signer = skSigner
+		dupeDetector = skSigner
 	case so.KeyRef != "":
 		k, err := signerVerifierFromKeyRef(ctx, so.KeyRef, so.Pf)
 		if err != nil {

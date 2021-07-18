@@ -160,22 +160,17 @@ func (a *Attestations) Output() {
 }
 
 func AttestationCmd(_ context.Context, slotArg string) (*Attestations, error) {
-	slot := pivkey.SlotForName(slotArg)
-	if slot == nil {
-		return nil, flag.ErrHelp
-	}
-
-	yk, err := pivkey.GetKey()
+	yk, err := pivkey.GetKeyWithSlot(slotArg)
 	if err != nil {
 		return nil, err
 	}
 	defer yk.Close()
-	deviceCert, err := yk.AttestationCertificate()
+	deviceCert, err := yk.GetAttestationCertificate()
 	if err != nil {
 		return nil, err
 	}
 
-	keyCert, err := yk.Attest(*slot)
+	keyCert, err := yk.Attest()
 	if err != nil {
 		return nil, err
 	}

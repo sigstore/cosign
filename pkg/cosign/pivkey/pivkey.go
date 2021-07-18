@@ -22,19 +22,36 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
-	"errors"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
-	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/term"
 )
 
-func GetKey() (*piv.YubiKey, error) {
+var (
+	KeyNotInitialized error = errors.New("key not initialzied")
+	SlotNotSet        error = errors.New("slot not set")
+)
+
+type Key struct {
+	Pub  crypto.PublicKey
+	Priv crypto.PrivateKey
+
+	card *piv.YubiKey
+	slot *piv.Slot
+	pin  string
+}
+
+func GetKey() (*Key, error) {
 	cards, err := piv.Cards()
 	if err != nil {
 		return nil, err
@@ -49,7 +66,131 @@ func GetKey() (*piv.YubiKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return yk, nil
+	return &Key{card: yk}, nil
+}
+
+func GetKeyWithSlot(slot string) (*Key, error) {
+	card, err := GetKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "open key")
+	}
+
+	card.slot = SlotForName(slot)
+
+	return card, nil
+}
+
+func (k *Key) Close() {
+	k.Pub = nil
+	k.Priv = nil
+
+	k.slot = nil
+	k.pin = ""
+	k.card.Close()
+}
+
+func (k *Key) Authenticate(pin string) {
+	k.pin = pin
+}
+
+func (k *Key) SetSlot(slot string) {
+	k.slot = SlotForName(slot)
+}
+
+func (k *Key) Attest() (*x509.Certificate, error) {
+	if k.card == nil {
+		return nil, KeyNotInitialized
+	}
+
+	return k.card.Attest(*k.slot)
+}
+
+func (k *Key) GetAttestationCertificate() (*x509.Certificate, error) {
+	if k.card == nil {
+		return nil, KeyNotInitialized
+	}
+
+	return k.card.AttestationCertificate()
+}
+
+func (k *Key) SetManagementKey(old, new [24]byte) error {
+	if k.card == nil {
+		return KeyNotInitialized
+	}
+
+	return k.card.SetManagementKey(old, new)
+}
+
+func (k *Key) SetPIN(old, new string) error {
+	if k.card == nil {
+		return KeyNotInitialized
+	}
+
+	return k.card.SetPIN(old, new)
+}
+
+func (k *Key) SetPUK(old, new string) error {
+	if k.card == nil {
+		return KeyNotInitialized
+	}
+
+	return k.card.SetPUK(old, new)
+}
+
+func (k *Key) Reset() error {
+	if k.card == nil {
+		return KeyNotInitialized
+	}
+
+	return k.card.Reset()
+}
+
+func (k *Key) Unblock(puk, newPIN string) error {
+	if k.card == nil {
+		return KeyNotInitialized
+	}
+
+	return k.card.Unblock(puk, newPIN)
+}
+
+func (k *Key) GenerateKey(mgmtKey [24]byte, slot piv.Slot, opts piv.Key) (crypto.PublicKey, error) {
+	if k.card == nil {
+		return nil, KeyNotInitialized
+	}
+
+	return k.card.GenerateKey(mgmtKey, slot, opts)
+}
+
+func (k *Key) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+	return k.Pub, nil
+}
+
+func (k *Key) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
+	sig, err := ioutil.ReadAll(signature)
+	if err != nil {
+		return errors.Wrap(err, "read signature")
+	}
+	msg, err := ioutil.ReadAll(message)
+	if err != nil {
+		return errors.Wrap(err, "read message")
+	}
+	digest := sha256.Sum256(msg)
+
+	att, err := k.Attest()
+	if err != nil {
+		return errors.Wrap(err, "get attestation")
+	}
+	switch kt := att.PublicKey.(type) {
+	case *ecdsa.PublicKey:
+		if ecdsa.VerifyASN1(kt, digest[:], sig) {
+			return nil
+		}
+		return errors.New("invalid ecdsa signature")
+	case *rsa.PublicKey:
+		return rsa.VerifyPKCS1v15(kt, crypto.SHA256, digest[:], sig)
+	}
+
+	return fmt.Errorf("unsupported key type: %T", att.PublicKey)
 }
 
 func getPin() (string, error) {
@@ -62,73 +203,63 @@ func getPin() (string, error) {
 	return string(b), err
 }
 
-func NewPublicKeyProvider(slotName string) (signature.Verifier, error) {
-	pk, err := GetKey()
+func (k *Key) Verifier() (signature.Verifier, error) {
+	if k.card == nil {
+		return nil, KeyNotInitialized
+	}
+	if k.slot == nil {
+		return nil, SlotNotSet
+	}
+	cert, err := k.card.Attest(*k.slot)
 	if err != nil {
 		return nil, err
 	}
+	k.Pub = (*crypto.PublicKey)(&cert.PublicKey)
 
-	slot := SlotForName(slotName)
-	if slot == nil {
-		return nil, errors.New("invalid slot name")
-	}
-
-	cert, err := pk.Attest(*slot)
-	if err != nil {
-		return nil, err
-	}
-	ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-	if err != nil {
-		return nil, err
-	}
-	return &PIVSignerVerifier{
-		Pub:           cert.PublicKey,
-		ECDSAVerifier: ev,
-	}, nil
+	return k, nil
 }
 
-func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
-	pk, err := GetKey()
-	if err != nil {
-		return nil, err
+func (k *Key) Certificate() (*x509.Certificate, error) {
+	if k.card == nil {
+		return nil, KeyNotInitialized
+	}
+	if k.slot == nil {
+		return nil, SlotNotSet
 	}
 
-	slot := SlotForName(slotName)
-	if slot == nil {
-		return nil, errors.New("invalid slot name")
-	}
-
-	cert, err := pk.Attest(*slot)
-	if err != nil {
-		return nil, err
-	}
-
-	auth := piv.KeyAuth{
-		PINPrompt: getPin,
-	}
-	privKey, err := pk.PrivateKey(*slot, cert.PublicKey, auth)
-	if err != nil {
-		return nil, err
-	}
-	ev, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-	if err != nil {
-		return nil, err
-	}
-	return &PIVSignerVerifier{
-		Priv:          privKey,
-		Pub:           cert.PublicKey,
-		ECDSAVerifier: ev,
-	}, nil
+	return k.card.Certificate(*k.slot)
 }
 
-type PIVSignerVerifier struct {
-	Priv crypto.PrivateKey
-	Pub  crypto.PrivateKey
-	*signature.ECDSAVerifier
+func (k *Key) SignerVerifier() (signature.SignerVerifier, error) {
+	if k.card == nil {
+		return nil, KeyNotInitialized
+	}
+	if k.slot == nil {
+		return nil, SlotNotSet
+	}
+	cert, err := k.card.Attest(*k.slot)
+	if err != nil {
+		return nil, err
+	}
+	k.Pub = (*crypto.PublicKey)(&cert.PublicKey)
+
+	var auth piv.KeyAuth
+	if k.pin == "" {
+		auth.PINPrompt = getPin
+	} else {
+		auth.PIN = k.pin
+	}
+	privKey, err := k.card.PrivateKey(*k.slot, cert.PublicKey, auth)
+	if err != nil {
+		return nil, err
+	}
+	k.Priv = privKey
+
+	return k, nil
 }
 
-func (ps *PIVSignerVerifier) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
-	signer := ps.Priv.(crypto.Signer)
+func (k *Key) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
+	signer := k.Priv.(crypto.Signer)
 	h := sha256.Sum256(rawPayload)
 	sig, err := signer.Sign(rand.Reader, h[:], crypto.SHA256)
 	if err != nil {
@@ -137,9 +268,8 @@ func (ps *PIVSignerVerifier) Sign(ctx context.Context, rawPayload []byte) ([]byt
 	return sig, h[:], err
 }
 
-func (ps *PIVSignerVerifier) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) {
-	signer := ps.Priv.(crypto.Signer)
-
+func (k *Key) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) {
+	signer := k.Priv.(crypto.Signer)
 	h := sha256.New()
 	if _, err := io.Copy(h, message); err != nil {
 		return nil, err
@@ -149,43 +279,4 @@ func (ps *PIVSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 		return nil, err
 	}
 	return sig, err
-}
-
-func (ps *PIVSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
-	return ps.Pub, nil
-}
-
-var _ signature.Signer = &PIVSignerVerifier{}
-
-func GetYubikey() (*piv.YubiKey, error) {
-	cards, err := piv.Cards()
-	if err != nil {
-		return nil, err
-	}
-
-	// Find a YubiKey and open the reader.
-	var yk *piv.YubiKey
-	for _, card := range cards {
-		if strings.Contains(strings.ToLower(card), "yubikey") {
-			if yk, err = piv.Open(card); err != nil {
-				return nil, err
-			}
-			return yk, nil
-		}
-	}
-	return nil, errors.New("no yubikey found")
-}
-
-func GenYubikey(yk *piv.YubiKey) (crypto.PublicKey, error) {
-	// Generate a private key on the YubiKey.
-	key := piv.Key{
-		Algorithm:   piv.AlgorithmEC256,
-		PINPolicy:   piv.PINPolicyAlways,
-		TouchPolicy: piv.TouchPolicyAlways,
-	}
-	pub, err := yk.GenerateKey(piv.DefaultManagementKey, piv.SlotSignature, key)
-	if err != nil {
-		return nil, err
-	}
-	return pub, nil
 }

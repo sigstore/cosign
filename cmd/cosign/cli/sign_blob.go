@@ -118,9 +118,14 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		}
 		signer = k
 	case ko.Sk:
-		k, err := pivkey.NewSignerVerifier(ko.Slot)
+		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "opening piv token")
+		}
+		defer sk.Close()
+		k, err := sk.SignerVerifier()
+		if err != nil {
+			return nil, errors.Wrap(err, "initializing signer on piv token")
 		}
 		signer = k
 	default:

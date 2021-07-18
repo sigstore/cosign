@@ -17,42 +17,70 @@
 package pivkey
 
 import (
-	"context"
-	"crypto"
+	"crypto/x509"
 	"errors"
-	"io"
 
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func NewPublicKeyProvider(slotName string) (signature.Verifier, error) {
+type empty struct{}
+
+type Key struct{}
+
+func GetKey() (*Key, error) {
 	return nil, errors.New("unimplemented")
 }
 
-func NewSigner() (signature.Signer, error) {
+func GetKeyWithSlot(slot string) (*Key, error) {
 	return nil, errors.New("unimplemented")
 }
 
-type PIVSigner struct {
-	Priv crypto.PrivateKey
-	Pub  crypto.PrivateKey
-	signature.ECDSAVerifier
-}
+func (k *Key) Close() {}
 
-func (ps *PIVSigner) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
-	return nil, nil, errors.New("unimplemented")
-}
+func (k *Key) Authenticate(pin string) {}
 
-func (ps *PIVSigner) SignMessage(rawPayload io.Reader, opts ...signature.SignOption) ([]byte, error) {
+func (k *Key) SetSlot(slot string) {}
+
+func (k *Key) Attest() (*x509.Certificate, error) {
 	return nil, errors.New("unimplemented")
 }
 
-func (ps *PIVSigner) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+func (k *Key) GetAttestationCertificate() (*x509.Certificate, error) {
 	return nil, errors.New("unimplemented")
 }
 
-var _ signature.Signer = &PIVSigner{}
+func (k *Key) SetManagementKey(old, new [24]byte) error {
+	return errors.New("unimplemented")
+}
 
-func NewSignerVerifier(slotName string) (signature.SignerVerifier, error) {
+func (k *Key) SetPIN(old, new string) error {
+	return errors.New("unimplemented")
+}
+
+func (k *Key) SetPUK(old, new string) error {
+	return errors.New("unimplemented")
+}
+
+func (k *Key) Reset() error {
+	return errors.New("unimplemented")
+}
+
+func (k *Key) Unblock(puk, newPIN string) error {
+	return errors.New("unimplemented")
+}
+
+func (k *Key) GenerateKey(mgmtKey [24]byte, slot *empty, opts *empty) (*empty, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (k *Key) Verifier() (signature.Verifier, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (k *Key) Certificate() (*x509.Certificate, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (k *Key) SignerVerifier() (signature.SignerVerifier, error) {
 	return nil, errors.New("unimplemented")
 }
