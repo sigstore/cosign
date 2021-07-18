@@ -24,7 +24,7 @@ import (
 func SlotForName(slotName string) *piv.Slot {
 	switch slotName {
 	case "":
-		return &piv.SlotAuthentication
+		return &piv.SlotSignature
 	case "authentication":
 		return &piv.SlotAuthentication
 	case "signature":

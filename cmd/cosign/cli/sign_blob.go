@@ -43,7 +43,7 @@ func SignBlob() *ffcli.Command {
 		key     = flagset.String("key", "", "path to the private key file or a KMS URI")
 		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
 		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot    = flagset.String("slot", "", "security key slot to use for generated key (authentication|signature|card-authentication|key-management)")
+		slot    = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 		idToken = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		output  = flagset.String("output", "", "write the signature to FILE")
 	)
