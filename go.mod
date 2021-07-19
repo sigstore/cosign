@@ -18,7 +18,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.0.0-20210714122808-6d21ab53f962
 	github.com/sigstore/rekor v0.2.1-0.20210714185543-38d532d5c0b1
-	github.com/sigstore/sigstore v0.0.0-20210714122742-a9aeb218f4d1
+	github.com/sigstore/sigstore v0.0.0-20210718202323-1c1454ffa6b3
 	github.com/stretchr/testify v1.7.0
 	github.com/theupdateframework/go-tuf v0.0.0-20210630170422-22a94818d17b
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
