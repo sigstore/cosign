@@ -88,8 +88,8 @@ func TestSignVerify(t *testing.T) {
 	mustErr(download.SignatureCmd(ctx, imgName), t)
 
 	// Now sign the image
-	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -99,8 +99,8 @@ func TestSignVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
 
 	// Sign the image with an annotation
-	so.Annotations = map[string]interface{}{"foo": "bar"}
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	annotations := map[string]interface{}{"foo": "bar"}
+	must(cli.SignCmd(ctx, ko, annotations, imgName, "", true, "", false, false), t)
 
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
@@ -123,8 +123,8 @@ func TestSignVerifyClean(t *testing.T) {
 	ctx := context.Background()
 
 	// Now sign the image
-	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -156,13 +156,13 @@ func TestBundle(t *testing.T) {
 
 	ctx := context.Background()
 
-	so := cli.SignOpts{
-		KeyRef: privKeyPath,
-		Pf:     passFunc,
+	ko := cli.KeyOpts{
+		KeyRef:   privKeyPath,
+		PassFunc: passFunc,
 	}
 
 	// Sign the image
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 	// Make sure verify works
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
@@ -190,15 +190,15 @@ func TestDuplicateSign(t *testing.T) {
 	mustErr(download.SignatureCmd(ctx, imgName), t)
 
 	// Now sign the image
-	so := cli.SignOpts{KeyRef: privKeyPath, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 	must(download.SignatureCmd(ctx, imgName), t)
 
 	// Signing again should work just fine...
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 	// but a duplicate signature should not be a uploaded
 	sigRepo, err := cli.TargetRepositoryForImage(ref)
 	if err != nil {
@@ -291,15 +291,15 @@ func TestMultipleSignatures(t *testing.T) {
 	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign the image with one key
-	so := cli.SignOpts{KeyRef: priv1, Pf: passFunc}
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	ko := cli.KeyOpts{KeyRef: priv1, PassFunc: passFunc}
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil), t)
 	mustErr(verify(pub2, imgName, true, nil), t)
 
 	// Now sign with the other key too
-	so.KeyRef = priv2
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	ko.KeyRef = priv2
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil), t)
@@ -337,7 +337,11 @@ func TestSignBlob(t *testing.T) {
 	mustErr(cli.VerifyBlobCmd(ctx, ko2, "", "badsig", blob), t)
 
 	// Now sign the blob with one key
-	sig, err := cli.SignBlobCmd(ctx, cli.KeyOpts{KeyRef: privKeyPath1}, bp, true, passFunc, "", "")
+	ko := cli.KeyOpts{
+		KeyRef:   privKeyPath1,
+		PassFunc: passFunc,
+	}
+	sig, err := cli.SignBlobCmd(ctx, ko, bp, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -595,11 +599,11 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Now sign the image without the tlog
-	so := cli.SignOpts{
-		KeyRef: privKeyPath,
-		Pf:     passFunc,
+	ko := cli.KeyOpts{
+		KeyRef:   privKeyPath,
+		PassFunc: passFunc,
 	}
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil), t)
@@ -611,7 +615,7 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Sign again with the tlog env var on
-	must(cli.SignCmd(ctx, so, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
 	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }

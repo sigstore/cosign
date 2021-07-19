@@ -131,31 +131,21 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 
-			so := SignOpts{
-				KeyRef:      *key,
-				Annotations: annotations.annotations,
-				Pf:          GetPass,
-				Sk:          *sk,
-				Slot:        *slot,
-				IDToken:     *idToken,
+			ko := KeyOpts{
+				KeyRef:   *key,
+				PassFunc: GetPass,
+				Sk:       *sk,
+				Slot:     *slot,
+				IDToken:  *idToken,
 			}
 			for _, img := range args {
-				if err := SignCmd(ctx, so, img, *cert, *upload, *payloadPath, *force, *recursive); err != nil {
+				if err := SignCmd(ctx, ko, annotations.annotations, img, *cert, *upload, *payloadPath, *force, *recursive); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
 			return nil
 		},
 	}
-}
-
-type SignOpts struct {
-	Annotations map[string]interface{}
-	KeyRef      string
-	Sk          bool
-	Slot        string
-	Pf          cosign.PassFunc
-	IDToken     string
 }
 
 func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opts ...remote.Option) ([]name.Digest, error) {
@@ -193,16 +183,16 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 	return imgs, nil
 }
 
-func SignCmd(ctx context.Context, so SignOpts,
+func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{},
 	imageRef string, certPath string, upload bool, payloadPath string, force bool, recursive bool) error {
 
 	// A key file or token is required unless we're in experimental mode!
 	if EnableExperimental() {
-		if nOf(so.KeyRef, so.Sk) > 1 {
+		if nOf(ko.KeyRef, ko.Sk) > 1 {
 			return &KeyParseError{}
 		}
 	} else {
-		if !oneOf(so.KeyRef, so.Sk) {
+		if !oneOf(ko.KeyRef, ko.Sk) {
 			return &KeyParseError{}
 		}
 	}
@@ -238,8 +228,8 @@ func SignCmd(ctx context.Context, so SignOpts,
 	var dupeDetector signature.Verifier
 	var cert, chain string
 	switch {
-	case so.Sk:
-		sk, err := pivkey.GetKeyWithSlot(so.Slot)
+	case ko.Sk:
+		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
 		defer sk.Close()
 		if err != nil {
 			return err
@@ -262,8 +252,8 @@ func SignCmd(ctx context.Context, so SignOpts,
 		}
 		cert = string(cosign.CertToPem(certFromPIV))
 
-	case so.KeyRef != "":
-		k, err := signerVerifierFromKeyRef(ctx, so.KeyRef, so.Pf)
+	case ko.KeyRef != "":
+		k, err := signerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
 		if err != nil {
 			return errors.Wrap(err, "reading key")
 		}
@@ -310,7 +300,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		k, err := fulcio.NewSigner(ctx, so.IDToken)
+		k, err := fulcio.NewSigner(ctx, ko.IDToken)
 		if err != nil {
 			return errors.Wrap(err, "getting key from Fulcio")
 		}
@@ -366,7 +356,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 		if len(payload) == 0 {
 			payload, err = (&sigPayload.Cosign{
 				Image:       img,
-				Annotations: so.Annotations,
+				Annotations: annotations,
 			}).MarshalJSON()
 			if err != nil {
 				return errors.Wrap(err, "payload")
@@ -416,7 +406,7 @@ func SignCmd(ctx context.Context, so SignOpts,
 			fmt.Println("tlog entry created with index: ", *entry.LogIndex)
 
 			uo.Bundle = bundle(entry)
-			uo.AdditionalAnnotations = annotations(entry)
+			uo.AdditionalAnnotations = parseAnnotations(entry)
 		}
 
 		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())
@@ -443,7 +433,7 @@ func bundle(entry *models.LogEntryAnon) *cremote.Bundle {
 	}
 }
 
-func annotations(entry *models.LogEntryAnon) map[string]string {
+func parseAnnotations(entry *models.LogEntryAnon) map[string]string {
 	annts := map[string]string{}
 	if bund := bundle(entry); bund != nil {
 		contents, _ := json.Marshal(bund)
