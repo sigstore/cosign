@@ -224,8 +224,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		toSign = append(toSign, imgs...)
 	}
 
-	var signer signature.Signer
-	var dupeDetector signature.Verifier
+	var signerVerifier signature.SignerVerifier
 	var cert, chain string
 	switch {
 	case ko.Sk:
@@ -234,12 +233,11 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		if err != nil {
 			return err
 		}
-		skSigner, err := sk.SignerVerifier()
+		sv, err := sk.SignerVerifier()
 		if err != nil {
 			return err
 		}
-		signer = skSigner
-		dupeDetector = skSigner
+		signerVerifier = sv
 
 		// Handle the -cert flag.
 		// With PIV, we assume the certificate is in the same slot on the PIV
@@ -257,8 +255,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		if err != nil {
 			return errors.Wrap(err, "reading key")
 		}
-		signer = k
-		dupeDetector = k
+		signerVerifier = k
 
 		// Handle the -cert flag
 		if certPath == "" {
@@ -304,7 +301,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		if err != nil {
 			return errors.Wrap(err, "getting key from Fulcio")
 		}
-		signer = k
+		signerVerifier = k
 		cert, chain = k.Cert, k.Chain
 	}
 
@@ -331,7 +328,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		if cert != "" {
 			rekorBytes = []byte(cert)
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(signer, options.WithContext(ctx))
+			pemBytes, err := cosign.PublicKeyPem(signerVerifier, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}
@@ -363,7 +360,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			}
 		}
 
-		sig, err := signer.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
+		sig, err := signerVerifier.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
@@ -390,7 +387,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		uo := cremote.UploadOpts{
 			Cert:         cert,
 			Chain:        chain,
-			DupeDetector: dupeDetector,
+			DupeDetector: signerVerifier,
 			RemoteOpts:   remoteOpts,
 		}
 
