@@ -122,7 +122,7 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
       - The `logIndex` is the index of the log entry in the transparency log
       - The `logID` is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
 
-For instructions on using the `bundle` for verification, see [USAGE.md](USAGE.md).
+For instructions on using the `bundle` for verification, see [USAGE.md](../USAGE.md#verify-a-signature-was-added-to-the-transparency-log).
 
 ## Storage
 
