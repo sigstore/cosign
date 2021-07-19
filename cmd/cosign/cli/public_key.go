@@ -58,11 +58,17 @@ EXAMPLES
   # extract public key from URL.
   cosign public-key -key https://host.for/<FILE> -outfile <OUTPUT>
 
-  # extract public key from Google Cloud KMS key pair
-  cosign public-key -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY>
+  # extract public key from Azure Key Vault
+  cosign public-key -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY]
 
-  # extract public key from Hashicorp Vault KMS key pair
-  cosign public-key -key hashivault://<KEY>`,
+  # extract public key from AWS KMS
+  cosign public-key -key awskms://[ENDPOINT]/[ID/ALIAS/ARN]
+
+  # extract public key from Google Cloud KMS
+  cosign public-key -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
+
+  # extract public key from Hashicorp Vault KMS
+  cosign public-key -key hashivault://[KEY]`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 

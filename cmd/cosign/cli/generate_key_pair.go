@@ -53,9 +53,15 @@ EXAMPLES:
   # generate key-pair and write to cosign.key and cosign.pub files
   cosign generate-key-pair
 
+  # generate a key-pair in Azure Key Vault
+  cosign generate-key-pair -kms azurekms://[VAULT_NAME][VAULT_URI]/[KEY]
+
+  # generate a key-pair in AWS KMS
+  cosign generate-key-pair -kms awskms://[ENDPOINT]/[ID/ALIAS/ARN]
+
   # generate a key-pair in Google Cloud KMS
   cosign generate-key-pair -kms gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
-  
+
   # generate a key-pair in Hashicorp Vault
   cosign generate-key-pair -kms hashivault://[KEY]
 
