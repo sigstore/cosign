@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/generated/client/operations"
 	"github.com/sigstore/sigstore/pkg/httpclients"
@@ -70,7 +72,7 @@ func PolicyInit() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign policy-init", flag.ExitOnError)
 
-		nameSpace   = flagset.String("ns", "", "The registry namespace")
+		imageRef   = flagset.String("ns", "", "The registry namespace")
 		mainTainers = flagset.String("maintainers", "", "Comma separated list of maintainers")
 		threshHold  = flagset.Int("threshold", 2, "Threshold")
 		outFile  = flagset.String("out", "root.json", "Output policy locally")
@@ -112,7 +114,7 @@ EXAMPLES
 			// These kv's contain security guarantees
 			body := BodyStruct{
 				Maintainers:       emailList,
-				RegistryNamespace: *nameSpace,
+				RegistryNamespace: *imageRef,
 				Threshold:         *threshHold,
 				Expires:           time.Now(),
 			}
@@ -189,7 +191,7 @@ EXAMPLES
 			policyJSON := MainStruct{
 				Body: BodyStruct{
 					Maintainers:       emailList,
-					RegistryNamespace: *nameSpace,
+					RegistryNamespace: *imageRef,
 					Threshold:         *threshHold,
 					Expires:           time.Now(),
 				},
@@ -198,7 +200,6 @@ EXAMPLES
 						Email: idToken.Subject,
 						FuclioCert: certb64,
 						Signature: sigb64,
-
 					},
 				},
 			}
@@ -227,6 +228,13 @@ EXAMPLES
 					return errors.Wrapf(err, "error writing to root.json")
 				}
 			}
+
+			files := []cremote.File{
+				{Path: *outFile},
+			}
+
+			upload.BlobCmd(ctx, files, "", *imageRef)
+
 			return nil
 		},
 	}
