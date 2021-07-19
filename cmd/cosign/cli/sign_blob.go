@@ -84,12 +84,14 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 			ko := KeyOpts{
-				KeyRef: *key,
-				Sk:     *sk,
-				Slot:   *slot,
+				KeyRef:   *key,
+				Sk:       *sk,
+				Slot:     *slot,
+				PassFunc: GetPass,
+				IDToken:  *idToken,
 			}
 			for _, blob := range args {
-				if _, err := SignBlobCmd(ctx, ko, blob, *b64, GetPass, *idToken, *output); err != nil {
+				if _, err := SignBlobCmd(ctx, ko, blob, *b64, *output); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
@@ -99,12 +101,14 @@ EXAMPLES
 }
 
 type KeyOpts struct {
-	Sk     bool
-	Slot   string
-	KeyRef string
+	Sk       bool
+	Slot     string
+	KeyRef   string
+	IDToken  string
+	PassFunc cosign.PassFunc
 }
 
-func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, pf cosign.PassFunc, idToken, output string) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, output string) ([]byte, error) {
 	var payload []byte
 	var err error
 	if payloadPath == "-" {
@@ -121,7 +125,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 	var signer signature.Signer
 	switch {
 	case ko.KeyRef != "":
-		k, err := signerFromKeyRef(ctx, ko.KeyRef, pf)
+		k, err := signerFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
 		if err != nil {
 			return nil, errors.Wrap(err, "loading key")
 		}
@@ -140,7 +144,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 	default:
 		// Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		k, err := fulcio.NewSigner(ctx, idToken)
+		k, err := fulcio.NewSigner(ctx, ko.IDToken)
 		if err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}

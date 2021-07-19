@@ -26,15 +26,15 @@ import (
 func TestSignCmdLocalKeyAndSk(t *testing.T) {
 	ctx := context.Background()
 
-	for _, so := range []SignOpts{
+	for _, ko := range []KeyOpts{
 		// local and sk keys
 		{
-			KeyRef: "testLocalPath",
-			Pf:     GetPass,
-			Sk:     true,
+			KeyRef:   "testLocalPath",
+			PassFunc: GetPass,
+			Sk:       true,
 		},
 	} {
-		err := SignCmd(ctx, so, "", "", false, "", false, false)
+		err := SignCmd(ctx, ko, nil, "", "", false, "", false, false)
 		if (errors.Is(err, &KeyParseError{}) == false) {
 			t.Fatal("expected KeyParseError")
 		}
