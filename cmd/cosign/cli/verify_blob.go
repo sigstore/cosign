@@ -121,7 +121,12 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			return errors.Wrap(err, "loading public key")
 		}
 	case ko.Sk:
-		pubKey, err = pivkey.NewPublicKeyProvider(ko.Slot)
+		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
+		if err != nil {
+			return errors.Wrap(err, "opening piv token")
+		}
+		defer sk.Close()
+		pubKey, err = sk.Verifier()
 		if err != nil {
 			return errors.Wrap(err, "loading public key from token")
 		}
