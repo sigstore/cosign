@@ -41,10 +41,10 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
-	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -223,86 +223,9 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}
 		toSign = append(toSign, imgs...)
 	}
-
-	var signerVerifier signature.SignerVerifier
-	var cert, chain string
-	switch {
-	case ko.Sk:
-		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
-		defer sk.Close()
-		if err != nil {
-			return err
-		}
-		sv, err := sk.SignerVerifier()
-		if err != nil {
-			return err
-		}
-		signerVerifier = sv
-
-		// Handle the -cert flag.
-		// With PIV, we assume the certificate is in the same slot on the PIV
-		// token as the private key. If it's not there, show a warning to the
-		// user.
-		certFromPIV, err := sk.Certificate()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
-			break
-		}
-		cert = string(cosign.CertToPem(certFromPIV))
-
-	case ko.KeyRef != "":
-		k, err := signerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
-		if err != nil {
-			return errors.Wrap(err, "reading key")
-		}
-		signerVerifier = k
-
-		// Handle the -cert flag
-		if certPath == "" {
-			break
-		}
-		certBytes, err := ioutil.ReadFile(certPath)
-		if err != nil {
-			return errors.Wrap(err, "read certificate")
-		}
-		// Handle PEM.
-		if bytes.HasPrefix(certBytes, []byte("-----")) {
-			decoded, _ := pem.Decode(certBytes)
-			if decoded.Type != "CERTIFICATE" {
-				return fmt.Errorf("supplied PEM file is not a certificate: %s", certPath)
-			}
-			certBytes = decoded.Bytes
-		}
-		parsedCert, err := x509.ParseCertificate(certBytes)
-		if err != nil {
-			return errors.Wrap(err, "parse x509 certificate")
-		}
-		pk, err := k.PublicKey()
-		if err != nil {
-			return errors.Wrap(err, "get public key")
-		}
-		switch kt := parsedCert.PublicKey.(type) {
-		case *ecdsa.PublicKey:
-			if !kt.Equal(pk) {
-				return errors.New("public key in certificate does not match that in the signing key")
-			}
-		case *rsa.PublicKey:
-			if !kt.Equal(pk) {
-				return errors.New("public key in certificate does not match that in the signing key")
-			}
-		default:
-			return fmt.Errorf("unsupported key type: %T", parsedCert.PublicKey)
-		}
-		cert = string(cosign.CertToPem(parsedCert))
-
-	default: // Keyless!
-		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		k, err := fulcio.NewSigner(ctx, ko.IDToken)
-		if err != nil {
-			return errors.Wrap(err, "getting key from Fulcio")
-		}
-		signerVerifier = k
-		cert, chain = k.Cert, k.Chain
+	sv, err := signerFromKeyOpts(ctx, certPath, ko)
+	if err != nil {
+		return errors.Wrap(err, "getting signer")
 	}
 
 	// Check if the image is public (no auth in Get)
@@ -325,10 +248,10 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 	var rekorBytes []byte
 	if uploadTLog {
 		// Upload the cert or the public key, depending on what we have
-		if cert != "" {
-			rekorBytes = []byte(cert)
+		if sv.Cert != "" {
+			rekorBytes = []byte(sv.Cert)
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(signerVerifier, options.WithContext(ctx))
+			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}
@@ -360,7 +283,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			}
 		}
 
-		sig, err := signerVerifier.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
+		sig, err := sv.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
@@ -385,9 +308,9 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}, cosign.SuffixSignature)
 
 		uo := cremote.UploadOpts{
-			Cert:         cert,
-			Chain:        chain,
-			DupeDetector: signerVerifier,
+			Cert:         sv.Cert,
+			Chain:        sv.Chain,
+			DupeDetector: sv,
 			RemoteOpts:   remoteOpts,
 		}
 
@@ -437,4 +360,100 @@ func parseAnnotations(entry *models.LogEntryAnon) map[string]string {
 		annts[cosign.BundleKey] = string(contents)
 	}
 	return annts
+}
+
+func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certSignVerifier, error) {
+	switch {
+	case ko.Sk:
+		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
+		defer sk.Close()
+		if err != nil {
+			return nil, err
+		}
+		sv, err := sk.SignerVerifier()
+		if err != nil {
+			return nil, err
+		}
+
+		// Handle the -cert flag.
+		// With PIV, we assume the certificate is in the same slot on the PIV
+		// token as the private key. If it's not there, show a warning to the
+		// user.
+		certFromPIV, err := sk.Certificate()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
+			break
+		}
+		cert := string(cosign.CertToPem(certFromPIV))
+		return &certSignVerifier{
+			Cert:           cert,
+			SignerVerifier: sv,
+		}, nil
+
+	case ko.KeyRef != "":
+		k, err := signerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
+		if err != nil {
+			return nil, errors.Wrap(err, "reading key")
+		}
+
+		certSigner := &certSignVerifier{
+			SignerVerifier: k,
+		}
+		// Handle the -cert flag
+		if certPath == "" {
+			return certSigner, nil
+		}
+
+		certBytes, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "read certificate")
+		}
+		// Handle PEM.
+		if bytes.HasPrefix(certBytes, []byte("-----")) {
+			decoded, _ := pem.Decode(certBytes)
+			if decoded.Type != "CERTIFICATE" {
+				return nil, fmt.Errorf("supplied PEM file is not a certificate: %s", certPath)
+			}
+			certBytes = decoded.Bytes
+		}
+		parsedCert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse x509 certificate")
+		}
+		pk, err := k.PublicKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "get public key")
+		}
+		switch kt := parsedCert.PublicKey.(type) {
+		case *ecdsa.PublicKey:
+			if !kt.Equal(pk) {
+				return nil, errors.New("public key in certificate does not match that in the signing key")
+			}
+		case *rsa.PublicKey:
+			if !kt.Equal(pk) {
+				return nil, errors.New("public key in certificate does not match that in the signing key")
+			}
+		default:
+			return nil, fmt.Errorf("unsupported key type: %T", parsedCert.PublicKey)
+		}
+		certSigner.Cert = string(cosign.CertToPem(parsedCert))
+		return certSigner, nil
+	}
+	// Default Keyless!
+	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
+	k, err := fulcio.NewSigner(ctx, ko.IDToken)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting key from Fulcio")
+	}
+	return &certSignVerifier{
+		Cert:           k.Cert,
+		Chain:          k.Chain,
+		SignerVerifier: k,
+	}, nil
+}
+
+type certSignVerifier struct {
+	Cert  string
+	Chain string
+	signature.SignerVerifier
 }
