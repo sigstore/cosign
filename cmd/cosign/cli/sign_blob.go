@@ -25,15 +25,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/fulcio"
-	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 )
 
@@ -121,39 +118,12 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		return nil, err
 	}
 
-	var cert string
-	var signer signature.Signer
-	switch {
-	case ko.KeyRef != "":
-		k, err := signerFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
-		if err != nil {
-			return nil, errors.Wrap(err, "loading key")
-		}
-		signer = k
-	case ko.Sk:
-		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "opening piv token")
-		}
-		defer sk.Close()
-		k, err := sk.SignerVerifier()
-		if err != nil {
-			return nil, errors.Wrap(err, "initializing signer on piv token")
-		}
-		signer = k
-	default:
-		// Keyless!
-		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		k, err := fulcio.NewSigner(ctx, ko.IDToken)
-		if err != nil {
-			return nil, errors.Wrap(err, "getting key from Fulcio")
-		}
-		signer = k
-		cert = k.Cert
-		fmt.Fprintf(os.Stderr, "Signing with certificate:\n%s\n", cert)
+	sv, err := signerFromKeyOpts(ctx, "", ko)
+	if err != nil {
+		return nil, err
 	}
 
-	sig, err := signer.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
+	sig, err := sv.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 	if err != nil {
 		return nil, errors.Wrap(err, "signing blob")
 	}
@@ -161,10 +131,10 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 	if EnableExperimental() {
 		// TODO: Refactor with sign.go
 		var rekorBytes []byte
-		if cert != "" {
-			rekorBytes = []byte(cert)
+		if sv.Cert != "" {
+			rekorBytes = []byte(sv.Cert)
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(signer, options.WithContext(ctx))
+			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
 			if err != nil {
 				return nil, err
 			}
