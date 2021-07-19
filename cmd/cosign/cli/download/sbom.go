@@ -19,6 +19,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 
@@ -42,13 +43,13 @@ func SBOM() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			_, err := SBOMCmd(ctx, args[0])
+			_, err := SBOMCmd(ctx, args[0], os.Stdout)
 			return err
 		},
 	}
 }
 
-func SBOMCmd(ctx context.Context, imageRef string) ([]string, error) {
+func SBOMCmd(ctx context.Context, imageRef string, out io.Writer) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
@@ -87,7 +88,7 @@ func SBOMCmd(ctx context.Context, imageRef string) ([]string, error) {
 			return nil, err
 		}
 		sboms = append(sboms, string(sbom))
-		fmt.Println(string(sbom))
+		fmt.Fprintln(out, string(sbom))
 	}
 	return sboms, nil
 }
