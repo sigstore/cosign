@@ -539,18 +539,22 @@ func TestAttachSBOM(t *testing.T) {
 	img, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
 
-	_, err := download.SBOMCmd(ctx, img.Name())
+	out := bytes.Buffer{}
+	_, err := download.SBOMCmd(ctx, img.Name(), &out)
 	if err == nil {
 		t.Fatal("Expected error")
 	}
+	t.Log(out)
+	out.Reset()
 
 	// Upload it!
 	must(attach.SBOMCmd(ctx, "./testdata/bom-go-mod.spdx", "spdx", imgName), t)
 
-	sboms, err := download.SBOMCmd(ctx, imgName)
+	sboms, err := download.SBOMCmd(ctx, imgName, &out)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log(out)
 	if len(sboms) != 1 {
 		t.Fatalf("Expected one sbom, got %d", len(sboms))
 	}
