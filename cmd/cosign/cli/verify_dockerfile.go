@@ -68,11 +68,17 @@ EXAMPLES
   # verify images with public key provided by URL
   cosign verify-dockerfile -key https://host.for/<FILE> <path/to/Dockerfile>
 
+  # verify images with public key stored in Azure Key Vault
+  cosign verify-dockerfile -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <path/to/Dockerfile>
+
+  # verify images with public key stored in AWS KMS
+  cosign verify-dockerfile -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <path/to/Dockerfile>
+
   # verify images with public key stored in Google Cloud KMS
-  cosign verify-dockerfile -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <path/to/Dockerfile>
-  
+  cosign verify-dockerfile -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <path/to/Dockerfile>
+
   # verify images with public key stored in Hashicorp Vault
-  cosign verify-dockerfile -key hashivault://<KEY> <path/to/Dockerfile>`,
+  cosign verify-dockerfile -key hashivault://[KEY] <path/to/Dockerfile>`,
 
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
