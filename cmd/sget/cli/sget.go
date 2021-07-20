@@ -41,9 +41,9 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 	}
 
 	co := &cosign.CheckOpts{
-		Claims:       true,
-		VerifyBundle: true,
-		RootCerts:    fulcio.Roots,
+		ClaimVerifier: cosign.SimpleClaimVerifier,
+		VerifyBundle:  true,
+		RootCerts:     fulcio.Roots,
 		RegistryClientOpts: []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
 			remote.WithContext(ctx),

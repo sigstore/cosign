@@ -167,9 +167,9 @@ type CheckOpts struct {
 	SignatureRepo      name.Repository
 	RegistryClientOpts []remote.Option
 
-	Annotations  map[string]interface{}
-	Claims       bool
-	VerifyBundle bool
+	Annotations   map[string]interface{}
+	ClaimVerifier func(SignedPayload, *v1.Descriptor, map[string]interface{}) error
+	VerifyBundle  bool
 
 	RekorURL string
 
@@ -237,23 +237,10 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 		}
 
 		// We can't check annotations without claims, both require unmarshalling the payload.
-		if co.Claims {
-			ss := &payload.SimpleContainerImage{}
-			if err := json.Unmarshal(sp.Payload, ss); err != nil {
+		if co.ClaimVerifier != nil {
+			if err := co.ClaimVerifier(sp, &signedImgDesc.Descriptor, co.Annotations); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
-			}
-
-			if err := sp.VerifyClaims(&signedImgDesc.Descriptor, ss); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-
-			if co.Annotations != nil {
-				if !correctAnnotations(co.Annotations, ss.Optional) {
-					validationErrs = append(validationErrs, "missing or incorrect annotation")
-					continue
-				}
 			}
 		}
 

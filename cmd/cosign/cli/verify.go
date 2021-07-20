@@ -113,12 +113,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 
 	co := &cosign.CheckOpts{
 		Annotations: *c.Annotations,
-		Claims:      c.CheckClaims,
 		RootCerts:   fulcio.Roots,
 		RegistryClientOpts: []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
 			remote.WithContext(ctx),
 		},
+	}
+	if c.CheckClaims {
+		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 	if EnableExperimental() {
 		co.RekorURL = TlogServer()
@@ -173,7 +175,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosign.CheckOpts, output string) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
-	if co.Claims {
+	if co.ClaimVerifier != nil {
 		if co.Annotations != nil {
 			fmt.Fprintln(os.Stderr, "  - The specified annotations were verified.")
 		}
