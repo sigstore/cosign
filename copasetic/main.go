@@ -187,11 +187,11 @@ func main() {
 			}
 			ctxOpt := options.WithContext(bctx.Context)
 			co := &cosign.CheckOpts{
-				SigVerifier: pubKey,
-				VerifyOpts:  []signature.VerifyOption{ctxOpt},
-				PKOpts:      []signature.PublicKeyOption{ctxOpt},
-				Claims:      true,
-				RootCerts:   fulcio.Roots,
+				SigVerifier:   pubKey,
+				VerifyOpts:    []signature.VerifyOption{ctxOpt},
+				PKOpts:        []signature.PublicKeyOption{ctxOpt},
+				ClaimVerifier: cosign.SimpleClaimVerifier,
+				RootCerts:     fulcio.Roots,
 				RegistryClientOpts: []remote.Option{
 					remote.WithAuthFromKeychain(authn.DefaultKeychain),
 					remote.WithContext(bctx.Context),
