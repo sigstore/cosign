@@ -34,7 +34,6 @@ import (
 const (
 	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
 	ServerEnv       = "REKOR_SERVER"
-	rekorServer     = "https://rekor.sigstore.dev"
 	repoEnv         = "COSIGN_REPOSITORY"
 )
 

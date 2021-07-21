@@ -89,10 +89,10 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 			ko := KeyOpts{
-				KeyRef: *key,
-				Sk:     *sk,
+				KeyRef:   *key,
+				Sk:       *sk,
 				RekorURL: *rekorURL,
-				Slot:   *slot,
+				Slot:     *slot,
 			}
 			if err := VerifyBlobCmd(ctx, ko, *cert, *signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)
