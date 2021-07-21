@@ -36,13 +36,18 @@ import (
 
 func SignBlob() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
-		key     = flagset.String("key", "", "path to the private key file or a KMS URI")
-		b64     = flagset.Bool("b64", true, "whether to base64 encode the output")
-		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot    = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-		idToken = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
-		output  = flagset.String("output", "", "write the signature to FILE")
+		flagset          = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
+		key              = flagset.String("key", "", "path to the private key file or a KMS URI")
+		b64              = flagset.Bool("b64", true, "whether to base64 encode the output")
+		sk               = flagset.Bool("sk", false, "whether to use a hardware security key")
+		slot             = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
+		fulcioURL        = flagset.String("fulcio-server", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
+		rekorURL         = flagset.String("rekor-server", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
+		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
+		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
+		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
+		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
+		output           = flagset.String("output", "", "write the signature to FILE")
 	)
 	return &ffcli.Command{
 		Name:       "sign-blob",
@@ -81,11 +86,16 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 			ko := KeyOpts{
-				KeyRef:   *key,
-				Sk:       *sk,
-				Slot:     *slot,
-				PassFunc: GetPass,
-				IDToken:  *idToken,
+				KeyRef:           *key,
+				Sk:               *sk,
+				Slot:             *slot,
+				PassFunc:         GetPass,
+				FulcioURL:        *fulcioURL,
+				RekorURL:         *rekorURL,
+				IDToken:          *idToken,
+				OIDCIssuer:       *oidcIssuer,
+				OIDCClientID:     *oidcClientID,
+				OIDCClientSecret: *oidcClientSecret,
 			}
 			for _, blob := range args {
 				if _, err := SignBlobCmd(ctx, ko, blob, *b64, *output); err != nil {
@@ -98,16 +108,22 @@ EXAMPLES
 }
 
 type KeyOpts struct {
-	Sk       bool
-	Slot     string
-	KeyRef   string
-	IDToken  string
-	PassFunc cosign.PassFunc
+	Sk               bool
+	Slot             string
+	KeyRef           string
+	FulcioURL        string
+	RekorURL         string
+	IDToken          string
+	PassFunc         cosign.PassFunc
+	OIDCIssuer       string
+	OIDCClientID     string
+	OIDCClientSecret string
 }
 
 func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, output string) ([]byte, error) {
 	var payload []byte
 	var err error
+
 	if payloadPath == "-" {
 		payload, err = ioutil.ReadAll(os.Stdin)
 	} else {
@@ -140,7 +156,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 			}
 			rekorBytes = pemBytes
 		}
-		rekorClient, err := rekorClient.GetRekorClient(TlogServer())
+		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
 		if err != nil {
 			return nil, err
 		}

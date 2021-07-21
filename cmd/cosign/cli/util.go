@@ -45,14 +45,6 @@ func EnableExperimental() bool {
 	return false
 }
 
-// TlogServer returns the name of the tlog server, can be overwritten via env var
-func TlogServer() string {
-	if s := os.Getenv(ServerEnv); s != "" {
-		return s
-	}
-	return rekorServer
-}
-
 func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
 	wantRepo := os.Getenv(repoEnv)
 	if wantRepo == "" {

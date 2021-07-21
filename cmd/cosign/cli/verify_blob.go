@@ -47,6 +47,7 @@ func VerifyBlob() *ffcli.Command {
 		key       = flagset.String("key", "", "path to the public key file, URL, or KMS URI")
 		sk        = flagset.Bool("sk", false, "whether to use a hardware security key")
 		slot      = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
+		rekorURL  = flagset.String("rekor-server", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "path to the signature")
 	)
@@ -90,6 +91,7 @@ EXAMPLES
 			ko := KeyOpts{
 				KeyRef: *key,
 				Sk:     *sk,
+				RekorURL: *rekorURL,
 				Slot:   *slot,
 			}
 			if err := VerifyBlobCmd(ctx, ko, *cert, *signature, args[0]); err != nil {
@@ -201,7 +203,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	fmt.Fprintln(os.Stderr, "Verified OK")
 
 	if EnableExperimental() {
-		rekorClient, err := rekorClient.GetRekorClient(TlogServer())
+		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
 		if err != nil {
 			return err
 		}

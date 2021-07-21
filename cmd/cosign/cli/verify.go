@@ -42,6 +42,7 @@ type VerifyCommand struct {
 	Sk          bool
 	Slot        string
 	Output      string
+	RekorURL    string
 	Annotations *map[string]interface{}
 }
 
@@ -50,6 +51,7 @@ func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
 	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
+	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "address of rekor STL server")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
 
@@ -123,7 +125,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 	if EnableExperimental() {
-		co.RekorURL = TlogServer()
+		co.RekorURL = c.RekorURL
 	}
 	keyRef := c.KeyRef
 
