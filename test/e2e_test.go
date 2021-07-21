@@ -51,6 +51,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	serverEnv       = "REKOR_SERVER"
+)
+
 var keyPass = []byte("hello")
 
 var passFunc = func(_ bool) ([]byte, error) {
@@ -139,7 +143,7 @@ func TestSignVerifyClean(t *testing.T) {
 
 func TestBundle(t *testing.T) {
 	// use rekor prod since we have hardcoded the public key
-	defer setenv(t, cli.ServerEnv, "https://rekor.sigstore.dev")()
+	defer setenv(t, serverEnv, "https://rekor.sigstore.dev")()
 	// turn on the tlog
 	defer setenv(t, cli.ExperimentalEnv, "1")()
 
@@ -167,7 +171,8 @@ func TestBundle(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Make sure offline verification works with bundling
-	os.Setenv(cli.ServerEnv, "notreal")
+	// use rekor prod since we have hardcoded the public key
+	os.Setenv(serverEnv, "notreal")
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
 
@@ -581,7 +586,7 @@ func setenv(t *testing.T, k, v string) func() {
 }
 
 func TestTlog(t *testing.T) {
-	defer setenv(t, cli.ServerEnv, "http://127.0.0.1:3000")()
+	defer setenv(t, serverEnv, "http://127.0.0.1:3000")()
 
 	repo, stop := reg(t)
 	defer stop()
