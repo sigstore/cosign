@@ -38,6 +38,11 @@ func TestGetImagesFromDockerfile(t *testing.T) {
 			expected:     []string{"gcr.io/test/image:latest"},
 		},
 		{
+			name:         "tag with as",
+			fileContents: `FROM gcr.io/test/image:1.16.5 as build`,
+			expected:     []string{"gcr.io/test/image:1.16.5"},
+		},
+		{
 			name:         "digest",
 			fileContents: `FROM gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5`,
 			expected:     []string{"gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5"},
