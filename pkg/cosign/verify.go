@@ -179,6 +179,7 @@ type CheckOpts struct {
 	PKOpts      []signature.PublicKeyOption
 
 	RootCerts *x509.CertPool
+	Suffix    string
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
@@ -198,7 +199,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 	if (sigRepo == name.Repository{}) {
 		sigRepo = signedImgRef.Context()
 	}
-	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, co.RegistryClientOpts...)
+	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, co.Suffix, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}
@@ -226,12 +227,12 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 				validationErrs = append(validationErrs, "invalid certificate found on signature")
 				continue
 			}
-			// Now verify the signature, then the cert.
-			if err := sp.VerifySignature(pub); err != nil {
+			// Now verify the cert, then the signature.
+			if err := sp.TrustedCert(co.RootCerts); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
-			if err := sp.TrustedCert(co.RootCerts); err != nil {
+			if err := sp.VerifySignature(pub); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}

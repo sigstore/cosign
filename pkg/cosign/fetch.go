@@ -60,20 +60,16 @@ func AttachedImageTag(repo name.Repository, imgDesc *remote.Descriptor, suffix s
 	return repo.Tag(tagStr)
 }
 
-func GetAttachedManifestForImage(imgDesc *remote.Descriptor, repo name.Repository, suffix string, opts ...remote.Option) (*remote.Descriptor, error) {
-	return remote.Get(AttachedImageTag(repo, imgDesc, suffix), opts...)
-}
-
 func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, error) {
 	signedImgDesc, err := remote.Get(signedImgRef, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, opts...)
+	return FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, SuffixSignature, opts...)
 }
 
-func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.Descriptor, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, error) {
-	sigImgDesc, err := GetAttachedManifestForImage(signedDescriptor, sigRepo, SuffixSignature, opts...)
+func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.Descriptor, sigRepo name.Repository, suffix string, opts ...remote.Option) ([]SignedPayload, error) {
+	sigImgDesc, err := remote.Get(AttachedImageTag(sigRepo, signedDescriptor, suffix), opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting signature manifest")
 	}

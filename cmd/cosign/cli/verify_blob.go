@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
+
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -137,7 +138,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			return err
 		}
 
-		certs, err := cosign.LoadCerts(string(pems))
+		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(pems))
 		if err != nil {
 			return err
 		}
