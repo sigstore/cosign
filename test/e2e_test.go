@@ -138,8 +138,6 @@ func TestSignVerifyClean(t *testing.T) {
 }
 
 func TestBundle(t *testing.T) {
-	// use rekor prod since we have hardcoded the public key
-	defer setenv(t, cli.ServerEnv, "https://rekor.sigstore.dev")()
 	// turn on the tlog
 	defer setenv(t, cli.ExperimentalEnv, "1")()
 
@@ -167,7 +165,8 @@ func TestBundle(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil), t)
 
 	// Make sure offline verification works with bundling
-	os.Setenv(cli.ServerEnv, "notreal")
+	// use rekor prod since we have hardcoded the public key
+	os.Setenv("https://rekor.sigstore.dev", "notreal")
 	must(verify(pubKeyPath, imgName, true, nil), t)
 }
 
