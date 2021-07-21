@@ -16,7 +16,6 @@
 package cosign
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -25,16 +24,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
 const (
@@ -77,14 +72,13 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 		return nil, err
 	}
 	// store in PEM format
-
 	privBytes := pem.EncodeToMemory(&pem.Block{
 		Bytes: encBytes,
 		Type:  PemType,
 	})
 
 	// Now do the public key
-	pubBytes, err := KeyToPem(&priv.PublicKey)
+	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -105,25 +99,7 @@ func PublicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKey
 	if err != nil {
 		return nil, err
 	}
-	return KeyToPem(pub)
-}
-
-func KeyToPem(pub crypto.PublicKey) ([]byte, error) {
-	b, err := x509.MarshalPKIXPublicKey(pub)
-	if err != nil {
-		return nil, err
-	}
-	return pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: b,
-	}), nil
-}
-
-func CertToPem(c *x509.Certificate) []byte {
-	return pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: c.Raw,
-	})
+	return cryptoutils.MarshalPublicKeyToPEM(pub)
 }
 
 func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifier, error) {
@@ -153,39 +129,6 @@ func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifie
 }
 
 const pubKeyPemType = "PUBLIC KEY"
-
-func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
-	// The key could be plaintext, in a file, at a URL, or in KMS.
-	if kmsKey, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
-		// KMS specified
-		return kmsKey, nil
-	}
-
-	var raw []byte
-
-	if strings.HasPrefix(keyRef, "http://") || strings.HasPrefix(keyRef, "https://") {
-		// key-url specified
-		// #nosec G107
-		resp, err := http.Get(keyRef)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		raw, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-	} else if raw, err = ioutil.ReadFile(filepath.Clean(keyRef)); err != nil {
-		return nil, err
-	}
-
-	// PEM encoded file.
-	ed, err := PemToECDSAKey(raw)
-	if err != nil {
-		return nil, errors.Wrap(err, "pem to ecdsa")
-	}
-	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
-}
 
 func PemToECDSAKey(raw []byte) (*ecdsa.PublicKey, error) {
 	p, _ := pem.Decode(raw)

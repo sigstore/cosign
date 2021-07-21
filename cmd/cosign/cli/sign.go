@@ -46,6 +46,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
@@ -384,7 +385,11 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
 			break
 		}
-		cert := string(cosign.CertToPem(certFromPIV))
+		pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPIV)
+		if err != nil {
+			return nil, err
+		}
+		cert := string(pemBytes)
 		return &certSignVerifier{
 			Cert:           cert,
 			SignerVerifier: sv,
@@ -436,7 +441,11 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 		default:
 			return nil, fmt.Errorf("unsupported key type: %T", parsedCert.PublicKey)
 		}
-		certSigner.Cert = string(cosign.CertToPem(parsedCert))
+		pemBytes, err := cryptoutils.MarshalCertificateToPEM(parsedCert)
+		if err != nil {
+			return nil, errors.Wrap(err, "marshaling certificate to PEM")
+		}
+		certSigner.Cert = string(pemBytes)
 		return certSigner, nil
 	}
 	// Default Keyless!

@@ -86,5 +86,5 @@ func publicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 		}
 	}
 
-	return cosign.LoadPublicKey(ctx, keyRef)
+	return LoadPublicKey(ctx, keyRef)
 }

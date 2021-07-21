@@ -16,14 +16,13 @@ require (
 	github.com/open-policy-agent/opa v0.30.2
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/sigstore/fulcio v0.0.0-20210714122808-6d21ab53f962
+	github.com/sigstore/fulcio v0.0.0-20210720153316-846105495d38
 	github.com/sigstore/rekor v0.2.1-0.20210714185543-38d532d5c0b1
-	github.com/sigstore/sigstore v0.0.0-20210718202323-1c1454ffa6b3
+	github.com/sigstore/sigstore v0.0.0-20210720205156-8a12b31f8ca6
 	github.com/stretchr/testify v1.7.0
 	github.com/theupdateframework/go-tuf v0.0.0-20210630170422-22a94818d17b
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
-	google.golang.org/genproto v0.0.0-20210716133855-ce7ef5c701ea // indirect
 	k8s.io/api v0.21.3
 	k8s.io/apimachinery v0.21.3
 	k8s.io/client-go v0.21.3

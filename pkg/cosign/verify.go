@@ -46,6 +46,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -263,12 +264,12 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			var pemBytes []byte
 			if co.SigVerifier != nil {
 				pemBytes, err = PublicKeyPem(co.SigVerifier, co.PKOpts...)
-				if err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
 			} else {
-				pemBytes = CertToPem(sp.Cert)
+				pemBytes, err = cryptoutils.MarshalCertificateToPEM(sp.Cert)
+			}
+			if err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
 			}
 
 			// Find the uuid then the entry.

@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -212,7 +213,10 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			}
 		}
 		if cert != nil {
-			pubBytes = cosign.CertToPem(cert)
+			pubBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
+			if err != nil {
+				return err
+			}
 		}
 		uuid, index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
 		if err != nil {
