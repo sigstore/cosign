@@ -118,6 +118,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
 			remote.WithContext(ctx),
 		},
+		Suffix: cosign.SuffixSignature,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
