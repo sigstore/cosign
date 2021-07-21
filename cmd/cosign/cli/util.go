@@ -15,10 +15,20 @@
 package cli
 
 import (
+	"context"
+	"crypto"
+	"io/ioutil"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
 const (
@@ -49,4 +59,37 @@ func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
 		return img.Context(), nil
 	}
 	return name.NewRepository(wantRepo)
+}
+
+func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
+	// The key could be plaintext, in a file, at a URL, or in KMS.
+	if kmsKey, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
+		// KMS specified
+		return kmsKey, nil
+	}
+
+	var raw []byte
+
+	if strings.HasPrefix(keyRef, "http://") || strings.HasPrefix(keyRef, "https://") {
+		// key-url specified
+		// #nosec G107
+		resp, err := http.Get(keyRef)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		raw, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else if raw, err = ioutil.ReadFile(filepath.Clean(keyRef)); err != nil {
+		return nil, err
+	}
+
+	// PEM encoded file.
+	ed, err := cosign.PemToECDSAKey(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "pem to ecdsa")
+	}
+	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
 }

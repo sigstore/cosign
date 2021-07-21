@@ -50,7 +50,7 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 		},
 	}
 	if keyRef != "" {
-		pub, err := cosign.LoadPublicKey(ctx, keyRef)
+		pub, err := cli.LoadPublicKey(ctx, keyRef)
 		if err != nil {
 			return nil, err
 		}

@@ -29,6 +29,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
@@ -88,7 +89,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		if err != nil {
 			return errors.Wrap(err, "creating key")
 		}
-		pemBytes, err := cosign.KeyToPem(pubKey)
+		pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pubKey)
 		if err != nil {
 			return err
 		}

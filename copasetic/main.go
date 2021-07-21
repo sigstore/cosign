@@ -181,7 +181,7 @@ func main() {
 				return nil, err
 			}
 
-			pubKey, err := cosign.LoadPublicKey(bctx.Context, key)
+			pubKey, err := cli.LoadPublicKey(bctx.Context, key)
 			if err != nil {
 				return nil, err
 			}
