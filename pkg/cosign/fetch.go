@@ -16,10 +16,10 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"io/ioutil"
 	"runtime"
 	"strings"
@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -119,7 +120,7 @@ func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.
 			// We may have a certificate and chain
 			certPem := desc.Annotations[certkey]
 			if certPem != "" {
-				certs, err := LoadCerts(certPem)
+				certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader([]byte(certPem)))
 				if err != nil {
 					return err
 				}
@@ -127,7 +128,7 @@ func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.
 			}
 			chainPem := desc.Annotations[chainkey]
 			if chainPem != "" {
-				certs, err := LoadCerts(chainPem)
+				certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader([]byte(chainPem)))
 				if err != nil {
 					return err
 				}
@@ -152,29 +153,4 @@ func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.
 	}
 	return signatures, nil
 
-}
-
-func LoadCerts(pemStr string) ([]*x509.Certificate, error) {
-	blocks := []*pem.Block{}
-	pemBytes := []byte(pemStr)
-	for {
-		block, rest := pem.Decode(pemBytes)
-		if block == nil {
-			break
-		}
-		if block.Type == "CERTIFICATE" {
-			blocks = append(blocks, block)
-		}
-		pemBytes = rest
-	}
-
-	certs := []*x509.Certificate{}
-	for _, block := range blocks {
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		certs = append(certs, cert)
-	}
-	return certs, nil
 }
