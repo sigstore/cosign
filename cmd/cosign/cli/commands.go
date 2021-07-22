@@ -124,6 +124,7 @@ func New() *cobra.Command {
 
 	// Add sub-commands.
 	addPublicKey(cmd)
+	addPolicyInit(cmd)
 	addGenerate(cmd)
 	addSign(cmd)
 	addSignBlob(cmd)
