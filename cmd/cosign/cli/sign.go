@@ -88,7 +88,7 @@ func Sign() *ffcli.Command {
 		payloadPath      = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force            = flagset.Bool("f", false, "skip warnings and confirmations")
 		recursive        = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
-		fulcioURL        = flagset.String("fulcio-server", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
+		fulcioURL        = flagset.String("fulcio-url", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
 		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
@@ -258,9 +258,8 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 	var rekorBytes []byte
 	if uploadTLog {
 		// Upload the cert or the public key, depending on what we have
-		if sv.Cert != "" {
-			rekorBytes = []byte(sv.Cert)
-		} else {
+		rekorBytes = sv.Cert
+		if rekorBytes == nil {
 			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
 			if err != nil {
 				return err
@@ -398,9 +397,8 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 		if err != nil {
 			return nil, err
 		}
-		cert := string(pemBytes)
 		return &certSignVerifier{
-			Cert:           cert,
+			Cert:           pemBytes,
 			SignerVerifier: sv,
 		}, nil
 
@@ -454,12 +452,16 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 		if err != nil {
 			return nil, errors.Wrap(err, "marshaling certificate to PEM")
 		}
-		certSigner.Cert = string(pemBytes)
+		certSigner.Cert = pemBytes
 		return certSigner, nil
 	}
 	// Default Keyless!
 	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, ko.FulcioURL)
+	fClient, err := fulcio.NewClient(ko.FulcioURL)
+	if err != nil {
+		return nil, errors.Wrap(err, "creating Fulcio client")
+	}
+	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, fClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
 	}
@@ -471,7 +473,7 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 }
 
 type certSignVerifier struct {
-	Cert  string
-	Chain string
+	Cert  []byte
+	Chain []byte
 	signature.SignerVerifier
 }

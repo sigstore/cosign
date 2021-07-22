@@ -141,8 +141,8 @@ type Bundle struct {
 }
 
 type UploadOpts struct {
-	Cert                  string
-	Chain                 string
+	Cert                  []byte
+	Chain                 []byte
 	DupeDetector          signature.Verifier
 	Bundle                *Bundle
 	AdditionalAnnotations map[string]string
@@ -169,9 +169,9 @@ func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadO
 	annotations := map[string]string{
 		sigkey: base64.StdEncoding.EncodeToString(signature),
 	}
-	if opts.Cert != "" {
-		annotations[certkey] = opts.Cert
-		annotations[chainkey] = opts.Chain
+	if opts.Cert != nil {
+		annotations[certkey] = string(opts.Cert)
+		annotations[chainkey] = string(opts.Chain)
 	}
 	if opts.Bundle != nil {
 		b, err := swag.WriteJSON(opts.Bundle)
