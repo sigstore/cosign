@@ -63,6 +63,7 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 			return nil, err
 		}
 		co.SignatureRepo = sigRepo
+		co.Suffix = cosign.SuffixSignature
 
 		sp, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
