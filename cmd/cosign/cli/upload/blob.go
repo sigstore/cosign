@@ -22,11 +22,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
@@ -117,7 +116,7 @@ func BlobCmd(ctx context.Context, files []cremote.File, contentType, imageRef st
 		return err
 	}
 
-	dgster, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx))
+	dgster, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, cli.DefaultRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}

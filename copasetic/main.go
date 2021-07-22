@@ -18,7 +18,6 @@ package main
 import (
 	"archive/tar"
 	"bytes"
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -141,8 +140,12 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
+			registryOpts := []remote.Option{
+				remote.WithAuthFromKeychain(authn.DefaultKeychain),
+				remote.WithContext(bctx.Context),
+			}
 
-			sps, err := cosign.FetchSignaturesForImage(context.Background(), ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+			sps, err := cosign.FetchSignaturesForImage(bctx.Context, ref, sigRepo, cosign.SignatureTagSuffix, registryOpts...)
 			if err != nil {
 				return nil, err
 			}

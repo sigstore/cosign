@@ -22,9 +22,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
@@ -114,13 +112,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 
 	co := &cosign.CheckOpts{
-		Annotations: *c.Annotations,
-		RootCerts:   fulcio.Roots,
-		RegistryClientOpts: []remote.Option{
-			remote.WithAuthFromKeychain(authn.DefaultKeychain),
-			remote.WithContext(ctx),
-		},
-		Suffix: cosign.SuffixSignature,
+		Annotations:        *c.Annotations,
+		RootCerts:          fulcio.Roots,
+		RegistryClientOpts: DefaultRegistryClientOpts(ctx),
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier

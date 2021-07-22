@@ -165,8 +165,9 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 
 // CheckOpts are the options for checking
 type CheckOpts struct {
-	SignatureRepo      name.Repository
-	RegistryClientOpts []remote.Option
+	SignatureRepo        name.Repository
+	SigTagSuffixOverride string
+	RegistryClientOpts   []remote.Option
 
 	Annotations   map[string]interface{}
 	ClaimVerifier func(SignedPayload, *v1.Descriptor, map[string]interface{}) error
@@ -179,7 +180,6 @@ type CheckOpts struct {
 	PKOpts      []signature.PublicKeyOption
 
 	RootCerts *x509.CertPool
-	Suffix    string
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
@@ -199,7 +199,11 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 	if (sigRepo == name.Repository{}) {
 		sigRepo = signedImgRef.Context()
 	}
-	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, co.Suffix, co.RegistryClientOpts...)
+	tagSuffix := SignatureTagSuffix
+	if co.SigTagSuffixOverride != "" {
+		tagSuffix = co.SigTagSuffixOverride
+	}
+	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, tagSuffix, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}

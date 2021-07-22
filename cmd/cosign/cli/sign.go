@@ -315,7 +315,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			Descriptor: ggcrV1.Descriptor{
 				Digest: imgHash,
 			},
-		}, cosign.SuffixSignature)
+		}, cosign.SignatureTagSuffix)
 
 		uo := cremote.UploadOpts{
 			Cert:         sv.Cert,
