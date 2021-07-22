@@ -1132,8 +1132,8 @@ github.com/sigstore/fulcio v0.0.0-20210720153316-846105495d38/go.mod h1:FZL7iVdW
 github.com/sigstore/rekor v0.2.1-0.20210714185543-38d532d5c0b1 h1:oSxPcSsScZwrurlM+FjMs+lbjdE/I42WdGy+jV0lO88=
 github.com/sigstore/rekor v0.2.1-0.20210714185543-38d532d5c0b1/go.mod h1:cL9B3+/gp3BG+/bhkSHBA3MQZMten5xM6BhJYd5b5zU=
 github.com/sigstore/sigstore v0.0.0-20210713222344-1fee53516622/go.mod h1:aOSeNrlcHsfUD8Q1hwWd8KloNqBnxEZlu4k47cFg5rg=
-github.com/sigstore/sigstore v0.0.0-20210720205156-8a12b31f8ca6 h1:a4GimMAzOiCya9WNVo07mSuPKP1jh5z/nmug4z5Wh24=
-github.com/sigstore/sigstore v0.0.0-20210720205156-8a12b31f8ca6/go.mod h1:OqEZWzGLbeyDBLpamU3H9ocwyoseksz6qVkZCoDHGyI=
+github.com/sigstore/sigstore v0.0.0-20210722023421-fd3b69438dba h1:NH2JUe2UWJ27vzzCwJPh4xtxfdGsJrtMcm8M1lqhb54=
+github.com/sigstore/sigstore v0.0.0-20210722023421-fd3b69438dba/go.mod h1:p+VFprG1w+oRcb3fgEKa9uvw3/7N9TR0srIi2JerPKo=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

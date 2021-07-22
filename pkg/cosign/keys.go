@@ -128,24 +128,14 @@ func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifie
 	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
 }
 
-const pubKeyPemType = "PUBLIC KEY"
-
-func PemToECDSAKey(raw []byte) (*ecdsa.PublicKey, error) {
-	p, _ := pem.Decode(raw)
-	if p == nil {
-		return nil, errors.New("pem.Decode failed")
-	}
-	if p.Type != pubKeyPemType {
-		return nil, fmt.Errorf("not public: %q", p.Type)
-	}
-
-	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
+func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
+	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
 		return nil, err
 	}
-	ed, ok := decoded.(*ecdsa.PublicKey)
+	ecdsaPub, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", raw)
+		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
 	}
-	return ed, nil
+	return ecdsaPub, nil
 }
