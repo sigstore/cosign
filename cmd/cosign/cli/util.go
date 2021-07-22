@@ -33,8 +33,6 @@ import (
 
 const (
 	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
-	ServerEnv       = "REKOR_SERVER"
-	rekorServer     = "https://rekor.sigstore.dev"
 	repoEnv         = "COSIGN_REPOSITORY"
 )
 
@@ -43,14 +41,6 @@ func EnableExperimental() bool {
 		return b
 	}
 	return false
-}
-
-// TlogServer returns the name of the tlog server, can be overwritten via env var
-func TlogServer() string {
-	if s := os.Getenv(ServerEnv); s != "" {
-		return s
-	}
-	return rekorServer
 }
 
 func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {

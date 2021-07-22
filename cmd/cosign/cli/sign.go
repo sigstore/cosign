@@ -79,17 +79,22 @@ func (a *annotationsMap) String() string {
 
 func Sign() *ffcli.Command {
 	var (
-		flagset     = flag.NewFlagSet("cosign sign", flag.ExitOnError)
-		key         = flagset.String("key", "", "path to the private key file, KMS URI or Kubernetes Secret")
-		cert        = flagset.String("cert", "", "Path to the x509 certificate to include in the Signature")
-		upload      = flagset.Bool("upload", true, "whether to upload the signature")
-		sk          = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot        = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-		payloadPath = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
-		force       = flagset.Bool("f", false, "skip warnings and confirmations")
-		recursive   = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
-		idToken     = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
-		annotations = annotationsMap{}
+		flagset          = flag.NewFlagSet("cosign sign", flag.ExitOnError)
+		key              = flagset.String("key", "", "path to the private key file, KMS URI or Kubernetes Secret")
+		cert             = flagset.String("cert", "", "Path to the x509 certificate to include in the Signature")
+		upload           = flagset.Bool("upload", true, "whether to upload the signature")
+		sk               = flagset.Bool("sk", false, "whether to use a hardware security key")
+		slot             = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
+		payloadPath      = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
+		force            = flagset.Bool("f", false, "skip warnings and confirmations")
+		recursive        = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
+		fulcioURL        = flagset.String("fulcio-server", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
+		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
+		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
+		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
+		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
+		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
+		annotations      = annotationsMap{}
 	)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
@@ -133,11 +138,16 @@ EXAMPLES
 			}
 
 			ko := KeyOpts{
-				KeyRef:   *key,
-				PassFunc: GetPass,
-				Sk:       *sk,
-				Slot:     *slot,
-				IDToken:  *idToken,
+				KeyRef:           *key,
+				PassFunc:         GetPass,
+				Sk:               *sk,
+				Slot:             *slot,
+				FulcioURL:        *fulcioURL,
+				RekorURL:         *rekorURL,
+				IDToken:          *idToken,
+				OIDCIssuer:       *oidcIssuer,
+				OIDCClientID:     *oidcClientID,
+				OIDCClientSecret: *oidcClientSecret,
 			}
 			for _, img := range args {
 				if err := SignCmd(ctx, ko, annotations.annotations, img, *cert, *upload, *payloadPath, *force, *recursive); err != nil {
@@ -186,7 +196,6 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 
 func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{},
 	imageRef string, certPath string, upload bool, payloadPath string, force bool, recursive bool) error {
-
 	// A key file or token is required unless we're in experimental mode!
 	if EnableExperimental() {
 		if nOf(ko.KeyRef, ko.Sk) > 1 {
@@ -233,7 +242,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 	uploadTLog := EnableExperimental()
 	if uploadTLog && !force {
 		if _, err := remote.Get(ref); err != nil {
-			fmt.Printf("warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", TlogServer())
+			fmt.Printf("warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", ko.RekorURL)
 
 			var tlogConfirmResponse string
 			if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
@@ -316,7 +325,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}
 
 		if uploadTLog {
-			rekorClient, err := rekorClient.GetRekorClient(TlogServer())
+			rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
 			if err != nil {
 				return err
 			}
@@ -450,7 +459,7 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 	}
 	// Default Keyless!
 	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-	k, err := fulcio.NewSigner(ctx, ko.IDToken)
+	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, ko.FulcioURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
 	}

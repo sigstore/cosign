@@ -43,10 +43,6 @@ import (
 )
 
 const (
-	defaultFulcioAddress = "https://fulcio.sigstore.dev"
-	oauthAddress         = "https://oauth2.sigstore.dev/auth"
-	clientID             = "sigstore"
-
 	FlowNormal = "normal"
 	FlowDevice = "device"
 	FlowToken  = "token"
@@ -55,14 +51,6 @@ const (
 // This is the root in the fulcio project.
 //go:embed fulcio.pem
 var rootPem string
-
-func fulcioServer() string {
-	addr := os.Getenv("FULCIO_ADDRESS")
-	if addr != "" {
-		return addr
-	}
-	return defaultFulcioAddress
-}
 
 type oidcConnector interface {
 	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, error)
@@ -80,13 +68,13 @@ type signingCertProvider interface {
 	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter, opts ...operations.ClientOption) (*operations.SigningCertCreated, error)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connector oidcConnector) (string, string, error) {
+func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connector oidcConnector, oidcIssuer string, oidcClientID string) (string, string, error) {
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
 		return "", "", err
 	}
 
-	tok, err := connector.OIDConnect(oauthAddress, clientID, "")
+	tok, err := connector.OIDConnect(oidcIssuer, oidcClientID, "")
 	if err != nil {
 		return "", "", err
 	}
@@ -136,8 +124,8 @@ func getFulcioClient(addr string) (*fulcioClient.Fulcio, error) {
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow string) (string, string, error) {
-	fcli, err := getFulcioClient(fulcioServer())
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow string, oidcIssuer string, oidcClientID string, fulcioClient string) (string, string, error) {
+	fcli, err := getFulcioClient(fulcioClient)
 	if err != nil {
 		return "", "", err
 	}
@@ -146,7 +134,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow string) 
 	switch flow {
 	case FlowDevice:
 		c.flow = oauthflow.NewDeviceFlowTokenGetter(
-			oauthAddress, oauthflow.SigstoreDeviceURL, oauthflow.SigstoreTokenURL)
+			oidcIssuer, oauthflow.SigstoreDeviceURL, oauthflow.SigstoreTokenURL)
 	case FlowNormal:
 		c.flow = oauthflow.DefaultIDTokenGetter
 	case FlowToken:
@@ -155,7 +143,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow string) 
 		return "", "", fmt.Errorf("unsupported oauth flow: %s", flow)
 	}
 
-	return getCertForOauthID(priv, fcli.Operations, c)
+	return getCertForOauthID(priv, fcli.Operations, c, oidcIssuer, oidcClientID)
 }
 
 type Signer struct {
@@ -165,7 +153,7 @@ type Signer struct {
 	*signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, fulcioClient string) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
@@ -186,7 +174,7 @@ func NewSigner(ctx context.Context, idToken string) (*Signer, error) {
 	default:
 		flow = FlowNormal
 	}
-	cert, chain, err := GetCert(ctx, priv, idToken, flow) // TODO, use the chain.
+	cert, chain, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, fulcioClient) // TODO, use the chain.
 	if err != nil {
 		return nil, errors.Wrap(err, "retrieving cert")
 	}

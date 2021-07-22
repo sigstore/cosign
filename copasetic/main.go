@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -45,6 +46,8 @@ import (
 )
 
 func main() {
+	rekorURL := flag.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
+	flag.Parse()
 
 	rego.RegisterBuiltin2(
 		&rego.Function{
@@ -196,7 +199,7 @@ func main() {
 					remote.WithAuthFromKeychain(authn.DefaultKeychain),
 					remote.WithContext(bctx.Context),
 				},
-				RekorURL:      cli.TlogServer(),
+				RekorURL:      *rekorURL,
 				SignatureRepo: sigRepo,
 			}
 			sps, err := cosign.Verify(bctx.Context, ref, co)
