@@ -460,7 +460,7 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 	}
 	// Default Keyless!
 	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.FulcioURL, ko.RekorURL)
+	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, ko.FulcioURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
 	}
