@@ -33,7 +33,7 @@ steps:
     git checkout ${_TOOL_REF}
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.16.5@sha256:5874d76072f0d434b4328c77977f1a9fb9bf28b21f083cf1b9a53ec497656128
+- name: ghcr.io/gythialy/golang-cross:v1.16.6@sha256:a31f3981571aab561bfdc2c50bf25142f2460a47c35e76ae9d50826e3a1aabac
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
