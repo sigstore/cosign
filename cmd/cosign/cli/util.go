@@ -30,10 +30,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
-
+\
 const (
 	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
-	ServerEnv       = "REKOR_SERVER"
 	repoEnv         = "COSIGN_REPOSITORY"
 )
 

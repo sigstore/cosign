@@ -89,7 +89,7 @@ func Sign() *ffcli.Command {
 		force            = flagset.Bool("f", false, "skip warnings and confirmations")
 		recursive        = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
 		fulcioURL        = flagset.String("fulcio-server", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
-		rekorURL         = flagset.String("rekor-server", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
+		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
 		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")

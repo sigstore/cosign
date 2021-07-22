@@ -153,7 +153,7 @@ type Signer struct {
 	*signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer string, oidcClientID string, oidcClientSecret string, fulcioClient string, rekorClient string) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, fulcioClient string) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")

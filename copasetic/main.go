@@ -46,7 +46,7 @@ import (
 )
 
 func main() {
-	rekorURL := flag.String("rekor-server", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
+	rekorURL := flag.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 	flag.Parse()
 
 	rego.RegisterBuiltin2(
