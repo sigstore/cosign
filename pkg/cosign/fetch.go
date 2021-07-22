@@ -51,26 +51,26 @@ type SignedPayload struct {
 // }
 
 const (
-	SuffixSignature = ".sig"
-	SuffixSBOM      = ".sbom"
+	SignatureTagSuffix = ".sig"
+	SBOMTagSuffix      = ".sbom"
 )
 
-func AttachedImageTag(repo name.Repository, imgDesc *remote.Descriptor, suffix string) name.Tag {
-	// sha256:d34db33f -> sha256-d34db33f.sig
-	tagStr := strings.ReplaceAll(imgDesc.Digest.String(), ":", "-") + suffix
+func AttachedImageTag(repo name.Repository, imgDesc *remote.Descriptor, tagSuffix string) name.Tag {
+	// sha256:d34db33f -> sha256-d34db33f.suffix
+	tagStr := strings.ReplaceAll(imgDesc.Digest.String(), ":", "-") + tagSuffix
 	return repo.Tag(tagStr)
 }
 
-func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, sigRepo name.Repository, opts ...remote.Option) ([]SignedPayload, error) {
-	signedImgDesc, err := remote.Get(signedImgRef, opts...)
+func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, sigRepo name.Repository, sigTagSuffix string, registryOpts ...remote.Option) ([]SignedPayload, error) {
+	signedImgDesc, err := remote.Get(signedImgRef, registryOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, SuffixSignature, opts...)
+	return FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, sigTagSuffix, registryOpts...)
 }
 
-func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.Descriptor, sigRepo name.Repository, suffix string, opts ...remote.Option) ([]SignedPayload, error) {
-	sigImgDesc, err := remote.Get(AttachedImageTag(sigRepo, signedDescriptor, suffix), opts...)
+func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.Descriptor, sigRepo name.Repository, sigTagSuffix string, registryOpts ...remote.Option) ([]SignedPayload, error) {
+	sigImgDesc, err := remote.Get(AttachedImageTag(sigRepo, signedDescriptor, sigTagSuffix), registryOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting signature manifest")
 	}

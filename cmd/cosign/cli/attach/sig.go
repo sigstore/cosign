@@ -24,7 +24,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -71,9 +70,8 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 		return err
 	}
 
-	remoteOpts := []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)}
-
-	get, err := remote.Get(ref, remoteOpts...)
+	regClientOpts := cli.DefaultRegistryClientOpts(ctx)
+	get, err := remote.Get(ref, regClientOpts...)
 	if err != nil {
 		return err
 	}
@@ -84,7 +82,7 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.AttachedImageTag(sigRepo, get, cosign.SuffixSignature)
+	dstRef := cosign.AttachedImageTag(sigRepo, get, cosign.SignatureTagSuffix)
 
 	var payload []byte
 	if payloadRef == "" {
@@ -101,7 +99,7 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	if err != nil {
 		return err
 	}
-	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts}); err != nil {
+	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: regClientOpts}); err != nil {
 		return err
 	}
 	return nil

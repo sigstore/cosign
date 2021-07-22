@@ -211,7 +211,7 @@ func TestDuplicateSign(t *testing.T) {
 		t.Fatalf("failed to get signature repository: %v", err)
 	}
 
-	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, cosign.SignatureTagSuffix, registryClientOpts(ctx)...)
 	if err != nil {
 		t.Fatalf("failed to fetch signatures: %v", err)
 	}
@@ -466,7 +466,8 @@ func TestUploadDownload(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to get signature repository: %v", err)
 			}
-			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+			regClientOpts := registryClientOpts(ctx)
+			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, cosign.SignatureTagSuffix, regClientOpts...)
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
@@ -667,19 +668,21 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 		t.Fatal(err)
 	}
 
-	if err := remote.Write(ref, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+	regClientOpts := registryClientOpts(context.Background())
+
+	if err := remote.Write(ref, img, regClientOpts...); err != nil {
 		t.Fatal(err)
 	}
 
-	remoteImage, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	remoteImage, err := remote.Get(ref, regClientOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	cleanup := func() {
-		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-		ref := cosign.AttachedImageTag(ref.Context(), remoteImage, cosign.SuffixSignature)
-		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		_ = remote.Delete(ref, regClientOpts...)
+		ref := cosign.AttachedImageTag(ref.Context(), remoteImage, cosign.SignatureTagSuffix)
+		_ = remote.Delete(ref, regClientOpts...)
 	}
 	return ref, remoteImage, cleanup
 }
@@ -717,4 +720,11 @@ func reg(t *testing.T) (string, func()) {
 		t.Fatal(err)
 	}
 	return u.Host, r.Close
+}
+
+func registryClientOpts(ctx context.Context) []remote.Option {
+	return []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithContext(ctx),
+	}
 }

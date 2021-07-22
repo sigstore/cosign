@@ -62,7 +62,7 @@ func MungeCmd(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.AttachedImageTag(sigRepo, desc, cosign.SuffixSignature)
+	dstRef := cosign.AttachedImageTag(sigRepo, desc, cosign.SignatureTagSuffix)
 
 	fmt.Println(dstRef.Name())
 	return nil

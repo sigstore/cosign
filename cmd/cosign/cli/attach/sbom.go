@@ -22,12 +22,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
@@ -64,7 +64,6 @@ func SBOM() *ffcli.Command {
 }
 
 func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
-
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -75,16 +74,16 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 		return err
 	}
 
-	remoteOpts := []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)}
-	get, err := remote.Get(ref, remoteOpts...)
+	regClientOpts := cli.DefaultRegistryClientOpts(ctx)
+	get, err := remote.Get(ref, regClientOpts...)
 	if err != nil {
 		return err
 	}
 	repo := ref.Context()
-	dstRef := cosign.AttachedImageTag(repo, get, cosign.SuffixSBOM)
+	dstRef := cosign.AttachedImageTag(repo, get, cosign.SBOMTagSuffix)
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
-	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, remoteOpts...); err != nil {
+	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, regClientOpts...); err != nil {
 		return err
 	}
 
