@@ -196,7 +196,6 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 
 func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{},
 	imageRef string, certPath string, upload bool, payloadPath string, force bool, recursive bool) error {
-
 	// A key file or token is required unless we're in experimental mode!
 	if EnableExperimental() {
 		if nOf(ko.KeyRef, ko.Sk) > 1 {
