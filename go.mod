@@ -14,6 +14,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/hashicorp/vault/api v1.1.1 // indirect
+	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
 	github.com/manifoldco/promptui v0.8.0
 	github.com/open-policy-agent/opa v0.30.2
 	github.com/peterbourgon/ff/v3 v3.1.0

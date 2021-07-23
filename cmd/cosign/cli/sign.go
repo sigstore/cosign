@@ -77,6 +77,31 @@ func (a *annotationsMap) String() string {
 	return strings.Join(s, ",")
 }
 
+func shouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error) {
+	// Check if the image is public (no auth in Get)
+	if !EnableExperimental() {
+		return false, nil
+	}
+	// Experimental is on!
+	if force {
+		return true, nil
+	}
+
+	if _, err := remote.Get(ref); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", url)
+
+		var tlogConfirmResponse string
+		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
+			return false, err
+		}
+		if tlogConfirmResponse != "Y" {
+			fmt.Println("not uploading to transparency log")
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func Sign() *ffcli.Command {
 	var (
 		flagset          = flag.NewFlagSet("cosign sign", flag.ExitOnError)
@@ -238,36 +263,6 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		return errors.Wrap(err, "getting signer")
 	}
 
-	// Check if the image is public (no auth in Get)
-	uploadTLog := EnableExperimental()
-	if uploadTLog && !force {
-		if _, err := remote.Get(ref); err != nil {
-			fmt.Printf("warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", ko.RekorURL)
-
-			var tlogConfirmResponse string
-			if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
-				return err
-			}
-			if tlogConfirmResponse != "Y" {
-				fmt.Println("not uploading to transparency log")
-				uploadTLog = false
-			}
-		}
-	}
-
-	var rekorBytes []byte
-	if uploadTLog {
-		// Upload the cert or the public key, depending on what we have
-		rekorBytes = sv.Cert
-		if rekorBytes == nil {
-			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
-			if err != nil {
-				return err
-			}
-			rekorBytes = pemBytes
-		}
-	}
-
 	var staticPayload []byte
 	if payloadPath != "" {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
@@ -323,7 +318,24 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			RemoteOpts:   remoteOpts,
 		}
 
+		// Check if the image is public (no auth in Get)
+		uploadTLog, err := shouldUploadToTlog(ref, force, ko.RekorURL)
+		if err != nil {
+			return err
+		}
+
 		if uploadTLog {
+			var rekorBytes []byte
+			// Upload the cert or the public key, depending on what we have
+			if sv.Cert != nil {
+				rekorBytes = sv.Cert
+			} else {
+				pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
+				if err != nil {
+					return err
+				}
+				rekorBytes = pemBytes
+			}
 			rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
 			if err != nil {
 				return err

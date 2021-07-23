@@ -143,6 +143,43 @@ func TestSignVerifyClean(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 }
 
+func TestAttestVerify(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Verify should fail at first
+	verifyAttestation := cli.VerifyAttestationCommand{
+		KeyRef: pubKeyPath,
+	}
+
+	attestation := "helloworld"
+	ap := filepath.Join(td, "attestation")
+	if err := ioutil.WriteFile(ap, []byte(attestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
+
+	// Now attest the image
+	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(cli.AttestCmd(ctx, ko, imgName, "", true, ap, false), t)
+
+	// Now verify and download should work!
+	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+	// Look for a specific annotation
+	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
+}
+
 func TestBundle(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, cli.ExperimentalEnv, "1")()

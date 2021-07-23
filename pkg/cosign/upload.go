@@ -26,6 +26,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 )
 
@@ -36,8 +37,21 @@ func UploadTLog(rekorClient *client.Rekor, signature, payload []byte, pemBytes [
 		APIVersion: swag.String(re.APIVersion()),
 		Spec:       re.RekordObj,
 	}
+	return doUpload(rekorClient, &returnVal)
+}
+
+func UploadAttestationTLog(rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
+	e := intotoEntry(signature, pemBytes)
+	returnVal := models.Intoto{
+		APIVersion: swag.String(e.APIVersion()),
+		Spec:       e.IntotoObj,
+	}
+	return doUpload(rekorClient, &returnVal)
+}
+
+func doUpload(rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEntryAnon, error) {
 	params := entries.NewCreateLogEntryParams()
-	params.SetProposedEntry(&returnVal)
+	params.SetProposedEntry(pe)
 	resp, err := rekorClient.Entries.CreateLogEntry(params)
 	if err != nil {
 		// If the entry already exists, we get a specific error.
@@ -56,6 +70,18 @@ func UploadTLog(rekorClient *client.Rekor, signature, payload []byte, pemBytes [
 		return &p, nil
 	}
 	return nil, errors.New("bad response from server")
+}
+
+func intotoEntry(signature, pubKey []byte) intoto_v001.V001Entry {
+	pub := strfmt.Base64(pubKey)
+	return intoto_v001.V001Entry{
+		IntotoObj: models.IntotoV001Schema{
+			Content: &models.IntotoV001SchemaContent{
+				Envelope: string(signature),
+			},
+			PublicKey: &pub,
+		},
+	}
 }
 
 func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {

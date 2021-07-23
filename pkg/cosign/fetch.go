@@ -51,8 +51,9 @@ type SignedPayload struct {
 // }
 
 const (
-	SignatureTagSuffix = ".sig"
-	SBOMTagSuffix      = ".sbom"
+	SignatureTagSuffix   = ".sig"
+	SBOMTagSuffix        = ".sbom"
+	AttestationTagSuffix = ".att"
 )
 
 func AttachedImageTag(repo name.Repository, imgDesc *remote.Descriptor, tagSuffix string) name.Tag {

@@ -49,8 +49,10 @@ func main() {
 			// Signing
 			cli.Verify(),
 			cli.Sign(),
+			cli.Attest(),
 			cli.Generate(),
 			cli.SignBlob(),
+			cli.VerifyAttestation(),
 			cli.VerifyBlob(),
 			cli.VerifyDockerfile(),
 			// Upload sub-tree
