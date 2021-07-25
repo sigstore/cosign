@@ -53,6 +53,12 @@ func TestGetImagesFromDockerfile(t *testing.T) {
 			expected:     []string{"gcr.io/fancy/test/image"},
 		},
 		{
+			name: "arg-before-from",
+			fileContents: `ARG IMAGE=gcr.io/fancy/test/image
+			FROM $IMAGE AS fancy`,
+			expected: []string{"gcr.io/fancy/test/image"},
+		},
+		{
 			name: "multistage",
 			fileContents: `FROM build_image_1
 			RUN script1
