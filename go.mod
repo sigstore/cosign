@@ -19,6 +19,7 @@ require (
 	github.com/open-policy-agent/opa v0.30.2
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
+	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab
 	github.com/sigstore/fulcio v0.0.0-20210720153316-846105495d38
 	github.com/sigstore/rekor v0.2.1-0.20210714185543-38d532d5c0b1
 	github.com/sigstore/sigstore v0.0.0-20210722023421-fd3b69438dba

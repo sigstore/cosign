@@ -19,7 +19,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/riywo/loginshell"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -33,9 +35,10 @@ import (
 )
 
 var (
-	rootFlagSet    = flag.NewFlagSet("cosign", flag.ExitOnError)
-	debug          = rootFlagSet.Bool("d", false, "log debug output")
-	outputFilename = rootFlagSet.String("output-file", "", "log output to a file")
+	rootFlagSet       = flag.NewFlagSet("cosign", flag.ExitOnError)
+	debug             = rootFlagSet.Bool("d", false, "log debug output")
+	outputFilename    = rootFlagSet.String("output-file", "", "log output to a file")
+	completionEnabled = rootFlagSet.Bool("completion", false, "generate completion for current shell")
 )
 
 func main() {
@@ -78,6 +81,11 @@ func main() {
 		printErrAndExit(err)
 	}
 
+	if *completionEnabled {
+		generateCompletionForCurrentShell(root)
+		os.Exit(0)
+	}
+
 	if *outputFilename != "" {
 		out, err := os.Create(*outputFilename)
 		if err != nil {
@@ -99,6 +107,86 @@ func main() {
 	if err := root.Run(context.Background()); err != nil {
 		printErrAndExit(err)
 	}
+}
+
+func generateCompletionForCurrentShell(root *ffcli.Command) {
+	shell, err := loginshell.Shell()
+	if err != nil {
+		printErrAndExit(err)
+	}
+
+	if strings.EqualFold(shell, "/bin/zsh") {
+		var rootCmpl []string
+		rootCmdName := root.FlagSet.Name()
+		fmt.Printf("#compdef _%s %s\n\n", rootCmdName, rootCmdName)
+		root.FlagSet.VisitAll(func(f *flag.Flag) {
+			rootCmpl = append(
+				rootCmpl, fmt.Sprintf("\t'-%s[%s]' \\\n", f.Name, f.Usage))
+		})
+		fmt.Printf("function _%s {\n\n local -a commands \n _arguments -C \\\n%s",
+			rootCmdName, strings.Join(rootCmpl, " "))
+		printSubCommands(root, rootCmdName)
+		printCommandFunctions(root, rootCmdName)
+	} else {
+		fmt.Fprintf(os.Stderr, "we are not currently supporting the shell %s for completions: %v\n", shell, err)
+		os.Exit(1)
+	}
+}
+
+func printCommandFunctions(root *ffcli.Command, parentCmdName string) {
+	for _, cmd := range root.Subcommands {
+		var sbCmpl []string
+		if cmd.Name == "" {
+			continue
+		}
+		cmd.FlagSet.VisitAll(func(f *flag.Flag) {
+			sbCmpl = append(
+				sbCmpl, fmt.Sprintf("\t'-%s[%s]' \\\n", f.Name, f.Usage))
+		})
+		fields := strings.Fields(parentCmdName)
+		if len(fields) > 0 {
+			parentCmdName = strings.Join(fields, "_")
+		}
+		fmt.Printf("function _%s_%s {\n\n local -a commands \n _arguments -C \\\n%s",
+			parentCmdName, cmd.Name, strings.Join(sbCmpl, " "))
+		printSubCommands(cmd, cmd.FlagSet.Name())
+		printCommandFunctions(cmd, cmd.FlagSet.Name())
+	}
+}
+
+func printSubCommands(cmd *ffcli.Command, parentCmdName string) {
+	fmt.Print("\t\"*::arg:->args\"")
+	if len(cmd.Subcommands) > 0 {
+		fmt.Println("\t \\")
+		fmt.Print("\t\"1: :->cmnds\"\n\n")
+		fmt.Println(" case $state in")
+		fmt.Println("\tcmnds)")
+		fmt.Println("\t commands=(")
+		for _, sbc := range cmd.Subcommands {
+			if sbc.Name == "" {
+				continue
+			}
+			fmt.Printf("\t \"%s:%s\"\n", sbc.Name, sbc.ShortHelp)
+		}
+		fmt.Println("\t)")
+		fmt.Println("\t _describe \"command\" commands\n\t ;;\n esac")
+
+		fmt.Println(" case \"$words[1]\" in")
+		for _, sbc := range cmd.Subcommands {
+			if sbc.Name == "" {
+				continue
+			}
+			fmt.Printf("\t%s)\n", sbc.Name)
+			fields := strings.Fields(parentCmdName)
+			if len(fields) > 0 {
+				parentCmdName = strings.Join(fields, "_")
+			}
+			fmt.Printf("\t _%s_%s\n", parentCmdName, sbc.Name)
+			fmt.Println("\t ;;")
+		}
+		fmt.Print(" esac")
+	}
+	fmt.Print("\n}\n\n")
 }
 
 func printErrAndExit(err error) {
