@@ -30,7 +30,7 @@ func Upload() *ffcli.Command {
 	return &ffcli.Command{
 		Name:        "upload",
 		ShortUsage:  "cosign upload",
-		ShortHelp:   "upload contains tools to upload artifacts to a registry",
+		ShortHelp:   "Provides utilities for uploading artifacts to a registry",
 		FlagSet:     flagset,
 		Subcommands: []*ffcli.Command{Blob(), Wasm()},
 		Exec: func(ctx context.Context, args []string) error {

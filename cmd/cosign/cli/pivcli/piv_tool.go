@@ -39,7 +39,7 @@ func PivKey() *ffcli.Command {
 	return &ffcli.Command{
 		Name:        "piv-tool",
 		ShortUsage:  "cosign piv-tool",
-		ShortHelp:   "piv-tool contains commands to manage a hardware token",
+		ShortHelp:   "Provides utilities for managing a hardware token",
 		FlagSet:     flagset,
 		Subcommands: []*ffcli.Command{SetManagementKey(), SetPin(), SetPuk(), Unblock(), Attestation(), GenerateKey(), ResetKey()},
 		Exec: func(ctx context.Context, args []string) error {

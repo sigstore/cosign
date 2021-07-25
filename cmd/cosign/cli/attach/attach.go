@@ -30,7 +30,7 @@ func Attach() *ffcli.Command {
 	return &ffcli.Command{
 		Name:        "attach",
 		ShortUsage:  "cosign attach",
-		ShortHelp:   "attach contains tools to attach artifacts to other artifacts in a registry",
+		ShortHelp:   "Provides utilities for attaching artifacts to other artifacts in a registry",
 		FlagSet:     flagset,
 		Subcommands: []*ffcli.Command{Signature(), SBOM()},
 		Exec: func(ctx context.Context, args []string) error {

@@ -36,7 +36,7 @@ func Wasm() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "wasm",
 		ShortUsage: "cosign upload wasm -f foo.wasm <image uri>",
-		ShortHelp:  "upload a wasm module to the supplied container image reference",
+		ShortHelp:  "Upload a wasm module to the supplied container image reference",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
