@@ -47,7 +47,7 @@ const (
 	FlowNormal = "normal"
 	FlowDevice = "device"
 	FlowToken  = "token"
-	altRoot    = "SIGSTORE_ROOT_DIR"
+	altRoot    = "SIGSTORE_ROOT_FILE"
 )
 
 // This is the root in the fulcio project.

@@ -100,5 +100,5 @@ If you're running your own sigtore services flags are available to set your own 
 You can override the public good instance root CA using the enviromental variable `SIGSTORE_ROOT_DIR`, e.g.
 
 ```
-export SIGSTORE_ROOT_DIR="/home/jdoe/myrootCA.pem"
+export SIGSTORE_ROOT_FILE="/home/jdoe/myrootCA.pem"
 ```
