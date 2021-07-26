@@ -49,7 +49,7 @@ type Keys struct {
 }
 
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 }
 
 func GenerateKeyPair(pf PassFunc) (*Keys, error) {

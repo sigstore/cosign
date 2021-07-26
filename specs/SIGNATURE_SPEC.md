@@ -279,7 +279,7 @@ For example:
 
 Implementations must support at least the following schemes:
 
-* ECDSA-P256
+* ECDSA-P384
 
 No information about the signature scheme is included in the object.
 Clients must determine the signature scheme out-of-band during the verification process.
@@ -387,7 +387,7 @@ There is also a performance benefit: we can validate the signature (stored in th
 
 ## Algorithms
 
-We only require ECDSA-P256 (with the SHA256 hash algorithm, see above), but will allow for other schemes.
+We only require ECDSA-P384 (with the SHA256 hash algorithm, see above), but will allow for other schemes.
 We will bias toward algorithms well-supported in the Go ecosystem, but will accept others.
 We will bias toward support for algorithms with wide industry adoption, API support, and hardware availability.
 
