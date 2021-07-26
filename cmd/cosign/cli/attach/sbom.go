@@ -46,7 +46,7 @@ func SBOM() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "sbom",
 		ShortUsage: "cosign attach sbom <image uri>",
-		ShortHelp:  "attach sbom to the supplied container image",
+		ShortHelp:  "Attach sbom to the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {

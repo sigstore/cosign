@@ -43,7 +43,7 @@ func Signature() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "signature",
 		ShortUsage: "cosign attach signature <image uri>",
-		ShortHelp:  "attach signatures to the supplied container image",
+		ShortHelp:  "Attach signatures to the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
