@@ -206,7 +206,7 @@ func init() {
 		if err != nil {
 			panic(fmt.Sprintf("error reading root PEM file: %s", err))
 		}
-		if !cp.AppendCertsFromPEM([]byte(raw)) {
+		if !cp.AppendCertsFromPEM(raw) {
 			panic("error creating root cert pool")
 		}
 	} else if !cp.AppendCertsFromPEM([]byte(rootPem)) {
