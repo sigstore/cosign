@@ -105,9 +105,9 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 }
 
 func UploadFile(b []byte, ref name.Reference, layerMt, configMt types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {
-	l := &StaticLayer{
-		B:  b,
-		Mt: layerMt,
+	l := &staticLayer{
+		b:  b,
+		mt: layerMt,
 	}
 
 	emptyOci := mutate.MediaType(empty.Image, types.OCIManifestSchema1)
