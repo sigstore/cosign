@@ -28,6 +28,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,6 +44,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	fulcioClient "github.com/sigstore/fulcio/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	rekorClient "github.com/sigstore/rekor/pkg/client"
@@ -113,7 +115,7 @@ func Sign() *ffcli.Command {
 		payloadPath      = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force            = flagset.Bool("f", false, "skip warnings and confirmations")
 		recursive        = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
-		fulcioURL        = flagset.String("fulcio-url", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
+		fulcioURL        = flagset.String("fulcio-url", fulcioClient.SigstorePublicServerURL, "[EXPERIMENTAL] address of sigstore PKI server")
 		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
@@ -469,10 +471,11 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 	}
 	// Default Keyless!
 	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-	fClient, err := fulcio.NewClient(ko.FulcioURL)
+	fulcioServer, err := url.Parse(ko.FulcioURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating Fulcio client")
+		return nil, errors.Wrap(err, "parsing Fulcio URL")
 	}
+	fClient := fulcioClient.New(fulcioServer)
 	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, fClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
