@@ -53,6 +53,9 @@ func CleanCmd(ctx context.Context, imageRef string) error {
 	}
 
 	h, err := Digest(ctx, ref)
+	if err != nil {
+		return err
+	}
 
 	sigRepo, err := TargetRepositoryForImage(ref)
 	if err != nil {
