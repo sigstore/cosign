@@ -8,8 +8,8 @@ Cosign supports:
 
 * Hardware and KMS signing
 * Bring-your-own PKI
-* Our free OIDC PKI (Fulcio)
-* Built-in binary transparency and timestamping service (Rekor)
+* Our free OIDC PKI ([Fulcio](https://github.com/sigstore/fulcio))
+* Built-in binary transparency and timestamping service ([Rekor](https://github.com/sigstore/rekor))
 
 ![intro](images/intro.gif)
 
@@ -105,7 +105,7 @@ Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea642
 
 ### Verify a container against a public key
 
-This command returns 0 if *at least one* `cosign` formatted signature for the image is found
+This command returns `0` if *at least one* `cosign` formatted signature for the image is found
 matching the public key.
 See the detailed usage below for information and caveats on other signature formats.
 
@@ -170,7 +170,7 @@ Digest verification is automatic:
 $ sget us.gcr.io/dlorenc-vmtest2/readme@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec > artifact
 ```
 
-You can also use sget to fetch contents by tag.
+You can also use `sget` to fetch contents by tag.
 Fetching contents without verifying them is dangerous, so we require the artifact be signed in this case:
 
 ```shell
