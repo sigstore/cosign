@@ -19,8 +19,6 @@ Cosign supports:
 We also use a slack [slack channel](https://sigstore.slack.com)!
 Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcfWn4XEyMqUUutbUQ) for the invite link.
 
-🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨
-
 ## Installation
 
 If you have Go 1.16+, you can directly install by running:
@@ -120,6 +118,49 @@ The following checks were performed on these signatures:
   - The signatures were verified against the specified public key
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
+
+## `Cosign` is (almost) 1.0!
+
+This means the core feature set of `cosign` is considered ready for production use.
+This core set includes:
+
+### Key Management
+
+* fixed, text-based keys generated using `cosign generate-key-pair`
+* cloud KMS-based keys generated using `cosign generate-key-pair -kms`
+* keys generated on hardware tokens using the PIV interface using `cosign piv-tool`
+* Kubernetes-secret based keys generated using `cosign generate-key-pair -k8s`
+
+### Artifact Types
+
+* OCI and Docker Images
+* Other artifacts that can be stored in a container registry, including:
+  * Tekton Bundles
+  * Helm Charts
+  * WASM modules
+  * (probably anything else, feel free to add things to this list)
+* Text files and other binary blobs, using `cosign sign-blob`
+
+### What ** is not ** production ready?
+
+While parts of `cosign` are stable, we are continuing to experiment and add new features.
+The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
+
+#### Anything under the `COSIGN_EXPERIMENTAL` environment variable
+
+* Integration with the `Rekor` transparency log
+* Keyless signatures using the `Fulcio` CA
+
+#### Formats/Specifications 
+
+While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
+the format specifications for some of those types may not be considered stable yet.
+Some of these are developed outside of the `cosign` project, so we are waiting for them to stabilize first.
+
+These include:
+
+* The SBOM specification for storing SBOMs in a container registry
+* The In-Toto attestation format
 
 ## Working with Other Artifacts
 
@@ -253,6 +294,10 @@ See the [Usage documentation](USAGE.md) for more commands!
 ## Hardware-based Tokens
 
 See the [Hardware Tokens documentation](TOKENS.md) for information on how to use `cosign` with hardware.
+
+## Keyless
+
+🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨
 
 ## Registry Support
 
@@ -458,10 +503,6 @@ The following checks were performed on each of these signatures:
 ```
 
 ## FAQ
-
-### Who is using this?
-
-Hopefully no one yet. Stay tuned, though.
 
 ### Why not use Notary v2
 
