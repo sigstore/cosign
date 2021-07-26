@@ -25,7 +25,6 @@ import (
 	_ "embed" // To enable the `go:embed` directive.
 	"encoding/pem"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/go-openapi/runtime"
@@ -110,17 +109,6 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 	certBlock, chainPem := pem.Decode([]byte(resp.Payload))
 	certPem = pem.EncodeToMemory(certBlock)
 	return certPem, chainPem, nil
-}
-
-func NewClient(addr string) (*fulcioClient.Fulcio, error) {
-	url, err := url.Parse(addr)
-	if err != nil {
-		return nil, err
-	}
-
-	rt := httptransport.New(url.Host, fulcioClient.DefaultBasePath, []string{url.Scheme})
-	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
-	return fulcioClient.New(rt, strfmt.Default), nil
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
