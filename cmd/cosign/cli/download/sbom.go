@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -56,15 +55,13 @@ func SBOMCmd(ctx context.Context, imageRef string, out io.Writer) ([]string, err
 		return nil, err
 	}
 
-	auth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-
-	get, err := remote.Get(ref, auth)
+	h, err := cli.Digest(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
 
 	repo := ref.Context()
-	dstRef := cosign.AttachedImageTag(repo, get, cosign.SBOMTagSuffix)
+	dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
 	img, err := remote.Image(dstRef, cli.DefaultRegistryClientOpts(ctx)...)
 	if err != nil {
 		return nil, err

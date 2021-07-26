@@ -24,13 +24,13 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func SimpleClaimVerifier(sp SignedPayload, desc *v1.Descriptor, annotations map[string]interface{}) error {
+func SimpleClaimVerifier(sp SignedPayload, digest v1.Hash, annotations map[string]interface{}) error {
 	ss := &payload.SimpleContainerImage{}
 	if err := json.Unmarshal(sp.Payload, ss); err != nil {
 		return err
 	}
 
-	if err := sp.VerifyClaims(desc, ss); err != nil {
+	if err := sp.VerifyClaims(digest, ss); err != nil {
 		return err
 	}
 
@@ -42,7 +42,7 @@ func SimpleClaimVerifier(sp SignedPayload, desc *v1.Descriptor, annotations map[
 	return nil
 }
 
-func IntotoSubjectClaimVerifier(sp SignedPayload, desc *v1.Descriptor, _ map[string]interface{}) error {
+func IntotoSubjectClaimVerifier(sp SignedPayload, digest v1.Hash, _ map[string]interface{}) error {
 	st := &in_toto.Statement{}
 	if err := json.Unmarshal(sp.Payload, st); err != nil {
 		return err
@@ -54,7 +54,7 @@ func IntotoSubjectClaimVerifier(sp SignedPayload, desc *v1.Descriptor, _ map[str
 			continue
 		}
 		subjDigest := "sha256:" + dgst
-		if subjDigest == desc.Digest.String() {
+		if subjDigest == digest.String() {
 			return nil
 		}
 	}

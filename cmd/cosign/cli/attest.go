@@ -29,7 +29,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	ggcrV1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -127,13 +126,12 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	get, err := remote.Get(ref, remoteOpts...)
+	h, err := Digest(ctx, ref)
 	if err != nil {
-		return errors.Wrap(err, "getting remote image")
+		return err
 	}
-
 	repo := ref.Context()
-	img := repo.Digest(get.Digest.String())
+	img := repo.Digest(h.String())
 
 	sv, err := signerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
@@ -155,7 +153,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 				{
 					Name: repo.String(),
 					Digest: map[string]string{
-						"sha256": get.Digest.Hex,
+						"sha256": h.Hex,
 					},
 				},
 			},
@@ -187,11 +185,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	if err != nil {
 		return err
 	}
-	attRef := cosign.AttachedImageTag(sigRepo, &remote.Descriptor{
-		Descriptor: ggcrV1.Descriptor{
-			Digest: imgHash,
-		},
-	}, cosign.AttestationTagSuffix)
+	attRef := cosign.AttachedImageTag(sigRepo, imgHash, cosign.AttestationTagSuffix)
 
 	uo := cremote.UploadOpts{
 		Cert:         sv.Cert,

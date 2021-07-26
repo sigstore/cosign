@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -53,23 +52,18 @@ func CleanCmd(ctx context.Context, imageRef string) error {
 		return err
 	}
 
-	remoteOpts := []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)}
-	// TODO: just return the descriptor directly if we have a digest reference.
-	desc, err := remote.Get(ref, remoteOpts...)
-	if err != nil {
-		return err
-	}
+	h, err := Digest(ctx, ref)
 
 	sigRepo, err := TargetRepositoryForImage(ref)
 	if err != nil {
 		return err
 	}
-	sigRef := cosign.AttachedImageTag(sigRepo, desc, cosign.SignatureTagSuffix)
+	sigRef := cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
 	fmt.Println(sigRef)
 
 	fmt.Println("Deleting signature metadata...")
 
-	err = remote.Delete(sigRef, remoteOpts...)
+	err = remote.Delete(sigRef, DefaultRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}

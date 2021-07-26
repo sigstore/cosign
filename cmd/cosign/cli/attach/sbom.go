@@ -23,7 +23,6 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
@@ -69,21 +68,21 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 		return err
 	}
 
+	h, err := cli.Digest(ctx, ref)
+	if err != nil {
+		return err
+	}
+
 	b, err := ioutil.ReadFile(sbomRef)
 	if err != nil {
 		return err
 	}
 
-	regClientOpts := cli.DefaultRegistryClientOpts(ctx)
-	get, err := remote.Get(ref, regClientOpts...)
-	if err != nil {
-		return err
-	}
 	repo := ref.Context()
-	dstRef := cosign.AttachedImageTag(repo, get, cosign.SBOMTagSuffix)
+	dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
-	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, regClientOpts...); err != nil {
+	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, cli.DefaultRegistryClientOpts(ctx)...); err != nil {
 		return err
 	}
 
