@@ -90,5 +90,6 @@ func DefaultRegistryClientOpts(ctx context.Context) []remote.Option {
 	return []remote.Option{
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 		remote.WithContext(ctx),
+		remote.WithUserAgent("cosign/" + VersionInfo().GitVersion),
 	}
 }
