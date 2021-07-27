@@ -46,8 +46,6 @@ func VerifyManifest() *ffcli.Command {
 		LongHelp: `Verify all signature of images in a Kubernetes resource manifest by checking claims
 against the transparency log.
 
-Shell-like variables in the Dockerfile's FROM lines will be substituted with values from the OS ENV.
-
 EXAMPLES
   # verify cosign claims and signing certificates on images in the manifest
   cosign verify-manifest <path/to/my-deployment.yaml>
@@ -56,7 +54,7 @@ EXAMPLES
   cosign verify-manifest -a key1=val1 -a key2=val2 <path/to/my-deployment.yaml>
 
   # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign verify-dockerfile <path/to/my-deployment.yaml>
+  COSIGN_EXPERIMENTAL=1 cosign verify-manifest <path/to/my-deployment.yaml>
 
   # verify images with public key
   cosign verify-manifest -key cosign.pub <path/to/my-deployment.yaml>
