@@ -24,7 +24,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -82,4 +84,12 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 		return nil, errors.Wrap(err, "pem to ecdsa")
 	}
 	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
+}
+
+func DefaultRegistryClientOpts(ctx context.Context) []remote.Option {
+	return []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithContext(ctx),
+		remote.WithUserAgent("cosign/" + VersionInfo().GitVersion),
+	}
 }

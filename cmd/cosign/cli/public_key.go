@@ -48,8 +48,8 @@ func PublicKey() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "public-key",
 		ShortUsage: "cosign public-key gets a public key from the key-pair",
-		ShortHelp:  "public-key gets a public key from the key-pair",
-		LongHelp: `public-key gets a public key from the key-pair and
+		ShortHelp:  "Gets a public key from the key-pair",
+		LongHelp: `Gets a public key from the key-pair and
 writes to a specified file. By default, it will write to standard out.
 
 EXAMPLES

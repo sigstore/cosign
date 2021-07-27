@@ -21,9 +21,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -56,8 +54,8 @@ func SignatureCmd(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return err
 	}
-
-	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	regClientOpts := cli.DefaultRegistryClientOpts(ctx)
+	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, cosign.SignatureTagSuffix, regClientOpts...)
 	if err != nil {
 		return err
 	}

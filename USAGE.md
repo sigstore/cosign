@@ -214,7 +214,15 @@ $ cosign download signature us-central1-docker.pkg.dev/dlorenc-vmtest2/test/task
 
 KMS:
 ```shell
+# Retrieve from Google Cloud KMS
 $ cosign public-key -key gcpkms://projects/someproject/locations/us-central1/keyRings/foo/cryptoKeys/bug/versions/1
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgrKKtyws86/APoULh/zXk4LONqII
+AcxvLtLEgRjRI4TKnMAXtIGp8K4X4CTWPEXMqSYZZUa2I1YvHyLLY2bEzA==
+-----END PUBLIC KEY-----
+
+# Retrieve from HashiCorp Vault
+$ cosign public-key -key hashivault://transit
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgrKKtyws86/APoULh/zXk4LONqII
 AcxvLtLEgRjRI4TKnMAXtIGp8K4X4CTWPEXMqSYZZUa2I1YvHyLLY2bEzA==

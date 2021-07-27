@@ -126,12 +126,14 @@ func TestGetCertForOauthID(t *testing.T) {
 			}
 
 			expectedCert := string(expectedCertBytes)
-			if cert != expectedCert {
-				t.Errorf("getCertForOauthID returned cert %q, wanted %q", cert, expectedCert)
+			actualCert := string(cert)
+			if actualCert != expectedCert {
+				t.Errorf("getCertForOauthID returned cert %q, wanted %q", actualCert, expectedCert)
 			}
 			expectedChain := string(expectedExtraBytes)
-			if chain != expectedChain {
-				t.Errorf("getCertForOauthID returned chain %q, wanted %q", chain, expectedChain)
+			actualChain := string(chain)
+			if actualChain != expectedChain {
+				t.Errorf("getCertForOauthID returned chain %q, wanted %q", actualChain, expectedChain)
 			}
 		})
 	}

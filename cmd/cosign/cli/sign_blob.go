@@ -41,7 +41,7 @@ func SignBlob() *ffcli.Command {
 		b64              = flagset.Bool("b64", true, "whether to base64 encode the output")
 		sk               = flagset.Bool("sk", false, "whether to use a hardware security key")
 		slot             = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-		fulcioURL        = flagset.String("fulcio-server", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
+		fulcioURL        = flagset.String("fulcio-url", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
 		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
@@ -146,10 +146,8 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 
 	if EnableExperimental() {
 		// TODO: Refactor with sign.go
-		var rekorBytes []byte
-		if sv.Cert != "" {
-			rekorBytes = []byte(sv.Cert)
-		} else {
+		rekorBytes := sv.Cert
+		if rekorBytes == nil {
 			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
 			if err != nil {
 				return nil, err

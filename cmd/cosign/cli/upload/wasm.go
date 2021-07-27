@@ -22,10 +22,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
@@ -37,7 +36,7 @@ func Wasm() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "wasm",
 		ShortUsage: "cosign upload wasm -f foo.wasm <image uri>",
-		ShortHelp:  "upload a wasm module to the supplied container image reference",
+		ShortHelp:  "Upload a wasm module to the supplied container image reference",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
@@ -66,7 +65,7 @@ func WasmCmd(ctx context.Context, wasmPath, imageRef string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Uploading wasm file from [%s] to [%s].\n", wasmPath, ref.Name())
-	if _, err := cremote.UploadFile(b, ref, wasmLayerMediaType, wasmConfigMediaType, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)); err != nil {
+	if _, err := cremote.UploadFile(b, ref, wasmLayerMediaType, wasmConfigMediaType, cli.DefaultRegistryClientOpts(ctx)...); err != nil {
 		return err
 	}
 

@@ -143,6 +143,43 @@ func TestSignVerifyClean(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil), t)
 }
 
+func TestAttestVerify(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Verify should fail at first
+	verifyAttestation := cli.VerifyAttestationCommand{
+		KeyRef: pubKeyPath,
+	}
+
+	attestation := "helloworld"
+	ap := filepath.Join(td, "attestation")
+	if err := ioutil.WriteFile(ap, []byte(attestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
+
+	// Now attest the image
+	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(cli.AttestCmd(ctx, ko, imgName, "", true, ap, false), t)
+
+	// Now verify and download should work!
+	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+	// Look for a specific annotation
+	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
+}
+
 func TestBundle(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, cli.ExperimentalEnv, "1")()
@@ -211,7 +248,7 @@ func TestDuplicateSign(t *testing.T) {
 		t.Fatalf("failed to get signature repository: %v", err)
 	}
 
-	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, cosign.SignatureTagSuffix, registryClientOpts(ctx)...)
 	if err != nil {
 		t.Fatalf("failed to fetch signatures: %v", err)
 	}
@@ -466,7 +503,8 @@ func TestUploadDownload(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to get signature repository: %v", err)
 			}
-			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+			regClientOpts := registryClientOpts(ctx)
+			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, cosign.SignatureTagSuffix, regClientOpts...)
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
@@ -667,19 +705,21 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 		t.Fatal(err)
 	}
 
-	if err := remote.Write(ref, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+	regClientOpts := registryClientOpts(context.Background())
+
+	if err := remote.Write(ref, img, regClientOpts...); err != nil {
 		t.Fatal(err)
 	}
 
-	remoteImage, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	remoteImage, err := remote.Get(ref, regClientOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	cleanup := func() {
-		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-		ref := cosign.AttachedImageTag(ref.Context(), remoteImage, cosign.SuffixSignature)
-		_ = remote.Delete(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		_ = remote.Delete(ref, regClientOpts...)
+		ref := cosign.AttachedImageTag(ref.Context(), remoteImage.Descriptor.Digest, cosign.SignatureTagSuffix)
+		_ = remote.Delete(ref, regClientOpts...)
 	}
 	return ref, remoteImage, cleanup
 }
@@ -717,4 +757,11 @@ func reg(t *testing.T) (string, func()) {
 		t.Fatal(err)
 	}
 	return u.Host, r.Close
+}
+
+func registryClientOpts(ctx context.Context) []remote.Option {
+	return []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithContext(ctx),
+	}
 }

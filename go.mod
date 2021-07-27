@@ -14,11 +14,12 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/hashicorp/vault/api v1.1.1 // indirect
+	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
 	github.com/manifoldco/promptui v0.8.0
 	github.com/open-policy-agent/opa v0.30.2
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/sigstore/fulcio v0.0.0-20210720153316-846105495d38
+	github.com/sigstore/fulcio v0.1.1
 	github.com/sigstore/rekor v0.2.1-0.20210714185543-38d532d5c0b1
 	github.com/sigstore/sigstore v0.0.0-20210722023421-fd3b69438dba
 	github.com/stretchr/testify v1.7.0

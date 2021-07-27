@@ -165,11 +165,12 @@ func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 
 // CheckOpts are the options for checking
 type CheckOpts struct {
-	SignatureRepo      name.Repository
-	RegistryClientOpts []remote.Option
+	SignatureRepo        name.Repository
+	SigTagSuffixOverride string
+	RegistryClientOpts   []remote.Option
 
 	Annotations   map[string]interface{}
-	ClaimVerifier func(SignedPayload, *v1.Descriptor, map[string]interface{}) error
+	ClaimVerifier func(SignedPayload, v1.Hash, map[string]interface{}) error
 	VerifyBundle  bool
 
 	RekorURL string
@@ -179,7 +180,6 @@ type CheckOpts struct {
 	PKOpts      []signature.PublicKeyOption
 
 	RootCerts *x509.CertPool
-	Suffix    string
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
@@ -190,16 +190,34 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 		return nil, errors.New("one of verifier or root certs is required")
 	}
 
-	// These are all the signatures attached to our image that we know how to parse.
-	signedImgDesc, err := remote.Get(signedImgRef, co.RegistryClientOpts...)
-	if err != nil {
-		return nil, err
+	// If the image ref contains the digest, use it.
+	// Otherwise, look up the digest the tag currently points to.
+	var h v1.Hash
+	if d, ok := signedImgRef.(name.Digest); ok {
+		var err error
+		h, err = v1.NewHash(d.DigestStr())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		signedImgDesc, err := remote.Get(signedImgRef, co.RegistryClientOpts...)
+		if err != nil {
+			return nil, err
+		}
+		h = signedImgDesc.Descriptor.Digest
 	}
+
+	// These are all the signatures attached to our image that we know how to parse.
 	sigRepo := co.SignatureRepo
 	if (sigRepo == name.Repository{}) {
 		sigRepo = signedImgRef.Context()
 	}
-	allSignatures, err := FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, co.Suffix, co.RegistryClientOpts...)
+	tagSuffix := SignatureTagSuffix
+	if co.SigTagSuffixOverride != "" {
+		tagSuffix = co.SigTagSuffixOverride
+	}
+
+	allSignatures, err := FetchSignaturesForImageDigest(ctx, h, sigRepo, tagSuffix, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}
@@ -240,7 +258,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 
 		// We can't check annotations without claims, both require unmarshalling the payload.
 		if co.ClaimVerifier != nil {
-			if err := co.ClaimVerifier(sp, &signedImgDesc.Descriptor, co.Annotations); err != nil {
+			if err := co.ClaimVerifier(sp, h, co.Annotations); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -329,9 +347,9 @@ func (sp *SignedPayload) VerifySignature(verifier signature.Verifier, verifyOpts
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload), verifyOpts...)
 }
 
-func (sp *SignedPayload) VerifyClaims(d *v1.Descriptor, ss *payload.SimpleContainerImage) error {
+func (sp *SignedPayload) VerifyClaims(digest v1.Hash, ss *payload.SimpleContainerImage) error {
 	foundDgst := ss.Critical.Image.DockerManifestDigest
-	if foundDgst != d.Digest.String() {
+	if foundDgst != digest.String() {
 		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)
 	}
 	return nil

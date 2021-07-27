@@ -47,8 +47,8 @@ func GenerateKeyPair() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "generate-key-pair",
 		ShortUsage: "cosign generate-key-pair [-kms KMSPATH]",
-		ShortHelp:  "generate-key-pair generates a key-pair",
-		LongHelp: `generate-key-pair generates a key-pair for signing.
+		ShortHelp:  "Generates a key-pair",
+		LongHelp: `Generates a key-pair for signing.
 
 EXAMPLES:
   # generate key-pair and write to cosign.key and cosign.pub files

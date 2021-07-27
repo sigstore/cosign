@@ -19,17 +19,18 @@ import (
 	"encoding/json"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func SimpleClaimVerifier(sp SignedPayload, desc *v1.Descriptor, annotations map[string]interface{}) error {
+func SimpleClaimVerifier(sp SignedPayload, digest v1.Hash, annotations map[string]interface{}) error {
 	ss := &payload.SimpleContainerImage{}
 	if err := json.Unmarshal(sp.Payload, ss); err != nil {
 		return err
 	}
 
-	if err := sp.VerifyClaims(desc, ss); err != nil {
+	if err := sp.VerifyClaims(digest, ss); err != nil {
 		return err
 	}
 
@@ -39,4 +40,23 @@ func SimpleClaimVerifier(sp SignedPayload, desc *v1.Descriptor, annotations map[
 		}
 	}
 	return nil
+}
+
+func IntotoSubjectClaimVerifier(sp SignedPayload, digest v1.Hash, _ map[string]interface{}) error {
+	st := &in_toto.Statement{}
+	if err := json.Unmarshal(sp.Payload, st); err != nil {
+		return err
+	}
+
+	for _, subj := range st.StatementHeader.Subject {
+		dgst, ok := subj.Digest["sha256"]
+		if !ok {
+			continue
+		}
+		subjDigest := "sha256:" + dgst
+		if subjDigest == digest.String() {
+			return nil
+		}
+	}
+	return errors.New("no matching subject digest found")
 }

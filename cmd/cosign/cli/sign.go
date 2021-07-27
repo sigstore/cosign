@@ -28,6 +28,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,10 +40,11 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	fulcioClient "github.com/sigstore/fulcio/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	rekorClient "github.com/sigstore/rekor/pkg/client"
@@ -77,6 +79,31 @@ func (a *annotationsMap) String() string {
 	return strings.Join(s, ",")
 }
 
+func shouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error) {
+	// Check if the image is public (no auth in Get)
+	if !EnableExperimental() {
+		return false, nil
+	}
+	// Experimental is on!
+	if force {
+		return true, nil
+	}
+
+	if _, err := remote.Get(ref); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", url)
+
+		var tlogConfirmResponse string
+		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
+			return false, err
+		}
+		if tlogConfirmResponse != "Y" {
+			fmt.Println("not uploading to transparency log")
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func Sign() *ffcli.Command {
 	var (
 		flagset          = flag.NewFlagSet("cosign sign", flag.ExitOnError)
@@ -88,7 +115,7 @@ func Sign() *ffcli.Command {
 		payloadPath      = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
 		force            = flagset.Bool("f", false, "skip warnings and confirmations")
 		recursive        = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
-		fulcioURL        = flagset.String("fulcio-server", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
+		fulcioURL        = flagset.String("fulcio-url", fulcioClient.SigstorePublicServerURL, "[EXPERIMENTAL] address of sigstore PKI server")
 		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
@@ -238,37 +265,6 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		return errors.Wrap(err, "getting signer")
 	}
 
-	// Check if the image is public (no auth in Get)
-	uploadTLog := EnableExperimental()
-	if uploadTLog && !force {
-		if _, err := remote.Get(ref); err != nil {
-			fmt.Printf("warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", ko.RekorURL)
-
-			var tlogConfirmResponse string
-			if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
-				return err
-			}
-			if tlogConfirmResponse != "Y" {
-				fmt.Println("not uploading to transparency log")
-				uploadTLog = false
-			}
-		}
-	}
-
-	var rekorBytes []byte
-	if uploadTLog {
-		// Upload the cert or the public key, depending on what we have
-		if sv.Cert != "" {
-			rekorBytes = []byte(sv.Cert)
-		} else {
-			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
-			if err != nil {
-				return err
-			}
-			rekorBytes = pemBytes
-		}
-	}
-
 	var staticPayload []byte
 	if payloadPath != "" {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
@@ -311,11 +307,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		if err != nil {
 			return err
 		}
-		sigRef := cosign.AttachedImageTag(sigRepo, &remote.Descriptor{
-			Descriptor: ggcrV1.Descriptor{
-				Digest: imgHash,
-			},
-		}, cosign.SuffixSignature)
+		sigRef := cosign.AttachedImageTag(sigRepo, imgHash, cosign.SignatureTagSuffix)
 
 		uo := cremote.UploadOpts{
 			Cert:         sv.Cert,
@@ -324,7 +316,24 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			RemoteOpts:   remoteOpts,
 		}
 
+		// Check if the image is public (no auth in Get)
+		uploadTLog, err := shouldUploadToTlog(ref, force, ko.RekorURL)
+		if err != nil {
+			return err
+		}
+
 		if uploadTLog {
+			var rekorBytes []byte
+			// Upload the cert or the public key, depending on what we have
+			if sv.Cert != nil {
+				rekorBytes = sv.Cert
+			} else {
+				pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
+				if err != nil {
+					return err
+				}
+				rekorBytes = pemBytes
+			}
 			rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
 			if err != nil {
 				return err
@@ -398,9 +407,8 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 		if err != nil {
 			return nil, err
 		}
-		cert := string(pemBytes)
 		return &certSignVerifier{
-			Cert:           cert,
+			Cert:           pemBytes,
 			SignerVerifier: sv,
 		}, nil
 
@@ -454,12 +462,17 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 		if err != nil {
 			return nil, errors.Wrap(err, "marshaling certificate to PEM")
 		}
-		certSigner.Cert = string(pemBytes)
+		certSigner.Cert = pemBytes
 		return certSigner, nil
 	}
 	// Default Keyless!
 	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, ko.FulcioURL)
+	fulcioServer, err := url.Parse(ko.FulcioURL)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing Fulcio URL")
+	}
+	fClient := fulcioClient.New(fulcioServer)
+	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, fClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
 	}
@@ -471,7 +484,7 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 }
 
 type certSignVerifier struct {
-	Cert  string
-	Chain string
+	Cert  []byte
+	Chain []byte
 	signature.SignerVerifier
 }

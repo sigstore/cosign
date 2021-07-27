@@ -8,8 +8,8 @@ Cosign supports:
 
 * Hardware and KMS signing
 * Bring-your-own PKI
-* Our free OIDC PKI (Fulcio)
-* Built-in binary transparency and timestamping service (Rekor)
+* Our free OIDC PKI ([Fulcio](https://github.com/sigstore/fulcio))
+* Built-in binary transparency and timestamping service ([Rekor](https://github.com/sigstore/rekor))
 
 ![intro](images/intro.gif)
 
@@ -18,8 +18,6 @@ Cosign supports:
 `Cosign` is developed as part of the [`sigstore`](https://sigstore.dev) project.
 We also use a slack [slack channel](https://sigstore.slack.com)!
 Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcfWn4XEyMqUUutbUQ) for the invite link.
-
-🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨
 
 ## Installation
 
@@ -105,7 +103,7 @@ Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea642
 
 ### Verify a container against a public key
 
-This command returns 0 if *at least one* `cosign` formatted signature for the image is found
+This command returns `0` if *at least one* `cosign` formatted signature for the image is found
 matching the public key.
 See the detailed usage below for information and caveats on other signature formats.
 
@@ -120,6 +118,49 @@ The following checks were performed on these signatures:
   - The signatures were verified against the specified public key
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
+
+## `Cosign` is (almost) 1.0!
+
+This means the core feature set of `cosign` is considered ready for production use.
+This core set includes:
+
+### Key Management
+
+* fixed, text-based keys generated using `cosign generate-key-pair`
+* cloud KMS-based keys generated using `cosign generate-key-pair -kms`
+* keys generated on hardware tokens using the PIV interface using `cosign piv-tool`
+* Kubernetes-secret based keys generated using `cosign generate-key-pair -k8s`
+
+### Artifact Types
+
+* OCI and Docker Images
+* Other artifacts that can be stored in a container registry, including:
+  * Tekton Bundles
+  * Helm Charts
+  * WASM modules
+  * (probably anything else, feel free to add things to this list)
+* Text files and other binary blobs, using `cosign sign-blob`
+
+### What ** is not ** production ready?
+
+While parts of `cosign` are stable, we are continuing to experiment and add new features.
+The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
+
+#### Anything under the `COSIGN_EXPERIMENTAL` environment variable
+
+* Integration with the `Rekor` transparency log
+* Keyless signatures using the `Fulcio` CA
+
+#### Formats/Specifications 
+
+While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
+the format specifications for some of those types may not be considered stable yet.
+Some of these are developed outside of the `cosign` project, so we are waiting for them to stabilize first.
+
+These include:
+
+* The SBOM specification for storing SBOMs in a container registry
+* The In-Toto attestation format
 
 ## Working with Other Artifacts
 
@@ -170,7 +211,7 @@ Digest verification is automatic:
 $ sget us.gcr.io/dlorenc-vmtest2/readme@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec > artifact
 ```
 
-You can also use sget to fetch contents by tag.
+You can also use `sget` to fetch contents by tag.
 Fetching contents without verifying them is dangerous, so we require the artifact be signed in this case:
 
 ```shell
@@ -226,6 +267,26 @@ tlog entry created with index:  5198
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812.sig
 ```
 
+#### In-Toto Attestations
+
+Cosign also has built-in support for [in-toto.io](in-toto.io) attestations.
+The specification for these is defined [here](https://github.com/in-toto/attestation).
+
+You can create and sign one from a local predicate file using the following commands:
+
+```shell
+$ cosign attest -predicate <file> -key cosign.pub <image>
+```
+
+All of the standard key management systems are supported.
+Payloads are signed using the DSSE signing spec, defined [here](https://github.com/secure-systems-lab/dsse).
+
+To verify:
+
+```shell
+$ cosign verify-attestation -key cosign.pub <image>
+```
+
 ## Detailed Usage
 
 See the [Usage documentation](USAGE.md) for more commands!
@@ -233,6 +294,10 @@ See the [Usage documentation](USAGE.md) for more commands!
 ## Hardware-based Tokens
 
 See the [Hardware Tokens documentation](TOKENS.md) for information on how to use `cosign` with hardware.
+
+## Keyless
+
+🚨 🚨 🚨 See [here](KEYLESS.md) for info on the experimental Keyless signatures mode. 🚨 🚨 🚨
 
 ## Registry Support
 
@@ -438,10 +503,6 @@ The following checks were performed on each of these signatures:
 ```
 
 ## FAQ
-
-### Who is using this?
-
-Hopefully no one yet. Stay tuned, though.
 
 ### Why not use Notary v2
 

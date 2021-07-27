@@ -19,7 +19,6 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -60,8 +59,6 @@ EXAMPLES
 }
 
 func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) error {
-	remoteAuth := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-
 	srcRef, err := name.ParseReference(srcImg)
 	if err != nil {
 		return err
@@ -71,7 +68,7 @@ func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) er
 		return err
 	}
 
-	gotSrc, err := remote.Get(srcRef, remoteAuth)
+	h, err := Digest(ctx, srcRef)
 	if err != nil {
 		return err
 	}
@@ -81,17 +78,18 @@ func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) er
 		return err
 	}
 
-	sigSrcRef := cosign.AttachedImageTag(srcSigRepo, gotSrc, cosign.SuffixSignature)
+	sigSrcRef := cosign.AttachedImageTag(srcSigRepo, h, cosign.SignatureTagSuffix)
 
 	dstRepoRef := dstRef.Context()
 	sigDstRef := dstRepoRef.Tag(sigSrcRef.Identifier())
 
-	if err := copyImage(sigSrcRef, sigDstRef, force, remoteAuth); err != nil {
+	regClientOpts := DefaultRegistryClientOpts(ctx)
+	if err := copyImage(sigSrcRef, sigDstRef, force, regClientOpts...); err != nil {
 		return err
 	}
 
 	if !sigOnly {
-		if err := copyImage(srcRef, dstRef, force, remoteAuth); err != nil {
+		if err := copyImage(srcRef, dstRef, force, regClientOpts...); err != nil {
 			return err
 		}
 	}

@@ -92,9 +92,9 @@ func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error)
 }
 
 func findDuplicate(sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
-	l := &StaticLayer{
-		B:  payload,
-		Mt: SimpleSigningMediaType,
+	l := &staticLayer{
+		b:  payload,
+		mt: SimpleSigningMediaType,
 	}
 
 	sigDigest, err := l.Digest()
@@ -141,8 +141,8 @@ type Bundle struct {
 }
 
 type UploadOpts struct {
-	Cert                  string
-	Chain                 string
+	Cert                  []byte
+	Chain                 []byte
 	DupeDetector          signature.Verifier
 	Bundle                *Bundle
 	AdditionalAnnotations map[string]string
@@ -150,9 +150,9 @@ type UploadOpts struct {
 }
 
 func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
-	l := &StaticLayer{
-		B:  payload,
-		Mt: SimpleSigningMediaType,
+	l := &staticLayer{
+		b:  payload,
+		mt: SimpleSigningMediaType,
 	}
 
 	base, err := SignatureImage(dst, opts.RemoteOpts...)
@@ -169,9 +169,9 @@ func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadO
 	annotations := map[string]string{
 		sigkey: base64.StdEncoding.EncodeToString(signature),
 	}
-	if opts.Cert != "" {
-		annotations[certkey] = opts.Cert
-		annotations[chainkey] = opts.Chain
+	if opts.Cert != nil {
+		annotations[certkey] = string(opts.Cert)
+		annotations[chainkey] = string(opts.Chain)
 	}
 	if opts.Bundle != nil {
 		b, err := swag.WriteJSON(opts.Bundle)
@@ -194,38 +194,38 @@ func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadO
 	return signature, nil
 }
 
-type StaticLayer struct {
-	B  []byte
-	Mt types.MediaType
+type staticLayer struct {
+	b  []byte
+	mt types.MediaType
 }
 
-func (l *StaticLayer) Digest() (v1.Hash, error) {
-	h, _, err := v1.SHA256(bytes.NewReader(l.B))
+func (l *staticLayer) Digest() (v1.Hash, error) {
+	h, _, err := v1.SHA256(bytes.NewReader(l.b))
 	return h, err
 }
 
 // DiffID returns the Hash of the uncompressed layer.
-func (l *StaticLayer) DiffID() (v1.Hash, error) {
-	h, _, err := v1.SHA256(bytes.NewReader(l.B))
+func (l *staticLayer) DiffID() (v1.Hash, error) {
+	h, _, err := v1.SHA256(bytes.NewReader(l.b))
 	return h, err
 }
 
 // Compressed returns an io.ReadCloser for the compressed layer contents.
-func (l *StaticLayer) Compressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.B)), nil
+func (l *staticLayer) Compressed() (io.ReadCloser, error) {
+	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
 }
 
 // Uncompressed returns an io.ReadCloser for the uncompressed layer contents.
-func (l *StaticLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.B)), nil
+func (l *staticLayer) Uncompressed() (io.ReadCloser, error) {
+	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
 }
 
 // Size returns the compressed size of the Layer.
-func (l *StaticLayer) Size() (int64, error) {
-	return int64(len(l.B)), nil
+func (l *staticLayer) Size() (int64, error) {
+	return int64(len(l.b)), nil
 }
 
 // MediaType returns the media type of the Layer.
-func (l *StaticLayer) MediaType() (types.MediaType, error) {
-	return l.Mt, nil
+func (l *staticLayer) MediaType() (types.MediaType, error) {
+	return l.mt, nil
 }

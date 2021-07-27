@@ -24,9 +24,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
@@ -44,7 +42,7 @@ func Signature() *ffcli.Command {
 	return &ffcli.Command{
 		Name:       "signature",
 		ShortUsage: "cosign attach signature <image uri>",
-		ShortHelp:  "attach signatures to the supplied container image",
+		ShortHelp:  "Attach signatures to the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
@@ -57,8 +55,6 @@ func Signature() *ffcli.Command {
 }
 
 func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
-	var b64SigBytes []byte
-
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -71,23 +67,21 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 		return err
 	}
 
-	remoteOpts := []remote.Option{remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx)}
-
-	get, err := remote.Get(ref, remoteOpts...)
+	h, err := cli.Digest(ctx, ref)
 	if err != nil {
 		return err
 	}
-	repo := ref.Context()
-	img := repo.Digest(get.Digest.String())
 
 	sigRepo, err := cli.TargetRepositoryForImage(ref)
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.AttachedImageTag(sigRepo, get, cosign.SuffixSignature)
+	dstRef := cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
 
 	var payload []byte
 	if payloadRef == "" {
+		repo := ref.Context()
+		img := repo.Digest(h.String())
 		payload, err = (&sigPayload.Cosign{Image: img}).MarshalJSON()
 	} else {
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadRef))
@@ -101,7 +95,8 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	if err != nil {
 		return err
 	}
-	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts}); err != nil {
+	regClientOpts := cli.DefaultRegistryClientOpts(ctx)
+	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: regClientOpts}); err != nil {
 		return err
 	}
 	return nil
