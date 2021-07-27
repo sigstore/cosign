@@ -20,9 +20,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -52,8 +50,7 @@ func MungeCmd(ctx context.Context, imageRef string) error {
 		return err
 	}
 
-	// TODO: just return the descriptor directly if we have a digest reference.
-	desc, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(ctx))
+	h, err := Digest(ctx, ref)
 	if err != nil {
 		return err
 	}
@@ -62,7 +59,7 @@ func MungeCmd(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.AttachedImageTag(sigRepo, desc, cosign.SignatureTagSuffix)
+	dstRef := cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
 
 	fmt.Println(dstRef.Name())
 	return nil

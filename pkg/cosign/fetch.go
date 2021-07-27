@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -56,9 +57,9 @@ const (
 	AttestationTagSuffix = ".att"
 )
 
-func AttachedImageTag(repo name.Repository, imgDesc *remote.Descriptor, tagSuffix string) name.Tag {
+func AttachedImageTag(repo name.Repository, digest v1.Hash, tagSuffix string) name.Tag {
 	// sha256:d34db33f -> sha256-d34db33f.suffix
-	tagStr := strings.ReplaceAll(imgDesc.Digest.String(), ":", "-") + tagSuffix
+	tagStr := strings.ReplaceAll(digest.String(), ":", "-") + tagSuffix
 	return repo.Tag(tagStr)
 }
 
@@ -67,11 +68,11 @@ func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, s
 	if err != nil {
 		return nil, err
 	}
-	return FetchSignaturesForDescriptor(ctx, signedImgDesc, sigRepo, sigTagSuffix, registryOpts...)
+	return FetchSignaturesForImageDigest(ctx, signedImgDesc.Descriptor.Digest, sigRepo, sigTagSuffix, registryOpts...)
 }
 
-func FetchSignaturesForDescriptor(ctx context.Context, signedDescriptor *remote.Descriptor, sigRepo name.Repository, sigTagSuffix string, registryOpts ...remote.Option) ([]SignedPayload, error) {
-	sigImgDesc, err := remote.Get(AttachedImageTag(sigRepo, signedDescriptor, sigTagSuffix), registryOpts...)
+func FetchSignaturesForImageDigest(ctx context.Context, signedImageDigest v1.Hash, sigRepo name.Repository, sigTagSuffix string, registryOpts ...remote.Option) ([]SignedPayload, error) {
+	sigImgDesc, err := remote.Get(AttachedImageTag(sigRepo, signedImageDigest, sigTagSuffix), registryOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting signature manifest")
 	}

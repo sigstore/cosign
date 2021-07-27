@@ -67,8 +67,8 @@ func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) er
 	if err != nil {
 		return err
 	}
-	regClientOpts := DefaultRegistryClientOpts(ctx)
-	gotSrc, err := remote.Get(srcRef, regClientOpts...)
+
+	h, err := Digest(ctx, srcRef)
 	if err != nil {
 		return err
 	}
@@ -78,11 +78,12 @@ func CopyCmd(ctx context.Context, srcImg, dstImg string, sigOnly, force bool) er
 		return err
 	}
 
-	sigSrcRef := cosign.AttachedImageTag(srcSigRepo, gotSrc, cosign.SignatureTagSuffix)
+	sigSrcRef := cosign.AttachedImageTag(srcSigRepo, h, cosign.SignatureTagSuffix)
 
 	dstRepoRef := dstRef.Context()
 	sigDstRef := dstRepoRef.Tag(sigSrcRef.Identifier())
 
+	regClientOpts := DefaultRegistryClientOpts(ctx)
 	if err := copyImage(sigSrcRef, sigDstRef, force, regClientOpts...); err != nil {
 		return err
 	}
