@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: single-pod
+spec:
+  restartPolicy: Never
+  containers:
+    - name: distroless
+      image: gcr.io/distroless/base
