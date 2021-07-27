@@ -25,6 +25,7 @@ import (
 	_ "embed" // To enable the `go:embed` directive.
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/go-openapi/runtime"
@@ -45,6 +46,7 @@ const (
 	FlowNormal = "normal"
 	FlowDevice = "device"
 	FlowToken  = "token"
+	altRoot    = "SIGSTORE_ROOT_FILE"
 )
 
 // This is the root in the fulcio project.
@@ -181,7 +183,16 @@ var Roots *x509.CertPool
 
 func init() {
 	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM([]byte(rootPem)) {
+	rootEnv := os.Getenv(altRoot)
+	if rootEnv != "" {
+		raw, err := ioutil.ReadFile(rootEnv)
+		if err != nil {
+			panic(fmt.Sprintf("error reading root PEM file: %s", err))
+		}
+		if !cp.AppendCertsFromPEM(raw) {
+			panic("error creating root cert pool")
+		}
+	} else if !cp.AppendCertsFromPEM([]byte(rootPem)) {
 		panic("error creating root cert pool")
 	}
 	Roots = cp

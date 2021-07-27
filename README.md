@@ -338,7 +338,7 @@ COSIGN_EXPERIMENTAL=1 cosign verify -key cosign.pub dlorenc/demo
 ```
 
 `cosign` defaults to using the public instance of rekor at [rekor.sigstore.dev](https://rekor.sigstore.dev).
-To configure the rekor server, set the `REKOR_SERVER` env variable.
+To configure the rekor server, use the -`rekor-url` flag
 
 ## Caveats
 

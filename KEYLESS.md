@@ -82,3 +82,23 @@ Signature timestamps are checked in the [rekor](https://github.com/sigstore/reko
 * Other timestamps: We should allow for other timestamp attestations, including attached [RFC3161](https://www.ietf.org/rfc/rfc3161.txt) signatures.
 * Probably a lot more: This is very experimental.
 * More OIDC providers: Obvious.
+
+## Custom Infrastructure
+
+If you're running your own sigtore services flags are available to set your own endpoint's, e.g
+
+```
+ COSIGN_EXPERIMENTAL=1 go run cmd/cosign/main.go sign -oidc-issuer "https://oauth2.example.com/auth" \
+                        -fulcio-url "https://fulcio.example.com" \
+                        -rekor-url "https://rekor.example.com"  \
+                        ghcr.io/jdoe/somerepo/testcosign
+
+```
+
+### Custom root Cert
+
+You can override the public good instance root CA using the enviromental variable `SIGSTORE_ROOT_FILE`, e.g.
+
+```
+export SIGSTORE_ROOT_FILE="/home/jdoe/myrootCA.pem"
+```
