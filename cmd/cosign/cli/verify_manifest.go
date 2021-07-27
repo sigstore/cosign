@@ -97,10 +97,7 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not read manifest: %v", err)
 	}
 
-	images, err := getImagesFromYamlManifest(string(manifest))
-	if err != nil {
-		return fmt.Errorf("failed extracting images from manifest: %v", err)
-	}
+	images := getImagesFromYamlManifest(string(manifest))
 	if len(images) == 0 {
 		return errors.New("no images found in manifest")
 	}
@@ -109,13 +106,13 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 	return c.VerifyCommand.Exec(ctx, images)
 }
 
-func getImagesFromYamlManifest(manifest string) ([]string, error) {
+func getImagesFromYamlManifest(manifest string) []string {
 	var images []string
 	re := regexp.MustCompile(`image:\s?(?P<Image>.*)\s?`)
 	for _, s := range re.FindAllStringSubmatch(manifest, -1) {
 		images = append(images, s[1])
 	}
-	return images, nil
+	return images
 }
 
 func isExtensionAllowed(ext string) error {

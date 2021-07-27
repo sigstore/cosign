@@ -80,10 +80,7 @@ func TestGetImagesFromYamlManifest(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := getImagesFromYamlManifest(tc.fileContents)
-			if err != nil {
-				t.Fatalf("getImagesFromYamlManifest returned error: %v", err)
-			}
+			got := getImagesFromYamlManifest(tc.fileContents)
 			if !reflect.DeepEqual(tc.expected, got) {
 				t.Errorf("getImagesFromYamlManifest returned %v, wanted %v", got, tc.expected)
 			}
