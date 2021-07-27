@@ -89,8 +89,9 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 
 	manifestPath := args[0]
 
-	if filepath.Ext(strings.TrimSpace(manifestPath)) != ".yaml" {
-		return fmt.Errorf("only yaml manifests are supported at this time")
+	err := isExtensionAllowed(manifestPath)
+	if err != nil {
+		return errors.Wrap(err, "check if extension is valid")
 	}
 
 	manifest, err := ioutil.ReadFile(manifestPath)
@@ -117,4 +118,18 @@ func getImagesFromYamlManifest(manifest string) ([]string, error) {
 		images = append(images, s[1])
 	}
 	return images, nil
+}
+
+func isExtensionAllowed(ext string) error {
+	allowedExtensions := allowedExtensionsForManifest()
+	for _, v := range allowedExtensions {
+		if strings.EqualFold(filepath.Ext(strings.TrimSpace(ext)), v) {
+			return nil
+		}
+	}
+	return fmt.Errorf("only %v manifests are supported at this time", allowedExtensions)
+}
+
+func allowedExtensionsForManifest() []string {
+	return []string{".yaml", ".yml"}
 }
