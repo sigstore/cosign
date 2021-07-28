@@ -68,7 +68,7 @@ builds:
     - darwin
   goarch:
     - arm64
-  tags:
+  tags: 
     - pivkey
   ldflags:
     - "{{.Env.LDFLAGS}}"
@@ -101,6 +101,7 @@ signs:
 archives:
 - format: binary
   name_template: "{{ .Binary }}"
+  allow_different_binary_count: true
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
@@ -109,7 +110,7 @@ snapshot:
   name_template: SNAPSHOT-{{.ShortCommit}}
 
 release:
-  prerelease: true # remove this when we start publishin non-prerelease or set to auto
+  prerelease: allow # remove this when we start publishing non-prerelease or set to auto
   draft: true # allow for manual edits
   github:
     owner: sigstore
