@@ -31,3 +31,5 @@ require (
 	k8s.io/apimachinery v0.21.3
 	k8s.io/client-go v0.21.3
 )
+
+replace github.com/theupdateframework/go-tuf => github.com/asraa/go-tuf v0.0.0-20210728205956-598b8cea39bf
