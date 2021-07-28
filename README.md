@@ -37,7 +37,18 @@ with:
   cosign-release: 'v1.0.0' # optional
 ```
 
-### Containers
+### Container Images
+
+Signed release images are available at `gcr.io/projectsigstore/cosign`.
+They are tagged with the release name (e.g. `gcr.io/projectsigstore/cosign:v1.0.0`).
+They can be found with `crane ls`:
+
+```shell
+$ crane ls gcr.io/projectsigstore/cosign
+sha256-7e9a6ca62c3b502a125754fbeb4cde2d37d4261a9c905359585bfc0a63ff17f4.sig
+v0.4.0
+...
+```
 
 CI Built containers are published for every commit at `gcr.io/projectsigstore/cosign/ci/cosign`.
 They are tagged with the commit.
@@ -48,18 +59,8 @@ $ crane ls gcr.io/projectsigstore/cosign/ci/cosign
 749f896
 749f896bb378aca5cb45c5154fc0cb43f6728d48
 ```
-Further details on Crane and instructions on install provided here: https://github.com/google/go-containerregistry/tree/main/cmd/crane
 
-Signed release containers are available at `gcr.io/projectsigstore/cosign`.
-They are tagged with the release name.
-They can be found with `crane ls`:
-
-```shell
-$ crane ls gcr.io/projectsigstore/cosign
-sha256-7e9a6ca62c3b502a125754fbeb4cde2d37d4261a9c905359585bfc0a63ff17f4.sig
-v0.4.0
-...
-```
+Further details and installation instructions for `crane` available here: https://github.com/google/go-containerregistry/tree/main/cmd/crane
 
 ### Releases
 
