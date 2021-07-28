@@ -66,8 +66,6 @@ steps:
   args:
   - '-c'
   - |
-    apt-get update
-    apt-get install libpcsclite-dev -y
     cp ./dist/cosign-linux-amd64 /usr/local/bin/cosign
     cosign verify-dockerfile -base-image-only -key https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub ./Dockerfile
     make sign-container-cloudbuild
