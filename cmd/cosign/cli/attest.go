@@ -23,15 +23,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
 	"github.com/google/go-containerregistry/pkg/name"
 	ggcrV1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign/attestation"
+	"os"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -52,6 +49,7 @@ func Attest() *ffcli.Command {
 		predicatePath = flagset.String("predicate", "", "path to the predicate file.")
 		force         = flagset.Bool("f", false, "skip warnings and confirmations")
 		idToken       = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
+		predicateType = flagset.String("type", "custom", "specify predicate type (default: custom) (provenance|link|spdx)")
 	)
 	return &ffcli.Command{
 		Name:       "attest",
@@ -95,7 +93,7 @@ EXAMPLES
 				IDToken:  *idToken,
 			}
 			for _, img := range args {
-				if err := AttestCmd(ctx, ko, img, *cert, *upload, *predicatePath, *force); err != nil {
+				if err := AttestCmd(ctx, ko, img, *cert, *upload, *predicatePath, *force, *predicateType); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
@@ -107,7 +105,7 @@ EXAMPLES
 const intotoPayloadType = "application/vnd.in-toto+json"
 
 func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string,
-	upload bool, predicatePath string, force bool) error {
+	upload bool, predicatePath string, force bool, predicateType string) error {
 
 	// A key file or token is required unless we're in experimental mode!
 	if EnableExperimental() {
@@ -140,27 +138,15 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	wrapped := dsse.WrapSigner(sv, intotoPayloadType)
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
-	rawPayload, err := ioutil.ReadFile(filepath.Clean(predicatePath))
-	if err != nil {
-		return errors.Wrap(err, "payload from file")
-	}
 
-	sh := in_toto.Statement{
-		StatementHeader: in_toto.StatementHeader{
-			Type:          "https://in-toto.io/Statement/v0.1",
-			PredicateType: "cosign.sigstore.dev/attestation/v1",
-			Subject: []in_toto.Subject{
-				{
-					Name: repo.String(),
-					Digest: map[string]string{
-						"sha256": h.Hex,
-					},
-				},
-			},
-		},
-		Predicate: CosignAttestation{
-			Data: string(rawPayload),
-		},
+	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
+		Path:   predicatePath,
+		Type:   predicateType,
+		Digest: h.Hex,
+		Repo:   repo.String(),
+	})
+	if err != nil {
+		return err
 	}
 
 	payload, err := json.Marshal(sh)
@@ -232,8 +218,4 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	}
 
 	return nil
-}
-
-type CosignAttestation struct {
-	Data string
 }
