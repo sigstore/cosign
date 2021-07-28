@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/vault/api v1.1.1 // indirect
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
 	github.com/manifoldco/promptui v0.8.0
-	github.com/open-policy-agent/opa v0.30.2
+	github.com/open-policy-agent/opa v0.31.0
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.1.1
