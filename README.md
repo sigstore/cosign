@@ -27,6 +27,16 @@ If you have Go 1.16+, you can directly install by running:
 
 and the resulting binary will be placed at `$HOME/go/bin/cosign`.
 
+### GitHub Action
+
+`cosign` can easily be installed in your GitHub actions using [`sigstore/cosign-installer`](https://github.com/marketplace/actions/install-cosign):
+
+```yaml
+uses: sigstore/cosign-installer@main
+with:
+  cosign-release: 'v1.0.0' # optional
+```
+
 ### Containers
 
 CI Built containers are published for every commit at `gcr.io/projectsigstore/cosign/ci/cosign`.
