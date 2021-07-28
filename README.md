@@ -57,19 +57,18 @@ Releases are published in this repository under the [Releases page](https://gith
 They can be viewed with `gsutil`:
 
 ```shell
-$ gsutil ls gs://cosign-releases/v0.4.0
-gs://cosign-releases/v0.4.0/cosign-darwin-amd64
-gs://cosign-releases/v0.4.0/cosign-darwin-amd64.sha256
-gs://cosign-releases/v0.4.0/cosign-darwin-amd64.sig
-gs://cosign-releases/v0.4.0/cosign-linux-amd64
-gs://cosign-releases/v0.4.0/cosign-linux-amd64.sha256
-gs://cosign-releases/v0.4.0/cosign-linux-amd64.sig
-gs://cosign-releases/v0.4.0/cosign-windows-amd64.exe
-gs://cosign-releases/v0.4.0/cosign-windows-amd64.exe.sha256
-gs://cosign-releases/v0.4.0/cosign-windows-amd64.exe.sig
+$ gsutil ls gs://cosign-releases/v1.0.0
+gs://cosign-releases/v1.0.0/cosign-darwin-amd64
+gs://cosign-releases/v1.0.0/cosign-darwin-amd64.sig
+gs://cosign-releases/v1.0.0/cosign-darwin-arm64
+gs://cosign-releases/v1.0.0/cosign-darwin-arm64.sig
+gs://cosign-releases/v1.0.0/cosign-linux-amd64
+gs://cosign-releases/v1.0.0/cosign-linux-amd64.sig
+gs://cosign-releases/v1.0.0/cosign-windows-amd64.exe
+gs://cosign-releases/v1.0.0/cosign-windows-amd64.exe.sig
+gs://cosign-releases/v1.0.0/cosign_checksums.txt
+gs://cosign-releases/v1.0.0/release-cosign.pub
 ```
-
-Cross platform builds started in v0.2.0.
 
 ## Quick Start
 
