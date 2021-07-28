@@ -119,7 +119,7 @@ The following checks were performed on these signatures:
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
 
-## `Cosign` is (almost) 1.0!
+## `Cosign` is 1.0!
 
 This means the core feature set of `cosign` is considered ready for production use.
 This core set includes:
