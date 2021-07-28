@@ -17,6 +17,10 @@ package cli
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -24,8 +28,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
 func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier, error) {
@@ -37,7 +43,7 @@ func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier
 	if err != nil {
 		return nil, err
 	}
-	return cosign.LoadECDSAPrivateKey(kb, pass)
+	return LoadECDSAPrivateKey(kb, pass)
 }
 
 func loadPublicKey(raw []byte) (signature.Verifier, error) {
@@ -67,7 +73,7 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		if len(s.Data) > 0 {
-			return cosign.LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
+			return LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
 		}
 	}
 
@@ -87,4 +93,38 @@ func publicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 	}
 
 	return LoadPublicKey(ctx, keyRef)
+}
+
+func publicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKeyOption) ([]byte, error) {
+	pub, err := key.PublicKey(pkOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return cryptoutils.MarshalPublicKeyToPEM(pub)
+}
+
+func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifier, error) {
+	// Decrypt first
+	p, _ := pem.Decode(key)
+	if p == nil {
+		return nil, errors.New("invalid pem block")
+	}
+	if p.Type != cosign.PrivakeKeyPemType {
+		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
+	}
+
+	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
+	if err != nil {
+		return nil, errors.Wrap(err, "decrypt")
+	}
+
+	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing private key")
+	}
+	epk, ok := pk.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("invalid private key")
+	}
+	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
 }

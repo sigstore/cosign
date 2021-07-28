@@ -130,7 +130,7 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		k = pk
 	}
 
-	pemBytes, err := cosign.PublicKeyPem(k, options.WithContext(ctx))
+	pemBytes, err := publicKeyPem(k, options.WithContext(ctx))
 	if err != nil {
 		return err
 	}

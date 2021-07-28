@@ -210,7 +210,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 		}
 		var pubBytes []byte
 		if pubKey != nil {
-			pubBytes, err = cosign.PublicKeyPem(pubKey, options.WithContext(ctx))
+			pubBytes, err = publicKeyPem(pubKey, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}

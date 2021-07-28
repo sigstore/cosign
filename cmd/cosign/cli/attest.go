@@ -206,7 +206,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		if sv.Cert != nil {
 			rekorBytes = sv.Cert
 		} else {
-			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
+			pemBytes, err := publicKeyPem(sv, options.WithContext(ctx))
 			if err != nil {
 				return err
 			}
@@ -216,7 +216,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		if err != nil {
 			return err
 		}
-		entry, err := cosign.UploadAttestationTLog(rekorClient, sig, rekorBytes)
+		entry, err := cosign.TLogUploadInTotoAttestation(rekorClient, sig, rekorBytes)
 		if err != nil {
 			return err
 		}

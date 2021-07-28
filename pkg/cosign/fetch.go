@@ -40,6 +40,7 @@ type SignedPayload struct {
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
 	Bundle          *cremote.Bundle
+	bundleVerified  bool
 }
 
 // TODO: marshal the cert correctly.

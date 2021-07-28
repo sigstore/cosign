@@ -1,4 +1,3 @@
-//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,162 +22,52 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	_ "embed" // To enable the `go:embed` directive.
-
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
-	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/client/entries"
-	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-// This is rekor's public key, via `curl -L rekor.sigstore.dev/api/ggcrv1/log/publicKey`
-// rekor.pub should be updated whenever the Rekor public key is rotated & the bundle annotation should be up-versioned
-//go:embed rekor.pub
-var rekorPub string
-
-func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
-	params := entries.NewGetLogEntryByUUIDParams()
-	params.SetEntryUUID(uuid)
-	resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range resp.Payload {
-		return &e, nil
-	}
-	return nil, errors.New("empty response")
-}
-
-func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (uuid string, index int64, err error) {
-	searchParams := entries.NewSearchLogQueryParams()
-	searchLogQuery := models.SearchLogQuery{}
-	signature, err := base64.StdEncoding.DecodeString(b64Sig)
-	if err != nil {
-		return "", 0, errors.Wrap(err, "decoding base64 signature")
-	}
-	re := rekorEntry(payload, signature, pubKey)
-	entry := &models.Rekord{
-		APIVersion: swag.String(re.APIVersion()),
-		Spec:       re.RekordObj,
-	}
-
-	searchLogQuery.SetEntries([]models.ProposedEntry{entry})
-
-	searchParams.SetEntry(&searchLogQuery)
-	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
-	if err != nil {
-		return "", 0, errors.Wrap(err, "searching log query")
-	}
-	if len(resp.Payload) == 0 {
-		return "", 0, errors.New("signature not found in transparency log")
-	} else if len(resp.Payload) > 1 {
-		return "", 0, errors.New("multiple entries returned; this should not happen")
-	}
-	logEntry := resp.Payload[0]
-	if len(logEntry) != 1 {
-		return "", 0, errors.New("UUID value can not be extracted")
-	}
-
-	for k := range logEntry {
-		uuid = k
-	}
-	verifiedEntry, err := VerifyTLogEntry(rekorClient, uuid)
-	if err != nil {
-		return "", 0, err
-	}
-	return uuid, *verifiedEntry.Verification.InclusionProof.LogIndex, nil
-}
-
-func VerifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
-	params := entries.NewGetLogEntryByUUIDParams()
-	params.EntryUUID = uuid
-
-	lep, err := rekorClient.Entries.GetLogEntryByUUID(params)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(lep.Payload) != 1 {
-		return nil, errors.New("UUID value can not be extracted")
-	}
-	e := lep.Payload[params.EntryUUID]
-
-	hashes := [][]byte{}
-	for _, h := range e.Verification.InclusionProof.Hashes {
-		hb, _ := hex.DecodeString(h)
-		hashes = append(hashes, hb)
-	}
-
-	rootHash, _ := hex.DecodeString(*e.Verification.InclusionProof.RootHash)
-	leafHash, _ := hex.DecodeString(params.EntryUUID)
-
-	v := logverifier.New(hasher.DefaultHasher)
-	if e.Verification == nil || e.Verification.InclusionProof == nil {
-		return nil, fmt.Errorf("inclusion proof not provided")
-	}
-	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
-		return nil, errors.Wrap(err, "verifying inclusion proof")
-	}
-
-	// Verify rekor's signature over the SET.
-	resp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParams())
-	if err != nil {
-		return nil, errors.Wrap(err, "rekor public key")
-	}
-	rekorPubKey, err := PemToECDSAKey([]byte(resp.Payload))
-	if err != nil {
-		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
-	}
-
-	payload := cremote.BundlePayload{
-		Body:           e.Body,
-		IntegratedTime: *e.IntegratedTime,
-		LogIndex:       *e.LogIndex,
-		LogID:          *e.LogID,
-	}
-	if err := VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), rekorPubKey); err != nil {
-		return nil, errors.Wrap(err, "verifying signedEntryTimestamp")
-	}
-
-	return &e, nil
-}
-
-// CheckOpts are the options for checking
+// CheckOpts are the options for checking signatures.
 type CheckOpts struct {
-	SignatureRepo        name.Repository
+	// SignatureRepo, if set, designates the repository where image signatures are stored.
+	// Otherwise, it is assumed that signatures reside in the same repo as the image itself.
+	SignatureRepo name.Repository
+	// SigTagSuffixOverride overrides the suffix of the derived signature image tag. Default: ".sig"
 	SigTagSuffixOverride string
-	RegistryClientOpts   []remote.Option
+	// RegistryClientOpts are the options for interacting with the container registry.
+	RegistryClientOpts []remote.Option
 
-	Annotations   map[string]interface{}
-	ClaimVerifier func(SignedPayload, v1.Hash, map[string]interface{}) error
-	VerifyBundle  bool
+	// Annotations optionally specifies image signature annotations to verify.
+	Annotations map[string]interface{}
+	// ClaimVerifier, if provided, verifies claims present in the SignedPayload.
+	ClaimVerifier func(sigPayload SignedPayload, imageDigest v1.Hash, annotations map[string]interface{}) error
+	VerifyBundle  bool //TODO: remove in favor of SignedPayload.BundleVerified
 
+	// RekorURL is the URL for the rekor server to use to verify signatures and public keys.
 	RekorURL string
 
+	// SigVerifier is used to verify signatures.
 	SigVerifier signature.Verifier
-	VerifyOpts  []signature.VerifyOption
-	PKOpts      []signature.PublicKeyOption
+	// VerifyOpts are the options provided to `SigVerifier.VerifySignature()`.
+	VerifyOpts []signature.VerifyOption
+	// PKOpts are the options provided to `SigVerifier.PublicKey()`.
+	PKOpts []signature.PublicKeyOption
 
+	// RootCerts are the root CA certs used to verify a signature's chained certificate.
 	RootCerts *x509.CertPool
 }
 
@@ -282,7 +171,13 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			// Get the right public key to use (key or cert)
 			var pemBytes []byte
 			if co.SigVerifier != nil {
-				pemBytes, err = PublicKeyPem(co.SigVerifier, co.PKOpts...)
+				var pub crypto.PublicKey
+				pub, err = co.SigVerifier.PublicKey(co.PKOpts...)
+				if err != nil {
+					validationErrs = append(validationErrs, err.Error())
+					continue
+				}
+				pemBytes, err = cryptoutils.MarshalPublicKeyToPEM(pub)
 			} else {
 				pemBytes, err = cryptoutils.MarshalCertificateToPEM(sp.Cert)
 			}
@@ -355,9 +250,16 @@ func (sp *SignedPayload) VerifyClaims(digest v1.Hash, ss *payload.SimpleContaine
 	return nil
 }
 
+func (sp *SignedPayload) BundleVerified() bool {
+	return sp.bundleVerified
+}
+
 func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	if sp.Bundle == nil {
 		return false, nil
+	}
+	if sp.bundleVerified {
+		return true, nil
 	}
 	rekorPubKey, err := PemToECDSAKey([]byte(rekorPub))
 	if err != nil {
@@ -369,6 +271,7 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	}
 
 	if sp.Cert == nil {
+		sp.bundleVerified = true
 		return true, nil
 	}
 
@@ -376,6 +279,7 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	if err := checkExpiry(sp.Cert, time.Unix(sp.Bundle.Payload.IntegratedTime, 0)); err != nil {
 		return false, errors.Wrap(err, "checking expiry on cert")
 	}
+	sp.bundleVerified = true
 	return true, nil
 }
 
