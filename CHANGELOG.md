@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.0.0
+
+### Enhancements
+
+* BREAKING: The default HSM key slot is now "signature" instead of "authentication" (https://github.com/sigstore/cosign/pull/450)
+* BREAKING: `--fulcio-server` is now `--fulcio-url` (https://github.com/sigstore/cosign/pull/471)
+* Added `-cert` flag to `sign` to allow the explicit addition of a signature certificate (https://github.com/sigstore/cosign/pull/451)
+* Added the `attest` command (https://github.com/sigstore/cosign/pull/458)
+* Added numerous flags for specifying parameters when interacting with Rekor and Fulcio (https://github.com/sigstore/cosign/pull/462)
+* `cosign` will now send its version string as part of the `user-agent` when interacting with a container registry (https://github.com/sigstore/cosign/pull/479)
+* Files containing certificates for custom Fulcio endpoints can now be specified via the `COSIGN_ROOT` environment variable (https://github.com/sigstore/cosign/pull/477)
+
+### Bug Fixes
+
+* Fixed a situation where lower-case `as` would break `verify-dockerfile` (Complements to @Dentrax https://github.com/sigstore/cosign/pull/433)
+
+### Contributors
+
+* Appu Goundan (@loosebazooka)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Panato (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Furkan Türkal (@Dentrax)
+* Hector Fernandez (@hectorj2f)
+* Jake Sanders (@dekkagaijin)
+* James Alseth (@jalseth)
+* Jason Hall (@imjasonh)
+* João Pereira (@joaodrp)
+* Luke Hinds (@lukehinds)
+* Tom Hennen (@TomHennen)
+
 ## v0.6.0
 
 ### Enhancements
@@ -27,6 +58,7 @@
 * Dan Lorenc (@dlorenc)
 * Dino A. Dai Zovi (@ddz)
 * Furkan Türkal (@Dentrax)
+* Jake Sanders (@dekkagaijin)
 * Jason Hall (@imjasonh)
 * Paris Zoumpouloglou (@zuBux)
 * Priya Wadhwa (@priyawadhwa)
