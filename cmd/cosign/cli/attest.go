@@ -61,25 +61,25 @@ func Attest() *ffcli.Command {
 
 EXAMPLES
   # attach an attestation to a container image Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign attest -attestation <FILE> <IMAGE>
+  COSIGN_EXPERIMENTAL=1 cosign attest -predicate <FILE> <IMAGE>
 
   # attach an attestation to a container image with a local key pair file
-  cosign attest -attestation <FILE> -key cosign.key <IMAGE>
+  cosign attest -predicate <FILE> -key cosign.key <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in Azure Key Vault
-  cosign attest -attestation <FILE> -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
+  cosign attest -predicate <FILE> -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in AWS KMS
-  cosign attest -attestation <FILE> -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <IMAGE>
+  cosign attest -predicate <FILE> -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in Google Cloud KMS
-  cosign attest -attestation <FILE> -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <IMAGE>
+  cosign attest -predicate <FILE> -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in Hashicorp Vault
-  cosign attest -attestation <FILE> -key hashivault://[KEY] <IMAGE>
+  cosign attest -predicate <FILE> -key hashivault://[KEY] <IMAGE>
 
   # attach an attestation to a container image which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest -attestation <FILE> -key cosign.key legacy-registry.example.com/my/image
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest -predicate <FILE> -key cosign.key legacy-registry.example.com/my/image
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
