@@ -148,7 +148,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		// TODO: Refactor with sign.go
 		rekorBytes := sv.Cert
 		if rekorBytes == nil {
-			pemBytes, err := cosign.PublicKeyPem(sv, options.WithContext(ctx))
+			pemBytes, err := publicKeyPem(sv, options.WithContext(ctx))
 			if err != nil {
 				return nil, err
 			}
@@ -158,7 +158,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		if err != nil {
 			return nil, err
 		}
-		entry, err := cosign.UploadTLog(rekorClient, sig, payload, rekorBytes)
+		entry, err := cosign.TLogUpload(rekorClient, sig, payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}

@@ -24,13 +24,14 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func SimpleClaimVerifier(sp SignedPayload, digest v1.Hash, annotations map[string]interface{}) error {
+// SimpleClaimVerifier verifies that SignedPayload.Payload is a SimpleContainerImage payload which references the given image digest and contains the given annotations.
+func SimpleClaimVerifier(sp SignedPayload, imageDigest v1.Hash, annotations map[string]interface{}) error {
 	ss := &payload.SimpleContainerImage{}
 	if err := json.Unmarshal(sp.Payload, ss); err != nil {
 		return err
 	}
 
-	if err := sp.VerifyClaims(digest, ss); err != nil {
+	if err := sp.VerifyClaims(imageDigest, ss); err != nil {
 		return err
 	}
 
@@ -42,7 +43,8 @@ func SimpleClaimVerifier(sp SignedPayload, digest v1.Hash, annotations map[strin
 	return nil
 }
 
-func IntotoSubjectClaimVerifier(sp SignedPayload, digest v1.Hash, _ map[string]interface{}) error {
+// IntotoSubjectClaimVerifier verifies that SignedPayload.Payload is an Intoto statement which references the given image digest.
+func IntotoSubjectClaimVerifier(sp SignedPayload, imageDigest v1.Hash, _ map[string]interface{}) error {
 	st := &in_toto.Statement{}
 	if err := json.Unmarshal(sp.Payload, st); err != nil {
 		return err
@@ -54,7 +56,7 @@ func IntotoSubjectClaimVerifier(sp SignedPayload, digest v1.Hash, _ map[string]i
 			continue
 		}
 		subjDigest := "sha256:" + dgst
-		if subjDigest == digest.String() {
+		if subjDigest == imageDigest.String() {
 			return nil
 		}
 	}

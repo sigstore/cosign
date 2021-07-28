@@ -16,7 +16,6 @@
 package cosign
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -29,11 +28,11 @@ import (
 	"github.com/theupdateframework/go-tuf/encrypted"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
-	PemType   = "ENCRYPTED COSIGN PRIVATE KEY"
+	PrivakeKeyPemType = "ENCRYPTED COSIGN PRIVATE KEY"
+
 	sigkey    = "dev.cosignproject.cosign/signature"
 	certkey   = "dev.sigstore.cosign/certificate"
 	chainkey  = "dev.sigstore.cosign/chain"
@@ -74,7 +73,7 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 	// store in PEM format
 	privBytes := pem.EncodeToMemory(&pem.Block{
 		Bytes: encBytes,
-		Type:  PemType,
+		Type:  PrivakeKeyPemType,
 	})
 
 	// Now do the public key
@@ -92,40 +91,6 @@ func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 
 func (k *Keys) Password() []byte {
 	return k.password
-}
-
-func PublicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKeyOption) ([]byte, error) {
-	pub, err := key.PublicKey(pkOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return cryptoutils.MarshalPublicKeyToPEM(pub)
-}
-
-func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifier, error) {
-	// Decrypt first
-	p, _ := pem.Decode(key)
-	if p == nil {
-		return nil, errors.New("invalid pem block")
-	}
-	if p.Type != PemType {
-		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
-	}
-
-	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
-	if err != nil {
-		return nil, errors.Wrap(err, "decrypt")
-	}
-
-	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing private key")
-	}
-	epk, ok := pk.(*ecdsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid private key")
-	}
-	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
 }
 
 func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {

@@ -16,6 +16,7 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
 	"io/ioutil"
 	"testing"
 
@@ -105,5 +106,32 @@ func TestPublicKeyFromFileRef(t *testing.T) {
 	if _, err := publicKeyFromKeyRef(ctx, testFile); err != nil {
 		t.Fatalf("publicKeyFromKeyRef returned error: %v", err)
 
+	}
+}
+
+func TestLoadECDSAPrivateKey(t *testing.T) {
+	// Generate a valid keypair
+	keys, err := cosign.GenerateKeyPair(pass("hello"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Load the private key with the right password
+	if _, err := LoadECDSAPrivateKey(keys.PrivateBytes, []byte("hello")); err != nil {
+		t.Errorf("unexpected error decrypting key: %s", err)
+	}
+
+	// Try it with the wrong one
+	if _, err := LoadECDSAPrivateKey(keys.PrivateBytes, []byte("wrong")); err == nil {
+		t.Error("expected error decrypting key!")
+	}
+
+	// Try to decrypt garbage
+	buf := [100]byte{}
+	if _, err := rand.Read(buf[:]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadECDSAPrivateKey(buf[:], []byte("wrong")); err == nil {
+		t.Error("expected error decrypting key!")
 	}
 }
