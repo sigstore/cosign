@@ -74,50 +74,6 @@ func addPolicyInit(topLevel *cobra.Command) {
 			root.Roles["root"] = role
 			root.Namespace = o.ImageRef
 
-			// Current user may sign the body of the root.json and add the signatures.
-			/*
-					rootMeta, err := root.
-					if err != nil {
-						return err
-					}
-
-
-				fulcioSigner, err := ctuf.GenerateFulcioSigner(ctx, "")
-				if err != nil {
-					return err
-				}
-				rootSig, err := fulcioSigner.Sign(rand.Reader, rootMeta.Signed, crypto.Hash(0))
-				if err != nil {
-					return errors.Wrap(err, "Error occurred while during artifact signing")
-				}
-				certStr, _ := json.Marshal(fulcioSigner.Cert())
-				for _, id := range fulcioSigner.IDs() {
-					if err := r.AddOrUpdateSignature("root.json", data.Signature{
-						KeyID:     id,
-						Signature: rootSig,
-						Cert:      string(certStr)}); err != nil {
-						return err
-					}
-				}
-
-				// Send to rekor
-				fmt.Println("Sending policy to transparency log")
-				rekorClient, err := rekorClient.GetRekorClient(TlogServer())
-				if err != nil {
-					return err
-				}
-				entry, err := cosign.UploadTLog(rekorClient, rootSig, rootMeta.Signed, []byte(fulcioSigner.Cert()))
-				if err != nil {
-					return err
-				}
-				fmt.Println("tlog entry created with index:", *entry.LogIndex)
-
-				meta, err := local.GetMeta()
-				if err != nil {
-					return err
-				}
-			*/
-
 			policy, err := root.Marshal()
 			if err != nil {
 				return err
