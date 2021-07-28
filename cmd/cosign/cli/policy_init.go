@@ -119,7 +119,7 @@ EXAMPLES
 			}
 			certStr, _ := json.Marshal(fulcioSigner.Cert())
 			for _, id := range fulcioSigner.IDs() {
-				if err := r.AppendSignature("root.json", data.Signature{
+				if err := r.AddOrUpdateSignature("root.json", data.Signature{
 					KeyID:     id,
 					Signature: rootSig,
 					Cert:      string(certStr)}); err != nil {
