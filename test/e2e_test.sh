@@ -57,6 +57,10 @@ test_image="gcr.io/distroless/base" ./cosign verify-dockerfile -key ${DISTROLESS
 # Image exists, but is unsigned
 if (test_image="ubuntu" ./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile); then false; fi
 
+# Test `cosign verify-manifest`
+./cosign verify-manifest -key ${DISTROLESS_PUB_KEY} ./test/testdata/signed_manifest.yaml
+if (./cosign verify-manifest -key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_manifest.yaml); then false; fi
+
 # Run the built container to make sure it doesn't crash
 make ko-local
 img="ko.local:$(git rev-parse HEAD)"
