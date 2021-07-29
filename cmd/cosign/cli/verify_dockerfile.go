@@ -117,7 +117,11 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 	fileScanner := bufio.NewScanner(dockerfile)
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
+		fileScanner.Scan()
+		nextLine := strings.TrimSpace(fileScanner.Text())
 		if strings.HasPrefix(line, "FROM") {
+			images = append(images, getImageFromLine(line))
+		} else if strings.HasPrefix(line, "ARG") && strings.HasPrefix(nextLine, "FROM") {
 			images = append(images, getImageFromLine(line))
 		}
 	}
@@ -132,6 +136,10 @@ func getImageFromLine(line string) string {
 	line = os.ExpandEnv(line)               // Substitute templated vars
 	fields := strings.Fields(line)
 	for i := len(fields) - 1; i > 0; i-- {
+		if strings.Contains(fields[i], "=") {
+			fields = strings.SplitN(fields[i], "=", 2)
+			break
+		}
 		// Remove the "AS" portion of line
 		if strings.EqualFold(fields[i], "AS") {
 			fields = fields[:i]
