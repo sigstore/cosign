@@ -55,6 +55,7 @@ func main() {
 			cli.VerifyAttestation(),
 			cli.VerifyBlob(),
 			cli.VerifyDockerfile(),
+			cli.VerifyList(),
 			// Upload sub-tree
 			upload.Upload(),
 			// Download sub-tree
