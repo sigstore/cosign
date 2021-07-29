@@ -172,7 +172,7 @@ func TestAttestVerify(t *testing.T) {
 
 	// Now attest the image
 	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(cli.AttestCmd(ctx, ko, imgName, "", true, ap, false), t)
+	must(cli.AttestCmd(ctx, ko, imgName, "", true, ap, false, "custom"), t)
 
 	// Now verify and download should work!
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
