@@ -23,12 +23,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	ggcrV1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
-	"os"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"

@@ -3,16 +3,18 @@ package attestation
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"strings"
+
+	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/pkg/errors"
 )
 
 const (
-	// CosignCustomPredicateType specifies the type of the Predicate.
-	CosignCustomPredicateType = "cosign.sigstore.dev/attestation/v1"
+	// CosignCustomProvenanceV01 specifies the type of the Predicate.
+	CosignCustomProvenanceV01 = "cosign.sigstore.dev/attestation/v1"
 )
 
 // CosignAttestation specifies the format of the Custom Predicate.
@@ -72,7 +74,7 @@ func generateStatementHeader(digest, repo, predicateType string) in_toto.Stateme
 //
 func generateCustomStatement(rawPayload []byte, digest, repo string) (interface{}, error) {
 	return in_toto.Statement{
-		StatementHeader: generateStatementHeader(digest, repo, in_toto.StatementInTotoV01),
+		StatementHeader: generateStatementHeader(digest, repo, CosignCustomProvenanceV01),
 		Predicate: CosignAttestation{
 			Data: string(rawPayload),
 		},
@@ -137,7 +139,10 @@ func checkRequiredJSONFields(rawPayload []byte, typ reflect.Type) error {
 	attributeCount := typ.NumField()
 	allFields := make([]string, 0)
 	for i := 0; i < attributeCount; i++ {
-		allFields = append(allFields, typ.Field(i).Tag.Get("json"))
+		jsonTagFields := strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)
+		if len(jsonTagFields) < 2 {
+			allFields = append(allFields, jsonTagFields[0])
+		}
 	}
 
 	// Assert that there's a key in the passed map for each tag
