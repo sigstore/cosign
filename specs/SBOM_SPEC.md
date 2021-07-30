@@ -18,7 +18,7 @@ SBOMs stored in an OCI registry are generally assumed to refer to other objects 
 This document does not specify how these "links" are created.
 A naming convention or the [in-progress OCI `references` API](https://github.com/opencontainers/image-spec/issues/827) are viable options.
 
-This document does not specify how clients should behave When multiple SBOMs are present for an image.
+This document does not specify how clients should behave when multiple SBOMs are present for an image.
 Clients may list all the SBOMs, or may provide tooling to filter based on SBOM type or scope.
 
 ## Overall Layout
@@ -49,7 +49,7 @@ Here is an example manifest containing one SBOM, in the [SPDX](https://spdx.org)
 ```
 
 Multiple SBOMs may be attached, using multiple formats.
-This example shows two SBOMs, one in the SPDX format and one in the CycloneDX format:
+This example shows two SBOMs, one in the SPDX format and one in the [CycloneDX](https://cyclonedx.org) format:
 
 ```json
 {
@@ -138,5 +138,5 @@ This scope refers to two layers: `layer=sha256:$DIGEST,layer=sha256:$OTHERDIGEST
 ## Relationship
 
 While SBOMs typically relate directly to the contents of the object they refer to, in certain circumstances they may instead relate to the object indirectly.
-One exmaple here is that the SBOM could describe the environment the object was built in, rather than the contents of the object itself.
+One example here is that the SBOM could describe the environment the object was built in, rather than the contents of the object itself.
 This type of relationship will be tracked by this spec somehow, but we're not sure exactly how yet.
