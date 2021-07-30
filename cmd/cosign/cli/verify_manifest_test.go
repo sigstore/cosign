@@ -55,6 +55,52 @@ spec:
       command: ["/bin/sh"]
       args: ["-c", "echo Hello, World > /pod-data/index.html"]
 `
+const MultiResourceContainerManifest = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-pod
+spec:
+  restartPolicy: Never
+  volumes:
+    - name: shared-data
+      emptyDir: {}
+  containers:
+    - name: nginx-container
+      image: nginx:1.21.1
+      volumeMounts:
+        - name: shared-data
+          mountPath: /usr/share/nginx/html
+    - name: ubuntu-container
+      image: ubuntu:21.10
+      volumeMounts:
+        - name: shared-data
+          mountPath: /pod-data
+      command: ["/bin/sh"]
+      args: ["-c", "echo Hello, World > /pod-data/index.html"]
+`
 
 func TestGetImagesFromYamlManifest(t *testing.T) {
 	testCases := []struct {
@@ -73,6 +119,11 @@ func TestGetImagesFromYamlManifest(t *testing.T) {
 			expected:     []string{"nginx:1.21.1", "ubuntu:21.10"},
 		},
 		{
+			name:         "multiple resources and images within a document",
+			fileContents: MultiResourceContainerManifest,
+			expected:     []string{"nginx:1.14.2", "nginx:1.21.1", "ubuntu:21.10"},
+		},
+		{
 			name:         "no images found",
 			fileContents: ``,
 			expected:     nil,
@@ -80,7 +131,10 @@ func TestGetImagesFromYamlManifest(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := getImagesFromYamlManifest(tc.fileContents)
+			got, err := getImagesFromYamlManifest(tc.fileContents)
+			if err != nil {
+				t.Fatalf("getImagesFromYamlManifest returned error: %v", err)
+			}
 			if !reflect.DeepEqual(tc.expected, got) {
 				t.Errorf("getImagesFromYamlManifest returned %v, wanted %v", got, tc.expected)
 			}

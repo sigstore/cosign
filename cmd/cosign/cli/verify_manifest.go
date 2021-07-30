@@ -15,17 +15,25 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // VerifyCommand verifies all image signatures on a supplied k8s resource
@@ -91,13 +99,15 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "check if extension is valid")
 	}
-
 	manifest, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
 		return fmt.Errorf("could not read manifest: %v", err)
 	}
 
-	images := getImagesFromYamlManifest(string(manifest))
+	images, err := getImagesFromYamlManifest(string(manifest))
+	if err != nil {
+		return fmt.Errorf("unable to extract the container image references in the manifest %v", err)
+	}
 	if len(images) == 0 {
 		return errors.New("no images found in manifest")
 	}
@@ -106,13 +116,98 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 	return c.VerifyCommand.Exec(ctx, images)
 }
 
-func getImagesFromYamlManifest(manifest string) []string {
+func getImagesFromYamlManifest(manifest string) ([]string, error) {
+	dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(manifest)), 4096)
+	cScheme := runtime.NewScheme()
 	var images []string
-	re := regexp.MustCompile(`image:\s?(?P<Image>.*)\s?`)
-	for _, s := range re.FindAllStringSubmatch(manifest, -1) {
-		images = append(images, s[1])
+	if err := corev1.AddToScheme(cScheme); err != nil {
+		return images, err
 	}
-	return images
+	if err := appsv1.AddToScheme(cScheme); err != nil {
+		return images, err
+	}
+	if err := batchv1.AddToScheme(cScheme); err != nil {
+		return images, err
+	}
+
+	deserializer := serializer.NewCodecFactory(cScheme).UniversalDeserializer()
+	for {
+		ext := runtime.RawExtension{}
+		if err := dec.Decode(&ext); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return images, fmt.Errorf("unable to decode the manifest")
+		}
+
+		ext.Raw = bytes.TrimSpace(ext.Raw)
+		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {
+			continue
+		}
+
+		decoded, _, err := deserializer.Decode(ext.Raw, nil, nil)
+		if err != nil {
+			return images, fmt.Errorf("unable to decode the manifest")
+		}
+
+		var (
+			d   *appsv1.Deployment
+			rs  *appsv1.ReplicaSet
+			ss  *appsv1.StatefulSet
+			ds  *appsv1.DaemonSet
+			job *batchv1.CronJob
+			pod *corev1.Pod
+		)
+		containers := make([]corev1.Container, 0)
+		switch obj := decoded.(type) {
+		case *appsv1.Deployment:
+			d = obj
+			containers = append(containers, d.Spec.Template.Spec.Containers...)
+			containers = append(containers, d.Spec.Template.Spec.InitContainers...)
+			for _, c := range containers {
+				images = append(images, c.Image)
+			}
+		case *appsv1.DaemonSet:
+			ds = obj
+			containers = append(containers, ds.Spec.Template.Spec.Containers...)
+			containers = append(containers, ds.Spec.Template.Spec.InitContainers...)
+			for _, c := range containers {
+				images = append(images, c.Image)
+			}
+		case *appsv1.ReplicaSet:
+			rs = obj
+			containers = append(containers, rs.Spec.Template.Spec.Containers...)
+			containers = append(containers, rs.Spec.Template.Spec.InitContainers...)
+			for _, c := range containers {
+				images = append(images, c.Image)
+			}
+		case *appsv1.StatefulSet:
+			ss = obj
+			containers = append(containers, ss.Spec.Template.Spec.Containers...)
+			containers = append(containers, ss.Spec.Template.Spec.InitContainers...)
+			for _, c := range containers {
+				images = append(images, c.Image)
+			}
+
+		case *batchv1.CronJob:
+			job = obj
+			containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.Containers...)
+			containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.InitContainers...)
+			for _, c := range containers {
+				images = append(images, c.Image)
+			}
+		case *corev1.Pod:
+			pod = obj
+			containers = append(containers, pod.Spec.Containers...)
+			containers = append(containers, pod.Spec.InitContainers...)
+
+			for _, c := range containers {
+				images = append(images, c.Image)
+			}
+		}
+	}
+
+	return images, nil
 }
 
 func isExtensionAllowed(ext string) error {
