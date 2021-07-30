@@ -118,7 +118,12 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
 		if strings.HasPrefix(line, "FROM") {
-			images = append(images, getImageFromLine(line))
+			switch image := getImageFromLine(line); image {
+			case "scratch":
+				fmt.Fprintln(os.Stderr, "- scratch image ignored")
+			default:
+				images = append(images, image)
+			}
 		}
 	}
 	if err := fileScanner.Err(); err != nil {
