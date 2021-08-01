@@ -279,7 +279,7 @@ Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641b
 
 #### In-Toto Attestations
 
-Cosign also has built-in support for [in-toto.io](in-toto.io) attestations.
+Cosign also has built-in support for [in-toto](https://in-toto.io) attestations.
 The specification for these is defined [here](https://github.com/in-toto/attestation).
 
 You can create and sign one from a local predicate file using the following commands:
