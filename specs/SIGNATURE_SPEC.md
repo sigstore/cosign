@@ -395,4 +395,4 @@ We will bias toward support for algorithms with wide industry adoption, API supp
 
 We are compatible with the In-Toto [Metablock](https://in-toto.readthedocs.io/en/latest/model.html) and JWS [rfc7515](https://tools.ietf.org/html/rfc7515) formats.
 This means we can convert to these formats during verification, and from these formats during upload/signature.
-You can think of this spec as an "on-registry serialization format" for either of these specififed formats.
+You can think of this spec as an "on-registry serialization format" for either of these specified formats.
