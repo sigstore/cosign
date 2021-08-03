@@ -2,6 +2,8 @@
 
 Container Signing, Verification and Storage in an OCI registry.
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/sigstore/cosign)](https://goreportcard.com/report/github.com/sigstore/cosign)
+
 Cosign aims to make signatures **invisible infrastructure**.
 
 Cosign supports:
