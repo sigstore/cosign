@@ -16,6 +16,7 @@
 package fulcio
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -27,6 +28,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -35,6 +37,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/fulcio/pkg/generated/models"
@@ -52,6 +55,8 @@ const (
 // This is the root in the fulcio project.
 //go:embed fulcio.pem
 var rootPem string
+
+var fulcioTargetStr = `fulcio.crt.pem`
 
 type oidcConnector interface {
 	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, error)
@@ -192,8 +197,23 @@ func init() {
 		if !cp.AppendCertsFromPEM(raw) {
 			panic("error creating root cert pool")
 		}
-	} else if !cp.AppendCertsFromPEM([]byte(rootPem)) {
-		panic("error creating root cert pool")
+	} else {
+		// First try retrieving from TUF root. Requires running `cosign init`
+		// Otherwise use rootPem.
+		ctx := context.Background()
+		buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
+		err := tuf.GetTarget(ctx, fulcioTargetStr, &buf)
+		if err != nil {
+			if !cp.AppendCertsFromPEM([]byte(rootPem)) {
+				panic("error creating root cert pool")
+			}
+		} else {
+			// TODO: Remove this when re-signing the next Fulcio certificate.
+			replaced := strings.ReplaceAll(buf.String(), "\n  ", "\n")
+			if !cp.AppendCertsFromPEM([]byte(replaced)) {
+				panic("error creating root cert pool")
+			}
+		}
 	}
 	Roots = cp
 }
