@@ -113,6 +113,10 @@ Enter password for private key:
 Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
+The cosign command above prompts the user to enter the password for the private key.
+The user can either manually enter the password, or if the environment variable `COSIGN_PASSWORD` is set then it is used automatically.
+
+
 ### Verify a container against a public key
 
 This command returns `0` if *at least one* `cosign` formatted signature for the image is found
@@ -163,7 +167,7 @@ The following feature set is not considered stable yet, but we are committed to 
 * Integration with the `Rekor` transparency log
 * Keyless signatures using the `Fulcio` CA
 
-#### Formats/Specifications 
+#### Formats/Specifications
 
 While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
 the format specifications for some of those types may not be considered stable yet.
