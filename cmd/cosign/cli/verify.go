@@ -113,7 +113,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 
 	co := &cosign.CheckOpts{
 		Annotations:        *c.Annotations,
-		RootCerts:          fulcio.Roots,
+		RootCerts:          fulcio.GetRoots(),
 		RegistryClientOpts: DefaultRegistryClientOpts(ctx),
 	}
 	if c.CheckClaims {

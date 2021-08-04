@@ -105,7 +105,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	}
 
 	co := &cosign.CheckOpts{
-		RootCerts:            fulcio.Roots,
+		RootCerts:            fulcio.GetRoots(),
 		RegistryClientOpts:   DefaultRegistryClientOpts(ctx),
 		SigTagSuffixOverride: cosign.AttestationTagSuffix,
 	}

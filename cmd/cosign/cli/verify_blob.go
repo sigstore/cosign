@@ -195,7 +195,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	}
 
 	if cert != nil { // cert
-		if err := cosign.TrustedCert(cert, fulcio.Roots); err != nil {
+		if err := cosign.TrustedCert(cert, fulcio.GetRoots()); err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")

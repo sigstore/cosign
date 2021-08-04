@@ -197,7 +197,7 @@ func main() {
 				VerifyOpts:    []signature.VerifyOption{ctxOpt},
 				PKOpts:        []signature.PublicKeyOption{ctxOpt},
 				ClaimVerifier: cosign.SimpleClaimVerifier,
-				RootCerts:     fulcio.Roots,
+				RootCerts:     fulcio.GetRoots(),
 				RegistryClientOpts: []remote.Option{
 					remote.WithAuthFromKeychain(authn.DefaultKeychain),
 					remote.WithContext(bctx.Context),
