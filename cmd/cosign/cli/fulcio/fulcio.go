@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -184,9 +185,19 @@ func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey,
 
 var _ signature.Signer = &Signer{}
 
-var Roots *x509.CertPool
+var (
+	rootsOnce sync.Once
+	roots     *x509.CertPool
+)
 
-func init() {
+func GetRoots() *x509.CertPool {
+	rootsOnce.Do(func() {
+		roots = initRoots()
+	})
+	return roots
+}
+
+func initRoots() *x509.CertPool {
 	cp := x509.NewCertPool()
 	rootEnv := os.Getenv(altRoot)
 	if rootEnv != "" {
@@ -215,5 +226,5 @@ func init() {
 			}
 		}
 	}
-	Roots = cp
+	return cp
 }

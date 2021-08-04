@@ -3,7 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
-	cloud.google.com/go/storage v1.16.0 // indirect
+	cloud.google.com/go/storage v1.16.0
 	github.com/Azure/go-autorest/autorest/adal v0.9.14 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4
@@ -12,7 +12,7 @@ require (
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-piv/piv-go v1.8.0
 	github.com/google/go-cmp v0.5.6
-	github.com/google/go-containerregistry v0.5.1
+	github.com/google/go-containerregistry v0.6.0
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
