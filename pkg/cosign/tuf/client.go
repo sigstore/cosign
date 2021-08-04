@@ -75,8 +75,10 @@ func getRootKeys() ([]*data.Key, error) {
 
 // Gets the global TUF client if the directory exists.
 func RootClient(ctx context.Context) (*client.Client, error) {
+	rootClientMu.Lock()
+	defer rootClientMu.Unlock()
 	if rootClient == nil {
-		// Instantiate the global TUF client.
+		// Instantiate the global TUF client from the local store. This does not do a download.
 		local, err := tuf_leveldbstore.FileLocalStore(TufLocalStore)
 		if err != nil {
 			return nil, errors.Wrap(err, "initializing local store")
@@ -86,23 +88,6 @@ func RootClient(ctx context.Context) (*client.Client, error) {
 			return nil, errors.Wrap(err, "initializing remote store")
 		}
 		rootClient = client.NewClient(local, remote)
-
-		rootKeys, err := getRootKeys()
-		if err != nil {
-			return nil, errors.Wrap(err, "retrieving root keys")
-		}
-		if err := rootClient.Init(rootKeys, TufThreshold); err != nil {
-			return nil, errors.Wrap(err, "initializing tuf client")
-		}
-
-		// Download initial targets and store in .sigstore/root/targets/.
-		if err := os.MkdirAll(TufLocalTargets, 0755); err != nil {
-			return nil, errors.Wrap(err, "creating targets dir")
-		}
-		if err := updateMetadataAndDownloadTargets(rootClient); err != nil {
-			return nil, errors.Wrap(err, "updating local metadata and targets")
-		}
-		return rootClient, nil
 	}
 	return rootClient, nil
 }
@@ -142,10 +127,23 @@ func downloadTarget(name string, c *client.Client, out client.Destination) error
 
 // Instantiates the global TUF client. Downloads all initial targets and stores in .sigstore/root/targets/.
 func Init(ctx context.Context) error {
-	// Instantiate the global TUF client.
-	_, err := RootClient(ctx)
+	rootClient, err := RootClient(ctx)
 	if err != nil {
-		return errors.Wrap(err, "getting root client")
+		return errors.Wrap(err, "initializing root client")
+	}
+	rootKeys, err := getRootKeys()
+	if err != nil {
+		return errors.Wrap(err, "retrieving root keys")
+	}
+	if err := rootClient.Init(rootKeys, TufThreshold); err != nil {
+		return errors.Wrap(err, "initializing tuf client")
+	}
+	// Download initial targets and store in .sigstore/root/targets/.
+	if err := os.MkdirAll(TufLocalTargets, 0755); err != nil {
+		return errors.Wrap(err, "creating targets dir")
+	}
+	if err := updateMetadataAndDownloadTargets(rootClient); err != nil {
+		return errors.Wrap(err, "updating local metadata and targets")
 	}
 
 	return nil

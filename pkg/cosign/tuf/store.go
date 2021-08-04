@@ -36,6 +36,7 @@ type gcsRemoteStore struct {
 	opts   *GcsRemoteOptions
 }
 
+// A remote store for TUF metadata on GCS.
 func GcsRemoteStore(ctx context.Context, bucket string, opts *GcsRemoteOptions, client *storage.Client) (client.RemoteStore, error) {
 	if opts == nil {
 		opts = &GcsRemoteOptions{}
@@ -43,7 +44,7 @@ func GcsRemoteStore(ctx context.Context, bucket string, opts *GcsRemoteOptions, 
 	if opts.TargetsPath == "" {
 		opts.TargetsPath = "targets"
 	}
-	store := gcsRemoteStore{ctx: ctx, bucket: bucket, opts: opts}
+	store := gcsRemoteStore{ctx: ctx, bucket: bucket, opts: opts, client: client}
 	if client == nil {
 		var err error
 		store.client, err = storage.NewClient(ctx)

@@ -15,6 +15,8 @@
 package cosign
 
 import (
+	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -29,6 +31,7 @@ import (
 	"github.com/pkg/errors"
 
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
@@ -41,6 +44,19 @@ import (
 // rekor.pub should be updated whenever the Rekor public key is rotated & the bundle annotation should be up-versioned
 //go:embed rekor.pub
 var rekorPub string
+var rekorTargetStr = `rekor.pub`
+
+func GetRekorPub() string {
+	ctx := context.Background() // TODO: pass in context?
+	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
+	err := tuf.GetTarget(ctx, rekorTargetStr, &buf)
+	if err != nil {
+		// The user may not have initialized the local root metadata. Log the error and use the embedded root.
+		fmt.Println("using embedded rekor public key. did you run `cosign init`? error retrieving target: ", err)
+		return rekorPub
+	}
+	return buf.String()
+}
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
 func TLogUpload(rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
