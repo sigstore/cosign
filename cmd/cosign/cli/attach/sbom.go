@@ -17,10 +17,12 @@ package attach
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -73,7 +75,7 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 		return err
 	}
 
-	b, err := ioutil.ReadFile(sbomRef)
+	b, err := sbomBytes(sbomRef)
 	if err != nil {
 		return err
 	}
@@ -87,4 +89,18 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 	}
 
 	return nil
+}
+
+func sbomBytes(sbomRef string) ([]byte, error) {
+	// sbomRef can be "-", a string or a file.
+	switch signatureType(sbomRef) {
+	case StdinSignature:
+		return ioutil.ReadAll(os.Stdin)
+	case RawSignature:
+		return []byte(sbomRef), nil
+	case FileSignature:
+		return ioutil.ReadFile(filepath.Clean(sbomRef))
+	default:
+		return nil, errors.New("unknown SBOM arg type")
+	}
 }
