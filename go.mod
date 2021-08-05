@@ -21,13 +21,13 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.1.1
 	github.com/sigstore/rekor v0.3.0
-	github.com/sigstore/sigstore v0.0.0-20210726180807-7e34e36ecda1
+	github.com/sigstore/sigstore v0.0.0-20210729211320-56a91f560f44
 	github.com/stretchr/testify v1.7.0
-	github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
+	github.com/theupdateframework/go-tuf v0.0.0-20210804171843-477a5d73800a
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
-	k8s.io/api v0.21.3
-	k8s.io/apimachinery v0.21.3
-	k8s.io/client-go v0.21.3
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/client-go v0.22.0
 )
