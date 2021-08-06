@@ -27,7 +27,7 @@ func Init() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign init", flag.ExitOnError)
 		// TODO: Support HTTP mirrors as well
-		mirror    = flagset.String("mirror", "test-root-123", "GCS bucket to a SigStore TUF repository.")
+		mirror    = flagset.String("mirror", "sigstore-tuf-root", "GCS bucket to a SigStore TUF repository.")
 		root      = flagset.String("root", ".sigstore/keys.json", "path to trusted initial root.")
 		threshold = flagset.Int("threshold", 3, "threshold of root key signers")
 	)
