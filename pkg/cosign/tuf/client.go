@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -31,18 +32,29 @@ import (
 	"github.com/theupdateframework/go-tuf/util"
 )
 
-// Location of SigStore local root store and global values.
-const TufLocalStore = ".sigstore/root/"
-const TufRemoteStore = "test-root-123"
-const TufRootKeys = ".sigstore/keys.json"
-const TufLocalTargets = TufLocalStore + "targets/"
-const TufThreshold = 3
+const (
+	TufRootEnv        = "TUF_ROOT"
+	defaultLocalStore = ".sigstore/root/"
+)
 
 // Global TUF client. Stores local targets in .sigstore/root.
 // Could be in memory local store, but that would mean re-download each time cosign is run.
 var rootClient *client.Client
 var rootClientMu = &sync.Mutex{}
 
+func CosignRoot() string {
+	rootDir := os.Getenv(TufRootEnv)
+	if rootDir == "" {
+		return defaultLocalStore
+	}
+	return rootDir
+}
+
+func CosignTargets() string {
+	return path.Join(CosignRoot(), "targets")
+}
+
+// Target destinations compatible with go-tuf.
 type targetDestination struct {
 	*os.File
 }
@@ -61,8 +73,8 @@ func (b *ByteDestination) Delete() error {
 	return nil
 }
 
-func getRootKeys() ([]*data.Key, error) {
-	rootFile, err := os.Open(TufRootKeys)
+func getRootKeys(rootPath string) ([]*data.Key, error) {
+	rootFile, err := os.Open(rootPath)
 	if err != nil {
 		return nil, err
 	}
@@ -74,18 +86,15 @@ func getRootKeys() ([]*data.Key, error) {
 }
 
 // Gets the global TUF client if the directory exists.
-func RootClient(ctx context.Context) (*client.Client, error) {
+// This will not make a remote call.
+func RootClient(ctx context.Context, local string, remote client.RemoteStore) (*client.Client, error) {
 	rootClientMu.Lock()
 	defer rootClientMu.Unlock()
 	if rootClient == nil {
 		// Instantiate the global TUF client from the local store. This does not do a download.
-		local, err := tuf_leveldbstore.FileLocalStore(TufLocalStore)
+		local, err := tuf_leveldbstore.FileLocalStore(local)
 		if err != nil {
 			return nil, errors.Wrap(err, "initializing local store")
-		}
-		remote, err := GcsRemoteStore(ctx, TufRemoteStore, nil, nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "initializing remote store")
 		}
 		rootClient = client.NewClient(local, remote)
 	}
@@ -100,6 +109,9 @@ func updateMetadataAndDownloadTargets(c *client.Client) error {
 	}
 
 	// Download targets, if they don't already exist and match the updated metadata.
+	if err := os.MkdirAll(CosignTargets(), 0700); err != nil {
+		return errors.Wrap(err, "creating targets dir")
+	}
 	for name := range targetFiles {
 		if err := downloadTarget(name, c, nil); err != nil {
 			return err
@@ -109,7 +121,7 @@ func updateMetadataAndDownloadTargets(c *client.Client) error {
 }
 
 func downloadTarget(name string, c *client.Client, out client.Destination) error {
-	f, err := os.Create(TufLocalTargets + name)
+	f, err := os.Create(path.Join(CosignTargets(), name))
 	if err != nil {
 		return errors.Wrap(err, "creating target file")
 	}
@@ -126,20 +138,20 @@ func downloadTarget(name string, c *client.Client, out client.Destination) error
 }
 
 // Instantiates the global TUF client. Downloads all initial targets and stores in .sigstore/root/targets/.
-func Init(ctx context.Context) error {
-	rootClient, err := RootClient(ctx)
+func Init(ctx context.Context, rootFile string, remote client.RemoteStore, threshold int) error {
+	rootClient, err := RootClient(ctx, CosignRoot(), remote)
 	if err != nil {
 		return errors.Wrap(err, "initializing root client")
 	}
-	rootKeys, err := getRootKeys()
+	rootKeys, err := getRootKeys(rootFile)
 	if err != nil {
 		return errors.Wrap(err, "retrieving root keys")
 	}
-	if err := rootClient.Init(rootKeys, TufThreshold); err != nil {
+	if err := rootClient.Init(rootKeys, threshold); err != nil {
 		return errors.Wrap(err, "initializing tuf client")
 	}
 	// Download initial targets and store in .sigstore/root/targets/.
-	if err := os.MkdirAll(TufLocalTargets, 0755); err != nil {
+	if err := os.MkdirAll(CosignRoot(), 0755); err != nil {
 		return errors.Wrap(err, "creating targets dir")
 	}
 	if err := updateMetadataAndDownloadTargets(rootClient); err != nil {
@@ -157,7 +169,7 @@ func getTargetHelper(name string, out client.Destination, c *client.Client) erro
 	}
 
 	// Get local target.
-	localTarget, err := os.Open(TufLocalTargets + name)
+	localTarget, err := os.Open(path.Join(CosignTargets(), name))
 	if err != nil {
 		// If the file does not exist, download the target and copy to out.
 		return downloadTarget(name, c, out)
@@ -189,8 +201,8 @@ func getTargetHelper(name string, out client.Destination, c *client.Client) erro
 }
 
 func GetTarget(ctx context.Context, name string, out client.Destination) error {
-	// Reads the root in .sigstore/root.
-	c, err := RootClient(ctx)
+	// Reads the root in CosignRoot() directory. Does not use a remote.
+	c, err := RootClient(ctx, CosignRoot(), nil)
 	if err != nil {
 		return errors.Wrap(err, "retrieving root")
 	}

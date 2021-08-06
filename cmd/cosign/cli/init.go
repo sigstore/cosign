@@ -26,8 +26,10 @@ import (
 func Init() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign init", flag.ExitOnError)
-		// mirrorURL = flagset.String("mirror", tuf.TufRemoteStore, "GCS bucket to a SigStore TUF repository.")
-		// outPath   = flagset.String("out", "", "path to write the resulting trusted SigStore TUF repository.")
+		// TODO: Support HTTP mirrors as well
+		mirror    = flagset.String("mirror", "test-root-123", "GCS bucket to a SigStore TUF repository.")
+		root      = flagset.String("root", ".sigstore/keys.json", "path to trusted initial root.")
+		threshold = flagset.Int("threshold", 3, "threshold of root key signers")
 	)
 	return &ffcli.Command{
 		Name:       "init",
@@ -59,14 +61,14 @@ EXAMPLES
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			// Update the rootKey file if provided.
+			// Initialize the remote repository.
+			remote, err := ctuf.GcsRemoteStore(ctx, *mirror, nil, nil)
+			if err != nil {
+				return err
+			}
 
-			// Update the default local store.
-
-			// Update the mirror for remote store.
-
-			// Initialize or update the SigStore TUF repository in .sigstore/root.
-			return ctuf.Init(context.Background())
+			// Initialize and update the local SigStore root.
+			return ctuf.Init(context.Background(), *root, remote, *threshold)
 		},
 	}
 }
