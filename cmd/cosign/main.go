@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -34,7 +35,7 @@ import (
 
 var (
 	rootFlagSet    = flag.NewFlagSet("cosign", flag.ExitOnError)
-	debug          = rootFlagSet.Bool("d", false, "log debug output")
+	logDebug       = rootFlagSet.Bool("d", false, "log debug output")
 	outputFilename = rootFlagSet.String("output-file", "", "log output to a file")
 )
 
@@ -93,7 +94,7 @@ func main() {
 		os.Stdout = out
 	}
 
-	if *debug {
+	if *logDebug {
 		logs.Debug.SetOutput(os.Stderr)
 	}
 
@@ -105,4 +106,20 @@ func main() {
 func printErrAndExit(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	os.Exit(1)
+}
+
+func init() {
+	// look for the default version and replace it, if found, from runtime build info
+	if cli.GitVersion != "devel" {
+		return
+	}
+
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	// Version is set in artifacts built with -X github.com/sigstore/cosign/cli.GitVersion=1.2.3
+	// Ensure version is also set when installed via go install github.com/sigstore/cosign/cmd/cosign
+	cli.GitVersion = bi.Main.Version
 }
