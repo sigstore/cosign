@@ -35,7 +35,7 @@ import (
 var (
 	// Output of "git describe". The prerequisite is that the branch should be
 	// tagged using the correct versioning strategy.
-	gitVersion = "unknown"
+	GitVersion string = "devel"
 	// SHA1 from git, output of $(git rev-parse HEAD)
 	gitCommit = "unknown"
 	// State of git tree, either "clean" or "dirty"
@@ -82,10 +82,8 @@ type Info struct {
 }
 
 func VersionInfo() Info {
-	// These variables typically come from -ldflags settings and in
-	// their absence fallback to the global defaults set above.
 	return Info{
-		GitVersion:   gitVersion,
+		GitVersion:   GitVersion,
 		GitCommit:    gitCommit,
 		GitTreeState: gitTreeState,
 		BuildDate:    buildDate,
