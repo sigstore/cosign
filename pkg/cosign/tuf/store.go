@@ -22,6 +22,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/theupdateframework/go-tuf/client"
+	"google.golang.org/api/option"
 )
 
 type GcsRemoteOptions struct {
@@ -47,7 +48,7 @@ func GcsRemoteStore(ctx context.Context, bucket string, opts *GcsRemoteOptions, 
 	store := gcsRemoteStore{ctx: ctx, bucket: bucket, opts: opts, client: client}
 	if client == nil {
 		var err error
-		store.client, err = storage.NewClient(ctx)
+		store.client, err = storage.NewClient(ctx, option.WithoutAuthentication())
 		if err != nil {
 			return nil, err
 		}
