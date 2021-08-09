@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -42,6 +43,7 @@ type VerifyCommand struct {
 	Output      string
 	RekorURL    string
 	Annotations *map[string]interface{}
+	Files       StringSlice
 }
 
 func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
@@ -52,6 +54,8 @@ func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "address of rekor STL server")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
+
+	flagset.Var(&cmd.Files, "f", "files to validate (kubernetes manifests or Dockerfiles)")
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -103,7 +107,7 @@ EXAMPLES
 
 // Exec runs the verification command
 func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
-	if len(args) == 0 {
+	if len(args) == 0 && len(c.Files.slice) == 0 {
 		return flag.ErrHelp
 	}
 
@@ -145,7 +149,26 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 	co.SigVerifier = pubKey
 
-	for _, imageRef := range args {
+	allImgs := []string{}
+	allImgs = append(allImgs, args...)
+
+	for _, f := range c.Files.slice {
+		err := isExtensionAllowed(f)
+		if err != nil {
+			return errors.Wrap(err, "check if extension is valid")
+		}
+		manifest, err := ioutil.ReadFile(f)
+		if err != nil {
+			return fmt.Errorf("could not read manifest: %v", err)
+		}
+		imgs, err := getImagesFromYamlManifest(string(manifest))
+		if err != nil {
+			return err
+		}
+		allImgs = append(allImgs, imgs...)
+	}
+
+	for _, imageRef := range allImgs {
 		ref, err := name.ParseReference(imageRef)
 		if err != nil {
 			return err

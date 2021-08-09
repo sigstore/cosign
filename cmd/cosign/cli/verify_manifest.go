@@ -89,6 +89,7 @@ EXAMPLES
 
 // Exec runs the verification command
 func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
+	fmt.Fprintln(os.Stderr, "This command is deprecated and will be removed in the next release. Please use `cosign verify -f <manifest>` instead.")
 	if len(args) != 1 {
 		return flag.ErrHelp
 	}
