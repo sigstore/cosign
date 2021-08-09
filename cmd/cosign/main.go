@@ -69,6 +69,8 @@ func main() {
 			cli.Copy(),
 			cli.Clean(),
 			cli.Triangulate(),
+			// Init
+			cli.Init(),
 			// Version
 			cli.Version()},
 		Exec: func(context.Context, []string) error {

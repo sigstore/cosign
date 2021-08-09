@@ -261,7 +261,7 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	if sp.bundleVerified {
 		return true, nil
 	}
-	rekorPubKey, err := PemToECDSAKey([]byte(rekorPub))
+	rekorPubKey, err := PemToECDSAKey([]byte(GetRekorPub()))
 	if err != nil {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
