@@ -6,8 +6,8 @@ require (
 	cloud.google.com/go/storage v1.16.0
 	github.com/Azure/go-autorest/autorest/adal v0.9.14 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
-	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4
-	github.com/go-openapi/runtime v0.19.29
+	github.com/cyberphone/json-canonicalization v0.0.0-20210810063702-dce61d6e0ff9
+	github.com/go-openapi/runtime v0.19.30
 	github.com/go-openapi/strfmt v0.20.1
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-piv/piv-go v1.8.0
@@ -25,10 +25,10 @@ require (
 	github.com/sigstore/sigstore v0.0.0-20210729211320-56a91f560f44
 	github.com/stretchr/testify v1.7.0
 	github.com/theupdateframework/go-tuf v0.0.0-20210804171843-477a5d73800a
-	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
+	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
-	google.golang.org/api v0.50.0
+	google.golang.org/api v0.52.0
 	k8s.io/api v0.22.0
 	k8s.io/apimachinery v0.22.0
 	k8s.io/client-go v0.22.0
