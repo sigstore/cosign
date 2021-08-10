@@ -55,7 +55,7 @@ func Init() *ffcli.Command {
 		flagset = flag.NewFlagSet("cosign init", flag.ExitOnError)
 		// TODO: Support HTTP mirrors as well
 		mirror    = flagset.String("mirror", "sigstore-tuf-root", "GCS bucket to a SigStore TUF repository.")
-		root      = flagset.String("root", "https://raw.githubusercontent.com/sigstore/root-signing/main/ceremony/2021-06-18/repository/1.root.json", "path to trusted initial root.")
+		root      = flagset.String("root", "https://storage.googleapis.com/sigstore-tuf-root/1.root.json", "path to trusted initial root.")
 		threshold = flagset.Int("threshold", 3, "threshold of root key signers")
 	)
 	return &ffcli.Command{
@@ -65,11 +65,11 @@ func Init() *ffcli.Command {
 		LongHelp: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
 The following options are used by default:
-	- Initial root keys are pulled from sigstore/root-signing repository.
+	- Initial root keys are pulled from the GCS bucket at sigstore-tuf-root.
 	- SigStore current TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
 	- A default threshold of 3 root signatures is used. 
 
-To provide an out-of-band trusted root.json, use the -root flag with a file or URL to a trusted root.json.
+To provide an out-of-band trusted initial root.json, use the -root flag with a file or URL reference.
 
 The resulting updated TUF repository will be written to $HOME/.sigstore/root/. 
 
