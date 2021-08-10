@@ -18,17 +18,44 @@ package cli
 import (
 	"context"
 	"flag"
+	"io/ioutil"
+	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 )
+
+func loadFileOrURL(fileRef string) ([]byte, error) {
+	var raw []byte
+	var err error
+	if strings.HasPrefix(fileRef, "http://") || strings.HasPrefix(fileRef, "https://") {
+		// #nosec G107
+		resp, err := http.Get(fileRef)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		raw, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		raw, err = ioutil.ReadFile(filepath.Clean(fileRef))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return raw, nil
+}
 
 func Init() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign init", flag.ExitOnError)
 		// TODO: Support HTTP mirrors as well
 		mirror    = flagset.String("mirror", "sigstore-tuf-root", "GCS bucket to a SigStore TUF repository.")
-		root      = flagset.String("root", ".sigstore/keys.json", "path to trusted initial root.")
+		root      = flagset.String("root", "https://raw.githubusercontent.com/sigstore/root-signing/main/ceremony/2021-06-18/repository/1.root.json", "path to trusted initial root.")
 		threshold = flagset.Int("threshold", 3, "threshold of root key signers")
 	)
 	return &ffcli.Command{
@@ -38,13 +65,13 @@ func Init() *ffcli.Command {
 		LongHelp: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
 The following options are used by default:
-	- Initial root keys are pulled from .sigstore/keys. If it does not exist, uses root keys provided in the release.
-	- SigStore current TUF repository is pulled from the GCS mirror at .
-	- Resulting trusted metadata is written to .sigstore/root.
+	- Initial root keys are pulled from sigstore/root-signing repository.
+	- SigStore current TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
+	- A default threshold of 3 root signatures is used. 
 
-To provide an out-of-band trusted root.json, copy the file into a directory named .sigstore/root/.
+To provide an out-of-band trusted root.json, use the -root flag with a file or URL to a trusted root.json.
 
-The resulting updated TUF repository will be written to .sigstore/root/. 
+The resulting updated TUF repository will be written to $HOME/.sigstore/root/. 
 
 Trusted keys and certificate used in cosign verification (e.g. verifying Fulcio issued certificates 
 with Fulcio root CA) are pulled form the trusted metadata.
@@ -57,10 +84,16 @@ EXAMPLES
   cosign init
 
   # initialize with an out-of-band root key file and custom repository mirror.
-  cosign init-mirror <>
+  cosign init -mirror <url> -root <url>
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
+			// Get the initial trusted root contents.
+			rootFileBytes, err := loadFileOrURL(*root)
+			if err != nil {
+				return err
+			}
+
 			// Initialize the remote repository.
 			remote, err := ctuf.GcsRemoteStore(ctx, *mirror, nil, nil)
 			if err != nil {
@@ -68,7 +101,7 @@ EXAMPLES
 			}
 
 			// Initialize and update the local SigStore root.
-			return ctuf.Init(context.Background(), *root, remote, *threshold)
+			return ctuf.Init(context.Background(), rootFileBytes, remote, *threshold)
 		},
 	}
 }

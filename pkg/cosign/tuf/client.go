@@ -26,6 +26,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/theupdateframework/go-tuf"
 	"github.com/theupdateframework/go-tuf/client"
 	tuf_leveldbstore "github.com/theupdateframework/go-tuf/client/leveldbstore"
 	"github.com/theupdateframework/go-tuf/data"
@@ -37,7 +38,7 @@ const (
 	defaultLocalStore = ".sigstore/root/"
 )
 
-// Global TUF client. Stores local targets in .sigstore/root.
+// Global TUF client. Stores local targets in $HOME/.sigstore/root.
 // Could be in memory local store, but that would mean re-download each time cosign is run.
 var rootClient *client.Client
 var rootClientMu = &sync.Mutex{}
@@ -45,7 +46,11 @@ var rootClientMu = &sync.Mutex{}
 func CosignRoot() string {
 	rootDir := os.Getenv(TufRootEnv)
 	if rootDir == "" {
-		return defaultLocalStore
+		home, err := os.UserHomeDir()
+		if err != nil {
+			home = ""
+		}
+		return path.Join(home, defaultLocalStore)
 	}
 	return rootDir
 }
@@ -73,16 +78,13 @@ func (b *ByteDestination) Delete() error {
 	return nil
 }
 
-func getRootKeys(rootPath string) ([]*data.Key, error) {
-	rootFile, err := os.Open(rootPath)
+func getRootKeys(rootFileBytes []byte) ([]*data.Key, error) {
+	store := tuf.MemoryStore(map[string]json.RawMessage{"root.json": rootFileBytes}, nil)
+	repo, err := tuf.NewRepo(store)
 	if err != nil {
 		return nil, err
 	}
-	var rootKeys []*data.Key
-	if err := json.NewDecoder(rootFile).Decode(&rootKeys); err != nil {
-		return nil, err
-	}
-	return rootKeys, nil
+	return repo.RootKeys()
 }
 
 // Gets the global TUF client if the directory exists.
@@ -102,7 +104,7 @@ func RootClient(ctx context.Context, local string, remote client.RemoteStore) (*
 }
 
 func updateMetadataAndDownloadTargets(c *client.Client) error {
-	// Download initial targets and store in .sigstore/root/targets/.
+	// Download initial targets and store in $HOME/.sigstore/root/targets/.
 	targetFiles, err := c.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
 		return errors.Wrap(err, "updating tuf metadata")
@@ -137,20 +139,20 @@ func downloadTarget(name string, c *client.Client, out client.Destination) error
 	return err
 }
 
-// Instantiates the global TUF client. Downloads all initial targets and stores in .sigstore/root/targets/.
-func Init(ctx context.Context, rootFile string, remote client.RemoteStore, threshold int) error {
+// Instantiates the global TUF client. Downloads all initial targets and stores in $HOME/.sigstore/root/targets/.
+func Init(ctx context.Context, rootBytes []byte, remote client.RemoteStore, threshold int) error {
 	rootClient, err := RootClient(ctx, CosignRoot(), remote)
 	if err != nil {
 		return errors.Wrap(err, "initializing root client")
 	}
-	rootKeys, err := getRootKeys(rootFile)
+	rootKeys, err := getRootKeys(rootBytes)
 	if err != nil {
 		return errors.Wrap(err, "retrieving root keys")
 	}
 	if err := rootClient.Init(rootKeys, threshold); err != nil {
 		return errors.Wrap(err, "initializing tuf client")
 	}
-	// Download initial targets and store in .sigstore/root/targets/.
+	// Download initial targets and store in $HOME/.sigstore/root/targets/.
 	if err := os.MkdirAll(CosignRoot(), 0755); err != nil {
 		return errors.Wrap(err, "creating targets dir")
 	}
