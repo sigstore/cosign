@@ -17,6 +17,7 @@ package cli
 
 import (
 	"context"
+	_ "embed" // To enable the `go:embed` directive.
 	"flag"
 	"io/ioutil"
 	"net/http"
@@ -26,6 +27,9 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 )
+
+//go:embed 1.root.json
+var initialRoot string
 
 func loadFileOrURL(fileRef string) ([]byte, error) {
 	var raw []byte
@@ -55,7 +59,7 @@ func Init() *ffcli.Command {
 		flagset = flag.NewFlagSet("cosign init", flag.ExitOnError)
 		// TODO: Support HTTP mirrors as well
 		mirror    = flagset.String("mirror", "sigstore-tuf-root", "GCS bucket to a SigStore TUF repository.")
-		root      = flagset.String("root", "https://storage.googleapis.com/sigstore-tuf-root/1.root.json", "path to trusted initial root.")
+		root      = flagset.String("root", "", "path to trusted initial root. defaults to embedded root.")
 		threshold = flagset.Int("threshold", 3, "threshold of root key signers")
 	)
 	return &ffcli.Command{
@@ -65,7 +69,7 @@ func Init() *ffcli.Command {
 		LongHelp: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
 The following options are used by default:
-	- Initial root keys are pulled from the GCS bucket at sigstore-tuf-root.
+	- The initial 1.root.json is embedded inside cosign.
 	- SigStore current TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
 	- A default threshold of 3 root signatures is used. 
 
@@ -89,9 +93,15 @@ EXAMPLES
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			// Get the initial trusted root contents.
-			rootFileBytes, err := loadFileOrURL(*root)
-			if err != nil {
-				return err
+			var rootFileBytes []byte
+			if *root == "" {
+				rootFileBytes = []byte(initialRoot)
+			} else {
+				var err error
+				rootFileBytes, err = loadFileOrURL(*root)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Initialize the remote repository.

@@ -39,7 +39,7 @@ const (
 	TufRootEnv        = "TUF_ROOT"
 	defaultLocalStore = ".sigstore/root/"
 	// SHA512 hash of the initial root.json. This is used to pin and bootstrap the initial root to cosign.
-	initialRoot = "87d41965ac08a2e03a33aa2db1dbbf5a7d6616e49f0ca3b20afe1c46ae78e52e841e21cca347f7b77ec929b6a3687d86d320ee04ba5f75a1880974310958b9c2"
+	initialRootSha = "87d41965ac08a2e03a33aa2db1dbbf5a7d6616e49f0ca3b20afe1c46ae78e52e841e21cca347f7b77ec929b6a3687d86d320ee04ba5f75a1880974310958b9c2"
 )
 
 // Global TUF client. Stores local targets in $HOME/.sigstore/root.
@@ -83,10 +83,9 @@ func (b *ByteDestination) Delete() error {
 }
 
 func validateInitialRoot(rootFileBytes []byte) bool {
-	// TODO: When a new root is added, this should only compare version 1's root SHA during verification of the
-	// root chain.
+	// TODO: When a new root is added, this will only compare version 1's root SHA during root chain verification.
 	h := sha512.Sum512(rootFileBytes)
-	return hex.EncodeToString(h[:]) == initialRoot
+	return hex.EncodeToString(h[:]) == initialRootSha
 }
 
 func getRootKeys(rootFileBytes []byte) ([]*data.Key, error) {
