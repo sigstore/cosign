@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
@@ -32,9 +33,10 @@ const (
 	CosignCustomProvenanceV01 = "cosign.sigstore.dev/attestation/v1"
 )
 
-// CosignAttestation specifies the format of the Custom Predicate.
-type CosignAttestation struct {
-	Data string
+// CosignPredicate specifies the format of the Custom Predicate.
+type CosignPredicate struct {
+	Data      string
+	Timestamp string
 }
 
 // GenerateOpts specifies the options of the Statement generator.
@@ -48,6 +50,9 @@ type GenerateOpts struct {
 	Digest string
 	// Repo context of the reference.
 	Repo string
+
+	// Function to return the time to set
+	Time func() time.Time
 }
 
 // GenerateStatement returns corresponding Predicate (custom|provenance|spdx|link)
@@ -59,7 +64,12 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	}
 	switch opts.Type {
 	case "custom":
-		return generateCustomStatement(rawPayload, opts.Digest, opts.Repo)
+		if opts.Time == nil {
+			opts.Time = time.Now
+		}
+		now := opts.Time()
+		stamp := now.UTC().Format(time.RFC3339)
+		return generateCustomStatement(rawPayload, opts.Digest, opts.Repo, stamp)
 	case "provenance":
 		return generateProvenanceStatement(rawPayload, opts.Digest, opts.Repo)
 	case "spdx":
@@ -87,11 +97,12 @@ func generateStatementHeader(digest, repo, predicateType string) in_toto.Stateme
 }
 
 //
-func generateCustomStatement(rawPayload []byte, digest, repo string) (interface{}, error) {
+func generateCustomStatement(rawPayload []byte, digest, repo, timestamp string) (interface{}, error) {
 	return in_toto.Statement{
 		StatementHeader: generateStatementHeader(digest, repo, CosignCustomProvenanceV01),
-		Predicate: CosignAttestation{
-			Data: string(rawPayload),
+		Predicate: CosignPredicate{
+			Data:      string(rawPayload),
+			Timestamp: timestamp,
 		},
 	}, nil
 }
@@ -131,7 +142,7 @@ func generateLinkStatement(rawPayload []byte, digest string, repo string) (inter
 func generateSPDXStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
 	return in_toto.SPDXStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateSPDX),
-		Predicate: CosignAttestation{
+		Predicate: CosignPredicate{
 			Data: string(rawPayload),
 		},
 	}, nil
