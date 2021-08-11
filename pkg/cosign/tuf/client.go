@@ -18,8 +18,6 @@ package tuf
 import (
 	"bytes"
 	"context"
-	"crypto/sha512"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -38,8 +36,6 @@ import (
 const (
 	TufRootEnv        = "TUF_ROOT"
 	defaultLocalStore = ".sigstore/root/"
-	// SHA512 hash of the initial root.json. This is used to pin and bootstrap the initial root to cosign.
-	initialRootSha = "87d41965ac08a2e03a33aa2db1dbbf5a7d6616e49f0ca3b20afe1c46ae78e52e841e21cca347f7b77ec929b6a3687d86d320ee04ba5f75a1880974310958b9c2"
 )
 
 // Global TUF client. Stores local targets in $HOME/.sigstore/root.
@@ -80,12 +76,6 @@ type ByteDestination struct {
 func (b *ByteDestination) Delete() error {
 	b.Reset()
 	return nil
-}
-
-func validateInitialRoot(rootFileBytes []byte) bool {
-	// TODO: When a new root is added, this will only compare version 1's root SHA during root chain verification.
-	h := sha512.Sum512(rootFileBytes)
-	return hex.EncodeToString(h[:]) == initialRootSha
 }
 
 func getRootKeys(rootFileBytes []byte) ([]*data.Key, error) {
@@ -151,10 +141,6 @@ func downloadTarget(name string, c *client.Client, out client.Destination) error
 
 // Instantiates the global TUF client. Downloads all initial targets and stores in $HOME/.sigstore/root/targets/.
 func Init(ctx context.Context, rootBytes []byte, remote client.RemoteStore, threshold int) error {
-	// Validate initial root if provided.
-	if !validateInitialRoot(rootBytes) {
-		return errors.New("unexpected initial root sha")
-	}
 	rootClient, err := RootClient(ctx, CosignRoot(), remote)
 	if err != nil {
 		return errors.Wrap(err, "initializing root client")
