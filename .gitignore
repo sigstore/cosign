@@ -24,8 +24,5 @@
 *.libfuzzer
 *fuzz.a
 
-# Root metadata
-*.sigstore/root/
-
 bin*
 dist/

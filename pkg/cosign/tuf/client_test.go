@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -33,7 +32,7 @@ import (
 // Only test the client without the remote fetch.
 
 // Set up a temporary file system store
-func generateTestRepo(t *testing.T, files map[string][]byte) (*fakeRemoteStore, tuf.LocalStore, []byte) {
+func generateTestRepo(t *testing.T, files map[string][]byte) (*fakeRemoteStore, tuf.LocalStore) {
 	store := tuf.MemoryStore(nil, files)
 	repo, err := tuf.NewRepo(store)
 	if err := repo.Init(false); err != nil {
@@ -54,21 +53,13 @@ func generateTestRepo(t *testing.T, files map[string][]byte) (*fakeRemoteStore, 
 	repo.Snapshot(tuf.CompressionTypeNone)
 	repo.Timestamp()
 	repo.Commit()
-	keys, err := repo.RootKeys()
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
+
 	meta, err := store.GetMeta()
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}
 	remote := newFakeRemoteStore(meta, files)
-
-	keyJSON, err := json.Marshal(keys)
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-	return remote, store, keyJSON
+	return remote, store
 }
 
 func newFakeFile(b []byte) *fakeFile {
@@ -129,7 +120,7 @@ func (f *fakeRemoteStore) get(name string, store map[string]*fakeFile) (io.ReadC
 func TestValidMetadata(t *testing.T) {
 	targetFiles := map[string][]byte{
 		"foo.txt": []byte("foo")}
-	remote, store, keys := generateTestRepo(t, targetFiles)
+	remote, store := generateTestRepo(t, targetFiles)
 
 	// Set up local with initial root.json
 	tmp := t.TempDir()
@@ -147,16 +138,7 @@ func TestValidMetadata(t *testing.T) {
 	defer os.Unsetenv(TufRootEnv)
 
 	// Set up client
-	tmp1 := t.TempDir()
-	rootFile, err := ioutil.TempFile(tmp1, "root.json")
-	if err != nil {
-		t.Fatalf("failed to create temp root key file: %v", err)
-	}
-	defer rootFile.Close()
-	if _, err := rootFile.Write(keys); err != nil {
-		t.Fatalf("failed to write key file: %v", err)
-	}
-	if err := Init(context.Background(), rootFile.Name(), remote, 1); err != nil {
+	if err := Init(context.Background(), root, remote, 1); err != nil {
 		t.Fatalf("unexpected error initializing root client %v", err)
 	}
 
