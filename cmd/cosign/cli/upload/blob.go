@@ -23,42 +23,24 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
-
-func fileFromFlag(s string) cremote.File {
-	split := strings.Split(s, ":")
-	f := cremote.File{
-		Path: split[0],
-	}
-	if len(split) > 1 {
-		split = strings.Split(split[1], "/")
-		f.Platform = &v1.Platform{
-			OS: split[0],
-		}
-		if len(split) > 1 {
-			f.Platform.Architecture = split[1]
-		}
-	}
-	return f
-}
 
 type Files struct {
 	Files []cremote.File
 }
 
 func (fs *Files) Set(k string) error {
-	f := fileFromFlag(k)
+	f := cremote.FileFromFlag(k)
 	fs.Files = append(fs.Files, f)
 
 	// If we have multiple files, each file must have a platform.
 	if len(fs.Files) > 1 {
 		for _, f := range fs.Files {
-			if f.Platform == nil {
-				return fmt.Errorf("each file must include a unique platform, %s had no platform", f.Path)
+			if f.Platform() == nil {
+				return fmt.Errorf("each file must include a unique platform, %s had no platform", f.Path())
 			}
 		}
 	}

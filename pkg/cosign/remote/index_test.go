@@ -13,38 +13,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package upload
+package remote
 
 import (
 	"reflect"
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
-func Test_fileFromFlag(t *testing.T) {
+func TestFileFromFlag(t *testing.T) {
 	tests := []struct {
 		name string
 		s    string
-		want cremote.File
+		want File
 	}{
 		{
 			name: "plain",
 			s:    "foo",
-			want: cremote.File{Path: "foo"},
+			want: &file{path: "foo"},
 		},
 		{
 			name: "os",
 			s:    "foo:darwin",
-			want: cremote.File{Path: "foo", Platform: &v1.Platform{
+			want: &file{path: "foo", platform: &v1.Platform{
 				OS: "darwin",
 			}},
 		},
 		{
 			name: "os",
 			s:    "foo:darwin/amd64",
-			want: cremote.File{Path: "foo", Platform: &v1.Platform{
+			want: &file{path: "foo", platform: &v1.Platform{
 				OS:           "darwin",
 				Architecture: "amd64",
 			}},
@@ -52,7 +51,7 @@ func Test_fileFromFlag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := fileFromFlag(tt.s); !reflect.DeepEqual(got, tt.want) {
+			if got := FileFromFlag(tt.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("fileFromFlag() = %v, want %v", got, tt.want)
 			}
 		})
