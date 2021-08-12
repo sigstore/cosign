@@ -15,8 +15,8 @@
 
 name: e2e-tests
 
-# Run this workflow every time a new commit pushed to your repository
-on: [push]
+# Run on every push and PR, and allow it to be run manually.
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   e2e-tests:
