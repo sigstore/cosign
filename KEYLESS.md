@@ -51,9 +51,9 @@ The root CA keys are hard-coded in `cosign` today.
 They can only be changed by recompiling the binary.
 This will be made more configurable in the future.
 
-### Oauth Flows
+### OAuth Flows
 
-Cosign supports two oauth flows today: the standard flow and the device flow.
+Cosign supports two OAuth flows today: the standard flow and the device flow.
 
 When there is no terminal attached (non-interactive mode), `cosign` will automatically use the device flow
 where a link is printed to stdout.
@@ -63,13 +63,32 @@ This link must be opened in a browser to complete the flow.
 
 In automated environments, cosign also supports directly using OIDC Identity Tokens from specific issuers.
 These can be supplied on the command line with the `--identity-token` flag.
-The `audiences` field must contain `fulcio`.
+The `audiences` field must contain `sigstore`.
 
-One example usage is:
+#### On GCP
+
+From a GCE VM, you can use the VM's service account identity to sign an image:
 
 ```shell
-$ cosign sign --identity-token=$(gcloud auth print-identity-token --audiences=fulcio) gcr.io/dlorenc-vmtest2/demo
+$ cosign sign --identity-token=$(
+    gcloud auth print-identity-token \
+        --audiences=sigstore) \
+    gcr.io/dlorenc-vmtest2/demo
 ```
+
+From outside a GCE VM, you can impersonate a GCP IAM service account to sign an image:
+
+```shell
+$ cosign sign --identity-token=$(
+    gcloud auth print-identity-token \
+        --audiences=sigstore \
+        --include-email \
+        --impersonate-service-account my-sa@my-project.iam.gserviceaccount.com) \
+    gcr.io/dlorenc-vmtest2/demo
+```
+
+In order to impersonate an IAM service account, your account must have the
+`roles/iam.serviceAccountTokenCreator` role.
 
 ### Timestamps
 
