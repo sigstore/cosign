@@ -20,6 +20,7 @@ require (
 	github.com/open-policy-agent/opa v0.31.0
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/common v0.29.0 // indirect
 	github.com/sigstore/fulcio v0.1.1
 	github.com/sigstore/rekor v0.3.0
 	github.com/sigstore/sigstore v0.0.0-20210729211320-56a91f560f44
