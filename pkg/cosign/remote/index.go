@@ -35,21 +35,56 @@ type Digester interface {
 	Digest() (v1.Hash, error)
 }
 
-type File struct {
-	Path     string
-	Platform *v1.Platform
+type File interface {
+	Contents() ([]byte, error)
+	Platform() *v1.Platform
+	String() string
+	Path() string
 }
 
-func (f *File) String() string {
-	r := f.Path
-	if f.Platform == nil {
+func FileFromFlag(s string) File {
+	split := strings.Split(s, ":")
+	f := file{
+		path: split[0],
+	}
+	if len(split) > 1 {
+		split = strings.Split(split[1], "/")
+		f.platform = &v1.Platform{
+			OS: split[0],
+		}
+		if len(split) > 1 {
+			f.platform.Architecture = split[1]
+		}
+	}
+	return &f
+}
+
+type file struct {
+	path     string
+	platform *v1.Platform
+}
+
+func (f *file) Path() string {
+	return f.path
+}
+
+func (f *file) Contents() ([]byte, error) {
+	return ioutil.ReadFile(f.path)
+}
+func (f *file) Platform() *v1.Platform {
+	return f.platform
+}
+
+func (f *file) String() string {
+	r := f.path
+	if f.platform == nil {
 		return r
 	}
-	r += ":" + f.Platform.OS
-	if f.Platform.Architecture == "" {
+	r += ":" + f.platform.OS
+	if f.platform.Architecture == "" {
 		return r
 	}
-	r += "/" + f.Platform.Architecture
+	r += "/" + f.platform.Architecture
 	return r
 }
 
@@ -64,12 +99,12 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 	var idx v1.ImageIndex = empty.Index
 
 	for _, f := range files {
-		b, err := ioutil.ReadFile(f.Path)
+		b, err := f.Contents()
 		if err != nil {
 			return nil, err
 		}
 		mt := getMt(b)
-		fmt.Fprintf(os.Stderr, "Uploading file from [%s] to [%s] with media type [%s]\n", f.Path, ref.Name(), mt)
+		fmt.Fprintf(os.Stderr, "Uploading file from [%s] to [%s] with media type [%s]\n", f.Path(), ref.Name(), mt)
 		_img, err := UploadFile(b, ref, mt, types.OCIConfigJSON, remoteOpts...)
 		if err != nil {
 			return nil, err
@@ -84,12 +119,12 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 			return nil, err
 		}
 		blobURL := ref.Context().Registry.RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/sha256:" + dgst.Hex
-		fmt.Fprintf(os.Stderr, "File [%s] is available directly at [%s]\n", f.Path, blobURL)
-		if f.Platform != nil {
+		fmt.Fprintf(os.Stderr, "File [%s] is available directly at [%s]\n", f.Path(), blobURL)
+		if f.Platform() != nil {
 			idx = mutate.AppendManifests(idx, mutate.IndexAddendum{
 				Add: img,
 				Descriptor: v1.Descriptor{
-					Platform: f.Platform,
+					Platform: f.Platform(),
 				},
 			})
 		}

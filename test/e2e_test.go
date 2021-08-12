@@ -539,9 +539,7 @@ func TestUploadBlob(t *testing.T) {
 	payloadPath := mkfile(payload, td, t)
 
 	// Upload it!
-	files := []cremote.File{{
-		Path: payloadPath,
-	}}
+	files := []cremote.File{cremote.FileFromFlag(payloadPath)}
 	must(upload.BlobCmd(ctx, files, "", imgName), t)
 
 	// Check it
