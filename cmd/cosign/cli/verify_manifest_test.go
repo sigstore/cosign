@@ -105,27 +105,27 @@ spec:
 func TestGetImagesFromYamlManifest(t *testing.T) {
 	testCases := []struct {
 		name         string
-		fileContents string
+		fileContents []byte
 		expected     []string
 	}{
 		{
 			name:         "single image",
-			fileContents: SingleContainerManifest,
+			fileContents: []byte(SingleContainerManifest),
 			expected:     []string{"nginx:1.21.1"},
 		},
 		{
 			name:         "multi image",
-			fileContents: MultiContainerManifest,
+			fileContents: []byte(MultiContainerManifest),
 			expected:     []string{"nginx:1.21.1", "ubuntu:21.10"},
 		},
 		{
 			name:         "multiple resources and images within a document",
-			fileContents: MultiResourceContainerManifest,
+			fileContents: []byte(MultiResourceContainerManifest),
 			expected:     []string{"nginx:1.14.2", "nginx:1.21.1", "ubuntu:21.10"},
 		},
 		{
 			name:         "no images found",
-			fileContents: ``,
+			fileContents: []byte(``),
 			expected:     nil,
 		},
 	}

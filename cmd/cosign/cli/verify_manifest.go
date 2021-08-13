@@ -104,7 +104,7 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not read manifest: %v", err)
 	}
 
-	images, err := getImagesFromYamlManifest(string(manifest))
+	images, err := getImagesFromYamlManifest(manifest)
 	if err != nil {
 		return fmt.Errorf("unable to extract the container image references in the manifest %v", err)
 	}
@@ -116,8 +116,8 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 	return c.VerifyCommand.Exec(ctx, images)
 }
 
-func getImagesFromYamlManifest(manifest string) ([]string, error) {
-	dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(manifest)), 4096)
+func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
+	dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 4096)
 	cScheme := runtime.NewScheme()
 	var images []string
 	if err := corev1.AddToScheme(cScheme); err != nil {
