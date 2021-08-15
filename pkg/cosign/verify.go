@@ -79,22 +79,12 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 		return nil, errors.New("one of verifier or root certs is required")
 	}
 
-	// If the image ref contains the digest, use it.
-	// Otherwise, look up the digest the tag currently points to.
-	var h v1.Hash
-	if d, ok := signedImgRef.(name.Digest); ok {
-		var err error
-		h, err = v1.NewHash(d.DigestStr())
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		signedImgDesc, err := remote.Get(signedImgRef, co.RegistryClientOpts...)
-		if err != nil {
-			return nil, err
-		}
-		h = signedImgDesc.Descriptor.Digest
+	// Always lookup digest from remote to prevent impersonation and zombie verification
+	signedImgDesc, err := remote.Get(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, err
 	}
+	h := signedImgDesc.Descriptor.Digest
 
 	// These are all the signatures attached to our image that we know how to parse.
 	sigRepo := co.SignatureRepo
