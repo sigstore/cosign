@@ -121,10 +121,32 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 }
 
 func GetPass(confirm bool) ([]byte, error) {
-	read := Read()
+	read := Read(confirm)
+	return read()
+}
+
+func readPasswordFn(confirm bool) func() ([]byte, error) {
+	pw, ok := os.LookupEnv("COSIGN_PASSWORD")
+	switch {
+	case ok:
+		return func() ([]byte, error) {
+			return []byte(pw), nil
+		}
+	case term.IsTerminal(0):
+		return func() ([]byte, error) {
+			return getPassFromTerm(confirm)
+		}
+	// Handle piped in passwords.
+	default:
+		return func() ([]byte, error) {
+			return ioutil.ReadAll(os.Stdin)
+		}
+	}
+}
+
+func getPassFromTerm(confirm bool) ([]byte, error) {
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
-	pw1, err := read()
-	fmt.Fprintln(os.Stderr)
+	pw1, err := term.ReadPassword(0)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +154,7 @@ func GetPass(confirm bool) ([]byte, error) {
 		return pw1, nil
 	}
 	fmt.Fprint(os.Stderr, "Enter again: ")
-	pw2, err := read()
+	pw2, err := term.ReadPassword(0)
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
@@ -142,23 +164,4 @@ func GetPass(confirm bool) ([]byte, error) {
 		return nil, errors.New("passwords do not match")
 	}
 	return pw1, nil
-}
-
-func readPasswordFn() func() ([]byte, error) {
-	pw, ok := os.LookupEnv("COSIGN_PASSWORD")
-	switch {
-	case ok:
-		return func() ([]byte, error) {
-			return []byte(pw), nil
-		}
-	case term.IsTerminal(0):
-		return func() ([]byte, error) {
-			return term.ReadPassword(0)
-		}
-	// Handle piped in passwords.
-	default:
-		return func() ([]byte, error) {
-			return ioutil.ReadAll(os.Stdin)
-		}
-	}
 }

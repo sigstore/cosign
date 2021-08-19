@@ -25,7 +25,7 @@ import (
 func TestReadPasswordFn_env(t *testing.T) {
 	os.Setenv("COSIGN_PASSWORD", "foo")
 	defer os.Unsetenv("COSIGN_PASSWORD")
-	b, err := readPasswordFn()()
+	b, err := readPasswordFn(true)()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestReadPasswordFn_env(t *testing.T) {
 func TestReadPasswordFn_envEmptyVal(t *testing.T) {
 	os.Setenv("COSIGN_PASSWORD", "")
 	defer os.Unsetenv("COSIGN_PASSWORD")
-	b, err := readPasswordFn()()
+	b, err := readPasswordFn(true)()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
