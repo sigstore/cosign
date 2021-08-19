@@ -166,7 +166,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 			return err
 		}
 
-		PrintVerification(imageRef, verified, co, "text")
+		PrintVerification(imageRef, verified, co, c.Output)
 	}
 
 	return nil
