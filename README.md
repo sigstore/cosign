@@ -145,7 +145,7 @@ This core set includes:
 * fixed, text-based keys generated using `cosign generate-key-pair`
 * cloud KMS-based keys generated using `cosign generate-key-pair -kms`
 * keys generated on hardware tokens using the PIV interface using `cosign piv-tool`
-* Kubernetes-secret based keys generated using `cosign generate-key-pair -k8s`
+* Kubernetes-secret based keys generated using `cosign generate-key-pair k8s://namespace/secretName`
 
 ### Artifact Types
 
