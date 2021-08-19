@@ -88,13 +88,16 @@ EXAMPLES
   cosign verify -key cosign.pub <IMAGE>
 
   # verify image with public key provided by URL
-  cosign verify -key https://host.for/<FILE> <IMAGE>
+  cosign verify -key https://host.for/[FILE] <IMAGE>
 
   # verify image with public key stored in Google Cloud KMS
-  cosign verify -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>
+  cosign verify -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <IMAGE>
   
   # verify image with public key stored in Hashicorp Vault
-  cosign verify -key hashivault:///<KEY> <IMAGE>`,
+  cosign verify -key hashivault://[KEY] <IMAGE>
+
+  # verify image with public key stored in a Kubernetes secret
+  cosign verify -key k8s://[NAMESPACE]/[KEY] <IMAGE>`,
 
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
