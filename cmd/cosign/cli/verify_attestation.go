@@ -46,7 +46,7 @@ func applyVerifyAttestationFlags(cmd *VerifyAttestationCommand, flagset *flag.Fl
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
 	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
-	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
+	flagset.StringVar(&cmd.Output, "output", "json", "output format for the signing image information (default JSON) (json|text)")
 	flagset.StringVar(&cmd.FulcioURL, "fulcio-url", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
 	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 }
@@ -155,7 +155,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 			return err
 		}
 
-		PrintVerification(imageRef, verified, co, "text")
+		PrintVerification(imageRef, verified, co, c.Output)
 	}
 
 	return nil

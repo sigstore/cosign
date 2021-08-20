@@ -51,7 +51,7 @@ func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "address of rekor STL server")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
-	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
+	flagset.StringVar(&cmd.Output, "output", "json", "output format for the signing image information (default JSON) (json|text)")
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -166,7 +166,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 			return err
 		}
 
-		PrintVerification(imageRef, verified, co, "text")
+		PrintVerification(imageRef, verified, co, c.Output)
 	}
 
 	return nil
