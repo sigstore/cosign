@@ -21,7 +21,7 @@ linters:
   - goimports
   - gosec
   - gocritic
-  - golint
+  - revive
   - misspell
   - unconvert
   - unparam

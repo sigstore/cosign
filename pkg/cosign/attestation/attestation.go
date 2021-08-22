@@ -77,7 +77,7 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	case "link":
 		return generateLinkStatement(rawPayload, opts.Digest, opts.Repo)
 	default:
-		return nil, errors.New(fmt.Sprintf("we don't know this predicate type: '%s'", opts.Type))
+		return nil, fmt.Errorf("we don't know this predicate type: '%s'", opts.Type)
 	}
 }
 
