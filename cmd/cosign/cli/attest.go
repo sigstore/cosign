@@ -103,7 +103,10 @@ EXAMPLES
 	}
 }
 
-const intotoPayloadType = "application/vnd.in-toto+json"
+const (
+	intotoPayloadType = "application/vnd.in-toto+json"
+	dssePayloadType   = "application/vnd.dsse.envelope.v1+json"
+)
 
 func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string,
 	upload bool, predicatePath string, force bool, predicateType string) error {
@@ -179,6 +182,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		Chain:        sv.Chain,
 		DupeDetector: sv,
 		RemoteOpts:   remoteOpts,
+		MediaType:    dssePayloadType,
 	}
 
 	uploadTLog, err := shouldUploadToTlog(ref, force, ko.RekorURL)

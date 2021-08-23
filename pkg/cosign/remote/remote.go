@@ -148,12 +148,17 @@ type UploadOpts struct {
 	Bundle                *Bundle
 	AdditionalAnnotations map[string]string
 	RemoteOpts            []remote.Option
+	MediaType             string
 }
 
 func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
+	// Preserve the default
+	if opts.MediaType == "" {
+		opts.MediaType = SimpleSigningMediaType
+	}
 	l := &staticLayer{
 		b:  payload,
-		mt: SimpleSigningMediaType,
+		mt: types.MediaType(opts.MediaType),
 	}
 
 	base, err := SignatureImage(dst, opts.RemoteOpts...)
