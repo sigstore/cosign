@@ -87,7 +87,7 @@ func getContainers(decoded runtime.Object) ([]corev1.Container, error) {
 		rs  *appsv1.ReplicaSet
 		ss  *appsv1.StatefulSet
 		ds  *appsv1.DaemonSet
-		job *batchv1.CronJob
+		job *batchv1.Job
 		pod *corev1.Pod
 	)
 	containers := make([]corev1.Container, 0)
@@ -108,10 +108,10 @@ func getContainers(decoded runtime.Object) ([]corev1.Container, error) {
 		ss = obj
 		containers = append(containers, ss.Spec.Template.Spec.Containers...)
 		containers = append(containers, ss.Spec.Template.Spec.InitContainers...)
-	case *batchv1.CronJob:
+	case *batchv1.Job:
 		job = obj
-		containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.Containers...)
-		containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.InitContainers...)
+		containers = append(containers, job.Spec.Template.Spec.Containers...)
+		containers = append(containers, job.Spec.Template.Spec.InitContainers...)
 	case *corev1.Pod:
 		pod = obj
 		containers = append(containers, pod.Spec.Containers...)

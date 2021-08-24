@@ -76,7 +76,7 @@ func main() {
 			ValidateCreate: webhook.ValidateSignedResources,
 			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
 		},
-		batchv1.SchemeGroupVersion.WithKind("CronJob"): {
+		batchv1.SchemeGroupVersion.WithKind("Job"): {
 			ValidateCreate: webhook.ValidateSignedResources,
 			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
 		},
