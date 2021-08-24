@@ -104,8 +104,8 @@ EXAMPLES
 }
 
 const (
-	intotoPayloadType = "application/vnd.in-toto+json"
-	dssePayloadType   = "application/vnd.dsse.envelope.v1+json"
+	IntotoPayloadType = "application/vnd.in-toto+json"
+	DssePayloadType   = "application/vnd.dsse.envelope.v1+json"
 )
 
 func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string,
@@ -139,7 +139,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
-	wrapped := dsse.WrapSigner(sv, intotoPayloadType)
+	wrapped := dsse.WrapSigner(sv, IntotoPayloadType)
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
 
@@ -182,7 +182,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		Chain:        sv.Chain,
 		DupeDetector: sv,
 		RemoteOpts:   remoteOpts,
-		MediaType:    dssePayloadType,
+		MediaType:    DssePayloadType,
 	}
 
 	uploadTLog, err := shouldUploadToTlog(ref, force, ko.RekorURL)
