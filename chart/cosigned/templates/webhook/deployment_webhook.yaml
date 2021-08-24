@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "cosigned.labels" . | nindent 4 }}
+    control-plane: {{ template "cosigned.fullname" . }}-webhook
+  name: {{ template "cosigned.fullname" . }}-webhook
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "cosigned.selectorLabels" . | nindent 6 }}
+      control-plane: {{ template "cosigned.fullname" . }}-webhook
+  template:
+    metadata:
+      labels:
+        {{- include "cosigned.selectorLabels" . | nindent 8 }}
+        control-plane: {{ template "cosigned.fullname" . }}-webhook
+    spec:
+      nodeSelector:
+        {{- toYaml .Values.commonNodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.commonTolerations | nindent 8 }}
+      serviceAccountName: {{ template "cosigned.fullname" . }}-webhook
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: webhook
+        image: "{{ .Values.webhook.image.repository }}:{{ .Values.webhook.image.tag | default $.Chart.AppVersion }}"
+        imagePullPolicy: "{{ .Values.webhook.image.pullPolicy }}"
+{{- if .Values.webhook.env }}
+        env:
+{{- range $key, $value := .Values.webhook.env }}
+        - name: "{{ $key }}"
+          value: "{{ $value }}"
+{{- end }}
+{{- end }}
+        args:
+        - --tls-cert-dir=/certs/
+        - --secret-key-ref={{ .Values.webhook.secretKeyRef.name }}
+        {{- range $key, $value := .Values.webhook.extraArgs }}
+        - --{{ $key }}={{ $value }}
+        {{- end }}
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          {{ with .Values.webhook.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        volumeMounts:
+        - mountPath: /certs
+          name: cert
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            port: 8443
+            scheme: HTTPS
+            path: /healthz
+        readinessProbe:
+          httpGet:
+            port: 8443
+            scheme: HTTPS
+            path: /readyz
+      securityContext:
+        {{ with .Values.webhook.securityContext }}
+        {{- toYaml . | nindent 8}}
+        {{- end }}
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: {{ template "cosigned.fullname" . }}-webhook-tls

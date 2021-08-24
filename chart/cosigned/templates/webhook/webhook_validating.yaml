@@ -1,0 +1,52 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ template "cosigned.fullname" . }}-webhook-tls
+  name: {{ template "cosigned.fullname" . }}-validating
+  labels:
+    {{- include "cosigned.labels" . | nindent 4 }}
+    control-plane: {{ template "cosigned.fullname" . }}-webhook
+webhooks:
+  - clientConfig:
+      service:
+        name: {{ template "cosigned.fullname" . }}-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /validations
+    failurePolicy: Ignore
+    #namespaceSelector:
+    #  matchLabels:
+    #    cosigned: "true"
+    name: webhook.cosigned.sigstore.dev
+    rules:
+      - apiGroups:
+        - ""
+        apiVersions:
+        - v1
+        operations:
+        - CREATE
+        - UPDATE
+        resources:
+        - pods
+      - apiGroups:
+        - "apps"
+        apiVersions:
+        - v1
+        operations:
+        - CREATE
+        - UPDATE
+        resources:
+        - daemonset
+        - statefulset
+        - replicaset
+        - deployments     
+      - apiGroups:
+        - "batch"
+        apiVersions:
+        - v1
+        operations:
+        - CREATE
+        - UPDATE
+        resources:
+        - jobs
+    sideEffects: None

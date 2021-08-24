@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "cosigned.fullname" . }}-webhook
+  labels:
+    {{- include "cosigned.labels" . | nindent 4 }}
+    control-plane: {{ template "cosigned.fullname" . }}-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ template "cosigned.fullname" . }}-webhook
+subjects:
+- kind: ServiceAccount
+  name: {{ template "cosigned.fullname" . }}-webhook
+  namespace: {{ .Release.Namespace }}

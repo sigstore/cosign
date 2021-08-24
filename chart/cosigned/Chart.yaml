@@ -1,0 +1,10 @@
+apiVersion: v2
+appVersion: "dev"
+description: The Helm chart for Cosigned
+home: https://github.com/sigstore/cosign
+name: cosigned
+type: application
+version: v0.0.0-dev
+maintainers:
+  - name: dlorenc
+  - name: hectorj2f

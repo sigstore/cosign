@@ -1,0 +1,48 @@
+# Cosigned requires the installation of cert-manager
+certificates:
+  selfSigned: true
+  ca:
+    issuer:
+      name:
+      kind: Issuer
+  issuer:
+    name:
+    kind: Issuer
+
+## common node selector for all the pods
+commonNodeSelector: {}
+#  key1: value1
+#  key2: value2
+
+## common tolerations for all the pods
+commonTolerations: []
+# - key: "key"
+#   operator: "Equal"
+#   value: "value"
+#   effect: "NoSchedule"
+
+webhook:
+  secretKeyRef:
+    name: 
+  image:
+    repository: hectorj2f/cosigned-admission-webhook
+    tag: dev
+    pullPolicy: IfNotPresent
+  env: {}
+  extraArgs: {}
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  securityContext:
+    runAsUser: 65532
+  service:
+    annotations: {}
+    type: ClusterIP
+    port: 443
+    # For nodeport, specify the following:
+    #   type: NodePort
+    #   nodePort: <port-number>

@@ -1,0 +1,29 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ template "cosigned.fullname" . }}-webhook-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cosigned.labels" . | nindent 4 }}
+    control-plane: {{ template "cosigned.fullname" . }}-webhook
+spec:
+  commonName: {{ template "cosigned.fullname" . }}-webhook.{{ .Release.Namespace }}.svc
+  dnsNames:
+    - {{ template "cosigned.fullname" . }}-webhook.{{ .Release.Namespace }}.svc
+    - {{ template "cosigned.fullname" . }}-webhook.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: {{ .Values.certificates.issuer.kind }}
+    name: {{ template "cosigned.issuerName" . }}
+  secretName: {{ template "cosigned.fullname" . }}-webhook-tls
+---
+{{- if  (.Capabilities.APIVersions.Has "cert-manager.io/v1") }}
+{{- if .Values.certificates.selfSigned }}
+apiVersion: cert-manager.io/v1
+kind: {{ .Values.certificates.issuer.kind }}
+metadata:
+  name: {{ template "cosigned.issuerName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selfSigned: {}
+{{- end }}
+{{- end }}
