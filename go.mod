@@ -35,3 +35,10 @@ require (
 	k8s.io/apimachinery v0.22.1
 	k8s.io/client-go v0.22.1
 )
+
+// For compatibility with Knative (release-0.20)/Tekton Chains, until they upgrade k8s
+replace (
+	k8s.io/api => k8s.io/api v0.20.7
+	k8s.io/apimachinery => k8s.io/apimachinery v0.20.7
+	k8s.io/client-go => k8s.io/client-go v0.20.7
+)

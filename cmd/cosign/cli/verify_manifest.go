@@ -27,6 +27,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -155,7 +156,7 @@ func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
 			rs  *appsv1.ReplicaSet
 			ss  *appsv1.StatefulSet
 			ds  *appsv1.DaemonSet
-			job *batchv1.CronJob
+			job *v1beta1.CronJob
 			pod *corev1.Pod
 		)
 		containers := make([]corev1.Container, 0)
@@ -189,7 +190,7 @@ func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
 				images = append(images, c.Image)
 			}
 
-		case *batchv1.CronJob:
+		case *v1beta1.CronJob:
 			job = obj
 			containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.Containers...)
 			containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.InitContainers...)
