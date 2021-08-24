@@ -116,3 +116,18 @@ sign-container-cloudbuild: docker-cloudbuild
 	docker push gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
 	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
 	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
+
+
+# Build cosigned binary
+cosigned: lint
+	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign/webhook
+
+cosigned-container:
+	docker build -f Dockerfile.cosigned -t hectorj2f/cosigned-admission-webhook:dev .
+
+uninstall-cosigned: manifests
+	helm delete cosigned -n cosigned
+
+# Install cosigned webhook in the configured Kubernetes cluster in ~/.kube/config
+install-cosigned: cosigned
+	helm install cosigned -n cosigned chart/cosigned --replace --set webhook.secretKeyRef.name=k8s://cosigned/mysecret --create-namespace

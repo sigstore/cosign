@@ -1,7 +1,7 @@
 # Cosigned Admission Webhook
 
 ## Requirements
-* kind (or any other Kubernetes cluster).
+* Kind (or any other Kubernetes cluster successfully configured).
 * Helm.
 
 ## Run `cosigned`
@@ -34,9 +34,57 @@ The previous command generates two key files `cosign.key` and `cosign.pub`. Next
 kubectl create secret generic mysecret -n cosigned --from-file=cosign.pub=./cosign.pub
 ```
 
-Install `cosigned`:
+Install `cosigned` using Helm and setting the value of the secret key reference to `k8s://cosigned/mysecret`:
 
 ```shell
 helm install cosigned -n cosigned chart/cosigned --replace --set webhook.secretKeyRef.name=k8s://cosigned/mysecret --create-namespace
+```
+
+Validate the `cosigned` functionality by create a `Deployment` with and without signed images:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-unsigned
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-signed
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: hectorj2f/nginx
+        ports:
+        - containerPort: 80
 ```
 
