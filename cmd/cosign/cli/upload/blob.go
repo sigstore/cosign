@@ -17,6 +17,7 @@ package upload
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -83,7 +84,7 @@ EXAMPLES
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
+			if len(args) != 1 || len(fmap.Files) < 1 {
 				return flag.ErrHelp
 			}
 
@@ -101,6 +102,9 @@ func BlobCmd(ctx context.Context, files []cremote.File, contentType, imageRef st
 	dgster, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, cli.DefaultRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
+	}
+	if dgster == nil {
+		return errors.New("dgstr is nil, no files uploaded?")
 	}
 	dgst, err := dgster.Digest()
 	if err != nil {
