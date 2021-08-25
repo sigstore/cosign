@@ -1,5 +1,43 @@
 # Changelog
 
+## v1.1.0
+
+### Enhancements
+
+* BREAKING: The `-attestation` flag has been renamed to `-predicate` in `attest` (https://github.com/sigstore/cosign/pull/500)
+* Added `verify-manifest` command (https://github.com/sigstore/cosign/pull/490)
+* Added the ability to specify and validate well-known attestation types in `attest` with the `-type` flag (https://github.com/sigstore/cosign/pull/504)
+* Added `cosign init` command to setup the trusted local repository of SigStore's TUF root metadata (https://github.com/sigstore/cosign/pull/520)
+* Added timestamps to Cosign's custom In-Toto predicate (https://github.com/sigstore/cosign/pull/533)
+* `verify` now always verifies that the image exists (even when referenced by digest) before verification (https://github.com/sigstore/cosign/pull/543)
+
+### Bug Fixes
+
+* `verify-dockerfile` no longer fails on `FROM scratch` (https://github.com/sigstore/cosign/pull/509)
+* Fixed reading from STDIN with `attach sbom` (https://github.com/sigstore/cosign/pull/517)
+* Fixed broken documentation and implementation of `-output` for `verify` and `verify-attestation` (https://github.com/sigstore/cosign/pull/546)
+* Fixed nil pointer error when calling `upload blob` without specifying `-f` (https://github.com/sigstore/cosign/pull/563)
+
+### Contributors
+
+* Adolfo García Veytia (@puerco)
+* Anton Semjonov (@ansemjo)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Panato (@cpanato)
+* Dan Lorenc (@dlorenc)
+* @gkovan
+* Hector Fernandez (@hectorj2f)
+* Jake Sanders (@dekkagaijin)
+* Jim Bugwadia (@JimBugwadia)
+* Jose Donizetti (@josedonizetti)
+* Joshua Hansen (@joshes)
+* Jason Hall (@imjasonh)
+* Priya Wadhwa (@priyawadhwa)
+* Russell Brown (@rjbrown57)
+* Stephan Renatus (@srenatus)
+* Li Yi (@denverdino)
+
 ## v1.0.0
 
 ### Enhancements
