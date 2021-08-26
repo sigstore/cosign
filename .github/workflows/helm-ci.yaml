@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - main
-      - helm-release-jobs
 
 jobs:
 
@@ -59,7 +58,7 @@ jobs:
         uses: helm/chart-testing-action@v2.0.1
 
       - name: Run chart-testing (lint)
-        run: ct lint --check-version-increment="false" --config chart/ct.yaml
+        run: ct lint --config chart/ct.yaml
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.2.0
