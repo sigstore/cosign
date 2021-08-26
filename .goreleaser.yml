@@ -90,12 +90,32 @@ builds:
   tags:
     - pivkey
 
+- id: linux-cosigned
+  binary: cosigned-linux-{{ .Arch }}
+  no_unique_dist_dir: true
+  main: ./cmd/cosign/webhook
+  goos:
+    - linux
+  goarch:
+    - amd64
+  ldflags:
+    - "{{ .Env.LDFLAGS }}"
+  env:
+    - CGO_ENABLED=0
+
 signs:
   - id: cosign
     signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "-output", "${artifact}.sig", "-key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
+  - id: cosigned
+    signature: "${artifact}.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "-output", "${artifact}.sig", "-key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    artifacts: binary
+    ids:
+      - linux-cosigned
 
 archives:
 - format: binary

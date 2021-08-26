@@ -119,11 +119,22 @@ sign-container-cloudbuild: docker-cloudbuild
 
 
 # Build cosigned binary
+.PHONY: cosigned
 cosigned: lint
 	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign/webhook
 
-cosigned-container:
-	docker build -f Dockerfile.cosigned -t hectorj2f/cosigned-admission-webhook:dev .
+.PHONY: cosigned-docker-cloudbuild
+cosigned-docker-cloudbuild:
+	docker build --build-arg RUNTIME_IMAGE=$(RUNTIME_IMAGE) \
+		-t "gcr.io/$(PROJECT_ID)/cosigned:$(GIT_TAG)" \
+		-t "gcr.io/$(PROJECT_ID)/cosigned:$(GIT_HASH)" -f Dockerfile.cosigned .
+
+.PHONY: cosigned-sign-container-cloudbuild
+cosigned-sign-container-cloudbuild: cosigned-docker-cloudbuild
+	docker push gcr.io/${PROJECT_ID}/cosigned:$(GIT_HASH)
+	docker push gcr.io/${PROJECT_ID}/cosigned:$(GIT_TAG)
+	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosigned:$(GIT_HASH)
+	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosigned:$(GIT_TAG)
 
 uninstall-cosigned: manifests
 	helm delete cosigned -n cosigned

@@ -70,6 +70,9 @@ steps:
     cosign verify-dockerfile -base-image-only -key https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub ./Dockerfile
     make sign-container-cloudbuild
 
+    cosign verify-dockerfile -base-image-only -key https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub ./Dockerfile.cosigned
+    make cosigned-sign-container-cloudbuild
+
 availableSecrets:
   secretManager:
   - versionName: projects/${PROJECT_NUMBER}/secrets/GITHUB_TOKEN/versions/latest
