@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
@@ -33,6 +33,9 @@ webhooks:
     #  matchLabels:
     #    cosigned: "true"
     name: webhook.cosigned.sigstore.dev
+    admissionReviewVersions:
+    - v1
+    - v1beta1
     rules:
       - apiGroups:
         - ""
