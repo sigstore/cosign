@@ -1,0 +1,8 @@
+# See https://github.com/helm/chart-testing#configuration
+chart-dirs:
+  - chart
+remote: origin
+target-branch: main
+chart-repos:
+  - stable=https://charts.helm.sh/stable
+  - jetstack=https://charts.jetstack.io

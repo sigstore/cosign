@@ -52,7 +52,7 @@ spec:
 {{- end }}
         args:
         - --tls-cert-dir=/certs/
-        - --secret-key-ref={{ .Values.webhook.secretKeyRef.name }}
+        - --secret-key-ref={{ required "Please set the secret name!" .Values.webhook.secretKeyRef.name }}
         {{- range $key, $value := .Values.webhook.extraArgs }}
         - --{{ $key }}={{ $value }}
         {{- end }}

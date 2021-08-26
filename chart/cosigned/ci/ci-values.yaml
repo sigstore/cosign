@@ -1,0 +1,3 @@
+webhook:
+  secretKeyRef:
+    name: k8s://default/ci-honk-secret
