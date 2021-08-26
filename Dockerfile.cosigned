@@ -14,7 +14,7 @@
 
 ARG RUNTIME_IMAGE=gcr.io/distroless/base:debug
 
-FROM golang:1.16.6 as build
+FROM golang:1.17.0 as build
 
 WORKDIR /go/src/cosign
 ADD . /go/src/cosign
