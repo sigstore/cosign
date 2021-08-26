@@ -954,8 +954,9 @@ github.com/imdario/mergo v0.3.10/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH
 github.com/imdario/mergo v0.3.11/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
 github.com/imdario/mergo v0.3.12 h1:b6R2BslTbIEToALKP7LxUvijTsNI9TAe80pLWN2g/HU=
 github.com/imdario/mergo v0.3.12/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
-github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9 h1:j7klXz5kh0ydPmHkBtJ/Al27G1/au4sH7OkGhkgRJWg=
 github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9/go.mod h1:Skbg04kmfB7IAnEIsspKPg/ny1eiFt/TgPr9SDCHusA=
+github.com/in-toto/in-toto-golang v0.2.1-0.20210806133539-f50646681592 h1:g9IxkZZUCtXHtU3fBXY+1WhEL6Hmcaelk4o4VGYSmsA=
+github.com/in-toto/in-toto-golang v0.2.1-0.20210806133539-f50646681592/go.mod h1:Skbg04kmfB7IAnEIsspKPg/ny1eiFt/TgPr9SDCHusA=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod h1:qj24IKcXYK6Iy9ceXlo3Tc+vtHo9lIhSX5JddghvEPo=

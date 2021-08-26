@@ -71,7 +71,7 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 		stamp := now.UTC().Format(time.RFC3339)
 		return generateCustomStatement(rawPayload, opts.Digest, opts.Repo, stamp)
 	case "provenance":
-		return generateProvenanceStatement(rawPayload, opts.Digest, opts.Repo)
+		return generateSLSAProvenanceStatement(rawPayload, opts.Digest, opts.Repo)
 	case "spdx":
 		return generateSPDXStatement(rawPayload, opts.Digest, opts.Repo)
 	case "link":
@@ -107,7 +107,7 @@ func generateCustomStatement(rawPayload []byte, digest, repo, timestamp string) 
 	}, nil
 }
 
-func generateProvenanceStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
+func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
 	var predicate in_toto.ProvenancePredicate
 	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
 	if err != nil {
@@ -118,7 +118,7 @@ func generateProvenanceStatement(rawPayload []byte, digest string, repo string) 
 		return "", errors.Wrap(err, "unmarshal Provenance predicate")
 	}
 	return in_toto.ProvenanceStatement{
-		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateProvenanceV01),
+		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateSLSAProvenanceV01),
 		Predicate:       predicate,
 	}, nil
 }

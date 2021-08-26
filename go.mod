@@ -82,7 +82,7 @@ require (
 	github.com/hashicorp/vault/api v1.1.1 // indirect
 	github.com/hashicorp/vault/sdk v0.2.1 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
+	github.com/in-toto/in-toto-golang v0.2.1-0.20210806133539-f50646681592
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20210703085342-c1f07ee84431 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
