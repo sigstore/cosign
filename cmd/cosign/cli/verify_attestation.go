@@ -18,6 +18,7 @@ package cli
 import (
 	"context"
 	"flag"
+	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -93,6 +94,17 @@ EXAMPLES
 	}
 }
 
+// DSSE messages contain the signature and payload in one object, but our interface expects a signature and payload
+// This means we need to use one field and ignore the other. The DSSE verifier upstream uses the signature field and ignores
+// The message field, but we want the reverse here.
+type reverseDSSEVerifier struct {
+	signature.Verifier
+}
+
+func (w *reverseDSSEVerifier) VerifySignature(s io.Reader, m io.Reader, opts ...signature.VerifyOption) error {
+	return w.Verifier.VerifySignature(m, nil, opts...)
+}
+
 // Exec runs the verification command
 func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err error) {
 	if len(args) == 0 {
@@ -134,7 +146,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 			return errors.Wrap(err, "initializing piv token verifier")
 		}
 	}
-	co.SigVerifier = dsse.WrapVerifier(pubKey)
+
+	co.SigVerifier = &reverseDSSEVerifier{
+		Verifier: dsse.WrapVerifier(pubKey),
+	}
 
 	for _, imageRef := range args {
 		ref, err := name.ParseReference(imageRef)

@@ -16,10 +16,12 @@
 package cosign
 
 import (
+	"encoding/base64"
 	"encoding/json"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -45,11 +47,20 @@ func SimpleClaimVerifier(sp SignedPayload, imageDigest v1.Hash, annotations map[
 
 // IntotoSubjectClaimVerifier verifies that SignedPayload.Payload is an Intoto statement which references the given image digest.
 func IntotoSubjectClaimVerifier(sp SignedPayload, imageDigest v1.Hash, _ map[string]interface{}) error {
-	st := &in_toto.Statement{}
-	if err := json.Unmarshal(sp.Payload, st); err != nil {
+	// The payload here is an envelope. We already verified the signature earlier.
+	e := ssl.Envelope{}
+	if err := json.Unmarshal(sp.Payload, &e); err != nil {
+		return err
+	}
+	stBytes, err := base64.StdEncoding.DecodeString(e.Payload)
+	if err != nil {
 		return err
 	}
 
+	st := in_toto.Statement{}
+	if err := json.Unmarshal(stBytes, &st); err != nil {
+		return err
+	}
 	for _, subj := range st.StatementHeader.Subject {
 		dgst, ok := subj.Digest["sha256"]
 		if !ok {
