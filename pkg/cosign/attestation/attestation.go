@@ -70,7 +70,7 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 		now := opts.Time()
 		stamp := now.UTC().Format(time.RFC3339)
 		return generateCustomStatement(rawPayload, opts.Digest, opts.Repo, stamp)
-	case "provenance":
+	case "slsaprovenance":
 		return generateSLSAProvenanceStatement(rawPayload, opts.Digest, opts.Repo)
 	case "spdx":
 		return generateSPDXStatement(rawPayload, opts.Digest, opts.Repo)

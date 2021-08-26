@@ -50,7 +50,7 @@ func Attest() *ffcli.Command {
 		predicatePath = flagset.String("predicate", "", "path to the predicate file.")
 		force         = flagset.Bool("f", false, "skip warnings and confirmations")
 		idToken       = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
-		predicateType = flagset.String("type", "custom", "specify predicate type (default: custom) (provenance|link|spdx)")
+		predicateType = flagset.String("type", "custom", "specify predicate type (default: custom) (slsaprovenance|link|spdx)")
 	)
 	return &ffcli.Command{
 		Name:       "attest",
@@ -60,25 +60,25 @@ func Attest() *ffcli.Command {
 
 EXAMPLES
   # attach an attestation to a container image Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign attest -predicate <FILE> <IMAGE>
+  COSIGN_EXPERIMENTAL=1 cosign attest -predicate <FILE> -type <TYPE> <IMAGE>
 
   # attach an attestation to a container image with a local key pair file
-  cosign attest -predicate <FILE> -key cosign.key <IMAGE>
+  cosign attest -predicate <FILE> -type <TYPE> -key cosign.key <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in Azure Key Vault
-  cosign attest -predicate <FILE> -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
+  cosign attest -predicate <FILE> -type <TYPE> -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in AWS KMS
-  cosign attest -predicate <FILE> -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <IMAGE>
+  cosign attest -predicate <FILE> -type <TYPE> -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in Google Cloud KMS
-  cosign attest -predicate <FILE> -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <IMAGE>
+  cosign attest -predicate <FILE> -type <TYPE> -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <IMAGE>
 
   # attach an attestation to a container image with a key pair stored in Hashicorp Vault
-  cosign attest -predicate <FILE> -key hashivault://[KEY] <IMAGE>
+  cosign attest -predicate <FILE> -type <TYPE> -key hashivault://[KEY] <IMAGE>
 
   # attach an attestation to a container image which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest -predicate <FILE> -key cosign.key legacy-registry.example.com/my/image
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest -predicate <FILE> -type <TYPE> -key cosign.key legacy-registry.example.com/my/image
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
