@@ -54,7 +54,7 @@ webhooks:
         - daemonset
         - statefulset
         - replicaset
-        - deployments     
+        - deployments
       - apiGroups:
         - "batch"
         apiVersions:

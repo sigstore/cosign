@@ -37,7 +37,7 @@ commonTolerations: []
 
 webhook:
   secretKeyRef:
-    name: 
+    name:
   image:
     repository: hectorj2f/cosigned-admission-webhook
     tag: dev

@@ -12,17 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG RUNTIME_IMAGE=gcr.io/distroless/base:debug
-
-FROM golang:1.17.0 as build
-
-WORKDIR /go/src/cosign
-ADD . /go/src/cosign
-
-RUN make cosigned
-
-FROM $RUNTIME_IMAGE
-
-COPY --from=build /go/src/cosign/cosigned /bin/
-
-ENTRYPOINT [ "/bin/cosigned" ]
+webhook:
+  secretKeyRef:
+    name: k8s://default/ci-honk-secret
