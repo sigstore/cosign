@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
 	_ "embed" // To enable the `go:embed` directive.
@@ -52,7 +53,7 @@ func GetRekorPub() string {
 	err := tuf.GetTarget(ctx, rekorTargetStr, &buf)
 	if err != nil {
 		// The user may not have initialized the local root metadata. Log the error and use the embedded root.
-		fmt.Println("using embedded rekor public key. did you run `cosign init`? error retrieving target: ", err)
+		fmt.Fprintln(os.Stderr, "using embedded rekor public key. did you run `cosign init`? error retrieving target: ", err)
 		return rekorPub
 	}
 	return buf.String()

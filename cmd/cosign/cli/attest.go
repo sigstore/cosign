@@ -211,7 +211,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		if err != nil {
 			return err
 		}
-		fmt.Println("tlog entry created with index: ", *entry.LogIndex)
+		fmt.Fprintln(os.Stderr, "tlog entry created with index: ", *entry.LogIndex)
 
 		uo.Bundle = bundle(entry)
 		uo.AdditionalAnnotations = parseAnnotations(entry)

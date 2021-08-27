@@ -97,7 +97,7 @@ func shouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error
 			return false, err
 		}
 		if tlogConfirmResponse != "Y" {
-			fmt.Println("not uploading to transparency log")
+			fmt.Fprintln(os.Stderr, "not uploading to transparency log")
 			return false, nil
 		}
 	}
@@ -345,7 +345,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			if err != nil {
 				return err
 			}
-			fmt.Println("tlog entry created with index: ", *entry.LogIndex)
+			fmt.Fprintln(os.Stderr, "tlog entry created with index: ", *entry.LogIndex)
 
 			uo.Bundle = bundle(entry)
 			uo.AdditionalAnnotations = parseAnnotations(entry)
