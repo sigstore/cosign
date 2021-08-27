@@ -19,7 +19,7 @@ sources:
   - https://github.com/sigstore/cosign
 name: cosigned
 type: application
-version: v0.0.2-dev
+version: v0.0.3-dev
 appVersion: "dev"
 maintainers:
   - name: dlorenc

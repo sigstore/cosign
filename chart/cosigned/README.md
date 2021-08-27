@@ -4,14 +4,16 @@
 * Kind (or any other Kubernetes cluster successfully configured).
 * Helm.
 
-## Run `cosigned`
+## Deploy `cosigned` Helm Chart
 
 Cosigned requires `cert-manager` to be pre-configured on the running cluster.
 To install `cert-manager` follow the next steps:
 
 ```shell
 helm repo add jetstack https://charts.jetstack.io
+
 helm repo update
+
 helm install \
   cert-manager jetstack/cert-manager \
   --namespace cert-manager \
@@ -37,8 +39,14 @@ kubectl create secret generic mysecret -n cosigned --from-file=cosign.pub=./cosi
 Install `cosigned` using Helm and setting the value of the secret key reference to `k8s://cosigned/mysecret`:
 
 ```shell
-helm install cosigned -n cosigned chart/cosigned --replace --set webhook.secretKeyRef.name=k8s://cosigned/mysecret --create-namespace
+helm repo add sigstore https://sigstore.github.io/cosign/
+
+helm repo update
+
+helm install cosigned -n cosigned sigstore/cosigned --devel --set webhook.secretKeyRef.name=k8s://cosigned/mysecret --create-namespace
 ```
+
+We need to add the `--devel` flag because we are still in the development of the chart. This will be removed when we release cosigned `v1.0.0`
 
 Validate the `cosigned` functionality by create a `Deployment` with and without signed images:
 
