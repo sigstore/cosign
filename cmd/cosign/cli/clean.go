@@ -19,6 +19,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -64,7 +65,7 @@ func CleanCmd(ctx context.Context, imageRef string) error {
 	sigRef := cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
 	fmt.Println(sigRef)
 
-	fmt.Println("Deleting signature metadata...")
+	fmt.Fprintln(os.Stderr, "Deleting signature metadata...")
 
 	err = remote.Delete(sigRef, DefaultRegistryClientOpts(ctx)...)
 	if err != nil {

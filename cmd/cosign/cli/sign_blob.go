@@ -146,8 +146,11 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 
 	if EnableExperimental() {
 		// TODO: Refactor with sign.go
-		rekorBytes := sv.Cert
-		if rekorBytes == nil {
+		var rekorBytes []byte
+		if sv.Cert != nil {
+			fmt.Fprintf(os.Stderr, "signing with ephemeral certificate:\n%s\n", string(sv.Cert))
+			rekorBytes = sv.Cert
+		} else {
 			pemBytes, err := publicKeyPem(sv, options.WithContext(ctx))
 			if err != nil {
 				return nil, err
@@ -162,8 +165,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("tlog entry created with index:", *entry.LogIndex)
-		return sig, nil
+		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 	}
 
 	if output != "" {
