@@ -35,7 +35,6 @@ webhooks:
     name: webhook.cosigned.sigstore.dev
     admissionReviewVersions:
     - v1
-    - v1beta1
     rules:
       - apiGroups:
         - ""
