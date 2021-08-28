@@ -53,7 +53,7 @@ func GetRekorPub() string {
 	err := tuf.GetTarget(ctx, rekorTargetStr, &buf)
 	if err != nil {
 		// The user may not have initialized the local root metadata. Log the error and use the embedded root.
-		fmt.Fprintln(os.Stderr, "using embedded rekor public key. did you run `cosign init`? error retrieving target: ", err)
+		fmt.Fprintln(os.Stderr, "No TUF root installed, using embedded rekor key")
 		return rekorPub
 	}
 	return buf.String()

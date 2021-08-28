@@ -43,7 +43,6 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 	co := &cosign.CheckOpts{
 		ClaimVerifier: cosign.SimpleClaimVerifier,
 		VerifyBundle:  true,
-		RootCerts:     fulcio.GetRoots(),
 		RegistryClientOpts: []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
 			remote.WithContext(ctx),
@@ -58,6 +57,7 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 	}
 
 	if co.SigVerifier != nil || cli.EnableExperimental() {
+		co.RootCerts = fulcio.GetRoots()
 		sigRepo, err := cli.TargetRepositoryForImage(ref)
 		if err != nil {
 			return nil, err
