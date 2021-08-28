@@ -116,7 +116,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 
 	co := &cosign.CheckOpts{
 		Annotations:        *c.Annotations,
-		RootCerts:          fulcio.GetRoots(),
 		RegistryClientOpts: DefaultRegistryClientOpts(ctx),
 	}
 	if c.CheckClaims {
@@ -124,7 +123,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 	if EnableExperimental() {
 		co.RekorURL = c.RekorURL
-
+		co.RootCerts = fulcio.GetRoots()
 	}
 	keyRef := c.KeyRef
 
