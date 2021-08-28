@@ -60,6 +60,7 @@ if (test_image="ubuntu" ./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./
 # Test `cosign verify-manifest`
 ./cosign verify-manifest -key ${DISTROLESS_PUB_KEY} ./test/testdata/signed_manifest.yaml
 if (./cosign verify-manifest -key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_manifest.yaml); then false; fi
+./cosign verify -key ${DISTROLESS_PUB_KEY} -f ./test/testdata/signed_manifest.yaml
 
 # Run the built container to make sure it doesn't crash
 make ko-local

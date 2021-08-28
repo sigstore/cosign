@@ -15,7 +15,10 @@
 
 package cli
 
-import "reflect"
+import (
+	"reflect"
+	"strings"
+)
 
 // oneOf ensures that only one of the supplied interfaces is set to a non-zero value.
 func oneOf(args ...interface{}) bool {
@@ -31,4 +34,17 @@ func nOf(args ...interface{}) int {
 		}
 	}
 	return n
+}
+
+type StringSlice struct {
+	slice []string
+}
+
+func (ss *StringSlice) Set(s string) error {
+	ss.slice = append(ss.slice, s)
+	return nil
+}
+
+func (ss *StringSlice) String() string {
+	return strings.Join(ss.slice, ",")
 }
