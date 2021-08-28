@@ -27,6 +27,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	ggcrV1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
@@ -108,6 +109,20 @@ const (
 	DssePayloadType   = "application/vnd.dsse.envelope.v1+json"
 )
 
+const (
+	predicateCustom = "custom"
+	predicateSlsa   = "slsaprovenance"
+	predicateSpdx   = "spdx"
+	predicateLink   = "link"
+)
+
+var predicateTypeMap = map[string]string{
+	predicateCustom: attestation.CosignCustomProvenanceV01,
+	predicateSlsa:   in_toto.PredicateSLSAProvenanceV01,
+	predicateSpdx:   in_toto.PredicateSPDX,
+	predicateLink:   in_toto.PredicateLinkV1,
+}
+
 func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string,
 	upload bool, predicatePath string, force bool, predicateType string) error {
 
@@ -120,6 +135,11 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		if !oneOf(ko.KeyRef, ko.Sk) {
 			return &KeyParseError{}
 		}
+	}
+
+	predicateURI, ok := predicateTypeMap[predicateType]
+	if !ok {
+		return fmt.Errorf("invalid predicate type: %s", predicateType)
 	}
 
 	remoteOpts := DefaultRegistryClientOpts(ctx)
@@ -139,7 +159,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
-	wrapped := dsse.WrapSigner(sv, IntotoPayloadType)
+	wrapped := dsse.WrapSigner(sv, predicateURI)
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
 
