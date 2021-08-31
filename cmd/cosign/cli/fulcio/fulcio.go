@@ -24,6 +24,8 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	_ "embed" // To enable the `go:embed` directive.
+	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -34,6 +36,10 @@ import (
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	ct "github.com/google/certificate-transparency-go"
+	"github.com/google/certificate-transparency-go/ctutil"
+	ctx509 "github.com/google/certificate-transparency-go/x509"
+	"github.com/google/certificate-transparency-go/x509util"
 	"github.com/pkg/errors"
 	"golang.org/x/term"
 
@@ -53,10 +59,23 @@ const (
 	altRoot    = "SIGSTORE_ROOT_FILE"
 )
 
+type Resp struct {
+	CertPEM  []byte
+	ChainPEM []byte
+	SCT      []byte
+}
+
 // This is the root in the fulcio project.
 //go:embed fulcio.pem
 var rootPem string
+
+var ctPublicKeyStr = `ctfe.pub`
 var fulcioTargetStr = `fulcio.crt.pem`
+
+var (
+	// For testing
+	VerifySCT = verifySCT
+)
 
 type oidcConnector interface {
 	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, error)
@@ -74,22 +93,22 @@ type signingCertProvider interface {
 	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter, opts ...operations.ClientOption) (*operations.SigningCertCreated, error)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connector oidcConnector, oidcIssuer string, oidcClientID string) (certPem, chainPem []byte, err error) {
+func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connector oidcConnector, oidcIssuer string, oidcClientID string) (Resp, error) {
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
-		return nil, nil, err
+		return Resp{}, err
 	}
 
 	tok, err := connector.OIDConnect(oidcIssuer, oidcClientID, "")
 	if err != nil {
-		return nil, nil, err
+		return Resp{}, err
 	}
 
 	// Sign the email address as part of the request
 	h := sha256.Sum256([]byte(tok.Subject))
 	proof, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
-		return nil, nil, err
+		return Resp{}, err
 	}
 
 	bearerAuth := httptransport.BearerToken(tok.RawString)
@@ -109,17 +128,58 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 
 	resp, err := scp.SigningCert(params, bearerAuth)
 	if err != nil {
-		return nil, nil, err
+		return Resp{}, err
+	}
+	sct, err := base64.StdEncoding.DecodeString(resp.SCT.String())
+	if err != nil {
+		return Resp{}, err
 	}
 
 	// split the cert and the chain
 	certBlock, chainPem := pem.Decode([]byte(resp.Payload))
-	certPem = pem.EncodeToMemory(certBlock)
-	return certPem, chainPem, nil
+	certPem := pem.EncodeToMemory(certBlock)
+	fr := Resp{
+		CertPEM:  certPem,
+		ChainPEM: chainPem,
+		SCT:      sct,
+	}
+
+	// verify the sct
+	if err := VerifySCT(fr); err != nil {
+		fmt.Printf("Unable to verify SCT: %v\n", err)
+	} else {
+		fmt.Println("Successfully verified SCT...")
+	}
+	return fr, nil
+}
+
+// verifySCT verifies the SCT against the Fulcio CT log public key
+// The SCT is a `Signed Certificate Timestamp`, which promises that
+// the certificate issued by Fulcio was also added to the public CT log within
+// some defined time period
+func verifySCT(fr Resp) error {
+	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
+	if err := tuf.GetTarget(context.TODO(), ctPublicKeyStr, &buf); err != nil {
+		fmt.Println("Unable to verify SCT, try running `cosign init`...")
+		return err
+	}
+	pubKey, err := cosign.PemToECDSAKey(buf.Bytes())
+	if err != nil {
+		return err
+	}
+	cert, err := x509util.CertificateFromPEM(fr.CertPEM)
+	if err != nil {
+		return err
+	}
+	var sct ct.SignedCertificateTimestamp
+	if err := json.Unmarshal(fr.SCT, &sct); err != nil {
+		return errors.Wrap(err, "unmarshal")
+	}
+	return ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID string, fClient *fulcioClient.Fulcio) (certPemBytes, chainPemBytes []byte, err error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID string, fClient *fulcioClient.Fulcio) (Resp, error) {
 	c := &realConnector{}
 	switch flow {
 	case FlowDevice:
@@ -130,7 +190,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 	case FlowToken:
 		c.flow = &oauthflow.StaticTokenGetter{RawToken: idToken}
 	default:
-		return nil, nil, fmt.Errorf("unsupported oauth flow: %s", flow)
+		return Resp{}, fmt.Errorf("unsupported oauth flow: %s", flow)
 	}
 
 	return getCertForOauthID(priv, fClient.Operations, c, oidcIssuer, oidcClientID)
@@ -139,6 +199,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 type Signer struct {
 	Cert  []byte
 	Chain []byte
+	SCT   []byte
 	pub   *ecdsa.PublicKey
 	*signature.ECDSASignerVerifier
 }
@@ -164,15 +225,16 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fC
 	default:
 		flow = FlowNormal
 	}
-	cert, chain, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, fClient) // TODO, use the chain.
+	Resp, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, fClient) // TODO, use the chain.
 	if err != nil {
 		return nil, errors.Wrap(err, "retrieving cert")
 	}
 	f := &Signer{
 		pub:                 &priv.PublicKey,
 		ECDSASignerVerifier: signer,
-		Cert:                cert,
-		Chain:               chain,
+		Cert:                Resp.CertPEM,
+		Chain:               Resp.ChainPEM,
+		SCT:                 Resp.SCT,
 	}
 	return f, nil
 
