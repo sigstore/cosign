@@ -65,6 +65,7 @@ jobs:
 
       - name: Install Cert-Manager
         run: |
+          helm repo update
           helm install \
             cert-manager jetstack/cert-manager \
             --namespace cert-manager \
