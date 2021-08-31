@@ -102,14 +102,14 @@ The URI format for GCP KMS is:
 
 `gcpkms://projects/$PROJECT/locations/$LOCATION/keyRings/$KEYRING/cryptoKeys/$KEY/versions/$KEY_VERSION`
 
-where PROJECT, LOCATION, KEYRUNG and KEY are replaced with the correct values.
+where PROJECT, LOCATION, KEYRING, KEY and KEY_VERSION are replaced with the correct values.
 
 Cosign automatically uses GCP Application Default Credentials for authentication.
 See the GCP [API documentation](https://cloud.google.com/docs/authentication/production) for information on how to authenticate in different environments.
 
 The user must have the following IAM roles:
 * Safer KMS Viewer Role
-* Cloud KMS CryptoKey Signer/Verifier
+* Cloud KMS CryptoKey Signer/Verifier (`roles/cloudkms.signerVerifier`)
 
 ### Hashicorp Vault
 
