@@ -69,7 +69,9 @@ type Resp struct {
 //go:embed fulcio.pem
 var rootPem string
 
-var ctPublicKeyStr = `ctfe.pub`
+// This is the CT log public key
+//go:embed ctfe.pub
+var ctPublicKey string
 var fulcioTargetStr = `fulcio.crt.pem`
 
 var (
@@ -146,10 +148,9 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 
 	// verify the sct
 	if err := VerifySCT(fr); err != nil {
-		fmt.Printf("Unable to verify SCT: %v\n", err)
-	} else {
-		fmt.Println("Successfully verified SCT...")
+		return Resp{}, errors.Wrap(err, "verifying SCT")
 	}
+	fmt.Println("Successfully verified SCT...")
 	return fr, nil
 }
 
@@ -158,12 +159,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
 func verifySCT(fr Resp) error {
-	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-	if err := tuf.GetTarget(context.TODO(), ctPublicKeyStr, &buf); err != nil {
-		fmt.Println("Unable to verify SCT, try running `cosign init`...")
-		return err
-	}
-	pubKey, err := cosign.PemToECDSAKey(buf.Bytes())
+	pubKey, err := cosign.PemToECDSAKey([]byte(ctPublicKey))
 	if err != nil {
 		return err
 	}
