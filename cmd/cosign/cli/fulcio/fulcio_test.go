@@ -113,7 +113,10 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			cert, chain, err := getCertForOauthID(testKey, tscp, &tf, "", "")
+			VerifySCT = func(Resp) error { return nil }
+			defer func() { VerifySCT = verifySCT }()
+
+			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "")
 
 			if err != nil {
 				if !tc.expectErr {
@@ -122,16 +125,16 @@ func TestGetCertForOauthID(t *testing.T) {
 				return
 			}
 			if tc.expectErr {
-				t.Fatalf("getCertForOauthID got: %q, %q wanted error", cert, chain)
+				t.Fatalf("getCertForOauthID got: %q, %q wanted error", resp.CertPEM, resp.ChainPEM)
 			}
 
 			expectedCert := string(expectedCertBytes)
-			actualCert := string(cert)
+			actualCert := string(resp.CertPEM)
 			if actualCert != expectedCert {
 				t.Errorf("getCertForOauthID returned cert %q, wanted %q", actualCert, expectedCert)
 			}
 			expectedChain := string(expectedExtraBytes)
-			actualChain := string(chain)
+			actualChain := string(resp.ChainPEM)
 			if actualChain != expectedChain {
 				t.Errorf("getCertForOauthID returned chain %q, wanted %q", actualChain, expectedChain)
 			}
