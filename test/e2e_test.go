@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build e2e
 // +build e2e
 
 package test
@@ -62,12 +63,13 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
-var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}) error {
+var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cli.VerifyCommand{
 		KeyRef:      keyRef,
 		RekorURL:    rekorURL,
 		CheckClaims: checkClaims,
 		Annotations: &annotations,
+		Attachment:  attachment,
 	}
 
 	args := []string{imageRef}
@@ -89,30 +91,30 @@ func TestSignVerify(t *testing.T) {
 
 	ctx := context.Background()
 	// Verify should fail at first
-	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 	// So should download
 	mustErr(download.SignatureCmd(ctx, imgName), t)
 
 	// Now sign the image
 	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 
 	// Now verify and download should work!
-	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 	must(download.SignatureCmd(ctx, imgName), t)
 
 	// Look for a specific annotation
-	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
+	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 
 	// Sign the image with an annotation
 	annotations := map[string]interface{}{"foo": "bar"}
-	must(cli.SignCmd(ctx, ko, annotations, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, annotations, imgName, "", true, "", false, false, ""), t)
 
 	// It should match this time.
-	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
+	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 
 	// But two doesn't work
-	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}), t)
+	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}, ""), t)
 }
 
 func TestSignVerifyClean(t *testing.T) {
@@ -130,17 +132,17 @@ func TestSignVerifyClean(t *testing.T) {
 
 	// Now sign the image
 	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 
 	// Now verify and download should work!
-	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 	must(download.SignatureCmd(ctx, imgName), t)
 
 	// Now clean signature from the given image
 	must(cli.CleanCmd(ctx, imgName), t)
 
 	// It doesn't work
-	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestAttestVerify(t *testing.T) {
@@ -177,7 +179,7 @@ func TestAttestVerify(t *testing.T) {
 	// Now verify and download should work!
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 	// Look for a specific annotation
-	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}), t)
+	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 }
 
 func TestBundle(t *testing.T) {
@@ -204,14 +206,14 @@ func TestBundle(t *testing.T) {
 	}
 
 	// Sign the image
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 	// Make sure verify works
-	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Make sure offline verification works with bundling
 	// use rekor prod since we have hardcoded the public key
 	os.Setenv(serverEnv, "notreal")
-	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestDuplicateSign(t *testing.T) {
@@ -228,20 +230,20 @@ func TestDuplicateSign(t *testing.T) {
 
 	ctx := context.Background()
 	// Verify should fail at first
-	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 	// So should download
 	mustErr(download.SignatureCmd(ctx, imgName), t)
 
 	// Now sign the image
 	ko := cli.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 
 	// Now verify and download should work!
-	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 	must(download.SignatureCmd(ctx, imgName), t)
 
 	// Signing again should work just fine...
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 	// but a duplicate signature should not be a uploaded
 	sigRepo, err := cli.TargetRepositoryForImage(ref)
 	if err != nil {
@@ -264,7 +266,7 @@ func TestKeyURLVerify(t *testing.T) {
 	keyRef := "https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub"
 	img := "gcr.io/distroless/base:latest"
 
-	must(verify(keyRef, img, true, nil), t)
+	must(verify(keyRef, img, true, nil, ""), t)
 }
 
 func TestGenerateKeyPairEnvVar(t *testing.T) {
@@ -330,23 +332,23 @@ func TestMultipleSignatures(t *testing.T) {
 	ctx := context.Background()
 
 	// Verify should fail at first for both keys
-	mustErr(verify(pub1, imgName, true, nil), t)
-	mustErr(verify(pub2, imgName, true, nil), t)
+	mustErr(verify(pub1, imgName, true, nil, ""), t)
+	mustErr(verify(pub2, imgName, true, nil, ""), t)
 
 	// Now sign the image with one key
 	ko := cli.KeyOpts{KeyRef: priv1, PassFunc: passFunc}
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 	// Now verify should work with that one, but not the other
-	must(verify(pub1, imgName, true, nil), t)
-	mustErr(verify(pub2, imgName, true, nil), t)
+	must(verify(pub1, imgName, true, nil, ""), t)
+	mustErr(verify(pub2, imgName, true, nil, ""), t)
 
 	// Now sign with the other key too
 	ko.KeyRef = priv2
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 
 	// Now verify should work with both
-	must(verify(pub1, imgName, true, nil), t)
-	must(verify(pub2, imgName, true, nil), t)
+	must(verify(pub1, imgName, true, nil, ""), t)
+	must(verify(pub2, imgName, true, nil, ""), t)
 }
 
 func TestSignBlob(t *testing.T) {
@@ -611,6 +613,24 @@ func TestAttachSBOM(t *testing.T) {
 	if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
 		t.Errorf("diff: %s", diff)
 	}
+
+	// Generate key pairs to sign the sbom
+	td1 := t.TempDir()
+	td2 := t.TempDir()
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+	_, _, pubKeyPath2 := keypair(t, td2)
+
+	// Verify should fail on a bad input
+	mustErr(verify(pubKeyPath1, imgName, true, nil, "sbom"), t)
+	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom"), t)
+
+	// Now sign the sbom with one key
+	ko1 := cli.KeyOpts{KeyRef: privKeyPath1, PassFunc: passFunc}
+	must(cli.SignCmd(ctx, ko1, nil, imgName, "", true, "", false, false, "sbom"), t)
+
+	// Now verify should work with that one, but not the other
+	must(verify(pubKeyPath1, imgName, true, nil, "sbom"), t)
+	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom"), t)
 }
 
 func setenv(t *testing.T, k, v string) func() {
@@ -636,7 +656,7 @@ func TestTlog(t *testing.T) {
 
 	ctx := context.Background()
 	// Verify should fail at first
-	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Now sign the image without the tlog
 	ko := cli.KeyOpts{
@@ -644,21 +664,21 @@ func TestTlog(t *testing.T) {
 		PassFunc: passFunc,
 		RekorURL: rekorURL,
 	}
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 
 	// Now verify should work!
-	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Now we turn on the tlog!
 	defer setenv(t, cli.ExperimentalEnv, "1")()
 
 	// Verify shouldn't work since we haven't put anything in it yet.
-	mustErr(verify(pubKeyPath, imgName, true, nil), t)
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Sign again with the tlog env var on
-	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false), t)
+	must(cli.SignCmd(ctx, ko, nil, imgName, "", true, "", false, false, ""), t)
 	// And now verify works!
-	must(verify(pubKeyPath, imgName, true, nil), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestGetPublicKeyCustomOut(t *testing.T) {

@@ -121,6 +121,7 @@ func Sign() *ffcli.Command {
 		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
 		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
 		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
+		attachment       = flagset.String("attachment", "", "related image attachment to sign (sbom), default none")
 		annotations      = annotationsMap{}
 	)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -166,7 +167,12 @@ EXAMPLES
 			if len(args) == 0 {
 				return flag.ErrHelp
 			}
-
+			switch *attachment {
+			case "sbom", "":
+				break
+			default:
+				return flag.ErrHelp
+			}
 			ko := KeyOpts{
 				KeyRef:           *key,
 				PassFunc:         GetPass,
@@ -180,13 +186,38 @@ EXAMPLES
 				OIDCClientSecret: *oidcClientSecret,
 			}
 			for _, img := range args {
-				if err := SignCmd(ctx, ko, annotations.annotations, img, *cert, *upload, *payloadPath, *force, *recursive); err != nil {
-					return errors.Wrapf(err, "signing %s", img)
+				if err := SignCmd(ctx, ko, annotations.annotations, img, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
+					if *attachment == "" {
+						return errors.Wrapf(err, "signing %s", img)
+					}
+					return errors.Wrapf(err, "signing attachement %s for image %s", *attachment, img)
 				}
 			}
 			return nil
 		},
 	}
+}
+
+func getAttachedImageRef(ctx context.Context, imageRef string, attachment string) (string, error) {
+	if attachment == "" {
+		return imageRef, nil
+	}
+	if attachment == "sbom" {
+		ref, err := name.ParseReference(imageRef)
+		if err != nil {
+			return "", err
+		}
+
+		h, err := Digest(ctx, ref)
+		if err != nil {
+			return "", err
+		}
+
+		repo := ref.Context()
+		dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
+		return dstRef.Name(), nil
+	}
+	return "", fmt.Errorf("unknown attachment type %s", attachment)
 }
 
 func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opts ...remote.Option) ([]name.Digest, error) {
@@ -225,8 +256,13 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 }
 
 func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{},
-	imageRef string, certPath string, upload bool, payloadPath string, force bool, recursive bool) error {
+	inputImg string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
 	// A key file or token is required unless we're in experimental mode!
+	imageRef, err := getAttachedImageRef(ctx, inputImg, attachment)
+	if err != nil {
+		return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
+	}
+
 	if EnableExperimental() {
 		if nOf(ko.KeyRef, ko.Sk) > 1 {
 			return &KeyParseError{}
