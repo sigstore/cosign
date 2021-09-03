@@ -92,7 +92,7 @@ EXAMPLES
 
   # verify image with public key stored in Google Cloud KMS
   cosign verify -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <IMAGE>
-  
+
   # verify image with public key stored in Hashicorp Vault
   cosign verify -key hashivault://[KEY] <IMAGE>
 
