@@ -70,6 +70,9 @@ EXAMPLES
   # Verify a signature from an environment variable
   cosign verify-blob -key cosign.pub -signature $sig msg
 
+  # verify a signature with public key provided by URL
+  cosign verify-dockerfile -key https://host.for/<FILE> -signature $sig msg
+
   # Verify a signature against a payload from another process using process redirection
   cosign verify-blob -key cosign.pub -signature $sig <(git rev-parse HEAD)
 
