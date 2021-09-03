@@ -4,9 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go/storage v1.16.1
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/go-openapi/runtime v0.19.31
 	github.com/go-openapi/strfmt v0.20.2
 	github.com/go-openapi/swag v0.19.15
@@ -17,7 +15,7 @@ require (
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210806133539-f50646681592
 	github.com/manifoldco/promptui v0.8.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/open-policy-agent/opa v0.31.0
+	github.com/open-policy-agent/opa v0.32.0
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.30.0 // indirect
@@ -47,14 +45,6 @@ require (
 require (
 	cloud.google.com/go v0.94.1 // indirect
 	cloud.google.com/go/kms v0.1.0 // indirect
-	github.com/cncf/udpa/go v0.0.0-20210322005330-6414d713912e // indirect
-	github.com/cncf/xds/go v0.0.0-20210805033703-aa0b78936158 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
-	github.com/envoyproxy/go-control-plane v0.9.9 // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.6.1 // indirect
-	github.com/golang/glog v1.0.0 // indirect
 	github.com/google/certificate-transparency-go v1.1.2-0.20210728111105-5f7e9ba4be3d
 	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v0.22.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 )
