@@ -41,6 +41,7 @@ type VerifyCommand struct {
 	Slot        string
 	Output      string
 	RekorURL    string
+	Attachment  string
 	Annotations *map[string]interface{}
 }
 
@@ -52,6 +53,7 @@ func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "address of rekor STL server")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output format for the signing image information (default JSON) (json|text)")
+	flagset.StringVar(&cmd.Attachment, "attachment", "", "related image attachment to sign (none|sbom), default none")
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -110,6 +112,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		return flag.ErrHelp
 	}
 
+	switch c.Attachment {
+	case "sbom", "":
+		break
+	default:
+		return flag.ErrHelp
+	}
+
 	if !oneOf(c.KeyRef, c.Sk) && !EnableExperimental() {
 		return &KeyParseError{}
 	}
@@ -147,7 +156,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 	co.SigVerifier = pubKey
 
-	for _, imageRef := range args {
+	for _, img := range args {
+		imageRef, err := getAttachedImageRef(ctx, img, c.Attachment)
+		if err != nil {
+			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
+		}
 		ref, err := name.ParseReference(imageRef)
 		if err != nil {
 			return err
