@@ -69,6 +69,8 @@ type CheckOpts struct {
 
 	// RootCerts are the root CA certs used to verify a signature's chained certificate.
 	RootCerts *x509.CertPool
+	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertEmail string
 }
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
@@ -132,6 +134,20 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			if err := sp.VerifySignature(pub); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
+			}
+			if co.CertEmail != "" {
+				emailVerified := false
+				for _, em := range sp.Cert.EmailAddresses {
+
+					if co.CertEmail == em {
+						emailVerified = true
+						break
+					}
+				}
+				if !emailVerified {
+					validationErrs = append(validationErrs, "expected email not found in certificate")
+					continue
+				}
 			}
 		}
 

@@ -37,6 +37,7 @@ import (
 type VerifyCommand struct {
 	CheckClaims bool
 	KeyRef      string
+	CertEmail   string
 	Sk          bool
 	Slot        string
 	Output      string
@@ -48,6 +49,7 @@ type VerifyCommand struct {
 func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	annotations := annotationsMap{}
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
+	flagset.StringVar(&cmd.CertEmail, "cert-email", "", "the email expected in a valid fulcio cert")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
 	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "address of rekor STL server")
