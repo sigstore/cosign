@@ -129,7 +129,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 
 	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
 		return err
-	}
+	} // #nosec G306
 	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
 	return nil
 }
