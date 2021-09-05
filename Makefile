@@ -54,14 +54,15 @@ cosign: $(SRCS)
 cosign-pivkey: $(SRCS)
 	CGO_ENABLED=1 go build -tags=pivkey -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
 
-GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+GOLANGCI_LINT_DIR = $(shell pwd)/bin
+GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
 golangci-lint:
-	rm -f $(GOLANGCI_LINT) || :
+	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell dirname $(GOLANGCI_LINT)) v1.42.0 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.0 ;\
 
 lint: golangci-lint ## Runs golangci-lint linter
-	$(GOLANGCI_LINT) run  -n
+	$(GOLANGCI_LINT_BIN) run -n
 
 
 PLATFORMS=darwin linux windows
