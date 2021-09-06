@@ -29,22 +29,23 @@ import (
 func Triangulate() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign triangulate", flag.ExitOnError)
+		t       = flagset.String("type", "signature", "related attachment to triangulate (attestation|sbom|signature), default signature")
 	)
 	return &ffcli.Command{
 		Name:       "triangulate",
 		ShortUsage: "cosign triangulate <image uri>",
-		ShortHelp:  "Outputs the located cosign image reference. This is the location cosign stores signatures.",
+		ShortHelp:  "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return MungeCmd(ctx, args[0])
+			return MungeCmd(ctx, args[0], *t)
 		},
 	}
 }
 
-func MungeCmd(ctx context.Context, imageRef string) error {
+func MungeCmd(ctx context.Context, imageRef string, attachmentType string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -59,7 +60,17 @@ func MungeCmd(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
+	var dstRef name.Tag
+	switch attachmentType {
+	case cosign.Signature:
+		dstRef = cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
+	case cosign.SBOM:
+		dstRef = cosign.AttachedImageTag(sigRepo, h, cosign.SBOMTagSuffix)
+	case cosign.Attestation:
+		dstRef = cosign.AttachedImageTag(sigRepo, h, cosign.AttestationTagSuffix)
+	default:
+		return fmt.Errorf("unknown attachment type %s", attachmentType)
+	}
 
 	fmt.Println(dstRef.Name())
 	return nil
