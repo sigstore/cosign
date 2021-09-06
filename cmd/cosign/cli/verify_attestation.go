@@ -170,8 +170,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 			return err
 		}
 
+		PrintVerificationHeader(imageRef, co)
 		// The attestations are always JSON, so use the raw "text" mode for outputting them instead of conversion
-		PrintVerification(imageRef, verified, co, "text")
+		PrintVerification(imageRef, verified, "text")
 	}
 
 	return nil

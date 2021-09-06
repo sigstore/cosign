@@ -68,7 +68,8 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 		if err != nil {
 			return nil, err
 		}
-		cli.PrintVerification(imageRef, sp, co, "text")
+		cli.PrintVerificationHeader(imageRef, co)
+		cli.PrintVerification(imageRef, sp, "text")
 	}
 
 	img, err := remote.Image(ref, co.RegistryClientOpts...)
