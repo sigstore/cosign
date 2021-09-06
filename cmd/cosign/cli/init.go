@@ -19,10 +19,6 @@ import (
 	"context"
 	_ "embed" // To enable the `go:embed` directive.
 	"flag"
-	"io/ioutil"
-	"net/http"
-	"path/filepath"
-	"strings"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
@@ -30,29 +26,6 @@ import (
 
 //go:embed 1.root.json
 var initialRoot string
-
-func loadFileOrURL(fileRef string) ([]byte, error) {
-	var raw []byte
-	var err error
-	if strings.HasPrefix(fileRef, "http://") || strings.HasPrefix(fileRef, "https://") {
-		// #nosec G107
-		resp, err := http.Get(fileRef)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		raw, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		raw, err = ioutil.ReadFile(filepath.Clean(fileRef))
-		if err != nil {
-			return nil, err
-		}
-	}
-	return raw, nil
-}
 
 func Init() *ffcli.Command {
 	var (
