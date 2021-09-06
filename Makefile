@@ -136,10 +136,3 @@ cosigned-sign-container-cloudbuild: cosigned-docker-cloudbuild
 	docker push gcr.io/${PROJECT_ID}/cosigned:$(GIT_TAG)
 	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosigned:$(GIT_HASH)
 	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosigned:$(GIT_TAG)
-
-uninstall-cosigned: manifests
-	helm delete cosigned -n cosigned
-
-# Install cosigned webhook in the configured Kubernetes cluster in ~/.kube/config
-install-cosigned: cosigned
-	helm install cosigned -n cosigned chart/cosigned --replace --set webhook.secretKeyRef.name=k8s://cosigned/mysecret --create-namespace
