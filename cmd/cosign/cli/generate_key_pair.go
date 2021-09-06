@@ -107,15 +107,29 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 	if err != nil {
 		return err
 	}
+
+	if fileExists("cosign.key") {
+		var overwrite string
+		fmt.Fprint(os.Stderr, "File cosign.key already exists. Overwrite (y/n)? ")
+		fmt.Scanf("%s", &overwrite)
+		switch overwrite {
+		case "y", "Y":
+		case "n", "N":
+			return nil
+		default:
+			fmt.Fprintln(os.Stderr, "Invalid input")
+			return nil
+		}
+	}
 	// TODO: make sure the perms are locked down first.
 	if err := ioutil.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
 
-	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0600); err != nil {
+	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
 		return err
-	}
+	} // #nosec G306
 	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
 	return nil
 }
@@ -153,7 +167,8 @@ func getPassFromTerm(confirm bool) ([]byte, error) {
 	if !confirm {
 		return pw1, nil
 	}
-	fmt.Fprint(os.Stderr, "Enter again: ")
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
 	pw2, err := term.ReadPassword(0)
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
@@ -164,4 +179,12 @@ func getPassFromTerm(confirm bool) ([]byte, error) {
 		return nil, errors.New("passwords do not match")
 	}
 	return pw1, nil
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
