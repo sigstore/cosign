@@ -1,3 +1,4 @@
+//go:build !pivkey || !cgo
 // +build !pivkey !cgo
 
 // Copyright 2021 The Sigstore Authors.
