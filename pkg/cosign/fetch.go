@@ -58,6 +58,12 @@ const (
 	AttestationTagSuffix = ".att"
 )
 
+const (
+	Signature   = "signature"
+	SBOM        = "sbom"
+	Attestation = "attestation"
+)
+
 func AttachedImageTag(repo name.Repository, digest v1.Hash, tagSuffix string) name.Tag {
 	// sha256:d34db33f -> sha256-d34db33f.suffix
 	tagStr := strings.ReplaceAll(digest.String(), ":", "-") + tagSuffix
