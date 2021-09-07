@@ -17,7 +17,7 @@ package cli
 import (
 	"context"
 	"crypto"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -53,6 +53,29 @@ func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
 	return name.NewRepository(wantRepo)
 }
 
+func loadFileOrURL(fileRef string) ([]byte, error) {
+	var raw []byte
+	var err error
+	if strings.HasPrefix(fileRef, "http://") || strings.HasPrefix(fileRef, "https://") {
+		// #nosec G107
+		resp, err := http.Get(fileRef)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		raw, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		raw, err = os.ReadFile(filepath.Clean(fileRef))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return raw, nil
+}
+
 func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
 	// The key could be plaintext, in a file, at a URL, or in KMS.
 	if kmsKey, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
@@ -60,21 +83,9 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 		return kmsKey, nil
 	}
 
-	var raw []byte
+	raw, err := loadFileOrURL(keyRef)
 
-	if strings.HasPrefix(keyRef, "http://") || strings.HasPrefix(keyRef, "https://") {
-		// key-url specified
-		// #nosec G107
-		resp, err := http.Get(keyRef)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		raw, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-	} else if raw, err = ioutil.ReadFile(filepath.Clean(keyRef)); err != nil {
+	if err != nil {
 		return nil, err
 	}
 

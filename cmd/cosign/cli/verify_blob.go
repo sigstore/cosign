@@ -166,17 +166,17 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			return err
 		}
 	} else {
-		b, err := ioutil.ReadFile(filepath.Clean(sigRef))
+		targetSig, err := loadFileOrURL(sigRef)
 		if err != nil {
 			return err
 		}
-		// If in a file, it could be raw or base64-encoded.
-		// We want them to be encoded eventually, but not double encoded!
-		if isb64(b) {
-			b64sig = string(b)
+
+		if isb64(targetSig) {
+			b64sig = string(targetSig)
 		} else {
-			b64sig = base64.StdEncoding.EncodeToString(b)
+			b64sig = base64.StdEncoding.EncodeToString(targetSig)
 		}
+
 	}
 
 	var blobBytes []byte
