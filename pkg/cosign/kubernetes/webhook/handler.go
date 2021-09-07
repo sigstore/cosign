@@ -26,13 +26,11 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -50,29 +48,25 @@ func init() { //nolint:gochecknoinits
 }
 
 type funcAdmissionValidator struct {
-	regularDecoder      runtime.Decoder
-	unstructuredDecoder runtime.Decoder
-	apiReader           client.Reader
-	validations         map[schema.GroupVersionKind]ValidationFunc
-	scheme              *runtime.Scheme
-	secretKeyRef        string
+	regularDecoder runtime.Decoder
+	validations    map[schema.GroupVersionKind]ValidationFunc
+	scheme         *runtime.Scheme
+	secretKeyRef   string
 }
 
-func NewFuncAdmissionValidator(scheme *runtime.Scheme, dynamicClient client.Client, fns map[schema.GroupVersionKind]ValidationFunc, secretKeyRef string) *webhook.Admission {
+func NewFuncAdmissionValidator(scheme *runtime.Scheme, fns map[schema.GroupVersionKind]ValidationFunc, secretKeyRef string) *webhook.Admission {
 	factory := serializer.NewCodecFactory(scheme)
 	return &webhook.Admission{
 		Handler: &funcAdmissionValidator{
-			regularDecoder:      factory.UniversalDeserializer(),
-			unstructuredDecoder: unstructured.UnstructuredJSONScheme,
-			apiReader:           dynamicClient,
-			scheme:              scheme,
-			validations:         fns,
-			secretKeyRef:        secretKeyRef,
+			regularDecoder: factory.UniversalDeserializer(),
+			scheme:         scheme,
+			validations:    fns,
+			secretKeyRef:   secretKeyRef,
 		},
 	}
 }
 
-type ValidationFunc func(newObj runtime.Object, apiReader client.Reader, keys []*ecdsa.PublicKey) field.ErrorList
+type ValidationFunc func(newObj runtime.Object, keys []*ecdsa.PublicKey) field.ErrorList
 
 func (c *funcAdmissionValidator) Handle(_ context.Context, admissionSpec admission.Request) admission.Response {
 	var (
@@ -147,7 +141,7 @@ func (c *funcAdmissionValidator) Handle(_ context.Context, admissionSpec admissi
 
 	switch admissionSpec.Operation {
 	case admissionv1.Create, admissionv1.Update:
-		validationErrs = validateFunc(newObj, c.apiReader, keys)
+		validationErrs = validateFunc(newObj, keys)
 
 	default:
 		return admission.Response{

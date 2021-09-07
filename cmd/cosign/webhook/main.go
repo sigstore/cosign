@@ -63,8 +63,6 @@ func main() {
 	flags.Uint16Var(&bindPort, "secure-port", bindPort, "The port on which to serve HTTPS.")
 	flags.StringVar(&tlsCertDirectory, "tls-cert-dir", tlsCertDirectory, "The directory where the TLS certs are located.")
 
-	kubernetesClientOptions := webhook.NewClientOptions(webhook.Scheme)
-
 	err := flags.Parse(os.Args[1:])
 	if err != nil {
 		klog.Error(err)
@@ -80,13 +78,7 @@ func main() {
 		appsv1.SchemeGroupVersion.WithKind("DaemonSet"):    webhook.ValidateSignedResources,
 	}
 
-	dynamicClient, err := kubernetesClientOptions.NewDynamicClient()
-	if err != nil {
-		klog.Error(err, "Failed to create client")
-		os.Exit(1)
-	}
-
-	cosignedValidationHook := webhook.NewFuncAdmissionValidator(webhook.Scheme, dynamicClient, cosignedValidationFuncs, secretKeyRef)
+	cosignedValidationHook := webhook.NewFuncAdmissionValidator(webhook.Scheme, cosignedValidationFuncs, secretKeyRef)
 
 	opts := ctrl.Options{
 		Scheme:             webhook.Scheme,
