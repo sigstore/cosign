@@ -71,31 +71,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	cosignedValidationFuncs := map[schema.GroupVersionKind]webhook.ValidationFuncs{
-		corev1.SchemeGroupVersion.WithKind("Pod"): {
-			ValidateCreate: webhook.ValidateSignedResources,
-			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
-		},
-		batchv1.SchemeGroupVersion.WithKind("Job"): {
-			ValidateCreate: webhook.ValidateSignedResources,
-			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
-		},
-		appsv1.SchemeGroupVersion.WithKind("Deployment"): {
-			ValidateCreate: webhook.ValidateSignedResources,
-			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
-		},
-		appsv1.SchemeGroupVersion.WithKind("StatefulSet"): {
-			ValidateCreate: webhook.ValidateSignedResources,
-			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
-		},
-		appsv1.SchemeGroupVersion.WithKind("ReplicateSet"): {
-			ValidateCreate: webhook.ValidateSignedResources,
-			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
-		},
-		appsv1.SchemeGroupVersion.WithKind("DaemonSet"): {
-			ValidateCreate: webhook.ValidateSignedResources,
-			ValidateUpdate: webhook.ValidateSignedResourcesUpdate,
-		},
+	cosignedValidationFuncs := map[schema.GroupVersionKind]webhook.ValidationFunc{
+		corev1.SchemeGroupVersion.WithKind("Pod"):          webhook.ValidateSignedResources,
+		batchv1.SchemeGroupVersion.WithKind("Job"):         webhook.ValidateSignedResources,
+		appsv1.SchemeGroupVersion.WithKind("Deployment"):   webhook.ValidateSignedResources,
+		appsv1.SchemeGroupVersion.WithKind("StatefulSet"):  webhook.ValidateSignedResources,
+		appsv1.SchemeGroupVersion.WithKind("ReplicateSet"): webhook.ValidateSignedResources,
+		appsv1.SchemeGroupVersion.WithKind("DaemonSet"):    webhook.ValidateSignedResources,
 	}
 
 	dynamicClient, err := kubernetesClientOptions.NewDynamicClient()

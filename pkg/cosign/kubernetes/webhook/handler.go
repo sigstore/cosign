@@ -53,12 +53,12 @@ type funcAdmissionValidator struct {
 	regularDecoder      runtime.Decoder
 	unstructuredDecoder runtime.Decoder
 	apiReader           client.Reader
-	validations         map[schema.GroupVersionKind]ValidationFuncs
+	validations         map[schema.GroupVersionKind]ValidationFunc
 	scheme              *runtime.Scheme
 	secretKeyRef        string
 }
 
-func NewFuncAdmissionValidator(scheme *runtime.Scheme, dynamicClient client.Client, fns map[schema.GroupVersionKind]ValidationFuncs, secretKeyRef string) *webhook.Admission {
+func NewFuncAdmissionValidator(scheme *runtime.Scheme, dynamicClient client.Client, fns map[schema.GroupVersionKind]ValidationFunc, secretKeyRef string) *webhook.Admission {
 	factory := serializer.NewCodecFactory(scheme)
 	return &webhook.Admission{
 		Handler: &funcAdmissionValidator{
@@ -72,41 +72,18 @@ func NewFuncAdmissionValidator(scheme *runtime.Scheme, dynamicClient client.Clie
 	}
 }
 
-type ValidationFuncs struct {
-	ValidateCreate ValidationCreateFunc
-	ValidateUpdate ValidationUpdateFunc
-}
-
-type ValidationCreateFunc func(newObj runtime.Object, apiReader client.Reader, keys []*ecdsa.PublicKey) field.ErrorList
-type ValidationUpdateFunc func(newObj runtime.Object, oldObj runtime.Object, apiReader client.Reader, keys []*ecdsa.PublicKey) field.ErrorList
+type ValidationFunc func(newObj runtime.Object, apiReader client.Reader, keys []*ecdsa.PublicKey) field.ErrorList
 
 func (c *funcAdmissionValidator) Handle(_ context.Context, admissionSpec admission.Request) admission.Response {
 	var (
-		newObj, oldObj runtime.Object
-		gvk            *schema.GroupVersionKind
-		err            error
+		newObj runtime.Object
+		gvk    *schema.GroupVersionKind
+		err    error
 	)
 
 	decoder := c.regularDecoder
 	if len(admissionSpec.Object.Raw) > 0 {
 		newObj, gvk, err = decoder.Decode(admissionSpec.Object.Raw, nil, nil)
-		if err != nil {
-			return admission.Response{
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed: false,
-					Result: &metav1.Status{
-						Status:  metav1.StatusFailure,
-						Code:    http.StatusInternalServerError,
-						Reason:  metav1.StatusReasonInternalError,
-						Message: fmt.Sprintf("Failed to decode object: %v", err),
-					},
-				},
-			}
-		}
-	}
-
-	if len(admissionSpec.OldObject.Raw) > 0 {
-		oldObj, gvk, err = decoder.Decode(admissionSpec.OldObject.Raw, nil, nil)
 		if err != nil {
 			return admission.Response{
 				AdmissionResponse: admissionv1.AdmissionResponse{
@@ -150,7 +127,7 @@ func (c *funcAdmissionValidator) Handle(_ context.Context, admissionSpec admissi
 		}
 	}
 
-	validateFuncs, ok := c.validations[*gvk]
+	validateFunc, ok := c.validations[*gvk]
 	if !ok {
 		return admission.Response{
 			AdmissionResponse: admissionv1.AdmissionResponse{
@@ -169,14 +146,9 @@ func (c *funcAdmissionValidator) Handle(_ context.Context, admissionSpec admissi
 	keys := getKeys(cfg.Data)
 
 	switch admissionSpec.Operation {
-	case admissionv1.Create:
-		if validateFuncs.ValidateCreate != nil {
-			validationErrs = validateFuncs.ValidateCreate(newObj, c.apiReader, keys)
-		}
-	case admissionv1.Update:
-		if validateFuncs.ValidateUpdate != nil {
-			validationErrs = validateFuncs.ValidateUpdate(newObj, oldObj, c.apiReader, keys)
-		}
+	case admissionv1.Create, admissionv1.Update:
+		validationErrs = validateFunc(newObj, c.apiReader, keys)
+
 	default:
 		return admission.Response{
 			AdmissionResponse: admissionv1.AdmissionResponse{
