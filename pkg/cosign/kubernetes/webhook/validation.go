@@ -33,14 +33,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
 	log = ctrl.Log.WithName("cosigned")
 )
 
-func ValidateSignedResources(obj runtime.Object, apiReader client.Reader, keys []*ecdsa.PublicKey) field.ErrorList {
+func ValidateSignedResources(obj runtime.Object, keys []*ecdsa.PublicKey) field.ErrorList {
 	containers, err := getContainers(obj)
 	if err != nil {
 		return field.ErrorList{field.InternalError(field.NewPath(""), err)}
