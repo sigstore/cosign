@@ -49,24 +49,6 @@ func ValidateSignedResources(obj runtime.Object, apiReader client.Reader, keys [
 	return validateSignedContainerImages(containers, keys)
 }
 
-func ValidateSignedResourcesUpdate(newObj runtime.Object, oldObj runtime.Object, apiReader client.Reader, keys []*ecdsa.PublicKey) field.ErrorList {
-	var allErrs field.ErrorList
-
-	containers, err := getContainers(newObj)
-	if err != nil {
-		return field.ErrorList{field.InternalError(field.NewPath(""), err)}
-	}
-
-	_, err = getContainers(oldObj)
-	if err != nil {
-		return field.ErrorList{field.InternalError(field.NewPath(""), err)}
-	}
-
-	allErrs = append(allErrs, validateSignedContainerImages(containers, keys)...)
-
-	return allErrs
-}
-
 func validateSignedContainerImages(containers []corev1.Container, keys []*ecdsa.PublicKey) field.ErrorList {
 	var allErrs field.ErrorList
 
