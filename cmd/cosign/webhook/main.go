@@ -17,99 +17,74 @@ package main
 
 import (
 	"context"
-	goflag "flag"
-	"net"
-	"net/http"
-	"os"
-	"strconv"
+	"flag"
 
-	flag "github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/signals"
+	"knative.dev/pkg/webhook"
+	"knative.dev/pkg/webhook/certificates"
+	"knative.dev/pkg/webhook/resourcesemantics"
+	"knative.dev/pkg/webhook/resourcesemantics/validation"
 
-	"github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
+	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
 )
 
+var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace.")
+
 func main() {
-	ctrl.SetLogger(zap.New(func(o *zap.Options) {
-		o.Development = true
-	}))
+	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
+		ServiceName: "webhook",
+		Port:        8443,
+		SecretName:  "webhook-certs",
+	})
 
-	var (
-		metricsAddr        = net.ParseIP("127.0.0.1")
-		metricsPort uint16 = 8080
-
-		bindAddr        = net.ParseIP("0.0.0.0")
-		bindPort uint16 = 8443
-
-		tlsCertDirectory string
-		secretKeyRef     string
+	// This calls flag.Parse()
+	sharedmain.MainWithContext(ctx, "cosigned",
+		certificates.NewController,
+		NewValidatingAdmissionController,
 	)
+}
 
-	klog.InitFlags(goflag.CommandLine)
-	flags := flag.NewFlagSet("main", flag.ExitOnError)
-	flags.AddGoFlagSet(goflag.CommandLine)
-	flags.StringVar(&secretKeyRef, "secret-key-ref", "", "The secret that includes pub/private key pair")
-	flags.IPVar(&metricsAddr, "metrics-address", metricsAddr, "The address the metric endpoint binds to.")
-	flags.Uint16Var(&metricsPort, "metrics-port", metricsPort, "The port the metric endpoint binds to.")
-	flags.IPVar(&bindAddr, "bind-address", bindAddr, ""+
-		"The IP address on which to listen for the --secure-port port.")
-	flags.Uint16Var(&bindPort, "secure-port", bindPort, "The port on which to serve HTTPS.")
-	flags.StringVar(&tlsCertDirectory, "tls-cert-dir", tlsCertDirectory, "The directory where the TLS certs are located.")
+func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	validator := cwebhook.NewValidator(ctx, *secretName)
 
-	err := flags.Parse(os.Args[1:])
-	if err != nil {
-		klog.Error(err)
-		os.Exit(1)
-	}
+	return validation.NewAdmissionController(ctx,
+		// Name of the resource webhook.
+		"cosigned.sigstore.dev",
 
-	cosignedValidationFuncs := map[schema.GroupVersionKind]webhook.ValidationFunc{
-		corev1.SchemeGroupVersion.WithKind("Pod"):          webhook.ValidateSignedResources,
-		batchv1.SchemeGroupVersion.WithKind("Job"):         webhook.ValidateSignedResources,
-		appsv1.SchemeGroupVersion.WithKind("Deployment"):   webhook.ValidateSignedResources,
-		appsv1.SchemeGroupVersion.WithKind("StatefulSet"):  webhook.ValidateSignedResources,
-		appsv1.SchemeGroupVersion.WithKind("ReplicateSet"): webhook.ValidateSignedResources,
-		appsv1.SchemeGroupVersion.WithKind("DaemonSet"):    webhook.ValidateSignedResources,
-	}
+		// The path on which to serve the webhook.
+		"/validations",
 
-	cosignedValidationHook := webhook.NewFuncAdmissionValidator(webhook.Scheme, cosignedValidationFuncs, secretKeyRef)
+		// The resources to validate.
+		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+			corev1.SchemeGroupVersion.WithKind("Pod"): &duckv1.Pod{},
 
-	opts := ctrl.Options{
-		Scheme:             webhook.Scheme,
-		MetricsBindAddress: net.JoinHostPort(metricsAddr.String(), strconv.Itoa(int(metricsPort))),
-		Host:               bindAddr.String(),
-		Port:               int(bindPort),
-		CertDir:            tlsCertDirectory,
-	}
+			appsv1.SchemeGroupVersion.WithKind("ReplicaSet"):  &duckv1.WithPod{},
+			appsv1.SchemeGroupVersion.WithKind("Deployment"):  &duckv1.WithPod{},
+			appsv1.SchemeGroupVersion.WithKind("StatefulSet"): &duckv1.WithPod{},
+			appsv1.SchemeGroupVersion.WithKind("DaemonSet"):   &duckv1.WithPod{},
+			batchv1.SchemeGroupVersion.WithKind("Job"):        &duckv1.WithPod{},
+		},
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), opts)
-	if err != nil {
-		klog.Error(err, "Failed to create manager")
-		os.Exit(1)
-	}
+		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
+		func(ctx context.Context) context.Context {
+			ctx = duckv1.WithPodValidator(ctx, validator.ValidatePod)
+			ctx = duckv1.WithPodSpecValidator(ctx, validator.ValidatePodSpecable)
+			return ctx
+		},
 
-	// Get the controller manager webhook server.
-	webhookServer := mgr.GetWebhookServer()
+		// Whether to disallow unknown fields.
+		// We pass false because we're using partial schemas.
+		false,
 
-	// Register the webhooks in the server.
-	webhookServer.Register("/validations", cosignedValidationHook)
-
-	// Add healthz and readyz handlers to webhook server. The controller-runtime AddHealthzCheck/AddReadyzCheck methods
-	// are served via separate http server - better to serve these from the same webhook http server.
-	webhookServer.WebhookMux.Handle("/readyz/", http.StripPrefix("/readyz/", &healthz.Handler{}))
-	webhookServer.WebhookMux.Handle("/healthz/", http.StripPrefix("/healthz/", &healthz.Handler{}))
-
-	klog.Info("Starting the webhook...")
-
-	// Start the server by starting a previously-set-up manager
-	if err := mgr.Start(context.Background()); err != nil {
-		klog.Error(err)
-		os.Exit(1)
-	}
+		// Extra validating callbacks to be applied to resources.
+		nil,
+	)
 }
