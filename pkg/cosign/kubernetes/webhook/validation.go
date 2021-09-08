@@ -24,7 +24,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	appsv1 "k8s.io/api/apps/v1"
@@ -129,7 +129,7 @@ func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]c
 	}
 
 	return cosign.Verify(ctx, ref, &cosign.CheckOpts{
-		RootCerts:     fulcio.GetRoots(),
+		RootCerts:     fulcioroots.Get(),
 		SigVerifier:   ecdsaVerifier,
 		ClaimVerifier: cosign.SimpleClaimVerifier,
 	})
