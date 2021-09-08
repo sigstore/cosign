@@ -16,7 +16,6 @@
 package fulcio
 
 import (
-	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -28,10 +27,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"strings"
-	"sync"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -43,8 +39,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/term"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/fulcio/pkg/generated/models"
@@ -56,7 +52,6 @@ const (
 	FlowNormal = "normal"
 	FlowDevice = "device"
 	FlowToken  = "token"
-	altRoot    = "SIGSTORE_ROOT_FILE"
 )
 
 type Resp struct {
@@ -65,14 +60,9 @@ type Resp struct {
 	SCT      []byte
 }
 
-// This is the root in the fulcio project.
-//go:embed fulcio.pem
-var rootPem string
-
 // This is the CT log public key
 //go:embed ctfe.pub
 var ctPublicKey string
-var fulcioTargetStr = `fulcio.crt.pem`
 
 var (
 	// For testing
@@ -242,47 +232,6 @@ func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey,
 
 var _ signature.Signer = &Signer{}
 
-var (
-	rootsOnce sync.Once
-	roots     *x509.CertPool
-)
-
 func GetRoots() *x509.CertPool {
-	rootsOnce.Do(func() {
-		roots = initRoots()
-	})
-	return roots
-}
-
-func initRoots() *x509.CertPool {
-	cp := x509.NewCertPool()
-	rootEnv := os.Getenv(altRoot)
-	if rootEnv != "" {
-		raw, err := ioutil.ReadFile(rootEnv)
-		if err != nil {
-			panic(fmt.Sprintf("error reading root PEM file: %s", err))
-		}
-		if !cp.AppendCertsFromPEM(raw) {
-			panic("error creating root cert pool")
-		}
-	} else {
-		// First try retrieving from TUF root. Otherwise use rootPem.
-		ctx := context.Background() // TODO: pass in context?
-		buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-		err := tuf.GetTarget(ctx, fulcioTargetStr, &buf)
-		if err != nil {
-			// The user may not have initialized the local root metadata. Log the error and use the embedded root.
-			fmt.Fprintln(os.Stderr, "No TUF root installed, using embedded CA certificate.")
-			if !cp.AppendCertsFromPEM([]byte(rootPem)) {
-				panic("error creating root cert pool")
-			}
-		} else {
-			// TODO: Remove the string replace when SigStore root is updated.
-			replaced := strings.ReplaceAll(buf.String(), "\n  ", "\n")
-			if !cp.AppendCertsFromPEM([]byte(replaced)) {
-				panic("error creating root cert pool")
-			}
-		}
-	}
-	return cp
+	return fulcioroots.Get()
 }
