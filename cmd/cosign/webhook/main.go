@@ -36,7 +36,12 @@ import (
 	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
 )
 
-var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace.")
+var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace that holds the public key for verification.")
+
+// webhookName holds the name of the validating webhook to set up with the
+// types we are watching.  If this changes, you must also change:
+//    ./config/500-webhook-configuration.yaml
+const webhookName = "cosigned.sigstore.dev"
 
 func main() {
 	opts := webhook.Options{
@@ -61,7 +66,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 	return validation.NewAdmissionController(ctx,
 		// Name of the resource webhook.
-		"cosigned.sigstore.dev",
+		webhookName,
 
 		// The path on which to serve the webhook.
 		"/validations",

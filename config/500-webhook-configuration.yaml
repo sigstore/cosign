@@ -24,7 +24,7 @@ webhooks:
     - key: cosigned.sigstore.dev/include
       operator: In
       values: ["true"]
-  admissionReviewVersions: [v1beta1, v1]
+  admissionReviewVersions: [v1]
   clientConfig:
     service:
       name: webhook

@@ -41,7 +41,6 @@ jobs:
 
     env:
       GOPATH: ${{ github.workspace }}
-      GO111MODULE: on
       # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
       # '*.local' hostnames.
       REGISTRY_NAME: registry.local
