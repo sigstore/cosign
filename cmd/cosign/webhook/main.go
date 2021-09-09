@@ -39,11 +39,15 @@ import (
 var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace.")
 
 func main() {
-	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
+	opts := webhook.Options{
 		ServiceName: "webhook",
 		Port:        8443,
 		SecretName:  "webhook-certs",
-	})
+	}
+	ctx := webhook.WithOptions(signals.NewContext(), opts)
+
+	// Allow folks to configure the port the webhook serves on.
+	flag.IntVar(&opts.Port, "secure-port", opts.Port, "The port on which to serve HTTPS.")
 
 	// This calls flag.Parse()
 	sharedmain.MainWithContext(ctx, "cosigned",
