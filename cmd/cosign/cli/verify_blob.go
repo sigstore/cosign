@@ -50,7 +50,7 @@ func VerifyBlob() *ffcli.Command {
 		slot      = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 		rekorURL  = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		cert      = flagset.String("cert", "", "path to the public certificate")
-		signature = flagset.String("signature", "", "path to the signature")
+		signature = flagset.String("signature", "", "signature content or path or remote URL")
 	)
 	return &ffcli.Command{
 		Name:       "verify-blob",
@@ -66,6 +66,9 @@ The blob may be specified as a path to a file or - for stdin.
 EXAMPLES
   # Verify a simple blob and message
   cosign verify-blob -key cosign.pub -signature sig msg
+
+  # Verify a simple blob with remote signature URL, both http and https schemes are supported
+  cosign verify-blob -key cosign.pub -signature http://host/my.sig
 
   # Verify a signature from an environment variable
   cosign verify-blob -key cosign.pub -signature $sig msg
