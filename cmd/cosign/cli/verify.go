@@ -132,6 +132,8 @@ against the transparency log.`,
 				Output:          o.Output,
 				RekorURL:        o.Rekor.URL,
 				FulcioURL:       o.Fulcio.URL,
+				PredicateType:   o.Predicate.Type,
+				Policies:        o.Policies,
 			}
 			return v.Exec(cmd.Context(), args)
 		},

@@ -16,12 +16,32 @@
 package options
 
 import (
+	"fmt"
+	"net/url"
+
+	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/spf13/cobra"
+
+	"github.com/sigstore/cosign/pkg/cosign/attestation"
 )
+
+const (
+	PredicateCustom = "custom"
+	PredicateSLSA   = "slsaprovenance"
+	PredicateSPDX   = "spdx"
+	PredicateLink   = "link"
+)
+
+// PredicateTypeMap is the mapping between the predicate `type` option to predicate URI.
+var PredicateTypeMap = map[string]string{
+	PredicateCustom: attestation.CosignCustomProvenanceV01,
+	PredicateSLSA:   in_toto.PredicateSLSAProvenanceV01,
+	PredicateSPDX:   in_toto.PredicateSPDX,
+	PredicateLink:   in_toto.PredicateLinkV1,
+}
 
 // PredicateOptions is the wrapper for predicate related options.
 type PredicateOptions struct {
-	Path string
 	Type string
 }
 
@@ -29,9 +49,46 @@ var _ Interface = (*PredicateOptions)(nil)
 
 // AddFlags implements Interface
 func (o *PredicateOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.Path, "predicate", "",
-		"path to the predicate file.")
-
 	cmd.Flags().StringVar(&o.Type, "type", "custom",
 		"specify a predicate type (slsaprovenance|link|spdx|custom) or an URI")
+}
+
+// ParsePredicateType parses the predicate `type` flag passed into a predicate URI, or validates `type` is a valid URI.
+func ParsePredicateType(t string) (string, error) {
+	uri, ok := PredicateTypeMap[t]
+	if !ok {
+		if _, err := url.ParseRequestURI(t); err != nil {
+			return "", fmt.Errorf("invalid predicate type: %s", t)
+		}
+		uri = t
+	}
+	return uri, nil
+}
+
+// PredicateLocalOptions is the wrapper for predicate related options.
+type PredicateLocalOptions struct {
+	PredicateOptions
+	Path string
+}
+
+var _ Interface = (*PredicateLocalOptions)(nil)
+
+// AddFlags implements Interface
+func (o *PredicateLocalOptions) AddFlags(cmd *cobra.Command) {
+	o.PredicateOptions.AddFlags(cmd)
+
+	cmd.Flags().StringVar(&o.Path, "predicate", "",
+		"path to the predicate file.")
+}
+
+// PredicateRemoteOptions is the wrapper for remote predicate related options.
+type PredicateRemoteOptions struct {
+	PredicateOptions
+}
+
+var _ Interface = (*PredicateRemoteOptions)(nil)
+
+// AddFlags implements Interface
+func (o *PredicateRemoteOptions) AddFlags(cmd *cobra.Command) {
+	o.PredicateOptions.AddFlags(cmd)
 }

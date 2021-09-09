@@ -32,17 +32,16 @@ require (
 
 require (
 	cloud.google.com/go/kms v1.0.0 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	cuelang.org/go v0.4.0
 	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.1 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/fsnotify/fsnotify v1.5.1 // indirect
-	github.com/golang/glog v1.0.0 // indirect
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20211004163346-9ae11fe20941
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
+	github.com/open-policy-agent/opa v0.33.1
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613

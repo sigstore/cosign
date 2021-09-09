@@ -69,6 +69,8 @@ type VerifyAttestationOptions struct {
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions // TODO: the original command did not use id token, mistake?
 	Registry    RegistryOptions
+	Predicate   PredicateRemoteOptions
+	Policies    []string
 }
 
 var _ Interface = (*VerifyAttestationOptions)(nil)
@@ -79,12 +81,16 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Rekor.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.Predicate.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
+
+	cmd.Flags().StringSliceVar(&o.Policies, "policy", nil,
+		"specify CUE or Rego files will be using for validation")
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")
