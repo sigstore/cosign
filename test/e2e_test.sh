@@ -56,6 +56,7 @@ if (./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/unsign
 test_image="gcr.io/distroless/base" ./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile
 # Image exists, but is unsigned
 if (test_image="ubuntu" ./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile); then false; fi
+./cosign verify-dockerfile -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_lowercase.Dockerfile
 
 # Test `cosign verify-manifest`
 ./cosign verify-manifest -key ${DISTROLESS_PUB_KEY} ./test/testdata/signed_manifest.yaml

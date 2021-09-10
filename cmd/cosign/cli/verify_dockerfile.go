@@ -117,7 +117,7 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 	fileScanner := bufio.NewScanner(dockerfile)
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
-		if strings.HasPrefix(line, "FROM") {
+		if strings.HasPrefix(strings.ToUpper(line), "FROM") {
 			switch image := getImageFromLine(line); image {
 			case "scratch":
 				fmt.Fprintln(os.Stderr, "- scratch image ignored")
