@@ -27,93 +27,22 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/logging"
 )
 
-var (
-	log = ctrl.Log.WithName("cosigned")
-)
-
-func ValidateSignedResources(obj runtime.Object, keys []*ecdsa.PublicKey) field.ErrorList {
-	containers, err := getContainers(obj)
-	if err != nil {
-		return field.ErrorList{field.InternalError(field.NewPath(""), err)}
-	}
-
-	return validateSignedContainerImages(containers, keys)
-}
-
-func validateSignedContainerImages(containers []corev1.Container, keys []*ecdsa.PublicKey) field.ErrorList {
-	var allErrs field.ErrorList
-
-	containersRefPath := field.NewPath("spec").Child("containers")
-
-	for _, c := range containers {
-		if !valid(c.Image, keys) {
-			allErrs = append(allErrs, field.Invalid(containersRefPath, c.Image, "invalid image signature"))
-		}
-	}
-
-	return allErrs
-}
-
-func getContainers(decoded runtime.Object) ([]corev1.Container, error) {
-	var (
-		d   *appsv1.Deployment
-		rs  *appsv1.ReplicaSet
-		ss  *appsv1.StatefulSet
-		ds  *appsv1.DaemonSet
-		job *batchv1.Job
-		pod *corev1.Pod
-	)
-	containers := make([]corev1.Container, 0)
-	switch obj := decoded.(type) {
-	case *appsv1.Deployment:
-		d = obj
-		containers = append(containers, d.Spec.Template.Spec.Containers...)
-		containers = append(containers, d.Spec.Template.Spec.InitContainers...)
-	case *appsv1.DaemonSet:
-		ds = obj
-		containers = append(containers, ds.Spec.Template.Spec.Containers...)
-		containers = append(containers, ds.Spec.Template.Spec.InitContainers...)
-	case *appsv1.ReplicaSet:
-		rs = obj
-		containers = append(containers, rs.Spec.Template.Spec.Containers...)
-		containers = append(containers, rs.Spec.Template.Spec.InitContainers...)
-	case *appsv1.StatefulSet:
-		ss = obj
-		containers = append(containers, ss.Spec.Template.Spec.Containers...)
-		containers = append(containers, ss.Spec.Template.Spec.InitContainers...)
-	case *batchv1.Job:
-		job = obj
-		containers = append(containers, job.Spec.Template.Spec.Containers...)
-		containers = append(containers, job.Spec.Template.Spec.InitContainers...)
-	case *corev1.Pod:
-		pod = obj
-		containers = append(containers, pod.Spec.Containers...)
-		containers = append(containers, pod.Spec.InitContainers...)
-	default:
-		return containers, fmt.Errorf("can only validate pod types")
-	}
-
-	return containers, nil
-}
-
-func valid(img string, keys []*ecdsa.PublicKey) bool {
+func valid(ctx context.Context, img string, keys []*ecdsa.PublicKey) bool {
 	for _, k := range keys {
-		sps, err := validSignatures(context.Background(), img, k)
+		sps, err := validSignatures(ctx, img, k)
 		if err != nil {
+			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
 			return false
 		}
 		if len(sps) > 0 {
 			return true
 		}
 	}
+	logging.FromContext(ctx).Debug("No valid signatures were found.")
 	return false
 }
 
@@ -135,19 +64,21 @@ func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]c
 	})
 }
 
-func getKeys(cfg map[string][]byte) []*ecdsa.PublicKey {
+func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *apis.FieldError) {
 	keys := []*ecdsa.PublicKey{}
 
+	logging.FromContext(ctx).Debugf("Got public key: %v", cfg["cosign.pub"])
+
 	pems := parsePems(cfg["cosign.pub"])
-	for _, p := range pems {
+	for i, p := range pems {
 		// TODO: (@dlorenc) check header
 		key, err := x509.ParsePKIXPublicKey(p.Bytes)
 		if err != nil {
-			log.Error(err, "parsing key", "cosign.pub", p)
+			return nil, apis.ErrGeneric(fmt.Sprintf("malformed cosign.pub (pem: %d): %v", i, err), apis.CurrentField)
 		}
 		keys = append(keys, key.(*ecdsa.PublicKey))
 	}
-	return keys
+	return keys, nil
 }
 
 func parsePems(b []byte) []*pem.Block {

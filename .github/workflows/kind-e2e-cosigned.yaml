@@ -1,0 +1,183 @@
+name: Cosigned KinD E2E
+
+on:
+  pull_request:
+    branches: [ 'main', 'release-*' ]
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ./src/github.com/sigstore/cosign
+
+jobs:
+
+  e2e-tests:
+    name: e2e tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Keep running if one leg fails.
+      matrix:
+        k8s-version:
+        - v1.19.11
+        - v1.20.7
+        - v1.21.1
+
+        include:
+          # Map between K8s and KinD versions.
+          # This is attempting to make it a bit clearer what's being tested.
+          # See: https://github.com/kubernetes-sigs/kind/releases
+        - k8s-version: v1.19.11
+          kind-version: v0.11.1
+          kind-image-sha: sha256:07db187ae84b4b7de440a73886f008cf903fcf5764ba8106a9fd5243d6f32729
+          cluster-suffix: c${{ github.run_id }}.local
+        - k8s-version: v1.20.7
+          kind-version: v0.11.1
+          kind-image-sha: sha256:cbeaf907fc78ac97ce7b625e4bf0de16e3ea725daf6b04f930bd14c67c671ff9
+          cluster-suffix: c${{ github.run_id }}.local
+        - k8s-version: v1.21.1
+          kind-version: v0.11.1
+          kind-image-sha: sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6
+          cluster-suffix: c${{ github.run_id }}.local
+
+    env:
+      GOPATH: ${{ github.workspace }}
+      # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
+      # '*.local' hostnames.
+      REGISTRY_NAME: registry.local
+      REGISTRY_PORT: 5000
+      KO_DOCKER_REPO: registry.local:5000/cosigned
+
+    steps:
+    - name: Set up Go 1.16.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.x
+
+    - name: Install Dependencies
+      working-directory: ./
+      run: |
+        echo '::group:: install ko'
+        curl -L https://github.com/google/ko/releases/download/v0.8.3/ko_0.8.3_Linux_x86_64.tar.gz | tar xzf - ko
+        chmod +x ./ko
+        sudo mv ko /usr/local/bin
+        echo '::endgroup::'
+
+    - name: Check out code onto GOPATH
+      uses: actions/checkout@v2
+      with:
+        path: ./src/github.com/sigstore/cosign
+
+    - name: Install Cosign
+      run: |
+        go install ./cmd/cosign
+
+    # This KinD setup is based on what we use for knative/serving on GHA, and it includes several "fun"
+    # monkey wrenches (e.g. randomizing cluster suffix: `.svc.cluster.local`) to make sure we don't bake
+    # in any invalid assumptions about a particular Kubernetes configuration.
+    - name: Install KinD
+      run: |
+        set -x
+        # Disable swap otherwise memory enforcement doesn't work
+        # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600009955324200
+        sudo swapoff -a
+        sudo rm -f /swapfile
+        # Use in-memory storage to avoid etcd server timeouts.
+        # https://kubernetes.slack.com/archives/CEKK1KTN2/p1615134111016300
+        # https://github.com/kubernetes-sigs/kind/issues/845
+        sudo mkdir -p /tmp/etcd
+        sudo mount -t tmpfs tmpfs /tmp/etcd
+        curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/${{ matrix.kind-version }}/kind-$(uname)-amd64
+        chmod +x ./kind
+        sudo mv kind /usr/local/bin
+
+    - name: Configure KinD Cluster
+      run: |
+        set -x
+        # KinD configuration.
+        cat > kind.yaml <<EOF
+        apiVersion: kind.x-k8s.io/v1alpha4
+        kind: Cluster
+        # Configure registry for KinD.
+        containerdConfigPatches:
+        - |-
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."$REGISTRY_NAME:$REGISTRY_PORT"]
+            endpoint = ["http://$REGISTRY_NAME:$REGISTRY_PORT"]
+        # This is needed in order to support projected volumes with service account tokens.
+        # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600268272383600
+        kubeadmConfigPatches:
+          - |
+            apiVersion: kubeadm.k8s.io/v1beta2
+            kind: ClusterConfiguration
+            metadata:
+              name: config
+            apiServer:
+              extraArgs:
+                "service-account-issuer": "kubernetes.default.svc"
+                "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"
+            networking:
+              dnsDomain: "${{ matrix.cluster-suffix }}"
+        nodes:
+        - role: control-plane
+          image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
+          extraMounts:
+          - containerPath: /var/lib/etcd
+            hostPath: /tmp/etcd
+        - role: worker
+          image: kindest/node:${{ matrix.k8s-version }}@${{ matrix.kind-image-sha }}
+        EOF
+
+    - name: Create KinD Cluster
+      run: |
+        set -x
+        kind create cluster --config kind.yaml
+
+    - name: Setup local registry
+      run: |
+        # Run a registry.
+        docker run -d --restart=always \
+          -p $REGISTRY_PORT:$REGISTRY_PORT --name $REGISTRY_NAME registry:2
+
+        # Connect the registry to the KinD network.
+        docker network connect "kind" $REGISTRY_NAME
+
+        # Make the $REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
+        # local reigstry, even when pushing $REGISTRY_NAME:$REGISTRY_PORT/some/image
+        sudo echo "127.0.0.1 $REGISTRY_NAME" | sudo tee -a /etc/hosts
+
+    - name: Install cosigned
+      run: |
+        ko apply -Bf config/
+
+        # Update the cosign verification-key secret with a proper key pair.
+        cosign generate-key-pair k8s://cosign-system/verification-key
+
+        # Wait for the webhook to come up and become Ready
+        kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
+
+    - name: Run Tests
+      run: |
+        ./test/e2e_test_cosigned.sh
+
+    - name: Collect diagnostics
+      if: ${{ failure() }}
+      run: |
+        # Add more namespaces to dump here.
+        for ns in cosign-system; do
+          kubectl get pods -n${ns}
+
+          echo '::group:: describe'
+          kubectl describe pods -n${ns}
+          echo '::endgroup::'
+
+          for x in $(kubectl get pods -n${ns} -oname); do
+
+            echo "::group:: describe $x"
+            kubectl describe -n${ns} $x
+            echo '::endgroup::'
+
+            echo "::group:: $x logs"
+            kubectl logs -n${ns} $x --all-containers
+            echo '::endgroup::'
+
+          done
+        done
