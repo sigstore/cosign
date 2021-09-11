@@ -65,6 +65,9 @@ In automated environments, cosign also supports directly using OIDC Identity Tok
 These can be supplied on the command line with the `--identity-token` flag.
 The `audiences` field must contain `sigstore`.
 
+`cosign` also has support for detecting some of these automated environments
+and producing an identity token.  Currently this supports Google and Github.
+
 #### On GCP
 
 From a GCE VM, you can use the VM's service account identity to sign an image:
