@@ -44,8 +44,13 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/providers"
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
+
+	// These are the ambient OIDC providers to link in.
+	_ "github.com/sigstore/cosign/pkg/providers/github"
+	_ "github.com/sigstore/cosign/pkg/providers/google"
 
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -511,7 +516,14 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 		return nil, errors.Wrap(err, "parsing Fulcio URL")
 	}
 	fClient := fulcioClient.New(fulcioServer)
-	k, err := fulcio.NewSigner(ctx, ko.IDToken, ko.OIDCIssuer, ko.OIDCClientID, fClient)
+	tok := ko.IDToken
+	if providers.Enabled(ctx) {
+		tok, err = providers.Provide(ctx, "sigstore")
+		if err != nil {
+			return nil, errors.Wrap(err, "fetching ambient OIDC credentials")
+		}
+	}
+	k, err := fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
 	}
