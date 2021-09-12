@@ -187,12 +187,12 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, 
 			}
 		}
 
-		fmt.Fprintf(os.Stderr, "Signature wrote in the file %s\n", f.Name())
+		fmt.Printf("Signature wrote in the file %s\n", f.Name())
 	} else {
 		if b64 {
 			sig = []byte(base64.StdEncoding.EncodeToString(sig))
-			fmt.Fprintln(os.Stderr, string(sig))
-		} else if _, err := os.Stderr.Write(sig); err != nil {
+			fmt.Println(string(sig))
+		} else if _, err := os.Stdout.Write(sig); err != nil {
 			// No newline if using the raw signature
 			return nil, err
 		}

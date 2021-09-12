@@ -90,7 +90,7 @@ EXAMPLES
 				writer.Writer = f
 				defer f.Close()
 			} else {
-				writer.Writer = os.Stderr
+				writer.Writer = os.Stdout
 			}
 			pk := Pkopts{
 				KeyRef: *key,

@@ -147,7 +147,7 @@ func Attestation() *ffcli.Command {
 				if err != nil {
 					return err
 				}
-				fmt.Fprintln(os.Stderr, string(b))
+				fmt.Println(string(b))
 			}
 			return err
 		},

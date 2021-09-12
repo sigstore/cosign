@@ -19,7 +19,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -73,6 +72,6 @@ func MungeCmd(ctx context.Context, imageRef string, attachmentType string) error
 		return fmt.Errorf("unknown attachment type %s", attachmentType)
 	}
 
-	fmt.Fprintln(os.Stderr, dstRef.Name())
+	fmt.Println(dstRef.Name())
 	return nil
 }
