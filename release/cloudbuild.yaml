@@ -105,4 +105,4 @@ substitutions:
   _KEY_NAME: 'honk-crypto'
   _KEY_VERSION: '1'
   _KEY_LOCATION: 'global'
-  _RUNTIME_IMAGE: 'gcr.io/distroless/static'
+  _RUNTIME_IMAGE: 'gcr.io/distroless/static:debug-nonroot'
