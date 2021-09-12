@@ -18,15 +18,18 @@ package google
 import (
 	"context"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"google.golang.org/api/idtoken"
+	"google.golang.org/api/impersonate"
 
 	"github.com/sigstore/cosign/pkg/providers"
 )
 
 func init() {
 	providers.Register("google-workload-identity", &googleWorkloadIdentity{})
+	providers.Register("google-impersonate", &googleImpersonate{})
 }
 
 type googleWorkloadIdentity struct{}
@@ -57,6 +60,34 @@ func (gwi *googleWorkloadIdentity) Enabled(ctx context.Context) bool {
 // Provide implements providers.Interface
 func (gwi *googleWorkloadIdentity) Provide(ctx context.Context, audience string) (string, error) {
 	ts, err := idtoken.NewTokenSource(ctx, audience)
+	if err != nil {
+		return "", err
+	}
+	tok, err := ts.Token()
+	if err != nil {
+		return "", err
+	}
+	return tok.AccessToken, nil
+}
+
+type googleImpersonate struct{}
+
+var _ providers.Interface = (*googleImpersonate)(nil)
+
+// Enabled implements providers.Interface
+func (gi *googleImpersonate) Enabled(ctx context.Context) bool {
+	// The "impersonate" method requires a target service account to impersonate.
+	return os.Getenv("GOOGLE_SERVICE_ACCOUNT_NAME") != ""
+}
+
+// Provide implements providers.Interface
+func (gi *googleImpersonate) Provide(ctx context.Context, audience string) (string, error) {
+	target := os.Getenv("GOOGLE_SERVICE_ACCOUNT_NAME")
+	ts, err := impersonate.IDTokenSource(ctx, impersonate.IDTokenConfig{
+		Audience:        "sigstore",
+		TargetPrincipal: target,
+		IncludeEmail:    true,
+	})
 	if err != nil {
 		return "", err
 	}
