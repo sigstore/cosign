@@ -2505,8 +2505,6 @@ k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/
 k8s.io/utils v0.0.0-20210802155522-efc7438f0176 h1:Mx0aa+SUAcNRQbs5jUzV8lkDlGFU8laZsY9jrcVX5SY=
 k8s.io/utils v0.0.0-20210802155522-efc7438f0176/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 knative.dev/hack v0.0.0-20210806075220-815cd312d65c/go.mod h1:PHt8x8yX5Z9pPquBEfIj0X66f8iWkWfR0S/sarACJrI=
-knative.dev/pkg v0.0.0-20210907232433-26db1ba732f6 h1:nLHaEQP+SNW4E6zsgSS6wwpHNpSpag8vw8SSsH4ILw8=
-knative.dev/pkg v0.0.0-20210907232433-26db1ba732f6/go.mod h1:jMSqkNMsrzuy+XR4Yr/BMy7SDVbUOl3KKB6+5MR+ZU8=
 knative.dev/pkg v0.0.0-20210908025933-71508fc69a57 h1:du+do3to2zboxuk0Uj8Xvf2onOxthyaBSr98+hVB7z4=
 knative.dev/pkg v0.0.0-20210908025933-71508fc69a57/go.mod h1:jMSqkNMsrzuy+XR4Yr/BMy7SDVbUOl3KKB6+5MR+ZU8=
 nhooyr.io/websocket v1.8.6/go.mod h1:B70DZP8IakI65RVQ51MsWP/8jndNma26DVA/nFSCgW0=

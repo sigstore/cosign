@@ -93,6 +93,16 @@ $ cosign sign --identity-token=$(
 In order to impersonate an IAM service account, your account must have the
 `roles/iam.serviceAccountTokenCreator` role.
 
+**Note**: On Google Cloud Build, standard identity tokens are not supported through the GCE metadata server.
+`cosign` has a special flow for this case, where you can instruct the Cloud Build service account to impersonate
+another service account.
+To configure this flow:
+
+1. Create a service account to use for signatures (the email address will be present in the certificate subject).
+2. Grant the Cloud Build service account the `roles/iam.serviceAccountTokenCreator` role for this target account.
+3. Set the `GOOGLE_SERVICE_ACCOUNT_NAME` environment variable to the name of the target account in your cloudbuid.yaml
+4. Sign images in GCB, without keys!
+
 ### Timestamps
 
 Signature timestamps are checked in the [rekor](https://github.com/sigstore/rekor) transparency log. Rekor's `IntegratedTime` is signed as part of its `signedEntryTimestamp`. Cosign verifies the signature over the timestamp and checks that the signature was created while the certificate was valid.
