@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -64,7 +65,7 @@ func SignatureCmd(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(b))
+		fmt.Fprintln(os.Stderr, string(b))
 	}
 	return nil
 }

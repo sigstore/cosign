@@ -75,7 +75,7 @@ func printErrAndExit(err error) {
 func createSink(path string) (io.WriteCloser, error) {
 	if path == "" {
 		// When writing to stdout, buffer so we can check the digest first.
-		return &buffered{os.Stdout, &bytes.Buffer{}}, nil
+		return &buffered{os.Stderr, &bytes.Buffer{}}, nil
 	}
 
 	return os.Create(path)

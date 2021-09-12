@@ -59,7 +59,7 @@ EXAMPLES
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return GenerateCmd(ctx, args[0], annotations.annotations, os.Stdout)
+			return GenerateCmd(ctx, args[0], annotations.annotations, os.Stderr)
 		},
 	}
 }

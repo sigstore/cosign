@@ -339,7 +339,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}
 
 		if !upload {
-			fmt.Println(base64.StdEncoding.EncodeToString(sig))
+			fmt.Fprintln(os.Stderr, base64.StdEncoding.EncodeToString(sig))
 			continue
 		}
 

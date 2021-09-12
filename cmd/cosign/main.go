@@ -88,12 +88,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error: %v\n", errors.Wrapf(err, "Error creating output file %s", *outputFilename))
 			os.Exit(1)
 		}
-		stdout := os.Stdout
+		stderr := os.Stderr
 		defer func() {
-			os.Stdout = stdout
+			os.Stderr = stderr
 			out.Close()
 		}()
-		os.Stdout = out
+		os.Stderr = out
 	}
 
 	if *logDebug {

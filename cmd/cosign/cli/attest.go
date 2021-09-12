@@ -183,7 +183,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	}
 
 	if !upload {
-		fmt.Println(base64.StdEncoding.EncodeToString(sig))
+		fmt.Fprintln(os.Stderr, base64.StdEncoding.EncodeToString(sig))
 		return nil
 	}
 

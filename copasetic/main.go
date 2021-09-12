@@ -224,7 +224,7 @@ func main() {
 	)
 
 	if err := cmd.RootCommand.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

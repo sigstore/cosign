@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"text/tabwriter"
@@ -65,7 +66,7 @@ func Version() *ffcli.Command {
 				res = j
 			}
 
-			fmt.Println(res)
+			fmt.Fprintln(os.Stderr, res)
 			return nil
 		},
 	}
