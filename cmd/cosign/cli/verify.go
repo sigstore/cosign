@@ -211,10 +211,10 @@ func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosig
 	case "text":
 		for _, vp := range verified {
 			if vp.Cert != nil {
-				fmt.Fprintln(os.Stderr, "Certificate subject: ", vp.Cert.EmailAddresses)
+				fmt.Println("Certificate subject: ", vp.Cert.EmailAddresses)
 			}
 
-			fmt.Fprintln(os.Stderr, string(vp.Payload))
+			fmt.Println(string(vp.Payload))
 		}
 	default:
 		var outputKeys []payload.SimpleContainerImage
@@ -222,7 +222,7 @@ func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosig
 			ss := payload.SimpleContainerImage{}
 			err := json.Unmarshal(vp.Payload, &ss)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "error decoding the payload:", err.Error())
+				fmt.Println("error decoding the payload:", err.Error())
 				return
 			}
 
@@ -244,10 +244,10 @@ func PrintVerification(imgRef string, verified []cosign.SignedPayload, co *cosig
 
 		b, err := json.Marshal(outputKeys)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "error when generating the output:", err.Error())
+			fmt.Println("error when generating the output:", err.Error())
 			return
 		}
 
-		fmt.Fprintf(os.Stderr, "\n%s\n", string(b))
+		fmt.Printf("\n%s\n", string(b))
 	}
 }

@@ -88,7 +88,7 @@ func doUpload(rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEn
 		// Here, we display the proof and succeed.
 		if existsErr, ok := err.(*entries.CreateLogEntryConflict); ok {
 
-			fmt.Fprintln(os.Stderr, "Signature already exists. Displaying proof")
+			fmt.Println("Signature already exists. Displaying proof")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
 			uuid := uriSplit[len(uriSplit)-1]
 			return verifyTLogEntry(rekorClient, uuid)

@@ -136,27 +136,27 @@ func (a *Attestations) Output() {
 		Type:  "CERTIFICATE",
 		Bytes: a.DeviceCert.Raw,
 	})
-	fmt.Fprintln(os.Stderr, string(b))
+	fmt.Println(string(b))
 
 	fmt.Fprintln(os.Stderr, "Printing key attestation certificate")
 	b = pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: a.KeyCert.Raw,
 	})
-	fmt.Fprintln(os.Stderr, string(b))
+	fmt.Println(string(b))
 
 	fmt.Fprintln(os.Stderr, "Verifying certificates...")
 
 	fmt.Fprintln(os.Stderr, "Verified ok")
-	fmt.Fprintln(os.Stderr, )
+	fmt.Println()
 
 	fmt.Fprintln(os.Stderr, "Device info:")
-	fmt.Fprintln(os.Stderr, "  Issuer:", a.DeviceCert.Issuer)
-	fmt.Fprintln(os.Stderr, "  Form factor:", formFactorString(a.KeyAttestation.Formfactor))
-	fmt.Fprintln(os.Stderr, "  PIN Policy:", pinPolicyStr(a.KeyAttestation.PINPolicy))
+	fmt.Println("  Issuer:", a.DeviceCert.Issuer)
+	fmt.Println("  Form factor:", formFactorString(a.KeyAttestation.Formfactor))
+	fmt.Println("  PIN Policy:", pinPolicyStr(a.KeyAttestation.PINPolicy))
 
-	fmt.Fprintf(os.Stderr, "  Serial number: %d\n", a.KeyAttestation.Serial)
-	fmt.Fprintf(os.Stderr, "  Version: %d.%d.%d\n", a.KeyAttestation.Version.Major, a.KeyAttestation.Version.Minor, a.KeyAttestation.Version.Patch)
+	fmt.Printf("  Serial number: %d\n", a.KeyAttestation.Serial)
+	fmt.Printf("  Version: %d.%d.%d\n", a.KeyAttestation.Version.Major, a.KeyAttestation.Version.Minor, a.KeyAttestation.Version.Patch)
 }
 
 func AttestationCmd(_ context.Context, slotArg string) (*Attestations, error) {
@@ -261,7 +261,7 @@ func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool, s
 		Bytes: b,
 	})
 
-	fmt.Fprintln(os.Stderr, string(pemBytes))
+	fmt.Println(string(pemBytes))
 	yk.Close()
 
 	att, err := AttestationCmd(ctx, slotArg)
@@ -305,7 +305,7 @@ var Confirm = func(p string) bool {
 
 	result, err := prompt.Run()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Println(err)
 		return false
 	}
 	return strings.ToLower(result) == "y"

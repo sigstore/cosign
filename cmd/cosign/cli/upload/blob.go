@@ -116,7 +116,7 @@ func BlobCmd(ctx context.Context, files []cremote.File, contentType, imageRef st
 		fmt.Fprintf(os.Stderr, "Uploading multi-platform index to %s\n", dgstAddr)
 	} else {
 		fmt.Fprintln(os.Stderr, "Uploaded image to:")
-		fmt.Fprintln(os.Stderr, dgstAddr)
+		fmt.Println(dgstAddr)
 	}
 	return nil
 }

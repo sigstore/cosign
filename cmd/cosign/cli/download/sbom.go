@@ -43,7 +43,7 @@ func SBOM() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			_, err := SBOMCmd(ctx, args[0], os.Stderr)
+			_, err := SBOMCmd(ctx, args[0], os.Stdout)
 			return err
 		},
 	}

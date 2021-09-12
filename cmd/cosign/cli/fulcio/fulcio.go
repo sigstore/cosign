@@ -140,7 +140,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 	if err := VerifySCT(fr); err != nil {
 		return Resp{}, errors.Wrap(err, "verifying SCT")
 	}
-	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")
+	fmt.Println("Successfully verified SCT...")
 	return fr, nil
 }
 

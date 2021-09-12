@@ -63,7 +63,7 @@ func CleanCmd(ctx context.Context, imageRef string) error {
 		return err
 	}
 	sigRef := cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
-	fmt.Fprintln(os.Stderr, sigRef)
+	fmt.Println(sigRef)
 
 	fmt.Fprintln(os.Stderr, "Deleting signature metadata...")
 
