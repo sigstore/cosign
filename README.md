@@ -265,7 +265,7 @@ Creating Tekton Bundle:
 Pushed Tekton Bundle to us.gcr.io/dlorenc-vmtest2/pipeline@sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155
 $ cosign sign -key cosign.key us.gcr.io/dlorenc-vmtest2/pipeline:latest
 Enter password for private key:
-tlog entry created with index:  5086
+tlog entry created with index: 5086
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/demo:sha256-124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155.sig
 ```
 
@@ -279,7 +279,7 @@ Cosign can upload these using the `cosign wasm upload` command:
 $ cosign upload wasm -f hello.wasm us.gcr.io/dlorenc-vmtest2/wasm
 $ cosign sign -key cosign.key us.gcr.io/dlorenc-vmtest2/wasm
 Enter password for private key:
-tlog entry created with index:  5198
+tlog entry created with index: 5198
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812.sig
 ```
 

@@ -386,7 +386,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(os.Stderr, "tlog entry created with index: ", *entry.LogIndex)
+			fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 
 			uo.Bundle = bundle(entry)
 			uo.AdditionalAnnotations = parseAnnotations(entry)
