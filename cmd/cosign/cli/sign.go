@@ -40,7 +40,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -523,7 +523,7 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 			return nil, errors.Wrap(err, "fetching ambient OIDC credentials")
 		}
 	}
-	k, err := fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
+	k, err := fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
 	}

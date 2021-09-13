@@ -22,9 +22,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	_ "embed" // To enable the `go:embed` directive.
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"os"
@@ -32,10 +30,6 @@ import (
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-	ct "github.com/google/certificate-transparency-go"
-	"github.com/google/certificate-transparency-go/ctutil"
-	ctx509 "github.com/google/certificate-transparency-go/x509"
-	"github.com/google/certificate-transparency-go/x509util"
 	"github.com/pkg/errors"
 	"golang.org/x/term"
 
@@ -59,15 +53,6 @@ type Resp struct {
 	ChainPEM []byte
 	SCT      []byte
 }
-
-// This is the CT log public key
-//go:embed ctfe.pub
-var ctPublicKey string
-
-var (
-	// For testing
-	VerifySCT = verifySCT
-)
 
 type oidcConnector interface {
 	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, error)
@@ -136,32 +121,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connecto
 		SCT:      sct,
 	}
 
-	// verify the sct
-	if err := VerifySCT(fr); err != nil {
-		return Resp{}, errors.Wrap(err, "verifying SCT")
-	}
-	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")
 	return fr, nil
-}
-
-// verifySCT verifies the SCT against the Fulcio CT log public key
-// The SCT is a `Signed Certificate Timestamp`, which promises that
-// the certificate issued by Fulcio was also added to the public CT log within
-// some defined time period
-func verifySCT(fr Resp) error {
-	pubKey, err := cosign.PemToECDSAKey([]byte(ctPublicKey))
-	if err != nil {
-		return err
-	}
-	cert, err := x509util.CertificateFromPEM(fr.CertPEM)
-	if err != nil {
-		return err
-	}
-	var sct ct.SignedCertificateTimestamp
-	if err := json.Unmarshal(fr.SCT, &sct); err != nil {
-		return errors.Wrap(err, "unmarshal")
-	}
-	return ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
@@ -215,6 +175,7 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fC
 	if err != nil {
 		return nil, errors.Wrap(err, "retrieving cert")
 	}
+
 	f := &Signer{
 		pub:                 &priv.PublicKey,
 		ECDSASignerVerifier: signer,
