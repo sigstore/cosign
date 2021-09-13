@@ -113,9 +113,6 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			VerifySCT = func(Resp) error { return nil }
-			defer func() { VerifySCT = verifySCT }()
-
 			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "")
 
 			if err != nil {
