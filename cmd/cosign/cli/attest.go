@@ -31,6 +31,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
+	"github.com/sigstore/cosign/pkg/types"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -103,11 +104,6 @@ EXAMPLES
 		},
 	}
 }
-
-const (
-	IntotoPayloadType = "application/vnd.in-toto+json"
-	DssePayloadType   = "application/vnd.dsse.envelope.v1+json"
-)
 
 const (
 	predicateCustom = "custom"
@@ -202,7 +198,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		Chain:        sv.Chain,
 		DupeDetector: sv,
 		RemoteOpts:   remoteOpts,
-		MediaType:    DssePayloadType,
+		MediaType:    types.DssePayloadType,
 	}
 
 	uploadTLog, err := shouldUploadToTlog(ref, force, ko.RekorURL)

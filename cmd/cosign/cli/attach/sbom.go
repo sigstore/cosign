@@ -31,11 +31,12 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
 var mediaTypes = map[string]string{
-	"cyclonedx": "application/vnd.cyclonedx",
-	"spdx":      "text/spdx",
+	"cyclonedx": ctypes.CycloneDXMediaType,
+	"spdx":      ctypes.SPDXMediaType,
 }
 
 func SBOM() *ffcli.Command {

@@ -26,6 +26,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/types"
 )
 
 func Wasm() *ffcli.Command {
@@ -48,11 +49,6 @@ func Wasm() *ffcli.Command {
 	}
 }
 
-const (
-	wasmLayerMediaType  = "application/vnd.wasm.content.layer.v1+wasm"
-	wasmConfigMediaType = "application/vnd.wasm.config.v1+json"
-)
-
 func WasmCmd(ctx context.Context, wasmPath, imageRef string) error {
 	b, err := ioutil.ReadFile(wasmPath)
 	if err != nil {
@@ -65,7 +61,7 @@ func WasmCmd(ctx context.Context, wasmPath, imageRef string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Uploading wasm file from [%s] to [%s].\n", wasmPath, ref.Name())
-	if _, err := cremote.UploadFile(b, ref, wasmLayerMediaType, wasmConfigMediaType, cli.DefaultRegistryClientOpts(ctx)...); err != nil {
+	if _, err := cremote.UploadFile(b, ref, types.WasmLayerMediaType, types.WasmConfigMediaType, cli.DefaultRegistryClientOpts(ctx)...); err != nil {
 		return err
 	}
 
