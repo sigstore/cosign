@@ -7,6 +7,19 @@ This directory contain the files and scripts to run a cosign release.
 1. Release notes: Create a PR to update and review release notes in CHANGELOG.md.
   - Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
 
+You can get a list of pull requests since the last release by substituting in the date of the last release and running:
+
+```
+git log --pretty="* %s" --after="YYYY-MM-DD"
+```
+
+and a list of authors by running:
+
+```
+git log --pretty="* %an" --after="YYYY-MM-DD" | sort -u
+```
+
+
 2. Submit the cloudbuild Job using the following command:
 
 ```shell
