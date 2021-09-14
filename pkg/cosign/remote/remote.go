@@ -34,12 +34,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
-	SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
-
 	sigkey              = "dev.cosignproject.cosign/signature"
 	certkey             = "dev.sigstore.cosign/certificate"
 	chainkey            = "dev.sigstore.cosign/chain"
@@ -95,7 +94,7 @@ func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error)
 func findDuplicate(sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
 	l := &staticLayer{
 		b:  payload,
-		mt: SimpleSigningMediaType,
+		mt: ctypes.SimpleSigningMediaType,
 	}
 
 	sigDigest, err := l.Digest()
@@ -115,7 +114,7 @@ LayerLoop:
 				continue LayerLoop
 			}
 		}
-		if layer.MediaType == SimpleSigningMediaType && layer.Digest == sigDigest && layer.Annotations[sigkey] != "" {
+		if layer.MediaType == ctypes.SimpleSigningMediaType && layer.Digest == sigDigest && layer.Annotations[sigkey] != "" {
 			uploadedSig, err := base64.StdEncoding.DecodeString(layer.Annotations[sigkey])
 			if err != nil {
 				return nil, err
@@ -154,7 +153,7 @@ type UploadOpts struct {
 func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
 	// Preserve the default
 	if opts.MediaType == "" {
-		opts.MediaType = SimpleSigningMediaType
+		opts.MediaType = ctypes.SimpleSigningMediaType
 	}
 	l := &staticLayer{
 		b:  payload,
