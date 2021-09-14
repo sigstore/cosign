@@ -275,7 +275,7 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := cli.LoadECDSAPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
+	if _, err := cosign.LoadECDSAPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
 		t.Fatal(err)
 	}
 }

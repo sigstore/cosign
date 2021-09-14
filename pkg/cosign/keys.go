@@ -16,6 +16,7 @@
 package cosign
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -28,6 +29,7 @@ import (
 	"github.com/theupdateframework/go-tuf/encrypted"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
@@ -103,4 +105,30 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
 	}
 	return ecdsaPub, nil
+}
+
+func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifier, error) {
+	// Decrypt first
+	p, _ := pem.Decode(key)
+	if p == nil {
+		return nil, errors.New("invalid pem block")
+	}
+	if p.Type != PrivakeKeyPemType {
+		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
+	}
+
+	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
+	if err != nil {
+		return nil, errors.Wrap(err, "decrypt")
+	}
+
+	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing private key")
+	}
+	epk, ok := pk.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("invalid private key")
+	}
+	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
 }
