@@ -46,7 +46,7 @@ type VerifyCommand struct {
 	Annotations *map[string]interface{}
 }
 
-func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
+func ApplyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	annotations := annotationsMap{}
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
 	flagset.StringVar(&cmd.CertEmail, "cert-email", "", "the email expected in a valid fulcio cert")
@@ -66,7 +66,7 @@ func applyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 func Verify() *ffcli.Command {
 	cmd := VerifyCommand{}
 	flagset := flag.NewFlagSet("cosign verify", flag.ExitOnError)
-	applyVerifyFlags(&cmd, flagset)
+	ApplyVerifyFlags(&cmd, flagset)
 
 	return &ffcli.Command{
 		Name:       "verify",

@@ -46,7 +46,7 @@ type VerifyManifestCommand struct {
 func VerifyManifest() *ffcli.Command {
 	cmd := VerifyManifestCommand{VerifyCommand: VerifyCommand{}}
 	flagset := flag.NewFlagSet("cosign verify-manifest", flag.ExitOnError)
-	applyVerifyFlags(&cmd.VerifyCommand, flagset)
+	ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
 
 	return &ffcli.Command{
 		Name:       "verify-manifest",

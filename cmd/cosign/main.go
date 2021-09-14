@@ -28,6 +28,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
+	"github.com/sigstore/cosign/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
@@ -55,7 +56,6 @@ func main() {
 			cli.SignBlob(),
 			cli.VerifyAttestation(),
 			cli.VerifyBlob(),
-			cli.VerifyDockerfile(),
 			cli.VerifyManifest(),
 			// Upload sub-tree
 			upload.Upload(),
@@ -63,6 +63,8 @@ func main() {
 			download.Download(),
 			// Attach sub-tree
 			attach.Attach(),
+			// Dockerfile sub-tree
+			dockerfile.Dockerfile(),
 			// PIV sub-tree
 			pivcli.PivKey(),
 			// PIV sub-tree
