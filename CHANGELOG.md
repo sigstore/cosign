@@ -1,5 +1,52 @@
 # Changelog
 
+## v1.2.0
+
+### Enhancements
+* BREAKING: move `verify-dockerfile` to `dockerfile verify` (https://github.com/sigstore/cosign/pull/662)
+* Have the keyless `cosign sign` flow use a single 3LO. (https://github.com/sigstore/cosign/pull/665)
+* Allow to `verify-blob` from urls (https://github.com/sigstore/cosign/pull/646)
+* Support GCP environments without workload identity (GCB). (https://github.com/sigstore/cosign/pull/652)
+* Switch the release cosign container to debug. (https://github.com/sigstore/cosign/pull/649)
+* Add logic to detect and use ambient OIDC from exec envs. (https://github.com/sigstore/cosign/pull/644)
+* Add `-cert-email` flag to provide the email expected from a fulcio cert to be valid (https://github.com/sigstore/cosign/pull/622)
+* Add support for downloading signature from remote (https://github.com/sigstore/cosign/pull/629)
+* Add sbom and attestations to triangulate (https://github.com/sigstore/cosign/pull/628)
+* Add cosign attachment signing and verification (https://github.com/sigstore/cosign/pull/615)
+* Embed CT log public key (https://github.com/sigstore/cosign/pull/607)
+* Verify SCTs returned by fulcio (https://github.com/sigstore/cosign/pull/600)
+* Add extra replacement variables and GCP's role identifier (https://github.com/sigstore/cosign/pull/597)
+* Store attestations in the layer (payload) rather than the annotation. (https://github.com/sigstore/cosign/pull/579)
+* Improve documentation about predicate type and change predicate type from provenance to slsaprovenance (https://github.com/sigstore/cosign/pull/583)
+* Upgrade in-toto-golang to adapt SLSA Provenance (https://github.com/sigstore/cosign/pull/582)
+
+### Bug Fixes
+* Fix verify-dockerfile to allow lowercase FROM (https://github.com/sigstore/cosign/pull/643)
+* Fix signing for the cosigned image. (https://github.com/sigstore/cosign/pull/634)
+* Make sure generate-key-pair doesn't overwrite existing key-pair (https://github.com/sigstore/cosign/pull/623)
+* helm/ci: update helm repo before installing the dependency (https://github.com/sigstore/cosign/pull/598)
+* Set the correct predicate type/URI for each supported predicate type. (https://github.com/sigstore/cosign/pull/592)
+* Warnings on admissionregistration version (https://github.com/sigstore/cosign/pull/581)
+* Remove unnecessary COSIGN_PASSWORD (https://github.com/sigstore/cosign/pull/572)
+
+### Contributors
+* Batuhan Apaydın
+* Ben Walding
+* Carlos Alexandro Becker
+* Carlos Tadeu Panato Junior
+* Erkan Zileli
+* Hector Fernandez
+* Jake Sanders
+* Jason Hall
+* Matt Moore
+* Michael Lieberman
+* Naveen Srinivasan
+* Pradeep Chhetri
+* Sambhav Kothari
+* dlorenc
+* priyawadhwa
+
+
 ## v1.1.0
 
 ### Enhancements
