@@ -34,7 +34,9 @@ func Wasm() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload wasm", flag.ExitOnError)
 		f       = flagset.String("f", "", "path to the wasm file to upload")
+		regOpts cli.RegistryOpts
 	)
+	cli.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "wasm",
 		ShortUsage: "cosign upload wasm -f foo.wasm <image uri>",
@@ -45,12 +47,12 @@ func Wasm() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return WasmCmd(ctx, *f, args[0])
+			return WasmCmd(ctx, regOpts, *f, args[0])
 		},
 	}
 }
 
-func WasmCmd(ctx context.Context, wasmPath, imageRef string) error {
+func WasmCmd(ctx context.Context, regOpts cli.RegistryOpts, wasmPath, imageRef string) error {
 	b, err := ioutil.ReadFile(wasmPath)
 	if err != nil {
 		return err
@@ -60,9 +62,9 @@ func WasmCmd(ctx context.Context, wasmPath, imageRef string) error {
 	if err != nil {
 		return err
 	}
-
+	regOpts.GetRegistryClientOpts(ctx)
 	fmt.Fprintf(os.Stderr, "Uploading wasm file from [%s] to [%s].\n", wasmPath, ref.Name())
-	if _, err := cremote.UploadFile(b, ref, types.WasmLayerMediaType, types.WasmConfigMediaType, cli.DefaultRegistryClientOpts(ctx)...); err != nil {
+	if _, err := cremote.UploadFile(b, ref, types.WasmLayerMediaType, types.WasmConfigMediaType, regOpts.GetRegistryClientOpts(ctx)...); err != nil {
 		return err
 	}
 

@@ -122,7 +122,9 @@ func Sign() *ffcli.Command {
 		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
 		attachment       = flagset.String("attachment", "", "related image attachment to sign (sbom), default none")
 		annotations      = annotationsMap{}
+		regOpts          RegistryOpts
 	)
+	ApplyRegistryFlags(&regOpts, flagset)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
@@ -184,7 +186,7 @@ EXAMPLES
 				OIDCClientID:     *oidcClientID,
 				OIDCClientSecret: *oidcClientSecret,
 			}
-			if err := SignCmd(ctx, ko, annotations.annotations, args, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
+			if err := SignCmd(ctx, ko, regOpts, annotations.annotations, args, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
 				if *attachment == "" {
 					return errors.Wrapf(err, "signing %v", args)
 				}
@@ -195,7 +197,7 @@ EXAMPLES
 	}
 }
 
-func getAttachedImageRef(ctx context.Context, imageRef string, attachment string) (name.Reference, error) {
+func getAttachedImageRef(imageRef string, attachment string, remoteOpts ...remote.Option) (name.Reference, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing reference")
@@ -204,7 +206,7 @@ func getAttachedImageRef(ctx context.Context, imageRef string, attachment string
 		return ref, nil
 	}
 	if attachment == "sbom" {
-		return AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
+		return AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
 	}
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
@@ -243,7 +245,7 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 	return imgs, nil
 }
 
-func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{},
+func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations map[string]interface{},
 	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
 	if EnableExperimental() {
 		if nOf(ko.KeyRef, ko.Sk) > 1 {
@@ -255,17 +257,17 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}
 	}
 
-	remoteOpts := DefaultRegistryClientOpts(ctx)
+	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
 	toSign := make([]name.Digest, 0, len(imgs))
 	for _, inputImg := range imgs {
 		// A key file or token is required unless we're in experimental mode!
-		ref, err := getAttachedImageRef(ctx, inputImg, attachment)
+		ref, err := getAttachedImageRef(inputImg, attachment, remoteOpts...)
 		if err != nil {
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
-		h, err := Digest(ctx, ref)
+		h, err := Digest(ref, remoteOpts...)
 		if err != nil {
 			return errors.Wrap(err, "resolving digest")
 		}
@@ -323,7 +325,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			continue
 		}
 
-		sigRef, err := AttachedImageTag(ctx, img, cosign.SignatureTagSuffix)
+		sigRef, err := AttachedImageTag(img, cosign.SignatureTagSuffix, remoteOpts...)
 		if err != nil {
 			return err
 		}

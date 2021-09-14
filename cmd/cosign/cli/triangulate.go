@@ -30,7 +30,9 @@ func Triangulate() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign triangulate", flag.ExitOnError)
 		t       = flagset.String("type", "signature", "related attachment to triangulate (attestation|sbom|signature), default signature")
+		regOpts RegistryOpts
 	)
+	ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "triangulate",
 		ShortUsage: "cosign triangulate <image uri>",
@@ -40,25 +42,26 @@ func Triangulate() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return MungeCmd(ctx, args[0], *t)
+			return MungeCmd(ctx, regOpts, args[0], *t)
 		},
 	}
 }
 
-func MungeCmd(ctx context.Context, imageRef string, attachmentType string) error {
+func MungeCmd(ctx context.Context, regOpts RegistryOpts, imageRef string, attachmentType string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
+	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 	var dstRef name.Tag
 	switch attachmentType {
 	case cosign.Signature:
-		dstRef, err = AttachedImageTag(ctx, ref, cosign.SignatureTagSuffix)
+		dstRef, err = AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
 	case cosign.SBOM:
-		dstRef, err = AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
+		dstRef, err = AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
 	case cosign.Attestation:
-		dstRef, err = AttachedImageTag(ctx, ref, cosign.AttestationTagSuffix)
+		dstRef, err = AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
 	default:
 		err = fmt.Errorf("unknown attachment type %s", attachmentType)
 	}

@@ -38,7 +38,9 @@ func Signature() *ffcli.Command {
 		flagset   = flag.NewFlagSet("cosign attach signature", flag.ExitOnError)
 		signature = flagset.String("signature", "", "the signature, path to the signature, or {-} for stdin")
 		payload   = flagset.String("payload", "", "path to the payload covered by the signature (if using another format)")
+		regOpts   cli.RegistryOpts
 	)
+	cli.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "signature",
 		ShortUsage: "cosign attach signature <image uri>",
@@ -49,12 +51,12 @@ func Signature() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SignatureCmd(ctx, *signature, *payload, args[0])
+			return SignatureCmd(ctx, regOpts, *signature, *payload, args[0])
 		},
 	}
 }
 
-func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts cli.RegistryOpts, sigRef, payloadRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -67,12 +69,14 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 		return err
 	}
 
-	h, err := cli.Digest(ctx, ref)
+	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
+
+	h, err := cli.Digest(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	dstRef, err := cli.AttachedImageTag(ctx, ref, cosign.SignatureTagSuffix)
+	dstRef, err := cli.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -93,8 +97,7 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 	if err != nil {
 		return err
 	}
-	regClientOpts := cli.DefaultRegistryClientOpts(ctx)
-	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: regClientOpts}); err != nil {
+	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts}); err != nil {
 		return err
 	}
 	return nil

@@ -54,8 +54,8 @@ func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
 	return name.NewRepository(wantRepo)
 }
 
-func AttachedImageTag(ctx context.Context, ref name.Reference, suffix string) (name.Tag, error) {
-	h, err := Digest(ctx, ref)
+func AttachedImageTag(ref name.Reference, suffix string, remoteOpts ...remote.Option) (name.Tag, error) {
+	h, err := Digest(ref, remoteOpts...)
 	if err != nil {
 		return name.Tag{}, err
 	}
@@ -111,7 +111,7 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
 }
 
-func DefaultRegistryClientOpts(ctx context.Context) []remote.Option {
+func defaultRegistryClientOpts(ctx context.Context) []remote.Option {
 	return []remote.Option{
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 		remote.WithContext(ctx),

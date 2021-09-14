@@ -22,7 +22,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -33,8 +32,10 @@ import (
 func Generate() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign generate", flag.ExitOnError)
+		regOpts     RegistryOpts
 		annotations = annotationsMap{}
 	)
+	ApplyRegistryFlags(&regOpts, flagset)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 
 	return &ffcli.Command{
@@ -59,18 +60,18 @@ EXAMPLES
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return GenerateCmd(ctx, args[0], annotations.annotations, os.Stdout)
+			return GenerateCmd(ctx, regOpts, args[0], annotations.annotations, os.Stdout)
 		},
 	}
 }
 
-func GenerateCmd(_ context.Context, imageRef string, annotations map[string]interface{}, w io.Writer) error {
+func GenerateCmd(ctx context.Context, regOpts RegistryOpts, imageRef string, annotations map[string]interface{}, w io.Writer) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
-	get, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	get, err := remote.Get(ref, regOpts.GetRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
