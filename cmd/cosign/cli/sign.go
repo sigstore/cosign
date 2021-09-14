@@ -44,13 +44,9 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/providers"
+	providers "github.com/sigstore/cosign/pkg/providers/all"
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
-
-	// These are the ambient OIDC providers to link in.
-	_ "github.com/sigstore/cosign/pkg/providers/github"
-	_ "github.com/sigstore/cosign/pkg/providers/google"
 
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
