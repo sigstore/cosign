@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -161,32 +160,26 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	}
 
 	var b64sig string
-	// This can be the base64-encoded bytes or a path to the signature
-	if _, err = os.Stat(sigRef); err != nil {
-		if os.IsNotExist(err) {
-			b64sig = sigRef
-		} else {
+	targetSig, err := loadFileOrURL(sigRef)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			// ignore if file does not exist, it can be a base64 encoded string as well
 			return err
 		}
+		targetSig = []byte(sigRef)
+	}
+
+	if isb64(targetSig) {
+		b64sig = string(targetSig)
 	} else {
-		targetSig, err := loadFileOrURL(sigRef)
-		if err != nil {
-			return err
-		}
-
-		if isb64(targetSig) {
-			b64sig = string(targetSig)
-		} else {
-			b64sig = base64.StdEncoding.EncodeToString(targetSig)
-		}
-
+		b64sig = base64.StdEncoding.EncodeToString(targetSig)
 	}
 
 	var blobBytes []byte
 	if blobRef == "-" {
 		blobBytes, err = ioutil.ReadAll(os.Stdin)
 	} else {
-		blobBytes, err = ioutil.ReadFile(filepath.Clean(blobRef))
+		blobBytes, err = loadFileOrURL(blobRef)
 	}
 	if err != nil {
 		return err
