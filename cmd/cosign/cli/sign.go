@@ -186,13 +186,11 @@ EXAMPLES
 				OIDCClientID:     *oidcClientID,
 				OIDCClientSecret: *oidcClientSecret,
 			}
-			for _, img := range args {
-				if err := SignCmd(ctx, ko, annotations.annotations, img, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
-					if *attachment == "" {
-						return errors.Wrapf(err, "signing %s", img)
-					}
-					return errors.Wrapf(err, "signing attachement %s for image %s", *attachment, img)
+			if err := SignCmd(ctx, ko, annotations.annotations, args, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
+				if *attachment == "" {
+					return errors.Wrapf(err, "signing %v", args)
 				}
+				return errors.Wrapf(err, "signing attachement %s for image %v", *attachment, args)
 			}
 			return nil
 		},
@@ -257,12 +255,7 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 }
 
 func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{},
-	inputImg string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
-	// A key file or token is required unless we're in experimental mode!
-	imageRef, err := getAttachedImageRef(ctx, inputImg, attachment)
-	if err != nil {
-		return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
-	}
+	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
 
 	if EnableExperimental() {
 		if nOf(ko.KeyRef, ko.Sk) > 1 {
@@ -279,27 +272,36 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		remote.WithContext(ctx),
 	}
 
-	ref, err := name.ParseReference(imageRef)
-	if err != nil {
-		return errors.Wrap(err, "parsing reference")
-	}
-	get, err := remote.Get(ref, remoteOpts...)
-	if err != nil {
-		return errors.Wrap(err, "getting remote image")
-	}
+	var toSign []name.Digest
+	for _, inputImg := range imgs {
 
-	repo := ref.Context()
-	img := repo.Digest(get.Digest.String())
-
-	toSign := []name.Digest{img}
-
-	if recursive && get.MediaType.IsIndex() {
-		imgs, err := getTransitiveImages(get, repo, remoteOpts...)
+		// A key file or token is required unless we're in experimental mode!
+		imageRef, err := getAttachedImageRef(ctx, inputImg, attachment)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
-		toSign = append(toSign, imgs...)
+
+		ref, err := name.ParseReference(imageRef)
+		if err != nil {
+			return errors.Wrap(err, "parsing reference")
+		}
+		get, err := remote.Get(ref, remoteOpts...)
+		if err != nil {
+			return errors.Wrap(err, "getting remote image")
+		}
+
+		repo := ref.Context()
+		toSign = append(toSign, repo.Digest(get.Digest.String()))
+
+		if recursive && get.MediaType.IsIndex() {
+			imgs, err := getTransitiveImages(get, repo, remoteOpts...)
+			if err != nil {
+				return err
+			}
+			toSign = append(toSign, imgs...)
+		}
 	}
+
 	sv, err := signerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
@@ -339,7 +341,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			continue
 		}
 
-		sigRepo, err := TargetRepositoryForImage(ref)
+		sigRepo, err := TargetRepositoryForImage(img)
 		if err != nil {
 			return err
 		}
@@ -357,7 +359,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}
 
 		// Check if the image is public (no auth in Get)
-		uploadTLog, err := shouldUploadToTlog(ref, force, ko.RekorURL)
+		uploadTLog, err := shouldUploadToTlog(img, force, ko.RekorURL)
 		if err != nil {
 			return err
 		}
