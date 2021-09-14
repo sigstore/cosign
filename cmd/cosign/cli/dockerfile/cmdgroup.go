@@ -29,7 +29,7 @@ func Dockerfile() *ffcli.Command {
 	return &ffcli.Command{
 		Name:        "dockerfile",
 		ShortUsage:  "cosign dockerfile",
-		ShortHelp:   "Provides utilities for attaching artifacts to other artifacts in a registry",
+		ShortHelp:   "Provides utilities for discovering images in and performing operations on Dockerfiles",
 		FlagSet:     flagset,
 		Subcommands: []*ffcli.Command{VerifyDockerfile()},
 		Exec: func(ctx context.Context, args []string) error {
