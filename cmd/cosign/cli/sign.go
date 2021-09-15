@@ -81,15 +81,16 @@ func (a *annotationsMap) String() string {
 }
 
 func shouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error) {
-	// Check if the image is public (no auth in Get)
+	// Check whether experimental is on!
 	if !EnableExperimental() {
 		return false, nil
 	}
-	// Experimental is on!
+	// We are forcing publishing to the Tlog.
 	if force {
 		return true, nil
 	}
 
+	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", url)
 
