@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
@@ -159,13 +158,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	co.SigVerifier = pubKey
 
 	for _, img := range args {
-		imageRef, err := getAttachedImageRef(ctx, img, c.Attachment)
+		ref, err := getAttachedImageRef(ctx, img, c.Attachment)
 		if err != nil {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
-		}
-		ref, err := name.ParseReference(imageRef)
-		if err != nil {
-			return err
 		}
 		sigRepo, err := TargetRepositoryForImage(ref)
 		if err != nil {
@@ -180,8 +175,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 			return err
 		}
 
-		PrintVerificationHeader(imageRef, co)
-		PrintVerification(imageRef, verified, c.Output)
+		PrintVerificationHeader(ref.Name(), co)
+		PrintVerification(ref.Name(), verified, c.Output)
 	}
 
 	return nil

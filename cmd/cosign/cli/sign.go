@@ -197,23 +197,18 @@ EXAMPLES
 	}
 }
 
-func getAttachedImageRef(ctx context.Context, imageRef string, attachment string) (string, error) {
+func getAttachedImageRef(ctx context.Context, imageRef string, attachment string) (name.Reference, error) {
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing reference")
+	}
 	if attachment == "" {
-		return imageRef, nil
+		return ref, nil
 	}
 	if attachment == "sbom" {
-		ref, err := name.ParseReference(imageRef)
-		if err != nil {
-			return "", err
-		}
-
-		dstRef, err := AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
-		if err != nil {
-			return "", err
-		}
-		return dstRef.Name(), nil
+		return AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
 	}
-	return "", fmt.Errorf("unknown attachment type %s", attachment)
+	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
 
 func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opts ...remote.Option) ([]name.Digest, error) {
@@ -273,15 +268,11 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 	for _, inputImg := range imgs {
 
 		// A key file or token is required unless we're in experimental mode!
-		imageRef, err := getAttachedImageRef(ctx, inputImg, attachment)
+		ref, err := getAttachedImageRef(ctx, inputImg, attachment)
 		if err != nil {
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
-		ref, err := name.ParseReference(imageRef)
-		if err != nil {
-			return errors.Wrap(err, "parsing reference")
-		}
 		get, err := remote.Get(ref, remoteOpts...)
 		if err != nil {
 			return errors.Wrap(err, "getting remote image")
