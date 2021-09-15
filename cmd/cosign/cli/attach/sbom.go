@@ -71,21 +71,15 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 		return err
 	}
 
-	h, err := cli.Digest(ctx, ref)
-	if err != nil {
-		return err
-	}
-
 	b, err := sbomBytes(sbomRef)
 	if err != nil {
 		return err
 	}
 
-	repo, err := cli.TargetRepositoryForImage(ref)
+	dstRef, err := cli.AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
 	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, cli.DefaultRegistryClientOpts(ctx)...); err != nil {

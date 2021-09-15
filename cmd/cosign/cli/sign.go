@@ -35,7 +35,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	ggcrV1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -208,16 +207,10 @@ func getAttachedImageRef(ctx context.Context, imageRef string, attachment string
 			return "", err
 		}
 
-		h, err := Digest(ctx, ref)
+		dstRef, err := AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
 		if err != nil {
 			return "", err
 		}
-
-		repo, err := TargetRepositoryForImage(ref)
-		if err != nil {
-			return "", err
-		}
-		dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
 		return dstRef.Name(), nil
 	}
 	return "", fmt.Errorf("unknown attachment type %s", attachment)
@@ -345,15 +338,10 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			continue
 		}
 
-		sigRepo, err := TargetRepositoryForImage(img)
+		sigRef, err := AttachedImageTag(ctx, img, cosign.SignatureTagSuffix)
 		if err != nil {
 			return err
 		}
-		imgHash, err := ggcrV1.NewHash(img.Identifier())
-		if err != nil {
-			return err
-		}
-		sigRef := cosign.AttachedImageTag(sigRepo, imgHash, cosign.SignatureTagSuffix)
 
 		uo := cremote.UploadOpts{
 			Cert:         sv.Cert,

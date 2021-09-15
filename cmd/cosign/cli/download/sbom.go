@@ -55,16 +55,10 @@ func SBOMCmd(ctx context.Context, imageRef string, out io.Writer) ([]string, err
 		return nil, err
 	}
 
-	h, err := cli.Digest(ctx, ref)
+	dstRef, err := cli.AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
 	if err != nil {
 		return nil, err
 	}
-
-	repo, err := cli.TargetRepositoryForImage(ref)
-	if err != nil {
-		return nil, err
-	}
-	dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
 	img, err := remote.Image(dstRef, cli.DefaultRegistryClientOpts(ctx)...)
 	if err != nil {
 		return nil, err

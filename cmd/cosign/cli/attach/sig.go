@@ -72,16 +72,14 @@ func SignatureCmd(ctx context.Context, sigRef, payloadRef, imageRef string) erro
 		return err
 	}
 
-	sigRepo, err := cli.TargetRepositoryForImage(ref)
+	dstRef, err := cli.AttachedImageTag(ctx, ref, cosign.SignatureTagSuffix)
 	if err != nil {
 		return err
 	}
-	dstRef := cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
 
 	var payload []byte
 	if payloadRef == "" {
-		repo := ref.Context()
-		img := repo.Digest(h.String())
+		img := ref.Context().Digest(h.String())
 		payload, err = (&sigPayload.Cosign{Image: img}).MarshalJSON()
 	} else {
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadRef))

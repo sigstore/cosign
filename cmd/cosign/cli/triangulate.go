@@ -51,25 +51,19 @@ func MungeCmd(ctx context.Context, imageRef string, attachmentType string) error
 		return err
 	}
 
-	h, err := Digest(ctx, ref)
-	if err != nil {
-		return err
-	}
-
-	sigRepo, err := TargetRepositoryForImage(ref)
-	if err != nil {
-		return err
-	}
 	var dstRef name.Tag
 	switch attachmentType {
 	case cosign.Signature:
-		dstRef = cosign.AttachedImageTag(sigRepo, h, cosign.SignatureTagSuffix)
+		dstRef, err = AttachedImageTag(ctx, ref, cosign.SignatureTagSuffix)
 	case cosign.SBOM:
-		dstRef = cosign.AttachedImageTag(sigRepo, h, cosign.SBOMTagSuffix)
+		dstRef, err = AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
 	case cosign.Attestation:
-		dstRef = cosign.AttachedImageTag(sigRepo, h, cosign.AttestationTagSuffix)
+		dstRef, err = AttachedImageTag(ctx, ref, cosign.AttestationTagSuffix)
 	default:
-		return fmt.Errorf("unknown attachment type %s", attachmentType)
+		err = fmt.Errorf("unknown attachment type %s", attachmentType)
+	}
+	if err != nil {
+		return err
 	}
 
 	fmt.Println(dstRef.Name())
