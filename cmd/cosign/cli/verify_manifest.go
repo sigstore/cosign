@@ -102,12 +102,12 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 	}
 	manifest, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("could not read manifest: %v", err)
+		return fmt.Errorf("could not read manifest: %w", err)
 	}
 
 	images, err := getImagesFromYamlManifest(manifest)
 	if err != nil {
-		return fmt.Errorf("unable to extract the container image references in the manifest %v", err)
+		return fmt.Errorf("unable to extract the container image references in the manifest %w", err)
 	}
 	if len(images) == 0 {
 		return errors.New("no images found in manifest")
@@ -135,10 +135,10 @@ func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
 	for {
 		ext := runtime.RawExtension{}
 		if err := dec.Decode(&ext); err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
-			return images, fmt.Errorf("unable to decode the manifest")
+			return images, errors.New("unable to decode the manifest")
 		}
 
 		ext.Raw = bytes.TrimSpace(ext.Raw)
@@ -148,7 +148,7 @@ func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
 
 		decoded, _, err := deserializer.Decode(ext.Raw, nil, nil)
 		if err != nil {
-			return images, fmt.Errorf("unable to decode the manifest")
+			return images, errors.New("unable to decode the manifest")
 		}
 
 		var (

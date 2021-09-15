@@ -70,7 +70,8 @@ func DockerMediaTypes() bool {
 func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error) {
 	base, err := remote.Image(ref, opts...)
 	if err != nil {
-		if te, ok := err.(*transport.Error); ok {
+		var te *transport.Error
+		if errors.As(err, &te) {
 			if te.StatusCode != http.StatusNotFound {
 				return nil, te
 			}

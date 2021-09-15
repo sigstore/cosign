@@ -39,13 +39,13 @@ func restClientConfig() (*rest.Config, error) {
 	if clientcmd.IsEmptyConfig(err) {
 		restConfig, err := rest.InClusterConfig()
 		if err != nil {
-			return restConfig, fmt.Errorf("error creating REST client config in-cluster: %v", err)
+			return restConfig, fmt.Errorf("error creating REST client config in-cluster: %w", err)
 		}
 
 		return restConfig, nil
 	}
 	if err != nil {
-		return restConfig, fmt.Errorf("error creating REST client config: %v", err)
+		return restConfig, fmt.Errorf("error creating REST client config: %w", err)
 	}
 
 	return restConfig, nil

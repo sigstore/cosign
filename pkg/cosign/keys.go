@@ -128,7 +128,7 @@ func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifie
 	}
 	epk, ok := pk.(*ecdsa.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf("invalid private key")
+		return nil, errors.New("invalid private key")
 	}
 	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
 }
