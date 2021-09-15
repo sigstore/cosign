@@ -212,7 +212,10 @@ func getAttachedImageRef(ctx context.Context, imageRef string, attachment string
 			return "", err
 		}
 
-		repo := ref.Context()
+		repo, err := TargetRepositoryForImage(ref)
+		if err != nil {
+			return "", err
+		}
 		dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
 		return dstRef.Name(), nil
 	}

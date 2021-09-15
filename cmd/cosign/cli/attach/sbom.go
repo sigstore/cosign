@@ -81,7 +81,10 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 		return err
 	}
 
-	repo := ref.Context()
+	repo, err := cli.TargetRepositoryForImage(ref)
+	if err != nil {
+		return err
+	}
 	dstRef := cosign.AttachedImageTag(repo, h, cosign.SBOMTagSuffix)
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
