@@ -62,23 +62,21 @@ func TestSignerFromPrivateKeyFileRef(t *testing.T) {
 		writePw   cosign.PassFunc
 		readPw    cosign.PassFunc
 		expectErr bool
-	}{
-		{
-			desc: "good password",
+	}{{
+		desc: "good password",
 
-			writePw: pass("hello"),
-			readPw:  pass("hello"),
-		},
-		{
-			desc: "bad password",
+		writePw: pass("hello"),
+		readPw:  pass("hello"),
+	}, {
+		desc: "bad password",
 
-			writePw:   pass("hello"),
-			readPw:    pass("something else"),
-			expectErr: true,
-		},
-	}
+		writePw:   pass("hello"),
+		readPw:    pass("something else"),
+		expectErr: true,
+	}}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
 			testFile, _ := generateKeyFile(t, tmpDir, tc.writePw)
 
 			signer, err := signerFromKeyRef(ctx, testFile, tc.readPw)

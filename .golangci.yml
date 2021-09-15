@@ -15,14 +15,20 @@
 
 linters:
   enable:
+  - asciicheck
   - deadcode
+  - depguard
   - errcheck
   - gofmt
   - goimports
   - gosec
   - gocritic
+  - importas
+  - prealloc
   - revive
   - misspell
+  - stylecheck
+  - tparallel
   - unconvert
   - unparam
 output:
