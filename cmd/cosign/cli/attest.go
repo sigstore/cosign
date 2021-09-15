@@ -26,7 +26,6 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	ggcrV1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -148,8 +147,6 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 	if err != nil {
 		return err
 	}
-	repo := ref.Context()
-	img := repo.Digest(h.String())
 
 	sv, err := signerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
@@ -163,7 +160,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		Path:   predicatePath,
 		Type:   predicateType,
 		Digest: h.Hex,
-		Repo:   repo.String(),
+		Repo:   ref.Context().String(),
 	})
 	if err != nil {
 		return err
@@ -183,15 +180,10 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		return nil
 	}
 
-	sigRepo, err := TargetRepositoryForImage(ref)
+	attRef, err := AttachedImageTag(ctx, ref, cosign.AttestationTagSuffix)
 	if err != nil {
 		return err
 	}
-	imgHash, err := ggcrV1.NewHash(img.Identifier())
-	if err != nil {
-		return err
-	}
-	attRef := cosign.AttachedImageTag(sigRepo, imgHash, cosign.AttestationTagSuffix)
 
 	uo := cremote.UploadOpts{
 		Cert:         sv.Cert,

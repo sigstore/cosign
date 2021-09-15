@@ -53,6 +53,19 @@ func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
 	return name.NewRepository(wantRepo)
 }
 
+func AttachedImageTag(ctx context.Context, ref name.Reference, suffix string) (name.Tag, error) {
+	h, err := Digest(ctx, ref)
+	if err != nil {
+		return name.Tag{}, err
+	}
+
+	repo, err := TargetRepositoryForImage(ref)
+	if err != nil {
+		return name.Tag{}, err
+	}
+	return cosign.AttachedImageTag(repo, h, suffix), nil
+}
+
 func loadFileOrURL(fileRef string) ([]byte, error) {
 	var raw []byte
 	var err error
