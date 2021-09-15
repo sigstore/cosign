@@ -1,0 +1,93 @@
+name: Whitespace
+
+on:
+  pull_request:
+    branches: [ 'main', 'release-*' ]
+
+jobs:
+
+  whitespace:
+    name: Check Whitespace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go 1.16.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+        id: go
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install Tools
+        run: |
+          TEMP_PATH="$(mktemp -d)"
+          cd $TEMP_PATH
+          echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
+          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b "${TEMP_PATH}" 2>&1
+          echo '::endgroup::'
+          echo "${TEMP_PATH}" >> $GITHUB_PATH
+
+      - name: trailing whitespace
+        shell: bash
+        if: ${{ always() }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+          echo '::group:: Flagging trailing whitespace with reviewdog 🐶 ...'
+          # Don't fail because of grep
+          set +o pipefail
+          # Exclude generated and vendored files, plus some legacy
+          # paths until we update all .gitattributes
+          git ls-files |
+          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          grep -Ev '^(vendor/|third_party/|.git)' |
+          xargs grep -nE " +$" |
+          reviewdog -efm="%f:%l:%m" \
+                -name="trailing whitespace" \
+                -reporter="github-pr-check" \
+                -filter-mode="added" \
+                -fail-on-error="true" \
+                -level="error"
+          echo '::endgroup::'
+
+      - name: EOF newline
+        shell: bash
+        if: ${{ always() }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+          echo '::group:: Flagging missing EOF newlines with reviewdog 🐶 ...'
+          # Don't fail because of misspell
+          set +o pipefail
+          # Lint exclude rule:
+          #  - nothing in vendor/
+          #  - nothing in third_party
+          #  - nothing in .git/
+          #  - no *.ai (Adobe Illustrator) files.
+          LINT_FILES=$(git ls-files |
+          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          grep -Ev '^(vendor/|third_party/|.git)' |
+          grep -v '\.ai$')
+          for x in $LINT_FILES; do
+            # Based on https://stackoverflow.com/questions/34943632/linux-check-if-there-is-an-empty-line-at-the-end-of-a-file
+            if [[ -f $x && ! ( -s "$x" && -z "$(tail -c 1 $x)" ) ]]; then
+              # We add 1 to `wc -l` here because of this limitation (from the man page):
+              # Characters beyond the final <newline> character will not be included in the line count.
+              echo $x:$((1 + $(wc -l $x | tr -s ' ' | cut -d' ' -f 1))): Missing newline
+            fi
+          done |
+          reviewdog -efm="%f:%l: %m" \
+                -name="EOF Newline" \
+                -reporter="github-pr-check" \
+                -filter-mode="added" \
+                -fail-on-error="true" \
+                -level="error"
+          echo '::endgroup::'
