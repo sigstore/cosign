@@ -32,6 +32,32 @@ steps:
     echo "Checking out ${_TOOL_REF}"
     git checkout ${_TOOL_REF}
 
+- name: 'gcr.io/projectsigstore/cosign:v1.2.0@sha256:96ef6fb02c5a56901dc3c2e0ca34eec9ed926ab8d936ea30ec38f9ec9db017a5'
+  dir: "go/src/sigstore/cosign"
+  env:
+  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
+  args:
+  - 'dockerfile'
+  - 'verify'
+  - '-base-image-only'
+  - '-key'
+  - 'https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub'
+  - './Dockerfile'
+  waitFor: ['-']
+
+- name: 'gcr.io/projectsigstore/cosign:v1.2.0@sha256:96ef6fb02c5a56901dc3c2e0ca34eec9ed926ab8d936ea30ec38f9ec9db017a5'
+  dir: "go/src/sigstore/cosign"
+  env:
+  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
+  args:
+  - 'dockerfile'
+  - 'verify'
+  - '-base-image-only'
+  - '-key'
+  - 'https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub'
+  - './Dockerfile.cosigned'
+  waitFor: ['-']
+
 # maybe we can build our own image and use that to be more in a safe side
 - name: ghcr.io/gythialy/golang-cross:v1.17@sha256:c0b971a8e659fcdc7d1b14ddef3a59acd79a4c85deeebef7e1c302cfa009b9e0
   entrypoint: /bin/sh
@@ -44,6 +70,8 @@ steps:
   - KEY_RING=${_KEY_RING}
   - KEY_NAME=${_KEY_NAME}
   - KEY_VERSION=${_KEY_VERSION}
+  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
+  - GIT_TAG=${_GIT_TAG}
   secretEnv:
   - GITHUB_TOKEN
   args:
@@ -51,27 +79,6 @@ steps:
     - |
       git tag ${_GIT_TAG}
       make release
-
-- name: gcr.io/cloud-builders/docker
-  entrypoint: "bash"
-  dir: "go/src/sigstore/cosign"
-  env:
-  - GIT_TAG=${_GIT_TAG}
-  - PROJECT_ID=${PROJECT_ID}
-  - KEY_LOCATION=${_KEY_LOCATION}
-  - KEY_RING=${_KEY_RING}
-  - KEY_NAME=${_KEY_NAME}
-  - KEY_VERSION=${_KEY_VERSION}
-  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
-  args:
-  - '-c'
-  - |
-    cp ./dist/cosign-linux-amd64 /usr/local/bin/cosign
-    cosign verify-dockerfile -base-image-only -key https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub ./Dockerfile
-    make sign-container-cloudbuild
-
-    cosign verify-dockerfile -base-image-only -key https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub ./Dockerfile.cosigned
-    make cosigned-sign-container-cloudbuild
 
 availableSecrets:
   secretManager:

@@ -23,6 +23,19 @@ builds:
   env:
     - CGO_ENABLED=0
 
+- id: linux-arm64
+  binary: cosign-linux-{{ .Arch }}
+  no_unique_dist_dir: true
+  main: ./cmd/cosign
+  goos:
+    - linux
+  goarch:
+    - arm64
+  ldflags:
+    - "{{ .Env.LDFLAGS }}"
+  env:
+    - CGO_ENABLED=0
+
 - id: linux-pivkey-amd64
   binary: cosign-linux-pivkey-amd64
   main: ./cmd/cosign
@@ -68,7 +81,7 @@ builds:
     - darwin
   goarch:
     - arm64
-  tags: 
+  tags:
     - pivkey
   ldflags:
     - "{{.Env.LDFLAGS}}"
@@ -103,6 +116,19 @@ builds:
   env:
     - CGO_ENABLED=0
 
+- id: linux-cosigned-arm64
+  binary: cosigned-linux-{{ .Arch }}
+  no_unique_dist_dir: true
+  main: ./cmd/cosign/webhook
+  goos:
+    - linux
+  goarch:
+    - arm64
+  ldflags:
+    - "{{ .Env.LDFLAGS }}"
+  env:
+    - CGO_ENABLED=0
+
 signs:
   - id: cosign
     signature: "${artifact}.sig"
@@ -116,6 +142,57 @@ signs:
     artifacts: binary
     ids:
       - linux-cosigned
+
+dockers:
+  - image_templates:
+      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+      - "--build-arg=ARCH=amd64"
+  - image_templates:
+      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8"
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+      - "--build-arg=ARCH=arm64"
+
+  - image_templates:
+      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: Dockerfile.cosigned
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+      - "--build-arg=ARCH=amd64"
+  - image_templates:
+      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8"
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile.cosigned
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+      - "--build-arg=ARCH=arm64"
+
+docker_manifests:
+  - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}
+    image_templates:
+      - ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64
+      - ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8
+  - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}
+    image_templates:
+      - ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64
+      - ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8
+
+docker_signs:
+  - artifacts: all
+    args: [ "sign", "-key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}" ]
 
 archives:
 - format: binary
