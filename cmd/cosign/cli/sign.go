@@ -33,7 +33,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -259,12 +258,9 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}
 	}
 
-	remoteOpts := []remote.Option{
-		remote.WithAuthFromKeychain(authn.DefaultKeychain),
-		remote.WithContext(ctx),
-	}
+	remoteOpts := DefaultRegistryClientOpts(ctx)
 
-	var toSign []name.Digest
+	toSign := make([]name.Digest, 0, len(imgs))
 	for _, inputImg := range imgs {
 
 		// A key file or token is required unless we're in experimental mode!
@@ -273,20 +269,24 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
-		get, err := remote.Get(ref, remoteOpts...)
+		h, err := Digest(ctx, ref)
 		if err != nil {
-			return errors.Wrap(err, "getting remote image")
+			return errors.Wrap(err, "resolving digest")
 		}
+		toSign = append(toSign, ref.Context().Digest(h.String()))
 
-		repo := ref.Context()
-		toSign = append(toSign, repo.Digest(get.Digest.String()))
-
-		if recursive && get.MediaType.IsIndex() {
-			imgs, err := getTransitiveImages(get, repo, remoteOpts...)
+		if recursive {
+			get, err := remote.Get(ref, remoteOpts...)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "getting remote image")
 			}
-			toSign = append(toSign, imgs...)
+			if get.MediaType.IsIndex() {
+				imgs, err := getTransitiveImages(get, ref.Context(), remoteOpts...)
+				if err != nil {
+					return err
+				}
+				toSign = append(toSign, imgs...)
+			}
 		}
 	}
 
@@ -304,9 +304,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 		}
 	}
 
-	for len(toSign) > 0 {
-		img := toSign[0]
-		toSign = toSign[1:]
+	for _, img := range toSign {
 		// The payload can be specified via a flag to skip generation.
 		payload := staticPayload
 		if len(payload) == 0 {
