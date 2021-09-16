@@ -30,11 +30,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pkg/errors"
-
 	"github.com/go-piv/piv-go/piv"
-	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/pkg/errors"
 	"golang.org/x/term"
+
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 var (

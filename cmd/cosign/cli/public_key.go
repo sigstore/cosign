@@ -72,7 +72,6 @@ EXAMPLES
   cosign public-key -key hashivault://[KEY]`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-
 			if !oneOf(*key, *sk) {
 				return &KeyParseError{}
 			}

@@ -28,10 +28,11 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
+
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 type SignedPayload struct {
@@ -116,7 +117,6 @@ func FetchSignaturesForImageDigest(ctx context.Context, signedImageDigest v1.Has
 			r, err := l.Compressed()
 			if err != nil {
 				return err
-
 			}
 			payload, err := ioutil.ReadAll(r)
 			if err != nil {
@@ -160,6 +160,6 @@ func FetchSignaturesForImageDigest(ctx context.Context, signedImageDigest v1.Has
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	return signatures, nil
 
+	return signatures, nil
 }

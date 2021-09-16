@@ -31,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
+
 	"github.com/sigstore/cosign/internal/oci/empty"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"

@@ -25,13 +25,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"

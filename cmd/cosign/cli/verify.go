@@ -205,7 +205,6 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts) {
 
 // PrintVerification logs details about the verification to stdout
 func PrintVerification(imgRef string, verified []cosign.SignedPayload, output string) {
-
 	switch output {
 	case "text":
 		for _, vp := range verified {

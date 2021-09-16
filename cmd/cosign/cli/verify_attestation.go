@@ -125,7 +125,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	if EnableExperimental() {
 		co.RekorURL = c.RekorURL
 		co.RootCerts = fulcio.GetRoots()
-
 	}
 	keyRef := c.KeyRef
 

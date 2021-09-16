@@ -102,6 +102,5 @@ func TestPublicKeyFromFileRef(t *testing.T) {
 
 	if _, err := publicKeyFromKeyRef(ctx, testFile); err != nil {
 		t.Fatalf("publicKeyFromKeyRef returned error: %v", err)
-
 	}
 }
