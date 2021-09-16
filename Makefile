@@ -22,6 +22,7 @@ endif
 
 # Set version variables for LDFLAGS
 PROJECT_ID ?= projectsigstore
+RUNTIME_IMAGE ?= gcr.io/distroless/static
 GIT_TAG ?= dirty-tag
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
@@ -112,36 +113,12 @@ sign-cosigned:
 release:
 	LDFLAGS=$(LDFLAGS) goreleaser release
 
-RUNTIME_IMAGE ?= gcr.io/distroless/static
-
-.PHONY: docker-cloudbuild
-docker-cloudbuild:
-	docker build --build-arg RUNTIME_IMAGE=$(RUNTIME_IMAGE) \
-		-t "gcr.io/$(PROJECT_ID)/cosign:$(GIT_TAG)" \
-		-t "gcr.io/$(PROJECT_ID)/cosign:$(GIT_HASH)" .
-
-.PHONY: sign-container-cloudbuild
-sign-container-cloudbuild: docker-cloudbuild
-	docker push gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
-	docker push gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
-	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosign:$(GIT_HASH)
-	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosign:$(GIT_TAG)
-
+# used when need to validate the goreleaser
+.PHONY: snapshot
+snapshot:
+	LDFLAGS=$(LDFLAGS) goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
 
 # Build cosigned binary
 .PHONY: cosigned
 cosigned: lint
 	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign/webhook
-
-.PHONY: cosigned-docker-cloudbuild
-cosigned-docker-cloudbuild:
-	docker build --build-arg RUNTIME_IMAGE=$(RUNTIME_IMAGE) \
-		-t "gcr.io/$(PROJECT_ID)/cosigned:$(GIT_TAG)" \
-		-t "gcr.io/$(PROJECT_ID)/cosigned:$(GIT_HASH)" -f Dockerfile.cosigned .
-
-.PHONY: cosigned-sign-container-cloudbuild
-cosigned-sign-container-cloudbuild: cosigned-docker-cloudbuild
-	docker push gcr.io/${PROJECT_ID}/cosigned:$(GIT_HASH)
-	docker push gcr.io/${PROJECT_ID}/cosigned:$(GIT_TAG)
-	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_HASH=$(GIT_HASH) gcr.io/${PROJECT_ID}/cosigned:$(GIT_HASH)
-	cosign sign -key gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION} -a GIT_TAG=$(GIT_TAG) gcr.io/${PROJECT_ID}/cosigned:$(GIT_TAG)
