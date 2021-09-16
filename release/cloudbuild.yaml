@@ -59,7 +59,7 @@ steps:
   waitFor: ['-']
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17@sha256:c0b971a8e659fcdc7d1b14ddef3a59acd79a4c85deeebef7e1c302cfa009b9e0
+- name: ghcr.io/gythialy/golang-cross:v1.17.1@sha256:d6982c0a6dae690b1f5ac977e377e75ba0db7022483c13b664a130a7934eb393
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
