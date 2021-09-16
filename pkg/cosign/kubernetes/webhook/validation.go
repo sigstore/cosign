@@ -24,11 +24,12 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/logging"
+
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/logging"
 )
 
 func valid(ctx context.Context, img string, keys []*ecdsa.PublicKey) bool {

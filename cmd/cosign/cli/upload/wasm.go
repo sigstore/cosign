@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
+
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/types"

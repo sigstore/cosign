@@ -32,6 +32,7 @@ linters:
   - tparallel
   - unconvert
   - unparam
+  - whitespace
 output:
   uniq-by-line: false
 issues:

@@ -25,13 +25,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sigstore/sigstore/pkg/signature/options"
-
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func SignBlob() *ffcli.Command {

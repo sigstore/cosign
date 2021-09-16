@@ -44,9 +44,8 @@ import (
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
-
 	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -235,7 +234,6 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 					return nil, errors.Wrap(err, "getting recursive image index")
 				}
 				indexDescs = append(indexDescs, indexDesc)
-
 			}
 			childImg := repo.Digest(manifest.Digest.String())
 			imgs = append(imgs, childImg)
@@ -247,7 +245,6 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 
 func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{},
 	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
-
 	if EnableExperimental() {
 		if nOf(ko.KeyRef, ko.Sk) > 1 {
 			return &KeyParseError{}
@@ -262,7 +259,6 @@ func SignCmd(ctx context.Context, ko KeyOpts, annotations map[string]interface{}
 
 	toSign := make([]name.Digest, 0, len(imgs))
 	for _, inputImg := range imgs {
-
 		// A key file or token is required unless we're in experimental mode!
 		ref, err := getAttachedImageRef(ctx, inputImg, attachment)
 		if err != nil {

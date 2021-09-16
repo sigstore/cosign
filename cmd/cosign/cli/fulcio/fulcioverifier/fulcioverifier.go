@@ -27,6 +27,7 @@ import (
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/google/certificate-transparency-go/x509util"
 	"github.com/pkg/errors"
+
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign"
 	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
@@ -69,5 +70,4 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fC
 	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")
 
 	return fs, nil
-
 }

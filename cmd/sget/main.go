@@ -24,6 +24,7 @@ import (
 	"os"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
+
 	"github.com/sigstore/cosign/cmd/sget/cli"
 )
 

@@ -183,8 +183,8 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fC
 		Chain:               Resp.ChainPEM,
 		SCT:                 Resp.SCT,
 	}
-	return f, nil
 
+	return f, nil
 }
 
 func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {

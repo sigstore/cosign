@@ -138,7 +138,6 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			if co.CertEmail != "" {
 				emailVerified := false
 				for _, em := range sp.Cert.EmailAddresses {
-
 					if co.CertEmail == em {
 						emailVerified = true
 						break

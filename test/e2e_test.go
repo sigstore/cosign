@@ -38,6 +38,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
@@ -48,8 +49,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (

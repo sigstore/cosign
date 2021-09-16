@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
+
 	"github.com/sigstore/cosign/internal/oci"
 )
 

@@ -25,7 +25,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
 	"github.com/theupdateframework/go-tuf"
 	"github.com/theupdateframework/go-tuf/client"
 	tuf_leveldbstore "github.com/theupdateframework/go-tuf/client/leveldbstore"

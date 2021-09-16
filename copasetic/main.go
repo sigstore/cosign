@@ -32,7 +32,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/cmd"
 	"github.com/open-policy-agent/opa/rego"
