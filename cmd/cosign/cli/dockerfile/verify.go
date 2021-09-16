@@ -94,13 +94,13 @@ func (c *VerifyDockerfileCommand) Exec(ctx context.Context, args []string) error
 
 	dockerfile, err := os.Open(args[0])
 	if err != nil {
-		return fmt.Errorf("could not open Dockerfile: %v", err)
+		return fmt.Errorf("could not open Dockerfile: %w", err)
 	}
 	defer dockerfile.Close()
 
 	images, err := getImagesFromDockerfile(dockerfile)
 	if err != nil {
-		return fmt.Errorf("failed extracting images from Dockerfile: %v", err)
+		return fmt.Errorf("failed extracting images from Dockerfile: %w", err)
 	}
 	if len(images) == 0 {
 		return errors.New("no images found in Dockerfile")

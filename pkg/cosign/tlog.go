@@ -86,8 +86,8 @@ func doUpload(rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEn
 	if err != nil {
 		// If the entry already exists, we get a specific error.
 		// Here, we display the proof and succeed.
-		if existsErr, ok := err.(*entries.CreateLogEntryConflict); ok {
-
+		var existsErr *entries.CreateLogEntryConflict
+		if errors.As(err, &existsErr) {
 			fmt.Println("Signature already exists. Displaying proof")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
 			uuid := uriSplit[len(uriSplit)-1]
@@ -209,7 +209,7 @@ func verifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 
 	v := logverifier.New(hasher.DefaultHasher)
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
-		return nil, fmt.Errorf("inclusion proof not provided")
+		return nil, errors.New("inclusion proof not provided")
 	}
 	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
 		return nil, errors.Wrap(err, "verifying inclusion proof")

@@ -77,7 +77,7 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	case "link":
 		return generateLinkStatement(rawPayload, opts.Digest, opts.Repo)
 	default:
-		return nil, fmt.Errorf("we don't know this predicate type: '%s'", opts.Type)
+		return nil, fmt.Errorf("we don't know this predicate type: %q", opts.Type)
 	}
 }
 
@@ -111,7 +111,7 @@ func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo stri
 	var predicate in_toto.ProvenancePredicate
 	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
 	if err != nil {
-		return nil, fmt.Errorf("provenance predicate: %v", err)
+		return nil, fmt.Errorf("provenance predicate: %w", err)
 	}
 	err = json.Unmarshal(rawPayload, &predicate)
 	if err != nil {
@@ -127,7 +127,7 @@ func generateLinkStatement(rawPayload []byte, digest string, repo string) (inter
 	var link in_toto.Link
 	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(link))
 	if err != nil {
-		return nil, fmt.Errorf("link statement: %v", err)
+		return nil, fmt.Errorf("link statement: %w", err)
 	}
 	err = json.Unmarshal(rawPayload, &link)
 	if err != nil {

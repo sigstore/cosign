@@ -19,6 +19,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -236,7 +237,7 @@ func findFile(img v1.Image, path string) ([]byte, error) {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break // End of archive
 		}
 		if err != nil {

@@ -19,6 +19,7 @@ linters:
   - deadcode
   - depguard
   - errcheck
+  - errorlint
   - gofmt
   - goimports
   - gosec

@@ -302,7 +302,7 @@ func VerifySET(bundlePayload cremote.BundlePayload, signature []byte, pub *ecdsa
 	// verify the SET against the public key
 	hash := sha256.Sum256(canonicalized)
 	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
-		return fmt.Errorf("unable to verify")
+		return errors.New("unable to verify")
 	}
 	return nil
 }
