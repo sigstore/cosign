@@ -23,17 +23,6 @@ on:
 
 jobs:
   build:
-    name: build-1.16
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16.8'
-      - name: compile
-        run: make
-
-  build:
     name: build
     runs-on: ubuntu-latest
 
@@ -42,7 +31,7 @@ jobs:
       - uses: sigstore/cosign-installer@v1.1.0
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.17.0'
+          go-version: '1.17.x'
       # Required for `make cosign-pivkey`
       # - name: deps
       #   run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
