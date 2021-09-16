@@ -28,8 +28,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
+	"knative.dev/pkg/pool"
 
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -94,16 +93,11 @@ func FetchSignaturesForImageDigest(ctx context.Context, signedImageDigest v1.Has
 		return nil, errors.Wrap(err, "manifest")
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
+	g := pool.New(runtime.NumCPU())
 	signatures := make([]SignedPayload, len(m.Layers))
-	sem := semaphore.NewWeighted(int64(runtime.NumCPU()))
 	for i, desc := range m.Layers {
 		i, desc := i, desc
 		g.Go(func() error {
-			if err := sem.Acquire(ctx, 1); err != nil {
-				return err
-			}
-			defer sem.Release(1)
 			base64sig, ok := desc.Annotations[sigkey]
 			if !ok {
 				return nil
