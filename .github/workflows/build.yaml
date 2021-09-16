@@ -23,19 +23,6 @@ on:
 
 jobs:
   build:
-    name: build-1.16
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.16.x'
-      - name: compile
-        run: |
-          make
-          go build ./...
-
-  build:
     name: build
     runs-on: ubuntu-latest
 
