@@ -21,29 +21,26 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"strconv"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/internal/oci/empty"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
-	sigkey              = "dev.cosignproject.cosign/signature"
-	certkey             = "dev.sigstore.cosign/certificate"
-	chainkey            = "dev.sigstore.cosign/chain"
-	BundleKey           = "dev.sigstore.cosign/bundle"
-	DockerMediaTypesEnv = "COSIGN_DOCKER_MEDIA_TYPES"
+	sigkey    = "dev.cosignproject.cosign/signature"
+	certkey   = "dev.sigstore.cosign/certificate"
+	chainkey  = "dev.sigstore.cosign/chain"
+	BundleKey = "dev.sigstore.cosign/bundle"
 )
 
 func Descriptors(ref name.Reference, remoteOpts ...remote.Option) ([]v1.Descriptor, error) {
@@ -59,37 +56,20 @@ func Descriptors(ref name.Reference, remoteOpts ...remote.Option) ([]v1.Descript
 	return m.Layers, nil
 }
 
-func DockerMediaTypes() bool {
-	if b, err := strconv.ParseBool(os.Getenv(DockerMediaTypesEnv)); err == nil {
-		return b
-	}
-	return false
-}
-
 // SignatureImage returns the existing destination image, or a new, empty one.
 func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error) {
 	base, err := remote.Image(ref, opts...)
-	if err != nil {
-		var te *transport.Error
-		if errors.As(err, &te) {
-			if te.StatusCode != http.StatusNotFound {
-				return nil, te
-			}
-			base = empty.Image
-			if !DockerMediaTypes() {
-				base = mutate.MediaType(base, types.OCIManifestSchema1)
-				m, err := base.Manifest()
-				if err != nil {
-					// should never happen...?
-					return nil, err
-				}
-				m.Config.MediaType = types.OCIConfigJSON
-			}
-		} else {
-			return nil, err
-		}
+	if err == nil {
+		return base, nil
 	}
-	return base, nil
+	var te *transport.Error
+	if errors.As(err, &te) {
+		if te.StatusCode != http.StatusNotFound {
+			return nil, te
+		}
+		return empty.Image(), nil
+	}
+	return nil, err
 }
 
 func findDuplicate(sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
