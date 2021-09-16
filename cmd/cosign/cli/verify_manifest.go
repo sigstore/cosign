@@ -27,21 +27,15 @@ import (
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/api/batch/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-// VerifyCommand verifies all image signatures on a supplied k8s resource
+// VerifyManifestCommand verifies all image signatures on a supplied k8s resource
 type VerifyManifestCommand struct {
 	VerifyCommand
 }
 
-// Verify builds and returns an ffcli command
+// VerifyManifest builds and returns an ffcli command
 func VerifyManifest() *ffcli.Command {
 	cmd := VerifyManifestCommand{VerifyCommand: VerifyCommand{}}
 	flagset := flag.NewFlagSet("cosign verify-manifest", flag.ExitOnError)
@@ -116,95 +110,81 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 	return c.VerifyCommand.Exec(ctx, images)
 }
 
-func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
-	dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 4096)
-	cScheme := runtime.NewScheme()
-	var images []string
-	if err := corev1.AddToScheme(cScheme); err != nil {
-		return images, err
+// unionImagesKind is the union type that match PodSpec, PodSpecTemplate, and
+// JobSpecTemplate; but filtering all keys except for `Image`.
+type unionImagesKind struct {
+	Spec struct {
+		// PodSpec
+		imageContainers `json:",inline"`
+		// PodSpecTemplate
+		Template struct {
+			Spec struct {
+				imageContainers `json:",inline"`
+			}
+		}
+		// JobSpecTemplate
+		JobTemplate struct {
+			Spec struct {
+				Template struct {
+					Spec struct {
+						imageContainers `json:",inline"`
+					}
+				}
+			}
+		}
 	}
-	if err := appsv1.AddToScheme(cScheme); err != nil {
-		return images, err
+}
+
+// imageContainers is a wrapper for `containers[].image` and `initContainers[].image`
+type imageContainers struct {
+	Containers []struct {
+		Image string
 	}
-	if err := batchv1.AddToScheme(cScheme); err != nil {
-		return images, err
+	InitContainers []struct {
+		Image string
+	}
+}
+
+func (uik *unionImagesKind) images() []string {
+	images := []string(nil)
+	var addImage = func(ic *imageContainers) {
+		for _, c := range ic.InitContainers {
+			if len(c.Image) > 0 {
+				images = append(images, c.Image)
+			}
+		}
+		for _, c := range ic.Containers {
+			if len(c.Image) > 0 {
+				images = append(images, c.Image)
+			}
+		}
 	}
 
-	deserializer := serializer.NewCodecFactory(cScheme).UniversalDeserializer()
+	// Pod
+	addImage(&uik.Spec.imageContainers)
+
+	// Deployment, ReplicaSet, StatefulSet, DaemonSet, Job
+	addImage(&uik.Spec.Template.Spec.imageContainers)
+
+	// CronJob
+	addImage(&uik.Spec.JobTemplate.Spec.Template.Spec.imageContainers)
+
+	return images
+}
+
+func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
+	dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 4096)
+	var images []string
+
 	for {
-		ext := runtime.RawExtension{}
-		if err := dec.Decode(&ext); err != nil {
+		ic := unionImagesKind{}
+		if err := dec.Decode(&ic); err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			return images, errors.New("unable to decode the manifest")
 		}
-
-		ext.Raw = bytes.TrimSpace(ext.Raw)
-		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {
-			continue
-		}
-
-		decoded, _, err := deserializer.Decode(ext.Raw, nil, nil)
-		if err != nil {
-			return images, errors.New("unable to decode the manifest")
-		}
-
-		var (
-			d   *appsv1.Deployment
-			rs  *appsv1.ReplicaSet
-			ss  *appsv1.StatefulSet
-			ds  *appsv1.DaemonSet
-			job *v1beta1.CronJob
-			pod *corev1.Pod
-		)
-		containers := make([]corev1.Container, 0)
-		switch obj := decoded.(type) {
-		case *appsv1.Deployment:
-			d = obj
-			containers = append(containers, d.Spec.Template.Spec.Containers...)
-			containers = append(containers, d.Spec.Template.Spec.InitContainers...)
-			for _, c := range containers {
-				images = append(images, c.Image)
-			}
-		case *appsv1.DaemonSet:
-			ds = obj
-			containers = append(containers, ds.Spec.Template.Spec.Containers...)
-			containers = append(containers, ds.Spec.Template.Spec.InitContainers...)
-			for _, c := range containers {
-				images = append(images, c.Image)
-			}
-		case *appsv1.ReplicaSet:
-			rs = obj
-			containers = append(containers, rs.Spec.Template.Spec.Containers...)
-			containers = append(containers, rs.Spec.Template.Spec.InitContainers...)
-			for _, c := range containers {
-				images = append(images, c.Image)
-			}
-		case *appsv1.StatefulSet:
-			ss = obj
-			containers = append(containers, ss.Spec.Template.Spec.Containers...)
-			containers = append(containers, ss.Spec.Template.Spec.InitContainers...)
-			for _, c := range containers {
-				images = append(images, c.Image)
-			}
-
-		case *v1beta1.CronJob:
-			job = obj
-			containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.Containers...)
-			containers = append(containers, job.Spec.JobTemplate.Spec.Template.Spec.InitContainers...)
-			for _, c := range containers {
-				images = append(images, c.Image)
-			}
-		case *corev1.Pod:
-			pod = obj
-			containers = append(containers, pod.Spec.Containers...)
-			containers = append(containers, pod.Spec.InitContainers...)
-
-			for _, c := range containers {
-				images = append(images, c.Image)
-			}
-		}
+		images = append(images, ic.images()...)
 	}
 
 	return images, nil
