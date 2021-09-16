@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -32,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/internal/oci/empty"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -110,23 +110,11 @@ LayerLoop:
 	return nil, nil
 }
 
-type BundlePayload struct {
-	Body           interface{} `json:"body"`
-	IntegratedTime int64       `json:"integratedTime"`
-	LogIndex       int64       `json:"logIndex"`
-	LogID          string      `json:"logID"`
-}
-
-type Bundle struct {
-	SignedEntryTimestamp strfmt.Base64
-	Payload              BundlePayload
-}
-
 type UploadOpts struct {
 	Cert                  []byte
 	Chain                 []byte
 	DupeDetector          signature.Verifier
-	Bundle                *Bundle
+	Bundle                *oci.Bundle
 	AdditionalAnnotations map[string]string
 	RemoteOpts            []remote.Option
 	MediaType             string

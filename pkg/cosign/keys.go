@@ -35,9 +35,6 @@ import (
 const (
 	PrivakeKeyPemType = "ENCRYPTED COSIGN PRIVATE KEY"
 
-	sigkey    = "dev.cosignproject.cosign/signature"
-	certkey   = "dev.sigstore.cosign/certificate"
-	chainkey  = "dev.sigstore.cosign/chain"
 	BundleKey = "dev.sigstore.cosign/bundle"
 )
 

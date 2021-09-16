@@ -39,6 +39,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
+	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -378,13 +379,13 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 	return nil
 }
 
-func bundle(entry *models.LogEntryAnon) *cremote.Bundle {
+func bundle(entry *models.LogEntryAnon) *oci.Bundle {
 	if entry.Verification == nil {
 		return nil
 	}
-	return &cremote.Bundle{
+	return &oci.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: cremote.BundlePayload{
+		Payload: oci.BundlePayload{
 			Body:           entry.Body,
 			IntegratedTime: *entry.IntegratedTime,
 			LogIndex:       *entry.LogIndex,
