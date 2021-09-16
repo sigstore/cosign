@@ -51,7 +51,9 @@ func Attest() *ffcli.Command {
 		force         = flagset.Bool("f", false, "skip warnings and confirmations")
 		idToken       = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		predicateType = flagset.String("type", "custom", "specify predicate type (default: custom) (slsaprovenance|link|spdx)")
+		regOpts       RegistryOpts
 	)
+	ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "attest",
 		ShortUsage: "cosign attest -key <key path>|<kms uri> [-predicate <path>] [-a key=value] [-upload=true|false] [-f] [-r] <image uri>",
@@ -94,7 +96,7 @@ EXAMPLES
 				IDToken:  *idToken,
 			}
 			for _, img := range args {
-				if err := AttestCmd(ctx, ko, img, *cert, *upload, *predicatePath, *force, *predicateType); err != nil {
+				if err := AttestCmd(ctx, ko, regOpts, img, *cert, *upload, *predicatePath, *force, *predicateType); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
@@ -117,7 +119,7 @@ var predicateTypeMap = map[string]string{
 	predicateLink:   in_toto.PredicateLinkV1,
 }
 
-func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string,
+func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef string, certPath string,
 	upload bool, predicatePath string, force bool, predicateType string) error {
 	// A key file or token is required unless we're in experimental mode!
 	if EnableExperimental() {
@@ -135,13 +137,13 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		return fmt.Errorf("invalid predicate type: %s", predicateType)
 	}
 
-	remoteOpts := DefaultRegistryClientOpts(ctx)
+	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	h, err := Digest(ctx, ref)
+	h, err := Digest(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -178,7 +180,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, imageRef string, certPath string
 		return nil
 	}
 
-	attRef, err := AttachedImageTag(ctx, ref, cosign.AttestationTagSuffix)
+	attRef, err := AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}

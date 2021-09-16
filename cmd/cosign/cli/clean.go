@@ -31,8 +31,9 @@ import (
 func Clean() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign clean", flag.ExitOnError)
+		regOpts RegistryOpts
 	)
-
+	ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "clean",
 		ShortUsage: "cosign clean <image uri>",
@@ -43,18 +44,19 @@ func Clean() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return CleanCmd(ctx, args[0])
+			return CleanCmd(ctx, regOpts, args[0])
 		},
 	}
 }
 
-func CleanCmd(ctx context.Context, imageRef string) error {
+func CleanCmd(ctx context.Context, regOpts RegistryOpts, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
-	sigRef, err := AttachedImageTag(ctx, ref, cosign.SignatureTagSuffix)
+	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
+	sigRef, err := AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,7 @@ func CleanCmd(ctx context.Context, imageRef string) error {
 
 	fmt.Fprintln(os.Stderr, "Deleting signature metadata...")
 
-	err = remote.Delete(sigRef, DefaultRegistryClientOpts(ctx)...)
+	err = remote.Delete(sigRef, remoteOpts...)
 	if err != nil {
 		return err
 	}

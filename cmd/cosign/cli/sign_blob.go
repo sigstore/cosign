@@ -47,7 +47,9 @@ func SignBlob() *ffcli.Command {
 		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
 		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
 		output           = flagset.String("output", "", "write the signature to FILE")
+		regOpts          RegistryOpts
 	)
+	ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "sign-blob",
 		ShortUsage: "cosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>",
@@ -97,7 +99,7 @@ EXAMPLES
 				OIDCClientSecret: *oidcClientSecret,
 			}
 			for _, blob := range args {
-				if _, err := SignBlobCmd(ctx, ko, blob, *b64, *output); err != nil {
+				if _, err := SignBlobCmd(ctx, ko, regOpts, blob, *b64, *output); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
@@ -119,7 +121,7 @@ type KeyOpts struct {
 	OIDCClientSecret string
 }
 
-func SignBlobCmd(ctx context.Context, ko KeyOpts, payloadPath string, b64 bool, output string) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, payloadPath string, b64 bool, output string) ([]byte, error) {
 	var payload []byte
 	var err error
 

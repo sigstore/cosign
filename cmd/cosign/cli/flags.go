@@ -15,7 +15,15 @@
 
 package cli
 
-import "reflect"
+import (
+	"context"
+	"crypto/tls"
+	"flag"
+	"net/http"
+	"reflect"
+
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+)
 
 // oneOf ensures that only one of the supplied interfaces is set to a non-zero value.
 func oneOf(args ...interface{}) bool {
@@ -31,4 +39,20 @@ func nOf(args ...interface{}) int {
 		}
 	}
 	return n
+}
+
+type RegistryOpts struct {
+	AllowInsecure bool
+}
+
+func (co *RegistryOpts) GetRegistryClientOpts(ctx context.Context) []remote.Option {
+	opts := defaultRegistryClientOpts(ctx)
+	if co != nil && co.AllowInsecure {
+		opts = append(opts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
+	}
+	return opts
+}
+
+func ApplyRegistryFlags(regOpts *RegistryOpts, fs *flag.FlagSet) {
+	fs.BoolVar(&regOpts.AllowInsecure, "allow-insecure-registry", false, "whether to allow insecure connections to registries. Don't use this for anything but testing")
 }

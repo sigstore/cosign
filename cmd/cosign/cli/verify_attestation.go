@@ -33,6 +33,7 @@ import (
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
 type VerifyAttestationCommand struct {
+	RegistryOpts
 	CheckClaims bool
 	KeyRef      string
 	Sk          bool
@@ -56,6 +57,7 @@ func VerifyAttestation() *ffcli.Command {
 	cmd := VerifyAttestationCommand{}
 	flagset := flag.NewFlagSet("cosign verify-attestation", flag.ExitOnError)
 	applyVerifyAttestationFlags(&cmd, flagset)
+	ApplyRegistryFlags(&cmd.RegistryOpts, flagset)
 
 	return &ffcli.Command{
 		Name:       "verify-attestation",
@@ -116,7 +118,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	}
 
 	co := &cosign.CheckOpts{
-		RegistryClientOpts:   DefaultRegistryClientOpts(ctx),
+		RegistryClientOpts:   c.GetRegistryClientOpts(ctx),
 		SigTagSuffixOverride: cosign.AttestationTagSuffix,
 	}
 	if c.CheckClaims {

@@ -61,7 +61,9 @@ func Blob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload blob", flag.ExitOnError)
 		ct      = flagset.String("ct", "", "content type to set")
+		regOpts cli.RegistryOpts
 	)
+	cli.ApplyRegistryFlags(&regOpts, flagset)
 	fmap := Files{}
 	flagset.Var(&fmap, "f", "<filepath>:[platform/arch]")
 	return &ffcli.Command{
@@ -89,18 +91,18 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 
-			return BlobCmd(ctx, fmap.Files, *ct, args[0])
+			return BlobCmd(ctx, regOpts, fmap.Files, *ct, args[0])
 		},
 	}
 }
 
-func BlobCmd(ctx context.Context, files []cremote.File, contentType, imageRef string) error {
+func BlobCmd(ctx context.Context, regOpts cli.RegistryOpts, files []cremote.File, contentType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
-	dgster, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, cli.DefaultRegistryClientOpts(ctx)...)
+	dgster, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, regOpts.GetRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}

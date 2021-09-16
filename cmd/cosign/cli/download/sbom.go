@@ -34,7 +34,9 @@ import (
 func SBOM() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign download sbom", flag.ExitOnError)
+		regOpts cli.RegistryOpts
 	)
+	cli.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "sbom",
 		ShortUsage: "cosign download sbom <image uri>",
@@ -44,23 +46,25 @@ func SBOM() *ffcli.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			_, err := SBOMCmd(ctx, args[0], os.Stdout)
+			_, err := SBOMCmd(ctx, regOpts, args[0], os.Stdout)
 			return err
 		},
 	}
 }
 
-func SBOMCmd(ctx context.Context, imageRef string, out io.Writer) ([]string, error) {
+func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, imageRef string, out io.Writer) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
 	}
 
-	dstRef, err := cli.AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
+	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
+
+	dstRef, err := cli.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Image(dstRef, cli.DefaultRegistryClientOpts(ctx)...)
+	img, err := remote.Image(dstRef, remoteOpts...)
 	if err != nil {
 		return nil, err
 	}

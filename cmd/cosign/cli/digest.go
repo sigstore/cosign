@@ -15,8 +15,6 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -26,11 +24,11 @@ import (
 //
 // If the reference is by digest already, it simply extracts the digest.
 // Otherwise, it looks up the digest from the registry.
-func Digest(ctx context.Context, ref name.Reference) (v1.Hash, error) {
+func Digest(ref name.Reference, remoteOpts ...remote.Option) (v1.Hash, error) {
 	if d, ok := ref.(name.Digest); ok {
 		return v1.NewHash(d.DigestStr())
 	}
-	desc, err := remote.Get(ref, DefaultRegistryClientOpts(ctx)...)
+	desc, err := remote.Get(ref, remoteOpts...)
 	if err != nil {
 		return v1.Hash{}, err
 	}

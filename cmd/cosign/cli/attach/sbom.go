@@ -44,7 +44,9 @@ func SBOM() *ffcli.Command {
 		flagset  = flag.NewFlagSet("cosign attach sbom", flag.ExitOnError)
 		sbom     = flagset.String("sbom", "", "path to the sbom, or {-} for stdin")
 		sbomType = flagset.String("type", "spdx", "type of sbom (spdx|cyclonedx), default spdx")
+		regOpts  cli.RegistryOpts
 	)
+	cli.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "sbom",
 		ShortUsage: "cosign attach sbom <image uri>",
@@ -60,12 +62,12 @@ func SBOM() *ffcli.Command {
 				return flag.ErrHelp
 			}
 
-			return SBOMCmd(ctx, *sbom, mt, args[0])
+			return SBOMCmd(ctx, regOpts, *sbom, mt, args[0])
 		},
 	}
 }
 
-func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
+func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, sbomRef, sbomType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -76,13 +78,15 @@ func SBOMCmd(ctx context.Context, sbomRef, sbomType, imageRef string) error {
 		return err
 	}
 
-	dstRef, err := cli.AttachedImageTag(ctx, ref, cosign.SBOMTagSuffix)
+	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
+
+	dstRef, err := cli.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
-	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, cli.DefaultRegistryClientOpts(ctx)...); err != nil {
+	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, remoteOpts...); err != nil {
 		return err
 	}
 
