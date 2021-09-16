@@ -71,6 +71,7 @@ func AttachedImageTag(repo name.Repository, digest v1.Hash, tagSuffix string) na
 }
 
 func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, sigRepo name.Repository, sigTagSuffix string, registryOpts ...remote.Option) ([]SignedPayload, error) {
+	// TODO(mattmoor): If signedImageRef is a digest, this is an unnecessary fetch.
 	signedImgDesc, err := remote.Get(signedImgRef, registryOpts...)
 	if err != nil {
 		return nil, err
@@ -79,11 +80,9 @@ func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, s
 }
 
 func FetchSignaturesForImageDigest(ctx context.Context, signedImageDigest v1.Hash, sigRepo name.Repository, sigTagSuffix string, registryOpts ...remote.Option) ([]SignedPayload, error) {
-	sigImgDesc, err := remote.Get(AttachedImageTag(sigRepo, signedImageDigest, sigTagSuffix), registryOpts...)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting signature manifest")
-	}
-	sigImg, err := sigImgDesc.Image()
+	tag := AttachedImageTag(sigRepo, signedImageDigest, sigTagSuffix)
+
+	sigImg, err := remote.Image(tag, registryOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "remote image")
 	}
