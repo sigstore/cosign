@@ -92,7 +92,7 @@ func FetchSignaturesForImageDigest(ctx context.Context, signedImageDigest v1.Has
 	signatures := make([]SignedPayload, len(l))
 	for i, sig := range l {
 		i, sig := i, sig
-		g.Go(func() error {
+		g.Go(func() (err error) {
 			signatures[i].Payload, err = sig.Payload()
 			if err != nil {
 				return err

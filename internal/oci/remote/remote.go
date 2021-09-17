@@ -16,27 +16,33 @@
 package remote
 
 import (
-	"bytes"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 const (
-	sigkey   = "dev.cosignproject.cosign/signature"
-	certkey  = "dev.sigstore.cosign/certificate"
-	chainkey = "dev.sigstore.cosign/chain"
+	sigkey    = "dev.cosignproject.cosign/signature"
+	certkey   = "dev.sigstore.cosign/certificate"
+	chainkey  = "dev.sigstore.cosign/chain"
+	BundleKey = "dev.sigstore.cosign/bundle"
 )
+
+// This enables mocking for unit testing without faking an entire registry.
+var remoteImage = remote.Image
 
 // Signatures fetches the signatures image represented by the named reference.
 func Signatures(ref name.Reference, opts ...remote.Option) (oci.Signatures, error) {
-	img, err := remote.Image(ref, opts...)
+	img, err := remoteImage(ref, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +114,7 @@ func (s *sigLayer) Cert() (*x509.Certificate, error) {
 	if !ok {
 		return nil, nil
 	}
-	certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader([]byte(certPEM)))
+	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(certPEM))
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +127,7 @@ func (s *sigLayer) Chain() ([]*x509.Certificate, error) {
 	if !ok {
 		return nil, nil
 	}
-	certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader([]byte(chainPEM)))
+	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(chainPEM))
 	if err != nil {
 		return nil, err
 	}
@@ -130,5 +136,13 @@ func (s *sigLayer) Chain() ([]*x509.Certificate, error) {
 
 // Bundle implements oci.Signature
 func (s *sigLayer) Bundle() (*oci.Bundle, error) {
-	return nil, nil
+	bundle := s.desc.Annotations[BundleKey]
+	if bundle == "" {
+		return nil, nil
+	}
+	var b oci.Bundle
+	if err := json.Unmarshal([]byte(bundle), &b); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling bundle")
+	}
+	return &b, nil
 }
