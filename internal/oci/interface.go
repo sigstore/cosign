@@ -15,11 +15,12 @@
 
 package oci
 
-import v1 "github.com/google/go-containerregistry/pkg/v1"
+type SignedEntity interface {
+	// Signatures returns the set of signatures currently associated with this
+	// entity, or the empty equivalent if none are found.
+	Signatures() (Signatures, error)
 
-// SignedImage represents an OCI Image, complemented with accessors
-// for retrieving signed metadata associated with that image.
-type SignedImage interface {
-	v1.Image
-	SignedEntity
+	// Attestations returns the set of attestations currently associated with this
+	// entity, or the empty equivalent if none are found.
+	Attestations() (Attestations, error)
 }

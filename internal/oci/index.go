@@ -21,6 +21,7 @@ import v1 "github.com/google/go-containerregistry/pkg/v1"
 // for retrieving signed metadata associated with that ImageIndex.
 type SignedImageIndex interface {
 	v1.ImageIndex
+	SignedEntity
 
 	// SignedImage is the same as Image, but provides accessors for the nested
 	// image's signed metadata.
@@ -29,12 +30,4 @@ type SignedImageIndex interface {
 	// SignedImageIndex is the same as ImageIndex, but provides accessors for
 	// the nested image index's signed metadata.
 	SignedImageIndex(v1.Hash) (SignedImageIndex, error)
-
-	// Signatures returns the set of signatures currently associated with this
-	// image, or the empty equivalent if none are found.
-	Signatures() (Signatures, error)
-
-	// Attestations returns the set of attestations currently associated with this
-	// image, or the empty equivalent if none are found.
-	Attestations() (Attestations, error)
 }
