@@ -13,31 +13,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package sget
 
 import (
 	"context"
-	"errors"
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
-func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error) {
-	ref, err := name.ParseReference(imageRef)
+func New(image, key string, out io.Writer) *SecureGet {
+	return &SecureGet{
+		ImageRef: image,
+		KeyRef:   key,
+		Out:      out,
+	}
+}
+
+type SecureGet struct {
+	ImageRef string
+	KeyRef   string
+	Out      io.Writer
+}
+
+func (sg *SecureGet) Do(ctx context.Context) error {
+	ref, err := name.ParseReference(sg.ImageRef)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if _, ok := ref.(name.Tag); ok {
-		if keyRef == "" && !cli.EnableExperimental() {
-			return nil, errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
+		if sg.KeyRef == "" && !cli.EnableExperimental() {
+			return errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
 		}
 	}
 
@@ -49,10 +63,10 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 			remote.WithContext(ctx),
 		},
 	}
-	if keyRef != "" {
-		pub, err := cli.LoadPublicKey(ctx, keyRef)
+	if sg.KeyRef != "" {
+		pub, err := cli.LoadPublicKey(ctx, sg.KeyRef)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		co.SigVerifier = pub
 	}
@@ -61,32 +75,37 @@ func SgetCmd(ctx context.Context, imageRef, keyRef string) (io.ReadCloser, error
 		co.RootCerts = fulcio.GetRoots()
 		sigRepo, err := cli.TargetRepositoryForImage(ref)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		co.SignatureRepo = sigRepo
 
 		sp, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		cli.PrintVerificationHeader(imageRef, co)
-		cli.PrintVerification(imageRef, sp, "text")
+		cli.PrintVerificationHeader(sg.ImageRef, co)
+		cli.PrintVerification(sg.ImageRef, sp, "text")
 	}
 
 	img, err := remote.Image(ref, co.RegistryClientOpts...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	layers, err := img.Layers()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(layers) != 1 {
-		return nil, errors.New("invalid artifact")
+		return errors.New("invalid artifact")
 	}
 	rc, err := layers[0].Compressed()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return rc, nil
+
+	_, err = io.Copy(sg.Out, rc)
+	if err != nil {
+		return err
+	}
+	return nil
 }

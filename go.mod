@@ -47,6 +47,7 @@ require (
 	github.com/peterh/liner v1.2.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	github.com/spf13/cobra v1.2.1
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v0.22.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
