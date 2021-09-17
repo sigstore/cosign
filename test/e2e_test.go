@@ -44,10 +44,10 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
-	sget "github.com/sigstore/cosign/cmd/sget/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/sget"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -550,7 +550,7 @@ func TestUploadBlob(t *testing.T) {
 	}
 
 	// Now download it with sget (this should fail by tag)
-	if _, err := sget.SgetCmd(ctx, imgName, ""); err == nil {
+	if err := sget.New(imgName, "", os.Stdout).Do(ctx); err == nil {
 		t.Error("expected download to fail")
 	}
 
@@ -563,12 +563,13 @@ func TestUploadBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	result := &bytes.Buffer{}
+
 	// But pass by digest
-	rc, err := sget.SgetCmd(ctx, imgName+"@"+dgst.String(), "")
-	if err != nil {
+	if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
 		t.Fatal(err)
 	}
-	b, err := ioutil.ReadAll(rc)
+	b, err := ioutil.ReadAll(result)
 	if err != nil {
 		t.Fatal(err)
 	}

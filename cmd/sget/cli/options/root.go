@@ -13,16 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
-	"log"
-
-	"github.com/sigstore/cosign/cmd/sget/cli"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	if err := cli.New().Execute(); err != nil {
-		log.Fatalf("error during command execution: %v", err)
-	}
+// RootOptions define flags and options for the root sget cli.
+type RootOptions struct {
+	OutputFile string
+	PublicKey  string
+	ImageRef   string
+}
+
+func AddRootArgs(cmd *cobra.Command, o *RootOptions) {
+	cmd.Flags().StringVarP(&o.OutputFile, "output", "o", "",
+		"output file")
+
+	cmd.Flags().StringVar(&o.PublicKey, "key", "",
+		"path to the public key file, URL, or KMS URI")
 }
