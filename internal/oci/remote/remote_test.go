@@ -70,6 +70,23 @@ func TestSignature(t *testing.T) {
 		},
 		wantSig: "blah",
 	}, {
+		name: "with empty other keys",
+		l: &sigLayer{
+			img: &sigs{
+				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+			},
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey:    "blah",
+					certkey:   "",
+					chainkey:  "",
+					BundleKey: "",
+				},
+			},
+		},
+		wantSig: "blah",
+	}, {
 		name: "bad digest",
 		l: &sigLayer{
 			img: &sigs{
