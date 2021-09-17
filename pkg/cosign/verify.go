@@ -34,6 +34,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/internal/oci"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -88,17 +89,21 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 	}
 	h := signedImgDesc.Descriptor.Digest
 
-	// These are all the signatures attached to our image that we know how to parse.
-	sigRepo := co.SignatureRepo
-	if (sigRepo == name.Repository{}) {
-		sigRepo = signedImgRef.Context()
-	}
-	tagSuffix := SignatureTagSuffix
-	if co.SigTagSuffixOverride != "" {
-		tagSuffix = co.SigTagSuffixOverride
+	opts := []ociremote.Option{
+		ociremote.WithRemoteOptions(co.RegistryClientOpts...),
 	}
 
-	allSignatures, err := FetchSignaturesForImageDigest(ctx, h, sigRepo, tagSuffix, co.RegistryClientOpts...)
+	// These are all the signatures attached to our image that we know how to parse.
+	if (co.SignatureRepo != name.Repository{}) {
+		opts = append(opts, ociremote.WithTargetRepository(co.SignatureRepo))
+	}
+	if co.SigTagSuffixOverride != "" {
+		opts = append(opts, ociremote.WithSignatureSuffix(co.SigTagSuffixOverride))
+	}
+
+	// TODO(mattmoor): If we change this code to interact with the SignedImage directly,
+	// then we could shed the `remote.Get` above.
+	allSignatures, err := FetchSignaturesForImage(ctx, signedImgRef, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}

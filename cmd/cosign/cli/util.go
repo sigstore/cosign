@@ -32,11 +32,12 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+
+	oremote "github.com/sigstore/cosign/internal/oci/remote"
 )
 
 const (
 	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
-	repoEnv         = "COSIGN_REPOSITORY"
 )
 
 func EnableExperimental() bool {
@@ -47,7 +48,7 @@ func EnableExperimental() bool {
 }
 
 func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
-	wantRepo := os.Getenv(repoEnv)
+	wantRepo := os.Getenv(oremote.RepoOverrideKey)
 	if wantRepo == "" {
 		return img.Context(), nil
 	}

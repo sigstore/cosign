@@ -25,12 +25,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/internal/oci"
-	"github.com/sigstore/cosign/internal/oci/empty"
+	ociempty "github.com/sigstore/cosign/internal/oci/empty"
 )
 
 func TestSignature(t *testing.T) {
@@ -59,7 +60,7 @@ func TestSignature(t *testing.T) {
 		name: "just payload and signature",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -73,7 +74,7 @@ func TestSignature(t *testing.T) {
 		name: "with empty other keys",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -90,7 +91,7 @@ func TestSignature(t *testing.T) {
 		name: "bad digest",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: v1.Hash{Algorithm: "bad", Hex: "f00d"},
@@ -105,7 +106,7 @@ func TestSignature(t *testing.T) {
 		name: "missing signature",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -116,7 +117,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bad bundle",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -132,7 +133,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bad cert",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -148,7 +149,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bad chain",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -164,7 +165,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bundle",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -190,7 +191,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus good cert",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -224,7 +225,7 @@ uThR1Z6JuA21HwxtL3GyJ8UQZcEPOlTBV593HrSAwBhiCoY=
 		name: "min plus bad chain",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(empty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -308,13 +309,108 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	}
 }
 
-func TestSignatures(t *testing.T) {
+func TestSignedImageIndex(t *testing.T) {
+	ri := remote.Image
+	rix := remote.Index
+	t.Cleanup(func() {
+		remoteImage = ri
+		remoteIndex = rix
+	})
+	wantLayers := int64(7)
+	wantImages := int64(1)
+
+	l1, err := random.Image(300 /* byteSize */, wantLayers)
+	if err != nil {
+		t.Fatalf("random.Index() = %v", err)
+	}
+	l2, err := random.Index(300 /* byteSize */, wantLayers, wantImages)
+	if err != nil {
+		t.Fatalf("random.Index() = %v", err)
+	}
+	l3 := mutate.AppendManifests(
+		empty.Index,
+		mutate.IndexAddendum{
+			Add: l2,
+		},
+		mutate.IndexAddendum{
+			Add: l1,
+		},
+	)
+
+	remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		// Only called for signature images
+		return random.Image(300 /* byteSize */, wantLayers)
+	}
+	remoteIndex = func(ref name.Reference, options ...remote.Option) (ii v1.ImageIndex, err error) {
+		return l3, nil
+	}
+
+	ref, err := name.ParseReference("gcr.io/distroless/static:nonroot")
+	if err != nil {
+		t.Fatalf("ParseRef() = %v", err)
+	}
+
+	sii, err := SignedImageIndex(ref)
+	if err != nil {
+		t.Fatalf("Signatures() = %v", err)
+	}
+
+	sigs, err := sii.Signatures()
+	if err != nil {
+		t.Fatalf("Signatures() = %v", err)
+	}
+
+	if sl, err := sigs.Get(); err != nil {
+		t.Errorf("Get() = %v", err)
+	} else if got := int64(len(sl)); got != wantLayers {
+		t.Errorf("len(Get()) = %d, wanted %d", got, wantLayers)
+	}
+
+	imf, err := sii.IndexManifest()
+	if err != nil {
+		t.Fatalf("IndexManifest() = %v", err)
+	}
+
+	for _, desc := range imf.Manifests {
+		var se oci.SignedEntity
+		switch desc.MediaType {
+		case types.OCIImageIndex, types.DockerManifestList:
+			se, err = sii.SignedImageIndex(desc.Digest)
+			if err != nil {
+				t.Fatalf("SignedImage() = %v", err)
+			}
+
+		case types.OCIManifestSchema1, types.DockerManifestSchema2:
+			se, err = sii.SignedImage(desc.Digest)
+			if err != nil {
+				t.Fatalf("SignedImage() = %v", err)
+			}
+		default:
+			t.Fatalf("unknown mime type: %v", desc.MediaType)
+		}
+
+		sigs, err := se.Signatures()
+		if err != nil {
+			t.Fatalf("Signatures() = %v", err)
+		}
+
+		if sl, err := sigs.Get(); err != nil {
+			t.Errorf("Get() = %v", err)
+		} else if got := int64(len(sl)); got != wantLayers {
+			t.Errorf("len(Get()) = %d, wanted %d", got, wantLayers)
+		}
+	}
+}
+
+func TestSignedImage(t *testing.T) {
 	ri := remote.Image
 	t.Cleanup(func() {
 		remoteImage = ri
 	})
-	wantLayers := int64(27)
+	wantLayers := int64(7)
+
 	remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		// Only called for signature images
 		return random.Image(300 /* byteSize */, wantLayers)
 	}
 
@@ -323,7 +419,12 @@ func TestSignatures(t *testing.T) {
 		t.Fatalf("ParseRef() = %v", err)
 	}
 
-	sigs, err := Signatures(ref)
+	si, err := SignedImage(ref)
+	if err != nil {
+		t.Fatalf("Signatures() = %v", err)
+	}
+
+	sigs, err := si.Signatures()
 	if err != nil {
 		t.Fatalf("Signatures() = %v", err)
 	}

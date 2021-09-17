@@ -39,6 +39,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -136,16 +137,12 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			sigRepo, err := cli.TargetRepositoryForImage(ref)
-			if err != nil {
-				return nil, err
-			}
 			registryOpts := []remote.Option{
 				remote.WithAuthFromKeychain(authn.DefaultKeychain),
 				remote.WithContext(bctx.Context),
 			}
 
-			sps, err := cosign.FetchSignaturesForImage(bctx.Context, ref, sigRepo, cosign.SignatureTagSuffix, registryOpts...)
+			sps, err := cosign.FetchSignaturesForImage(bctx.Context, ref, ociremote.WithRemoteOptions(registryOpts...))
 			if err != nil {
 				return nil, err
 			}

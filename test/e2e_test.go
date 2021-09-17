@@ -44,6 +44,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -243,13 +244,8 @@ func TestDuplicateSign(t *testing.T) {
 
 	// Signing again should work just fine...
 	must(cli.SignCmd(ctx, ko, cli.RegistryOpts{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
-	// but a duplicate signature should not be a uploaded
-	sigRepo, err := cli.TargetRepositoryForImage(ref)
-	if err != nil {
-		t.Fatalf("failed to get signature repository: %v", err)
-	}
 
-	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, cosign.SignatureTagSuffix, registryClientOpts(ctx)...)
+	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
 	if err != nil {
 		t.Fatalf("failed to fetch signatures: %v", err)
 	}
@@ -500,12 +496,8 @@ func TestUploadDownload(t *testing.T) {
 			}
 
 			// Now download it!
-			sigRepo, err := cli.TargetRepositoryForImage(ref)
-			if err != nil {
-				t.Fatalf("failed to get signature repository: %v", err)
-			}
 			regClientOpts := registryClientOpts(ctx)
-			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, sigRepo, cosign.SignatureTagSuffix, regClientOpts...)
+			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, ociremote.WithRemoteOptions(regClientOpts...))
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
