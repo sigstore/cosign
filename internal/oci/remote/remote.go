@@ -116,8 +116,8 @@ func (s *sigLayer) Base64Signature() (string, error) {
 
 // Cert implements oci.Signature
 func (s *sigLayer) Cert() (*x509.Certificate, error) {
-	certPEM, ok := s.desc.Annotations[certkey]
-	if !ok {
+	certPEM := s.desc.Annotations[certkey]
+	if certPEM == "" {
 		return nil, nil
 	}
 	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(certPEM))
@@ -129,8 +129,8 @@ func (s *sigLayer) Cert() (*x509.Certificate, error) {
 
 // Chain implements oci.Signature
 func (s *sigLayer) Chain() ([]*x509.Certificate, error) {
-	chainPEM, ok := s.desc.Annotations[chainkey]
-	if !ok {
+	chainPEM := s.desc.Annotations[chainkey]
+	if chainPEM == "" {
 		return nil, nil
 	}
 	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(chainPEM))
