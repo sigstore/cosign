@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package manifest
 
 import (
 	"bytes"
@@ -27,54 +27,55 @@ import (
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // VerifyManifestCommand verifies all image signatures on a supplied k8s resource
 type VerifyManifestCommand struct {
-	VerifyCommand
+	cli.VerifyCommand
 }
 
 // VerifyManifest builds and returns an ffcli command
 func VerifyManifest() *ffcli.Command {
-	cmd := VerifyManifestCommand{VerifyCommand: VerifyCommand{}}
-	flagset := flag.NewFlagSet("cosign verify-manifest", flag.ExitOnError)
-	ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
+	cmd := VerifyManifestCommand{}
+	flagset := flag.NewFlagSet("cosign manifest verify", flag.ExitOnError)
+	cli.ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
 
 	return &ffcli.Command{
-		Name:       "verify-manifest",
-		ShortUsage: "cosign verify-manifest -key <key path>|<key url>|<kms uri> <path/to/manifest>",
+		Name:       "verify",
+		ShortUsage: "cosign manifest verify -key <key path>|<key url>|<kms uri> <path/to/manifest>",
 		ShortHelp:  "Verify all signatures of images specified in the manifest",
 		LongHelp: `Verify all signature of images in a Kubernetes resource manifest by checking claims
 against the transparency log.
 
 EXAMPLES
   # verify cosign claims and signing certificates on images in the manifest
-  cosign verify-manifest <path/to/my-deployment.yaml>
+  cosign manifest verify <path/to/my-deployment.yaml>
 
   # additionally verify specified annotations
-  cosign verify-manifest -a key1=val1 -a key2=val2 <path/to/my-deployment.yaml>
+  cosign manifest verify -a key1=val1 -a key2=val2 <path/to/my-deployment.yaml>
 
   # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign verify-manifest <path/to/my-deployment.yaml>
+  COSIGN_EXPERIMENTAL=1 cosign manifest verify <path/to/my-deployment.yaml>
 
   # verify images with public key
-  cosign verify-manifest -key cosign.pub <path/to/my-deployment.yaml>
+  cosign manifest verify -key cosign.pub <path/to/my-deployment.yaml>
 
   # verify images with public key provided by URL
-  cosign verify-manifest -key https://host.for/<FILE> <path/to/my-deployment.yaml>
+  cosign manifest verify -key https://host.for/<FILE> <path/to/my-deployment.yaml>
 
   # verify images with public key stored in Azure Key Vault
-  cosign verify-manifest -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <path/to/my-deployment.yaml>
+  cosign manifest verify -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <path/to/my-deployment.yaml>
 
   # verify images with public key stored in AWS KMS
-  cosign verify-manifest -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <path/to/my-deployment.yaml>
+  cosign manifest verify -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <path/to/my-deployment.yaml>
 
   # verify images with public key stored in Google Cloud KMS
-  cosign verify-manifest -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <path/to/my-deployment.yaml>
+  cosign manifest verify -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <path/to/my-deployment.yaml>
 
   # verify images with public key stored in Hashicorp Vault
-  cosign verify-manifest -key hashivault://[KEY] <path/to/my-deployment.yaml>`,
+  cosign manifest verify -key hashivault://[KEY] <path/to/my-deployment.yaml>`,
 
 		FlagSet: flagset,
 		Exec:    cmd.Exec,

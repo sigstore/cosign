@@ -30,6 +30,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
+	"github.com/sigstore/cosign/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 )
@@ -56,7 +57,8 @@ func main() {
 			cli.SignBlob(),
 			cli.VerifyAttestation(),
 			cli.VerifyBlob(),
-			cli.VerifyManifest(),
+			// Manifest sub-tree
+			manifest.Manifest(),
 			// Upload sub-tree
 			upload.Upload(),
 			// Download sub-tree
