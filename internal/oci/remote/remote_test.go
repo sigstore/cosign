@@ -239,11 +239,12 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			b, err := test.l.Payload()
-			if (err != nil) != (test.wantPayloadErr != nil) {
+			switch {
+			case (err != nil) != (test.wantPayloadErr != nil):
 				t.Errorf("Payload() = %v, wanted %v", err, test.wantPayloadErr)
-			} else if (err != nil) && (test.wantPayloadErr != nil) && err.Error() != test.wantPayloadErr.Error() {
+			case (err != nil) && (test.wantPayloadErr != nil) && err.Error() != test.wantPayloadErr.Error():
 				t.Errorf("Payload() = %v, wanted %v", err, test.wantPayloadErr)
-			} else if err == nil {
+			case err == nil:
 				if got, _, err := v1.SHA256(bytes.NewBuffer(b)); err != nil {
 					t.Errorf("v1.SHA256() = %v", err)
 				} else if want := digest; want != got {
@@ -251,35 +252,39 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 				}
 			}
 
-			if got, err := test.l.Base64Signature(); (err != nil) != (test.wantSigErr != nil) {
+			switch got, err := test.l.Base64Signature(); {
+			case (err != nil) != (test.wantSigErr != nil):
 				t.Errorf("Base64Signature() = %v, wanted %v", err, test.wantSigErr)
-			} else if (err != nil) && (test.wantSigErr != nil) && err.Error() != test.wantSigErr.Error() {
+			case (err != nil) && (test.wantSigErr != nil) && err.Error() != test.wantSigErr.Error():
 				t.Errorf("Base64Signature() = %v, wanted %v", err, test.wantSigErr)
-			} else if got != test.wantSig {
+			case got != test.wantSig:
 				t.Errorf("Base64Signature() = %v, wanted %v", got, test.wantSig)
 			}
 
-			if got, err := test.l.Cert(); (err != nil) != (test.wantCertErr != nil) {
+			switch got, err := test.l.Cert(); {
+			case (err != nil) != (test.wantCertErr != nil):
 				t.Errorf("Cert() = %v, wanted %v", err, test.wantCertErr)
-			} else if (err != nil) && (test.wantCertErr != nil) && err.Error() != test.wantCertErr.Error() {
+			case (err != nil) && (test.wantCertErr != nil) && err.Error() != test.wantCertErr.Error():
 				t.Errorf("Cert() = %v, wanted %v", err, test.wantCertErr)
-			} else if (got != nil) != test.wantCert {
+			case (got != nil) != test.wantCert:
 				t.Errorf("Cert() = %v, wanted cert? %v", got, test.wantCert)
 			}
 
-			if got, err := test.l.Chain(); (err != nil) != (test.wantChainErr != nil) {
+			switch got, err := test.l.Chain(); {
+			case (err != nil) != (test.wantChainErr != nil):
 				t.Errorf("Chain() = %v, wanted %v", err, test.wantChainErr)
-			} else if (err != nil) && (test.wantChainErr != nil) && err.Error() != test.wantChainErr.Error() {
+			case (err != nil) && (test.wantChainErr != nil) && err.Error() != test.wantChainErr.Error():
 				t.Errorf("Chain() = %v, wanted %v", err, test.wantChainErr)
-			} else if len(got) != test.wantChain {
+			case len(got) != test.wantChain:
 				t.Errorf("Chain() = %v, wanted chain of length %d", got, test.wantChain)
 			}
 
-			if got, err := test.l.Bundle(); (err != nil) != (test.wantBundleErr != nil) {
+			switch got, err := test.l.Bundle(); {
+			case (err != nil) != (test.wantBundleErr != nil):
 				t.Errorf("Bundle() = %v, wanted %v", err, test.wantBundleErr)
-			} else if (err != nil) && (test.wantBundleErr != nil) && err.Error() != test.wantBundleErr.Error() {
+			case (err != nil) && (test.wantBundleErr != nil) && err.Error() != test.wantBundleErr.Error():
 				t.Errorf("Bundle() = %v, wanted %v", err, test.wantBundleErr)
-			} else if !cmp.Equal(got, test.wantBundle) {
+			case !cmp.Equal(got, test.wantBundle):
 				t.Errorf("Bundle() %s", cmp.Diff(got, test.wantBundle))
 			}
 		})
