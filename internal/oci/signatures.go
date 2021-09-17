@@ -15,7 +15,12 @@
 
 package oci
 
-import v1 "github.com/google/go-containerregistry/pkg/v1"
+import (
+	"crypto/x509"
+
+	"github.com/go-openapi/strfmt"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+)
 
 // Signatures represents a set of signatures that are associated with a particular
 // v1.Image.
@@ -25,4 +30,46 @@ type Signatures interface {
 	// TODO(mattmoor): Accessors that build on `v1.Image` to provide
 	// higher-level accessors for the signature data that is embedded
 	// in the wrapped `v1.Image`
+
+	// Get retrieves the list of signatures stored.
+	Get() ([]Signature, error)
+}
+
+// Signature holds a single image signature.
+type Signature interface {
+	// Payload fetches the opaque data that is being signed.
+	// This will always return data when there is no error.
+	Payload() ([]byte, error)
+
+	// Base64Signature fetches the base64 encoded signature
+	// of the payload.  This will always return data when
+	// there is no error.
+	Base64Signature() (string, error)
+
+	// Cert fetches the optional public key from the key pair that
+	// was used to sign the payload.
+	Cert() (*x509.Certificate, error)
+
+	// Chain fetches the optional "full certificate chain" rooted
+	// at a Fulcio CA, the leaf of which was used to sign the
+	// payload.
+	Chain() ([]*x509.Certificate, error)
+
+	// Bundle fetches the optional metadata that records the ephemeral
+	// Fulcio key in the transparency log.
+	Bundle() (*Bundle, error)
+}
+
+// Bundle holds metadata about recording a Signature's ephemeral key to
+// a Rekor transparency log.
+type Bundle struct {
+	SignedEntryTimestamp strfmt.Base64
+	Payload              BundlePayload
+}
+
+type BundlePayload struct {
+	Body           interface{} `json:"body"`
+	IntegratedTime int64       `json:"integratedTime"`
+	LogIndex       int64       `json:"logIndex"`
+	LogID          string      `json:"logID"`
 }

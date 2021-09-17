@@ -16,11 +16,8 @@
 package cosign
 
 import (
-	"bytes"
 	"context"
 	"crypto/x509"
-	"encoding/json"
-	"io/ioutil"
 	"runtime"
 	"strings"
 
@@ -30,8 +27,8 @@ import (
 	"github.com/pkg/errors"
 	"knative.dev/pkg/pool"
 
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/cosign/internal/oci"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 )
 
 type SignedPayload struct {
@@ -39,7 +36,7 @@ type SignedPayload struct {
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
-	Bundle          *cremote.Bundle
+	Bundle          *oci.Bundle
 	bundleVerified  bool
 }
 
@@ -82,72 +79,38 @@ func FetchSignaturesForImage(ctx context.Context, signedImgRef name.Reference, s
 func FetchSignaturesForImageDigest(ctx context.Context, signedImageDigest v1.Hash, sigRepo name.Repository, sigTagSuffix string, registryOpts ...remote.Option) ([]SignedPayload, error) {
 	tag := AttachedImageTag(sigRepo, signedImageDigest, sigTagSuffix)
 
-	sigImg, err := remote.Image(tag, registryOpts...)
+	sigs, err := ociremote.Signatures(tag, registryOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "remote image")
 	}
-
-	m, err := sigImg.Manifest()
+	l, err := sigs.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "manifest")
+		return nil, errors.Wrap(err, "fetching signatures")
 	}
 
 	g := pool.New(runtime.NumCPU())
-	signatures := make([]SignedPayload, len(m.Layers))
-	for i, desc := range m.Layers {
-		i, desc := i, desc
-		g.Go(func() error {
-			base64sig, ok := desc.Annotations[sigkey]
-			if !ok {
-				return nil
-			}
-			l, err := sigImg.LayerByDigest(desc.Digest)
+	signatures := make([]SignedPayload, len(l))
+	for i, sig := range l {
+		i, sig := i, sig
+		g.Go(func() (err error) {
+			signatures[i].Payload, err = sig.Payload()
 			if err != nil {
 				return err
 			}
-
-			// Compressed is a misnomer here, we just want the raw bytes from the registry.
-			r, err := l.Compressed()
+			signatures[i].Base64Signature, err = sig.Base64Signature()
 			if err != nil {
 				return err
 			}
-			payload, err := ioutil.ReadAll(r)
+			signatures[i].Cert, err = sig.Cert()
 			if err != nil {
 				return err
 			}
-			sp := SignedPayload{
-				Payload:         payload,
-				Base64Signature: base64sig,
+			signatures[i].Chain, err = sig.Chain()
+			if err != nil {
+				return err
 			}
-			// We may have a certificate and chain
-			certPem := desc.Annotations[certkey]
-			if certPem != "" {
-				certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader([]byte(certPem)))
-				if err != nil {
-					return err
-				}
-				sp.Cert = certs[0]
-			}
-			chainPem := desc.Annotations[chainkey]
-			if chainPem != "" {
-				certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader([]byte(chainPem)))
-				if err != nil {
-					return err
-				}
-				sp.Chain = certs
-			}
-
-			bundle := desc.Annotations[BundleKey]
-			if bundle != "" {
-				var b cremote.Bundle
-				if err := json.Unmarshal([]byte(bundle), &b); err != nil {
-					return errors.Wrap(err, "unmarshaling bundle")
-				}
-				sp.Bundle = &b
-			}
-
-			signatures[i] = sp
-			return nil
+			signatures[i].Bundle, err = sig.Bundle()
+			return err
 		})
 	}
 	if err := g.Wait(); err != nil {

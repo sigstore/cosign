@@ -31,7 +31,7 @@ import (
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -225,7 +225,7 @@ func verifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
 	}
 
-	payload := cremote.BundlePayload{
+	payload := oci.BundlePayload{
 		Body:           e.Body,
 		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       *e.LogIndex,

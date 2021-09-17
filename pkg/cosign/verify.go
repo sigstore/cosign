@@ -33,7 +33,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/internal/oci"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -288,7 +288,7 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	return true, nil
 }
 
-func VerifySET(bundlePayload cremote.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
+func VerifySET(bundlePayload oci.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
 	contents, err := json.Marshal(bundlePayload)
 	if err != nil {
 		return errors.Wrap(err, "marshaling")
