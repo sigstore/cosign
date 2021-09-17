@@ -20,14 +20,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
@@ -64,26 +63,22 @@ func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, imageRef string, out
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Image(dstRef, remoteOpts...)
+	img, err := remote.Signatures(dstRef, remoteOpts...)
 	if err != nil {
 		return nil, err
 	}
-	layers, err := img.Layers()
+	sigs, err := img.Get()
 	if err != nil {
 		return nil, err
 	}
-	sboms := []string{}
-	for _, l := range layers {
+	sboms := make([]string, 0, len(sigs))
+	for _, l := range sigs {
 		mt, err := l.MediaType()
 		if err != nil {
 			return nil, err
 		}
 		fmt.Fprintf(os.Stderr, "Found SBOM of media type: %s\n", mt)
-		r, err := l.Compressed()
-		if err != nil {
-			return nil, err
-		}
-		sbom, err := ioutil.ReadAll(r)
+		sbom, err := l.Payload()
 		if err != nil {
 			return nil, err
 		}

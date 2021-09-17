@@ -65,15 +65,21 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 	}
 	signatures := make([]oci.Signature, 0, len(m.Layers))
 	for _, desc := range m.Layers {
+		layer, err := s.Image.LayerByDigest(desc.Digest)
+		if err != nil {
+			return nil, err
+		}
 		signatures = append(signatures, &sigLayer{
-			img:  s,
-			desc: desc,
+			Layer: layer,
+			img:   s,
+			desc:  desc,
 		})
 	}
 	return signatures, nil
 }
 
 type sigLayer struct {
+	v1.Layer
 	img  *sigs
 	desc v1.Descriptor
 }

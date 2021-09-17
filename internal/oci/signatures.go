@@ -37,6 +37,8 @@ type Signatures interface {
 
 // Signature holds a single image signature.
 type Signature interface {
+	v1.Layer
+
 	// Payload fetches the opaque data that is being signed.
 	// This will always return data when there is no error.
 	Payload() ([]byte, error)

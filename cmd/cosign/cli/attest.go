@@ -180,11 +180,6 @@ func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef s
 		return nil
 	}
 
-	attRef, err := AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
-	if err != nil {
-		return err
-	}
-
 	uo := cremote.UploadOpts{
 		Cert:         sv.Cert,
 		Chain:        sv.Chain,
@@ -223,6 +218,11 @@ func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef s
 
 		uo.Bundle = bundle(entry)
 		uo.AdditionalAnnotations = parseAnnotations(entry)
+	}
+
+	attRef, err := AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
+	if err != nil {
+		return err
 	}
 
 	fmt.Fprintln(os.Stderr, "Pushing attestation to:", attRef.String())
