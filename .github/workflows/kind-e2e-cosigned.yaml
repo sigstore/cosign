@@ -45,6 +45,8 @@ jobs:
       # '*.local' hostnames.
       REGISTRY_NAME: registry.local
       REGISTRY_PORT: 5000
+      INSECURE_REGISTRY_NAME: insecure-registry.notlocal
+      INSECURE_REGISTRY_PORT: 5001
       KO_DOCKER_REPO: registry.local:5000/cosigned
 
     steps:
@@ -144,6 +146,32 @@ jobs:
         # local reigstry, even when pushing $REGISTRY_NAME:$REGISTRY_PORT/some/image
         sudo echo "127.0.0.1 $REGISTRY_NAME" | sudo tee -a /etc/hosts
 
+    - name: Setup local insecure registry
+      run: |
+        # Create a self-signed SSL cert
+        mkdir -p insecure-certs
+        openssl req \
+          -subj "/C=US/ST=WA/L=Flavorton/O=Tests-R-Us/OU=Dept. of Insecurity/CN=example.com/emailAddress=testing@example.com" \
+          -newkey rsa:4096 -nodes -sha256 -keyout insecure-certs/domain.key \
+          -x509 -days 365 -out insecure-certs/domain.crt
+
+        # Run a registry.
+        docker run -d  --restart=always \
+          --name $INSECURE_REGISTRY_NAME \
+          -v "$(pwd)"/insecure-certs:/insecure-certs \
+          -e REGISTRY_HTTP_ADDR=0.0.0.0:$INSECURE_REGISTRY_PORT \
+          -e REGISTRY_HTTP_TLS_CERTIFICATE=/insecure-certs/domain.crt \
+          -e REGISTRY_HTTP_TLS_KEY=/insecure-certs/domain.key \
+          -p $INSECURE_REGISTRY_PORT:$INSECURE_REGISTRY_PORT \
+          registry:2
+
+        # Connect the registry to the KinD network.
+        docker network connect "kind" $INSECURE_REGISTRY_NAME
+
+        # Make the $INSECURE_REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
+        # local registry, even when pushing $INSECURE_REGISTRY_NAME:$INSECURE_REGISTRY_NAME/some/image
+        sudo echo "127.0.0.1 $INSECURE_REGISTRY_NAME" | sudo tee -a /etc/hosts
+
     - name: Install cosigned
       run: |
         ko apply -Bf config/
@@ -153,8 +181,13 @@ jobs:
 
         # Wait for the webhook to come up and become Ready
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
-
-    - name: Run Tests
+    
+    - name: Run Insecure Registry Tests
+      run: |
+        go install github.com/google/go-containerregistry/cmd/crane
+        ./test/e2e_test_insecure_registry.sh
+    
+    - name: Run Cosigned Tests
       run: |
         ./test/e2e_test_cosigned.sh
 
