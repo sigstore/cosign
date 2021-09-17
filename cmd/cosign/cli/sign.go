@@ -326,11 +326,6 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 			continue
 		}
 
-		sigRef, err := AttachedImageTag(img, cosign.SignatureTagSuffix, remoteOpts...)
-		if err != nil {
-			return err
-		}
-
 		uo := cremote.UploadOpts{
 			Cert:         sv.Cert,
 			Chain:        sv.Chain,
@@ -368,6 +363,11 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 
 			uo.Bundle = bundle(entry)
 			uo.AdditionalAnnotations = parseAnnotations(entry)
+		}
+
+		sigRef, err := AttachedImageTag(img, cosign.SignatureTagSuffix, remoteOpts...)
+		if err != nil {
+			return err
 		}
 
 		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())

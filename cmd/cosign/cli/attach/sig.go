@@ -76,11 +76,6 @@ func SignatureCmd(ctx context.Context, regOpts cli.RegistryOpts, sigRef, payload
 		return err
 	}
 
-	dstRef, err := cli.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
-	if err != nil {
-		return err
-	}
-
 	var payload []byte
 	if payloadRef == "" {
 		img := ref.Context().Digest(h.String())
@@ -97,6 +92,12 @@ func SignatureCmd(ctx context.Context, regOpts cli.RegistryOpts, sigRef, payload
 	if err != nil {
 		return err
 	}
+
+	dstRef, err := cli.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
+	if err != nil {
+		return err
+	}
+
 	if _, err := cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts}); err != nil {
 		return err
 	}
