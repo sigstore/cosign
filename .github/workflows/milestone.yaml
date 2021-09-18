@@ -1,12 +1,27 @@
 name: Milestone
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
+    branches:
+      - main
 
 jobs:
   milestone:
     runs-on: ubuntu-latest
+
+    permissions:
+      actions: none
+      checks: none
+      contents: read
+      deployments: none
+      issues: write
+      packages: none
+      pull-requests: write
+      repository-projects: none
+      security-events: none
+      statuses: none
+
     steps:
       - uses: actions/github-script@v4
         with:
