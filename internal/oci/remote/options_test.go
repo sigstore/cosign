@@ -122,6 +122,7 @@ func TestOptions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("makeOptions() = %v", err)
 			}
+			test.want.OriginalOptions = test.opts
 
 			if !reflect.DeepEqual(got, test.want) {
 				t.Errorf("makeOptions() = %#v, wanted %#v", got, test.want)

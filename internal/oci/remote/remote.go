@@ -91,5 +91,5 @@ func signatures(digestable interface{ Digest() (v1.Hash, error) }, o *options) (
 	if err != nil {
 		return nil, err
 	}
-	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignatureSuffix)), o.ROpt...)
+	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignatureSuffix)), o.OriginalOptions...)
 }

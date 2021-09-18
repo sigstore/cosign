@@ -40,6 +40,8 @@ type options struct {
 	SBOMSuffix        string
 	TargetRepository  name.Repository
 	ROpt              []remote.Option
+
+	OriginalOptions []Option
 }
 
 var defaultOptions = []remote.Option{
@@ -54,6 +56,10 @@ func makeOptions(target name.Repository, opts ...Option) (*options, error) {
 		SBOMSuffix:        SBOMTagSuffix,
 		TargetRepository:  target,
 		ROpt:              defaultOptions,
+
+		// Keep the original options around for things that want
+		// to call something that takes options!
+		OriginalOptions: opts,
 	}
 
 	// Before applying options, allow the environment to override things.
