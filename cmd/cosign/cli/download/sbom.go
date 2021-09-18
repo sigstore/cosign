@@ -63,7 +63,7 @@ func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, imageRef string, out
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Signatures(dstRef, remoteOpts...)
+	img, err := remote.Signatures(dstRef, remote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return nil, err
 	}

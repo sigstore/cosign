@@ -18,14 +18,16 @@ package remote
 import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/internal/oci"
 )
 
 // Signatures fetches the signatures image represented by the named reference.
-// TODO(mattmoor): Consider changing to take our Options
-func Signatures(ref name.Reference, opts ...remote.Option) (oci.Signatures, error) {
-	img, err := remoteImage(ref, opts...)
+func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
+	o, err := makeOptions(ref.Context(), opts...)
+	if err != nil {
+		return nil, err
+	}
+	img, err := remoteImage(ref, o.ROpt...)
 	if err != nil {
 		return nil, err
 	}
