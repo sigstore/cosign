@@ -25,9 +25,9 @@ require (
 	github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	google.golang.org/api v0.56.0
-	k8s.io/api v0.22.1
-	k8s.io/apimachinery v0.22.1
-	k8s.io/client-go v0.22.1
+	k8s.io/api v0.21.4
+	k8s.io/apimachinery v0.21.4
+	k8s.io/client-go v0.21.4
 	knative.dev/pkg v0.0.0-20210908025933-71508fc69a57
 )
 
@@ -56,14 +56,6 @@ require (
 	golang.org/x/sys v0.0.0-20210903071746-97244b99971b // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	k8s.io/apiextensions-apiserver v0.22.1 // indirect
 	k8s.io/klog/v2 v2.10.0 // indirect
 	k8s.io/utils v0.0.0-20210802155522-efc7438f0176 // indirect
-)
-
-// This version is used by knative.dev/pkg
-replace (
-	k8s.io/api => k8s.io/api v0.21.4
-	k8s.io/apimachinery => k8s.io/apimachinery v0.21.4
-	k8s.io/client-go => k8s.io/client-go v0.21.4
 )

@@ -18,6 +18,7 @@
 # cosign stuff
 /cosign*
 .vscode
+.idea
 /sget*
 
 # fuzzing artifacts
