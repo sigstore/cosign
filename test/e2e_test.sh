@@ -58,9 +58,9 @@ test_image="gcr.io/distroless/base" ./cosign dockerfile verify -key ${DISTROLESS
 if (test_image="ubuntu" ./cosign dockerfile verify -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile); then false; fi
 ./cosign dockerfile verify -key ${DISTROLESS_PUB_KEY} ./test/testdata/with_lowercase.Dockerfile
 
-# Test `cosign verify-manifest`
-./cosign verify-manifest -key ${DISTROLESS_PUB_KEY} ./test/testdata/signed_manifest.yaml
-if (./cosign verify-manifest -key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_manifest.yaml); then false; fi
+# Test `cosign manifest verify`
+./cosign manifest verify -key ${DISTROLESS_PUB_KEY} ./test/testdata/signed_manifest.yaml
+if (./cosign manifest verify -key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_manifest.yaml); then false; fi
 
 # Run the built container to make sure it doesn't crash
 make ko-local
