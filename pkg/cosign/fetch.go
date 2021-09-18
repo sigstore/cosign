@@ -66,7 +66,7 @@ func AttachedImageTag(repo name.Repository, digest v1.Hash, tagSuffix string) na
 	return repo.Tag(tagStr)
 }
 
-func FetchSignaturesForImage(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]SignedPayload, error) {
+func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]SignedPayload, error) {
 	simg, err := ociremote.SignedEntity(ref, opts...)
 	if err != nil {
 		return nil, err

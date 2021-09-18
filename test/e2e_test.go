@@ -245,7 +245,7 @@ func TestDuplicateSign(t *testing.T) {
 	// Signing again should work just fine...
 	must(cli.SignCmd(ctx, ko, cli.RegistryOpts{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
 
-	signatures, err := cosign.FetchSignaturesForImage(ctx, ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
+	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
 	if err != nil {
 		t.Fatalf("failed to fetch signatures: %v", err)
 	}
@@ -497,7 +497,7 @@ func TestUploadDownload(t *testing.T) {
 
 			// Now download it!
 			regClientOpts := registryClientOpts(ctx)
-			signatures, err := cosign.FetchSignaturesForImage(ctx, ref, ociremote.WithRemoteOptions(regClientOpts...))
+			signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremote.WithRemoteOptions(regClientOpts...))
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {

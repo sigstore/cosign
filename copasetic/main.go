@@ -141,7 +141,7 @@ func main() {
 			}
 			registryOpts := regOpts.GetRegistryClientOpts(bctx.Context)
 
-			sps, err := cosign.FetchSignaturesForImage(bctx.Context, ref, ociremote.WithRemoteOptions(registryOpts...))
+			sps, err := cosign.FetchSignaturesForReference(bctx.Context, ref, ociremote.WithRemoteOptions(registryOpts...))
 			if err != nil {
 				return nil, err
 			}
