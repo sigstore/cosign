@@ -32,10 +32,10 @@ require (
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/api v0.56.0
-	k8s.io/api v0.22.1
-	k8s.io/apimachinery v0.22.1
-	k8s.io/client-go v0.22.1
-	k8s.io/klog/v2 v2.10.0 // indirect
+	k8s.io/api v0.21.4
+	k8s.io/apimachinery v0.21.4
+	k8s.io/client-go v0.21.4
+	knative.dev/pkg v0.0.0-20210908025933-71508fc69a57
 )
 
 require (
@@ -56,14 +56,6 @@ require (
 	go.opentelemetry.io/contrib v0.22.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	k8s.io/apiextensions-apiserver v0.22.1 // indirect
+	k8s.io/klog/v2 v2.10.0 // indirect
 	k8s.io/utils v0.0.0-20210802155522-efc7438f0176 // indirect
-	knative.dev/pkg v0.0.0-20210908025933-71508fc69a57
-)
-
-// This version is used by knative.dev/pkg
-replace (
-	k8s.io/api => k8s.io/api v0.21.4
-	k8s.io/apimachinery => k8s.io/apimachinery v0.21.4
-	k8s.io/client-go => k8s.io/client-go v0.21.4
 )
