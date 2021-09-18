@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 )
 
 func TestTargetRepositoryForImage(t *testing.T) {
@@ -68,8 +69,8 @@ func TestTargetRepositoryForImage(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			os.Setenv(repoEnv, test.envRepo)
-			defer os.Unsetenv(repoEnv)
+			os.Setenv(ociremote.RepoOverrideKey, test.envRepo)
+			defer os.Unsetenv(ociremote.RepoOverrideKey)
 
 			got, err := TargetRepositoryForImage(test.image)
 			if err != nil {
