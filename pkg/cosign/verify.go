@@ -103,7 +103,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 
 	// TODO(mattmoor): If we change this code to interact with the SignedImage directly,
 	// then we could shed the `remote.Get` above.
-	allSignatures, err := FetchSignaturesForImage(ctx, signedImgRef, opts...)
+	allSignatures, err := FetchSignaturesForReference(ctx, signedImgRef, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
 	}
