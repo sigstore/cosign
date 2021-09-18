@@ -27,7 +27,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -46,7 +45,10 @@ import (
 )
 
 func main() {
-	rekorURL := flag.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
+	fs := flag.NewFlagSet("copasetic", flag.ExitOnError)
+	rekorURL := fs.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
+	var regOpts cli.RegistryOpts
+	cli.ApplyRegistryFlags(&regOpts, fs)
 	flag.Parse()
 
 	rego.RegisterBuiltin2(
@@ -67,7 +69,7 @@ func main() {
 				return nil, err
 			}
 
-			img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(bctx.Context))
+			img, err := remote.Image(ref, regOpts.GetRegistryClientOpts(bctx.Context)...)
 			if err != nil {
 				return nil, err
 			}
@@ -106,7 +108,7 @@ func main() {
 				return nil, err
 			}
 
-			img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithContext(bctx.Context))
+			img, err := remote.Image(ref, regOpts.GetRegistryClientOpts(bctx.Context)...)
 			if err != nil {
 				return nil, err
 			}
@@ -137,10 +139,7 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			registryOpts := []remote.Option{
-				remote.WithAuthFromKeychain(authn.DefaultKeychain),
-				remote.WithContext(bctx.Context),
-			}
+			registryOpts := regOpts.GetRegistryClientOpts(bctx.Context)
 
 			sps, err := cosign.FetchSignaturesForImage(bctx.Context, ref, ociremote.WithRemoteOptions(registryOpts...))
 			if err != nil {
@@ -190,17 +189,14 @@ func main() {
 			}
 			ctxOpt := options.WithContext(bctx.Context)
 			co := &cosign.CheckOpts{
-				SigVerifier:   pubKey,
-				VerifyOpts:    []signature.VerifyOption{ctxOpt},
-				PKOpts:        []signature.PublicKeyOption{ctxOpt},
-				ClaimVerifier: cosign.SimpleClaimVerifier,
-				RootCerts:     fulcio.GetRoots(),
-				RegistryClientOpts: []remote.Option{
-					remote.WithAuthFromKeychain(authn.DefaultKeychain),
-					remote.WithContext(bctx.Context),
-				},
-				RekorURL:      *rekorURL,
-				SignatureRepo: sigRepo,
+				SigVerifier:        pubKey,
+				VerifyOpts:         []signature.VerifyOption{ctxOpt},
+				PKOpts:             []signature.PublicKeyOption{ctxOpt},
+				ClaimVerifier:      cosign.SimpleClaimVerifier,
+				RootCerts:          fulcio.GetRoots(),
+				RegistryClientOpts: regOpts.GetRegistryClientOpts(bctx.Context),
+				RekorURL:           *rekorURL,
+				SignatureRepo:      sigRepo,
 			}
 			sps, err := cosign.Verify(bctx.Context, ref, co)
 			if err != nil {
