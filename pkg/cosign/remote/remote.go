@@ -33,6 +33,7 @@ import (
 
 	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/internal/oci/empty"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -58,8 +59,8 @@ func Descriptors(ref name.Reference, remoteOpts ...remote.Option) ([]v1.Descript
 }
 
 // SignatureImage returns the existing destination image, or a new, empty one.
-func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error) {
-	base, err := remote.Image(ref, opts...)
+func SignatureImage(ref name.Reference, opts ...remote.Option) (oci.Signatures, error) {
+	base, err := ociremote.Signatures(ref, ociremote.WithRemoteOptions(opts...))
 	if err == nil {
 		return base, nil
 	}
@@ -68,12 +69,12 @@ func SignatureImage(ref name.Reference, opts ...remote.Option) (v1.Image, error)
 		if te.StatusCode != http.StatusNotFound {
 			return nil, te
 		}
-		return empty.Image(), nil
+		return empty.Signatures(), nil
 	}
 	return nil, err
 }
 
-func findDuplicate(sigImage v1.Image, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
+func findDuplicate(sigImage oci.Signatures, payload []byte, dupeDetector signature.Verifier, annotations map[string]string) ([]byte, error) {
 	l := &staticLayer{
 		b:  payload,
 		mt: ctypes.SimpleSigningMediaType,
@@ -83,6 +84,8 @@ func findDuplicate(sigImage v1.Image, payload []byte, dupeDetector signature.Ver
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO(mattmoor): Port this to take advantage of the higher-level oci.Signature interface.
 	manifest, err := sigImage.Manifest()
 	if err != nil {
 		return nil, err
