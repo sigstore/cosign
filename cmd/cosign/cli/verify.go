@@ -17,6 +17,7 @@ package cli
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -207,13 +208,23 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts) {
 	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
 }
 
+func certSubject(c *x509.Certificate) string {
+	switch {
+	case c.EmailAddresses != nil:
+		return c.EmailAddresses[0]
+	case c.URIs != nil:
+		return c.URIs[0].String()
+	}
+	return ""
+}
+
 // PrintVerification logs details about the verification to stdout
 func PrintVerification(imgRef string, verified []cosign.SignedPayload, output string) {
 	switch output {
 	case "text":
 		for _, vp := range verified {
 			if vp.Cert != nil {
-				fmt.Println("Certificate subject: ", vp.Cert.EmailAddresses)
+				fmt.Println("Certificate subject: ", certSubject(vp.Cert))
 			}
 
 			fmt.Println(string(vp.Payload))
@@ -232,7 +243,7 @@ func PrintVerification(imgRef string, verified []cosign.SignedPayload, output st
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["Subject"] = vp.Cert.EmailAddresses
+				ss.Optional["Subject"] = certSubject(vp.Cert)
 			}
 			if vp.Bundle != nil {
 				if ss.Optional == nil {
