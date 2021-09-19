@@ -24,8 +24,8 @@ import (
 	"github.com/sigstore/cosign/internal/oci"
 )
 
-// Image constructs an empty image on which to base signature images.
-func Image() v1.Image {
+// Signatures constructs an empty oci.Signatures.
+func Signatures() oci.Signatures {
 	base := empty.Image
 	if !oci.DockerMediaTypes() {
 		base = mutate.MediaType(base, types.OCIManifestSchema1)
@@ -36,5 +36,18 @@ func Image() v1.Image {
 		}
 		m.Config.MediaType = types.OCIConfigJSON
 	}
-	return base
+	return &emptyImage{
+		Image: base,
+	}
+}
+
+type emptyImage struct {
+	v1.Image
+}
+
+var _ oci.Signatures = (*emptyImage)(nil)
+
+// Get implements oci.Signatures
+func (*emptyImage) Get() ([]oci.Signature, error) {
+	return nil, nil
 }

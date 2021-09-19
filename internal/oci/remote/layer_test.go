@@ -56,7 +56,7 @@ func TestSignature(t *testing.T) {
 		name: "just payload and signature",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -70,7 +70,7 @@ func TestSignature(t *testing.T) {
 		name: "with empty other keys",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -87,7 +87,7 @@ func TestSignature(t *testing.T) {
 		name: "bad digest",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: v1.Hash{Algorithm: "bad", Hex: "f00d"},
@@ -102,7 +102,7 @@ func TestSignature(t *testing.T) {
 		name: "missing signature",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -113,7 +113,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bad bundle",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -129,7 +129,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bad cert",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -145,7 +145,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bad chain",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -161,7 +161,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus bundle",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -187,7 +187,7 @@ func TestSignature(t *testing.T) {
 		name: "min plus good cert",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,
@@ -221,7 +221,7 @@ uThR1Z6JuA21HwxtL3GyJ8UQZcEPOlTBV593HrSAwBhiCoY=
 		name: "min plus bad chain",
 		l: &sigLayer{
 			img: &sigs{
-				Image: must(mutate.Append(ociempty.Image(), mutate.Addendum{Layer: layer})),
+				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
 			},
 			desc: v1.Descriptor{
 				Digest: digest,

@@ -52,7 +52,7 @@ func TestEmptyImage(t *testing.T) {
 				t.Fatalf("Setenv() = %v", err)
 			}
 
-			img := Image()
+			img := Signatures()
 
 			if mt, err := img.MediaType(); err != nil {
 				t.Errorf("MediaType() = %v", err)
