@@ -28,6 +28,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -47,7 +48,7 @@ func valid(ctx context.Context, img string, keys []*ecdsa.PublicKey) bool {
 	return false
 }
 
-func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]cosign.SignedPayload, error) {
+func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]oci.Signature, error) {
 	ref, err := name.ParseReference(img)
 	if err != nil {
 		return nil, err

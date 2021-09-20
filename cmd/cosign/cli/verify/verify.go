@@ -29,6 +29,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	sigs "github.com/sigstore/cosign/pkg/signature"
@@ -219,37 +220,48 @@ func certSubject(c *x509.Certificate) string {
 }
 
 // PrintVerification logs details about the verification to stdout
-func PrintVerification(imgRef string, verified []cosign.SignedPayload, output string) {
+func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	switch output {
 	case "text":
-		for _, vp := range verified {
-			if vp.Cert != nil {
-				fmt.Println("Certificate subject: ", certSubject(vp.Cert))
+		for _, sig := range verified {
+			if cert, err := sig.Cert(); err == nil && cert != nil {
+				fmt.Println("Certificate subject: ", certSubject(cert))
 			}
 
-			fmt.Println(string(vp.Payload))
+			p, err := sig.Payload()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error fetching payload: %v", err)
+				return
+			}
+			fmt.Println(string(p))
 		}
+
 	default:
 		var outputKeys []payload.SimpleContainerImage
-		for _, vp := range verified {
-			ss := payload.SimpleContainerImage{}
-			err := json.Unmarshal(vp.Payload, &ss)
+		for _, sig := range verified {
+			p, err := sig.Payload()
 			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error fetching payload: %v", err)
+				return
+			}
+
+			ss := payload.SimpleContainerImage{}
+			if err := json.Unmarshal(p, &ss); err != nil {
 				fmt.Println("error decoding the payload:", err.Error())
 				return
 			}
 
-			if vp.Cert != nil {
+			if cert, err := sig.Cert(); err == nil && cert != nil {
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["Subject"] = certSubject(vp.Cert)
+				ss.Optional["Subject"] = certSubject(cert)
 			}
-			if vp.Bundle != nil {
+			if bundle, err := sig.Bundle(); err == nil && bundle != nil {
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["Bundle"] = vp.Bundle
+				ss.Optional["Bundle"] = bundle
 			}
 
 			outputKeys = append(outputKeys, ss)
