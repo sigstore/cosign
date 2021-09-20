@@ -173,22 +173,19 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}
 
-		//TODO: this is really confusing, it's actually a return value for the printed verification below
-		co.BundleVerified = false
-
-		verified, err := cosign.Verify(ctx, ref, co)
+		verified, bundleVerified, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
 			return err
 		}
 
-		PrintVerificationHeader(ref.Name(), co)
+		PrintVerificationHeader(ref.Name(), co, bundleVerified)
 		PrintVerification(ref.Name(), verified, c.Output)
 	}
 
 	return nil
 }
 
-func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts) {
+func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified bool) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.ClaimVerifier != nil {
@@ -197,7 +194,7 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts) {
 		}
 		fmt.Fprintln(os.Stderr, "  - The cosign claims were validated")
 	}
-	if co.BundleVerified {
+	if bundleVerified {
 		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
 	} else if co.RekorURL != "" {
 		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")

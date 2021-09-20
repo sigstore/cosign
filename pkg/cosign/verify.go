@@ -52,8 +52,7 @@ type CheckOpts struct {
 	// Annotations optionally specifies image signature annotations to verify.
 	Annotations map[string]interface{}
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
-	ClaimVerifier  func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
-	BundleVerified bool
+	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
 
 	// RekorURL is the URL for the rekor server to use to verify signatures and public keys.
 	RekorURL string
@@ -71,10 +70,10 @@ type CheckOpts struct {
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
-func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, err error) {
+func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
-		return nil, errors.New("one of verifier or root certs is required")
+		return nil, false, errors.New("one of verifier or root certs is required")
 	}
 
 	validationErrs := []string{}
@@ -82,7 +81,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 	if co.RekorURL != "" {
 		rekorClient, err = rekor.GetRekorClient(co.RekorURL)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	}
 
@@ -96,7 +95,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 
 	se, err := ociremote.SignedEntity(signedImgRef, opts...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	// TODO(mattmoor): We could implement recursive verification if we just wrapped
@@ -104,11 +103,11 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 
 	sigs, err := se.Signatures()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	sl, err := sigs.Get()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	for _, sig := range sl {
 		b64sig, err := sig.Base64Signature()
@@ -186,7 +185,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 			// Both of the SignedEntity types implement Digest()
 			h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
 				validationErrs = append(validationErrs, err.Error())
@@ -199,7 +198,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 			validationErrs = append(validationErrs, "unable to verify bundle: "+err.Error())
 			continue
 		}
-		co.BundleVerified = verified
+		bundleVerified = bundleVerified || verified
 
 		if !verified && co.RekorURL != "" {
 			// Get the right public key to use (key or cert)
@@ -248,9 +247,9 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 		checkedSignatures = append(checkedSignatures, sig)
 	}
 	if len(checkedSignatures) == 0 {
-		return nil, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n "))
+		return nil, false, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n "))
 	}
-	return checkedSignatures, nil
+	return checkedSignatures, bundleVerified, nil
 }
 
 func checkExpiry(cert *x509.Certificate, it time.Time) error {
