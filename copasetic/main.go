@@ -186,7 +186,6 @@ func main() {
 			ctxOpt := options.WithContext(bctx.Context)
 			co := &cosign.CheckOpts{
 				SigVerifier:        pubKey,
-				VerifyOpts:         []signature.VerifyOption{ctxOpt},
 				PKOpts:             []signature.PublicKeyOption{ctxOpt},
 				ClaimVerifier:      cosign.SimpleClaimVerifier,
 				RootCerts:          fulcio.GetRoots(),
