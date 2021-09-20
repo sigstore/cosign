@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.2.1
+
+### Bug Fixes
+
+* Fix go install method of installation (https://github.com/sigstore/cosign/pull/726)
+
+### Contributors
+* Dan Luhring
+
+
 ## v1.2.0
 
 ### Enhancements
