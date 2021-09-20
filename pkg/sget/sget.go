@@ -73,11 +73,6 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 
 	if co.SigVerifier != nil || cli.EnableExperimental() {
 		co.RootCerts = fulcio.GetRoots()
-		sigRepo, err := cli.TargetRepositoryForImage(ref)
-		if err != nil {
-			return err
-		}
-		co.SignatureRepo = sigRepo
 
 		sp, err := cosign.Verify(ctx, ref, co)
 		if err != nil {

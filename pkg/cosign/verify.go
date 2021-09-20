@@ -44,9 +44,6 @@ import (
 
 // CheckOpts are the options for checking signatures.
 type CheckOpts struct {
-	// SignatureRepo, if set, designates the repository where image signatures are stored.
-	// Otherwise, it is assumed that signatures reside in the same repo as the image itself.
-	SignatureRepo name.Repository
 	// SigTagSuffixOverride overrides the suffix of the derived signature image tag. Default: ".sig"
 	SigTagSuffixOverride string
 	// RegistryClientOpts are the options for interacting with the container registry.
@@ -94,9 +91,6 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 	}
 
 	// These are all the signatures attached to our image that we know how to parse.
-	if (co.SignatureRepo != name.Repository{}) {
-		opts = append(opts, ociremote.WithTargetRepository(co.SignatureRepo))
-	}
 	if co.SigTagSuffixOverride != "" {
 		opts = append(opts, ociremote.WithSignatureSuffix(co.SigTagSuffixOverride))
 	}

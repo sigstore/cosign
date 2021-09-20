@@ -178,10 +178,6 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			sigRepo, err := cli.TargetRepositoryForImage(ref)
-			if err != nil {
-				return nil, err
-			}
 
 			pubKey, err := cli.LoadPublicKey(bctx.Context, key)
 			if err != nil {
@@ -196,7 +192,6 @@ func main() {
 				RootCerts:          fulcio.GetRoots(),
 				RegistryClientOpts: regOpts.GetRegistryClientOpts(bctx.Context),
 				RekorURL:           *rekorURL,
-				SignatureRepo:      sigRepo,
 			}
 			sps, err := cosign.Verify(bctx.Context, ref, co)
 			if err != nil {
