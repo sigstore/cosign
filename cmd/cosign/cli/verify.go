@@ -167,11 +167,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		if err != nil {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}
-		sigRepo, err := TargetRepositoryForImage(ref)
-		if err != nil {
-			return err
-		}
-		co.SignatureRepo = sigRepo
 		//TODO: this is really confusing, it's actually a return value for the printed verification below
 		co.VerifyBundle = false
 
