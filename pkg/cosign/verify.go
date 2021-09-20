@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -60,8 +61,6 @@ type CheckOpts struct {
 
 	// SigVerifier is used to verify signatures.
 	SigVerifier signature.Verifier
-	// VerifyOpts are the options provided to `SigVerifier.VerifySignature()`.
-	VerifyOpts []signature.VerifyOption
 	// PKOpts are the options provided to `SigVerifier.PublicKey()`.
 	PKOpts []signature.PublicKeyOption
 
@@ -109,7 +108,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 		switch {
 		// We have a public key to check against.
 		case co.SigVerifier != nil:
-			if err := sp.VerifySignature(co.SigVerifier, co.VerifyOpts...); err != nil {
+			if err := sp.VerifySignature(ctx, co.SigVerifier); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -130,7 +129,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
-			if err := sp.VerifySignature(pub); err != nil {
+			if err := sp.VerifySignature(ctx, pub); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -238,12 +237,12 @@ func checkExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func (sp *SignedPayload) VerifySignature(verifier signature.Verifier, verifyOpts ...signature.VerifyOption) error {
+func (sp *SignedPayload) VerifySignature(ctx context.Context, verifier signature.Verifier) error {
 	signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
 	if err != nil {
 		return err
 	}
-	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload), verifyOpts...)
+	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload), options.WithContext(ctx))
 }
 
 func (sp *SignedPayload) VerifyClaims(digest v1.Hash, ss *payload.SimpleContainerImage) error {
