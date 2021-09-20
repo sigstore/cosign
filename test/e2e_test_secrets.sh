@@ -124,11 +124,11 @@ dgst=$(./cosign upload blob -f randomblob ${blobimg})
 ./cosign verify -key ${verification_key} ${dgst} # For sanity
 
 # sget w/ signature verification should work via tag or digest
-./sget -key ${verification_key} -o verified_randomblob_from_digest $dgst
-./sget -key ${verification_key} -o verified_randomblob_from_tag $blobimg
+./sget --key ${verification_key} -o verified_randomblob_from_digest $dgst
+./sget --key ${verification_key} -o verified_randomblob_from_tag $blobimg
 
 # sget w/o signature verification should only work for ref by digest
-./sget -key ${verification_key} -o randomblob_from_digest $dgst
+./sget --key ${verification_key} -o randomblob_from_digest $dgst
 if (./sget -o randomblob_from_tag $blobimg); then false; fi
 
 # clean up a bit

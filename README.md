@@ -234,7 +234,7 @@ Fetching contents without verifying them is dangerous, so we require the artifac
 $ sget gcr.io/dlorenc-vmtest2/artifact
 error: public key must be specified when fetching by tag, you must fetch by digest or supply a public key
 
-$ sget -key cosign.pub us.gcr.io/dlorenc-vmtest2/readme > foo
+$ sget --key cosign.pub us.gcr.io/dlorenc-vmtest2/readme > foo
 
 Verification for us.gcr.io/dlorenc-vmtest2/readme --
 The following checks were performed on each of these signatures:
