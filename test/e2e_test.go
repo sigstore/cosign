@@ -249,10 +249,13 @@ func TestDuplicateSign(t *testing.T) {
 	// Signing again should work just fine...
 	must(sign.SignCmd(ctx, ko, options.RegistryOpts{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
 
-	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
-	if err != nil {
-		t.Fatalf("failed to fetch signatures: %v", err)
-	}
+	se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
+	must(err, t)
+	sigs, err := se.Signatures()
+	must(err, t)
+	signatures, err := sigs.Get()
+	must(err, t)
+
 	if len(signatures) > 1 {
 		t.Errorf("expected there to only be one signature, got %v", signatures)
 	}
@@ -500,20 +503,31 @@ func TestUploadDownload(t *testing.T) {
 			}
 
 			// Now download it!
-			regClientOpts := registryClientOpts(ctx)
-			signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremote.WithRemoteOptions(regClientOpts...))
+			se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
+			must(err, t)
+			sigs, err := se.Signatures()
+
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
 				must(err, t)
 
+				signatures, err := sigs.Get()
+				must(err, t)
+
 				if len(signatures) != 1 {
-					t.Error("unexpected signatures")
+					t.Fatalf("unexpected signatures %d, wanted 1", len(signatures))
 				}
-				if diff := cmp.Diff(signatures[0].Base64Signature, signature); diff != "" {
+
+				if b64sig, err := signatures[0].Base64Signature(); err != nil {
+					t.Fatalf("Base64Signature() = %v", err)
+				} else if diff := cmp.Diff(b64sig, signature); diff != "" {
 					t.Error(diff)
 				}
-				if diff := cmp.Diff(signatures[0].Payload, []byte(payload)); diff != "" {
+
+				if p, err := signatures[0].Payload(); err != nil {
+					t.Fatalf("Payload() = %v", err)
+				} else if diff := cmp.Diff(p, []byte(payload)); diff != "" {
 					t.Error(diff)
 				}
 			}
