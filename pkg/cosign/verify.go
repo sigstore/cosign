@@ -52,8 +52,8 @@ type CheckOpts struct {
 	// Annotations optionally specifies image signature annotations to verify.
 	Annotations map[string]interface{}
 	// ClaimVerifier, if provided, verifies claims present in the SignedPayload.
-	ClaimVerifier func(sigPayload SignedPayload, imageDigest v1.Hash, annotations map[string]interface{}) error
-	VerifyBundle  bool //TODO: remove in favor of SignedPayload.BundleVerified
+	ClaimVerifier  func(sigPayload SignedPayload, imageDigest v1.Hash, annotations map[string]interface{}) error
+	BundleVerified bool //TODO: remove in favor of SignedPayload.BundleVerified
 
 	// RekorURL is the URL for the rekor server to use to verify signatures and public keys.
 	RekorURL string
@@ -171,7 +171,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			validationErrs = append(validationErrs, "unable to verify bundle: "+err.Error())
 			continue
 		}
-		co.VerifyBundle = verified
+		co.BundleVerified = verified
 
 		if !verified && co.RekorURL != "" {
 			if rekorClient == nil {

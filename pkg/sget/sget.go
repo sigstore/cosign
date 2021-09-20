@@ -58,8 +58,8 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	}
 
 	co := &cosign.CheckOpts{
-		ClaimVerifier: cosign.SimpleClaimVerifier,
-		VerifyBundle:  true,
+		ClaimVerifier:  cosign.SimpleClaimVerifier,
+		BundleVerified: true,
 		RegistryClientOpts: []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
 			remote.WithContext(ctx),
