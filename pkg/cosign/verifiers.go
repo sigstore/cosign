@@ -18,6 +18,7 @@ package cosign
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
@@ -34,8 +35,9 @@ func SimpleClaimVerifier(sp SignedPayload, imageDigest v1.Hash, annotations map[
 		return err
 	}
 
-	if err := sp.VerifyClaims(imageDigest, ss); err != nil {
-		return err
+	foundDgst := ss.Critical.Image.DockerManifestDigest
+	if foundDgst != imageDigest.String() {
+		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)
 	}
 
 	if annotations != nil {

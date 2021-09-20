@@ -173,7 +173,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		}
 
 		//TODO: this is really confusing, it's actually a return value for the printed verification below
-		co.VerifyBundle = false
+		co.BundleVerified = false
 
 		verified, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
@@ -196,7 +196,7 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts) {
 		}
 		fmt.Fprintln(os.Stderr, "  - The cosign claims were validated")
 	}
-	if co.VerifyBundle {
+	if co.BundleVerified {
 		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
 	} else if co.RekorURL != "" {
 		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")

@@ -40,7 +40,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
-	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 // CheckOpts are the options for checking signatures.
@@ -53,8 +52,8 @@ type CheckOpts struct {
 	// Annotations optionally specifies image signature annotations to verify.
 	Annotations map[string]interface{}
 	// ClaimVerifier, if provided, verifies claims present in the SignedPayload.
-	ClaimVerifier func(sigPayload SignedPayload, imageDigest v1.Hash, annotations map[string]interface{}) error
-	VerifyBundle  bool //TODO: remove in favor of SignedPayload.BundleVerified
+	ClaimVerifier  func(sigPayload SignedPayload, imageDigest v1.Hash, annotations map[string]interface{}) error
+	BundleVerified bool //TODO: remove in favor of SignedPayload.BundleVerified
 
 	// RekorURL is the URL for the rekor server to use to verify signatures and public keys.
 	RekorURL string
@@ -108,7 +107,12 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 		switch {
 		// We have a public key to check against.
 		case co.SigVerifier != nil:
-			if err := sp.VerifySignature(ctx, co.SigVerifier); err != nil {
+			signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
+			if err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
+			if err := co.SigVerifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload), options.WithContext(ctx)); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -125,11 +129,17 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 				continue
 			}
 			// Now verify the cert, then the signature.
-			if err := sp.TrustedCert(co.RootCerts); err != nil {
+			if err := TrustedCert(sp.Cert, co.RootCerts); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
-			if err := sp.VerifySignature(ctx, pub); err != nil {
+
+			signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
+			if err != nil {
+				validationErrs = append(validationErrs, err.Error())
+				continue
+			}
+			if err := pub.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload), options.WithContext(ctx)); err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
 			}
@@ -156,12 +166,12 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			}
 		}
 
-		verified, err := sp.VerifyBundle()
+		verified, err := VerifyBundle(sp)
 		if err != nil && co.RekorURL == "" {
 			validationErrs = append(validationErrs, "unable to verify bundle: "+err.Error())
 			continue
 		}
-		co.VerifyBundle = verified
+		co.BundleVerified = verified
 
 		if !verified && co.RekorURL != "" {
 			if rekorClient == nil {
@@ -190,7 +200,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]
 			}
 
 			// Find the uuid then the entry.
-			uuid, _, err := sp.VerifyTlog(rekorClient, pemBytes)
+			uuid, _, err := FindTlogEntry(rekorClient, sp.Base64Signature, sp.Payload, pemBytes)
 			if err != nil {
 				validationErrs = append(validationErrs, err.Error())
 				continue
@@ -237,32 +247,9 @@ func checkExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func (sp *SignedPayload) VerifySignature(ctx context.Context, verifier signature.Verifier) error {
-	signature, err := base64.StdEncoding.DecodeString(sp.Base64Signature)
-	if err != nil {
-		return err
-	}
-	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(sp.Payload), options.WithContext(ctx))
-}
-
-func (sp *SignedPayload) VerifyClaims(digest v1.Hash, ss *payload.SimpleContainerImage) error {
-	foundDgst := ss.Critical.Image.DockerManifestDigest
-	if foundDgst != digest.String() {
-		return fmt.Errorf("invalid or missing digest in claim: %s", foundDgst)
-	}
-	return nil
-}
-
-func (sp *SignedPayload) BundleVerified() bool {
-	return sp.bundleVerified
-}
-
-func (sp *SignedPayload) VerifyBundle() (bool, error) {
+func VerifyBundle(sp SignedPayload) (bool, error) {
 	if sp.Bundle == nil {
 		return false, nil
-	}
-	if sp.bundleVerified {
-		return true, nil
 	}
 	rekorPubKey, err := PemToECDSAKey([]byte(GetRekorPub()))
 	if err != nil {
@@ -274,7 +261,6 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	}
 
 	if sp.Cert == nil {
-		sp.bundleVerified = true
 		return true, nil
 	}
 
@@ -282,7 +268,6 @@ func (sp *SignedPayload) VerifyBundle() (bool, error) {
 	if err := checkExpiry(sp.Cert, time.Unix(sp.Bundle.Payload.IntegratedTime, 0)); err != nil {
 		return false, errors.Wrap(err, "checking expiry on cert")
 	}
-	sp.bundleVerified = true
 	return true, nil
 }
 
@@ -302,14 +287,6 @@ func VerifySET(bundlePayload oci.BundlePayload, signature []byte, pub *ecdsa.Pub
 		return errors.New("unable to verify")
 	}
 	return nil
-}
-
-func (sp *SignedPayload) VerifyTlog(rc *client.Rekor, publicKeyPem []byte) (uuid string, index int64, err error) {
-	return FindTlogEntry(rc, sp.Base64Signature, sp.Payload, publicKeyPem)
-}
-
-func (sp *SignedPayload) TrustedCert(roots *x509.CertPool) error {
-	return TrustedCert(sp.Cert, roots)
 }
 
 func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {

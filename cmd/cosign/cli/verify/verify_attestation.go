@@ -164,7 +164,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 		}
 
 		//TODO: this is really confusing, it's actually a return value for the printed verification below
-		co.VerifyBundle = false
+		co.BundleVerified = false
 
 		verified, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
