@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build gofuzz
 // +build gofuzz
 
 package cli
@@ -21,18 +22,18 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 )
 
 func FuzzGetPassword(data []byte) int {
-	original := cli.Read
-	cli.Read = func() func() ([]byte, error) {
+	original := generate.Read
+	generate.Read = func() func() ([]byte, error) {
 		return func() ([]byte, error) {
 			return data, nil
 		}
 	}
-	defer func() { cli.Read = original }()
-	p, err := cli.GetPass(true)
+	defer func() { generate.Read = original }()
+	p, err := generate.GetPass(true)
 	if err != nil {
 		panic(fmt.Sprintf("error getting password: %v", err))
 	}

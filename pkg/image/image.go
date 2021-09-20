@@ -12,13 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package image
 
 import (
+	"os"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	"github.com/sigstore/cosign/pkg/cosign"
+
+	oremote "github.com/sigstore/cosign/internal/oci/remote"
 )
+
+func TargetRepositoryForImage(img name.Reference) (name.Repository, error) {
+	wantRepo := os.Getenv(oremote.RepoOverrideKey)
+	if wantRepo == "" {
+		return img.Context(), nil
+	}
+	return name.NewRepository(wantRepo)
+}
+
+func AttachedImageTag(ref name.Reference, suffix string, remoteOpts ...remote.Option) (name.Tag, error) {
+	h, err := Digest(ref, remoteOpts...)
+	if err != nil {
+		return name.Tag{}, err
+	}
+
+	repo, err := TargetRepositoryForImage(ref)
+	if err != nil {
+		return name.Tag{}, err
+	}
+	return cosign.AttachedImageTag(repo, h, suffix), nil
+}
 
 // Digest returns the digest of the image at the reference.
 //

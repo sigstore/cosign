@@ -30,13 +30,18 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/image"
+	"github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/cosign/pkg/types"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func Attest() *ffcli.Command {
@@ -51,9 +56,9 @@ func Attest() *ffcli.Command {
 		force         = flagset.Bool("f", false, "skip warnings and confirmations")
 		idToken       = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		predicateType = flagset.String("type", "custom", "specify predicate type (default: custom) (slsaprovenance|link|spdx)")
-		regOpts       RegistryOpts
+		regOpts       options.RegistryOpts
 	)
-	ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "attest",
 		ShortUsage: "cosign attest -key <key path>|<kms uri> [-predicate <path>] [-a key=value] [-upload=true|false] [-f] [-r] <image uri>",
@@ -88,9 +93,9 @@ EXAMPLES
 				return flag.ErrHelp
 			}
 
-			ko := KeyOpts{
+			ko := sign.KeyOpts{
 				KeyRef:   *key,
-				PassFunc: GetPass,
+				PassFunc: generate.GetPass,
 				Sk:       *sk,
 				Slot:     *slot,
 				IDToken:  *idToken,
@@ -119,16 +124,16 @@ var predicateTypeMap = map[string]string{
 	predicateLink:   in_toto.PredicateLinkV1,
 }
 
-func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef string, certPath string,
+func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpts, imageRef string, certPath string,
 	upload bool, predicatePath string, force bool, predicateType string) error {
 	// A key file or token is required unless we're in experimental mode!
-	if EnableExperimental() {
-		if nOf(ko.KeyRef, ko.Sk) > 1 {
-			return &KeyParseError{}
+	if options.EnableExperimental() {
+		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
+			return &options.KeyParseError{}
 		}
 	} else {
-		if !oneOf(ko.KeyRef, ko.Sk) {
-			return &KeyParseError{}
+		if !options.OneOf(ko.KeyRef, ko.Sk) {
+			return &options.KeyParseError{}
 		}
 	}
 
@@ -143,12 +148,12 @@ func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef s
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	h, err := Digest(ref, remoteOpts...)
+	h, err := image.Digest(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	sv, err := signerFromKeyOpts(ctx, certPath, ko)
+	sv, err := sign.SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
@@ -170,7 +175,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef s
 	if err != nil {
 		return err
 	}
-	sig, err := wrapped.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
+	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
@@ -188,7 +193,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef s
 		MediaType:    types.DssePayloadType,
 	}
 
-	uploadTLog, err := shouldUploadToTlog(ref, force, ko.RekorURL)
+	uploadTLog, err := sign.ShouldUploadToTlog(ref, force, ko.RekorURL)
 	if err != nil {
 		return err
 	}
@@ -200,7 +205,7 @@ func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef s
 		if sv.Cert != nil {
 			rekorBytes = sv.Cert
 		} else {
-			pemBytes, err := publicKeyPem(sv, options.WithContext(ctx))
+			pemBytes, err := signature.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
 			if err != nil {
 				return err
 			}
@@ -216,11 +221,11 @@ func AttestCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, imageRef s
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 
-		uo.Bundle = bundle(entry)
-		uo.AdditionalAnnotations = parseAnnotations(entry)
+		uo.Bundle = sign.Bundle(entry)
+		uo.AdditionalAnnotations = sign.ParseAnnotations(entry)
 	}
 
-	attRef, err := AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
+	attRef, err := image.AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package options
 
 import "testing"
 
@@ -76,8 +76,8 @@ func TestOneOf(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := oneOf(tt.args...); got != tt.want {
-				t.Errorf("oneOf() = %v, want %v", got, tt.want)
+			if got := OneOf(tt.args...); got != tt.want {
+				t.Errorf("OneOf() = %v, want %v", got, tt.want)
 			}
 		})
 	}

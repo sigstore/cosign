@@ -13,30 +13,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package signature
 
 import (
-	"context"
-	"errors"
-	"testing"
+	_ "crypto/sha256" // for `crypto.SHA256`
+	"fmt"
+	"strings"
 )
 
-// TestSignCmdLocalKeyAndSk verifies the SignCmd returns an error
-// if both a local key path and a sk are specified
-func TestSignCmdLocalKeyAndSk(t *testing.T) {
-	ctx := context.Background()
+type AnnotationsMap struct {
+	Annotations map[string]interface{}
+}
 
-	for _, ko := range []KeyOpts{
-		// local and sk keys
-		{
-			KeyRef:   "testLocalPath",
-			PassFunc: GetPass,
-			Sk:       true,
-		},
-	} {
-		err := SignCmd(ctx, ko, RegistryOpts{}, nil, nil, "", false, "", false, false, "")
-		if (errors.Is(err, &KeyParseError{}) == false) {
-			t.Fatal("expected KeyParseError")
-		}
+func (a *AnnotationsMap) Set(s string) error {
+	if a.Annotations == nil {
+		a.Annotations = map[string]interface{}{}
 	}
+	kvp := strings.SplitN(s, "=", 2)
+	if len(kvp) != 2 {
+		return fmt.Errorf("invalid flag: %s, expected key=value", s)
+	}
+
+	a.Annotations[kvp[0]] = kvp[1]
+	return nil
+}
+
+func (a *AnnotationsMap) String() string {
+	s := []string{}
+	for k, v := range a.Annotations {
+		s = append(s, fmt.Sprintf("%s=%s", k, v))
+	}
+	return strings.Join(s, ",")
 }

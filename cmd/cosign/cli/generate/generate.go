@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package generate
 
 import (
 	"context"
@@ -26,16 +26,18 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 func Generate() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign generate", flag.ExitOnError)
-		regOpts     RegistryOpts
-		annotations = annotationsMap{}
+		regOpts     options.RegistryOpts
+		annotations = signature.AnnotationsMap{}
 	)
-	ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 
 	return &ffcli.Command{
@@ -60,12 +62,13 @@ EXAMPLES
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return GenerateCmd(ctx, regOpts, args[0], annotations.annotations, os.Stdout)
+			return GenerateCmd(ctx, regOpts, args[0], annotations.Annotations, os.Stdout)
 		},
 	}
 }
 
-func GenerateCmd(ctx context.Context, regOpts RegistryOpts, imageRef string, annotations map[string]interface{}, w io.Writer) error {
+// nolint
+func GenerateCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string, annotations map[string]interface{}, w io.Writer) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -78,10 +81,10 @@ func GenerateCmd(ctx context.Context, regOpts RegistryOpts, imageRef string, ann
 	repo := ref.Context()
 	img := repo.Digest(get.Digest.String())
 
-	payload, err := (&payload.Cosign{Image: img, Annotations: annotations}).MarshalJSON()
+	json, err := (&payload.Cosign{Image: img, Annotations: annotations}).MarshalJSON()
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(w, string(payload))
+	fmt.Fprintln(w, string(json))
 	return nil
 }

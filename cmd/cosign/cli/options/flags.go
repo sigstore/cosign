@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package options
 
 import (
 	"context"
@@ -22,16 +22,17 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-// oneOf ensures that only one of the supplied interfaces is set to a non-zero value.
-func oneOf(args ...interface{}) bool {
-	return nOf(args...) == 1
+// OneOf ensures that only one of the supplied interfaces is set to a non-zero value.
+func OneOf(args ...interface{}) bool {
+	return NOf(args...) == 1
 }
 
-// nOf returns how many of the fields are non-zero
-func nOf(args ...interface{}) int {
+// NOf returns how many of the fields are non-zero
+func NOf(args ...interface{}) int {
 	n := 0
 	for _, arg := range args {
 		if !reflect.ValueOf(arg).IsZero() {
@@ -55,4 +56,12 @@ func (co *RegistryOpts) GetRegistryClientOpts(ctx context.Context) []remote.Opti
 
 func ApplyRegistryFlags(regOpts *RegistryOpts, fs *flag.FlagSet) {
 	fs.BoolVar(&regOpts.AllowInsecure, "allow-insecure-registry", false, "whether to allow insecure connections to registries. Don't use this for anything but testing")
+}
+
+func defaultRegistryClientOpts(ctx context.Context) []remote.Option {
+	return []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithContext(ctx),
+		remote.WithUserAgent("cosign/" + VersionInfo().GitVersion),
+	}
 }

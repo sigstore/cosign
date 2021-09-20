@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package sign
 
 import (
 	"bytes"
@@ -31,7 +31,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -39,48 +38,27 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
+	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/image"
 	providers "github.com/sigstore/cosign/pkg/providers/all"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-type annotationsMap struct {
-	annotations map[string]interface{}
-}
-
-func (a *annotationsMap) Set(s string) error {
-	if a.annotations == nil {
-		a.annotations = map[string]interface{}{}
-	}
-	kvp := strings.SplitN(s, "=", 2)
-	if len(kvp) != 2 {
-		return fmt.Errorf("invalid flag: %s, expected key=value", s)
-	}
-
-	a.annotations[kvp[0]] = kvp[1]
-	return nil
-}
-
-func (a *annotationsMap) String() string {
-	s := []string{}
-	for k, v := range a.annotations {
-		s = append(s, fmt.Sprintf("%s=%s", k, v))
-	}
-	return strings.Join(s, ",")
-}
-
-func shouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error) {
+func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error) {
 	// Check whether experimental is on!
-	if !EnableExperimental() {
+	if !options.EnableExperimental() {
 		return false, nil
 	}
 	// We are forcing publishing to the Tlog.
@@ -122,10 +100,10 @@ func Sign() *ffcli.Command {
 		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
 		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
 		attachment       = flagset.String("attachment", "", "related image attachment to sign (sbom), default none")
-		annotations      = annotationsMap{}
-		regOpts          RegistryOpts
+		annotations      = sigs.AnnotationsMap{}
+		regOpts          options.RegistryOpts
 	)
-	ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
@@ -177,7 +155,7 @@ EXAMPLES
 			}
 			ko := KeyOpts{
 				KeyRef:           *key,
-				PassFunc:         GetPass,
+				PassFunc:         generate.GetPass,
 				Sk:               *sk,
 				Slot:             *slot,
 				FulcioURL:        *fulcioURL,
@@ -187,7 +165,7 @@ EXAMPLES
 				OIDCClientID:     *oidcClientID,
 				OIDCClientSecret: *oidcClientSecret,
 			}
-			if err := SignCmd(ctx, ko, regOpts, annotations.annotations, args, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
+			if err := SignCmd(ctx, ko, regOpts, annotations.Annotations, args, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
 				if *attachment == "" {
 					return errors.Wrapf(err, "signing %v", args)
 				}
@@ -198,7 +176,7 @@ EXAMPLES
 	}
 }
 
-func getAttachedImageRef(imageRef string, attachment string, remoteOpts ...remote.Option) (name.Reference, error) {
+func GetAttachedImageRef(imageRef string, attachment string, remoteOpts ...remote.Option) (name.Reference, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing reference")
@@ -207,7 +185,7 @@ func getAttachedImageRef(imageRef string, attachment string, remoteOpts ...remot
 		return ref, nil
 	}
 	if attachment == "sbom" {
-		return AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
+		return image.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
 	}
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
@@ -246,15 +224,16 @@ func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opt
 	return imgs, nil
 }
 
-func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations map[string]interface{},
+// nolint
+func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, annotations map[string]interface{},
 	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
-	if EnableExperimental() {
-		if nOf(ko.KeyRef, ko.Sk) > 1 {
-			return &KeyParseError{}
+	if options.EnableExperimental() {
+		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
+			return &options.KeyParseError{}
 		}
 	} else {
-		if !oneOf(ko.KeyRef, ko.Sk) {
-			return &KeyParseError{}
+		if !options.OneOf(ko.KeyRef, ko.Sk) {
+			return &options.KeyParseError{}
 		}
 	}
 
@@ -263,12 +242,12 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 	toSign := make([]name.Digest, 0, len(imgs))
 	for _, inputImg := range imgs {
 		// A key file or token is required unless we're in experimental mode!
-		ref, err := getAttachedImageRef(inputImg, attachment, remoteOpts...)
+		ref, err := GetAttachedImageRef(inputImg, attachment, remoteOpts...)
 		if err != nil {
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
-		h, err := Digest(ref, remoteOpts...)
+		h, err := image.Digest(ref, remoteOpts...)
 		if err != nil {
 			return errors.Wrap(err, "resolving digest")
 		}
@@ -289,7 +268,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 		}
 	}
 
-	sv, err := signerFromKeyOpts(ctx, certPath, ko)
+	sv, err := SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
@@ -316,7 +295,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 			}
 		}
 
-		sig, err := sv.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
+		sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
@@ -334,7 +313,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 		}
 
 		// Check if the image is public (no auth in Get)
-		uploadTLog, err := shouldUploadToTlog(img, force, ko.RekorURL)
+		uploadTLog, err := ShouldUploadToTlog(img, force, ko.RekorURL)
 		if err != nil {
 			return err
 		}
@@ -345,7 +324,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 			if sv.Cert != nil {
 				rekorBytes = sv.Cert
 			} else {
-				pemBytes, err := publicKeyPem(sv, options.WithContext(ctx))
+				pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
 				if err != nil {
 					return err
 				}
@@ -361,11 +340,11 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 			}
 			fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 
-			uo.Bundle = bundle(entry)
-			uo.AdditionalAnnotations = parseAnnotations(entry)
+			uo.Bundle = Bundle(entry)
+			uo.AdditionalAnnotations = ParseAnnotations(entry)
 		}
 
-		sigRef, err := AttachedImageTag(img, cosign.SignatureTagSuffix, remoteOpts...)
+		sigRef, err := image.AttachedImageTag(img, cosign.SignatureTagSuffix, remoteOpts...)
 		if err != nil {
 			return err
 		}
@@ -379,7 +358,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, annotations 
 	return nil
 }
 
-func bundle(entry *models.LogEntryAnon) *oci.Bundle {
+func Bundle(entry *models.LogEntryAnon) *oci.Bundle {
 	if entry.Verification == nil {
 		return nil
 	}
@@ -394,16 +373,16 @@ func bundle(entry *models.LogEntryAnon) *oci.Bundle {
 	}
 }
 
-func parseAnnotations(entry *models.LogEntryAnon) map[string]string {
+func ParseAnnotations(entry *models.LogEntryAnon) map[string]string {
 	annts := map[string]string{}
-	if bund := bundle(entry); bund != nil {
+	if bund := Bundle(entry); bund != nil {
 		contents, _ := json.Marshal(bund)
 		annts[cosign.BundleKey] = string(contents)
 	}
 	return annts
 }
 
-func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certSignVerifier, error) {
+func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertSignVerifier, error) {
 	switch {
 	case ko.Sk:
 		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
@@ -429,18 +408,18 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 		if err != nil {
 			return nil, err
 		}
-		return &certSignVerifier{
+		return &CertSignVerifier{
 			Cert:           pemBytes,
 			SignerVerifier: sv,
 		}, nil
 
 	case ko.KeyRef != "":
-		k, err := signerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
+		k, err := sigs.SignerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
 		if err != nil {
 			return nil, errors.Wrap(err, "reading key")
 		}
 
-		certSigner := &certSignVerifier{
+		certSigner := &CertSignVerifier{
 			SignerVerifier: k,
 		}
 		// Handle the -cert flag
@@ -505,14 +484,14 @@ func signerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*certS
 	if err != nil {
 		return nil, errors.Wrap(err, "getting key from Fulcio")
 	}
-	return &certSignVerifier{
+	return &CertSignVerifier{
 		Cert:           k.Cert,
 		Chain:          k.Chain,
 		SignerVerifier: k,
 	}, nil
 }
 
-type certSignVerifier struct {
+type CertSignVerifier struct {
 	Cert  []byte
 	Chain []byte
 	signature.SignerVerifier

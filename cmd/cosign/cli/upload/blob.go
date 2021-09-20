@@ -26,7 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
@@ -61,9 +61,9 @@ func Blob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload blob", flag.ExitOnError)
 		ct      = flagset.String("ct", "", "content type to set")
-		regOpts cli.RegistryOpts
+		regOpts options.RegistryOpts
 	)
-	cli.ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	fmap := Files{}
 	flagset.Var(&fmap, "f", "<filepath>:[platform/arch]")
 	return &ffcli.Command{
@@ -96,7 +96,7 @@ EXAMPLES
 	}
 }
 
-func BlobCmd(ctx context.Context, regOpts cli.RegistryOpts, files []cremote.File, contentType, imageRef string) error {
+func BlobCmd(ctx context.Context, regOpts options.RegistryOpts, files []cremote.File, contentType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

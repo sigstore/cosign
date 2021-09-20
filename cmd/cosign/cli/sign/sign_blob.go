@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package sign
 
 import (
 	"bytes"
@@ -28,11 +28,15 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/signature"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// nolint
 func SignBlob() *ffcli.Command {
 	var (
 		flagset          = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
@@ -47,9 +51,9 @@ func SignBlob() *ffcli.Command {
 		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
 		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
 		output           = flagset.String("output", "", "write the signature to FILE")
-		regOpts          RegistryOpts
+		regOpts          options.RegistryOpts
 	)
-	ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "sign-blob",
 		ShortUsage: "cosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>",
@@ -77,9 +81,9 @@ EXAMPLES
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 			// A key file is required unless we're in experimental mode!
-			if !EnableExperimental() {
-				if !oneOf(*key, *sk) {
-					return &KeyParseError{}
+			if !options.EnableExperimental() {
+				if !options.OneOf(*key, *sk) {
+					return &options.KeyParseError{}
 				}
 			}
 
@@ -90,7 +94,7 @@ EXAMPLES
 				KeyRef:           *key,
 				Sk:               *sk,
 				Slot:             *slot,
-				PassFunc:         GetPass,
+				PassFunc:         generate.GetPass,
 				FulcioURL:        *fulcioURL,
 				RekorURL:         *rekorURL,
 				IDToken:          *idToken,
@@ -121,7 +125,8 @@ type KeyOpts struct {
 	OIDCClientSecret string
 }
 
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, payloadPath string, b64 bool, output string) ([]byte, error) {
+// nolint
+func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, payloadPath string, b64 bool, output string) ([]byte, error) {
 	var payload []byte
 	var err error
 
@@ -135,24 +140,24 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts RegistryOpts, payloadP
 		return nil, err
 	}
 
-	sv, err := signerFromKeyOpts(ctx, "", ko)
+	sv, err := SignerFromKeyOpts(ctx, "", ko)
 	if err != nil {
 		return nil, err
 	}
 
-	sig, err := sv.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
+	sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return nil, errors.Wrap(err, "signing blob")
 	}
 
-	if EnableExperimental() {
+	if options.EnableExperimental() {
 		// TODO: Refactor with sign.go
 		var rekorBytes []byte
 		if sv.Cert != nil {
 			fmt.Fprintf(os.Stderr, "signing with ephemeral certificate:\n%s\n", string(sv.Cert))
 			rekorBytes = sv.Cert
 		} else {
-			pemBytes, err := publicKeyPem(sv, options.WithContext(ctx))
+			pemBytes, err := signature.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
 			if err != nil {
 				return nil, err
 			}

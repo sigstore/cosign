@@ -25,17 +25,18 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/image"
 )
 
 func SBOM() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign download sbom", flag.ExitOnError)
-		regOpts cli.RegistryOpts
+		regOpts options.RegistryOpts
 	)
-	cli.ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "sbom",
 		ShortUsage: "cosign download sbom <image uri>",
@@ -51,7 +52,7 @@ func SBOM() *ffcli.Command {
 	}
 }
 
-func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, imageRef string, out io.Writer) ([]string, error) {
+func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string, out io.Writer) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
@@ -59,7 +60,7 @@ func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, imageRef string, out
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
-	dstRef, err := cli.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
+	dstRef, err := image.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
 	if err != nil {
 		return nil, err
 	}

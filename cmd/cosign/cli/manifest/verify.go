@@ -27,20 +27,21 @@ import (
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
-	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"k8s.io/apimachinery/pkg/util/yaml"
+
+	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )
 
 // VerifyManifestCommand verifies all image signatures on a supplied k8s resource
 type VerifyManifestCommand struct {
-	cli.VerifyCommand
+	verify.VerifyCommand
 }
 
 // VerifyManifest builds and returns an ffcli command
 func VerifyManifest() *ffcli.Command {
 	cmd := VerifyManifestCommand{}
 	flagset := flag.NewFlagSet("cosign manifest verify", flag.ExitOnError)
-	cli.ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
+	verify.ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
 
 	return &ffcli.Command{
 		Name:       "verify",

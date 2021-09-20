@@ -27,9 +27,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/image"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -38,9 +39,9 @@ func Signature() *ffcli.Command {
 		flagset   = flag.NewFlagSet("cosign attach signature", flag.ExitOnError)
 		signature = flagset.String("signature", "", "the signature, path to the signature, or {-} for stdin")
 		payload   = flagset.String("payload", "", "path to the payload covered by the signature (if using another format)")
-		regOpts   cli.RegistryOpts
+		regOpts   options.RegistryOpts
 	)
-	cli.ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "signature",
 		ShortUsage: "cosign attach signature <image uri>",
@@ -56,7 +57,7 @@ func Signature() *ffcli.Command {
 	}
 }
 
-func SignatureCmd(ctx context.Context, regOpts cli.RegistryOpts, sigRef, payloadRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, payloadRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -71,7 +72,7 @@ func SignatureCmd(ctx context.Context, regOpts cli.RegistryOpts, sigRef, payload
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
-	h, err := cli.Digest(ref, remoteOpts...)
+	h, err := image.Digest(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func SignatureCmd(ctx context.Context, regOpts cli.RegistryOpts, sigRef, payload
 		return err
 	}
 
-	dstRef, err := cli.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
+	dstRef, err := image.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package signature
 
 import (
 	"context"
@@ -79,16 +79,16 @@ func TestSignerFromPrivateKeyFileRef(t *testing.T) {
 			t.Parallel()
 			testFile, _ := generateKeyFile(t, tmpDir, tc.writePw)
 
-			signer, err := signerFromKeyRef(ctx, testFile, tc.readPw)
+			signer, err := SignerFromKeyRef(ctx, testFile, tc.readPw)
 			if err != nil {
 				if tc.expectErr {
 					// Task failed successfully
 					return
 				}
-				t.Fatalf("signerFromKeyRef returned error: %v", err)
+				t.Fatalf("SignerFromKeyRef returned error: %v", err)
 			}
 			if tc.expectErr {
-				t.Fatalf("signerFromKeyRef should have returned error, got: %v", signer)
+				t.Fatalf("SignerFromKeyRef should have returned error, got: %v", signer)
 			}
 		})
 	}
@@ -100,7 +100,13 @@ func TestPublicKeyFromFileRef(t *testing.T) {
 	ctx := context.Background()
 	_, testFile := generateKeyFile(t, tmpDir, pass("whatever"))
 
-	if _, err := publicKeyFromKeyRef(ctx, testFile); err != nil {
-		t.Fatalf("publicKeyFromKeyRef returned error: %v", err)
+	if _, err := PublicKeyFromKeyRef(ctx, testFile); err != nil {
+		t.Fatalf("PublicKeyFromKeyRef returned error: %v", err)
+	}
+}
+
+func pass(s string) cosign.PassFunc {
+	return func(_ bool) ([]byte, error) {
+		return []byte(s), nil
 	}
 }

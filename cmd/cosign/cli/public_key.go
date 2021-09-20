@@ -25,10 +25,13 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 type NamedWriter struct {
@@ -72,8 +75,8 @@ EXAMPLES
   cosign public-key -key hashivault://[KEY]`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if !oneOf(*key, *sk) {
-				return &KeyParseError{}
+			if !options.OneOf(*key, *sk) {
+				return &options.KeyParseError{}
 			}
 
 			writer := NamedWriter{Name: "", Writer: nil}
@@ -96,7 +99,7 @@ EXAMPLES
 				Sk:     *sk,
 				Slot:   *slot,
 			}
-			return GetPublicKey(ctx, pk, writer, GetPass)
+			return GetPublicKey(ctx, pk, writer, generate.GetPass)
 		},
 	}
 }
@@ -111,7 +114,7 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 	var k signature.PublicKeyProvider
 	switch {
 	case opts.KeyRef != "":
-		s, err := signerFromKeyRef(ctx, opts.KeyRef, pf)
+		s, err := sigs.SignerFromKeyRef(ctx, opts.KeyRef, pf)
 		if err != nil {
 			return err
 		}
@@ -129,7 +132,7 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		k = pk
 	}
 
-	pemBytes, err := publicKeyPem(k, options.WithContext(ctx))
+	pemBytes, err := sigs.PublicKeyPem(k, signatureoptions.WithContext(ctx))
 	if err != nil {
 		return err
 	}

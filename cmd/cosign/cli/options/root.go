@@ -13,25 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package options
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/spf13/cobra"
 )
 
-func TestVersionText(t *testing.T) {
-	sut := options.VersionInfo()
-	require.NotEmpty(t, sut.String())
+// RootOptions define flags and options for the root cosign cli.
+type RootOptions struct {
+	OutputFile string
+	Verbose    bool
 }
 
-func TestVersionJSON(t *testing.T) {
-	sut := options.VersionInfo()
-	json, err := sut.JSONString()
+func AddRootArgs(cmd *cobra.Command, o *RootOptions) {
+	cmd.PersistentFlags().StringVar(&o.OutputFile, "output-file", "",
+		"log output to a file")
 
-	require.Nil(t, err)
-	require.NotEmpty(t, json)
+	cmd.PersistentFlags().BoolVarP(&o.Verbose, "verbose", "d", false,
+		"log debug output")
 }
