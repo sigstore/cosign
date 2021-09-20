@@ -36,17 +36,7 @@ type SignedPayload struct {
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
 	Bundle          *oci.Bundle
-	bundleVerified  bool
 }
-
-// TODO: marshal the cert correctly.
-// func (sp *SignedPayload) MarshalJSON() ([]byte, error) {
-// 	x509.Certificate.
-// 	pem.EncodeToMemory(&pem.Block{
-// 		Type: "CERTIFICATE",
-// 		Bytes:
-// 	})
-// }
 
 const (
 	SignatureTagSuffix   = ".sig"
