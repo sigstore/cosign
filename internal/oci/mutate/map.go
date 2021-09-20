@@ -132,8 +132,12 @@ func Map(ctx context.Context, parent oci.SignedEntity, fn Mutator) (oci.SignedEn
 		return parent, nil
 	}
 
+	// Preserve the key attributes from the base IndexManifest.
+	e := mutate.IndexMediaType(empty.Index, im.MediaType)
+	e = mutate.Annotations(e, im.Annotations).(v1.ImageIndex)
+
 	// Construct a new ImageIndex from the new consituent signed images.
-	result := AppendManifests(mutate.IndexMediaType(empty.Index, im.MediaType), adds...)
+	result := AppendManifests(e, adds...)
 
 	// Since the children changed, give the callback a crack at the new image index.
 	return fn(after(ctx), result)

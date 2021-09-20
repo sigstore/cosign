@@ -20,7 +20,6 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/internal/oci/empty"
 	"github.com/sigstore/cosign/internal/oci/signed"
@@ -29,10 +28,7 @@ import (
 // Appendable is our signed version of mutate.Appendable
 type Appendable interface {
 	oci.SignedEntity
-
-	MediaType() (types.MediaType, error)
-	Digest() (v1.Hash, error)
-	Size() (int64, error)
+	mutate.Appendable
 }
 
 // IndexAddendum is our signed version of mutate.IndexAddendum
