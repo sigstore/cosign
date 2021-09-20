@@ -25,15 +25,17 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/image"
 )
 
 func Clean() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign clean", flag.ExitOnError)
-		regOpts RegistryOpts
+		regOpts options.RegistryOpts
 	)
-	ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "clean",
 		ShortUsage: "cosign clean <image uri>",
@@ -49,14 +51,14 @@ func Clean() *ffcli.Command {
 	}
 }
 
-func CleanCmd(ctx context.Context, regOpts RegistryOpts, imageRef string) error {
+func CleanCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	sigRef, err := AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
+	sigRef, err := image.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}

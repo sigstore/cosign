@@ -36,19 +36,20 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/types"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func main() {
 	fs := flag.NewFlagSet("copasetic", flag.ExitOnError)
 	rekorURL := fs.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
-	var regOpts cli.RegistryOpts
-	cli.ApplyRegistryFlags(&regOpts, fs)
+	var regOpts options.RegistryOpts
+	options.ApplyRegistryFlags(&regOpts, fs)
 	flag.Parse()
 
 	rego.RegisterBuiltin2(
@@ -179,11 +180,11 @@ func main() {
 				return nil, err
 			}
 
-			pubKey, err := cli.LoadPublicKey(bctx.Context, key)
+			pubKey, err := sigs.LoadPublicKey(bctx.Context, key)
 			if err != nil {
 				return nil, err
 			}
-			ctxOpt := options.WithContext(bctx.Context)
+			ctxOpt := signatureoptions.WithContext(bctx.Context)
 			co := &cosign.CheckOpts{
 				SigVerifier:        pubKey,
 				VerifyOpts:         []signature.VerifyOption{ctxOpt},

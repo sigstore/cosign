@@ -24,9 +24,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/pkg/cosign"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 )
 
 func New(image, key string, out io.Writer) *SecureGet {
@@ -50,7 +52,7 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	}
 
 	if _, ok := ref.(name.Tag); ok {
-		if sg.KeyRef == "" && !cli.EnableExperimental() {
+		if sg.KeyRef == "" && !options.EnableExperimental() {
 			return errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
 		}
 	}
@@ -64,22 +66,22 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		},
 	}
 	if sg.KeyRef != "" {
-		pub, err := cli.LoadPublicKey(ctx, sg.KeyRef)
+		pub, err := sigs.LoadPublicKey(ctx, sg.KeyRef)
 		if err != nil {
 			return err
 		}
 		co.SigVerifier = pub
 	}
 
-	if co.SigVerifier != nil || cli.EnableExperimental() {
+	if co.SigVerifier != nil || options.EnableExperimental() {
 		co.RootCerts = fulcio.GetRoots()
 
 		sp, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
 			return err
 		}
-		cli.PrintVerificationHeader(sg.ImageRef, co)
-		cli.PrintVerification(sg.ImageRef, sp, "text")
+		verify.PrintVerificationHeader(sg.ImageRef, co)
+		verify.PrintVerification(sg.ImageRef, sp, "text")
 	}
 
 	img, err := remote.Image(ref, co.RegistryClientOpts...)

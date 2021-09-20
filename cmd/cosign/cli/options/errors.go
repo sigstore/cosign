@@ -13,25 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package options
 
-import (
-	"testing"
+// KeyParseError is an error returned when an incorrect set of key flags
+// are parsed by the CLI
+type KeyParseError struct{}
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-)
-
-func TestVersionText(t *testing.T) {
-	sut := options.VersionInfo()
-	require.NotEmpty(t, sut.String())
-}
-
-func TestVersionJSON(t *testing.T) {
-	sut := options.VersionInfo()
-	json, err := sut.JSONString()
-
-	require.Nil(t, err)
-	require.NotEmpty(t, json)
+func (e *KeyParseError) Error() string {
+	return "exactly one of: key reference (-key), or hardware token (-sk) must be provided"
 }

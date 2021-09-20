@@ -24,7 +24,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/image"
 )
 
 func Copy() *ffcli.Command {
@@ -32,9 +34,9 @@ func Copy() *ffcli.Command {
 		flagset     = flag.NewFlagSet("cosign copy", flag.ExitOnError)
 		sigOnlyFlag = flagset.Bool("sig-only", false, "only copy the image signature")
 		forceFlag   = flagset.Bool("f", false, "overwrite destination image(s), if necessary")
-		regOpts     RegistryOpts
+		regOpts     options.RegistryOpts
 	)
-	ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "copy",
 		ShortUsage: "cosign copy <source image> <destination image>",
@@ -61,7 +63,7 @@ EXAMPLES
 	}
 }
 
-func CopyCmd(ctx context.Context, regOpts RegistryOpts, srcImg, dstImg string, sigOnly, force bool) error {
+func CopyCmd(ctx context.Context, regOpts options.RegistryOpts, srcImg, dstImg string, sigOnly, force bool) error {
 	srcRef, err := name.ParseReference(srcImg)
 	if err != nil {
 		return err
@@ -72,7 +74,7 @@ func CopyCmd(ctx context.Context, regOpts RegistryOpts, srcImg, dstImg string, s
 	}
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	sigSrcRef, err := AttachedImageTag(srcRef, cosign.SignatureTagSuffix, remoteOpts...)
+	sigSrcRef, err := image.AttachedImageTag(srcRef, cosign.SignatureTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}

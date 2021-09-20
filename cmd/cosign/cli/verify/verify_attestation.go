@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package verify
 
 import (
 	"context"
@@ -25,15 +25,18 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
+// nolint
 type VerifyAttestationCommand struct {
-	RegistryOpts
+	options.RegistryOpts
 	CheckClaims bool
 	KeyRef      string
 	Sk          bool
@@ -53,11 +56,12 @@ func applyVerifyAttestationFlags(cmd *VerifyAttestationCommand, flagset *flag.Fl
 }
 
 // Verify builds and returns an ffcli command
+// nolint
 func VerifyAttestation() *ffcli.Command {
 	cmd := VerifyAttestationCommand{}
 	flagset := flag.NewFlagSet("cosign verify-attestation", flag.ExitOnError)
 	applyVerifyAttestationFlags(&cmd, flagset)
-	ApplyRegistryFlags(&cmd.RegistryOpts, flagset)
+	options.ApplyRegistryFlags(&cmd.RegistryOpts, flagset)
 
 	return &ffcli.Command{
 		Name:       "verify-attestation",
@@ -113,8 +117,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 		return flag.ErrHelp
 	}
 
-	if !oneOf(c.KeyRef, c.Sk) && !EnableExperimental() {
-		return &KeyParseError{}
+	if !options.OneOf(c.KeyRef, c.Sk) && !options.EnableExperimental() {
+		return &options.KeyParseError{}
 	}
 
 	co := &cosign.CheckOpts{
@@ -124,7 +128,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
-	if EnableExperimental() {
+	if options.EnableExperimental() {
 		co.RekorURL = c.RekorURL
 		co.RootCerts = fulcio.GetRoots()
 	}
@@ -133,7 +137,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	// Keys are optional!
 	var pubKey signature.Verifier
 	if keyRef != "" {
-		pubKey, err = publicKeyFromKeyRef(ctx, keyRef)
+		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
@@ -158,6 +162,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 		if err != nil {
 			return err
 		}
+
 		//TODO: this is really confusing, it's actually a return value for the printed verification below
 		co.VerifyBundle = false
 

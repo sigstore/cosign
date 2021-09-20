@@ -26,21 +26,21 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
 type VerifyDockerfileCommand struct {
-	cli.VerifyCommand
+	verify.VerifyCommand
 	BaseOnly bool
 }
 
 // Verify builds and returns an ffcli command
 func VerifyDockerfile() *ffcli.Command {
-	cmd := VerifyDockerfileCommand{VerifyCommand: cli.VerifyCommand{}}
+	cmd := VerifyDockerfileCommand{VerifyCommand: verify.VerifyCommand{}}
 	flagset := flag.NewFlagSet("cosign dockerfile verify", flag.ExitOnError)
 	flagset.BoolVar(&cmd.BaseOnly, "base-image-only", false, "only verify the base image (the last FROM image in the Dockerfile)")
-	cli.ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
+	verify.ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
 
 	return &ffcli.Command{
 		Name:       "verify",

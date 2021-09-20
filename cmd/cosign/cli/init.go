@@ -21,6 +21,8 @@ import (
 	"flag"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
+
+	"github.com/sigstore/cosign/pkg/blob"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 )
 
@@ -71,7 +73,7 @@ EXAMPLES
 				rootFileBytes = []byte(initialRoot)
 			} else {
 				var err error
-				rootFileBytes, err = loadFileOrURL(*root)
+				rootFileBytes, err = blob.LoadFileOrURL(*root)
 				if err != nil {
 					return err
 				}

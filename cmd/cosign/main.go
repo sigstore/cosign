@@ -16,107 +16,47 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
+	"log"
 	"os"
 	"runtime/debug"
-
-	"github.com/google/go-containerregistry/pkg/logs"
-	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/pkg/errors"
+	"strings"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
-	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
-	"github.com/sigstore/cosign/cmd/cosign/cli/dockerfile"
-	"github.com/sigstore/cosign/cmd/cosign/cli/download"
-	"github.com/sigstore/cosign/cmd/cosign/cli/manifest"
-	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
-	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
-)
-
-var (
-	rootFlagSet    = flag.NewFlagSet("cosign", flag.ExitOnError)
-	logDebug       = rootFlagSet.Bool("d", false, "log debug output")
-	outputFilename = rootFlagSet.String("output-file", "", "log output to a file")
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
 func main() {
-	root := &ffcli.Command{
-		ShortUsage: "cosign [flags] <subcommand>",
-		FlagSet:    rootFlagSet,
-		Subcommands: []*ffcli.Command{
-			// Key Management
-			cli.PublicKey(),
-			cli.GenerateKeyPair(),
-			// Signing
-			cli.Verify(),
-			cli.Sign(),
-			cli.Attest(),
-			cli.Generate(),
-			cli.SignBlob(),
-			cli.VerifyAttestation(),
-			cli.VerifyBlob(),
-			// Manifest sub-tree
-			manifest.Manifest(),
-			// Upload sub-tree
-			upload.Upload(),
-			// Download sub-tree
-			download.Download(),
-			// Attach sub-tree
-			attach.Attach(),
-			// Dockerfile sub-tree
-			dockerfile.Dockerfile(),
-			// PIV sub-tree
-			pivcli.PivKey(),
-			// PIV sub-tree
-			cli.Copy(),
-			cli.Clean(),
-			cli.Triangulate(),
-			// Init
-			cli.Init(),
-			// Version
-			cli.Version()},
-		Exec: func(context.Context, []string) error {
-			return flag.ErrHelp
-		},
-	}
-
-	if err := root.Parse(os.Args[1:]); err != nil {
-		printErrAndExit(err)
-	}
-
-	if *outputFilename != "" {
-		out, err := os.Create(*outputFilename)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", errors.Wrapf(err, "Error creating output file %s", *outputFilename))
-			os.Exit(1)
+	// Fix up flags to POSIX standard flags.
+	for i, arg := range os.Args {
+		if (strings.HasPrefix(arg, "-") && len(arg) == 2) || (strings.HasPrefix(arg, "--") && len(arg) >= 4) {
+			continue
 		}
-		stdout := os.Stdout
-		defer func() {
-			os.Stdout = stdout
-			out.Close()
-		}()
-		os.Stdout = out
+		if strings.HasPrefix(arg, "--") && len(arg) == 3 {
+			// Handle --o, convert to -o
+			newArg := fmt.Sprintf("-%c", arg[2])
+			fmt.Fprintf(os.Stderr, "WARNING: the flag %s is deprecated and will be removed in a future release. Please use the flag %s.\n", arg, newArg)
+			os.Args[i] = newArg
+		} else if strings.HasPrefix(arg, "-") {
+			// Handle -output, convert to --output
+			newArg := fmt.Sprintf("-%s", arg)
+			fmt.Fprintf(os.Stderr, "WARNING: the flag %s is deprecated and will be removed in a future release. Please use the flag %s.\n", arg, newArg)
+			os.Args[i] = newArg
+		}
 	}
 
-	if *logDebug {
-		logs.Debug.SetOutput(os.Stderr)
-	}
+	// Extra migration hacks, while we still use ffcli, we will add a -- to
+	// escape the remaining args to let them be passed to cobra.
+	os.Args = append([]string{os.Args[0], "--"}, os.Args[1:]...)
 
-	if err := root.Run(context.Background()); err != nil {
-		printErrAndExit(err)
+	if err := cli.New().Execute(); err != nil {
+		log.Fatalf("error during command execution: %v", err)
 	}
-}
-
-func printErrAndExit(err error) {
-	fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	os.Exit(1)
 }
 
 func init() {
 	// look for the default version and replace it, if found, from runtime build info
-	if cli.GitVersion != "devel" {
+	if options.GitVersion != "devel" {
 		return
 	}
 
@@ -127,5 +67,5 @@ func init() {
 
 	// Version is set in artifacts built with -X github.com/sigstore/cosign/cli.GitVersion=1.2.3
 	// Ensure version is also set when installed via go install github.com/sigstore/cosign/cmd/cosign
-	cli.GitVersion = bi.Main.Version
+	options.GitVersion = bi.Main.Version
 }

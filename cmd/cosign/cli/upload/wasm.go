@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/types"
 )
@@ -34,9 +34,9 @@ func Wasm() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload wasm", flag.ExitOnError)
 		f       = flagset.String("f", "", "path to the wasm file to upload")
-		regOpts cli.RegistryOpts
+		regOpts options.RegistryOpts
 	)
-	cli.ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "wasm",
 		ShortUsage: "cosign upload wasm -f foo.wasm <image uri>",
@@ -52,7 +52,7 @@ func Wasm() *ffcli.Command {
 	}
 }
 
-func WasmCmd(ctx context.Context, regOpts cli.RegistryOpts, wasmPath, imageRef string) error {
+func WasmCmd(ctx context.Context, regOpts options.RegistryOpts, wasmPath, imageRef string) error {
 	b, err := ioutil.ReadFile(wasmPath)
 	if err != nil {
 		return err

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package signature
 
 import (
 	"context"
@@ -23,12 +23,34 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
+
+func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
+	// The key could be plaintext, in a file, at a URL, or in KMS.
+	if kmsKey, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
+		// KMS specified
+		return kmsKey, nil
+	}
+
+	raw, err := blob.LoadFileOrURL(keyRef)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// PEM encoded file.
+	ed, err := cosign.PemToECDSAKey(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "pem to ecdsa")
+	}
+	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
+}
 
 func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier, error) {
 	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
@@ -51,11 +73,11 @@ func loadPublicKey(raw []byte) (signature.Verifier, error) {
 	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
 }
 
-func signerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
-	return signerVerifierFromKeyRef(ctx, keyRef, pf)
+func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
+	return SignerVerifierFromKeyRef(ctx, keyRef, pf)
 }
 
-func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
+func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
 	for prefix := range kms.ProvidersMux().Providers() {
 		if strings.HasPrefix(keyRef, prefix) {
 			return kms.Get(ctx, keyRef, crypto.SHA256)
@@ -76,7 +98,7 @@ func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 	return loadKey(keyRef, pf)
 }
 
-func publicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier, error) {
+func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier, error) {
 	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
 		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
 		if err != nil {
@@ -91,7 +113,7 @@ func publicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 	return LoadPublicKey(ctx, keyRef)
 }
 
-func publicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKeyOption) ([]byte, error) {
+func PublicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKeyOption) ([]byte, error) {
 	pub, err := key.PublicKey(pkOpts...)
 	if err != nil {
 		return nil, err

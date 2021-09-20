@@ -1,4 +1,3 @@
-//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package options
 
-// KeyParseError is an error returned when an incorrect set of key flags
-// are parsed by the CLI
-type KeyParseError struct{}
+import (
+	"os"
+	"strconv"
+)
 
-func (e *KeyParseError) Error() string {
-	return "exactly one of: key reference (-key), or hardware token (-sk) must be provided"
+const (
+	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
+)
+
+func EnableExperimental() bool {
+	if b, err := strconv.ParseBool(os.Getenv(ExperimentalEnv)); err == nil {
+		return b
+	}
+	return false
 }

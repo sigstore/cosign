@@ -1,4 +1,3 @@
-//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,25 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package blob
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
-func TestVersionText(t *testing.T) {
-	sut := options.VersionInfo()
-	require.NotEmpty(t, sut.String())
-}
-
-func TestVersionJSON(t *testing.T) {
-	sut := options.VersionInfo()
-	json, err := sut.JSONString()
-
-	require.Nil(t, err)
-	require.NotEmpty(t, json)
+func LoadFileOrURL(fileRef string) ([]byte, error) {
+	var raw []byte
+	var err error
+	if strings.HasPrefix(fileRef, "http://") || strings.HasPrefix(fileRef, "https://") {
+		// #nosec G107
+		resp, err := http.Get(fileRef)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		raw, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		raw, err = os.ReadFile(filepath.Clean(fileRef))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return raw, nil
 }

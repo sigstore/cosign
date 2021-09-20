@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package verify
 
 import (
 	"context"
@@ -27,15 +27,19 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
+// nolint
 type VerifyCommand struct {
-	RegistryOpts
+	options.RegistryOpts
 	CheckClaims bool
 	KeyRef      string
 	CertEmail   string
@@ -48,7 +52,7 @@ type VerifyCommand struct {
 }
 
 func ApplyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
-	annotations := annotationsMap{}
+	annotations := sigs.AnnotationsMap{}
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
 	flagset.StringVar(&cmd.CertEmail, "cert-email", "", "the email expected in a valid fulcio cert")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
@@ -57,11 +61,11 @@ func ApplyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output format for the signing image information (default JSON) (json|text)")
 	flagset.StringVar(&cmd.Attachment, "attachment", "", "related image attachment to sign (none|sbom), default none")
-	ApplyRegistryFlags(&cmd.RegistryOpts, flagset)
+	options.ApplyRegistryFlags(&cmd.RegistryOpts, flagset)
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
-	cmd.Annotations = &annotations.annotations
+	cmd.Annotations = &annotations.Annotations
 }
 
 // Verify builds and returns an ffcli command
@@ -123,8 +127,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		return flag.ErrHelp
 	}
 
-	if !oneOf(c.KeyRef, c.Sk) && !EnableExperimental() {
-		return &KeyParseError{}
+	if !options.OneOf(c.KeyRef, c.Sk) && !options.EnableExperimental() {
+		return &options.KeyParseError{}
 	}
 
 	remoteOpts := c.RegistryOpts.GetRegistryClientOpts(ctx)
@@ -136,7 +140,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
-	if EnableExperimental() {
+	if options.EnableExperimental() {
 		co.RekorURL = c.RekorURL
 		co.RootCerts = fulcio.GetRoots()
 	}
@@ -145,7 +149,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	// Keys are optional!
 	var pubKey signature.Verifier
 	if keyRef != "" {
-		pubKey, err = publicKeyFromKeyRef(ctx, keyRef)
+		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
@@ -163,10 +167,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	co.SigVerifier = pubKey
 
 	for _, img := range args {
-		ref, err := getAttachedImageRef(img, c.Attachment, remoteOpts...)
+		ref, err := sign.GetAttachedImageRef(img, c.Attachment, remoteOpts...)
 		if err != nil {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}
+
 		//TODO: this is really confusing, it's actually a return value for the printed verification below
 		co.VerifyBundle = false
 

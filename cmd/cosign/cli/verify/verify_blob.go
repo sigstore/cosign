@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package verify
 
 import (
 	"bytes"
@@ -32,14 +32,19 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	sigstoresigs "github.com/sigstore/sigstore/pkg/signature"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// nolint
 func VerifyBlob() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign verify-blob", flag.ExitOnError)
@@ -49,9 +54,9 @@ func VerifyBlob() *ffcli.Command {
 		rekorURL  = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "signature content or path or remote URL")
-		regOpts   RegistryOpts
+		regOpts   options.RegistryOpts
 	)
-	ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "verify-blob",
 		ShortUsage: "cosign verify-blob (-key <key path>|<key url>|<kms uri>)|(-cert <cert>) -signature <sig> <blob>",
@@ -95,7 +100,7 @@ EXAMPLES
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			ko := KeyOpts{
+			ko := sign.KeyOpts{
 				KeyRef:   *key,
 				Sk:       *sk,
 				RekorURL: *rekorURL,
@@ -114,19 +119,20 @@ func isb64(data []byte) bool {
 	return err == nil
 }
 
-func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef string) error {
-	var pubKey signature.Verifier
+// nolint
+func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRef string) error {
+	var pubKey sigstoresigs.Verifier
 	var err error
 	var cert *x509.Certificate
 
-	if !oneOf(ko.KeyRef, ko.Sk, certRef) {
-		return &KeyParseError{}
+	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) {
+		return &options.KeyParseError{}
 	}
 
 	// Keys are optional!
 	switch {
 	case ko.KeyRef != "":
-		pubKey, err = publicKeyFromKeyRef(ctx, ko.KeyRef)
+		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
@@ -154,14 +160,14 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 			return errors.New("no certs found in pem file")
 		}
 		cert = certs[0]
-		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		pubKey, err = sigstoresigs.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
 			return err
 		}
 	}
 
 	var b64sig string
-	targetSig, err := loadFileOrURL(sigRef)
+	targetSig, err := blob.LoadFileOrURL(sigRef)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			// ignore if file does not exist, it can be a base64 encoded string as well
@@ -180,7 +186,7 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	if blobRef == "-" {
 		blobBytes, err = ioutil.ReadAll(os.Stdin)
 	} else {
-		blobBytes, err = loadFileOrURL(blobRef)
+		blobBytes, err = blob.LoadFileOrURL(blobRef)
 	}
 	if err != nil {
 		return err
@@ -203,14 +209,14 @@ func VerifyBlobCmd(ctx context.Context, ko KeyOpts, certRef, sigRef, blobRef str
 	}
 	fmt.Fprintln(os.Stderr, "Verified OK")
 
-	if EnableExperimental() {
+	if options.EnableExperimental() {
 		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
 		if err != nil {
 			return err
 		}
 		var pubBytes []byte
 		if pubKey != nil {
-			pubBytes, err = publicKeyPem(pubKey, options.WithContext(ctx))
+			pubBytes, err = sigs.PublicKeyPem(pubKey, signatureoptions.WithContext(ctx))
 			if err != nil {
 				return err
 			}

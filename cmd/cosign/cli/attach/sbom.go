@@ -28,9 +28,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/image"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
@@ -44,9 +45,9 @@ func SBOM() *ffcli.Command {
 		flagset  = flag.NewFlagSet("cosign attach sbom", flag.ExitOnError)
 		sbom     = flagset.String("sbom", "", "path to the sbom, or {-} for stdin")
 		sbomType = flagset.String("type", "spdx", "type of sbom (spdx|cyclonedx), default spdx")
-		regOpts  cli.RegistryOpts
+		regOpts  options.RegistryOpts
 	)
-	cli.ApplyRegistryFlags(&regOpts, flagset)
+	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
 		Name:       "sbom",
 		ShortUsage: "cosign attach sbom <image uri>",
@@ -67,7 +68,7 @@ func SBOM() *ffcli.Command {
 	}
 }
 
-func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, sbomRef, sbomType, imageRef string) error {
+func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef, sbomType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -80,7 +81,7 @@ func SBOMCmd(ctx context.Context, regOpts cli.RegistryOpts, sbomRef, sbomType, i
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
-	dstRef, err := cli.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
+	dstRef, err := image.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
 	if err != nil {
 		return err
 	}

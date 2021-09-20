@@ -13,25 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package sign
 
 import (
+	"context"
+	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func TestVersionText(t *testing.T) {
-	sut := options.VersionInfo()
-	require.NotEmpty(t, sut.String())
-}
+// TestSignCmdLocalKeyAndSk verifies the SignCmd returns an error
+// if both a local key path and a sk are specified
+func TestSignCmdLocalKeyAndSk(t *testing.T) {
+	ctx := context.Background()
 
-func TestVersionJSON(t *testing.T) {
-	sut := options.VersionInfo()
-	json, err := sut.JSONString()
-
-	require.Nil(t, err)
-	require.NotEmpty(t, json)
+	for _, ko := range []KeyOpts{
+		// local and sk keys
+		{
+			KeyRef:   "testLocalPath",
+			PassFunc: generate.GetPass,
+			Sk:       true,
+		},
+	} {
+		err := SignCmd(ctx, ko, options.RegistryOpts{}, nil, nil, "", false, "", false, false, "")
+		if (errors.Is(err, &options.KeyParseError{}) == false) {
+			t.Fatal("expected KeyParseError")
+		}
+	}
 }
