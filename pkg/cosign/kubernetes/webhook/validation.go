@@ -59,11 +59,12 @@ func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]o
 		return nil, err
 	}
 
-	return cosign.Verify(ctx, ref, &cosign.CheckOpts{
+	sigs, _, err := cosign.Verify(ctx, ref, &cosign.CheckOpts{
 		RootCerts:     fulcioroots.Get(),
 		SigVerifier:   ecdsaVerifier,
 		ClaimVerifier: cosign.SimpleClaimVerifier,
 	})
+	return sigs, err
 }
 
 func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *apis.FieldError) {

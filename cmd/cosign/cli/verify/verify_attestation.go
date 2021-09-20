@@ -163,15 +163,12 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 			return err
 		}
 
-		//TODO: this is really confusing, it's actually a return value for the printed verification below
-		co.BundleVerified = false
-
-		verified, err := cosign.Verify(ctx, ref, co)
+		verified, bundleVerified, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
 			return err
 		}
 
-		PrintVerificationHeader(imageRef, co)
+		PrintVerificationHeader(imageRef, co, bundleVerified)
 		// The attestations are always JSON, so use the raw "text" mode for outputting them instead of conversion
 		PrintVerification(imageRef, verified, "text")
 	}

@@ -58,8 +58,7 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	}
 
 	co := &cosign.CheckOpts{
-		ClaimVerifier:  cosign.SimpleClaimVerifier,
-		BundleVerified: true,
+		ClaimVerifier: cosign.SimpleClaimVerifier,
 		RegistryClientOpts: []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
 			remote.WithContext(ctx),
@@ -76,11 +75,11 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	if co.SigVerifier != nil || options.EnableExperimental() {
 		co.RootCerts = fulcio.GetRoots()
 
-		sp, err := cosign.Verify(ctx, ref, co)
+		sp, bundleVerified, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
 			return err
 		}
-		verify.PrintVerificationHeader(sg.ImageRef, co)
+		verify.PrintVerificationHeader(sg.ImageRef, co, bundleVerified)
 		verify.PrintVerification(sg.ImageRef, sp, "text")
 	}
 
