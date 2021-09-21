@@ -20,10 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strings"
-
-	_ "embed" // To enable the `go:embed` directive.
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -41,20 +38,16 @@ import (
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 )
 
-// This is rekor's public key, via `curl -L rekor.sigstore.dev/api/ggcrv1/log/publicKey`
-// rekor.pub should be updated whenever the Rekor public key is rotated & the bundle annotation should be up-versioned
-//go:embed rekor.pub
-var rekorPub string
+// This is the rekor public key target name
 var rekorTargetStr = `rekor.pub`
 
 func GetRekorPub() string {
 	ctx := context.Background() // TODO: pass in context?
 	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-	err := tuf.GetTarget(ctx, rekorTargetStr, &buf)
-	if err != nil {
-		// The user may not have initialized the local root metadata. Log the error and use the embedded root.
-		fmt.Fprintln(os.Stderr, "No TUF root installed, using embedded rekor key")
-		return rekorPub
+	// Retrieves the rekor public key from the embedded or cached TUF root. If expired, makes a
+	// network call to retrieve the updated target.
+	if err := tuf.GetTarget(ctx, rekorTargetStr, &buf); err != nil {
+		panic("error retrieving rekor public key")
 	}
 	return buf.String()
 }

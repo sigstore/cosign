@@ -16,8 +16,8 @@
 package fulcioverifier
 
 import (
+	"bytes"
 	"context"
-	_ "embed" // To enable the `go:embed` directive.
 	"encoding/json"
 	"fmt"
 	"os"
@@ -30,19 +30,31 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
 )
 
-// This is the CT log public key
-//go:embed ctfe.pub
-var ctPublicKey string
+// This is the CT log public key target name
+var ctPublicKeyStr = `ctfe.pub`
+
+func getCTPub() string {
+	ctx := context.Background() // TODO: pass in context?
+	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
+	// Retrieves the CT public key from the embedded or cached TUF root. If expired, makes a
+	// network call to retrieve the updated target.
+	if err := tuf.GetTarget(ctx, ctPublicKeyStr, &buf); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		panic("error retrieving CT public key")
+	}
+	return buf.String()
+}
 
 // verifySCT verifies the SCT against the Fulcio CT log public key
 // The SCT is a `Signed Certificate Timestamp`, which promises that
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
 func verifySCT(certPEM, rawSCT []byte) error {
-	pubKey, err := cosign.PemToECDSAKey([]byte(ctPublicKey))
+	pubKey, err := cosign.PemToECDSAKey([]byte(getCTPub()))
 	if err != nil {
 		return err
 	}
