@@ -132,11 +132,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		return &options.KeyParseError{}
 	}
 
-	remoteOpts := c.RegistryOpts.GetRegistryClientOpts(ctx)
-
 	co := &cosign.CheckOpts{
 		Annotations:        *c.Annotations,
-		RegistryClientOpts: remoteOpts,
+		RegistryClientOpts: c.RegistryOpts.RemoteOpts(ctx),
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
@@ -168,7 +166,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	co.SigVerifier = pubKey
 
 	for _, img := range args {
-		ref, err := sign.GetAttachedImageRef(img, c.Attachment, remoteOpts...)
+		ref, err := sign.GetAttachedImageRef(img, c.Attachment, c.RegistryOpts.GetRegistryClientOpts(ctx)...)
 		if err != nil {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}

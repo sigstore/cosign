@@ -30,7 +30,6 @@ import (
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/internal/oci"
@@ -47,7 +46,7 @@ type CheckOpts struct {
 	// SigTagSuffixOverride overrides the suffix of the derived signature image tag. Default: ".sig"
 	SigTagSuffixOverride string
 	// RegistryClientOpts are the options for interacting with the container registry.
-	RegistryClientOpts []remote.Option
+	RegistryClientOpts []ociremote.Option
 
 	// Annotations optionally specifies image signature annotations to verify.
 	Annotations map[string]interface{}
@@ -85,9 +84,8 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 		}
 	}
 
-	opts := []ociremote.Option{
-		ociremote.WithRemoteOptions(co.RegistryClientOpts...),
-	}
+	opts := co.RegistryClientOpts
+
 	// These are all the signatures attached to our image that we know how to parse.
 	if co.SigTagSuffixOverride != "" {
 		opts = append(opts, ociremote.WithSignatureSuffix(co.SigTagSuffixOverride))
