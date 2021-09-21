@@ -41,6 +41,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/internal/oci"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -185,7 +186,7 @@ func GetAttachedImageRef(imageRef string, attachment string, remoteOpts ...remot
 		return ref, nil
 	}
 	if attachment == "sbom" {
-		return image.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
+		return ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	}
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
@@ -344,7 +345,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			uo.AdditionalAnnotations = ParseAnnotations(entry)
 		}
 
-		sigRef, err := image.AttachedImageTag(img, cosign.SignatureTagSuffix, remoteOpts...)
+		sigRef, err := ociremote.SignatureTag(img, ociremote.WithRemoteOptions(remoteOpts...))
 		if err != nil {
 			return err
 		}

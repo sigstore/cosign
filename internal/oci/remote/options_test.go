@@ -23,7 +23,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 )
 
 func TestOptions(t *testing.T) {
@@ -128,31 +127,5 @@ func TestOptions(t *testing.T) {
 				t.Errorf("makeOptions() = %#v, wanted %#v", got, test.want)
 			}
 		})
-	}
-}
-
-func TestOptionsErrors(t *testing.T) {
-	repo, err := name.NewRepository("gcr.io/projectsigstore")
-	if err != nil {
-		t.Errorf("NewRepository() = %v", err)
-	}
-
-	want := errors.New("you should expect this error")
-
-	_, got := makeOptions(repo, func(*options) error {
-		return want
-	})
-	if !errors.Is(got, want) {
-		t.Fatalf("makeOptions() = %#v, wanted %v", got, want)
-	}
-
-	ev := os.Getenv(RepoOverrideKey)
-	defer os.Setenv(RepoOverrideKey, ev)
-	os.Setenv(RepoOverrideKey, "gcr.io/illegal@character")
-
-	want = errors.New("repository can only contain the runes `abcdefghijklmnopqrstuvwxyz0123456789_-./`: illegal@character")
-	_, got = makeOptions(repo)
-	if got.Error() != want.Error() {
-		t.Fatalf("makeOptions() = %v, wanted %v", got, want)
 	}
 }

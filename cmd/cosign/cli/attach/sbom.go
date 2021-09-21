@@ -29,9 +29,8 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/image"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
@@ -81,7 +80,7 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef, sbomTyp
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
-	dstRef, err := image.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
+	dstRef, err := ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}

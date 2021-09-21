@@ -27,8 +27,6 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/internal/oci/remote"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/image"
 )
 
 func SBOM() *ffcli.Command {
@@ -60,7 +58,7 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string,
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
-	dstRef, err := image.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
+	dstRef, err := remote.SBOMTag(ref, remote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return nil, err
 	}

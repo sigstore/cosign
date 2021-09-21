@@ -26,8 +26,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/image"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 )
 
 func Clean() *ffcli.Command {
@@ -58,7 +57,7 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string
 	}
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	sigRef, err := image.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
+	sigRef, err := ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}

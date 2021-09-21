@@ -19,10 +19,8 @@ import (
 	"context"
 	"crypto/x509"
 	"runtime"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"knative.dev/pkg/pool"
 
@@ -49,12 +47,6 @@ const (
 	SBOM        = "sbom"
 	Attestation = "attestation"
 )
-
-func AttachedImageTag(repo name.Repository, digest v1.Hash, tagSuffix string) name.Tag {
-	// sha256:d34db33f -> sha256-d34db33f.suffix
-	tagStr := strings.ReplaceAll(digest.String(), ":", "-") + tagSuffix
-	return repo.Tag(tagStr)
-}
 
 func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]SignedPayload, error) {
 	simg, err := ociremote.SignedEntity(ref, opts...)

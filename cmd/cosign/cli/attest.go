@@ -33,6 +33,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -225,7 +226,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		uo.AdditionalAnnotations = sign.ParseAnnotations(entry)
 	}
 
-	attRef, err := image.AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
+	attRef, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}

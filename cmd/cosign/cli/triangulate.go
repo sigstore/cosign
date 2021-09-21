@@ -24,8 +24,8 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/image"
 )
 
 func Triangulate() *ffcli.Command {
@@ -59,11 +59,11 @@ func MungeCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string
 	var dstRef name.Tag
 	switch attachmentType {
 	case cosign.Signature:
-		dstRef, err = image.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
+		dstRef, err = ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	case cosign.SBOM:
-		dstRef, err = image.AttachedImageTag(ref, cosign.SBOMTagSuffix, remoteOpts...)
+		dstRef, err = ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	case cosign.Attestation:
-		dstRef, err = image.AttachedImageTag(ref, cosign.AttestationTagSuffix, remoteOpts...)
+		dstRef, err = ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	default:
 		err = fmt.Errorf("unknown attachment type %s", attachmentType)
 	}

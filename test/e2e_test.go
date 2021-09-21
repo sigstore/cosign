@@ -746,7 +746,7 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 
 	cleanup := func() {
 		_ = remote.Delete(ref, regClientOpts...)
-		ref := cosign.AttachedImageTag(ref.Context(), remoteImage.Descriptor.Digest, cosign.SignatureTagSuffix)
+		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteImage.Descriptor.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
 		_ = remote.Delete(ref, regClientOpts...)
 	}
 	return ref, remoteImage, cleanup
