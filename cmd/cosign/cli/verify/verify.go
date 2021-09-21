@@ -134,7 +134,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 
 	co := &cosign.CheckOpts{
 		Annotations:        *c.Annotations,
-		RegistryClientOpts: c.RegistryOpts.RemoteOpts(ctx),
+		RegistryClientOpts: c.RegistryOpts.ClientOpts(ctx),
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier

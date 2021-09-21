@@ -122,7 +122,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	}
 
 	co := &cosign.CheckOpts{
-		RegistryClientOpts:   c.RemoteOpts(ctx),
+		RegistryClientOpts:   c.ClientOpts(ctx),
 		SigTagSuffixOverride: cosign.AttestationTagSuffix,
 	}
 	if c.CheckClaims {

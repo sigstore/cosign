@@ -47,7 +47,7 @@ type RegistryOpts struct {
 	AllowInsecure bool
 }
 
-func (co *RegistryOpts) RemoteOpts(ctx context.Context) []ociremote.Option {
+func (co *RegistryOpts) ClientOpts(ctx context.Context) []ociremote.Option {
 	return []ociremote.Option{ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
 }
 
