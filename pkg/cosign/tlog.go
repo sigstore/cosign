@@ -197,6 +197,9 @@ func verifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 		return nil, errors.New("UUID value can not be extracted")
 	}
 	e := lep.Payload[params.EntryUUID]
+	if e.Verification == nil || e.Verification.InclusionProof == nil {
+		return nil, errors.New("inclusion proof not provided")
+	}
 
 	hashes := [][]byte{}
 	for _, h := range e.Verification.InclusionProof.Hashes {
@@ -208,9 +211,6 @@ func verifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAn
 	leafHash, _ := hex.DecodeString(params.EntryUUID)
 
 	v := logverifier.New(hasher.DefaultHasher)
-	if e.Verification == nil || e.Verification.InclusionProof == nil {
-		return nil, errors.New("inclusion proof not provided")
-	}
 	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
 		return nil, errors.Wrap(err, "verifying inclusion proof")
 	}
