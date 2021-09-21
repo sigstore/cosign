@@ -43,8 +43,6 @@ import (
 
 // CheckOpts are the options for checking signatures.
 type CheckOpts struct {
-	// SigTagSuffixOverride overrides the suffix of the derived signature image tag. Default: ".sig"
-	SigTagSuffixOverride string
 	// RegistryClientOpts are the options for interacting with the container registry.
 	RegistryClientOpts []ociremote.Option
 
@@ -85,11 +83,6 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 	}
 
 	opts := co.RegistryClientOpts
-
-	// These are all the signatures attached to our image that we know how to parse.
-	if co.SigTagSuffixOverride != "" {
-		opts = append(opts, ociremote.WithSignatureSuffix(co.SigTagSuffixOverride))
-	}
 
 	se, err := ociremote.SignedEntity(signedImgRef, opts...)
 	if err != nil {

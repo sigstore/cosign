@@ -26,6 +26,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	sigs "github.com/sigstore/cosign/pkg/signature"
@@ -122,8 +123,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	}
 
 	co := &cosign.CheckOpts{
-		RegistryClientOpts:   c.ClientOpts(ctx),
-		SigTagSuffixOverride: cosign.AttestationTagSuffix,
+		RegistryClientOpts: append(c.ClientOpts(ctx), ociremote.WithSignatureSuffix(cosign.AttestationTagSuffix)),
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
