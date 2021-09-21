@@ -15,7 +15,7 @@ require (
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210806133539-f50646681592
 	github.com/manifoldco/promptui v0.8.0
-	github.com/open-policy-agent/opa v0.32.0
+	github.com/open-policy-agent/opa v0.32.1
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
@@ -34,12 +34,6 @@ require (
 require (
 	cloud.google.com/go v0.94.1 // indirect
 	cloud.google.com/go/kms v0.1.0 // indirect
-	github.com/cncf/udpa/go v0.0.0-20210322005330-6414d713912e // indirect
-	github.com/cncf/xds/go v0.0.0-20210805033703-aa0b78936158 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
-	github.com/envoyproxy/go-control-plane v0.9.9 // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.6.1 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
@@ -49,8 +43,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v0.22.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/net v0.0.0-20210903162142-ad29c8ab022f // indirect
 	golang.org/x/sys v0.0.0-20210903071746-97244b99971b // indirect
