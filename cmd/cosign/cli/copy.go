@@ -25,8 +25,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/image"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 )
 
 func Copy() *ffcli.Command {
@@ -74,7 +73,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOpts, srcImg, dstImg s
 	}
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	sigSrcRef, err := image.AttachedImageTag(srcRef, cosign.SignatureTagSuffix, remoteOpts...)
+	sigSrcRef, err := ociremote.SignatureTag(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}

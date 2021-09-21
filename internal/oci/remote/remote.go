@@ -17,7 +17,6 @@ package remote
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -82,7 +81,52 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 
 func normalize(h v1.Hash, suffix string) string {
 	// sha256:d34db33f -> sha256-d34db33f.suffix
-	return strings.ReplaceAll(h.String(), ":", "-") + suffix
+	return fmt.Sprintf("%s-%s%s", h.Algorithm, h.Hex, suffix)
+}
+
+// SignatureTag returns the name.Tag that associated signatures with a particular digest.
+func SignatureTag(ref name.Reference, opts ...Option) (name.Tag, error) {
+	o, err := makeOptions(ref.Context(), opts...)
+	if err != nil {
+		return name.Tag{}, err
+	}
+	return suffixTag(ref, o.SignatureSuffix, o)
+}
+
+// AttestationTag returns the name.Tag that associated attestations with a particular digest.
+func AttestationTag(ref name.Reference, opts ...Option) (name.Tag, error) {
+	o, err := makeOptions(ref.Context(), opts...)
+	if err != nil {
+		return name.Tag{}, err
+	}
+	return suffixTag(ref, o.AttestationSuffix, o)
+}
+
+// SBOMTag returns the name.Tag that associated SBOMs with a particular digest.
+func SBOMTag(ref name.Reference, opts ...Option) (name.Tag, error) {
+	o, err := makeOptions(ref.Context(), opts...)
+	if err != nil {
+		return name.Tag{}, err
+	}
+	return suffixTag(ref, o.SBOMSuffix, o)
+}
+
+func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) {
+	var h v1.Hash
+	if digest, ok := ref.(name.Digest); ok {
+		var err error
+		h, err = v1.NewHash(digest.DigestStr())
+		if err != nil { // This is effectively impossible.
+			return name.Tag{}, err
+		}
+	} else {
+		desc, err := remoteGet(ref, o.ROpt...)
+		if err != nil {
+			return name.Tag{}, err
+		}
+		h = desc.Digest
+	}
+	return o.TargetRepository.Tag(normalize(h, suffix)), nil
 }
 
 // signatures is a shared implementation of the oci.Signed* Signatures method.

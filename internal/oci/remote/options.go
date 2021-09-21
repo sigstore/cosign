@@ -32,7 +32,7 @@ const (
 )
 
 // Option is a functional option for remote operations.
-type Option func(*options) error
+type Option func(*options)
 
 type options struct {
 	SignatureSuffix   string
@@ -72,9 +72,7 @@ func makeOptions(target name.Repository, opts ...Option) (*options, error) {
 	}
 
 	for _, option := range opts {
-		if err := option(o); err != nil {
-			return nil, err
-		}
+		option(o)
 	}
 
 	return o, nil
@@ -83,44 +81,39 @@ func makeOptions(target name.Repository, opts ...Option) (*options, error) {
 // WithSignatureSuffix is a functional option for overriding the default
 // signature tag suffix.
 func WithSignatureSuffix(suffix string) Option {
-	return func(o *options) error {
+	return func(o *options) {
 		o.SignatureSuffix = suffix
-		return nil
 	}
 }
 
 // WithAttestationSuffix is a functional option for overriding the default
 // attestation tag suffix.
 func WithAttestationSuffix(suffix string) Option {
-	return func(o *options) error {
+	return func(o *options) {
 		o.AttestationSuffix = suffix
-		return nil
 	}
 }
 
 // WithSBOMSuffix is a functional option for overriding the default
 // SBOM tag suffix.
 func WithSBOMSuffix(suffix string) Option {
-	return func(o *options) error {
+	return func(o *options) {
 		o.SBOMSuffix = suffix
-		return nil
 	}
 }
 
 // WithRemoteOptions is a functional option for overriding the default
 // remote options passed to GGCR.
 func WithRemoteOptions(opts ...remote.Option) Option {
-	return func(o *options) error {
+	return func(o *options) {
 		o.ROpt = opts
-		return nil
 	}
 }
 
 // WithTargetRepository is a functional option for overriding the default
 // target repository hosting the signature and attestation tags.
 func WithTargetRepository(repo name.Repository) Option {
-	return func(o *options) error {
+	return func(o *options) {
 		o.TargetRepository = repo
-		return nil
 	}
 }

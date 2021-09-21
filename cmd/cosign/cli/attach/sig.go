@@ -28,7 +28,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/image"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
@@ -94,7 +94,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 		return err
 	}
 
-	dstRef, err := image.AttachedImageTag(ref, cosign.SignatureTagSuffix, remoteOpts...)
+	dstRef, err := ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}
