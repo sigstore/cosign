@@ -103,8 +103,12 @@ LayerLoop:
 		if err != nil {
 			continue LayerLoop
 		}
+
 		// if there are any new annotations, then this isn't a duplicate
 		for a, value := range newAnnotations {
+			if a == sigkey {
+				continue // Ignore the signature key, we check it with custom logic below.
+			}
 			if val, ok := existingAnnotations[a]; !ok || val != value {
 				continue LayerLoop
 			}
