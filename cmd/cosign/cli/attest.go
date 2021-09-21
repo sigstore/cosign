@@ -234,9 +234,5 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	fmt.Fprintln(os.Stderr, "Pushing attestation to:", attRef.String())
 	// An attestation represents both the signature and payload. So store the entire thing
 	// in the payload field since they can get large
-	if _, err = cremote.UploadSignature([]byte{}, sig, attRef, uo); err != nil {
-		return errors.Wrap(err, "uploading")
-	}
-
-	return nil
+	return cremote.UploadSignature([]byte{}, sig, attRef, uo)
 }
