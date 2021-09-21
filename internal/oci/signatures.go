@@ -39,6 +39,9 @@ type Signatures interface {
 type Signature interface {
 	v1.Layer
 
+	// Annotations returns the annotations associated with this layer.
+	Annotations() (map[string]string, error)
+
 	// Payload fetches the opaque data that is being signed.
 	// This will always return data when there is no error.
 	Payload() ([]byte, error)

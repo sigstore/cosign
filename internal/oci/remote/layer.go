@@ -36,6 +36,11 @@ type sigLayer struct {
 
 var _ oci.Signature = (*sigLayer)(nil)
 
+// Annotations implements oci.Signature
+func (s *sigLayer) Annotations() (map[string]string, error) {
+	return s.desc.Annotations, nil
+}
+
 // Payload implements oci.Signature
 func (s *sigLayer) Payload() ([]byte, error) {
 	l, err := s.img.LayerByDigest(s.desc.Digest)
