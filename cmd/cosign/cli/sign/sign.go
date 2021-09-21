@@ -351,7 +351,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 		}
 
 		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())
-		if _, err = cremote.UploadSignature(sig, payload, sigRef, uo); err != nil {
+		if err := cremote.UploadSignature(sig, payload, sigRef, uo); err != nil {
 			return errors.Wrap(err, "uploading")
 		}
 	}

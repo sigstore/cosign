@@ -123,7 +123,7 @@ type UploadOpts struct {
 	MediaType             string
 }
 
-func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) (uploadedSig []byte, err error) {
+func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) error {
 	// Preserve the default
 	if opts.MediaType == "" {
 		opts.MediaType = ctypes.SimpleSigningMediaType
@@ -135,12 +135,12 @@ func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadO
 
 	base, err := SignatureImage(dst, opts.RemoteOpts...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if opts.DupeDetector != nil {
-		if uploadedSig, err = findDuplicate(base, payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
-			return uploadedSig, err
+		if uploadedSig, err := findDuplicate(base, payload, opts.DupeDetector, opts.AdditionalAnnotations); err != nil || uploadedSig != nil {
+			return err
 		}
 	}
 
@@ -154,7 +154,7 @@ func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadO
 	if opts.Bundle != nil {
 		b, err := swag.WriteJSON(opts.Bundle)
 		if err != nil {
-			return nil, errors.Wrap(err, "marshaling bundle")
+			return errors.Wrap(err, "marshaling bundle")
 		}
 		annotations[BundleKey] = string(b)
 	}
@@ -163,13 +163,13 @@ func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadO
 		Annotations: annotations,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := remote.Write(dst, img, opts.RemoteOpts...); err != nil {
-		return nil, err
+		return err
 	}
-	return signature, nil
+	return nil
 }
 
 type staticLayer struct {
