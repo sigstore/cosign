@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 )
@@ -57,12 +58,14 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		}
 	}
 
+	opts := []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+		remote.WithContext(ctx),
+	}
+
 	co := &cosign.CheckOpts{
-		ClaimVerifier: cosign.SimpleClaimVerifier,
-		RegistryClientOpts: []remote.Option{
-			remote.WithAuthFromKeychain(authn.DefaultKeychain),
-			remote.WithContext(ctx),
-		},
+		ClaimVerifier:      cosign.SimpleClaimVerifier,
+		RegistryClientOpts: []ociremote.Option{ociremote.WithRemoteOptions(opts...)},
 	}
 	if sg.KeyRef != "" {
 		pub, err := sigs.LoadPublicKey(ctx, sg.KeyRef)
@@ -83,7 +86,8 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		verify.PrintVerification(sg.ImageRef, sp, "text")
 	}
 
-	img, err := remote.Image(ref, co.RegistryClientOpts...)
+	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.
+	img, err := remote.Image(ref, opts...)
 	if err != nil {
 		return err
 	}

@@ -190,7 +190,7 @@ func main() {
 				PKOpts:             []signature.PublicKeyOption{ctxOpt},
 				ClaimVerifier:      cosign.SimpleClaimVerifier,
 				RootCerts:          fulcio.GetRoots(),
-				RegistryClientOpts: regOpts.GetRegistryClientOpts(bctx.Context),
+				RegistryClientOpts: regOpts.ClientOpts(bctx.Context),
 				RekorURL:           *rekorURL,
 			}
 			sps, _, err := cosign.Verify(bctx.Context, ref, co)

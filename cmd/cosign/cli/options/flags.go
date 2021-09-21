@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 )
 
 // OneOf ensures that only one of the supplied interfaces is set to a non-zero value.
@@ -44,6 +45,10 @@ func NOf(args ...interface{}) int {
 
 type RegistryOpts struct {
 	AllowInsecure bool
+}
+
+func (co *RegistryOpts) ClientOpts(ctx context.Context) []ociremote.Option {
+	return []ociremote.Option{ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
 }
 
 func (co *RegistryOpts) GetRegistryClientOpts(ctx context.Context) []remote.Option {
