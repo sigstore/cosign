@@ -39,9 +39,9 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/image"
-	"github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/cosign/pkg/types"
-	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -154,6 +154,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	if err != nil {
 		return err
 	}
+	digest := ref.Context().Digest(h.String())
 
 	sv, err := sign.SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
@@ -192,38 +193,20 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
 
-	uploadTLog, err := sign.ShouldUploadToTlog(ref, force, ko.RekorURL)
-	if err != nil {
+	// Check whether we should be uploading to the transparency log
+	if uploadTLog, err := sign.ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
 		return err
-	}
-
-	if uploadTLog {
-		var rekorBytes []byte
-
-		// Upload the cert or the public key, depending on what we have
-		if sv.Cert != nil {
-			rekorBytes = sv.Cert
-		} else {
-			pemBytes, err := signature.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-			if err != nil {
-				return err
-			}
-			rekorBytes = pemBytes
-		}
-		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+	} else if uploadTLog {
+		bundle, err := sign.UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+			return cosign.TLogUploadInTotoAttestation(r, signedPayload, b)
+		})
 		if err != nil {
 			return err
 		}
-		entry, err := cosign.TLogUploadInTotoAttestation(rekorClient, signedPayload, rekorBytes)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-
-		opts = append(opts, static.WithBundle(sign.Bundle(entry)))
+		opts = append(opts, static.WithBundle(bundle))
 	}
 
-	attRef, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+	attRef, err := ociremote.AttestationTag(digest, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}
