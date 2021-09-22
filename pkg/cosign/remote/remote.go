@@ -17,14 +17,9 @@ package remote
 
 import (
 	"bytes"
-	"crypto/x509"
 	"encoding/base64"
-	"io"
-	"io/ioutil"
 	"net/http"
-	"strings"
 
-	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -32,21 +27,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
-	"knative.dev/pkg/kmeta"
 
 	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/internal/oci/empty"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
-	ctypes "github.com/sigstore/cosign/pkg/types"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/sigstore/pkg/signature"
-)
-
-const (
-	sigkey    = "dev.cosignproject.cosign/signature"
-	certkey   = "dev.sigstore.cosign/certificate"
-	chainkey  = "dev.sigstore.cosign/chain"
-	BundleKey = "dev.sigstore.cosign/bundle"
 )
 
 func Descriptors(ref name.Reference, remoteOpts ...remote.Option) ([]v1.Descriptor, error) {
@@ -106,7 +92,7 @@ LayerLoop:
 
 		// if there are any new annotations, then this isn't a duplicate
 		for a, value := range newAnnotations {
-			if a == sigkey {
+			if a == static.SignatureAnnotationKey {
 				continue // Ignore the signature key, we check it with custom logic below.
 			}
 			if val, ok := existingAnnotations[a]; !ok || val != value {
@@ -152,32 +138,21 @@ type UploadOpts struct {
 
 func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) error {
 	b64sig := base64.StdEncoding.EncodeToString(signature)
-	l := &staticLayer{
-		b:  payload,
-		mt: ctypes.SimpleSigningMediaType,
-		annotations: kmeta.UnionMaps(opts.AdditionalAnnotations, map[string]string{
-			sigkey: b64sig,
-		}),
-		b64sig:   b64sig,
-		certPEM:  string(opts.Cert),
-		chainPEM: string(opts.Chain),
-		bundle:   opts.Bundle,
-	}
+	var options []static.Option
 	// Preserve the default
 	if opts.MediaType != "" {
-		l.mt = types.MediaType(opts.MediaType)
+		options = append(options, static.WithMediaType(types.MediaType(opts.MediaType)))
 	}
-
 	if opts.Cert != nil {
-		l.annotations[certkey] = l.certPEM
-		l.annotations[chainkey] = l.chainPEM
+		options = append(options, static.WithCertChain(opts.Cert, opts.Chain))
 	}
 	if opts.Bundle != nil {
-		b, err := swag.WriteJSON(opts.Bundle)
-		if err != nil {
-			return errors.Wrap(err, "marshaling bundle")
-		}
-		l.annotations[BundleKey] = string(b)
+		options = append(options, static.WithBundle(opts.Bundle))
+	}
+
+	l, err := static.NewSignature(payload, b64sig, options...)
+	if err != nil {
+		return err
 	}
 
 	base, err := SignatureImage(dst, opts.RemoteOpts...)
@@ -191,96 +166,18 @@ func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadO
 		}
 	}
 
+	ann, err := l.Annotations()
+	if err != nil {
+		return err
+	}
+
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer:       l,
-		Annotations: l.annotations,
+		Annotations: ann,
 	})
 	if err != nil {
 		return err
 	}
 
 	return remote.Write(dst, img, opts.RemoteOpts...)
-}
-
-type staticLayer struct {
-	b           []byte
-	mt          types.MediaType
-	annotations map[string]string
-	b64sig      string
-	certPEM     string
-	chainPEM    string
-	bundle      *oci.Bundle
-}
-
-var _ v1.Layer = (*staticLayer)(nil)
-var _ oci.Signature = (*staticLayer)(nil)
-
-// Annotations implements oci.Signature
-func (l *staticLayer) Annotations() (map[string]string, error) {
-	return l.annotations, nil
-}
-
-// Payload implements oci.Signature
-func (l *staticLayer) Payload() ([]byte, error) {
-	return l.b, nil
-}
-
-// Base64Signature implements oci.Signature
-func (l *staticLayer) Base64Signature() (string, error) {
-	return l.b64sig, nil
-}
-
-// Cert implements oci.Signature
-func (l *staticLayer) Cert() (*x509.Certificate, error) {
-	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(l.certPEM))
-	if err != nil {
-		return nil, err
-	}
-	return certs[0], nil
-}
-
-// Chain implements oci.Signature
-func (l *staticLayer) Chain() ([]*x509.Certificate, error) {
-	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(l.chainPEM))
-	if err != nil {
-		return nil, err
-	}
-	return certs, nil
-}
-
-// Bundle implements oci.Signature
-func (l *staticLayer) Bundle() (*oci.Bundle, error) {
-	return l.bundle, nil
-}
-
-// Digest implements v1.Layer
-func (l *staticLayer) Digest() (v1.Hash, error) {
-	h, _, err := v1.SHA256(bytes.NewReader(l.b))
-	return h, err
-}
-
-// DiffID implements v1.Layer
-func (l *staticLayer) DiffID() (v1.Hash, error) {
-	h, _, err := v1.SHA256(bytes.NewReader(l.b))
-	return h, err
-}
-
-// Compressed implements v1.Layer
-func (l *staticLayer) Compressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
-}
-
-// Uncompressed implements v1.Layer
-func (l *staticLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
-}
-
-// Size implements v1.Layer
-func (l *staticLayer) Size() (int64, error) {
-	return int64(len(l.b)), nil
-}
-
-// MediaType implements v1.Layer
-func (l *staticLayer) MediaType() (types.MediaType, error) {
-	return l.mt, nil
 }

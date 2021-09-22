@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 
-	"github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -36,7 +36,7 @@ import (
 const (
 	PrivakeKeyPemType = "ENCRYPTED COSIGN PRIVATE KEY"
 
-	BundleKey = remote.BundleKey
+	BundleKey = static.BundleAnnotationKey
 )
 
 type PassFunc func(bool) ([]byte, error)
