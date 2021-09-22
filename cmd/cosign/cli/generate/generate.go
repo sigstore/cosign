@@ -23,10 +23,10 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/image"
 	"github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -74,12 +74,11 @@ func GenerateCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef str
 		return err
 	}
 
-	get, err := remote.Get(ref, regOpts.GetRegistryClientOpts(ctx)...)
+	h, err := image.Digest(ref, regOpts.GetRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
-	repo := ref.Context()
-	img := repo.Digest(get.Digest.String())
+	img := ref.Context().Digest(h.String())
 
 	json, err := (&payload.Cosign{Image: img, Annotations: annotations}).MarshalJSON()
 	if err != nil {
