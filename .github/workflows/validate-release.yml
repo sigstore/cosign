@@ -1,0 +1,66 @@
+#
+# Copyright 2021 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: CI-Validate-Release-Job
+
+on:
+  push:
+    branches:
+      - main
+      - release-*
+  pull_request:
+
+jobs:
+  validate-release-job:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: none
+      checks: none
+      contents: none
+      deployments: none
+      issues: none
+      packages: none
+      pull-requests: none
+      repository-projects: none
+      security-events: none
+      statuses: none
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: goreleaser snapshot
+        run: |
+          docker run --rm --privileged \
+            -e PROJECT_ID=honk-fake-project \
+            -e RUNTIME_IMAGE=gcr.io/distroless/static:debug-nonroot \
+            -v ${PWD}:/go/src/sigstore/cosign \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -w /go/src/sigstore/cosign \
+            --entrypoint="" \
+            ghcr.io/gythialy/golang-cross:v1.17.1@sha256:d6982c0a6dae690b1f5ac977e377e75ba0db7022483c13b664a130a7934eb393 \
+            make snapshot
+
+      - name: check binaries
+        run: |
+          ./dist/cosign-linux-amd64 version
+          ./dist/cosigned-linux-amd64 --help
+          ./dist/sget-linux-amd64 --help
+
+      - name: check images
+        run: |
+          docker run ghcr.io/honk-fake-project/cosign:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 version
+          docker run ghcr.io/honk-fake-project/cosigned:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help
+          docker run ghcr.io/honk-fake-project/sget:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help
