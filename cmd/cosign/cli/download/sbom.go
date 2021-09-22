@@ -56,11 +56,19 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string,
 		return nil, err
 	}
 
-	dstRef, err := remote.SBOMTag(ref, regOpts.ClientOpts(ctx)...)
+	opts := append(regOpts.ClientOpts(ctx),
+		// TODO(mattmoor): This isn't really "signatures", consider shifting to
+		// an SBOMs accessor?
+		remote.WithSignatureSuffix(remote.SBOMTagSuffix))
+
+	se, err := remote.SignedEntity(ref, opts...)
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Signatures(dstRef, regOpts.ClientOpts(ctx)...)
+
+	// TODO(mattmoor): This logic does a shallow walk, we should use `mutate.Map`
+	// if we want to collect all of the SBOMs attached at any level of an index.
+	img, err := se.Signatures()
 	if err != nil {
 		return nil, err
 	}
