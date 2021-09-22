@@ -23,7 +23,6 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"flag"
 	"fmt"
@@ -379,15 +378,6 @@ func Bundle(entry *models.LogEntryAnon) *oci.Bundle {
 			LogID:          *entry.LogID,
 		},
 	}
-}
-
-func ParseAnnotations(entry *models.LogEntryAnon) map[string]string {
-	annts := map[string]string{}
-	if bund := Bundle(entry); bund != nil {
-		contents, _ := json.Marshal(bund)
-		annts[cosign.BundleKey] = string(contents)
-	}
-	return annts
 }
 
 func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertSignVerifier, error) {
