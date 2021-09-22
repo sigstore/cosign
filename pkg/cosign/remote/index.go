@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/internal/oci/static"
 )
 
 type Digester interface {
@@ -139,10 +140,10 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 	return img, nil
 }
 
-func UploadFile(b []byte, ref name.Reference, layerMt, configMt types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {
-	l := &staticLayer{
-		b:  b,
-		mt: layerMt,
+func UploadFile(b []byte, ref name.Reference, layerMT, configMt types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {
+	l, err := static.NewFile(b, static.WithMediaType(layerMT))
+	if err != nil {
+		return nil, err
 	}
 
 	emptyOci := mutate.MediaType(empty.Image, types.OCIManifestSchema1)
