@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
@@ -34,19 +33,6 @@ import (
 	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
-
-func Descriptors(ref name.Reference, remoteOpts ...remote.Option) ([]v1.Descriptor, error) {
-	img, err := remote.Image(ref, remoteOpts...)
-	if err != nil {
-		return nil, err
-	}
-	m, err := img.Manifest()
-	if err != nil {
-		return nil, err
-	}
-
-	return m.Layers, nil
-}
 
 // SignatureImage returns the existing destination image, or a new, empty one.
 func SignatureImage(ref name.Reference, opts ...remote.Option) (oci.Signatures, error) {
