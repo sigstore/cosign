@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
+	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -176,22 +177,19 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	if err != nil {
 		return err
 	}
-	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
 
 	if !upload {
-		fmt.Println(base64.StdEncoding.EncodeToString(sig))
+		fmt.Println(base64.StdEncoding.EncodeToString(signedPayload))
 		return nil
 	}
 
-	uo := cremote.UploadOpts{
-		Cert:         sv.Cert,
-		Chain:        sv.Chain,
-		DupeDetector: sv,
-		RemoteOpts:   remoteOpts,
-		MediaType:    types.DssePayloadType,
+	opts := []static.Option{static.WithMediaType(types.DssePayloadType)}
+	if sv.Cert != nil {
+		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
 
 	uploadTLog, err := sign.ShouldUploadToTlog(ref, force, ko.RekorURL)
@@ -216,14 +214,13 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		if err != nil {
 			return err
 		}
-		entry, err := cosign.TLogUploadInTotoAttestation(rekorClient, sig, rekorBytes)
+		entry, err := cosign.TLogUploadInTotoAttestation(rekorClient, signedPayload, rekorBytes)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 
-		uo.Bundle = sign.Bundle(entry)
-		uo.AdditionalAnnotations = sign.ParseAnnotations(entry)
+		opts = append(opts, static.WithBundle(sign.Bundle(entry)))
 	}
 
 	attRef, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
@@ -231,8 +228,16 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return err
 	}
 
+	sig, err := static.NewSignature(signedPayload, "", opts...)
+	if err != nil {
+		return err
+	}
+
 	fmt.Fprintln(os.Stderr, "Pushing attestation to:", attRef.String())
 	// An attestation represents both the signature and payload. So store the entire thing
 	// in the payload field since they can get large
-	return cremote.UploadSignature([]byte{}, sig, attRef, uo)
+	return cremote.UploadSignature(sig, attRef, cremote.UploadOpts{
+		DupeDetector: sv,
+		RemoteOpts:   remoteOpts,
+	})
 }
