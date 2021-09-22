@@ -50,6 +50,7 @@ import (
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -81,6 +82,32 @@ func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error
 		}
 	}
 	return true, nil
+}
+
+type Uploader func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
+
+func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, upload Uploader) (*oci.Bundle, error) {
+	var rekorBytes []byte
+	// Upload the cert or the public key, depending on what we have
+	if sv.Cert != nil {
+		rekorBytes = sv.Cert
+	} else {
+		pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
+		if err != nil {
+			return nil, err
+		}
+		rekorBytes = pemBytes
+	}
+	rekorClient, err := rekorClient.GetRekorClient(rekorURL)
+	if err != nil {
+		return nil, err
+	}
+	entry, err := upload(rekorClient, rekorBytes)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+	return Bundle(entry), nil
 }
 
 func Sign() *ffcli.Command {
@@ -312,35 +339,17 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 		}
 
-		// Check if the image is public (no auth in Get)
-		uploadTLog, err := ShouldUploadToTlog(img, force, ko.RekorURL)
-		if err != nil {
+		// Check whether we should be uploading to the transparency log
+		if uploadTLog, err := ShouldUploadToTlog(img, force, ko.RekorURL); err != nil {
 			return err
-		}
-
-		if uploadTLog {
-			var rekorBytes []byte
-			// Upload the cert or the public key, depending on what we have
-			if sv.Cert != nil {
-				rekorBytes = sv.Cert
-			} else {
-				pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-				if err != nil {
-					return err
-				}
-				rekorBytes = pemBytes
-			}
-			rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		} else if uploadTLog {
+			bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+				return cosign.TLogUpload(r, signature, payload, b)
+			})
 			if err != nil {
 				return err
 			}
-			entry, err := cosign.TLogUpload(rekorClient, signature, payload, rekorBytes)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-
-			opts = append(opts, static.WithBundle(Bundle(entry)))
+			opts = append(opts, static.WithBundle(bundle))
 		}
 
 		sigRef, err := ociremote.SignatureTag(img, ociremote.WithRemoteOptions(remoteOpts...))
