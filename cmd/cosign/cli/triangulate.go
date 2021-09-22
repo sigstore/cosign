@@ -55,15 +55,14 @@ func MungeCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string
 		return err
 	}
 
-	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 	var dstRef name.Tag
 	switch attachmentType {
 	case cosign.Signature:
-		dstRef, err = ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+		dstRef, err = ociremote.SignatureTag(ref, regOpts.ClientOpts(ctx)...)
 	case cosign.SBOM:
-		dstRef, err = ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+		dstRef, err = ociremote.SBOMTag(ref, regOpts.ClientOpts(ctx)...)
 	case cosign.Attestation:
-		dstRef, err = ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+		dstRef, err = ociremote.AttestationTag(ref, regOpts.ClientOpts(ctx)...)
 	default:
 		err = fmt.Errorf("unknown attachment type %s", attachmentType)
 	}

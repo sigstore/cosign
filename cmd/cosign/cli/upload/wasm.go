@@ -62,7 +62,6 @@ func WasmCmd(ctx context.Context, regOpts options.RegistryOpts, wasmPath, imageR
 	if err != nil {
 		return err
 	}
-	regOpts.GetRegistryClientOpts(ctx)
 	fmt.Fprintf(os.Stderr, "Uploading wasm file from [%s] to [%s].\n", wasmPath, ref.Name())
 	if _, err := cremote.UploadFile(b, ref, types.WasmLayerMediaType, types.WasmConfigMediaType, regOpts.GetRegistryClientOpts(ctx)...); err != nil {
 		return err

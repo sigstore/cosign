@@ -25,7 +25,6 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
@@ -54,8 +53,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef st
 	if err != nil {
 		return err
 	}
-	regClientOpts := regOpts.GetRegistryClientOpts(ctx)
-	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremote.WithRemoteOptions(regClientOpts...))
+	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}

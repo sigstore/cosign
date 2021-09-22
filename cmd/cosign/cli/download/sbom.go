@@ -56,13 +56,11 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string,
 		return nil, err
 	}
 
-	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-
-	dstRef, err := remote.SBOMTag(ref, remote.WithRemoteOptions(remoteOpts...))
+	dstRef, err := remote.SBOMTag(ref, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Signatures(dstRef, remote.WithRemoteOptions(remoteOpts...))
+	img, err := remote.Signatures(dstRef, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return nil, err
 	}
