@@ -25,7 +25,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/internal/oci"
@@ -127,34 +126,11 @@ LayerLoop:
 }
 
 type UploadOpts struct {
-	Cert                  []byte
-	Chain                 []byte
-	DupeDetector          signature.Verifier
-	Bundle                *oci.Bundle
-	AdditionalAnnotations map[string]string
-	RemoteOpts            []remote.Option
-	MediaType             string
+	DupeDetector signature.Verifier
+	RemoteOpts   []remote.Option
 }
 
-func UploadSignature(signature, payload []byte, dst name.Reference, opts UploadOpts) error {
-	b64sig := base64.StdEncoding.EncodeToString(signature)
-	var options []static.Option
-	// Preserve the default
-	if opts.MediaType != "" {
-		options = append(options, static.WithMediaType(types.MediaType(opts.MediaType)))
-	}
-	if opts.Cert != nil {
-		options = append(options, static.WithCertChain(opts.Cert, opts.Chain))
-	}
-	if opts.Bundle != nil {
-		options = append(options, static.WithBundle(opts.Bundle))
-	}
-
-	l, err := static.NewSignature(payload, b64sig, options...)
-	if err != nil {
-		return err
-	}
-
+func UploadSignature(l oci.Signature, dst name.Reference, opts UploadOpts) error {
 	base, err := SignatureImage(dst, opts.RemoteOpts...)
 	if err != nil {
 		return err

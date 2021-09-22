@@ -42,6 +42,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/internal/oci"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
+	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -296,21 +297,20 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			}
 		}
 
-		sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+		signature, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 		if err != nil {
 			return errors.Wrap(err, "signing")
 		}
+		b64sig := base64.StdEncoding.EncodeToString(signature)
 
 		if !upload {
-			fmt.Println(base64.StdEncoding.EncodeToString(sig))
+			fmt.Println(b64sig)
 			continue
 		}
 
-		uo := cremote.UploadOpts{
-			Cert:         sv.Cert,
-			Chain:        sv.Chain,
-			DupeDetector: sv,
-			RemoteOpts:   remoteOpts,
+		opts := []static.Option{}
+		if sv.Cert != nil {
+			opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 		}
 
 		// Check if the image is public (no auth in Get)
@@ -335,14 +335,13 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			if err != nil {
 				return err
 			}
-			entry, err := cosign.TLogUpload(rekorClient, sig, payload, rekorBytes)
+			entry, err := cosign.TLogUpload(rekorClient, signature, payload, rekorBytes)
 			if err != nil {
 				return err
 			}
 			fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 
-			uo.Bundle = Bundle(entry)
-			uo.AdditionalAnnotations = ParseAnnotations(entry)
+			opts = append(opts, static.WithBundle(Bundle(entry)))
 		}
 
 		sigRef, err := ociremote.SignatureTag(img, ociremote.WithRemoteOptions(remoteOpts...))
@@ -350,8 +349,16 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			return err
 		}
 
+		sig, err := static.NewSignature(payload, b64sig, opts...)
+		if err != nil {
+			return err
+		}
+
 		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())
-		if err := cremote.UploadSignature(sig, payload, sigRef, uo); err != nil {
+		if err := cremote.UploadSignature(sig, sigRef, cremote.UploadOpts{
+			DupeDetector: sv,
+			RemoteOpts:   remoteOpts,
+		}); err != nil {
 			return errors.Wrap(err, "uploading")
 		}
 	}

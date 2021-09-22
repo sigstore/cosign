@@ -29,6 +29,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
+	"github.com/sigstore/cosign/internal/oci/static"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/image"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
@@ -99,7 +100,12 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 		return err
 	}
 
-	return cremote.UploadSignature(sigBytes, payload, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts})
+	sig, err := static.NewSignature(payload, base64.StdEncoding.EncodeToString(sigBytes))
+	if err != nil {
+		return err
+	}
+
+	return cremote.UploadSignature(sig, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts})
 }
 
 type SignatureArgType uint8
