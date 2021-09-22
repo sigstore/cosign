@@ -31,7 +31,6 @@ import (
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/internal/oci/static"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/image"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -71,17 +70,14 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 		return err
 	}
 
-	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-
-	h, err := image.Digest(ref, remoteOpts...)
+	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
 
 	var payload []byte
 	if payloadRef == "" {
-		img := ref.Context().Digest(h.String())
-		payload, err = (&sigPayload.Cosign{Image: img}).MarshalJSON()
+		payload, err = (&sigPayload.Cosign{Image: digest}).MarshalJSON()
 	} else {
 		payload, err = ioutil.ReadFile(filepath.Clean(payloadRef))
 	}
@@ -95,7 +91,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 		return err
 	}
 
-	dstRef, err := ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+	dstRef, err := ociremote.SignatureTag(digest, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
@@ -105,7 +101,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 		return err
 	}
 
-	return cremote.UploadSignature(sig, dstRef, cremote.UploadOpts{RemoteOpts: remoteOpts})
+	return cremote.UploadSignature(sig, dstRef, cremote.UploadOpts{RemoteOpts: regOpts.GetRegistryClientOpts(ctx)})
 }
 
 type SignatureArgType uint8

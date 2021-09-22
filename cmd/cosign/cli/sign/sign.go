@@ -45,7 +45,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/image"
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
@@ -275,19 +274,19 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
-		h, err := image.Digest(ref, remoteOpts...)
+		digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
 		if err != nil {
 			return errors.Wrap(err, "resolving digest")
 		}
-		toSign = append(toSign, ref.Context().Digest(h.String()))
+		toSign = append(toSign, digest)
 
 		if recursive {
-			get, err := remote.Get(ref, remoteOpts...)
+			get, err := remote.Get(digest, remoteOpts...)
 			if err != nil {
 				return errors.Wrap(err, "getting remote image")
 			}
 			if get.MediaType.IsIndex() {
-				imgs, err := getTransitiveImages(get, ref.Context(), remoteOpts...)
+				imgs, err := getTransitiveImages(get, digest.Repository, remoteOpts...)
 				if err != nil {
 					return err
 				}

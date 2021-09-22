@@ -26,6 +26,7 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -38,7 +39,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/image"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -144,17 +144,15 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return fmt.Errorf("invalid predicate type: %s", predicateType)
 	}
 
-	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	h, err := image.Digest(ref, remoteOpts...)
+	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
-	digest := ref.Context().Digest(h.String())
+	h, _ := v1.NewHash(digest.Identifier())
 
 	sv, err := sign.SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
@@ -163,12 +161,11 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	wrapped := dsse.WrapSigner(sv, predicateURI)
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
-
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
 		Path:   predicatePath,
 		Type:   predicateType,
 		Digest: h.Hex,
-		Repo:   ref.Context().String(),
+		Repo:   digest.Repository.String(),
 	})
 	if err != nil {
 		return err
@@ -206,7 +203,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		opts = append(opts, static.WithBundle(bundle))
 	}
 
-	attRef, err := ociremote.AttestationTag(digest, ociremote.WithRemoteOptions(remoteOpts...))
+	attRef, err := ociremote.AttestationTag(digest, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
@@ -221,6 +218,6 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	// in the payload field since they can get large
 	return cremote.UploadSignature(sig, attRef, cremote.UploadOpts{
 		DupeDetector: cremote.NewDupeDetector(sv),
-		RemoteOpts:   remoteOpts,
+		RemoteOpts:   regOpts.GetRegistryClientOpts(ctx),
 	})
 }

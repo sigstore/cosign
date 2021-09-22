@@ -12,25 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package image
+package remote
 
 import (
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-// Digest returns the digest of the image at the reference.
+// ResolveDigest returns the digest of the image at the reference.
 //
 // If the reference is by digest already, it simply extracts the digest.
 // Otherwise, it looks up the digest from the registry.
-func Digest(ref name.Reference, remoteOpts ...remote.Option) (v1.Hash, error) {
-	if d, ok := ref.(name.Digest); ok {
-		return v1.NewHash(d.DigestStr())
-	}
-	desc, err := remote.Get(ref, remoteOpts...)
+func ResolveDigest(ref name.Reference, opts ...Option) (name.Digest, error) {
+	o, err := makeOptions(ref.Context(), opts...)
 	if err != nil {
-		return v1.Hash{}, err
+		return name.Digest{}, err
 	}
-	return desc.Digest, nil
+	if d, ok := ref.(name.Digest); ok {
+		return d, nil
+	}
+	desc, err := remoteGet(ref, o.ROpt...)
+	if err != nil {
+		return name.Digest{}, err
+	}
+	return ref.Context().Digest(desc.Digest.String()), nil
 }
