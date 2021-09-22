@@ -29,7 +29,24 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func findDuplicate(sigImage oci.Signatures, newSig oci.Signature, dupeDetector signature.Verifier) ([]byte, error) {
+// DupeDetector scans a list of signatures looking for a duplicate.
+type DupeDetector interface {
+	Find(oci.Signatures, oci.Signature) (oci.Signature, error)
+}
+
+// NewDupeDetector creates a new DupeDetector that looks for matching signatures that
+// can verify the provided signature's payload.
+func NewDupeDetector(v signature.Verifier) DupeDetector {
+	return &dd{verifier: v}
+}
+
+type dd struct {
+	verifier signature.Verifier
+}
+
+var _ DupeDetector = (*dd)(nil)
+
+func (dd *dd) Find(sigImage oci.Signatures, newSig oci.Signature) (oci.Signature, error) {
 	newDigest, err := newSig.Digest()
 	if err != nil {
 		return nil, err
@@ -83,16 +100,15 @@ LayerLoop:
 		if err != nil {
 			return nil, err
 		}
-		if err := dupeDetector.VerifySignature(bytes.NewReader(uploadedSig), r); err == nil {
-			// An equivalent signature has already been uploaded.
-			return uploadedSig, nil
+		if err := dd.verifier.VerifySignature(bytes.NewReader(uploadedSig), r); err == nil {
+			return sig, nil
 		}
 	}
 	return nil, nil
 }
 
 type UploadOpts struct {
-	DupeDetector signature.Verifier
+	DupeDetector DupeDetector
 	RemoteOpts   []remote.Option
 }
 
@@ -103,7 +119,7 @@ func UploadSignature(l oci.Signature, dst name.Reference, opts UploadOpts) error
 	}
 
 	if opts.DupeDetector != nil {
-		if uploadedSig, err := findDuplicate(base, l, opts.DupeDetector); err != nil || uploadedSig != nil {
+		if existing, err := opts.DupeDetector.Find(base, l); err != nil || existing != nil {
 			return err
 		}
 	}
