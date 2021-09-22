@@ -18,18 +18,6 @@ builds:
     - linux
   goarch:
     - amd64
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  env:
-    - CGO_ENABLED=0
-
-- id: linux-arm64
-  binary: cosign-linux-{{ .Arch }}
-  no_unique_dist_dir: true
-  main: ./cmd/cosign
-  goos:
-    - linux
-  goarch:
     - arm64
   ldflags:
     - "{{ .Env.LDFLAGS }}"
@@ -111,19 +99,26 @@ builds:
     - linux
   goarch:
     - amd64
+    - arm64
   ldflags:
     - "{{ .Env.LDFLAGS }}"
   env:
     - CGO_ENABLED=0
 
-- id: linux-cosigned-arm64
-  binary: cosigned-linux-{{ .Arch }}
+- id: sget
+  binary: sget-{{ .Os }}-{{ .Arch }}
   no_unique_dist_dir: true
-  main: ./cmd/cosign/webhook
+  main: ./cmd/sget
   goos:
     - linux
+    - darwin
+    - windows
   goarch:
+    - amd64
     - arm64
+  ignore:
+    - goos: windows
+      goarch: arm64
   ldflags:
     - "{{ .Env.LDFLAGS }}"
   env:
@@ -142,8 +137,16 @@ signs:
     artifacts: binary
     ids:
       - linux-cosigned
+  - id: sget
+    signature: "${artifact}.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "-output", "${artifact}.sig", "-key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    artifacts: binary
+    ids:
+      - sget
 
 dockers:
+  # cosign Image
   - image_templates:
       - "ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64"
     use: buildx
@@ -162,6 +165,7 @@ dockers:
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=arm64"
 
+  # cosigned Image
   - image_templates:
       - "ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64"
     use: buildx
@@ -180,6 +184,25 @@ dockers:
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=arm64"
 
+  # sget Image
+  - image_templates:
+      - "ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: Dockerfile.sget
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+      - "--build-arg=ARCH=amd64"
+  - image_templates:
+      - "ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8"
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile.sget
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+      - "--build-arg=ARCH=arm64"
+
 docker_manifests:
   - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}
     image_templates:
@@ -189,6 +212,10 @@ docker_manifests:
     image_templates:
       - ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64
       - ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8
+  - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}
+    image_templates:
+      - ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64
+      - ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8
 
 docker_signs:
   - artifacts: all
@@ -203,7 +230,7 @@ checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
 
 snapshot:
-  name_template: SNAPSHOT-{{.ShortCommit}}
+  name_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
   prerelease: allow # remove this when we start publishing non-prerelease or set to auto
