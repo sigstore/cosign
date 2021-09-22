@@ -506,15 +506,15 @@ func TestUploadDownload(t *testing.T) {
 			se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
 			must(err, t)
 			sigs, err := se.Signatures()
+			must(err, t)
+			signatures, err := sigs.Get()
+			must(err, t)
 
 			if testCase.expectedErr {
-				mustErr(err, t)
+				if len(signatures) != 0 {
+					t.Fatalf("unexpected signatures %d, wanted 0", len(signatures))
+				}
 			} else {
-				must(err, t)
-
-				signatures, err := sigs.Get()
-				must(err, t)
-
 				if len(signatures) != 1 {
 					t.Fatalf("unexpected signatures %d, wanted 1", len(signatures))
 				}

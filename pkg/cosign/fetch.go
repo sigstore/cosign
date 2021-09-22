@@ -18,6 +18,7 @@ package cosign
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
 	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -61,6 +62,9 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 	l, err := sigs.Get()
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching signatures")
+	}
+	if len(l) == 0 {
+		return nil, fmt.Errorf("no signatures associated with %v", ref)
 	}
 
 	g := pool.New(runtime.NumCPU())

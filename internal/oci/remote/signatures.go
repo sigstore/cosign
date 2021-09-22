@@ -16,19 +16,31 @@
 package remote
 
 import (
+	"net/http"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/internal/oci"
+	"github.com/sigstore/cosign/internal/oci/empty"
 )
 
 // Signatures fetches the signatures image represented by the named reference.
+// If the tag is not found, this returns an empty oci.Signatures.
 func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
 	o, err := makeOptions(ref.Context(), opts...)
 	if err != nil {
 		return nil, err
 	}
 	img, err := remoteImage(ref, o.ROpt...)
-	if err != nil {
+	var te *transport.Error
+	if errors.As(err, &te) {
+		if te.StatusCode != http.StatusNotFound {
+			return nil, te
+		}
+		return empty.Signatures(), nil
+	} else if err != nil {
 		return nil, err
 	}
 	return &sigs{

@@ -70,6 +70,10 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string,
 	if err != nil {
 		return nil, err
 	}
+	if len(sigs) == 0 {
+		return nil, fmt.Errorf("no signatures associated with %v", ref)
+	}
+
 	sboms := make([]string, 0, len(sigs))
 	for _, l := range sigs {
 		mt, err := l.MediaType()
