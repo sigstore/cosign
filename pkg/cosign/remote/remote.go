@@ -21,13 +21,13 @@ import (
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/internal/oci/empty"
+	"github.com/sigstore/cosign/internal/oci/mutate"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -128,18 +128,10 @@ func UploadSignature(l oci.Signature, dst name.Reference, opts UploadOpts) error
 		}
 	}
 
-	ann, err := l.Annotations()
+	sigs, err := mutate.AppendSignatures(base, l)
 	if err != nil {
 		return err
 	}
 
-	img, err := mutate.Append(base, mutate.Addendum{
-		Layer:       l,
-		Annotations: ann,
-	})
-	if err != nil {
-		return err
-	}
-
-	return remote.Write(dst, img, opts.RemoteOpts...)
+	return remote.Write(dst, sigs, opts.RemoteOpts...)
 }
