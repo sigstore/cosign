@@ -26,7 +26,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/image"
+	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -74,13 +74,12 @@ func GenerateCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef str
 		return err
 	}
 
-	h, err := image.Digest(ref, regOpts.GetRegistryClientOpts(ctx)...)
+	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
-	img := ref.Context().Digest(h.String())
 
-	json, err := (&payload.Cosign{Image: img, Annotations: annotations}).MarshalJSON()
+	json, err := (&payload.Cosign{Image: digest, Annotations: annotations}).MarshalJSON()
 	if err != nil {
 		return err
 	}
