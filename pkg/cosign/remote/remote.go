@@ -18,36 +18,16 @@ package remote
 import (
 	"bytes"
 	"encoding/base64"
-	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/internal/oci"
-	"github.com/sigstore/cosign/internal/oci/empty"
 	"github.com/sigstore/cosign/internal/oci/mutate"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
-
-// SignatureImage returns the existing destination image, or a new, empty one.
-func SignatureImage(ref name.Reference, opts ...remote.Option) (oci.Signatures, error) {
-	base, err := ociremote.Signatures(ref, ociremote.WithRemoteOptions(opts...))
-	if err == nil {
-		return base, nil
-	}
-	var te *transport.Error
-	if errors.As(err, &te) {
-		if te.StatusCode != http.StatusNotFound {
-			return nil, te
-		}
-		return empty.Signatures(), nil
-	}
-	return nil, err
-}
 
 func findDuplicate(sigImage oci.Signatures, newSig oci.Signature, dupeDetector signature.Verifier) ([]byte, error) {
 	newDigest, err := newSig.Digest()
@@ -117,7 +97,7 @@ type UploadOpts struct {
 }
 
 func UploadSignature(l oci.Signature, dst name.Reference, opts UploadOpts) error {
-	base, err := SignatureImage(dst, opts.RemoteOpts...)
+	base, err := ociremote.Signatures(dst, ociremote.WithRemoteOptions(opts.RemoteOpts...))
 	if err != nil {
 		return err
 	}
