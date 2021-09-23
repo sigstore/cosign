@@ -17,6 +17,7 @@ package mutate
 
 import (
 	"errors"
+	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -120,4 +121,82 @@ func (i *indexWrapper) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error)
 	} else {
 		return signed.ImageIndex(unsigned), nil
 	}
+}
+
+// SignEntity attaches the provided signature to the provided entity.
+func SignEntity(se oci.SignedEntity, sig oci.Signature, opts ...SignOption) (oci.SignedEntity, error) {
+	switch obj := se.(type) {
+	case oci.SignedImage:
+		return SignImage(obj, sig, opts...)
+	case oci.SignedImageIndex:
+		return SignImageIndex(obj, sig, opts...)
+	default:
+		return nil, fmt.Errorf("unsupported type: %T", se)
+	}
+}
+
+// SignImage attaches the provided signature to the provided image.
+func SignImage(si oci.SignedImage, sig oci.Signature, opts ...SignOption) (oci.SignedImage, error) {
+	return &signedImage{
+		SignedImage: si,
+		sig:         sig,
+		so:          makeSignOpts(opts...),
+	}, nil
+}
+
+type signedImage struct {
+	oci.SignedImage
+	sig oci.Signature
+	so  *signOpts
+}
+
+// Signatures implements oci.SignedImage
+func (si *signedImage) Signatures() (oci.Signatures, error) {
+	base, err := si.SignedImage.Signatures()
+	if err != nil {
+		return nil, err
+	}
+	if si.so.dd != nil {
+		if existing, err := si.so.dd.Find(base, si.sig); err != nil {
+			return nil, err
+		} else if existing != nil {
+			// Just return base if the signature is redundant
+			return base, nil
+		}
+	}
+	return AppendSignatures(base, si.sig)
+}
+
+// SignImage attaches the provided signature to the provided image.
+func SignImageIndex(sii oci.SignedImageIndex, sig oci.Signature, opts ...SignOption) (oci.SignedImageIndex, error) {
+	return &signedImageIndex{
+		ociSignedImageIndex: sii,
+		sig:                 sig,
+		so:                  makeSignOpts(opts...),
+	}, nil
+}
+
+type ociSignedImageIndex oci.SignedImageIndex
+
+type signedImageIndex struct {
+	ociSignedImageIndex
+	sig oci.Signature
+	so  *signOpts
+}
+
+// Signatures implements oci.SignedImageIndex
+func (sii *signedImageIndex) Signatures() (oci.Signatures, error) {
+	base, err := sii.ociSignedImageIndex.Signatures()
+	if err != nil {
+		return nil, err
+	}
+	if sii.so.dd != nil {
+		if existing, err := sii.so.dd.Find(base, sii.sig); err != nil {
+			return nil, err
+		} else if existing != nil {
+			// Just return base if the signature is redundant
+			return base, nil
+		}
+	}
+	return AppendSignatures(base, sii.sig)
 }

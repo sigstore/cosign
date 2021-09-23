@@ -29,14 +29,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-// DupeDetector scans a list of signatures looking for a duplicate.
-type DupeDetector interface {
-	Find(oci.Signatures, oci.Signature) (oci.Signature, error)
-}
-
 // NewDupeDetector creates a new DupeDetector that looks for matching signatures that
 // can verify the provided signature's payload.
-func NewDupeDetector(v signature.Verifier) DupeDetector {
+func NewDupeDetector(v signature.Verifier) mutate.DupeDetector {
 	return &dd{verifier: v}
 }
 
@@ -44,7 +39,7 @@ type dd struct {
 	verifier signature.Verifier
 }
 
-var _ DupeDetector = (*dd)(nil)
+var _ mutate.DupeDetector = (*dd)(nil)
 
 func (dd *dd) Find(sigImage oci.Signatures, newSig oci.Signature) (oci.Signature, error) {
 	newDigest, err := newSig.Digest()
@@ -108,7 +103,7 @@ LayerLoop:
 }
 
 type UploadOpts struct {
-	DupeDetector DupeDetector
+	DupeDetector mutate.DupeDetector
 	RemoteOpts   []remote.Option
 }
 

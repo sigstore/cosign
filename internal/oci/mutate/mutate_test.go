@@ -16,12 +16,16 @@
 package mutate
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/internal/oci/signed"
+	"github.com/sigstore/cosign/internal/oci/static"
 )
 
 func TestAppendManifests(t *testing.T) {
@@ -138,4 +142,138 @@ func TestAppendManifests(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSignEntity(t *testing.T) {
+	i, err := random.Image(300 /* bytes */, 3 /* layers */)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	si := signed.Image(i)
+
+	ii, err := random.Index(300 /* bytes */, 3 /* layers */, 5 /* images */)
+	if err != nil {
+		t.Fatalf("random.Index() = %v", err)
+	}
+	sii := signed.ImageIndex(ii)
+
+	t.Run("without duplicate detector", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii} {
+			orig, err := static.NewSignature(nil, "")
+			if err != nil {
+				t.Fatalf("static.NewSignature() = %v", err)
+			}
+			se, err = SignEntity(se, orig)
+			if err != nil {
+				t.Fatalf("SignEntity() = %v", err)
+			}
+
+			for i := 2; i < 10; i++ {
+				sig, err := static.NewSignature(nil, fmt.Sprintf("%d", i))
+				if err != nil {
+					t.Fatalf("static.NewSignature() = %v", err)
+				}
+
+				se, err = SignEntity(se, sig)
+				if err != nil {
+					t.Fatalf("SignEntity() = %v", err)
+				}
+
+				sigs, err := se.Signatures()
+				if err != nil {
+					t.Fatalf("Signatures() = %v", err)
+				}
+				if sl, err := sigs.Get(); err != nil {
+					t.Fatalf("Get() = %v", err)
+				} else if len(sl) != i {
+					t.Errorf("len(Get()) = %d, wanted %d", len(sl), i)
+				}
+			}
+		}
+	})
+
+	t.Run("with duplicate detector", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii} {
+			orig, err := static.NewSignature(nil, "")
+			if err != nil {
+				t.Fatalf("static.NewSignature() = %v", err)
+			}
+			se, err = SignEntity(se, orig)
+			if err != nil {
+				t.Fatalf("SignEntity() = %v", err)
+			}
+
+			dd := &dupe{
+				sig: orig,
+			}
+
+			for i := 2; i < 10; i++ {
+				sig, err := static.NewSignature(nil, fmt.Sprintf("%d", i))
+				if err != nil {
+					t.Fatalf("static.NewSignature() = %v", err)
+				}
+
+				se, err = SignEntity(se, sig, WithDupeDetector(dd))
+				if err != nil {
+					t.Fatalf("SignEntity() = %v", err)
+				}
+
+				sigs, err := se.Signatures()
+				if err != nil {
+					t.Fatalf("Signatures() = %v", err)
+				}
+				if sl, err := sigs.Get(); err != nil {
+					t.Fatalf("Get() = %v", err)
+				} else if len(sl) != 1 {
+					t.Errorf("len(Get()) = %d, wanted %d", len(sl), i)
+				}
+			}
+		}
+	})
+
+	t.Run("with erroring duplicate detector", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii} {
+			orig, err := static.NewSignature(nil, "")
+			if err != nil {
+				t.Fatalf("static.NewSignature() = %v", err)
+			}
+			se, err = SignEntity(se, orig)
+			if err != nil {
+				t.Fatalf("SignEntity() = %v", err)
+			}
+
+			want := errors.New("expected error")
+			dd := &dupe{
+				err: want,
+			}
+
+			for i := 2; i < 10; i++ {
+				sig, err := static.NewSignature(nil, fmt.Sprintf("%d", i))
+				if err != nil {
+					t.Fatalf("static.NewSignature() = %v", err)
+				}
+
+				se, err = SignEntity(se, sig, WithDupeDetector(dd))
+				if err != nil {
+					t.Fatalf("SignEntity() = %v", err)
+				}
+
+				if _, got := se.Signatures(); !errors.Is(got, want) {
+					t.Fatalf("Signatures() = %v, wanted %v", got, want)
+				}
+			}
+		}
+	})
+}
+
+type dupe struct {
+	sig oci.Signature
+	err error
+}
+
+var _ DupeDetector = (*dupe)(nil)
+
+// Find implements DupeDetector
+func (d *dupe) Find(oci.Signatures, oci.Signature) (oci.Signature, error) {
+	return d.sig, d.err
 }
