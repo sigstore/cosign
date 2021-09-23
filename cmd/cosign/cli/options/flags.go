@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	ociremote "github.com/sigstore/cosign/internal/oci/remote"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
 // OneOf ensures that only one of the supplied interfaces is set to a non-zero value.

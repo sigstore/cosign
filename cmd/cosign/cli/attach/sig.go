@@ -28,9 +28,9 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	ociremote "github.com/sigstore/cosign/internal/oci/remote"
-	"github.com/sigstore/cosign/internal/oci/static"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/static"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
