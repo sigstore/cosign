@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -39,6 +40,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/internal/oci"
+	"github.com/sigstore/cosign/internal/oci/mutate"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/internal/oci/static"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -209,40 +211,6 @@ func GetAttachedImageRef(imageRef string, attachment string, remoteOpts ...remot
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
 
-func getTransitiveImages(rootIndex *remote.Descriptor, repo name.Repository, opts ...remote.Option) ([]name.Digest, error) {
-	var imgs []name.Digest
-
-	indexDescs := []*remote.Descriptor{rootIndex}
-
-	for len(indexDescs) > 0 {
-		indexDesc := indexDescs[len(indexDescs)-1]
-		indexDescs = indexDescs[:len(indexDescs)-1]
-
-		idx, err := indexDesc.ImageIndex()
-		if err != nil {
-			return nil, err
-		}
-		idxManifest, err := idx.IndexManifest()
-		if err != nil {
-			return nil, err
-		}
-		for _, manifest := range idxManifest.Manifests {
-			if manifest.MediaType.IsIndex() {
-				nextIndexName := repo.Digest(manifest.Digest.String())
-				indexDesc, err := remote.Get(nextIndexName, opts...)
-				if err != nil {
-					return nil, errors.Wrap(err, "getting recursive image index")
-				}
-				indexDescs = append(indexDescs, indexDesc)
-			}
-			childImg := repo.Digest(manifest.Digest.String())
-			imgs = append(imgs, childImg)
-		}
-	}
-
-	return imgs, nil
-}
-
 // nolint
 func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, annotations map[string]interface{},
 	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
@@ -258,39 +226,11 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
-	toSign := make([]name.Digest, 0, len(imgs))
-	for _, inputImg := range imgs {
-		// A key file or token is required unless we're in experimental mode!
-		ref, err := GetAttachedImageRef(inputImg, attachment, remoteOpts...)
-		if err != nil {
-			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
-		}
-
-		digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
-		if err != nil {
-			return errors.Wrap(err, "resolving digest")
-		}
-		toSign = append(toSign, digest)
-
-		if recursive {
-			get, err := remote.Get(digest, remoteOpts...)
-			if err != nil {
-				return errors.Wrap(err, "getting remote image")
-			}
-			if get.MediaType.IsIndex() {
-				imgs, err := getTransitiveImages(get, digest.Repository, remoteOpts...)
-				if err != nil {
-					return err
-				}
-				toSign = append(toSign, imgs...)
-			}
-		}
-	}
-
 	sv, err := SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
+	dd := cremote.NewDupeDetector(sv)
 
 	var staticPayload []byte
 	if payloadPath != "" {
@@ -301,64 +241,92 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 		}
 	}
 
-	for _, img := range toSign {
-		// The payload can be specified via a flag to skip generation.
-		payload := staticPayload
-		if len(payload) == 0 {
-			payload, err = (&sigPayload.Cosign{
-				Image:       img,
-				Annotations: annotations,
-			}).MarshalJSON()
+	// Set up an ErrDone considerion to return along "success" paths
+	var ErrDone error
+	if !recursive {
+		ErrDone = mutate.ErrSkipChildren
+	}
+
+	for _, inputImg := range imgs {
+		ref, err := GetAttachedImageRef(inputImg, attachment, remoteOpts...)
+		if err != nil {
+			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
+		}
+
+		se, err := ociremote.SignedEntity(ref, regOpts.ClientOpts(ctx)...)
+		if err != nil {
+			return err
+		}
+
+		_, err = mutate.Map(ctx, se, func(ctx context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+			// Get the digest for this entity in our walk.
+			d, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
 			if err != nil {
-				return errors.Wrap(err, "payload")
+				return nil, err
 			}
-		}
+			digest := ref.Context().Digest(d.String())
 
-		signature, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
-		if err != nil {
-			return errors.Wrap(err, "signing")
-		}
-		b64sig := base64.StdEncoding.EncodeToString(signature)
+			// The payload can be specified via a flag to skip generation.
+			payload := staticPayload
+			if len(payload) == 0 {
+				payload, err = (&sigPayload.Cosign{
+					Image:       digest,
+					Annotations: annotations,
+				}).MarshalJSON()
+				if err != nil {
+					return nil, errors.Wrap(err, "payload")
+				}
+			}
 
-		if !upload {
-			fmt.Println(b64sig)
-			continue
-		}
-
-		opts := []static.Option{}
-		if sv.Cert != nil {
-			opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
-		}
-
-		// Check whether we should be uploading to the transparency log
-		if uploadTLog, err := ShouldUploadToTlog(img, force, ko.RekorURL); err != nil {
-			return err
-		} else if uploadTLog {
-			bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-				return cosign.TLogUpload(r, signature, payload, b)
-			})
+			signature, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 			if err != nil {
-				return err
+				return nil, errors.Wrap(err, "signing")
 			}
-			opts = append(opts, static.WithBundle(bundle))
-		}
+			b64sig := base64.StdEncoding.EncodeToString(signature)
 
-		sigRef, err := ociremote.SignatureTag(img, ociremote.WithRemoteOptions(remoteOpts...))
+			if !upload {
+				fmt.Println(b64sig)
+				return se, ErrDone
+			}
+
+			opts := []static.Option{}
+			if sv.Cert != nil {
+				opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
+			}
+
+			// Check whether we should be uploading to the transparency log
+			if uploadTLog, err := ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
+				return nil, err
+			} else if uploadTLog {
+				bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+					return cosign.TLogUpload(r, signature, payload, b)
+				})
+				if err != nil {
+					return nil, err
+				}
+				opts = append(opts, static.WithBundle(bundle))
+			}
+
+			// Create the new signature for this entity.
+			sig, err := static.NewSignature(payload, b64sig, opts...)
+			if err != nil {
+				return nil, err
+			}
+
+			// Attach the signature to the entity.
+			newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(dd))
+			if err != nil {
+				return nil, err
+			}
+
+			// Publish the signatures associated with this entity
+			if err := ociremote.WriteSignatures(digest.Repository, newSE, regOpts.ClientOpts(ctx)...); err != nil {
+				return nil, err
+			}
+			return se, ErrDone
+		})
 		if err != nil {
 			return err
-		}
-
-		sig, err := static.NewSignature(payload, b64sig, opts...)
-		if err != nil {
-			return err
-		}
-
-		fmt.Fprintln(os.Stderr, "Pushing signature to:", sigRef.String())
-		if err := cremote.UploadSignature(sig, sigRef, cremote.UploadOpts{
-			DupeDetector: cremote.NewDupeDetector(sv),
-			RemoteOpts:   remoteOpts,
-		}); err != nil {
-			return errors.Wrap(err, "uploading")
 		}
 	}
 
