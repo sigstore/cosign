@@ -27,13 +27,16 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
         include:
           - os: macos-latest
-            TARGET: cosign-darwin-amd64
+            COSIGN_TARGET: cosign-darwin-amd64
+            SGET_TARGET: sget-darwin-amd64
             COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: ubuntu-latest
-            TARGET: cosign-linux-amd64
+            COSIGN_TARGET: cosign-linux-amd64
+            SGET_TARGET: sget-linux-amd64
             COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: windows-latest
-            TARGET: cosign-windows-amd64.exe
+            COSIGN_TARGET: cosign-windows-amd64.exe
+            SGET_TARGET: sget-windows-amd64.exe
             COSIGN_PASSWORD: COSIGN_PASSWORD
     steps:
       - name: Install Go
@@ -47,22 +50,29 @@ jobs:
       #   if: matrix.os == 'ubuntu-latest'
       #   run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: build cosign
-        run: make cosign && mv ./cosign ./${{matrix.TARGET}}
-      - name: Print Info
+        run: |
+          make cosign && mv ./cosign ./${{matrix.COSIGN_TARGET}}
+          make sget && mv ./sget ./${{matrix.SGET_TARGET}}
+      - name: Create checksum file
         shell: pwsh
         run: |
-          $hash=Get-FileHash -Path ./${{matrix.TARGET}}
-          Write-Output $($hash.Hash + " " + $(([io.fileinfo]$hash.path).basename)) | Tee-Object -Path ${{matrix.TARGET}}.sha256
+          $hash=Get-FileHash -Path ./${{matrix.COSIGN_TARGET}}
+          Write-Output $($hash.Hash + " " + $(([io.fileinfo]$hash.path).basename)) | Tee-Object -Path ${{matrix.COSIGN_TARGET}}.sha256
+          $hash=Get-FileHash -Path ./${{matrix.SGET_TARGET}}
+          Write-Output $($hash.Hash + " " + $(([io.fileinfo]$hash.path).basename)) | Tee-Object -Path ${{matrix.SGET_TARGET}}.sha256
       - name: sign
         shell: bash
         env:
           COSIGN_PASSWORD: ${{secrets[matrix.COSIGN_PASSWORD]}}
         if: github.event_name != 'pull_request'
         run: |
-          ./${{matrix.TARGET}} sign-blob -key ./.github/workflows/cosign.key ./${{matrix.TARGET}} > ${{matrix.TARGET}}.sig
+          ./${{matrix.COSIGN_TARGET}} sign-blob -key ./.github/workflows/cosign.key ./${{matrix.COSIGN_TARGET}} > ${{matrix.COSIGN_TARGET}}.sig
+          ./${{matrix.COSIGN_TARGET}} sign-blob -key ./.github/workflows/cosign.key ./${{matrix.SGET_TARGET}} > ${{matrix.SGET_TARGET}}.sig
       - name: verify
         if: github.event_name != 'pull_request'
-        run: ./${{matrix.TARGET}} verify-blob -key ./.github/workflows/cosign.pub -signature ${{matrix.TARGET}}.sig ./${{matrix.TARGET}}
+        run: |
+          ./${{matrix.COSIGN_TARGET}} verify-blob -key ./.github/workflows/cosign.pub -signature ${{matrix.COSIGN_TARGET}}.sig ./${{matrix.COSIGN_TARGET}}
+          ./${{matrix.COSIGN_TARGET}} verify-blob -key ./.github/workflows/cosign.pub -signature ${{matrix.SGET_TARGET}}.sig ./${{matrix.SGET_TARGET}}
       - name: Upload artifacts
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v2
@@ -72,52 +82,7 @@ jobs:
             cosign-*
             cosign.-*sha256
             cosign-*.sig
-
-  build-sget:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        include:
-          - os: macos-latest
-            TARGET: sget-darwin-amd64
-            COSIGN_PASSWORD: COSIGN_PASSWORD
-          - os: ubuntu-latest
-            TARGET: sget-linux-amd64
-            COSIGN_PASSWORD: COSIGN_PASSWORD
-          - os: windows-latest
-            TARGET: sget-windows-amd64.exe
-            COSIGN_PASSWORD: COSIGN_PASSWORD
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.17.x'
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: build sget
-        run: make sget && mv ./sget ./${{matrix.TARGET}}
-      - name: Print sget info
-        shell: pwsh
-        run: |
-          $hash=Get-FileHash -Path ./${{matrix.TARGET}}
-          Write-Output $($hash.Hash + " " + $(([io.fileinfo]$hash.path).basename)) | Tee-Object -Path ${{matrix.TARGET}}.sha256
-      - name: sign sget
-        shell: bash
-        env:
-          COSIGN_PASSWORD: ${{secrets[matrix.COSIGN_PASSWORD]}}
-        if: github.event_name != 'pull_request'
-        run: |
-          ./${{matrix.TARGET}} sign-blob -key ./.github/workflows/cosign.key ./${{matrix.TARGET}} > ${{matrix.TARGET}}.sig
-      - name: verify sget binary
-        if: github.event_name != 'pull_request'
-        run: ./${{matrix.TARGET}} verify-blob -key ./.github/workflows/cosign.pub -signature ${{matrix.TARGET}}.sig ./${{matrix.TARGET}}
-      - name: Upload sget artifacts
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v2
-        with:
-          name: artifacts
-          path: |
             sget-*
             sget.-*sha256
             sget-*.sig
+
