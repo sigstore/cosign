@@ -163,7 +163,7 @@ func TestSignEntity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("static.NewSignature() = %v", err)
 			}
-			se, err = SignEntity(se, orig)
+			se, err = AttachSignatureToEntity(se, orig)
 			if err != nil {
 				t.Fatalf("SignEntity() = %v", err)
 			}
@@ -174,7 +174,7 @@ func TestSignEntity(t *testing.T) {
 					t.Fatalf("static.NewSignature() = %v", err)
 				}
 
-				se, err = SignEntity(se, sig)
+				se, err = AttachSignatureToEntity(se, sig)
 				if err != nil {
 					t.Fatalf("SignEntity() = %v", err)
 				}
@@ -198,7 +198,7 @@ func TestSignEntity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("static.NewSignature() = %v", err)
 			}
-			se, err = SignEntity(se, orig)
+			se, err = AttachSignatureToEntity(se, orig)
 			if err != nil {
 				t.Fatalf("SignEntity() = %v", err)
 			}
@@ -213,7 +213,7 @@ func TestSignEntity(t *testing.T) {
 					t.Fatalf("static.NewSignature() = %v", err)
 				}
 
-				se, err = SignEntity(se, sig, WithDupeDetector(dd))
+				se, err = AttachSignatureToEntity(se, sig, WithDupeDetector(dd))
 				if err != nil {
 					t.Fatalf("SignEntity() = %v", err)
 				}
@@ -237,7 +237,7 @@ func TestSignEntity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("static.NewSignature() = %v", err)
 			}
-			se, err = SignEntity(se, orig)
+			se, err = AttachSignatureToEntity(se, orig)
 			if err != nil {
 				t.Fatalf("SignEntity() = %v", err)
 			}
@@ -253,7 +253,7 @@ func TestSignEntity(t *testing.T) {
 					t.Fatalf("static.NewSignature() = %v", err)
 				}
 
-				se, err = SignEntity(se, sig, WithDupeDetector(dd))
+				se, err = AttachSignatureToEntity(se, sig, WithDupeDetector(dd))
 				if err != nil {
 					t.Fatalf("SignEntity() = %v", err)
 				}

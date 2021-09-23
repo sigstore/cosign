@@ -123,20 +123,20 @@ func (i *indexWrapper) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error)
 	}
 }
 
-// SignEntity attaches the provided signature to the provided entity.
-func SignEntity(se oci.SignedEntity, sig oci.Signature, opts ...SignOption) (oci.SignedEntity, error) {
+// AttachSignatureToEntity attaches the provided signature to the provided entity.
+func AttachSignatureToEntity(se oci.SignedEntity, sig oci.Signature, opts ...SignOption) (oci.SignedEntity, error) {
 	switch obj := se.(type) {
 	case oci.SignedImage:
-		return SignImage(obj, sig, opts...)
+		return AttachSignatureToImage(obj, sig, opts...)
 	case oci.SignedImageIndex:
-		return SignImageIndex(obj, sig, opts...)
+		return AttachSignatureToImageIndex(obj, sig, opts...)
 	default:
 		return nil, fmt.Errorf("unsupported type: %T", se)
 	}
 }
 
-// SignImage attaches the provided signature to the provided image.
-func SignImage(si oci.SignedImage, sig oci.Signature, opts ...SignOption) (oci.SignedImage, error) {
+// AttachSignatureToImage attaches the provided signature to the provided image.
+func AttachSignatureToImage(si oci.SignedImage, sig oci.Signature, opts ...SignOption) (oci.SignedImage, error) {
 	return &signedImage{
 		SignedImage: si,
 		sig:         sig,
@@ -167,8 +167,8 @@ func (si *signedImage) Signatures() (oci.Signatures, error) {
 	return AppendSignatures(base, si.sig)
 }
 
-// SignImage attaches the provided signature to the provided image.
-func SignImageIndex(sii oci.SignedImageIndex, sig oci.Signature, opts ...SignOption) (oci.SignedImageIndex, error) {
+// AttachSignatureToImageIndex attaches the provided signature to the provided image index.
+func AttachSignatureToImageIndex(sii oci.SignedImageIndex, sig oci.Signature, opts ...SignOption) (oci.SignedImageIndex, error) {
 	return &signedImageIndex{
 		ociSignedImageIndex: sii,
 		sig:                 sig,
