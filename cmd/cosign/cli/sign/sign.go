@@ -43,6 +43,7 @@ import (
 	"github.com/sigstore/cosign/internal/oci/mutate"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
 	"github.com/sigstore/cosign/internal/oci/static"
+	"github.com/sigstore/cosign/internal/oci/walk"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -258,11 +259,11 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			return err
 		}
 
-		_, err = mutate.Map(ctx, se, func(ctx context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		if err := walk.SignedEntity(ctx, se, func(ctx context.Context, se oci.SignedEntity) error {
 			// Get the digest for this entity in our walk.
 			d, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
 			if err != nil {
-				return nil, err
+				return err
 			}
 			digest := ref.Context().Digest(d.String())
 
@@ -274,19 +275,19 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 					Annotations: annotations,
 				}).MarshalJSON()
 				if err != nil {
-					return nil, errors.Wrap(err, "payload")
+					return errors.Wrap(err, "payload")
 				}
 			}
 
 			signature, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 			if err != nil {
-				return nil, errors.Wrap(err, "signing")
+				return errors.Wrap(err, "signing")
 			}
 			b64sig := base64.StdEncoding.EncodeToString(signature)
 
 			if !upload {
 				fmt.Println(b64sig)
-				return se, ErrDone
+				return ErrDone
 			}
 
 			opts := []static.Option{}
@@ -296,13 +297,13 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 
 			// Check whether we should be uploading to the transparency log
 			if uploadTLog, err := ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
-				return nil, err
+				return err
 			} else if uploadTLog {
 				bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 					return cosign.TLogUpload(r, signature, payload, b)
 				})
 				if err != nil {
-					return nil, err
+					return err
 				}
 				opts = append(opts, static.WithBundle(bundle))
 			}
@@ -310,22 +311,21 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 			// Create the new signature for this entity.
 			sig, err := static.NewSignature(payload, b64sig, opts...)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			// Attach the signature to the entity.
 			newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(dd))
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			// Publish the signatures associated with this entity
 			if err := ociremote.WriteSignatures(digest.Repository, newSE, regOpts.ClientOpts(ctx)...); err != nil {
-				return nil, err
+				return err
 			}
-			return se, ErrDone
-		})
-		if err != nil {
+			return ErrDone
+		}); err != nil {
 			return err
 		}
 	}
