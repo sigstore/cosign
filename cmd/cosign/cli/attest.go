@@ -217,7 +217,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	// An attestation represents both the signature and payload. So store the entire thing
 	// in the payload field since they can get large
 	return cremote.UploadSignature(sig, attRef, cremote.UploadOpts{
-		DupeDetector: cremote.NewDupeDetector(sv),
-		RemoteOpts:   regOpts.GetRegistryClientOpts(ctx),
+		DupeDetector:       cremote.NewDupeDetector(sv),
+		RegistryClientOpts: regOpts.GetRegistryClientOpts(ctx),
 	})
 }
