@@ -16,16 +16,13 @@
 package signed
 
 import (
-	"errors"
-
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/internal/oci/empty"
 )
 
-// Image returns an oci.SignedImage form of the v1.Image with no signatures
-// or attestations.
+// Image returns an oci.SignedImage form of the v1.Image with no signatures.
 func Image(i v1.Image) oci.SignedImage {
 	return &image{
 		Image: i,
@@ -41,9 +38,4 @@ var _ oci.SignedImage = (*image)(nil)
 // Signatures implements oci.SignedImage
 func (*image) Signatures() (oci.Signatures, error) {
 	return empty.Signatures(), nil
-}
-
-// Attestations implements oci.SignedImage
-func (*image) Attestations() (oci.Attestations, error) {
-	return nil, errors.New("NYI")
 }

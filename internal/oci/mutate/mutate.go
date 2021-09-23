@@ -16,7 +16,6 @@
 package mutate
 
 import (
-	"errors"
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -71,12 +70,6 @@ var _ oci.SignedImageIndex = (*indexWrapper)(nil)
 // Signatures implements oic.SignedImageIndex
 func (i *indexWrapper) Signatures() (oci.Signatures, error) {
 	return empty.Signatures(), nil
-}
-
-// Attestations implements oic.SignedImageIndex
-func (i *indexWrapper) Attestations() (oci.Attestations, error) {
-	// TODO(mattmoor): return empty image
-	return nil, errors.New("NYI")
 }
 
 // SignedImage implements oic.SignedImageIndex
