@@ -113,7 +113,10 @@ func New() *cobra.Command {
 			return nil // TODO: use cobra to output help.
 		},
 	}
-	options.AddRootArgs(cmd, ro)
+	options.AddRootOptions(cmd, ro)
+
+	// Add sub-commands.
+	addSign(cmd)
 
 	return cmd
 }

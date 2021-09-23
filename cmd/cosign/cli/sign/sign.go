@@ -37,7 +37,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
-	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/internal/oci"
 	ociremote "github.com/sigstore/cosign/internal/oci/remote"
@@ -48,7 +47,7 @@ import (
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
-	rekorClient "github.com/sigstore/rekor/pkg/client"
+	rekorclient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -97,7 +96,7 @@ func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, up
 		}
 		rekorBytes = pemBytes
 	}
-	rekorClient, err := rekorClient.GetRekorClient(rekorURL)
+	rekorClient, err := rekorclient.GetRekorClient(rekorURL)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +108,8 @@ func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, up
 	return Bundle(entry), nil
 }
 
+// Sign subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Sign() *ffcli.Command {
 	var (
 		flagset          = flag.NewFlagSet("cosign sign", flag.ExitOnError)
@@ -171,34 +172,25 @@ EXAMPLES
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) == 0 {
-				return flag.ErrHelp
-			}
-			switch *attachment {
-			case "sbom", "":
-				break
-			default:
-				return flag.ErrHelp
-			}
-			ko := KeyOpts{
-				KeyRef:           *key,
-				PassFunc:         generate.GetPass,
-				Sk:               *sk,
-				Slot:             *slot,
-				FulcioURL:        *fulcioURL,
-				RekorURL:         *rekorURL,
-				IDToken:          *idToken,
-				OIDCIssuer:       *oidcIssuer,
-				OIDCClientID:     *oidcClientID,
-				OIDCClientSecret: *oidcClientSecret,
-			}
-			if err := SignCmd(ctx, ko, regOpts, annotations.Annotations, args, *cert, *upload, *payloadPath, *force, *recursive, *attachment); err != nil {
-				if *attachment == "" {
-					return errors.Wrapf(err, "signing %v", args)
-				}
-				return errors.Wrapf(err, "signing attachement %s for image %v", *attachment, args)
-			}
-			return nil
+			_ = flagset
+			_ = key
+			_ = cert
+			_ = upload
+			_ = sk
+			_ = slot
+			_ = payloadPath
+			_ = force
+			_ = recursive
+			_ = fulcioURL
+			_ = rekorURL
+			_ = idToken
+			_ = oidcIssuer
+			_ = oidcClientID
+			_ = oidcClientSecret
+			_ = attachment
+			_ = annotations
+			_ = regOpts
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

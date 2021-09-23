@@ -25,7 +25,7 @@ type RootOptions struct {
 	Verbose    bool
 }
 
-func AddRootArgs(cmd *cobra.Command, o *RootOptions) {
+func AddRootOptions(cmd *cobra.Command, o *RootOptions) {
 	cmd.PersistentFlags().StringVar(&o.OutputFile, "output-file", "",
 		"log output to a file")
 
