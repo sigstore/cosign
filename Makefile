@@ -43,6 +43,12 @@ PKG=github.com/sigstore/cosign/cmd/cosign/cli
 
 LDFLAGS="-X $(PKG).GitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE) -X $(PKG).buildDate=$(BUILD_DATE)"
 
+help: # Display help
+	@awk -F ':|##' \
+		'/^[^\t].+?:.*?##/ {\
+			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
+		}' $(MAKEFILE_LIST) | sort
+
 .PHONY: all lint test clean cosign cross
 
 all: cosign
@@ -62,7 +68,7 @@ golangci-lint:
 	set -e ;\
 	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.0 ;\
 
-lint: golangci-lint ## Runs golangci-lint linter
+lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
 
 
@@ -87,7 +93,7 @@ ko:
 	KO_DOCKER_REPO=${KO_PREFIX}/cosign CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
-	
+
 	# cosigned
 	KO_DOCKER_REPO=${KO_PREFIX}/cosigned CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
@@ -118,7 +124,10 @@ release:
 snapshot:
 	LDFLAGS=$(LDFLAGS) goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
 
-# Build cosigned binary
 .PHONY: cosigned
-cosigned: lint
+cosigned: lint ## Build cosigned binary
 	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign/webhook
+
+.PHONY: sget
+sget: ## Build sget binary
+	go build -o $@ ./cmd/sget
