@@ -15,10 +15,21 @@
 
 package options
 
-// KeyParseError is an error returned when an incorrect set of key flags
-// are parsed by the CLI
-type KeyParseError struct{}
+import (
+	fulcioclient "github.com/sigstore/fulcio/pkg/client"
+	"github.com/spf13/cobra"
+)
 
-func (e *KeyParseError) Error() string {
-	return "exactly one of: key reference (--key), or hardware token (--sk) must be provided"
+// FulcioOptions is the wrapper for Fulcio related options.
+type FulcioOptions struct {
+	URL           string
+	IdentityToken string
+}
+
+func AddFulcioOptions(cmd *cobra.Command, o *FulcioOptions) {
+	cmd.Flags().StringVar(&o.URL, "fulcio-url", fulcioclient.SigstorePublicServerURL,
+		"[EXPERIMENTAL] address of sigstore PKI server")
+
+	cmd.Flags().StringVar(&o.IdentityToken, "identity-token", "",
+		"[EXPERIMENTAL] identity token to use for certificate from fulcio")
 }

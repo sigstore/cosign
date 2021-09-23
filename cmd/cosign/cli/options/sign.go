@@ -22,26 +22,23 @@ import (
 	"github.com/spf13/cobra"
 
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	fulcioclient "github.com/sigstore/fulcio/pkg/client"
 )
 
 // SignOptions is the top level wrapper for the sign command.
 type SignOptions struct {
-	Key              string
-	Cert             string
-	Upload           bool
-	SecurityKey      bool
-	SecurityKeySlot  string
-	PayloadPath      string
-	Force            bool
-	Recursive        bool
-	FulcioURL        string
-	RektorURL        string
-	IdentityToken    string
-	OIDCIssuer       string
-	OIDCClientID     string
-	OIDCClientSecret string
-	Attachment       string
+	Key         string
+	Cert        string
+	Upload      bool
+	SecurityKey SecurityKeyOptions
+	PayloadPath string
+	Force       bool
+	Recursive   bool
+
+	Fulcio FulcioOptions
+	Rektor RekorOptions
+
+	OIDC       OIDCOptions
+	Attachment string
 
 	Annotations  []string
 	RegistryOpts RegistryOpts
@@ -69,11 +66,7 @@ func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")
 
-	cmd.Flags().BoolVar(&o.SecurityKey, "sk", false,
-		"whether to use a hardware security key")
-
-	cmd.Flags().StringVar(&o.SecurityKeySlot, "slot", "",
-		"security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
+	AddSecurityKeyOptions(cmd, &o.SecurityKey)
 
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
@@ -84,7 +77,7 @@ func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")
 
-	cmd.Flags().StringVar(&o.OIDCIssuer, "attachment", "",
+	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"related image attachment to sign (sbom), default none")
 
 	cmd.Flags().StringSliceVarP(&o.Annotations, "annotations", "a", nil,
@@ -93,25 +86,9 @@ func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
 	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
 
-	// TODO: an interesting idea? This hides the flags that are experimental
-	// unless experimental is enabled.
-	if EnableExperimental() {
-		cmd.Flags().StringVar(&o.FulcioURL, "fulcio-url", fulcioclient.SigstorePublicServerURL,
-			"[EXPERIMENTAL] address of sigstore PKI server")
+	AddRekorOptions(cmd, &o.Rektor)
 
-		cmd.Flags().StringVar(&o.RektorURL, "rekor-url", "https://rekor.sigstore.dev",
-			"[EXPERIMENTAL] address of rekor STL server")
+	AddFulcioOptions(cmd, &o.Fulcio)
 
-		cmd.Flags().StringVar(&o.IdentityToken, "identity-token", "",
-			"[EXPERIMENTAL] identity token to use for certificate from fulcio")
-
-		cmd.Flags().StringVar(&o.OIDCIssuer, "oidc-issuer", "https://oauth2.sigstore.dev/auth",
-			"[EXPERIMENTAL] OIDC provider to be used to issue ID token")
-
-		cmd.Flags().StringVar(&o.OIDCClientID, "oidc-client-id", "sigstore",
-			"[EXPERIMENTAL] OIDC client ID for application")
-
-		cmd.Flags().StringVar(&o.OIDCClientSecret, "oidc-client-secret", "",
-			"[EXPERIMENTAL] OIDC client secret for application")
-	}
+	AddOIDCOptions(cmd, &o.OIDC)
 }

@@ -49,7 +49,7 @@ func main() {
 	// escape the remaining args to let them be passed to cobra.
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "sign":
+		case "sign", "sign-blob":
 			// cobra.
 		default:
 			// ffcli

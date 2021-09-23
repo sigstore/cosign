@@ -15,10 +15,20 @@
 
 package options
 
-// KeyParseError is an error returned when an incorrect set of key flags
-// are parsed by the CLI
-type KeyParseError struct{}
+import (
+	"github.com/spf13/cobra"
+)
 
-func (e *KeyParseError) Error() string {
-	return "exactly one of: key reference (--key), or hardware token (--sk) must be provided"
+// SecurityKeyOptions is the wrapper for security key related options.
+type SecurityKeyOptions struct {
+	Use  bool
+	Slot string
+}
+
+func AddSecurityKeyOptions(cmd *cobra.Command, o *SecurityKeyOptions) {
+	cmd.Flags().BoolVar(&o.Use, "sk", false,
+		"whether to use a hardware security key")
+
+	cmd.Flags().StringVar(&o.Slot, "slot", "",
+		"security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
 }
