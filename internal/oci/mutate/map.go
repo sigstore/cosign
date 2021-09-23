@@ -27,15 +27,15 @@ import (
 	"github.com/sigstore/cosign/internal/oci"
 )
 
-// Mutator is the signature of the callback supplied to Map.
+// Fn is the signature of the callback supplied to Map.
 // The oci.SignedEntity is either an oci.SignedImageIndex or an oci.SignedImage.
 // This callback is called on oci.SignedImageIndex *before* its children are
 // processed with a context that returns IsBeforeChildren(ctx) == true.
 // If the images within the SignedImageIndex change after the Before pass, then
-// the Mutator will be invoked again on the new SignedImageIndex with a context
+// the Fn will be invoked again on the new SignedImageIndex with a context
 // that returns IsAfterChildren(ctx) == true.
 // If the returned entity is nil, it is filtered from the result of Map.
-type Mutator func(context.Context, oci.SignedEntity) (oci.SignedEntity, error)
+type Fn func(context.Context, oci.SignedEntity) (oci.SignedEntity, error)
 
 // ErrSkipChildren is a special error that may be returned from a Mutator
 // to skip processing of an index's child entities.
@@ -44,7 +44,7 @@ var ErrSkipChildren = errors.New("skip child entities")
 // Map calls `fn` on the signed entity and each of its constituent entities (`SignedImageIndex`
 // or `SignedImage`) transitively.
 // Any errors returned by an `fn` are returned by `Map`.
-func Map(ctx context.Context, parent oci.SignedEntity, fn Mutator) (oci.SignedEntity, error) {
+func Map(ctx context.Context, parent oci.SignedEntity, fn Fn) (oci.SignedEntity, error) {
 	parent, err := fn(before(ctx), parent)
 	switch {
 	case errors.Is(err, ErrSkipChildren):
