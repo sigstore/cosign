@@ -29,12 +29,7 @@ func Signatures() oci.Signatures {
 	base := empty.Image
 	if !oci.DockerMediaTypes() {
 		base = mutate.MediaType(base, types.OCIManifestSchema1)
-		m, err := base.Manifest()
-		if err != nil {
-			// It is impossible for this to happen.
-			panic(err.Error())
-		}
-		m.Config.MediaType = types.OCIConfigJSON
+		base = mutate.ConfigMediaType(base, types.OCIConfigJSON)
 	}
 	return &emptyImage{
 		Image: base,
