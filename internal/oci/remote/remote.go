@@ -37,6 +37,7 @@ var (
 	remoteImage = remote.Image
 	remoteIndex = remote.Index
 	remoteGet   = remote.Get
+	remoteWrite = remote.Write
 )
 
 // SignedEntity provides access to a remote reference, and its signatures.
@@ -129,8 +130,12 @@ func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) 
 	return o.TargetRepository.Tag(normalize(h, suffix)), nil
 }
 
+type digestable interface {
+	Digest() (v1.Hash, error)
+}
+
 // signatures is a shared implementation of the oci.Signed* Signatures method.
-func signatures(digestable interface{ Digest() (v1.Hash, error) }, o *options) (oci.Signatures, error) {
+func signatures(digestable digestable, o *options) (oci.Signatures, error) {
 	h, err := digestable.Digest()
 	if err != nil {
 		return nil, err
