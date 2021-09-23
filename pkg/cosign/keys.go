@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 
-	"github.com/sigstore/cosign/internal/oci/static"
+	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 )

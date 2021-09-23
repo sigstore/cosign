@@ -32,8 +32,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/internal/oci"
-	ociremote "github.com/sigstore/cosign/internal/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"

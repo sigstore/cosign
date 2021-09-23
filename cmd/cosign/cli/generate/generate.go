@@ -26,7 +26,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	ociremote "github.com/sigstore/cosign/internal/oci/remote"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )

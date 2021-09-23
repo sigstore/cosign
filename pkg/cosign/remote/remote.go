@@ -22,10 +22,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"github.com/sigstore/cosign/internal/oci"
-	"github.com/sigstore/cosign/internal/oci/mutate"
-	ociremote "github.com/sigstore/cosign/internal/oci/remote"
-	"github.com/sigstore/cosign/internal/oci/static"
+	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 

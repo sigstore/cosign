@@ -25,8 +25,8 @@ import (
 	"github.com/pkg/errors"
 	"knative.dev/pkg/pool"
 
-	"github.com/sigstore/cosign/internal/oci"
-	ociremote "github.com/sigstore/cosign/internal/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
 type SignedPayload struct {

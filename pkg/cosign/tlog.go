@@ -31,8 +31,8 @@ import (
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/internal/oci"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
+	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"

@@ -26,7 +26,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/internal/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/remote"
 )
 
 func SBOM() *ffcli.Command {

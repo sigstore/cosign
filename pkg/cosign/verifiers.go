@@ -25,7 +25,7 @@ import (
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/internal/oci"
+	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
