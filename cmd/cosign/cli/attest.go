@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
@@ -159,6 +160,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return errors.Wrap(err, "getting signer")
 	}
 	wrapped := dsse.WrapSigner(sv, predicateURI)
+	dd := cremote.NewDupeDetector(sv)
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
@@ -203,21 +205,27 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		opts = append(opts, static.WithBundle(bundle))
 	}
 
-	attRef, err := ociremote.AttestationTag(digest, regOpts.ClientOpts(ctx)...)
-	if err != nil {
-		return err
-	}
+	clientOpts := append(
+		regOpts.ClientOpts(ctx),
+		ociremote.WithSignatureSuffix(ociremote.AttestationTagSuffix),
+	)
 
 	sig, err := static.NewSignature(signedPayload, "", opts...)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintln(os.Stderr, "Pushing attestation to:", attRef.String())
-	// An attestation represents both the signature and payload. So store the entire thing
-	// in the payload field since they can get large
-	return cremote.UploadSignature(sig, attRef, cremote.UploadOpts{
-		DupeDetector:       cremote.NewDupeDetector(sv),
-		RegistryClientOpts: regOpts.GetRegistryClientOpts(ctx),
-	})
+	se, err := ociremote.SignedEntity(digest, clientOpts...)
+	if err != nil {
+		return err
+	}
+
+	// Attach the signature to the entity.
+	newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(dd))
+	if err != nil {
+		return err
+	}
+
+	// Publish the signatures associated with this entity
+	return ociremote.WriteSignatures(digest.Repository, newSE, clientOpts...)
 }
