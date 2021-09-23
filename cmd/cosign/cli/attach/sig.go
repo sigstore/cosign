@@ -101,7 +101,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 		return err
 	}
 
-	return cremote.UploadSignature(sig, dstRef, cremote.UploadOpts{RemoteOpts: regOpts.GetRegistryClientOpts(ctx)})
+	return cremote.UploadSignature(sig, dstRef, cremote.UploadOpts{RegistryClientOpts: regOpts.GetRegistryClientOpts(ctx)})
 }
 
 type SignatureArgType uint8

@@ -103,12 +103,12 @@ LayerLoop:
 }
 
 type UploadOpts struct {
-	DupeDetector mutate.DupeDetector
-	RemoteOpts   []remote.Option
+	DupeDetector       mutate.DupeDetector
+	RegistryClientOpts []remote.Option
 }
 
 func UploadSignature(l oci.Signature, dst name.Reference, opts UploadOpts) error {
-	base, err := ociremote.Signatures(dst, ociremote.WithRemoteOptions(opts.RemoteOpts...))
+	base, err := ociremote.Signatures(dst, ociremote.WithRemoteOptions(opts.RegistryClientOpts...))
 	if err != nil {
 		return err
 	}
@@ -124,5 +124,5 @@ func UploadSignature(l oci.Signature, dst name.Reference, opts UploadOpts) error
 		return err
 	}
 
-	return remote.Write(dst, sigs, opts.RemoteOpts...)
+	return remote.Write(dst, sigs, opts.RegistryClientOpts...)
 }
