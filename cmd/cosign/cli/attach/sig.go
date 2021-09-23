@@ -17,7 +17,6 @@ package attach
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"flag"
 	"io/ioutil"
@@ -28,7 +27,7 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
@@ -69,7 +68,6 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 	if err != nil {
 		return err
 	}
-
 	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
@@ -85,23 +83,24 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 		return err
 	}
 
-	// This expects it to not be base64 encoded, so decode first
-	sigBytes, err := base64.StdEncoding.DecodeString(string(b64SigBytes))
+	sig, err := static.NewSignature(payload, string(b64SigBytes))
 	if err != nil {
 		return err
 	}
 
-	dstRef, err := ociremote.SignatureTag(digest, regOpts.ClientOpts(ctx)...)
+	se, err := ociremote.SignedEntity(digest, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
 
-	sig, err := static.NewSignature(payload, base64.StdEncoding.EncodeToString(sigBytes))
+	// Attach the signature to the entity.
+	newSE, err := mutate.AttachSignatureToEntity(se, sig)
 	if err != nil {
 		return err
 	}
 
-	return cremote.UploadSignature(sig, dstRef, cremote.UploadOpts{RegistryClientOpts: regOpts.GetRegistryClientOpts(ctx)})
+	// Publish the signatures associated with this entity
+	return ociremote.WriteSignatures(digest.Repository, newSE, regOpts.ClientOpts(ctx)...)
 }
 
 type SignatureArgType uint8

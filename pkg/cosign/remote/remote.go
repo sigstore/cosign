@@ -19,12 +19,8 @@ import (
 	"bytes"
 	"encoding/base64"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -100,29 +96,4 @@ LayerLoop:
 		}
 	}
 	return nil, nil
-}
-
-type UploadOpts struct {
-	DupeDetector       mutate.DupeDetector
-	RegistryClientOpts []remote.Option
-}
-
-func UploadSignature(l oci.Signature, dst name.Reference, opts UploadOpts) error {
-	base, err := ociremote.Signatures(dst, ociremote.WithRemoteOptions(opts.RegistryClientOpts...))
-	if err != nil {
-		return err
-	}
-
-	if opts.DupeDetector != nil {
-		if existing, err := opts.DupeDetector.Find(base, l); err != nil || existing != nil {
-			return err
-		}
-	}
-
-	sigs, err := mutate.AppendSignatures(base, l)
-	if err != nil {
-		return err
-	}
-
-	return remote.Write(dst, sigs, opts.RegistryClientOpts...)
 }
