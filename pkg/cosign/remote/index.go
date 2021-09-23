@@ -153,11 +153,7 @@ func UploadFile(b []byte, ref name.Reference, layerMT, configMt types.MediaType,
 	if err != nil {
 		return nil, err
 	}
-	mfst, err := img.Manifest()
-	if err != nil {
-		return nil, err
-	}
-	mfst.Config.MediaType = configMt
+	img = mutate.ConfigMediaType(img, configMt)
 	if err := remote.Write(ref, img, remoteOpts...); err != nil {
 		return nil, err
 	}
