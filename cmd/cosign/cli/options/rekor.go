@@ -15,10 +15,16 @@
 
 package options
 
-// KeyParseError is an error returned when an incorrect set of key flags
-// are parsed by the CLI
-type KeyParseError struct{}
+import (
+	"github.com/spf13/cobra"
+)
 
-func (e *KeyParseError) Error() string {
-	return "exactly one of: key reference (--key), or hardware token (--sk) must be provided"
+// RekorOptions is the wrapper for Rekor related options.
+type RekorOptions struct {
+	URL string
+}
+
+func AddRekorOptions(cmd *cobra.Command, o *RekorOptions) {
+	cmd.Flags().StringVar(&o.URL, "rekor-url", "https://rekor.sigstore.dev",
+		"[EXPERIMENTAL] address of rekor STL server")
 }

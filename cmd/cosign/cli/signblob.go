@@ -1,0 +1,90 @@
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cli
+
+import (
+	"context"
+	"flag"
+
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+
+	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+)
+
+func addSignBlob(topLevel *cobra.Command) {
+	so := &options.SignBlobOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "sign-blob",
+		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout.\ncosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>",
+		Long:  "Sign the supplied blob, outputting the base64-encoded signature to stdout.",
+		Example: `
+  # sign a blob with Google sign-in (experimental)
+  COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
+
+  # sign a blob with a local key pair file
+  cosign sign-blob -key cosign.key <FILE>
+
+  # sign a blob with a key pair stored in Azure Key Vault
+  cosign sign-blob -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
+
+  # sign a blob with a key pair stored in AWS KMS
+  cosign sign-blob -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <FILE>
+
+  # sign a blob with a key pair stored in Google Cloud KMS
+  cosign sign-blob -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
+
+  # sign a blob with a key pair stored in Hashicorp Vault
+  cosign sign-blob -key hashivault://[KEY] <FILE>`,
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// A key file is required unless we're in experimental mode!
+			if !options.EnableExperimental() {
+				if !options.OneOf(so.Key, so.SecurityKey.Use) {
+					return &options.KeyParseError{}
+				}
+			}
+
+			if len(args) == 0 {
+				return flag.ErrHelp
+			}
+			ko := sign.KeyOpts{
+				KeyRef:           so.Key,
+				PassFunc:         generate.GetPass,
+				Sk:               so.SecurityKey.Use,
+				Slot:             so.SecurityKey.Slot,
+				FulcioURL:        so.Fulcio.URL,
+				IDToken:          so.Fulcio.IdentityToken,
+				RekorURL:         so.Rektor.URL,
+				OIDCIssuer:       so.OIDC.Issuer,
+				OIDCClientID:     so.OIDC.ClientID,
+				OIDCClientSecret: so.OIDC.ClientSecret,
+			}
+			for _, blob := range args {
+				if _, err := sign.SignBlobCmd(context.Background(), ko, so.RegistryOpts, blob, so.Base64Output, so.Output); err != nil {
+					return errors.Wrapf(err, "signing %s", blob)
+				}
+			}
+			return nil
+		},
+	}
+
+	options.AddSignBlobOptions(cmd, so)
+	topLevel.AddCommand(cmd)
+}

@@ -63,8 +63,8 @@ func addSign(topLevel *cobra.Command) {
   cosign sign --key k8s://[NAMESPACE]/[KEY] <IMAGE>
 
   # sign a container in a registry which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
-  `,
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image`,
+
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return flag.ErrHelp
@@ -78,14 +78,14 @@ func addSign(topLevel *cobra.Command) {
 			ko := sign.KeyOpts{
 				KeyRef:           so.Key,
 				PassFunc:         generate.GetPass,
-				Sk:               so.SecurityKey,
-				Slot:             so.SecurityKeySlot,
-				FulcioURL:        so.FulcioURL,
-				RekorURL:         so.RektorURL,
-				IDToken:          so.IdentityToken,
-				OIDCIssuer:       so.OIDCIssuer,
-				OIDCClientID:     so.OIDCClientID,
-				OIDCClientSecret: so.OIDCClientSecret,
+				Sk:               so.SecurityKey.Use,
+				Slot:             so.SecurityKey.Slot,
+				FulcioURL:        so.Fulcio.URL,
+				IDToken:          so.Fulcio.IdentityToken,
+				RekorURL:         so.Rektor.URL,
+				OIDCIssuer:       so.OIDC.Issuer,
+				OIDCClientID:     so.OIDC.ClientID,
+				OIDCClientSecret: so.OIDC.ClientSecret,
 			}
 			annotationsMap, err := so.AnnotationsMap()
 			if err != nil {

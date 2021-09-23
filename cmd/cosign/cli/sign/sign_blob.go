@@ -28,7 +28,6 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/signature"
@@ -36,7 +35,9 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// SignBlob subcommand for ffcli.
 // nolint
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func SignBlob() *ffcli.Command {
 	var (
 		flagset          = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
@@ -80,34 +81,20 @@ EXAMPLES
   cosign sign-blob -key hashivault://[KEY] <FILE>`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			// A key file is required unless we're in experimental mode!
-			if !options.EnableExperimental() {
-				if !options.OneOf(*key, *sk) {
-					return &options.KeyParseError{}
-				}
-			}
-
-			if len(args) == 0 {
-				return flag.ErrHelp
-			}
-			ko := KeyOpts{
-				KeyRef:           *key,
-				Sk:               *sk,
-				Slot:             *slot,
-				PassFunc:         generate.GetPass,
-				FulcioURL:        *fulcioURL,
-				RekorURL:         *rekorURL,
-				IDToken:          *idToken,
-				OIDCIssuer:       *oidcIssuer,
-				OIDCClientID:     *oidcClientID,
-				OIDCClientSecret: *oidcClientSecret,
-			}
-			for _, blob := range args {
-				if _, err := SignBlobCmd(ctx, ko, regOpts, blob, *b64, *output); err != nil {
-					return errors.Wrapf(err, "signing %s", blob)
-				}
-			}
-			return nil
+			_ = flagset
+			_ = key
+			_ = b64
+			_ = sk
+			_ = slot
+			_ = fulcioURL
+			_ = rekorURL
+			_ = idToken
+			_ = oidcIssuer
+			_ = oidcClientID
+			_ = oidcClientSecret
+			_ = output
+			_ = regOpts
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

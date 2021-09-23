@@ -117,6 +117,7 @@ func New() *cobra.Command {
 
 	// Add sub-commands.
 	addSign(cmd)
+	addSignBlob(cmd)
 
 	return cmd
 }
