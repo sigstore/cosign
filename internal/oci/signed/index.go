@@ -16,8 +16,6 @@
 package signed
 
 import (
-	"errors"
-
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/sigstore/cosign/internal/oci"
@@ -25,7 +23,7 @@ import (
 )
 
 // ImageIndex returns an oci.SignedImageIndex form of the v1.ImageIndex with
-// no signatures or attestations.
+// no signatures.
 func ImageIndex(i v1.ImageIndex) oci.SignedImageIndex {
 	return &index{
 		v1Index: i,
@@ -61,9 +59,4 @@ func (ii *index) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error) {
 // Signatures implements oci.SignedImageIndex
 func (*index) Signatures() (oci.Signatures, error) {
 	return empty.Signatures(), nil
-}
-
-// Attestations implements oci.SignedImageIndex
-func (*index) Attestations() (oci.Attestations, error) {
-	return nil, errors.New("NYI")
 }

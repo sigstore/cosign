@@ -98,10 +98,6 @@ func TestAppendManifests(t *testing.T) {
 				t.Errorf("len(Get()) = %d, wanted 0", len(sl))
 			}
 
-			if _, err := ni.Attestations(); err == nil {
-				t.Error("Attestations needs coverage!")
-			}
-
 			d1, err := i1.Digest()
 			if err != nil {
 				t.Fatalf("Digest() = %v", err)

@@ -18,7 +18,6 @@ package remote
 import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/internal/oci"
 )
 
@@ -48,10 +47,4 @@ var _ oci.SignedImage = (*image)(nil)
 // Signatures implements oic.SignedImage
 func (i *image) Signatures() (oci.Signatures, error) {
 	return signatures(i, i.opt)
-}
-
-// Attestations implements oic.SignedImage
-func (i *image) Attestations() (oci.Attestations, error) {
-	// TODO(mattmoor): allow accessing attestations.
-	return nil, errors.New("NYI")
 }

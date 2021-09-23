@@ -39,8 +39,4 @@ func TestImage(t *testing.T) {
 	} else if got, want := len(sl), 0; got != want {
 		t.Errorf("len(Get()) = %d, wanted %d", got, want)
 	}
-
-	if _, err := si.Attestations(); err == nil {
-		t.Error("Need coverage for attestations!")
-	}
 }

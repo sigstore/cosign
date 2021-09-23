@@ -86,9 +86,5 @@ func TestImageIndex(t *testing.T) {
 		} else if got, want := len(sl), 0; got != want {
 			t.Errorf("len(Get()) = %d, wanted %d", got, want)
 		}
-
-		if _, err := se.Attestations(); err == nil {
-			t.Error("Need coverage for attestations!")
-		}
 	}
 }

@@ -19,8 +19,4 @@ type SignedEntity interface {
 	// Signatures returns the set of signatures currently associated with this
 	// entity, or the empty equivalent if none are found.
 	Signatures() (Signatures, error)
-
-	// Attestations returns the set of attestations currently associated with this
-	// entity, or the empty equivalent if none are found.
-	Attestations() (Attestations, error)
 }
