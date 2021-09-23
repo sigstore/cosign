@@ -19,21 +19,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// OIDCOptions is the wrapper for OIDC related options.
-type OIDCOptions struct {
-	Issuer       string
-	ClientID     string
-	ClientSecret string
+// PublicKeyOptions is the top level wrapper for the public-key command.
+type PublicKeyOptions struct {
+	Key         string
+	SecurityKey SecurityKeyOptions
+	OutFile     string
 }
 
-// AddOIDCOptions adds the OIDC related options to cmd.
-func AddOIDCOptions(cmd *cobra.Command, o *OIDCOptions) {
-	cmd.Flags().StringVar(&o.Issuer, "oidc-issuer", "https://oauth2.sigstore.dev/auth",
-		"[EXPERIMENTAL] OIDC provider to be used to issue ID token")
+// AddPublicKeyOptions adds the public-key command options to cmd.
+func AddPublicKeyOptions(cmd *cobra.Command, o *PublicKeyOptions) {
+	cmd.Flags().StringVar(&o.Key, "key", "",
+		"path to the private key file, KMS URI or Kubernetes Secret")
 
-	cmd.Flags().StringVar(&o.ClientID, "oidc-client-id", "sigstore",
-		"[EXPERIMENTAL] OIDC client ID for application")
+	AddSecurityKeyOptions(cmd, &o.SecurityKey)
 
-	cmd.Flags().StringVar(&o.ClientSecret, "oidc-client-secret", "",
-		"[EXPERIMENTAL] OIDC client secret for application")
+	cmd.Flags().StringVar(&o.OutFile, "outfile", "",
+		"path to a payload file to use rather than generating one")
 }

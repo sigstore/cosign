@@ -25,6 +25,7 @@ type SecurityKeyOptions struct {
 	Slot string
 }
 
+// AddSecurityKeyOptions adds the security key related options to cmd.
 func AddSecurityKeyOptions(cmd *cobra.Command, o *SecurityKeyOptions) {
 	cmd.Flags().BoolVar(&o.Use, "sk", false,
 		"whether to use a hardware security key")

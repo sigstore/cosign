@@ -53,11 +53,11 @@ func New() *cobra.Command {
 					PublicKey(),
 					generate.GenerateKeyPair(),
 					// Signing
-					verify.Verify(),
 					sign.Sign(),
+					sign.SignBlob(),
 					Attest(),
 					generate.Generate(),
-					sign.SignBlob(),
+					verify.Verify(),
 					verify.VerifyAttestation(),
 					verify.VerifyBlob(),
 					// Manifest sub-tree
@@ -116,6 +116,7 @@ func New() *cobra.Command {
 	options.AddRootOptions(cmd, ro)
 
 	// Add sub-commands.
+	addPublicKey(cmd)
 	addSign(cmd)
 	addSignBlob(cmd)
 

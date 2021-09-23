@@ -31,6 +31,7 @@ type SignBlobOptions struct {
 	RegistryOpts RegistryOpts
 }
 
+// AddSignBlobOptions adds the sign-blob command options to cmd.
 func AddSignBlobOptions(cmd *cobra.Command, o *SignBlobOptions) {
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
