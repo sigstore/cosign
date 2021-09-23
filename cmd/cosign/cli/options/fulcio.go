@@ -26,6 +26,7 @@ type FulcioOptions struct {
 	IdentityToken string
 }
 
+// AddFulcioOptions adds the Fulcio related options to cmd.
 func AddFulcioOptions(cmd *cobra.Command, o *FulcioOptions) {
 	cmd.Flags().StringVar(&o.URL, "fulcio-url", fulcioclient.SigstorePublicServerURL,
 		"[EXPERIMENTAL] address of sigstore PKI server")

@@ -28,7 +28,7 @@ import (
 )
 
 func addSign(topLevel *cobra.Command) {
-	so := &options.SignOptions{}
+	o := &options.SignOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "sign",
@@ -69,38 +69,38 @@ func addSign(topLevel *cobra.Command) {
 			if len(args) == 0 {
 				return flag.ErrHelp
 			}
-			switch so.Attachment {
+			switch o.Attachment {
 			case "sbom", "":
 				break
 			default:
 				return flag.ErrHelp
 			}
 			ko := sign.KeyOpts{
-				KeyRef:           so.Key,
+				KeyRef:           o.Key,
 				PassFunc:         generate.GetPass,
-				Sk:               so.SecurityKey.Use,
-				Slot:             so.SecurityKey.Slot,
-				FulcioURL:        so.Fulcio.URL,
-				IDToken:          so.Fulcio.IdentityToken,
-				RekorURL:         so.Rektor.URL,
-				OIDCIssuer:       so.OIDC.Issuer,
-				OIDCClientID:     so.OIDC.ClientID,
-				OIDCClientSecret: so.OIDC.ClientSecret,
+				Sk:               o.SecurityKey.Use,
+				Slot:             o.SecurityKey.Slot,
+				FulcioURL:        o.Fulcio.URL,
+				IDToken:          o.Fulcio.IdentityToken,
+				RekorURL:         o.Rektor.URL,
+				OIDCIssuer:       o.OIDC.Issuer,
+				OIDCClientID:     o.OIDC.ClientID,
+				OIDCClientSecret: o.OIDC.ClientSecret,
 			}
-			annotationsMap, err := so.AnnotationsMap()
+			annotationsMap, err := o.AnnotationsMap()
 			if err != nil {
 				return err
 			}
-			if err := sign.SignCmd(context.Background(), ko, so.RegistryOpts, annotationsMap.Annotations, args, so.Cert, so.Upload, so.PayloadPath, so.Force, so.Recursive, so.Attachment); err != nil {
-				if so.Attachment == "" {
+			if err := sign.SignCmd(context.Background(), ko, o.RegistryOpts, annotationsMap.Annotations, args, o.Cert, o.Upload, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
+				if o.Attachment == "" {
 					return errors.Wrapf(err, "signing %v", args)
 				}
-				return errors.Wrapf(err, "signing attachement %s for image %v", so.Attachment, args)
+				return errors.Wrapf(err, "signing attachement %s for image %v", o.Attachment, args)
 			}
 			return nil
 		},
 	}
 
-	options.AddSignOptions(cmd, so)
+	options.AddSignOptions(cmd, o)
 	topLevel.AddCommand(cmd)
 }

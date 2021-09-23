@@ -56,6 +56,7 @@ func (s *SignOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
 	return ann, nil
 }
 
+// AddSignOptions adds the sign command options to cmd.
 func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")

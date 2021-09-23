@@ -28,7 +28,7 @@ import (
 )
 
 func addSignBlob(topLevel *cobra.Command) {
-	so := &options.SignBlobOptions{}
+	o := &options.SignBlobOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "sign-blob",
@@ -39,24 +39,24 @@ func addSignBlob(topLevel *cobra.Command) {
   COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
 
   # sign a blob with a local key pair file
-  cosign sign-blob -key cosign.key <FILE>
+  cosign sign-blob --key cosign.key <FILE>
 
   # sign a blob with a key pair stored in Azure Key Vault
-  cosign sign-blob -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
+  cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
 
   # sign a blob with a key pair stored in AWS KMS
-  cosign sign-blob -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <FILE>
+  cosign sign-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <FILE>
 
   # sign a blob with a key pair stored in Google Cloud KMS
-  cosign sign-blob -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
+  cosign sign-blob --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
 
   # sign a blob with a key pair stored in Hashicorp Vault
-  cosign sign-blob -key hashivault://[KEY] <FILE>`,
+  cosign sign-blob --key hashivault://[KEY] <FILE>`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !options.EnableExperimental() {
-				if !options.OneOf(so.Key, so.SecurityKey.Use) {
+				if !options.OneOf(o.Key, o.SecurityKey.Use) {
 					return &options.KeyParseError{}
 				}
 			}
@@ -65,19 +65,19 @@ func addSignBlob(topLevel *cobra.Command) {
 				return flag.ErrHelp
 			}
 			ko := sign.KeyOpts{
-				KeyRef:           so.Key,
+				KeyRef:           o.Key,
 				PassFunc:         generate.GetPass,
-				Sk:               so.SecurityKey.Use,
-				Slot:             so.SecurityKey.Slot,
-				FulcioURL:        so.Fulcio.URL,
-				IDToken:          so.Fulcio.IdentityToken,
-				RekorURL:         so.Rektor.URL,
-				OIDCIssuer:       so.OIDC.Issuer,
-				OIDCClientID:     so.OIDC.ClientID,
-				OIDCClientSecret: so.OIDC.ClientSecret,
+				Sk:               o.SecurityKey.Use,
+				Slot:             o.SecurityKey.Slot,
+				FulcioURL:        o.Fulcio.URL,
+				IDToken:          o.Fulcio.IdentityToken,
+				RekorURL:         o.Rektor.URL,
+				OIDCIssuer:       o.OIDC.Issuer,
+				OIDCClientID:     o.OIDC.ClientID,
+				OIDCClientSecret: o.OIDC.ClientSecret,
 			}
 			for _, blob := range args {
-				if _, err := sign.SignBlobCmd(context.Background(), ko, so.RegistryOpts, blob, so.Base64Output, so.Output); err != nil {
+				if _, err := sign.SignBlobCmd(context.Background(), ko, o.RegistryOpts, blob, o.Base64Output, o.Output); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
@@ -85,6 +85,6 @@ func addSignBlob(topLevel *cobra.Command) {
 		},
 	}
 
-	options.AddSignBlobOptions(cmd, so)
+	options.AddSignBlobOptions(cmd, o)
 	topLevel.AddCommand(cmd)
 }
