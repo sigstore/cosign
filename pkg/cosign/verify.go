@@ -88,6 +88,11 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 	if err != nil {
 		return nil, false, err
 	}
+	// Both of the SignedEntity types implement Digest()
+	h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
+	if err != nil {
+		return nil, false, err
+	}
 
 	// TODO(mattmoor): We could implement recursive verification if we just wrapped
 	// most of the logic below here in a call to mutate.Map
@@ -101,137 +106,120 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 		return nil, false, err
 	}
 	for _, sig := range sl {
-		b64sig, err := sig.Base64Signature()
-		if err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
-		payload, err := sig.Payload()
-		if err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
-		cert, err := sig.Cert()
-		if err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
-
-		switch {
-		// We have a public key to check against.
-		case co.SigVerifier != nil:
-			signature, err := base64.StdEncoding.DecodeString(b64sig)
+		if err := func(sig oci.Signature) error {
+			b64sig, err := sig.Base64Signature()
 			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
+				return err
 			}
-			if err := co.SigVerifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-		// If we don't have a public key to check against, we can try a root cert.
-		case co.RootCerts != nil:
-			// There might be signatures with a public key instead of a cert, though
-			if cert == nil {
-				validationErrs = append(validationErrs, "no certificate found on signature")
-				continue
-			}
-			pub, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			payload, err := sig.Payload()
 			if err != nil {
-				validationErrs = append(validationErrs, "invalid certificate found on signature")
-				continue
+				return err
 			}
-			// Now verify the cert, then the signature.
-			if err := TrustedCert(cert, co.RootCerts); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
+			cert, err := sig.Cert()
+			if err != nil {
+				return err
 			}
 
-			signature, err := base64.StdEncoding.DecodeString(b64sig)
-			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-			if err := pub.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-			if co.CertEmail != "" {
-				emailVerified := false
-				for _, em := range cert.EmailAddresses {
-					if co.CertEmail == em {
-						emailVerified = true
-						break
+			switch {
+			// We have a public key to check against.
+			case co.SigVerifier != nil:
+				signature, err := base64.StdEncoding.DecodeString(b64sig)
+				if err != nil {
+					return err
+				}
+				if err := co.SigVerifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
+					return err
+				}
+			// If we don't have a public key to check against, we can try a root cert.
+			case co.RootCerts != nil:
+				// There might be signatures with a public key instead of a cert, though
+				if cert == nil {
+					return errors.New("no certificate found on signature")
+				}
+				pub, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+				if err != nil {
+					return errors.Wrap(err, "invalid certificate found on signature")
+				}
+				// Now verify the cert, then the signature.
+				if err := TrustedCert(cert, co.RootCerts); err != nil {
+					return err
+				}
+
+				signature, err := base64.StdEncoding.DecodeString(b64sig)
+				if err != nil {
+					return err
+				}
+				if err := pub.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
+					return err
+				}
+				if co.CertEmail != "" {
+					emailVerified := false
+					for _, em := range cert.EmailAddresses {
+						if co.CertEmail == em {
+							emailVerified = true
+							break
+						}
+					}
+					if !emailVerified {
+						return errors.New("expected email not found in certificate")
 					}
 				}
-				if !emailVerified {
-					validationErrs = append(validationErrs, "expected email not found in certificate")
-					continue
+			}
+
+			// We can't check annotations without claims, both require unmarshalling the payload.
+			if co.ClaimVerifier != nil {
+				if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
+					return err
 				}
 			}
-		}
 
-		// We can't check annotations without claims, both require unmarshalling the payload.
-		if co.ClaimVerifier != nil {
-			// Both of the SignedEntity types implement Digest()
-			h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
-			if err != nil {
-				return nil, false, err
+			verified, err := VerifyBundle(sig)
+			if err != nil && co.RekorURL == "" {
+				return errors.Wrap(err, "unable to verify bundle")
 			}
-			if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-		}
+			bundleVerified = bundleVerified || verified
 
-		verified, err := VerifyBundle(sig)
-		if err != nil && co.RekorURL == "" {
-			validationErrs = append(validationErrs, "unable to verify bundle: "+err.Error())
+			if !verified && co.RekorURL != "" {
+				// Get the right public key to use (key or cert)
+				var pemBytes []byte
+				if co.SigVerifier != nil {
+					var pub crypto.PublicKey
+					pub, err = co.SigVerifier.PublicKey(co.PKOpts...)
+					if err != nil {
+						return err
+					}
+					pemBytes, err = cryptoutils.MarshalPublicKeyToPEM(pub)
+				} else {
+					pemBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
+				}
+				if err != nil {
+					return err
+				}
+
+				// Find the uuid then the entry.
+				uuid, _, err := FindTlogEntry(rekorClient, b64sig, payload, pemBytes)
+				if err != nil {
+					return err
+				}
+
+				// if we have a cert, we should check expiry
+				// The IntegratedTime verified in VerifyTlog
+				if cert != nil {
+					e, err := getTlogEntry(rekorClient, uuid)
+					if err != nil {
+						return err
+					}
+
+					// Expiry check is only enabled with Tlog support
+					if err := checkExpiry(cert, time.Unix(*e.IntegratedTime, 0)); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}(sig); err != nil {
+			validationErrs = append(validationErrs, err.Error())
 			continue
-		}
-		bundleVerified = bundleVerified || verified
-
-		if !verified && co.RekorURL != "" {
-			// Get the right public key to use (key or cert)
-			var pemBytes []byte
-			if co.SigVerifier != nil {
-				var pub crypto.PublicKey
-				pub, err = co.SigVerifier.PublicKey(co.PKOpts...)
-				if err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
-				pemBytes, err = cryptoutils.MarshalPublicKeyToPEM(pub)
-			} else {
-				pemBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
-			}
-			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-
-			// Find the uuid then the entry.
-			uuid, _, err := FindTlogEntry(rekorClient, b64sig, payload, pemBytes)
-			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-
-			// if we have a cert, we should check expiry
-			// The IntegratedTime verified in VerifyTlog
-			if cert != nil {
-				e, err := getTlogEntry(rekorClient, uuid)
-				if err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
-
-				// Expiry check is only enabled with Tlog support
-				if err := checkExpiry(cert, time.Unix(*e.IntegratedTime, 0)); err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
-			}
 		}
 
 		// Phew, we made it.
