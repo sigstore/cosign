@@ -18,6 +18,7 @@ package webhook
 import (
 	"context"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"
 	listersv1 "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
@@ -59,12 +60,22 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (er
 		return kerr
 	}
 	for i, c := range ps.InitContainers {
-		if !valid(ctx, c.Image, keys) {
+		ref, err := name.ParseReference(c.Image)
+		if err != nil {
+			errs = errs.Also(apis.ErrGeneric(err.Error(), "image").ViaFieldIndex("initContainers", i))
+		}
+
+		if !valid(ctx, ref, keys) {
 			errs = errs.Also(apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex("initContainers", i))
 		}
 	}
 	for i, c := range ps.Containers {
-		if !valid(ctx, c.Image, keys) {
+		ref, err := name.ParseReference(c.Image)
+		if err != nil {
+			errs = errs.Also(apis.ErrGeneric(err.Error(), "image").ViaFieldIndex("containers", i))
+		}
+
+		if !valid(ctx, ref, keys) {
 			errs = errs.Also(apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex("containers", i))
 		}
 	}

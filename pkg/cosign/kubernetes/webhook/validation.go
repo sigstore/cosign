@@ -33,9 +33,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func valid(ctx context.Context, img string, keys []*ecdsa.PublicKey) bool {
+func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey) bool {
 	for _, k := range keys {
-		sps, err := validSignatures(ctx, img, k)
+		sps, err := validSignatures(ctx, ref, k)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
 			return false
@@ -48,13 +48,7 @@ func valid(ctx context.Context, img string, keys []*ecdsa.PublicKey) bool {
 	return false
 }
 
-func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]oci.Signature, error) {
-	// TODO(mattmoor): take the name.Reference as the param?
-	ref, err := name.ParseReference(img)
-	if err != nil {
-		return nil, err
-	}
-
+func validSignatures(ctx context.Context, ref name.Reference, key *ecdsa.PublicKey) ([]oci.Signature, error) {
 	ecdsaVerifier, err := signature.LoadECDSAVerifier(key, crypto.SHA256)
 	if err != nil {
 		return nil, err
