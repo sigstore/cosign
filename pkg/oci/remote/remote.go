@@ -142,3 +142,12 @@ func signatures(digestable digestable, o *options) (oci.Signatures, error) {
 	}
 	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignatureSuffix)), o.OriginalOptions...)
 }
+
+// attestations is a shared implementation of the oci.Signed* Signatures method.
+func attestations(digestable digestable, o *options) (oci.Signatures, error) {
+	h, err := digestable.Digest()
+	if err != nil {
+		return nil, err
+	}
+	return Signatures(o.TargetRepository.Tag(normalize(h, o.AttestationSuffix)), o.OriginalOptions...)
+}

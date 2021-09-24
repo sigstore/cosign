@@ -69,3 +69,45 @@ func TestWriteSignatures(t *testing.T) {
 		t.Fatalf("WriteSignature() = %v", err)
 	}
 }
+
+func TestWriteAttestations(t *testing.T) {
+	rw := remote.Write
+	t.Cleanup(func() {
+		remoteWrite = rw
+	})
+	i, err := random.Image(300 /* byteSize */, 7 /* layers */)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	si := signed.Image(i)
+
+	want := 6 // Add 6 attestations
+	for i := 0; i < want; i++ {
+		sig, err := static.NewAttestation([]byte(fmt.Sprintf("%d", i)))
+		if err != nil {
+			t.Fatalf("static.NewSignature() = %v", err)
+		}
+		si, err = mutate.AttachAttestationToImage(si, sig)
+		if err != nil {
+			t.Fatalf("SignEntity() = %v", err)
+		}
+	}
+
+	ref := name.MustParseReference("gcr.io/bistroless/static:nonroot")
+
+	remoteWrite = func(ref name.Reference, img v1.Image, options ...remote.Option) error {
+		l, err := img.Layers()
+		if err != nil {
+			return err
+		}
+
+		if got := len(l); got != want {
+			t.Errorf("got %d layers, wanted %d", got, want)
+		}
+
+		return nil
+	}
+	if err := WriteAttestations(ref.Context(), si); err != nil {
+		t.Fatalf("WriteAttestations() = %v", err)
+	}
+}

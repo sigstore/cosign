@@ -39,4 +39,15 @@ func TestImage(t *testing.T) {
 	} else if got, want := len(sl), 0; got != want {
 		t.Errorf("len(Get()) = %d, wanted %d", got, want)
 	}
+
+	atts, err := si.Attestations()
+	if err != nil {
+		t.Fatalf("Attestations() = %v", err)
+	}
+
+	if al, err := atts.Get(); err != nil {
+		t.Errorf("Get() = %v", err)
+	} else if got, want := len(al), 0; got != want {
+		t.Errorf("len(Get()) = %d, wanted %d", got, want)
+	}
 }

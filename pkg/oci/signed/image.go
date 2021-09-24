@@ -39,3 +39,8 @@ var _ oci.SignedImage = (*image)(nil)
 func (*image) Signatures() (oci.Signatures, error) {
 	return empty.Signatures(), nil
 }
+
+// Attestations implements oci.SignedImage
+func (*image) Attestations() (oci.Signatures, error) {
+	return empty.Signatures(), nil
+}

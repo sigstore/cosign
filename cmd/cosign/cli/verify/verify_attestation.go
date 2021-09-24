@@ -163,6 +163,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 			return err
 		}
 
+		// TODO(mattmoor): Add some sort of configuration to have this
+		// use Attestations() in place of Signatures().
 		verified, bundleVerified, err := cosign.Verify(ctx, ref, co)
 		if err != nil {
 			return err

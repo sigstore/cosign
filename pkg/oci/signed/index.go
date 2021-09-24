@@ -60,3 +60,8 @@ func (ii *index) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error) {
 func (*index) Signatures() (oci.Signatures, error) {
 	return empty.Signatures(), nil
 }
+
+// Attestations implements oci.SignedImageIndex
+func (*index) Attestations() (oci.Signatures, error) {
+	return empty.Signatures(), nil
+}

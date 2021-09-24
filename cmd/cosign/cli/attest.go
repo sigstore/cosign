@@ -209,27 +209,22 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		opts = append(opts, static.WithBundle(bundle))
 	}
 
-	clientOpts := append(
-		regOpts.ClientOpts(ctx),
-		ociremote.WithSignatureSuffix(ociremote.AttestationTagSuffix),
-	)
-
 	sig, err := static.NewAttestation(signedPayload, opts...)
 	if err != nil {
 		return err
 	}
 
-	se, err := ociremote.SignedEntity(digest, clientOpts...)
+	se, err := ociremote.SignedEntity(digest, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
 
-	// Attach the signature to the entity.
-	newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(dd))
+	// Attach the attestation to the entity.
+	newSE, err := mutate.AttachAttestationToEntity(se, sig, mutate.WithDupeDetector(dd))
 	if err != nil {
 		return err
 	}
 
-	// Publish the signatures associated with this entity
-	return ociremote.WriteSignatures(digest.Repository, newSE, clientOpts...)
+	// Publish the attestations associated with this entity
+	return ociremote.WriteAttestations(digest.Repository, newSE, regOpts.ClientOpts(ctx)...)
 }
