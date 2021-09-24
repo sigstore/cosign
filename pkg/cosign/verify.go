@@ -82,9 +82,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 		}
 	}
 
-	opts := co.RegistryClientOpts
-
-	se, err := ociremote.SignedEntity(signedImgRef, opts...)
+	se, err := ociremote.SignedEntity(signedImgRef, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, false, err
 	}

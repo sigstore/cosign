@@ -98,6 +98,14 @@ func TestAppendManifests(t *testing.T) {
 				t.Errorf("len(Get()) = %d, wanted 0", len(sl))
 			}
 
+			if atts, err := ni.Attestations(); err != nil {
+				t.Errorf("Attestations() = %v", err)
+			} else if al, err := atts.Get(); err != nil {
+				t.Errorf("Get() = %v", err)
+			} else if len(al) != 0 {
+				t.Errorf("len(Get()) = %d, wanted 0", len(al))
+			}
+
 			d1, err := i1.Digest()
 			if err != nil {
 				t.Fatalf("Digest() = %v", err)
@@ -153,7 +161,7 @@ func TestSignEntity(t *testing.T) {
 	}
 	sii := signed.ImageIndex(ii)
 
-	t.Run("without duplicate detector", func(t *testing.T) {
+	t.Run("without duplicate detector (signature)", func(t *testing.T) {
 		for _, se := range []oci.SignedEntity{si, sii} {
 			orig, err := static.NewSignature(nil, "")
 			if err != nil {
@@ -161,7 +169,7 @@ func TestSignEntity(t *testing.T) {
 			}
 			se, err = AttachSignatureToEntity(se, orig)
 			if err != nil {
-				t.Fatalf("SignEntity() = %v", err)
+				t.Fatalf("AttachSignatureToEntity() = %v", err)
 			}
 
 			for i := 2; i < 10; i++ {
@@ -172,7 +180,7 @@ func TestSignEntity(t *testing.T) {
 
 				se, err = AttachSignatureToEntity(se, sig)
 				if err != nil {
-					t.Fatalf("SignEntity() = %v", err)
+					t.Fatalf("AttachSignatureToEntity() = %v", err)
 				}
 
 				sigs, err := se.Signatures()
@@ -188,7 +196,42 @@ func TestSignEntity(t *testing.T) {
 		}
 	})
 
-	t.Run("with duplicate detector", func(t *testing.T) {
+	t.Run("without duplicate detector (attestation)", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii} {
+			orig, err := static.NewAttestation([]byte("payload"))
+			if err != nil {
+				t.Fatalf("static.NewAttestation() = %v", err)
+			}
+			se, err = AttachAttestationToEntity(se, orig)
+			if err != nil {
+				t.Fatalf("AttachAttestationToEntity() = %v", err)
+			}
+
+			for i := 2; i < 10; i++ {
+				sig, err := static.NewAttestation([]byte(fmt.Sprintf("%d", i)))
+				if err != nil {
+					t.Fatalf("static.NewAttestation() = %v", err)
+				}
+
+				se, err = AttachAttestationToEntity(se, sig)
+				if err != nil {
+					t.Fatalf("AttachAttestationToEntity() = %v", err)
+				}
+
+				atts, err := se.Attestations()
+				if err != nil {
+					t.Fatalf("Attestations() = %v", err)
+				}
+				if al, err := atts.Get(); err != nil {
+					t.Fatalf("Get() = %v", err)
+				} else if len(al) != i {
+					t.Errorf("len(Get()) = %d, wanted %d", len(al), i)
+				}
+			}
+		}
+	})
+
+	t.Run("with duplicate detector (signature)", func(t *testing.T) {
 		for _, se := range []oci.SignedEntity{si, sii} {
 			orig, err := static.NewSignature(nil, "")
 			if err != nil {
@@ -196,7 +239,7 @@ func TestSignEntity(t *testing.T) {
 			}
 			se, err = AttachSignatureToEntity(se, orig)
 			if err != nil {
-				t.Fatalf("SignEntity() = %v", err)
+				t.Fatalf("AttachSignatureToEntity() = %v", err)
 			}
 
 			dd := &dupe{
@@ -211,7 +254,7 @@ func TestSignEntity(t *testing.T) {
 
 				se, err = AttachSignatureToEntity(se, sig, WithDupeDetector(dd))
 				if err != nil {
-					t.Fatalf("SignEntity() = %v", err)
+					t.Fatalf("AttachSignatureToEntity() = %v", err)
 				}
 
 				sigs, err := se.Signatures()
@@ -227,7 +270,46 @@ func TestSignEntity(t *testing.T) {
 		}
 	})
 
-	t.Run("with erroring duplicate detector", func(t *testing.T) {
+	t.Run("with duplicate detector (attestation)", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii} {
+			orig, err := static.NewAttestation([]byte("blah"))
+			if err != nil {
+				t.Fatalf("static.NewAttestation() = %v", err)
+			}
+			se, err = AttachAttestationToEntity(se, orig)
+			if err != nil {
+				t.Fatalf("AttachAttestationToEntity() = %v", err)
+			}
+
+			dd := &dupe{
+				sig: orig,
+			}
+
+			for i := 2; i < 10; i++ {
+				sig, err := static.NewAttestation([]byte(fmt.Sprintf("%d", i)))
+				if err != nil {
+					t.Fatalf("static.NewAttestation() = %v", err)
+				}
+
+				se, err = AttachAttestationToEntity(se, sig, WithDupeDetector(dd))
+				if err != nil {
+					t.Fatalf("AttachAttestationToEntity() = %v", err)
+				}
+
+				atts, err := se.Attestations()
+				if err != nil {
+					t.Fatalf("Attestations() = %v", err)
+				}
+				if al, err := atts.Get(); err != nil {
+					t.Fatalf("Get() = %v", err)
+				} else if len(al) != 1 {
+					t.Errorf("len(Get()) = %d, wanted %d", len(al), i)
+				}
+			}
+		}
+	})
+
+	t.Run("with erroring duplicate detector (signature)", func(t *testing.T) {
 		for _, se := range []oci.SignedEntity{si, sii} {
 			orig, err := static.NewSignature(nil, "")
 			if err != nil {
@@ -235,7 +317,7 @@ func TestSignEntity(t *testing.T) {
 			}
 			se, err = AttachSignatureToEntity(se, orig)
 			if err != nil {
-				t.Fatalf("SignEntity() = %v", err)
+				t.Fatalf("AttachSignatureToEntity() = %v", err)
 			}
 
 			want := errors.New("expected error")
@@ -251,11 +333,45 @@ func TestSignEntity(t *testing.T) {
 
 				se, err = AttachSignatureToEntity(se, sig, WithDupeDetector(dd))
 				if err != nil {
-					t.Fatalf("SignEntity() = %v", err)
+					t.Fatalf("AttachSignatureToEntity() = %v", err)
 				}
 
 				if _, got := se.Signatures(); !errors.Is(got, want) {
 					t.Fatalf("Signatures() = %v, wanted %v", got, want)
+				}
+			}
+		}
+	})
+
+	t.Run("with erroring duplicate detector (attestation)", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii} {
+			orig, err := static.NewAttestation([]byte("blah"))
+			if err != nil {
+				t.Fatalf("static.NewAttestation() = %v", err)
+			}
+			se, err = AttachAttestationToEntity(se, orig)
+			if err != nil {
+				t.Fatalf("AttachAttestationToEntity() = %v", err)
+			}
+
+			want := errors.New("expected error")
+			dd := &dupe{
+				err: want,
+			}
+
+			for i := 2; i < 10; i++ {
+				sig, err := static.NewAttestation([]byte(fmt.Sprintf("%d", i)))
+				if err != nil {
+					t.Fatalf("static.NewAttestation() = %v", err)
+				}
+
+				se, err = AttachAttestationToEntity(se, sig, WithDupeDetector(dd))
+				if err != nil {
+					t.Fatalf("AttachAttestationToEntity() = %v", err)
+				}
+
+				if _, got := se.Attestations(); !errors.Is(got, want) {
+					t.Fatalf("Attestations() = %v, wanted %v", got, want)
 				}
 			}
 		}

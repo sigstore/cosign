@@ -55,6 +55,11 @@ func (i *index) Signatures() (oci.Signatures, error) {
 	return signatures(i, i.opt)
 }
 
+// Attestations implements oic.SignedImageIndex
+func (i *index) Attestations() (oci.Signatures, error) {
+	return attestations(i, i.opt)
+}
+
 // SignedImage implements oic.SignedImageIndex
 func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	img, err := i.Image(h)

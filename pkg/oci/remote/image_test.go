@@ -56,4 +56,15 @@ func TestSignedImage(t *testing.T) {
 	} else if got := int64(len(sl)); got != wantLayers {
 		t.Errorf("len(Get()) = %d, wanted %d", got, wantLayers)
 	}
+
+	atts, err := si.Attestations()
+	if err != nil {
+		t.Fatalf("Signatures() = %v", err)
+	}
+
+	if al, err := atts.Get(); err != nil {
+		t.Errorf("Get() = %v", err)
+	} else if got := int64(len(al)); got != wantLayers {
+		t.Errorf("len(Get()) = %d, wanted %d", got, wantLayers)
+	}
 }

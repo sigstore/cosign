@@ -20,7 +20,7 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
-// WriteSignature publishes the signatures attaches to the given entity
+// WriteSignature publishes the signatures attached to the given entity
 // into the provided repository.
 func WriteSignatures(repo name.Repository, se oci.SignedEntity, opts ...Option) error {
 	o, err := makeOptions(repo, opts...)
@@ -43,4 +43,29 @@ func WriteSignatures(repo name.Repository, se oci.SignedEntity, opts ...Option) 
 
 	// Write the Signatures image to the tag, with the provided remote.Options
 	return remoteWrite(tag, sigs, o.ROpt...)
+}
+
+// WriteAttestations publishes the attestations attached to the given entity
+// into the provided repository.
+func WriteAttestations(repo name.Repository, se oci.SignedEntity, opts ...Option) error {
+	o, err := makeOptions(repo, opts...)
+	if err != nil {
+		return err
+	}
+
+	// Access the signature list to publish
+	atts, err := se.Attestations()
+	if err != nil {
+		return err
+	}
+
+	// Determine the tag to which these signatures should be published.
+	h, err := se.(digestable).Digest()
+	if err != nil {
+		return err
+	}
+	tag := o.TargetRepository.Tag(normalize(h, o.AttestationSuffix))
+
+	// Write the Signatures image to the tag, with the provided remote.Options
+	return remoteWrite(tag, atts, o.ROpt...)
 }

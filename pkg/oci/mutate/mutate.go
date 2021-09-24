@@ -72,6 +72,11 @@ func (i *indexWrapper) Signatures() (oci.Signatures, error) {
 	return empty.Signatures(), nil
 }
 
+// Attestations implements oic.SignedImageIndex
+func (i *indexWrapper) Attestations() (oci.Signatures, error) {
+	return empty.Signatures(), nil
+}
+
 // SignedImage implements oic.SignedImageIndex
 func (i *indexWrapper) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	for _, add := range i.addendum {
@@ -128,6 +133,18 @@ func AttachSignatureToEntity(se oci.SignedEntity, sig oci.Signature, opts ...Sig
 	}
 }
 
+// AttachAttestationToEntity attaches the provided attestation to the provided entity.
+func AttachAttestationToEntity(se oci.SignedEntity, att oci.Signature, opts ...SignOption) (oci.SignedEntity, error) {
+	switch obj := se.(type) {
+	case oci.SignedImage:
+		return AttachAttestationToImage(obj, att, opts...)
+	case oci.SignedImageIndex:
+		return AttachAttestationToImageIndex(obj, att, opts...)
+	default:
+		return nil, fmt.Errorf("unsupported type: %T", se)
+	}
+}
+
 // AttachSignatureToImage attaches the provided signature to the provided image.
 func AttachSignatureToImage(si oci.SignedImage, sig oci.Signature, opts ...SignOption) (oci.SignedImage, error) {
 	return &signedImage{
@@ -137,9 +154,19 @@ func AttachSignatureToImage(si oci.SignedImage, sig oci.Signature, opts ...SignO
 	}, nil
 }
 
+// AttachAttestationToImage attaches the provided signature to the provided image.
+func AttachAttestationToImage(si oci.SignedImage, att oci.Signature, opts ...SignOption) (oci.SignedImage, error) {
+	return &signedImage{
+		SignedImage: si,
+		att:         att,
+		so:          makeSignOpts(opts...),
+	}, nil
+}
+
 type signedImage struct {
 	oci.SignedImage
 	sig oci.Signature
+	att oci.Signature
 	so  *signOpts
 }
 
@@ -148,6 +175,8 @@ func (si *signedImage) Signatures() (oci.Signatures, error) {
 	base, err := si.SignedImage.Signatures()
 	if err != nil {
 		return nil, err
+	} else if si.sig == nil {
+		return base, nil
 	}
 	if si.so.dd != nil {
 		if existing, err := si.so.dd.Find(base, si.sig); err != nil {
@@ -160,6 +189,25 @@ func (si *signedImage) Signatures() (oci.Signatures, error) {
 	return AppendSignatures(base, si.sig)
 }
 
+// Attestations implements oci.SignedImage
+func (si *signedImage) Attestations() (oci.Signatures, error) {
+	base, err := si.SignedImage.Attestations()
+	if err != nil {
+		return nil, err
+	} else if si.att == nil {
+		return base, nil
+	}
+	if si.so.dd != nil {
+		if existing, err := si.so.dd.Find(base, si.att); err != nil {
+			return nil, err
+		} else if existing != nil {
+			// Just return base if the signature is redundant
+			return base, nil
+		}
+	}
+	return AppendSignatures(base, si.att)
+}
+
 // AttachSignatureToImageIndex attaches the provided signature to the provided image index.
 func AttachSignatureToImageIndex(sii oci.SignedImageIndex, sig oci.Signature, opts ...SignOption) (oci.SignedImageIndex, error) {
 	return &signedImageIndex{
@@ -169,11 +217,21 @@ func AttachSignatureToImageIndex(sii oci.SignedImageIndex, sig oci.Signature, op
 	}, nil
 }
 
+// AttachAttestationToImageIndex attaches the provided attestation to the provided image index.
+func AttachAttestationToImageIndex(sii oci.SignedImageIndex, att oci.Signature, opts ...SignOption) (oci.SignedImageIndex, error) {
+	return &signedImageIndex{
+		ociSignedImageIndex: sii,
+		att:                 att,
+		so:                  makeSignOpts(opts...),
+	}, nil
+}
+
 type ociSignedImageIndex oci.SignedImageIndex
 
 type signedImageIndex struct {
 	ociSignedImageIndex
 	sig oci.Signature
+	att oci.Signature
 	so  *signOpts
 }
 
@@ -182,6 +240,8 @@ func (sii *signedImageIndex) Signatures() (oci.Signatures, error) {
 	base, err := sii.ociSignedImageIndex.Signatures()
 	if err != nil {
 		return nil, err
+	} else if sii.sig == nil {
+		return base, nil
 	}
 	if sii.so.dd != nil {
 		if existing, err := sii.so.dd.Find(base, sii.sig); err != nil {
@@ -192,4 +252,23 @@ func (sii *signedImageIndex) Signatures() (oci.Signatures, error) {
 		}
 	}
 	return AppendSignatures(base, sii.sig)
+}
+
+// Attestations implements oci.SignedImageIndex
+func (sii *signedImageIndex) Attestations() (oci.Signatures, error) {
+	base, err := sii.ociSignedImageIndex.Attestations()
+	if err != nil {
+		return nil, err
+	} else if sii.att == nil {
+		return base, nil
+	}
+	if sii.so.dd != nil {
+		if existing, err := sii.so.dd.Find(base, sii.att); err != nil {
+			return nil, err
+		} else if existing != nil {
+			// Just return base if the signature is redundant
+			return base, nil
+		}
+	}
+	return AppendSignatures(base, sii.att)
 }
