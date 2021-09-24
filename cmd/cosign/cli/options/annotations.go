@@ -31,9 +31,9 @@ type AnnotationOptions struct {
 
 var _ Interface = (*AnnotationOptions)(nil)
 
-func (s *AnnotationOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
+func (o *AnnotationOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
 	ann := sigs.AnnotationsMap{}
-	for _, a := range s.Annotations {
+	for _, a := range o.Annotations {
 		kv := strings.Split(a, "=")
 		if len(kv) != 2 {
 			return ann, fmt.Errorf("unable to parse annotation: %s", a)
