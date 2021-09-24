@@ -46,6 +46,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	o.Rektor.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
+	o.SecurityKey.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
