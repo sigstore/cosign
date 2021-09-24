@@ -80,6 +80,6 @@ func addPublicKey(topLevel *cobra.Command) {
 		},
 	}
 
-	options.AddPublicKeyOptions(cmd, o)
+	o.AddFlags(cmd)
 	topLevel.AddCommand(cmd)
 }

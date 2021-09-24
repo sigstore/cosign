@@ -55,6 +55,6 @@ to sign payloads with your own tooling or algorithms.`,
 		},
 	}
 
-	options.AddGenerateOptions(cmd, o)
+	o.AddFlags(cmd)
 	topLevel.AddCommand(cmd)
 }

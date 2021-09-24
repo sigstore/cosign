@@ -116,7 +116,7 @@ func New() *cobra.Command {
 			return nil // TODO: use cobra to output help.
 		},
 	}
-	options.AddRootOptions(cmd, ro)
+	ro.AddFlags(cmd)
 
 	// Add sub-commands.
 	addPublicKey(cmd)

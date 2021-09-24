@@ -39,8 +39,16 @@ type SignOptions struct {
 	RegistryOpts RegistryOpts
 }
 
-// AddSignOptions adds the sign command options to cmd.
-func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
+var _ Interface = (*SignOptions)(nil)
+
+// AddFlags implements Interface
+func (o *SignOptions) AddFlags(cmd *cobra.Command) {
+	o.Rektor.AddFlags(cmd)
+	o.Fulcio.AddFlags(cmd)
+	o.OIDC.AddFlags(cmd)
+	o.SecurityKey.AddFlags(cmd)
+	o.AnnotationOptions.AddFlags(cmd)
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
 
@@ -49,8 +57,6 @@ func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
 
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")
-
-	AddSecurityKeyOptions(cmd, &o.SecurityKey)
 
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
@@ -64,14 +70,6 @@ func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"related image attachment to sign (sbom), default none")
 
-	AddAnnotationOptions(cmd, &o.AnnotationOptions)
-
 	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
-
-	AddRekorOptions(cmd, &o.Rektor)
-
-	AddFulcioOptions(cmd, &o.Fulcio)
-
-	AddOIDCOptions(cmd, &o.OIDC)
 }

@@ -26,8 +26,10 @@ type OIDCOptions struct {
 	ClientSecret string
 }
 
-// AddOIDCOptions adds the OIDC related options to cmd.
-func AddOIDCOptions(cmd *cobra.Command, o *OIDCOptions) {
+var _ Interface = (*OIDCOptions)(nil)
+
+// AddFlags implements Interface
+func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Issuer, "oidc-issuer", "https://oauth2.sigstore.dev/auth",
 		"[EXPERIMENTAL] OIDC provider to be used to issue ID token")
 

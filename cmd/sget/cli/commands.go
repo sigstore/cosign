@@ -51,7 +51,7 @@ func New() *cobra.Command {
 			return sget.New(ro.ImageRef, ro.PublicKey, wc).Do(cmd.Context())
 		},
 	}
-	options.AddRootArgs(cmd, ro)
+	ro.AddFlags(cmd)
 	return cmd
 }
 

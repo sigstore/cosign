@@ -33,8 +33,15 @@ type AttestOptions struct {
 	RegistryOpts RegistryOpts
 }
 
-// AddAttestOptions adds the sign command options to cmd.
-func AddAttestOptions(cmd *cobra.Command, o *AttestOptions) {
+var _ Interface = (*AttestOptions)(nil)
+
+// AddFlags implements Interface
+func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
+	o.SecurityKey.AddFlags(cmd)
+	o.Predicate.AddFlags(cmd)
+	o.Fulcio.AddFlags(cmd)
+	// TODO(n3wscott): We need o.RegistryOpts.AddFlags(cmd)
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
 
@@ -52,10 +59,4 @@ func AddAttestOptions(cmd *cobra.Command, o *AttestOptions) {
 
 	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
-
-	AddSecurityKeyOptions(cmd, &o.SecurityKey)
-
-	AddPredicateOptions(cmd, &o.Predicate)
-
-	AddFulcioOptions(cmd, &o.Fulcio)
 }

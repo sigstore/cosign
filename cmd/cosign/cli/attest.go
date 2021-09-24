@@ -77,6 +77,6 @@ func addAttest(topLevel *cobra.Command) {
 			return nil
 		},
 	}
-	options.AddAttestOptions(cmd, o)
+	o.AddFlags(cmd)
 	topLevel.AddCommand(cmd)
 }

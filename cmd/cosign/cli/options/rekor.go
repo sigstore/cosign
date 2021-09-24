@@ -24,8 +24,10 @@ type RekorOptions struct {
 	URL string
 }
 
-// AddRekorOptions adds the Rektor related options to cmd.
-func AddRekorOptions(cmd *cobra.Command, o *RekorOptions) {
+var _ Interface = (*RekorOptions)(nil)
+
+// AddFlags implements Interface
+func (o *RekorOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.URL, "rekor-url", "https://rekor.sigstore.dev",
 		"[EXPERIMENTAL] address of rekor STL server")
 }

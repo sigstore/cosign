@@ -15,20 +15,9 @@
 
 package options
 
-import (
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
-// GenerateKeyPairOptions is the top level wrapper for the generate-key-pair command.
-type GenerateKeyPairOptions struct {
-	// KMS Key Management Service
-	KMS string
-}
-
-var _ Interface = (*GenerateKeyPairOptions)(nil)
-
-// AddFlags implements Interface
-func (o *GenerateKeyPairOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.KMS, "kms", "",
-		"create key pair in KMS service to use for signing")
+type Interface interface {
+	// AddFlags adds this options' flags to the cobra command.
+	AddFlags(cmd *cobra.Command)
 }
