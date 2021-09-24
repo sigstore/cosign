@@ -17,75 +17,14 @@ package cli
 
 import (
 	"context"
-	"flag"
-	"fmt"
-	"io"
 	"os"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/pivkey"
-	sigs "github.com/sigstore/cosign/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/publickey"
 )
-
-type NamedWriter struct {
-	Name string
-	io.Writer
-}
-
-// PublicKey subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func PublicKey() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign public-key", flag.ExitOnError)
-		key     = flagset.String("key", "", "path to the private key file, public key URL, or KMS URI")
-		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot    = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-		outFile = flagset.String("outfile", "", "file to write public key")
-	)
-
-	return &ffcli.Command{
-		Name:       "public-key",
-		ShortUsage: "cosign public-key gets a public key from the key-pair",
-		ShortHelp:  "Gets a public key from the key-pair",
-		LongHelp: `Gets a public key from the key-pair and
-writes to a specified file. By default, it will write to standard out.
-
-EXAMPLES
-  # extract public key from private key to a specified out file.
-  cosign public-key -key <PRIVATE KEY FILE> -outfile <OUTPUT>
-
-  # extract public key from URL.
-  cosign public-key -key https://host.for/<FILE> -outfile <OUTPUT>
-
-  # extract public key from Azure Key Vault
-  cosign public-key -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY]
-
-  # extract public key from AWS KMS
-  cosign public-key -key awskms://[ENDPOINT]/[ID/ALIAS/ARN]
-
-  # extract public key from Google Cloud KMS
-  cosign public-key -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
-
-  # extract public key from Hashicorp Vault KMS
-  cosign public-key -key hashivault://[KEY]`,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			_ = key
-			_ = sk
-			_ = slot
-			_ = outFile
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
 
 func addPublicKey(topLevel *cobra.Command) {
 	o := &options.PublicKeyOptions{}
@@ -118,7 +57,7 @@ func addPublicKey(topLevel *cobra.Command) {
 				return &options.KeyParseError{}
 			}
 
-			writer := NamedWriter{Name: "", Writer: nil}
+			writer := publickey.NamedWriter{Name: "", Writer: nil}
 			var f *os.File
 			// Open output file for public key if specified.
 			if o.OutFile != "" {
@@ -133,57 +72,15 @@ func addPublicKey(topLevel *cobra.Command) {
 			} else {
 				writer.Writer = os.Stdout
 			}
-			pk := Pkopts{
+			pk := publickey.Pkopts{
 				KeyRef: o.Key,
 				Sk:     o.SecurityKey.Use,
 				Slot:   o.SecurityKey.Slot,
 			}
-			return GetPublicKey(context.Background(), pk, writer, generate.GetPass)
+			return publickey.GetPublicKey(context.Background(), pk, writer, generate.GetPass)
 		},
 	}
 
 	options.AddPublicKeyOptions(cmd, o)
 	topLevel.AddCommand(cmd)
-}
-
-type Pkopts struct {
-	KeyRef string
-	Sk     bool
-	Slot   string
-}
-
-func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosign.PassFunc) error {
-	var k signature.PublicKeyProvider
-	switch {
-	case opts.KeyRef != "":
-		s, err := sigs.SignerFromKeyRef(ctx, opts.KeyRef, pf)
-		if err != nil {
-			return err
-		}
-		k = s
-	case opts.Sk:
-		sk, err := pivkey.GetKeyWithSlot(opts.Slot)
-		if err != nil {
-			return errors.Wrap(err, "opening piv token")
-		}
-		defer sk.Close()
-		pk, err := sk.Verifier()
-		if err != nil {
-			return errors.Wrap(err, "initializing piv token verifier")
-		}
-		k = pk
-	}
-
-	pemBytes, err := sigs.PublicKeyPem(k, signatureoptions.WithContext(ctx))
-	if err != nil {
-		return err
-	}
-
-	if _, err := writer.Write(pemBytes); err != nil {
-		return err
-	}
-	if writer.Name != "" {
-		fmt.Fprintln(os.Stderr, "Public key written to ", writer.Name)
-	}
-	return nil
 }

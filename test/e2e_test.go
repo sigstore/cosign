@@ -42,9 +42,11 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
+	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	cliverify "github.com/sigstore/cosign/cmd/cosign/cli/verify"
@@ -178,7 +180,7 @@ func TestAttestVerify(t *testing.T) {
 
 	// Now attest the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(cli.AttestCmd(ctx, ko, options.RegistryOpts{}, imgName, "", true, ap, false, "custom"), t)
+	must(attest.AttestCmd(ctx, ko, options.RegistryOpts{}, imgName, "", true, ap, false, "custom"), t)
 
 	// Now verify and download should work!
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
@@ -701,10 +703,10 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	outWriter, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0600)
 	must(err, t)
 
-	pk := cli.Pkopts{
+	pk := publickey.Pkopts{
 		KeyRef: privKeyPath,
 	}
-	must(cli.GetPublicKey(ctx, pk, cli.NamedWriter{Name: outPath, Writer: outWriter}, passFunc), t)
+	must(publickey.GetPublicKey(ctx, pk, publickey.NamedWriter{Name: outPath, Writer: outWriter}, passFunc), t)
 
 	output, err := ioutil.ReadFile(outPath)
 	must(err, t)
