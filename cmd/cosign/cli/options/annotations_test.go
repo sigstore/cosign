@@ -23,7 +23,7 @@ import (
 	"github.com/sigstore/cosign/pkg/signature"
 )
 
-func TestSignOptions_AnnotationsMap(t *testing.T) {
+func TestAnnotationOptions_AnnotationsMap(t *testing.T) {
 	tests := []struct {
 		name        string
 		annotations []string
@@ -47,7 +47,7 @@ func TestSignOptions_AnnotationsMap(t *testing.T) {
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &SignOptions{
+			s := &AnnotationOptions{
 				Annotations: tt.annotations,
 			}
 			got, err := s.AnnotationsMap()

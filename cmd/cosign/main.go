@@ -50,7 +50,7 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "public-key", "generate-key-pair",
-			"sign", "sign-blob",
+			"generate", "sign", "sign-blob",
 			"attest":
 			// cobra.
 		default:

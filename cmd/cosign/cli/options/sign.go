@@ -16,12 +16,7 @@
 package options
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/spf13/cobra"
-
-	sigs "github.com/sigstore/cosign/pkg/signature"
 )
 
 // SignOptions is the top level wrapper for the sign command.
@@ -40,23 +35,8 @@ type SignOptions struct {
 	OIDC       OIDCOptions
 	Attachment string
 
-	Annotations  []string
+	AnnotationOptions
 	RegistryOpts RegistryOpts
-}
-
-func (s *SignOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
-	ann := sigs.AnnotationsMap{}
-	for _, a := range s.Annotations {
-		kv := strings.Split(a, "=")
-		if len(kv) != 2 {
-			return ann, fmt.Errorf("unable to parse annotation: %s", a)
-		}
-		if ann.Annotations == nil {
-			ann.Annotations = map[string]interface{}{}
-		}
-		ann.Annotations[kv[0]] = kv[1]
-	}
-	return ann, nil
 }
 
 // AddSignOptions adds the sign command options to cmd.
@@ -84,8 +64,7 @@ func AddSignOptions(cmd *cobra.Command, o *SignOptions) {
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"related image attachment to sign (sbom), default none")
 
-	cmd.Flags().StringSliceVarP(&o.Annotations, "annotations", "a", nil,
-		"extra key=value pairs to sign")
+	AddAnnotationOptions(cmd, &o.AnnotationOptions)
 
 	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
