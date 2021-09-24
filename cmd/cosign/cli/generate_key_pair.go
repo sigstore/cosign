@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
@@ -55,7 +53,7 @@ CAVEATS:
   the COSIGN_PASSWORD environment variable to provide one.`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return generate.GenerateKeyPairCmd(context.Background(), o.KMS, args)
+			return generate.GenerateKeyPairCmd(cmd.Context(), o.KMS, args)
 		},
 	}
 

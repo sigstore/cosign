@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"context"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -77,7 +76,7 @@ func addPublicKey(topLevel *cobra.Command) {
 				Sk:     o.SecurityKey.Use,
 				Slot:   o.SecurityKey.Slot,
 			}
-			return publickey.GetPublicKey(context.Background(), pk, writer, generate.GetPass)
+			return publickey.GetPublicKey(cmd.Context(), pk, writer, generate.GetPass)
 		},
 	}
 

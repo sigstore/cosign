@@ -17,7 +17,6 @@ package cli
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"os"
 
@@ -49,7 +48,7 @@ func New() *cobra.Command {
 				return err
 			}
 			defer wc.Close()
-			return sget.New(ro.ImageRef, ro.PublicKey, wc).Do(context.Background())
+			return sget.New(ro.ImageRef, ro.PublicKey, wc).Do(cmd.Context())
 		},
 	}
 	options.AddRootArgs(cmd, ro)
