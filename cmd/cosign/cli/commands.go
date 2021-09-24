@@ -119,6 +119,7 @@ func New() *cobra.Command {
 	addPublicKey(cmd)
 	addSign(cmd)
 	addSignBlob(cmd)
+	addGenerateKeyPair(cmd)
 
 	return cmd
 }
