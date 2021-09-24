@@ -22,10 +22,13 @@ import (
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
+// Version subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Version() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign version", flag.ExitOnError)
@@ -51,4 +54,33 @@ func Version() *ffcli.Command {
 			return nil
 		},
 	}
+}
+
+func addVersion(topLevel *cobra.Command) {
+	var outputJSON bool
+
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Prints the cosign version",
+		Long:  "Prints the cosign version",
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := options.VersionInfo()
+			res := v.String()
+			if outputJSON {
+				j, err := v.JSONString()
+				if err != nil {
+					return errors.Wrap(err, "unable to generate JSON from version info")
+				}
+				res = j
+			}
+			fmt.Println(res)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&outputJSON, "json", false,
+		"print JSON instead of text")
+
+	topLevel.AddCommand(cmd)
 }
