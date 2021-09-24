@@ -25,8 +25,10 @@ type PredicateOptions struct {
 	Type string
 }
 
-// AddPredicateOptions adds the predicate related options to cmd.
-func AddPredicateOptions(cmd *cobra.Command, o *PredicateOptions) {
+var _ Interface = (*PredicateOptions)(nil)
+
+// AddFlags implements Interface
+func (o *PredicateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Path, "predicate", "",
 		"path to the predicate file.")
 

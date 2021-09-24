@@ -25,9 +25,11 @@ type GenerateOptions struct {
 	RegistryOpts RegistryOpts
 }
 
-// AddGenerateOptions adds the generate command options to cmd.
-func AddGenerateOptions(cmd *cobra.Command, o *GenerateOptions) {
-	AddAnnotationOptions(cmd, &o.AnnotationOptions)
+var _ Interface = (*GenerateOptions)(nil)
+
+// AddFlags implements Interface
+func (o *GenerateOptions) AddFlags(cmd *cobra.Command) {
+	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")

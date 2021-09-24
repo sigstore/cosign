@@ -26,12 +26,14 @@ type PublicKeyOptions struct {
 	OutFile     string
 }
 
-// AddPublicKeyOptions adds the public-key command options to cmd.
-func AddPublicKeyOptions(cmd *cobra.Command, o *PublicKeyOptions) {
+var _ Interface = (*PublicKeyOptions)(nil)
+
+// AddFlags implements Interface
+func (o *PublicKeyOptions) AddFlags(cmd *cobra.Command) {
+	o.SecurityKey.AddFlags(cmd)
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
-
-	AddSecurityKeyOptions(cmd, &o.SecurityKey)
 
 	cmd.Flags().StringVar(&o.OutFile, "outfile", "",
 		"path to a payload file to use rather than generating one")

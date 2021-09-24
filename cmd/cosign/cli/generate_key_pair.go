@@ -59,6 +59,6 @@ CAVEATS:
 		},
 	}
 
-	options.AddGenerateKeyPairOptions(cmd, o)
+	o.AddFlags(cmd)
 	topLevel.AddCommand(cmd)
 }

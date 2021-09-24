@@ -52,7 +52,7 @@ func New() *cobra.Command {
 			return sget.New(ro.ImageRef, ro.PublicKey, wc).Do(context.Background())
 		},
 	}
-	options.AddRootArgs(cmd, ro)
+	ro.AddFlags(cmd)
 	return cmd
 }
 

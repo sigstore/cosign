@@ -101,6 +101,6 @@ func addSign(topLevel *cobra.Command) {
 		},
 	}
 
-	options.AddSignOptions(cmd, o)
+	o.AddFlags(cmd)
 	topLevel.AddCommand(cmd)
 }

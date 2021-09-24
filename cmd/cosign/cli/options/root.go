@@ -25,7 +25,10 @@ type RootOptions struct {
 	Verbose    bool
 }
 
-func AddRootOptions(cmd *cobra.Command, o *RootOptions) {
+var _ Interface = (*RootOptions)(nil)
+
+// AddFlags implements Interface
+func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&o.OutputFile, "output-file", "",
 		"log output to a file")
 

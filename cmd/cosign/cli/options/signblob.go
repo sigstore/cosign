@@ -31,8 +31,15 @@ type SignBlobOptions struct {
 	RegistryOpts RegistryOpts
 }
 
-// AddSignBlobOptions adds the sign-blob command options to cmd.
-func AddSignBlobOptions(cmd *cobra.Command, o *SignBlobOptions) {
+var _ Interface = (*SignBlobOptions)(nil)
+
+// AddFlags implements Interface
+func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
+	o.SecurityKey.AddFlags(cmd)
+	o.Fulcio.AddFlags(cmd)
+	o.Rektor.AddFlags(cmd)
+	o.OIDC.AddFlags(cmd)
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
 
@@ -44,12 +51,4 @@ func AddSignBlobOptions(cmd *cobra.Command, o *SignBlobOptions) {
 
 	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
-
-	AddSecurityKeyOptions(cmd, &o.SecurityKey)
-
-	AddFulcioOptions(cmd, &o.Fulcio)
-
-	AddRekorOptions(cmd, &o.Rektor)
-
-	AddOIDCOptions(cmd, &o.OIDC)
 }

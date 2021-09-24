@@ -29,6 +29,8 @@ type AnnotationOptions struct {
 	Annotations []string
 }
 
+var _ Interface = (*AnnotationOptions)(nil)
+
 func (s *AnnotationOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
 	ann := sigs.AnnotationsMap{}
 	for _, a := range s.Annotations {
@@ -44,8 +46,8 @@ func (s *AnnotationOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
 	return ann, nil
 }
 
-// AddAnnotationOptions adds annotation options to cmd.
-func AddAnnotationOptions(cmd *cobra.Command, o *AnnotationOptions) {
+// AddFlags implements Inteface
+func (o *AnnotationOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSliceVarP(&o.Annotations, "annotations", "a", nil,
 		"extra key=value pairs to sign")
 }

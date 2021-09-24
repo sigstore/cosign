@@ -85,6 +85,6 @@ func addSignBlob(topLevel *cobra.Command) {
 		},
 	}
 
-	options.AddSignBlobOptions(cmd, o)
+	o.AddFlags(cmd)
 	topLevel.AddCommand(cmd)
 }
