@@ -27,10 +27,6 @@ import (
 type Signatures interface {
 	v1.Image // The low-level representation of the signatures
 
-	// TODO(mattmoor): Accessors that build on `v1.Image` to provide
-	// higher-level accessors for the signature data that is embedded
-	// in the wrapped `v1.Image`
-
 	// Get retrieves the list of signatures stored.
 	Get() ([]Signature, error)
 }
