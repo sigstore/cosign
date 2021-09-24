@@ -52,12 +52,6 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		return err
 	}
 
-	if _, ok := ref.(name.Tag); ok {
-		if sg.KeyRef == "" && !options.EnableExperimental() {
-			return errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
-		}
-	}
-
 	opts := []remote.Option{
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 		remote.WithContext(ctx),
@@ -67,6 +61,19 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
 		RegistryClientOpts: []ociremote.Option{ociremote.WithRemoteOptions(opts...)},
 	}
+	if _, ok := ref.(name.Tag); ok {
+		if sg.KeyRef == "" && !options.EnableExperimental() {
+			return errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
+		}
+	}
+	// Overwrite "ref" with a digest to avoid a race where we verify the tag,
+	// and then access the file through the tag.  This has a race where we
+	// might download content that isn't what we verified.
+	ref, err = ociremote.ResolveDigest(ref, co.RegistryClientOpts...)
+	if err != nil {
+		return err
+	}
+
 	if sg.KeyRef != "" {
 		pub, err := sigs.LoadPublicKey(ctx, sg.KeyRef)
 		if err != nil {
@@ -104,8 +111,5 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	}
 
 	_, err = io.Copy(sg.Out, rc)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

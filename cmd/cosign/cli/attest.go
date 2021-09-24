@@ -154,6 +154,10 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return err
 	}
 	h, _ := v1.NewHash(digest.Identifier())
+	// Overwrite "ref" with a digest to avoid a race where we use a tag
+	// multiple times, and it potentially points to different things at
+	// each access.
+	ref = digest // nolint
 
 	sv, err := sign.SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
