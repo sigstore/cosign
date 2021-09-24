@@ -263,6 +263,160 @@ func TestNewSignatureBasic(t *testing.T) {
 	})
 }
 
+func TestNewAttestationBasic(t *testing.T) {
+	payload := "this is the content!"
+	l, err := NewAttestation([]byte(payload), WithMediaType("foo"))
+	if err != nil {
+		t.Fatalf("NewSignature() = %v", err)
+	}
+
+	t.Run("check size", func(t *testing.T) {
+		wantSize := int64(len(payload))
+		gotSize, err := l.Size()
+		if err != nil {
+			t.Fatalf("Size() = %v", err)
+		}
+		if gotSize != wantSize {
+			t.Errorf("Size() = %d, wanted %d", gotSize, wantSize)
+		}
+	})
+
+	t.Run("check media type", func(t *testing.T) {
+		wantMT := types.MediaType("foo")
+		gotMT, err := l.MediaType()
+		if err != nil {
+			t.Fatalf("MediaType() = %v", err)
+		}
+		if gotMT != wantMT {
+			t.Errorf("MediaType() = %s, wanted %s", gotMT, wantMT)
+		}
+	})
+
+	t.Run("check hashes", func(t *testing.T) {
+		wantHash, _, err := v1.SHA256(strings.NewReader(payload))
+		if err != nil {
+			t.Fatalf("SHA256() = %v", err)
+		}
+
+		gotDigest, err := l.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+		if !cmp.Equal(gotDigest, wantHash) {
+			t.Errorf("Digest = %s", cmp.Diff(gotDigest, wantHash))
+		}
+
+		gotDiffID, err := l.DiffID()
+		if err != nil {
+			t.Fatalf("DiffID() = %v", err)
+		}
+		if !cmp.Equal(gotDiffID, wantHash) {
+			t.Errorf("DiffID = %s", cmp.Diff(gotDiffID, wantHash))
+		}
+	})
+
+	t.Run("check content", func(t *testing.T) {
+		comp, err := l.Compressed()
+		if err != nil {
+			t.Fatalf("Compressed() = %v", err)
+		}
+		defer comp.Close()
+		compContent, err := io.ReadAll(comp)
+		if err != nil {
+			t.Fatalf("ReadAll() = %v", err)
+		}
+		if got, want := string(compContent), payload; got != want {
+			t.Errorf("Compressed() = %s, wanted %s", got, want)
+		}
+
+		uncomp, err := l.Uncompressed()
+		if err != nil {
+			t.Fatalf("Uncompressed() = %v", err)
+		}
+		defer uncomp.Close()
+		uncompContent, err := io.ReadAll(uncomp)
+		if err != nil {
+			t.Fatalf("ReadAll() = %v", err)
+		}
+		if got, want := string(uncompContent), payload; got != want {
+			t.Errorf("Uncompressed() = %s, wanted %s", got, want)
+		}
+
+		gotPayload, err := l.Payload()
+		if err != nil {
+			t.Fatalf("Payload() = %v", err)
+		}
+		if got, want := string(gotPayload), payload; got != want {
+			t.Errorf("Payload() = %s, wanted %s", got, want)
+		}
+
+		gotSig, err := l.Base64Signature()
+		if err != nil {
+			t.Fatalf("Base64Signature() = %v", err)
+		}
+		if got, want := gotSig, ""; got != want {
+			t.Errorf("Base64Signature() = %s, wanted %s", got, want)
+		}
+
+		gotBundle, err := l.Bundle()
+		if err != nil {
+			t.Fatalf("Bundle() = %v", err)
+		}
+		if gotBundle != nil {
+			t.Errorf("Bundle() = %#v, wanted nil", gotBundle)
+		}
+	})
+
+	t.Run("check annotations", func(t *testing.T) {
+		want := map[string]string{
+			SignatureAnnotationKey: "",
+		}
+		got, err := l.Annotations()
+		if err != nil {
+			t.Fatalf("Annotations() = %v", err)
+		}
+		if !cmp.Equal(got, want) {
+			t.Errorf("Annotations = %s", cmp.Diff(got, want))
+		}
+	})
+
+	t.Run("check signature accessors", func(t *testing.T) {
+		gotPayload, err := l.Payload()
+		if err != nil {
+			t.Fatalf("Payload() = %v", err)
+		}
+		if got, want := string(gotPayload), payload; got != want {
+			t.Errorf("Payload() = %s, wanted %s", got, want)
+		}
+
+		gotSig, err := l.Base64Signature()
+		if err != nil {
+			t.Fatalf("Base64Signature() = %v", err)
+		}
+		if got, want := gotSig, ""; got != want {
+			t.Errorf("Base64Signature() = %s, wanted %s", got, want)
+		}
+
+		if got, err := l.Bundle(); err != nil {
+			t.Fatalf("Bundle() = %v", err)
+		} else if got != nil {
+			t.Errorf("Bundle() = %#v, wanted nil", got)
+		}
+
+		if got, err := l.Cert(); err != nil {
+			t.Fatalf("Cert() = %v", err)
+		} else if got != nil {
+			t.Errorf("Cert() = %#v, wanted nil", got)
+		}
+
+		if got, err := l.Chain(); err != nil {
+			t.Fatalf("Chain() = %v", err)
+		} else if len(got) != 0 {
+			t.Errorf("len(Chain()) = %d, wanted 0", len(got))
+		}
+	})
+}
+
 func TestNewSignatureCertChainAndBundle(t *testing.T) {
 	payload := "this is the other content!"
 	b64sig := "b64 content="

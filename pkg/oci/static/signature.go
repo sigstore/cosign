@@ -48,16 +48,14 @@ func NewSignature(payload []byte, b64sig string, opts ...Option) (oci.Signature,
 	}, nil
 }
 
+// NewAttestation constructs a new oci.Signature from the provided options.
+func NewAttestation(payload []byte, opts ...Option) (oci.Signature, error) {
+	return NewSignature(payload, "", opts...)
+}
+
 // NewFile constructs a new v1.Layer with the provided payload.
 func NewFile(payload []byte, opts ...Option) (v1.Layer, error) {
-	o, err := makeOptions(opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &staticLayer{
-		b:    payload,
-		opts: o,
-	}, nil
+	return NewSignature(payload, "", opts...)
 }
 
 type staticLayer struct {

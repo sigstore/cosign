@@ -214,7 +214,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		ociremote.WithSignatureSuffix(ociremote.AttestationTagSuffix),
 	)
 
-	sig, err := static.NewSignature(signedPayload, "", opts...)
+	sig, err := static.NewAttestation(signedPayload, opts...)
 	if err != nil {
 		return err
 	}
