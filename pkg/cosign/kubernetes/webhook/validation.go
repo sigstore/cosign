@@ -60,7 +60,7 @@ func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]o
 		return nil, err
 	}
 
-	sigs, _, err := cosign.Verify(ctx, ref, &cosign.CheckOpts{
+	sigs, _, err := cosign.VerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RootCerts:     fulcioroots.Get(),
 		SigVerifier:   ecdsaVerifier,
 		ClaimVerifier: cosign.SimpleClaimVerifier,

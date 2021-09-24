@@ -28,7 +28,6 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -123,7 +122,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 	}
 
 	co := &cosign.CheckOpts{
-		RegistryClientOpts: append(c.ClientOpts(ctx), ociremote.WithSignatureSuffix(cosign.AttestationTagSuffix)),
+		RegistryClientOpts: c.ClientOpts(ctx),
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
@@ -163,9 +162,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 			return err
 		}
 
-		// TODO(mattmoor): Add some sort of configuration to have this
-		// use Attestations() in place of Signatures().
-		verified, bundleVerified, err := cosign.Verify(ctx, ref, co)
+		verified, bundleVerified, err := cosign.VerifyAttestations(ctx, ref, co)
 		if err != nil {
 			return err
 		}

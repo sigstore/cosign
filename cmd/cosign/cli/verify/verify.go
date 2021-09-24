@@ -171,7 +171,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}
 
-		verified, bundleVerified, err := cosign.Verify(ctx, ref, co)
+		verified, bundleVerified, err := cosign.VerifySignatures(ctx, ref, co)
 		if err != nil {
 			return err
 		}
