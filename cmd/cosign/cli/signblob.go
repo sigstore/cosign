@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"context"
 	"flag"
 
 	"github.com/pkg/errors"
@@ -77,7 +76,7 @@ func addSignBlob(topLevel *cobra.Command) {
 				OIDCClientSecret: o.OIDC.ClientSecret,
 			}
 			for _, blob := range args {
-				if _, err := sign.SignBlobCmd(context.Background(), ko, o.RegistryOpts, blob, o.Base64Output, o.Output); err != nil {
+				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.RegistryOpts, blob, o.Base64Output, o.Output); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}

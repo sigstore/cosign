@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"context"
 	"flag"
 
 	"github.com/pkg/errors"
@@ -71,7 +70,7 @@ func addAttest(topLevel *cobra.Command) {
 				FulcioURL: o.Fulcio.URL,
 			}
 			for _, img := range args {
-				if err := attest.AttestCmd(context.Background(), ko, o.RegistryOpts, img, o.Cert, o.Upload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {
+				if err := attest.AttestCmd(cmd.Context(), ko, o.RegistryOpts, img, o.Cert, o.Upload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}

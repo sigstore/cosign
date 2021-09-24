@@ -86,7 +86,7 @@ EXAMPLES
 			}
 
 			// Initialize and update the local SigStore root.
-			return ctuf.Init(context.Background(), rootFileBytes, remote, *threshold)
+			return ctuf.Init(ctx, rootFileBytes, remote, *threshold)
 		},
 	}
 }
