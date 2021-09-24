@@ -49,8 +49,9 @@ func main() {
 	// escape the remaining args to let them be passed to cobra.
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "public-key", "generate-key-pair":
-		case "sign", "sign-blob":
+		case "public-key", "generate-key-pair",
+			"sign", "sign-blob",
+			"attest":
 			// cobra.
 		default:
 			// ffcli

@@ -19,6 +19,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -27,12 +28,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
+	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
+	"github.com/sigstore/cosign/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
@@ -50,12 +53,12 @@ func New() *cobra.Command {
 				ShortUsage: "cosign [flags] <subcommand>",
 				Subcommands: []*ffcli.Command{
 					// Key Management
-					PublicKey(),
+					publickey.PublicKey(),
 					generate.GenerateKeyPair(),
 					// Signing
 					sign.Sign(),
 					sign.SignBlob(),
-					Attest(),
+					attest.Attest(),
 					generate.Generate(),
 					verify.Verify(),
 					verify.VerifyAttestation(),
@@ -120,6 +123,7 @@ func New() *cobra.Command {
 	addSign(cmd)
 	addSignBlob(cmd)
 	addGenerateKeyPair(cmd)
+	addAttest(cmd)
 
 	return cmd
 }
