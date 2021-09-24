@@ -65,9 +65,29 @@ type CheckOpts struct {
 	CertEmail string
 }
 
-// Verify does all the main cosign checks in a loop, returning validated payloads.
-// If there were no payloads, we return an error.
-func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+// VerifySignatures does all the main cosign checks in a loop, returning the verified signatures.
+// If there were no valid signatures, we return an error.
+func VerifySignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	return Verify(ctx, signedImgRef, SignaturesAccessor, co)
+}
+
+// VerifyAttestations does all the main cosign checks in a loop, returning the verified attestations.
+// If there were no valid attestations, we return an error.
+func VerifyAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	return Verify(ctx, signedImgRef, AttestationsAccessor, co)
+}
+
+// Accessor is used by Verify to extract the signatures to be verified.
+type Accessor func(oci.SignedEntity) (oci.Signatures, error)
+
+var (
+	AttestationsAccessor Accessor = func(se oci.SignedEntity) (oci.Signatures, error) { return se.Attestations() }
+	SignaturesAccessor   Accessor = func(se oci.SignedEntity) (oci.Signatures, error) { return se.Signatures() }
+)
+
+// Verify does all the main cosign checks in a loop, returning the verified signatures.
+// If there were no valid signatures, we return an error.
+func Verify(ctx context.Context, signedImgRef name.Reference, accessor Accessor, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -95,7 +115,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (ch
 	// TODO(mattmoor): We could implement recursive verification if we just wrapped
 	// most of the logic below here in a call to mutate.Map
 
-	sigs, err := se.Signatures()
+	sigs, err := accessor(se)
 	if err != nil {
 		return nil, false, err
 	}

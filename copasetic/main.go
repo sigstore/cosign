@@ -193,7 +193,7 @@ func main() {
 				RegistryClientOpts: regOpts.ClientOpts(bctx.Context),
 				RekorURL:           *rekorURL,
 			}
-			sps, _, err := cosign.Verify(bctx.Context, ref, co)
+			sps, _, err := cosign.VerifySignatures(bctx.Context, ref, co)
 			if err != nil {
 				return nil, err
 			}
