@@ -72,6 +72,10 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, pay
 	if err != nil {
 		return err
 	}
+	// Overwrite "ref" with a digest to avoid a race where we use a tag
+	// multiple times, and it potentially points to different things at
+	// each access.
+	ref = digest // nolint
 
 	var payload []byte
 	if payloadRef == "" {

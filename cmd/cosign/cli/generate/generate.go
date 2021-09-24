@@ -73,11 +73,14 @@ func GenerateCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef str
 	if err != nil {
 		return err
 	}
-
 	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
+	// Overwrite "ref" with a digest to avoid a race where we use a tag
+	// multiple times, and it potentially points to different things at
+	// each access.
+	ref = digest
 
 	json, err := (&payload.Cosign{Image: digest, Annotations: annotations}).MarshalJSON()
 	if err != nil {

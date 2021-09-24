@@ -86,11 +86,8 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef, sbomTyp
 	}
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
-	if _, err := cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, remoteOpts...); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, remoteOpts...)
+	return err
 }
 
 func sbomBytes(sbomRef string) ([]byte, error) {

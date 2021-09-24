@@ -49,6 +49,7 @@ func valid(ctx context.Context, img string, keys []*ecdsa.PublicKey) bool {
 }
 
 func validSignatures(ctx context.Context, img string, key *ecdsa.PublicKey) ([]oci.Signature, error) {
+	// TODO(mattmoor): take the name.Reference as the param?
 	ref, err := name.ParseReference(img)
 	if err != nil {
 		return nil, err
