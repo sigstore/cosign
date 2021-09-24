@@ -38,6 +38,8 @@ var (
 	Read = readPasswordFn
 )
 
+// GenerateKeyPair subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 // nolint
 func GenerateKeyPair() *ffcli.Command {
 	var (
@@ -75,7 +77,8 @@ CAVEATS:
   the COSIGN_PASSWORD environment variable to provide one.`,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return GenerateKeyPairCmd(ctx, *kmsVal, args)
+			_ = kmsVal
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
