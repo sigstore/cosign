@@ -48,13 +48,16 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey) boo
 	return false
 }
 
+// For testing
+var cosignVerifySignatures = cosign.VerifySignatures
+
 func validSignatures(ctx context.Context, ref name.Reference, key *ecdsa.PublicKey) ([]oci.Signature, error) {
 	ecdsaVerifier, err := signature.LoadECDSAVerifier(key, crypto.SHA256)
 	if err != nil {
 		return nil, err
 	}
 
-	sigs, _, err := cosign.VerifySignatures(ctx, ref, &cosign.CheckOpts{
+	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RootCerts:     fulcioroots.Get(),
 		SigVerifier:   ecdsaVerifier,
 		ClaimVerifier: cosign.SimpleClaimVerifier,
