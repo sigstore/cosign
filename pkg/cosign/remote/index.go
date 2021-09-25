@@ -138,20 +138,12 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 	return ref.Context().Digest(lastHash.String()), nil
 }
 
-func UploadFile(b []byte, ref name.Reference, layerMT, configMt types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {
-	l, err := static.NewFile(b, static.WithMediaType(layerMT))
+func UploadFile(b []byte, ref name.Reference, layerMT, configMT types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {
+	img, err := static.NewFile(b, static.WithLayerMediaType(layerMT), static.WithConfigMediaType(configMT))
 	if err != nil {
 		return nil, err
 	}
 
-	emptyOci := mutate.MediaType(empty.Image, types.OCIManifestSchema1)
-	img, err := mutate.Append(emptyOci, mutate.Addendum{
-		Layer: l,
-	})
-	if err != nil {
-		return nil, err
-	}
-	img = mutate.ConfigMediaType(img, configMt)
 	if err := remote.Write(ref, img, remoteOpts...); err != nil {
 		return nil, err
 	}

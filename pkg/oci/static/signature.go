@@ -53,11 +53,6 @@ func NewAttestation(payload []byte, opts ...Option) (oci.Signature, error) {
 	return NewSignature(payload, "", opts...)
 }
 
-// NewFile constructs a new v1.Layer with the provided payload.
-func NewFile(payload []byte, opts ...Option) (v1.Layer, error) {
-	return NewSignature(payload, "", opts...)
-}
-
 type staticLayer struct {
 	b      []byte
 	b64sig string
@@ -139,5 +134,5 @@ func (l *staticLayer) Size() (int64, error) {
 
 // MediaType implements v1.Layer
 func (l *staticLayer) MediaType() (types.MediaType, error) {
-	return l.opts.MediaType, nil
+	return l.opts.LayerMediaType, nil
 }

@@ -26,17 +26,19 @@ import (
 type Option func(*options)
 
 type options struct {
-	MediaType   types.MediaType
-	Bundle      *oci.Bundle
-	Cert        []byte
-	Chain       []byte
-	Annotations map[string]string
+	LayerMediaType  types.MediaType
+	ConfigMediaType types.MediaType
+	Bundle          *oci.Bundle
+	Cert            []byte
+	Chain           []byte
+	Annotations     map[string]string
 }
 
 func makeOptions(opts ...Option) (*options, error) {
 	o := &options{
-		MediaType:   ctypes.SimpleSigningMediaType,
-		Annotations: make(map[string]string),
+		LayerMediaType:  ctypes.SimpleSigningMediaType,
+		ConfigMediaType: types.OCIConfigJSON,
+		Annotations:     make(map[string]string),
 	}
 
 	for _, opt := range opts {
@@ -59,10 +61,17 @@ func makeOptions(opts ...Option) (*options, error) {
 	return o, nil
 }
 
-// WithMediaType sets the media type of the signature.
-func WithMediaType(mt types.MediaType) Option {
+// WithLayerMediaType sets the media type of the signature.
+func WithLayerMediaType(mt types.MediaType) Option {
 	return func(o *options) {
-		o.MediaType = mt
+		o.LayerMediaType = mt
+	}
+}
+
+// WithConfigMediaType sets the media type of the signature.
+func WithConfigMediaType(mt types.MediaType) Option {
+	return func(o *options) {
+		o.ConfigMediaType = mt
 	}
 }
 

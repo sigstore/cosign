@@ -189,7 +189,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return nil
 	}
 
-	opts := []static.Option{static.WithMediaType(types.DssePayloadType)}
+	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
