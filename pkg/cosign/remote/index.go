@@ -22,7 +22,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -31,10 +30,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci/static"
 )
-
-type Digester interface {
-	Digest() (v1.Hash, error)
-}
 
 type File interface {
 	Contents() ([]byte, error)
@@ -95,31 +90,30 @@ func DefaultMediaTypeGetter(b []byte) types.MediaType {
 	return types.MediaType(strings.Split(http.DetectContentType(b), ";")[0])
 }
 
-func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remoteOpts ...remote.Option) (Digester, error) {
-	var img v1.Image
+func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remoteOpts ...remote.Option) (name.Digest, error) {
+	var lastHash v1.Hash
 	var idx v1.ImageIndex = empty.Index
 
 	for _, f := range files {
 		b, err := f.Contents()
 		if err != nil {
-			return nil, err
+			return name.Digest{}, err
 		}
 		mt := getMt(b)
 		fmt.Fprintf(os.Stderr, "Uploading file from [%s] to [%s] with media type [%s]\n", f.Path(), ref.Name(), mt)
-		_img, err := UploadFile(b, ref, mt, types.OCIConfigJSON, remoteOpts...)
+		img, err := UploadFile(b, ref, mt, types.OCIConfigJSON, remoteOpts...)
 		if err != nil {
-			return nil, err
+			return name.Digest{}, err
 		}
-		img = _img
-		l, err := _img.Layers()
+		l, err := img.Layers()
 		if err != nil {
-			return nil, err
+			return name.Digest{}, err
 		}
-		dgst, err := l[0].Digest()
+		lastHash, err = l[0].Digest()
 		if err != nil {
-			return nil, err
+			return name.Digest{}, err
 		}
-		blobURL := ref.Context().Registry.RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/sha256:" + dgst.Hex
+		blobURL := ref.Context().Registry.RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/" + lastHash.String()
 		fmt.Fprintf(os.Stderr, "File [%s] is available directly at [%s]\n", f.Path(), blobURL)
 		if f.Platform() != nil {
 			idx = mutate.AppendManifests(idx, mutate.IndexAddendum{
@@ -132,12 +126,16 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 	}
 
 	if len(files) > 1 {
-		if err := remote.WriteIndex(ref, idx, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
-			return nil, err
+		err := remote.WriteIndex(ref, idx, remoteOpts...)
+		if err != nil {
+			return name.Digest{}, err
 		}
-		return idx, nil
+		lastHash, err = idx.Digest()
+		if err != nil {
+			return name.Digest{}, err
+		}
 	}
-	return img, nil
+	return ref.Context().Digest(lastHash.String()), nil
 }
 
 func UploadFile(b []byte, ref name.Reference, layerMT, configMt types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {

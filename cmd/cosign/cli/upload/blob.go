@@ -102,19 +102,13 @@ func BlobCmd(ctx context.Context, regOpts options.RegistryOpts, files []cremote.
 		return err
 	}
 
-	dgster, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, regOpts.GetRegistryClientOpts(ctx)...)
+	dgstAddr, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, regOpts.GetRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
-	if dgster == nil {
-		return errors.New("dgstr is nil, no files uploaded?")
+	if len(files) == 0 {
+		return errors.New("no files uploaded?")
 	}
-	dgst, err := dgster.Digest()
-	if err != nil {
-		return err
-	}
-	dgstAddr := ref.Context().Digest(dgst.String())
-
 	if len(files) > 1 {
 		fmt.Fprintf(os.Stderr, "Uploading multi-platform index to %s\n", dgstAddr)
 	} else {
