@@ -198,11 +198,7 @@ EXAMPLES
 	}
 }
 
-func GetAttachedImageRef(imageRef string, attachment string, remoteOpts ...remote.Option) (name.Reference, error) {
-	ref, err := name.ParseReference(imageRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing reference")
-	}
+func GetAttachedImageRef(ref name.Reference, attachment string, remoteOpts ...remote.Option) (name.Reference, error) {
 	if attachment == "" {
 		return ref, nil
 	}
@@ -249,7 +245,11 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, anno
 	}
 
 	for _, inputImg := range imgs {
-		ref, err := GetAttachedImageRef(inputImg, attachment, remoteOpts...)
+		ref, err := name.ParseReference(inputImg)
+		if err != nil {
+			return errors.Wrap(err, "parsing reference")
+		}
+		ref, err = GetAttachedImageRef(ref, attachment, remoteOpts...)
 		if err != nil {
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
