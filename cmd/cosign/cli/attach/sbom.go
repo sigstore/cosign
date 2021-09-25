@@ -25,12 +25,13 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/static"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
@@ -86,8 +87,11 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef string, 
 	}
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
-	_, err = cremote.UploadFile(b, dstRef, sbomType, types.OCIConfigJSON, remoteOpts...)
-	return err
+	img, err := static.NewFile(b, static.WithLayerMediaType(sbomType))
+	if err != nil {
+		return err
+	}
+	return remote.Write(dstRef, img, remoteOpts...)
 }
 
 func sbomBytes(sbomRef string) ([]byte, error) {
