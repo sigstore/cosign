@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
@@ -33,15 +34,25 @@ func TestOptions(t *testing.T) {
 	}{{
 		name: "no options",
 		want: &options{
-			MediaType:   ctypes.SimpleSigningMediaType,
-			Annotations: make(map[string]string),
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
+			Annotations:     make(map[string]string),
 		},
 	}, {
-		name: "with media type",
-		opts: []Option{WithMediaType("foo")},
+		name: "with layer media type",
+		opts: []Option{WithLayerMediaType("foo")},
 		want: &options{
-			MediaType:   "foo",
-			Annotations: make(map[string]string),
+			LayerMediaType:  "foo",
+			ConfigMediaType: types.OCIConfigJSON,
+			Annotations:     make(map[string]string),
+		},
+	}, {
+		name: "with config media type",
+		opts: []Option{WithConfigMediaType("bar")},
+		want: &options{
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: "bar",
+			Annotations:     make(map[string]string),
 		},
 	}, {
 		name: "with annotations",
@@ -49,7 +60,8 @@ func TestOptions(t *testing.T) {
 			"foo": "bar",
 		})},
 		want: &options{
-			MediaType: ctypes.SimpleSigningMediaType,
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
 			Annotations: map[string]string{
 				"foo": "bar",
 			},
@@ -58,7 +70,8 @@ func TestOptions(t *testing.T) {
 		name: "with cert chain",
 		opts: []Option{WithCertChain([]byte("a"), []byte("b"))},
 		want: &options{
-			MediaType: ctypes.SimpleSigningMediaType,
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
 			Annotations: map[string]string{
 				CertificateAnnotationKey: "a",
 				ChainAnnotationKey:       "b",
@@ -70,7 +83,8 @@ func TestOptions(t *testing.T) {
 		name: "with bundle",
 		opts: []Option{WithBundle(bundle)},
 		want: &options{
-			MediaType: ctypes.SimpleSigningMediaType,
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
 			Annotations: map[string]string{
 				BundleAnnotationKey: "{\"SignedEntryTimestamp\":\"\",\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
 			},
