@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
@@ -166,7 +167,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	co.SigVerifier = pubKey
 
 	for _, img := range args {
-		ref, err := sign.GetAttachedImageRef(img, c.Attachment, c.RegistryOpts.GetRegistryClientOpts(ctx)...)
+		ref, err := name.ParseReference(img)
+		if err != nil {
+			return errors.Wrap(err, "parsing reference")
+		}
+		ref, err = sign.GetAttachedImageRef(ref, c.Attachment, c.RegistryOpts.GetRegistryClientOpts(ctx)...)
 		if err != nil {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}
