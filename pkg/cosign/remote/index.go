@@ -101,8 +101,12 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 		}
 		mt := getMt(b)
 		fmt.Fprintf(os.Stderr, "Uploading file from [%s] to [%s] with media type [%s]\n", f.Path(), ref.Name(), mt)
-		img, err := UploadFile(b, ref, mt, types.OCIConfigJSON, remoteOpts...)
+
+		img, err := static.NewFile(b, static.WithLayerMediaType(mt))
 		if err != nil {
+			return name.Digest{}, err
+		}
+		if err := remote.Write(ref, img, remoteOpts...); err != nil {
 			return name.Digest{}, err
 		}
 		l, err := img.Layers()
@@ -136,16 +140,4 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 		}
 	}
 	return ref.Context().Digest(lastHash.String()), nil
-}
-
-func UploadFile(b []byte, ref name.Reference, layerMT, configMT types.MediaType, remoteOpts ...remote.Option) (v1.Image, error) {
-	img, err := static.NewFile(b, static.WithLayerMediaType(layerMT), static.WithConfigMediaType(configMT))
-	if err != nil {
-		return nil, err
-	}
-
-	if err := remote.Write(ref, img, remoteOpts...); err != nil {
-		return nil, err
-	}
-	return img, nil
 }

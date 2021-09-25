@@ -23,10 +23,11 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
 )
 
@@ -63,6 +64,9 @@ func WasmCmd(ctx context.Context, regOpts options.RegistryOpts, wasmPath, imageR
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "Uploading wasm file from [%s] to [%s].\n", wasmPath, ref.Name())
-	_, err = cremote.UploadFile(b, ref, types.WasmLayerMediaType, types.WasmConfigMediaType, regOpts.GetRegistryClientOpts(ctx)...)
-	return err
+	img, err := static.NewFile(b, static.WithLayerMediaType(types.WasmLayerMediaType), static.WithConfigMediaType(types.WasmConfigMediaType))
+	if err != nil {
+		return err
+	}
+	return remote.Write(ref, img, regOpts.GetRegistryClientOpts(ctx)...)
 }
