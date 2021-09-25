@@ -34,7 +34,7 @@ import (
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
-var mediaTypes = map[string]string{
+var mediaTypes = map[string]types.MediaType{
 	"cyclonedx": ctypes.CycloneDXMediaType,
 	"spdx":      ctypes.SPDXMediaType,
 }
@@ -67,7 +67,7 @@ func SBOM() *ffcli.Command {
 	}
 }
 
-func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef, sbomType, imageRef string) error {
+func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef string, sbomType types.MediaType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef, sbomTyp
 	}
 
 	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
-	_, err = cremote.UploadFile(b, dstRef, types.MediaType(sbomType), types.OCIConfigJSON, remoteOpts...)
+	_, err = cremote.UploadFile(b, dstRef, sbomType, types.OCIConfigJSON, remoteOpts...)
 	return err
 }
 
