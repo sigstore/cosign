@@ -17,6 +17,7 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"
@@ -59,25 +60,34 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (er
 	if kerr != nil {
 		return kerr
 	}
-	for i, c := range ps.InitContainers {
-		ref, err := name.ParseReference(c.Image)
-		if err != nil {
-			errs = errs.Also(apis.ErrGeneric(err.Error(), "image").ViaFieldIndex("initContainers", i))
-		}
 
-		if !valid(ctx, ref, keys) {
-			errs = errs.Also(apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex("initContainers", i))
+	checkContainers := func(cs []corev1.Container, field string) {
+		for i, c := range cs {
+			ref, err := name.ParseReference(c.Image)
+			if err != nil {
+				errs = errs.Also(apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i))
+				continue
+			}
+
+			// Require digests, otherwise the validation is meaningless
+			// since the tag can move.
+			if _, ok := ref.(name.Digest); !ok {
+				errs = errs.Also(apis.ErrInvalidValue(
+					fmt.Sprintf("%s must be an image digest", c.Image),
+					"image",
+				).ViaFieldIndex(field, i))
+				continue
+			}
+
+			if !valid(ctx, ref, keys) {
+				errs = errs.Also(apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex(field, i))
+				continue
+			}
 		}
 	}
-	for i, c := range ps.Containers {
-		ref, err := name.ParseReference(c.Image)
-		if err != nil {
-			errs = errs.Also(apis.ErrGeneric(err.Error(), "image").ViaFieldIndex("containers", i))
-		}
 
-		if !valid(ctx, ref, keys) {
-			errs = errs.Also(apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex("containers", i))
-		}
-	}
+	checkContainers(ps.InitContainers, "initContainers")
+	checkContainers(ps.Containers, "containers")
+
 	return errs
 }
