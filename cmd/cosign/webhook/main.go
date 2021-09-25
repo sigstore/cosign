@@ -31,6 +31,7 @@ import (
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
 	"knative.dev/pkg/webhook/resourcesemantics"
+	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 
 	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
@@ -58,7 +59,18 @@ func main() {
 	sharedmain.MainWithContext(ctx, "cosigned",
 		certificates.NewController,
 		NewValidatingAdmissionController,
+		NewMutatingAdmissionController,
 	)
+}
+
+var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+	corev1.SchemeGroupVersion.WithKind("Pod"): &duckv1.Pod{},
+
+	appsv1.SchemeGroupVersion.WithKind("ReplicaSet"):  &duckv1.WithPod{},
+	appsv1.SchemeGroupVersion.WithKind("Deployment"):  &duckv1.WithPod{},
+	appsv1.SchemeGroupVersion.WithKind("StatefulSet"): &duckv1.WithPod{},
+	appsv1.SchemeGroupVersion.WithKind("DaemonSet"):   &duckv1.WithPod{},
+	batchv1.SchemeGroupVersion.WithKind("Job"):        &duckv1.WithPod{},
 }
 
 func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
@@ -72,15 +84,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 		"/validations",
 
 		// The resources to validate.
-		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-			corev1.SchemeGroupVersion.WithKind("Pod"): &duckv1.Pod{},
-
-			appsv1.SchemeGroupVersion.WithKind("ReplicaSet"):  &duckv1.WithPod{},
-			appsv1.SchemeGroupVersion.WithKind("Deployment"):  &duckv1.WithPod{},
-			appsv1.SchemeGroupVersion.WithKind("StatefulSet"): &duckv1.WithPod{},
-			appsv1.SchemeGroupVersion.WithKind("DaemonSet"):   &duckv1.WithPod{},
-			batchv1.SchemeGroupVersion.WithKind("Job"):        &duckv1.WithPod{},
-		},
+		types,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
@@ -95,5 +99,31 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 		// Extra validating callbacks to be applied to resources.
 		nil,
+	)
+}
+
+func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	validator := cwebhook.NewValidator(ctx, *secretName)
+
+	return defaulting.NewAdmissionController(ctx,
+		// Name of the resource webhook.
+		webhookName,
+
+		// The path on which to serve the webhook.
+		"/mutations",
+
+		// The resources to validate.
+		types,
+
+		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
+		func(ctx context.Context) context.Context {
+			ctx = duckv1.WithPodDefaulter(ctx, validator.ResolvePod)
+			ctx = duckv1.WithPodSpecDefaulter(ctx, validator.ResolvePodSpecable)
+			return ctx
+		},
+
+		// Whether to disallow unknown fields.
+		// We pass false because we're using partial schemas.
+		false,
 	)
 }
