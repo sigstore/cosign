@@ -18,7 +18,7 @@ set -ex
 
 
 echo '::group:: publish test image'
-DIGEST=$(ko publish ./cmd/sample)
+DIGEST=$(ko publish -B ./cmd/sample)
 cat > pod.yaml <<EOF
 apiVersion: v1
 kind: Pod
@@ -28,7 +28,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: sample
-    image: $DIGEST
+    image: $KO_DOCKER_REPO/sample
 EOF
 cat > job.yaml <<EOF
 apiVersion: batch/v1
@@ -41,8 +41,13 @@ spec:
       restartPolicy: Never
       containers:
         - name: sample
-          image: $DIGEST
+          image: $KO_DOCKER_REPO/sample
 EOF
+echo '::endgroup::'
+
+
+echo '::group:: disable verification'
+kubectl label namespace default --overwrite cosigned.sigstore.dev/include=false
 echo '::endgroup::'
 
 
@@ -69,7 +74,7 @@ echo '::endgroup::'
 
 
 echo '::group:: enable verification'
-kubectl label namespace default cosigned.sigstore.dev/include=true
+kubectl label namespace default --overwrite cosigned.sigstore.dev/include=true
 echo '::endgroup::'
 
 
@@ -95,6 +100,30 @@ echo '::endgroup::'
 
 echo '::group:: sign test image'
 cosign sign -key k8s://cosign-system/verification-key $DIGEST
+echo '::endgroup::'
+
+
+
+echo '::group:: test pod digest resolution'
+IMAGE=$(kubectl create --dry-run=server -f pod.yaml -oyaml | yq e '.spec.containers[0].image' -)
+
+if [ "$IMAGE" != "$DIGEST" ] ; then
+  echo Failed to resolve tag to digest!
+  exit 1
+else
+  echo Successfully resolved tag to digest.
+fi
+echo '::endgroup::'
+
+echo '::group:: test job digest resolution'
+IMAGE=$(kubectl create --dry-run=server -f job.yaml -oyaml | yq e '.spec.template.spec.containers[0].image' -)
+
+if [ "$IMAGE" != "$DIGEST" ] ; then
+  echo Failed to resolve tag to digest!
+  exit 1
+else
+  echo Successfully resolved tag to digest.
+fi
 echo '::endgroup::'
 
 

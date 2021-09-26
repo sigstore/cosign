@@ -33,6 +33,27 @@ webhooks:
   sideEffects: None
 
 ---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: cosigned.sigstore.dev
+webhooks:
+- name: cosigned.sigstore.dev
+  namespaceSelector:
+    # The webhook should only apply to things that opt-in
+    matchExpressions:
+    - key: cosigned.sigstore.dev/include
+      operator: In
+      values: ["true"]
+  admissionReviewVersions: [v1]
+  clientConfig:
+    service:
+      name: webhook
+      namespace: cosign-system
+  failurePolicy: Fail
+  sideEffects: None
+
+---
 apiVersion: v1
 kind: Secret
 metadata:

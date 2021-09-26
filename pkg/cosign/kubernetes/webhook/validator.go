@@ -20,11 +20,13 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/cosign/pkg/oci/remote"
 	corev1 "k8s.io/api/core/v1"
 	listersv1 "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 )
 
@@ -90,4 +92,43 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (er
 	checkContainers(ps.Containers, "containers")
 
 	return errs
+}
+
+// ResolvePodSpecable implements duckv1.PodSpecValidator
+func (v *Validator) ResolvePodSpecable(ctx context.Context, wp *duckv1.WithPod) {
+	v.resolvePodSpec(ctx, &wp.Spec.Template.Spec)
+}
+
+// ResolvePod implements duckv1.PodValidator
+func (v *Validator) ResolvePod(ctx context.Context, p *duckv1.Pod) {
+	v.resolvePodSpec(ctx, &p.Spec)
+}
+
+// For testing
+var remoteResolveDigest = remote.ResolveDigest
+
+func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec) {
+	resolveContainers := func(cs []corev1.Container) {
+		for i, c := range cs {
+			ref, err := name.ParseReference(c.Image)
+			if err != nil {
+				logging.FromContext(ctx).Debugf("Unable to parse reference: %v", err)
+				continue
+			}
+
+			// If we are in the context of a mutating webhook, then resolve the tag to a digest.
+			switch {
+			case apis.IsInCreate(ctx), apis.IsInUpdate(ctx):
+				digest, err := remoteResolveDigest(ref)
+				if err != nil {
+					logging.FromContext(ctx).Debugf("Unable to resolve digest %q: %v", ref.String(), err)
+					continue
+				}
+				cs[i].Image = digest.String()
+			}
+		}
+	}
+
+	resolveContainers(ps.InitContainers)
+	resolveContainers(ps.Containers)
 }
