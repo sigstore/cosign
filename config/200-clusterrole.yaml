@@ -21,12 +21,12 @@ rules:
     resources: ["events"]
     verbs: ["create"]
 
-  # Allow the reconciliation of exactly our validating webhook.
+  # Allow the reconciliation of exactly our validating and mutating webhooks.
   - apiGroups: ["admissionregistration.k8s.io"]
-    resources: ["validatingwebhookconfigurations"]
+    resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
     verbs: ["list", "watch"]
   - apiGroups: ["admissionregistration.k8s.io"]
-    resources: ["validatingwebhookconfigurations"]
+    resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
     verbs: ["get", "update"]
     resourceNames: ["cosigned.sigstore.dev"]
 

@@ -64,6 +64,10 @@ jobs:
         sudo mv ko /usr/local/bin
         echo '::endgroup::'
 
+        echo '::group:: install yq'
+        go get github.com/mikefarah/yq/v4
+        echo '::endgroup::'
+
     - name: Check out code onto GOPATH
       uses: actions/checkout@v2
       with:
