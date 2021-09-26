@@ -44,11 +44,19 @@ func NewValidator(ctx context.Context, secretName string) *Validator {
 
 // ValidatePodSpecable implements duckv1.PodSpecValidator
 func (v *Validator) ValidatePodSpecable(ctx context.Context, wp *duckv1.WithPod) *apis.FieldError {
+	if wp.DeletionTimestamp != nil {
+		// Don't block things that are being deleted.
+		return nil
+	}
 	return v.validatePodSpec(ctx, &wp.Spec.Template.Spec).ViaField("spec.template.spec")
 }
 
 // ValidatePod implements duckv1.PodValidator
 func (v *Validator) ValidatePod(ctx context.Context, p *duckv1.Pod) *apis.FieldError {
+	if p.DeletionTimestamp != nil {
+		// Don't block things that are being deleted.
+		return nil
+	}
 	return v.validatePodSpec(ctx, &p.Spec).ViaField("spec")
 }
 
@@ -96,11 +104,19 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (er
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator
 func (v *Validator) ResolvePodSpecable(ctx context.Context, wp *duckv1.WithPod) {
+	if wp.DeletionTimestamp != nil {
+		// Don't mess with things that are being deleted.
+		return
+	}
 	v.resolvePodSpec(ctx, &wp.Spec.Template.Spec)
 }
 
 // ResolvePod implements duckv1.PodValidator
 func (v *Validator) ResolvePod(ctx context.Context, p *duckv1.Pod) {
+	if p.DeletionTimestamp != nil {
+		// Don't mess with things that are being deleted.
+		return
+	}
 	v.resolvePodSpec(ctx, &p.Spec)
 }
 
