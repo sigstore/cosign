@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -28,7 +29,9 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/static"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	fakesecret "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 	rtesting "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/system"
@@ -140,11 +143,51 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cosignVerifySignatures = test.cvs
+
+			// Check the core mechanics
 			got := v.validatePodSpec(context.Background(), test.ps)
 			if (got != nil) != (test.want != nil) {
 				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
 			} else if got != nil && got.Error() != test.want.Error() {
 				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
+			}
+
+			// Check wrapped in a Pod
+			pod := &duckv1.Pod{
+				Spec: *test.ps,
+			}
+			got = v.ValidatePod(context.Background(), pod)
+			want := test.want.ViaField("spec")
+			if (got != nil) != (want != nil) {
+				t.Errorf("ValidatePod() = %v, wanted %v", got, want)
+			} else if got != nil && got.Error() != want.Error() {
+				t.Errorf("ValidatePod() = %v, wanted %v", got, want)
+			}
+			// Check that we don't block things being deleted.
+			pod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			if got := v.ValidatePod(context.Background(), pod); got != nil {
+				t.Errorf("ValidatePod() = %v, wanted nil", got)
+			}
+
+			// Check wrapped in a WithPod
+			withPod := &duckv1.WithPod{
+				Spec: duckv1.WithPodSpec{
+					Template: duckv1.PodSpecable{
+						Spec: *test.ps,
+					},
+				},
+			}
+			got = v.ValidatePodSpecable(context.Background(), withPod)
+			want = test.want.ViaField("spec.template.spec")
+			if (got != nil) != (want != nil) {
+				t.Errorf("ValidatePodSpecable() = %v, wanted %v", got, want)
+			} else if got != nil && got.Error() != want.Error() {
+				t.Errorf("ValidatePodSpecable() = %v, wanted %v", got, want)
+			}
+			// Check that we don't block things being deleted.
+			withPod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			if got := v.ValidatePodSpecable(context.Background(), withPod); got != nil {
+				t.Errorf("ValidatePodSpecable() = %v, wanted nil", got)
 			}
 		})
 	}
@@ -277,14 +320,70 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			remoteResolveDigest = test.rrd
-			got := test.ps.DeepCopy()
 			ctx := context.Background()
 			if test.wc != nil {
 				ctx = test.wc(context.Background())
 			}
+
+			// Check the core mechanics.
+			got := test.ps.DeepCopy()
 			v.resolvePodSpec(ctx, got)
 			if !cmp.Equal(got, test.want) {
 				t.Errorf("resolvePodSpec = %s", cmp.Diff(got, test.want))
+			}
+
+			var want runtime.Object
+
+			// Check wrapped in a Pod
+			pod := &duckv1.Pod{Spec: *test.ps.DeepCopy()}
+			want = &duckv1.Pod{Spec: *test.want.DeepCopy()}
+			v.ResolvePod(ctx, pod)
+			if !cmp.Equal(pod, want) {
+				t.Errorf("ResolvePod = %s", cmp.Diff(pod, want))
+			}
+
+			// Check that nothing happens when it's being deleted.
+			pod = &duckv1.Pod{Spec: *test.ps.DeepCopy()}
+			pod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			want = pod.DeepCopy()
+			v.ResolvePod(ctx, pod)
+			if !cmp.Equal(pod, want) {
+				t.Errorf("ResolvePod = %s", cmp.Diff(pod, want))
+			}
+
+			// Check wrapped in a WithPod
+			withPod := &duckv1.WithPod{
+				Spec: duckv1.WithPodSpec{
+					Template: duckv1.PodSpecable{
+						Spec: *test.ps.DeepCopy(),
+					},
+				},
+			}
+			want = &duckv1.WithPod{
+				Spec: duckv1.WithPodSpec{
+					Template: duckv1.PodSpecable{
+						Spec: *test.want.DeepCopy(),
+					},
+				},
+			}
+			v.ResolvePodSpecable(ctx, withPod)
+			if !cmp.Equal(withPod, want) {
+				t.Errorf("ResolvePodSpecable = %s", cmp.Diff(withPod, want))
+			}
+
+			// Check that nothing happens when it's being deleted.
+			withPod = &duckv1.WithPod{
+				Spec: duckv1.WithPodSpec{
+					Template: duckv1.PodSpecable{
+						Spec: *test.ps.DeepCopy(),
+					},
+				},
+			}
+			withPod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			want = withPod.DeepCopy()
+			v.ResolvePodSpecable(ctx, withPod)
+			if !cmp.Equal(withPod, want) {
+				t.Errorf("ResolvePodSpecable = %s", cmp.Diff(withPod, want))
 			}
 		})
 	}
