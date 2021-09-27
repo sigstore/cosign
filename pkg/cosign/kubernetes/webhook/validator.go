@@ -19,24 +19,30 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	listersv1 "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 )
 
 type Validator struct {
+	client     kubernetes.Interface
 	lister     listersv1.SecretLister
 	secretName string
 }
 
 func NewValidator(ctx context.Context, secretName string) *Validator {
 	return &Validator{
+		client:     kubeclient.Get(ctx),
 		lister:     secretinformer.Get(ctx).Lister(),
 		secretName: secretName,
 	}
@@ -108,7 +114,17 @@ func (v *Validator) ResolvePodSpecable(ctx context.Context, wp *duckv1.WithPod) 
 		// Don't mess with things that are being deleted.
 		return
 	}
-	v.resolvePodSpec(ctx, &wp.Spec.Template.Spec)
+
+	imagePullSecrets := make([]string, 0, len(wp.Spec.Template.Spec.ImagePullSecrets))
+	for _, s := range wp.Spec.Template.Spec.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, s.Name)
+	}
+	opt := k8schain.Options{
+		Namespace:          wp.Namespace,
+		ServiceAccountName: wp.Spec.Template.Spec.ServiceAccountName,
+		ImagePullSecrets:   imagePullSecrets,
+	}
+	v.resolvePodSpec(ctx, &wp.Spec.Template.Spec, opt)
 }
 
 // ResolvePod implements duckv1.PodValidator
@@ -117,13 +133,28 @@ func (v *Validator) ResolvePod(ctx context.Context, p *duckv1.Pod) {
 		// Don't mess with things that are being deleted.
 		return
 	}
-	v.resolvePodSpec(ctx, &p.Spec)
+	imagePullSecrets := make([]string, 0, len(p.Spec.ImagePullSecrets))
+	for _, s := range p.Spec.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, s.Name)
+	}
+	opt := k8schain.Options{
+		Namespace:          p.Namespace,
+		ServiceAccountName: p.Spec.ServiceAccountName,
+		ImagePullSecrets:   imagePullSecrets,
+	}
+	v.resolvePodSpec(ctx, &p.Spec, opt)
 }
 
 // For testing
-var remoteResolveDigest = remote.ResolveDigest
+var remoteResolveDigest = ociremote.ResolveDigest
 
-func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec) {
+func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec, opt k8schain.Options) {
+	kc, err := k8schain.New(ctx, v.client, opt)
+	if err != nil {
+		logging.FromContext(ctx).Warnf("Unable to build k8schain: %v", err)
+		return
+	}
+
 	resolveContainers := func(cs []corev1.Container) {
 		for i, c := range cs {
 			ref, err := name.ParseReference(c.Image)
@@ -135,7 +166,7 @@ func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec) {
 			// If we are in the context of a mutating webhook, then resolve the tag to a digest.
 			switch {
 			case apis.IsInCreate(ctx), apis.IsInUpdate(ctx):
-				digest, err := remoteResolveDigest(ref)
+				digest, err := remoteResolveDigest(ref, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
 				if err != nil {
 					logging.FromContext(ctx).Debugf("Unable to resolve digest %q: %v", ref.String(), err)
 					continue

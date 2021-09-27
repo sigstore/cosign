@@ -15,7 +15,6 @@ require (
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210806133539-f50646681592
 	github.com/manifoldco/promptui v0.8.0
-	github.com/open-policy-agent/opa v0.32.1
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
@@ -33,6 +32,8 @@ require (
 
 require (
 	cloud.google.com/go/kms v0.1.0 // indirect
+	github.com/OneOfOne/xxhash v1.2.8 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cncf/udpa/go v0.0.0-20210322005330-6414d713912e // indirect
 	github.com/cncf/xds/go v0.0.0-20210805033703-aa0b78936158 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
@@ -40,12 +41,13 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v0.6.1 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/golang/glog v1.0.0 // indirect
+	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20210924194000-308547aa3b27
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/onsi/gomega v1.15.0 // indirect
-	github.com/peterh/liner v1.2.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v0.22.0 // indirect
