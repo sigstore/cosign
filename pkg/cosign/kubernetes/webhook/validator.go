@@ -66,6 +66,16 @@ func (v *Validator) ValidatePod(ctx context.Context, p *duckv1.Pod) *apis.FieldE
 	return v.validatePodSpec(ctx, &p.Spec).ViaField("spec")
 }
 
+// ValidateCronJob implements duckv1.CronJobValidator
+func (v *Validator) ValidateCronJob(ctx context.Context, c *duckv1.CronJob) *apis.FieldError {
+	if c.DeletionTimestamp != nil {
+		// Don't block things that are being deleted.
+		return nil
+	}
+	logging.FromContext(ctx).Infof("VILLE: Validating podspec: %+v", c.Spec.JobTemplate.Spec.Template.Spec)
+	return v.validatePodSpec(ctx, &c.Spec.JobTemplate.Spec.Template.Spec).ViaField("spec.jobTemplate.spec.template.spec")
+}
+
 func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (errs *apis.FieldError) {
 	s, err := v.lister.Secrets(system.Namespace()).Get(v.secretName)
 	if err != nil {
@@ -143,6 +153,25 @@ func (v *Validator) ResolvePod(ctx context.Context, p *duckv1.Pod) {
 		ImagePullSecrets:   imagePullSecrets,
 	}
 	v.resolvePodSpec(ctx, &p.Spec, opt)
+}
+
+// ResolveCronJob implements duckv1.CronJobValidator
+func (v *Validator) ResolveCronJob(ctx context.Context, c *duckv1.CronJob) {
+	if c.DeletionTimestamp != nil {
+		// Don't mess with things that are being deleted.
+		return
+	}
+	imagePullSecrets := make([]string, 0, len(c.Spec.JobTemplate.Spec.Template.Spec.ImagePullSecrets))
+	for _, s := range c.Spec.JobTemplate.Spec.Template.Spec.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, s.Name)
+	}
+	opt := k8schain.Options{
+		Namespace:          c.Namespace,
+		ServiceAccountName: c.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName,
+		ImagePullSecrets:   imagePullSecrets,
+	}
+	logging.FromContext(ctx).Infof("VILLE: Resolving podspec: %+v", c.Spec.JobTemplate.Spec.Template.Spec)
+	v.resolvePodSpec(ctx, &c.Spec.JobTemplate.Spec.Template.Spec, opt)
 }
 
 // For testing

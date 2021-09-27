@@ -2,6 +2,9 @@ module github.com/sigstore/cosign
 
 go 1.16
 
+// DO NOT MERGE
+replace knative.dev/pkg => github.com/vaikas/pkg cronjob-duck
+
 require (
 	cloud.google.com/go/storage v1.16.1
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
@@ -53,7 +56,6 @@ require (
 	go.opentelemetry.io/contrib v0.22.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/mod v0.5.0 // indirect
-	golang.org/x/net v0.0.0-20210903162142-ad29c8ab022f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	k8s.io/klog/v2 v2.10.0 // indirect
