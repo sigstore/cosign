@@ -38,15 +38,15 @@ var _ Interface = (*RegistryOptions)(nil)
 func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
-	cmd.Flags().StringVar(&o.TagPrefix, "signature-prefix", "", "custom prefix to use for signature tag")
-	cmd.Flags().StringVar(&o.TagSuffix, "signature-suffix", "", "custom suffix to use for signature tag")
+	cmd.Flags().StringVar(&o.TagPrefix, "tag-prefix", "", "custom prefix to use for tags")
+	cmd.Flags().StringVar(&o.TagSuffix, "signature-tag-suffix", "", "custom suffix to use for signature tags")
 }
 
 func (o *RegistryOptions) ClientOpts(ctx context.Context) []ociremote.Option {
 	if o.TagSuffix != "" {
-		return []ociremote.Option{ociremote.WithSignatureSuffix(o.TagSuffix), ociremote.WithSignaturePrefix(o.TagPrefix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
+		return []ociremote.Option{ociremote.WithPrefix(o.TagPrefix), ociremote.WithSignatureSuffix(o.TagSuffix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
 	} else {
-		return []ociremote.Option{ociremote.WithSignaturePrefix(o.TagPrefix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
+		return []ociremote.Option{ociremote.WithPrefix(o.TagPrefix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
 	}
 }
 

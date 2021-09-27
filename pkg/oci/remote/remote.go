@@ -127,7 +127,7 @@ func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) 
 		}
 		h = desc.Digest
 	}
-	return o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, suffix)), nil
+	return o.TargetRepository.Tag(normalize(h, o.TagPrefix, suffix)), nil
 }
 
 type digestable interface {
@@ -140,7 +140,7 @@ func signatures(digestable digestable, o *options) (oci.Signatures, error) {
 	if err != nil {
 		return nil, err
 	}
-	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, o.SignatureSuffix)), o.OriginalOptions...)
+	return Signatures(o.TargetRepository.Tag(normalize(h, o.TagPrefix, o.SignatureSuffix)), o.OriginalOptions...)
 }
 
 // attestations is a shared implementation of the oci.Signed* Signatures method.
@@ -149,5 +149,5 @@ func attestations(digestable digestable, o *options) (oci.Signatures, error) {
 	if err != nil {
 		return nil, err
 	}
-	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, o.AttestationSuffix)), o.OriginalOptions...)
+	return Signatures(o.TargetRepository.Tag(normalize(h, o.TagPrefix, o.AttestationSuffix)), o.OriginalOptions...)
 }
