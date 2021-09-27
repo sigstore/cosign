@@ -40,35 +40,9 @@ func NOf(args ...interface{}) int {
 	return n
 }
 
-<<<<<<< HEAD
-type RegistryOpts struct {
-	AllowInsecure bool
-	TagPrefix     string
-	TagSuffix     string
-}
-
-func (co *RegistryOpts) ClientOpts(ctx context.Context) []ociremote.Option {
-	if co.TagSuffix != "" {
-		return []ociremote.Option{ociremote.WithSignatureSuffix(co.TagSuffix), ociremote.WithSignaturePrefix(co.TagPrefix), ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
-	} else {
-		return []ociremote.Option{ociremote.WithSignaturePrefix(co.TagPrefix), ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
-	}
-}
-
-func (co *RegistryOpts) GetRegistryClientOpts(ctx context.Context) []remote.Option {
-	opts := defaultRegistryClientOpts(ctx)
-	if co != nil && co.AllowInsecure {
-		opts = append(opts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
-	}
-	return opts
-}
-
-func ApplyRegistryFlags(regOpts *RegistryOpts, fs *flag.FlagSet) {
-=======
 // ApplyRegistryFlags adds registry go flags to a flagset.
 // Deprecated: this will be deleted when the migration to cobra is finished.
 func ApplyRegistryFlags(regOpts *RegistryOptions, fs *flag.FlagSet) {
->>>>>>> 874644e (Migrate copy and clean to cobra. Add RegistryOptions to match the style of other flags. Move init. Move triangulate (#806))
 	fs.BoolVar(&regOpts.AllowInsecure, "allow-insecure-registry", false, "whether to allow insecure connections to registries. Don't use this for anything but testing")
 	fs.StringVar(&regOpts.TagPrefix, "signature-prefix", "", "custom prefix to use for signature tag")
 	fs.StringVar(&regOpts.TagSuffix, "signature-suffix", "", "custom suffix to use for signature tag")
