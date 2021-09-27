@@ -27,6 +27,7 @@ const (
 	SignatureTagSuffix   = ".sig"
 	SBOMTagSuffix        = ".sbom"
 	AttestationTagSuffix = ".att"
+	SignatureTagPrefix   = ""
 
 	RepoOverrideKey = "COSIGN_REPOSITORY"
 )
@@ -38,6 +39,7 @@ type options struct {
 	SignatureSuffix   string
 	AttestationSuffix string
 	SBOMSuffix        string
+	SignaturePrefix   string
 	TargetRepository  name.Repository
 	ROpt              []remote.Option
 
@@ -54,6 +56,7 @@ func makeOptions(target name.Repository, opts ...Option) (*options, error) {
 		SignatureSuffix:   SignatureTagSuffix,
 		AttestationSuffix: AttestationTagSuffix,
 		SBOMSuffix:        SBOMTagSuffix,
+		SignaturePrefix:   SignatureTagPrefix,
 		TargetRepository:  target,
 		ROpt:              defaultOptions,
 
@@ -76,6 +79,14 @@ func makeOptions(target name.Repository, opts ...Option) (*options, error) {
 	}
 
 	return o, nil
+}
+
+// WithSignaturePrefix is a functional option for overriding the default
+// signature tag prefix.
+func WithSignaturePrefix(prefix string) Option {
+	return func(o *options) {
+		o.SignaturePrefix = prefix
+	}
 }
 
 // WithSignatureSuffix is a functional option for overriding the default

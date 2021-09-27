@@ -39,7 +39,7 @@ func WriteSignatures(repo name.Repository, se oci.SignedEntity, opts ...Option) 
 	if err != nil {
 		return err
 	}
-	tag := o.TargetRepository.Tag(normalize(h, o.SignatureSuffix))
+	tag := o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, o.SignatureSuffix))
 
 	// Write the Signatures image to the tag, with the provided remote.Options
 	return remoteWrite(tag, sigs, o.ROpt...)
@@ -64,7 +64,7 @@ func WriteAttestations(repo name.Repository, se oci.SignedEntity, opts ...Option
 	if err != nil {
 		return err
 	}
-	tag := o.TargetRepository.Tag(normalize(h, o.AttestationSuffix))
+	tag := o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, o.AttestationSuffix))
 
 	// Write the Signatures image to the tag, with the provided remote.Options
 	return remoteWrite(tag, atts, o.ROpt...)

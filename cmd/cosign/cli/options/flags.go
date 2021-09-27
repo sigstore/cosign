@@ -45,14 +45,15 @@ func NOf(args ...interface{}) int {
 
 type RegistryOpts struct {
 	AllowInsecure bool
+	TagPrefix     string
 	TagSuffix     string
 }
 
 func (co *RegistryOpts) ClientOpts(ctx context.Context) []ociremote.Option {
 	if co.TagSuffix != "" {
-		return []ociremote.Option{ociremote.WithSignatureSuffix(co.TagSuffix), ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
+		return []ociremote.Option{ociremote.WithSignatureSuffix(co.TagSuffix), ociremote.WithSignaturePrefix(co.TagPrefix), ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
 	} else {
-		return []ociremote.Option{ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
+		return []ociremote.Option{ociremote.WithSignaturePrefix(co.TagPrefix), ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
 	}
 }
 
@@ -66,6 +67,7 @@ func (co *RegistryOpts) GetRegistryClientOpts(ctx context.Context) []remote.Opti
 
 func ApplyRegistryFlags(regOpts *RegistryOpts, fs *flag.FlagSet) {
 	fs.BoolVar(&regOpts.AllowInsecure, "allow-insecure-registry", false, "whether to allow insecure connections to registries. Don't use this for anything but testing")
+	fs.StringVar(&regOpts.TagPrefix, "signature-prefix", "", "custom prefix to use for signature tag")
 	fs.StringVar(&regOpts.TagSuffix, "signature-suffix", "", "custom suffix to use for signature tag")
 }
 

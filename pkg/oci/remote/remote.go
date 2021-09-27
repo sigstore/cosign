@@ -80,9 +80,9 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	}
 }
 
-func normalize(h v1.Hash, suffix string) string {
+func normalize(h v1.Hash, prefix string, suffix string) string {
 	// sha256:d34db33f -> sha256-d34db33f.suffix
-	return fmt.Sprintf("%s-%s%s", h.Algorithm, h.Hex, suffix)
+	return fmt.Sprintf("%s%s-%s%s", h.Algorithm, prefix, h.Hex, suffix)
 }
 
 // SignatureTag returns the name.Tag that associated signatures with a particular digest.
@@ -127,7 +127,7 @@ func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) 
 		}
 		h = desc.Digest
 	}
-	return o.TargetRepository.Tag(normalize(h, suffix)), nil
+	return o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, suffix)), nil
 }
 
 type digestable interface {
@@ -140,7 +140,7 @@ func signatures(digestable digestable, o *options) (oci.Signatures, error) {
 	if err != nil {
 		return nil, err
 	}
-	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignatureSuffix)), o.OriginalOptions...)
+	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, o.SignatureSuffix)), o.OriginalOptions...)
 }
 
 // attestations is a shared implementation of the oci.Signed* Signatures method.
@@ -149,5 +149,5 @@ func attestations(digestable digestable, o *options) (oci.Signatures, error) {
 	if err != nil {
 		return nil, err
 	}
-	return Signatures(o.TargetRepository.Tag(normalize(h, o.AttestationSuffix)), o.OriginalOptions...)
+	return Signatures(o.TargetRepository.Tag(normalize(h, o.SignaturePrefix, o.AttestationSuffix)), o.OriginalOptions...)
 }
