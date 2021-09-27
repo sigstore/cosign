@@ -17,14 +17,11 @@ package options
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
-	"net/http"
 	"reflect"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
 // OneOf ensures that only one of the supplied interfaces is set to a non-zero value.
@@ -43,6 +40,7 @@ func NOf(args ...interface{}) int {
 	return n
 }
 
+<<<<<<< HEAD
 type RegistryOpts struct {
 	AllowInsecure bool
 	TagPrefix     string
@@ -66,6 +64,11 @@ func (co *RegistryOpts) GetRegistryClientOpts(ctx context.Context) []remote.Opti
 }
 
 func ApplyRegistryFlags(regOpts *RegistryOpts, fs *flag.FlagSet) {
+=======
+// ApplyRegistryFlags adds registry go flags to a flagset.
+// Deprecated: this will be deleted when the migration to cobra is finished.
+func ApplyRegistryFlags(regOpts *RegistryOptions, fs *flag.FlagSet) {
+>>>>>>> 874644e (Migrate copy and clean to cobra. Add RegistryOptions to match the style of other flags. Move init. Move triangulate (#806))
 	fs.BoolVar(&regOpts.AllowInsecure, "allow-insecure-registry", false, "whether to allow insecure connections to registries. Don't use this for anything but testing")
 	fs.StringVar(&regOpts.TagPrefix, "signature-prefix", "", "custom prefix to use for signature tag")
 	fs.StringVar(&regOpts.TagSuffix, "signature-suffix", "", "custom suffix to use for signature tag")

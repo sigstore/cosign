@@ -20,6 +20,8 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/triangulate"
+
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -29,9 +31,11 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
+	"github.com/sigstore/cosign/cmd/cosign/cli/copy"
 	"github.com/sigstore/cosign/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/cmd/cosign/cli/initialize"
 	"github.com/sigstore/cosign/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
@@ -76,11 +80,11 @@ func New() *cobra.Command {
 					// PIV sub-tree
 					pivcli.PivKey(),
 					// PIV sub-tree
-					Copy(),
+					copy.Copy(),
 					Clean(),
-					Triangulate(),
-					// Init
-					Init(),
+					triangulate.Triangulate(),
+					// Initialize
+					initialize.Initialize(),
 					// Version
 					Version()},
 				Exec: func(context.Context, []string) error {
@@ -125,6 +129,8 @@ func New() *cobra.Command {
 	addSignBlob(cmd)
 	addGenerateKeyPair(cmd)
 	addAttest(cmd)
+	addCopy(cmd)
+	addClean(cmd)
 	addVersion(cmd)
 
 	return cmd

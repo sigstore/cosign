@@ -35,7 +35,7 @@ func Wasm() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload wasm", flag.ExitOnError)
 		f       = flagset.String("f", "", "path to the wasm file to upload")
-		regOpts options.RegistryOpts
+		regOpts options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -53,7 +53,7 @@ func Wasm() *ffcli.Command {
 	}
 }
 
-func WasmCmd(ctx context.Context, regOpts options.RegistryOpts, wasmPath, imageRef string) error {
+func WasmCmd(ctx context.Context, regOpts options.RegistryOptions, wasmPath, imageRef string) error {
 	b, err := ioutil.ReadFile(wasmPath)
 	if err != nil {
 		return err

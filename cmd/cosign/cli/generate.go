@@ -51,7 +51,7 @@ to sign payloads with your own tooling or algorithms.`,
 			if err != nil {
 				return err
 			}
-			return generate.GenerateCmd(cmd.Context(), o.RegistryOpts, args[0], annotationMap.Annotations, cmd.OutOrStdout())
+			return generate.GenerateCmd(cmd.Context(), o.Registry, args[0], annotationMap.Annotations, cmd.OutOrStdout())
 		},
 	}
 

@@ -61,7 +61,7 @@ func Blob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload blob", flag.ExitOnError)
 		ct      = flagset.String("ct", "", "content type to set")
-		regOpts options.RegistryOpts
+		regOpts options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	fmap := Files{}
@@ -96,7 +96,7 @@ EXAMPLES
 	}
 }
 
-func BlobCmd(ctx context.Context, regOpts options.RegistryOpts, files []cremote.File, contentType, imageRef string) error {
+func BlobCmd(ctx context.Context, regOpts options.RegistryOptions, files []cremote.File, contentType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

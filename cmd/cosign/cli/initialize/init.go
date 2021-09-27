@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package initialize
 
 import (
 	"context"
@@ -29,17 +29,17 @@ import (
 //go:embed 1.root.json
 var initialRoot string
 
-func Init() *ffcli.Command {
+func Initialize() *ffcli.Command {
 	var (
-		flagset = flag.NewFlagSet("cosign init", flag.ExitOnError)
+		flagset = flag.NewFlagSet("cosign initialize", flag.ExitOnError)
 		// TODO: Support HTTP mirrors as well
 		mirror    = flagset.String("mirror", "sigstore-tuf-root", "GCS bucket to a SigStore TUF repository.")
 		root      = flagset.String("root", "", "path to trusted initial root. defaults to embedded root.")
 		threshold = flagset.Int("threshold", 3, "threshold of root key signers")
 	)
 	return &ffcli.Command{
-		Name:       "init",
-		ShortUsage: "cosign init -mirror <url> -out <file>",
+		Name:       "initialize",
+		ShortUsage: "cosign initialize -mirror <url> -out <file>",
 		ShortHelp:  `Initializes SigStore root to retrieve trusted certificate and key targets for verification.`,
 		LongHelp: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
@@ -57,13 +57,13 @@ with Fulcio root CA) are pulled form the trusted metadata.
 
 EXAMPLES
   # initialize root with distributed root keys, default mirror, and default out path.
-  cosign init
+  cosign initialize
 
   # initialize with an out-of-band root key file.
-  cosign init
+  cosign initialize
 
   # initialize with an out-of-band root key file and custom repository mirror.
-  cosign init -mirror <url> -root <url>
+  cosign initialize -mirror <url> -root <url>
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {

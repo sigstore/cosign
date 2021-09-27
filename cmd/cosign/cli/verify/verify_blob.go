@@ -54,7 +54,7 @@ func VerifyBlob() *ffcli.Command {
 		rekorURL  = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
 		cert      = flagset.String("cert", "", "path to the public certificate")
 		signature = flagset.String("signature", "", "signature content or path or remote URL")
-		regOpts   options.RegistryOpts
+		regOpts   options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{

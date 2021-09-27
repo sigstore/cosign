@@ -76,7 +76,7 @@ func addSignBlob(topLevel *cobra.Command) {
 				OIDCClientSecret: o.OIDC.ClientSecret,
 			}
 			for _, blob := range args {
-				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.RegistryOpts, blob, o.Base64Output, o.Output); err != nil {
+				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.Output); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}

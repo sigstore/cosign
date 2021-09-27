@@ -90,7 +90,7 @@ func addSign(topLevel *cobra.Command) {
 			if err != nil {
 				return err
 			}
-			if err := sign.SignCmd(cmd.Context(), ko, o.RegistryOpts, annotationsMap.Annotations, args, o.Cert, o.Upload, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
+			if err := sign.SignCmd(cmd.Context(), ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.Upload, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
 				if o.Attachment == "" {
 					return errors.Wrapf(err, "signing %v", args)
 				}

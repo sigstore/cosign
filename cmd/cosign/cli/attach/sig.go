@@ -38,7 +38,7 @@ func Signature() *ffcli.Command {
 		flagset   = flag.NewFlagSet("cosign attach signature", flag.ExitOnError)
 		signature = flagset.String("signature", "", "the signature, path to the signature, or {-} for stdin")
 		payload   = flagset.String("payload", "", "path to the payload covered by the signature (if using another format)")
-		regOpts   options.RegistryOpts
+		regOpts   options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -56,7 +56,7 @@ func Signature() *ffcli.Command {
 	}
 }
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, sigRef, payloadRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err

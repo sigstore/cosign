@@ -35,7 +35,7 @@ import (
 func Generate() *ffcli.Command {
 	var (
 		flagset     = flag.NewFlagSet("cosign generate", flag.ExitOnError)
-		regOpts     options.RegistryOpts
+		regOpts     options.RegistryOptions
 		annotations = signature.AnnotationsMap{}
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
@@ -66,7 +66,7 @@ EXAMPLES
 }
 
 // nolint
-func GenerateCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string, annotations map[string]interface{}, w io.Writer) error {
+func GenerateCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, annotations map[string]interface{}, w io.Writer) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
