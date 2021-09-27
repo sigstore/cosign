@@ -72,7 +72,6 @@ func (v *Validator) ValidateCronJob(ctx context.Context, c *duckv1.CronJob) *api
 		// Don't block things that are being deleted.
 		return nil
 	}
-	logging.FromContext(ctx).Infof("VILLE: Validating podspec: %+v", c.Spec.JobTemplate.Spec.Template.Spec)
 	return v.validatePodSpec(ctx, &c.Spec.JobTemplate.Spec.Template.Spec).ViaField("spec.jobTemplate.spec.template.spec")
 }
 
@@ -170,7 +169,6 @@ func (v *Validator) ResolveCronJob(ctx context.Context, c *duckv1.CronJob) {
 		ServiceAccountName: c.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName,
 		ImagePullSecrets:   imagePullSecrets,
 	}
-	logging.FromContext(ctx).Infof("VILLE: Resolving podspec: %+v", c.Spec.JobTemplate.Spec.Template.Spec)
 	v.resolvePodSpec(ctx, &c.Spec.JobTemplate.Spec.Template.Spec, opt)
 }
 
