@@ -27,10 +27,10 @@ type AttestOptions struct {
 	Force     bool
 	Recursive bool
 
-	Fulcio       FulcioOptions
-	SecurityKey  SecurityKeyOptions
-	Predicate    PredicateOptions
-	RegistryOpts RegistryOpts
+	Fulcio      FulcioOptions
+	SecurityKey SecurityKeyOptions
+	Predicate   PredicateOptions
+	Registry    RegistryOptions
 }
 
 var _ Interface = (*AttestOptions)(nil)
@@ -40,7 +40,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
-	// TODO(n3wscott): We need o.RegistryOpts.AddFlags(cmd)
+	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
@@ -56,7 +56,4 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")
-
-	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
-		"whether to allow insecure connections to registries. Don't use this for anything but testing")
 }

@@ -70,7 +70,7 @@ func addAttest(topLevel *cobra.Command) {
 				FulcioURL: o.Fulcio.URL,
 			}
 			for _, img := range args {
-				if err := attest.AttestCmd(cmd.Context(), ko, o.RegistryOpts, img, o.Cert, o.Upload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {
+				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.Upload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}

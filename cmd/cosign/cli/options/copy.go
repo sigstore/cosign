@@ -19,16 +19,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// GenerateOptions is the top level wrapper for the generate command.
-type GenerateOptions struct {
-	AnnotationOptions
-	Registry RegistryOptions
+// CopyOptions is the top level wrapper for the copy command.
+type CopyOptions struct {
+	SignatureOnly bool
+	Force         bool
+	Registry      RegistryOptions
 }
 
-var _ Interface = (*GenerateOptions)(nil)
+var _ Interface = (*CopyOptions)(nil)
 
 // AddFlags implements Interface
-func (o *GenerateOptions) AddFlags(cmd *cobra.Command) {
-	o.AnnotationOptions.AddFlags(cmd)
+func (o *CopyOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
+
+	cmd.Flags().BoolVar(&o.SignatureOnly, "sig-only", true,
+		"only copy the image signature")
+
+	cmd.Flags().BoolVarP(&o.Force, "force", "f", false,
+		"overwrite destination image(s), if necessary")
 }

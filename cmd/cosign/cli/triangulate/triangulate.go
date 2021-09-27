@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package triangulate
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func Triangulate() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign triangulate", flag.ExitOnError)
 		t       = flagset.String("type", "signature", "related attachment to triangulate (attestation|sbom|signature), default signature")
-		regOpts options.RegistryOpts
+		regOpts options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -49,7 +49,7 @@ func Triangulate() *ffcli.Command {
 	}
 }
 
-func MungeCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string, attachmentType string) error {
+func MungeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, attachmentType string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

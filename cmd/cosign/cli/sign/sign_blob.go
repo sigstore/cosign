@@ -52,7 +52,7 @@ func SignBlob() *ffcli.Command {
 		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
 		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
 		output           = flagset.String("output", "", "write the signature to FILE")
-		regOpts          options.RegistryOpts
+		regOpts          options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -113,7 +113,7 @@ type KeyOpts struct {
 }
 
 // nolint
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, payloadPath string, b64 bool, output string) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, output string) ([]byte, error) {
 	var payload []byte
 	var err error
 
