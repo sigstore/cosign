@@ -36,7 +36,7 @@ type SignOptions struct {
 	Attachment string
 
 	AnnotationOptions
-	RegistryOpts RegistryOpts
+	Registry RegistryOptions
 }
 
 var _ Interface = (*SignOptions)(nil)
@@ -48,6 +48,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	o.OIDC.AddFlags(cmd)
 	o.SecurityKey.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
+	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
@@ -69,7 +70,4 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"related image attachment to sign (sbom), default none")
-
-	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
-		"whether to allow insecure connections to registries. Don't use this for anything but testing")
 }

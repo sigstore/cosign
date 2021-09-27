@@ -41,7 +41,7 @@ import (
 // VerifyCommand verifies a signature on a supplied container image
 // nolint
 type VerifyCommand struct {
-	options.RegistryOpts
+	options.RegistryOptions
 	CheckClaims bool
 	KeyRef      string
 	CertEmail   string
@@ -63,7 +63,7 @@ func ApplyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output format for the signing image information (default JSON) (json|text)")
 	flagset.StringVar(&cmd.Attachment, "attachment", "", "related image attachment to sign (none|sbom), default none")
-	options.ApplyRegistryFlags(&cmd.RegistryOpts, flagset)
+	options.ApplyRegistryFlags(&cmd.RegistryOptions, flagset)
 
 	// parse annotations
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -135,7 +135,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 
 	co := &cosign.CheckOpts{
 		Annotations:        *c.Annotations,
-		RegistryClientOpts: c.RegistryOpts.ClientOpts(ctx),
+		RegistryClientOpts: c.RegistryOptions.ClientOpts(ctx),
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
@@ -171,7 +171,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "parsing reference")
 		}
-		ref, err = sign.GetAttachedImageRef(ref, c.Attachment, c.RegistryOpts.GetRegistryClientOpts(ctx)...)
+		ref, err = sign.GetAttachedImageRef(ref, c.Attachment, c.RegistryOptions.GetRegistryClientOpts(ctx)...)
 		if err != nil {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}

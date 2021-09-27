@@ -61,7 +61,7 @@ func Attest() *ffcli.Command {
 		force         = flagset.Bool("f", false, "skip warnings and confirmations")
 		idToken       = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
 		predicateType = flagset.String("type", "custom", "specify predicate type (default: custom) (slsaprovenance|link|spdx)")
-		regOpts       options.RegistryOpts
+		regOpts       options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -125,7 +125,7 @@ var predicateTypeMap = map[string]string{
 }
 
 //nolint
-func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpts, imageRef string, certPath string,
+func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string,
 	upload bool, predicatePath string, force bool, predicateType string) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {

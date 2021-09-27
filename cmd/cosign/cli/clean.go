@@ -24,15 +24,39 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
+func addClean(topLevel *cobra.Command) {
+	o := &options.RegistryOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "clean",
+		Short: "Remove all signatures from an image.\ncosign clean <image uri>",
+		Long:  "Remove all signatures from an image.",
+
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return flag.ErrHelp
+			}
+
+			return CleanCmd(cmd.Context(), *o, args[0])
+		},
+	}
+
+	o.AddFlags(cmd)
+	topLevel.AddCommand(cmd)
+}
+
+// Clean subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Clean() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign clean", flag.ExitOnError)
-		regOpts options.RegistryOpts
+		regOpts options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -41,16 +65,12 @@ func Clean() *ffcli.Command {
 		ShortHelp:  "Remove all signatures from an image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-
-			return CleanCmd(ctx, regOpts, args[0])
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
-func CleanCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string) error {
+func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

@@ -32,7 +32,7 @@ import (
 func SBOM() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign download sbom", flag.ExitOnError)
-		regOpts options.RegistryOpts
+		regOpts options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -50,7 +50,7 @@ func SBOM() *ffcli.Command {
 	}
 }
 
-func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string, out io.Writer) ([]string, error) {
+func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, out io.Writer) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err

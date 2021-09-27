@@ -238,7 +238,7 @@ func TestGetImagesFromYamlManifest(t *testing.T) {
 		fileContents: []byte(singleContainerManifest),
 		expected:     []string{"nginx:1.21.1"},
 	}, {
-		name:         "init and container images",
+		name:         "initialize and container images",
 		fileContents: []byte(initContainerManifest),
 		expected:     []string{"preflight:3.2.1", "nginx:1.21.1"},
 	}, {

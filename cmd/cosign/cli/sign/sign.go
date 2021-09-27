@@ -132,7 +132,7 @@ func Sign() *ffcli.Command {
 		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
 		attachment       = flagset.String("attachment", "", "related image attachment to sign (sbom), default none")
 		annotations      = sigs.AnnotationsMap{}
-		regOpts          options.RegistryOpts
+		regOpts          options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
@@ -209,7 +209,7 @@ func GetAttachedImageRef(ref name.Reference, attachment string, remoteOpts ...re
 }
 
 // nolint
-func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, annotations map[string]interface{},
+func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
 	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {

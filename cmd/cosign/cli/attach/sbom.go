@@ -45,7 +45,7 @@ func SBOM() *ffcli.Command {
 		flagset  = flag.NewFlagSet("cosign attach sbom", flag.ExitOnError)
 		sbom     = flagset.String("sbom", "", "path to the sbom, or {-} for stdin")
 		sbomType = flagset.String("type", "spdx", "type of sbom (spdx|cyclonedx), default spdx")
-		regOpts  options.RegistryOpts
+		regOpts  options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -68,7 +68,7 @@ func SBOM() *ffcli.Command {
 	}
 }
 
-func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, sbomRef string, sbomType types.MediaType, imageRef string) error {
+func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef string, sbomType types.MediaType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

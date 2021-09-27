@@ -31,7 +31,7 @@ import (
 func Signature() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign download signature", flag.ExitOnError)
-		regOpts options.RegistryOpts
+		regOpts options.RegistryOptions
 	)
 	options.ApplyRegistryFlags(&regOpts, flagset)
 	return &ffcli.Command{
@@ -48,7 +48,7 @@ func Signature() *ffcli.Command {
 	}
 }
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
