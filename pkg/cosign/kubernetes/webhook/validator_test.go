@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	fakekube "knative.dev/pkg/client/injection/kube/client/fake"
 	fakesecret "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 	rtesting "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/system"
@@ -200,9 +202,7 @@ func TestResolvePodSpec(t *testing.T) {
 
 	ctx, _ := rtesting.SetupFakeContext(t)
 	si := fakesecret.Get(ctx)
-
 	secretName := "blah"
-
 	si.Informer().GetIndexer().Add(&corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
@@ -217,6 +217,13 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 `),
 		},
 	})
+
+	kc := fakekube.Get(ctx)
+	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}, metav1.CreateOptions{})
 
 	v := NewValidator(ctx, secretName)
 
@@ -327,7 +334,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 
 			// Check the core mechanics.
 			got := test.ps.DeepCopy()
-			v.resolvePodSpec(ctx, got)
+			v.resolvePodSpec(ctx, got, k8schain.Options{})
 			if !cmp.Equal(got, test.want) {
 				t.Errorf("resolvePodSpec = %s", cmp.Diff(got, test.want))
 			}

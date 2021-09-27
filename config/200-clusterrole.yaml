@@ -36,3 +36,11 @@ rules:
     # The webhook configured the namespace as the OwnerRef on various cluster-scoped resources,
     # which requires we can Get the system namespace.
     resourceNames: ["cosign-system"]
+
+  # This is needed by k8schain to support fetching pull secrets attached to pod specs
+  # or their service accounts.  If pull secrets aren't used, the "secrets" below can
+  # be safely dropped, but the logic will fetch the service account to check for pull
+  # secrets.
+  - apiGroups: [""]
+    resources: ["serviceaccounts", "secrets"]
+    verbs: ["get"]
