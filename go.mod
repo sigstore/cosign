@@ -3,7 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 // DO NOT MERGE
-replace knative.dev/pkg => github.com/vaikas/pkg cronjob-duck
+replace knative.dev/pkg => github.com/vaikas/pkg v0.0.0-20210927232805-81c09c17d09c
 
 require (
 	cloud.google.com/go/storage v1.16.1

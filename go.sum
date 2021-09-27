@@ -1604,6 +1604,8 @@ github.com/urfave/cli v1.22.4/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtX
 github.com/urfave/cli v1.22.5 h1:lNq9sAHXK2qfdI8W+GRItjCEkI+2oR4d+MEHy1CKXoU=
 github.com/urfave/cli v1.22.5/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
+github.com/vaikas/pkg v0.0.0-20210927232805-81c09c17d09c h1:0l7tUAkmi+maAcxbuR3uT2CJ1uMacQg4xYFE/bgJjOA=
+github.com/vaikas/pkg v0.0.0-20210927232805-81c09c17d09c/go.mod h1:wRMSKvXVVOvH3d9e3NV2IrX7MQqedzmrAX0LtTIe2oA=
 github.com/vdemeester/k8s-pkg-credentialprovider v1.21.0-1 h1:7Ajl3rjeYoB5V47jPknnLbyxYlhMXTTJiQsye5aT7f0=
 github.com/vdemeester/k8s-pkg-credentialprovider v1.21.0-1/go.mod h1:l4LxiP0cmEcc5q4BTDE8tZSyIiyXe0T28x37yHpMzoM=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
