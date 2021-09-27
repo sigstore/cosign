@@ -72,4 +72,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
+
+	cmd.Flags().StringVar(&o.RegistryOpts.TagSuffix, "signature-suffix", "",
+		"custom suffix to use for signature tag")
 }
