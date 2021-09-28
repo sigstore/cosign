@@ -44,7 +44,7 @@ spec:
           image: $KO_DOCKER_REPO/sample
 EOF
 cat > cronjob.yaml <<EOF
-apiVersion: batch/v1
+apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   generateName: cronjob-test-
