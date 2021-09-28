@@ -32,7 +32,7 @@ var _ Interface = (*CopyOptions)(nil)
 func (o *CopyOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
-	cmd.Flags().BoolVar(&o.SignatureOnly, "sig-only", true,
+	cmd.Flags().BoolVar(&o.SignatureOnly, "sig-only", false,
 		"only copy the image signature")
 
 	cmd.Flags().BoolVarP(&o.Force, "force", "f", false,
