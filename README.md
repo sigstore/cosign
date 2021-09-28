@@ -39,6 +39,13 @@ with:
   cosign-release: 'v1.0.0' # optional
 ```
 
+### Kubernetes webhook
+
+`cosign` can be installed on your Kubernetes cluster in a form of a [`cosigned webhook`](https://github.com/sigstore/helm-charts/tree/main/charts/cosigned).
+By installing a webhook, you can automatically validate that all the container
+images have been signed. The webhook also resolves the image tags to ensure the
+image being ran is not different from when it was admitted.
+
 ### Container Images
 
 Signed release images are available at `gcr.io/projectsigstore/cosign`.
