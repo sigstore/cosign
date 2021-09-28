@@ -72,6 +72,7 @@ var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	appsv1.SchemeGroupVersion.WithKind("StatefulSet"): &duckv1.WithPod{},
 	appsv1.SchemeGroupVersion.WithKind("DaemonSet"):   &duckv1.WithPod{},
 	batchv1.SchemeGroupVersion.WithKind("Job"):        &duckv1.WithPod{},
+
 	batchv1.SchemeGroupVersion.WithKind("CronJob"):      &duckv1.CronJob{},
 	batchv1beta1.SchemeGroupVersion.WithKind("CronJob"): &duckv1.CronJob{},
 }
