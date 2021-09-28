@@ -89,9 +89,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}
 
 	if !sigOnly {
-		if err := copyImage(srcRef, dstRef, force, remoteOpts...); err != nil {
-			return err
-		}
+		return copyImage(srcRef, dstRef, force, remoteOpts...)
 	}
 
 	return nil
