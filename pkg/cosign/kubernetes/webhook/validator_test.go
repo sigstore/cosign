@@ -28,6 +28,7 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -78,7 +79,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		}
 		return []oci.Signature{sig}, true, nil
 	}
-	// Let's just say that everything is verified.
+	// Let's just say that everything is not verified.
 	fail := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 		return nil, false, errors.New("bad signature")
 	}
@@ -190,6 +191,170 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			withPod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 			if got := v.ValidatePodSpecable(context.Background(), withPod); got != nil {
 				t.Errorf("ValidatePodSpecable() = %v, wanted nil", got)
+			}
+		})
+	}
+}
+
+func TestValidateCronJob(t *testing.T) {
+	tag := name.MustParseReference("gcr.io/distroless/static:nonroot")
+	// Resolved via crane digest on 2021/09/25
+	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
+
+	ctx, _ := rtesting.SetupFakeContext(t)
+	si := fakesecret.Get(ctx)
+
+	secretName := "blah"
+
+	si.Informer().GetIndexer().Add(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      secretName,
+		},
+		Data: map[string][]byte{
+			// Random public key (cosign generate-key-pair) 2021-09-25
+			"cosign.pub": []byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
+UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
+-----END PUBLIC KEY-----
+`),
+		},
+	})
+
+	v := NewValidator(ctx, secretName)
+
+	cvs := cosignVerifySignatures
+	defer func() {
+		cosignVerifySignatures = cvs
+	}()
+	// Let's just say that everything is verified.
+	pass := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		sig, err := static.NewSignature(nil, "")
+		if err != nil {
+			return nil, false, err
+		}
+		return []oci.Signature{sig}, true, nil
+	}
+	// Let's just say that everything is not verified.
+	fail := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		return nil, false, errors.New("bad signature")
+	}
+
+	tests := []struct {
+		name string
+		c    *duckv1.CronJob
+		want *apis.FieldError
+		cvs  func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
+	}{{
+		name: "simple, no error",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: digest.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: digest.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		cvs: pass,
+	}, {
+		name: "bad reference",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: "in@valid",
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `could not parse reference: in@valid`,
+			Paths:   []string{"spec.jobTemplate.spec.template.spec.containers[0].image"},
+		},
+		cvs: fail,
+	}, {
+		name: "not digest",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: tag.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `invalid value: gcr.io/distroless/static:nonroot must be an image digest`,
+			Paths:   []string{"spec.jobTemplate.spec.template.spec.containers[0].image"},
+		},
+		cvs: fail,
+	}, {
+		name: "bad signature",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: digest.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `invalid image signature`,
+			Paths:   []string{"spec.jobTemplate.spec.template.spec.containers[0].image"},
+		},
+		cvs: fail,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cosignVerifySignatures = test.cvs
+
+			// Check the core mechanics
+			got := v.ValidateCronJob(context.Background(), test.c)
+			if (got != nil) != (test.want != nil) {
+				t.Errorf("validateCronJob() = %v, wanted %v", got, test.want)
+			} else if got != nil && got.Error() != test.want.Error() {
+				t.Errorf("validateCronJob() = %v, wanted %v", got, test.want)
+			}
+			// Check that we don't block things being deleted.
+			cronJob := test.c.DeepCopy()
+			cronJob.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			if got := v.ValidateCronJob(context.Background(), cronJob); got != nil {
+				t.Errorf("ValidateCronJob() = %v, wanted nil", got)
 			}
 		})
 	}
@@ -391,6 +556,244 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			v.ResolvePodSpecable(ctx, withPod)
 			if !cmp.Equal(withPod, want) {
 				t.Errorf("ResolvePodSpecable = %s", cmp.Diff(withPod, want))
+			}
+		})
+	}
+}
+
+func TestResolveCronJob(t *testing.T) {
+	tag := name.MustParseReference("gcr.io/distroless/static:nonroot")
+	// Resolved via crane digest on 2021/09/25
+	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
+
+	ctx, _ := rtesting.SetupFakeContext(t)
+	si := fakesecret.Get(ctx)
+	secretName := "blah"
+	si.Informer().GetIndexer().Add(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      secretName,
+		},
+		Data: map[string][]byte{
+			// Random public key (cosign generate-key-pair) 2021-09-25
+			"cosign.pub": []byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
+UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
+-----END PUBLIC KEY-----
+`),
+		},
+	})
+
+	kc := fakekube.Get(ctx)
+	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}, metav1.CreateOptions{})
+
+	v := NewValidator(ctx, secretName)
+
+	rrd := remoteResolveDigest
+	defer func() {
+		remoteResolveDigest = rrd
+	}()
+	resolve := func(ref name.Reference, opts ...remote.Option) (name.Digest, error) {
+		return digest.(name.Digest), nil
+	}
+
+	tests := []struct {
+		name string
+		c    *duckv1.CronJob
+		want *duckv1.CronJob
+		wc   func(context.Context) context.Context
+		rrd  func(name.Reference, ...remote.Option) (name.Digest, error)
+	}{{
+		name: "nothing changed (not the right update)",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: tag.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: tag.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: tag.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: tag.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		rrd: resolve,
+	}, {
+		name: "nothing changed (bad reference)",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: "in@valid",
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: "in@valid",
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		wc:  apis.WithinCreate,
+		rrd: resolve,
+	}, {
+		name: "nothing changed (unable to resolve)",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: "in@valid",
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: "in@valid",
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		wc: apis.WithinCreate,
+		rrd: func(r name.Reference, o ...remote.Option) (name.Digest, error) {
+			return name.Digest{}, errors.New("boom")
+		},
+	}, {
+		name: "digests resolve (in create)",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: tag.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: tag.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: digest.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: digest.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		wc:  apis.WithinCreate,
+		rrd: resolve,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			remoteResolveDigest = test.rrd
+			ctx := context.Background()
+			if test.wc != nil {
+				ctx = test.wc(context.Background())
+			}
+
+			var want runtime.Object
+
+			cronJob := test.c.DeepCopy()
+			want = test.want.DeepCopy()
+			v.ResolveCronJob(ctx, cronJob)
+			if !cmp.Equal(cronJob, want) {
+				t.Errorf("ResolveCronJob = %s", cmp.Diff(cronJob, want))
+			}
+
+			// Check that nothing happens when it's being deleted.
+			cronJob = test.c.DeepCopy()
+			cronJob.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			want = cronJob.DeepCopy()
+			v.ResolveCronJob(ctx, cronJob)
+			if !cmp.Equal(cronJob, want) {
+				t.Errorf("ResolveCronJob = %s", cmp.Diff(cronJob, want))
 			}
 		})
 	}

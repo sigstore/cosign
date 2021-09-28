@@ -27,7 +27,7 @@ require (
 	k8s.io/api v0.21.4
 	k8s.io/apimachinery v0.21.4
 	k8s.io/client-go v0.21.4
-	knative.dev/pkg v0.0.0-20210908025933-71508fc69a57
+	knative.dev/pkg v0.0.0-20210927235013-221312a6a057
 )
 
 require (
@@ -53,7 +53,6 @@ require (
 	go.opentelemetry.io/contrib v0.22.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/mod v0.5.0 // indirect
-	golang.org/x/net v0.0.0-20210903162142-ad29c8ab022f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	k8s.io/klog/v2 v2.10.0 // indirect
