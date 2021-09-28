@@ -27,7 +27,7 @@ If you have Go 1.16+, you can directly install by running:
 
     $ go install github.com/sigstore/cosign/cmd/cosign@latest
 
-and the resulting binary will be placed at `$HOME/go/bin/cosign`.
+and the resulting binary will be placed at `$GOPATH/bin/cosign` (or `$GOBIN/cosign`, if set).
 
 ### GitHub Action
 
