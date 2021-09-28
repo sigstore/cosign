@@ -106,6 +106,10 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 		if err != nil {
 			return name.Digest{}, err
 		}
+		lastHash, err = img.Digest()
+		if err != nil {
+			return name.Digest{}, err
+		}
 		if err := remote.Write(ref, img, remoteOpts...); err != nil {
 			return name.Digest{}, err
 		}
@@ -113,11 +117,11 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 		if err != nil {
 			return name.Digest{}, err
 		}
-		lastHash, err = l[0].Digest()
+		layerHash, err := l[0].Digest()
 		if err != nil {
 			return name.Digest{}, err
 		}
-		blobURL := ref.Context().Registry.RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/" + lastHash.String()
+		blobURL := ref.Context().Registry.RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/" + layerHash.String()
 		fmt.Fprintf(os.Stderr, "File [%s] is available directly at [%s]\n", f.Path(), blobURL)
 		if f.Platform() != nil {
 			idx = mutate.AppendManifests(idx, mutate.IndexAddendum{
