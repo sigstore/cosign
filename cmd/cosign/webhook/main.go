@@ -21,6 +21,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -71,6 +72,9 @@ var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	appsv1.SchemeGroupVersion.WithKind("StatefulSet"): &duckv1.WithPod{},
 	appsv1.SchemeGroupVersion.WithKind("DaemonSet"):   &duckv1.WithPod{},
 	batchv1.SchemeGroupVersion.WithKind("Job"):        &duckv1.WithPod{},
+
+	batchv1.SchemeGroupVersion.WithKind("CronJob"):      &duckv1.CronJob{},
+	batchv1beta1.SchemeGroupVersion.WithKind("CronJob"): &duckv1.CronJob{},
 }
 
 func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
@@ -90,6 +94,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 		func(ctx context.Context) context.Context {
 			ctx = duckv1.WithPodValidator(ctx, validator.ValidatePod)
 			ctx = duckv1.WithPodSpecValidator(ctx, validator.ValidatePodSpecable)
+			ctx = duckv1.WithCronJobValidator(ctx, validator.ValidateCronJob)
 			return ctx
 		},
 
@@ -119,6 +124,7 @@ func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 		func(ctx context.Context) context.Context {
 			ctx = duckv1.WithPodDefaulter(ctx, validator.ResolvePod)
 			ctx = duckv1.WithPodSpecDefaulter(ctx, validator.ResolvePodSpecable)
+			ctx = duckv1.WithCronJobDefaulter(ctx, validator.ResolveCronJob)
 			return ctx
 		},
 
