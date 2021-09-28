@@ -160,7 +160,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: test cronjob digest resolution'
-IMAGE=$(kubectl create --dry-run=server -f job.yaml -oyaml | yq e '.spec.jobTemplate.spec.template.spec.containers[0].image' -)
+IMAGE=$(kubectl create --dry-run=server -f cronjob.yaml -oyaml | yq e '.spec.jobTemplate.spec.template.spec.containers[0].image' -)
 
 if [ "$IMAGE" != "$DIGEST" ] ; then
   echo Failed to resolve tag to digest!
