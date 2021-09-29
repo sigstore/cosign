@@ -57,28 +57,6 @@ type FulcioSigner struct {
 	issuer   string
 }
 
-/*
-func GenerateFulcioSigner(ctx context.Context, idToken string) (*FulcioSigner, error) {
-	k, err := fulcio.NewSigner(ctx, idToken)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting key from Fulcio")
-	}
-	certs, err := cosign.LoadCerts(k.Cert)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting Fulcio certificate")
-	}
-
-	return &FulcioSigner{
-		Signer:        k,
-		ids:           []string{certs[0].EmailAddresses[0]},
-		cert:          k.Cert,
-		keyType:       KeyTypeFulcio,
-		keyScheme:     KeySchemeFulcio,
-		keyAlgorithms: data.KeyAlgorithms,
-	}, nil
-}
-*/
-
 func (s *FulcioSigner) PublicData() *Key {
 	return FulcioVerificationKey(s.identity, s.issuer)
 }

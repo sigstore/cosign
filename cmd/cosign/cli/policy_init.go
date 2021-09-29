@@ -19,10 +19,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/mail"
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/spf13/cobra"
 )
@@ -78,29 +81,32 @@ func addPolicyInit(topLevel *cobra.Command) {
 			if err != nil {
 				return err
 			}
-			policyFile, err := policy.JsonMarshal("", "\t")
+			policyFile, err := policy.JSONMarshal("", "\t")
 			if err != nil {
 				return err
 			}
 
+			var outfile string
 			if o.OutFile != "" {
+				outfile = o.OutFile
 				err = ioutil.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
 					return errors.Wrapf(err, "error writing to root.json")
 				}
-			}
-
-			/*
-				files := []cremote.File{
-					{Path: *outFile},
-				}
-
-				if err := upload.BlobCmd(ctx, files, "", *imageRef+"/root.json"); err != nil {
+			} else {
+				tempFile, err := os.CreateTemp("", "root")
+				if err != nil {
 					return err
 				}
-			*/
+				outfile = tempFile.Name()
+				defer os.Remove(tempFile.Name())
+			}
 
-			return nil
+			files := []cremote.File{
+				cremote.FileFromFlag(outfile),
+			}
+
+			return upload.BlobCmd(cmd.Context(), options.RegistryOptions{}, files, "", o.ImageRef+"/root.json")
 		},
 	}
 

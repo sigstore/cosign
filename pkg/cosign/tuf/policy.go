@@ -131,7 +131,7 @@ func (r *Root) Marshal() (*Signed, error) {
 	return &Signed{Signed: b}, nil
 }
 
-func (s *Signed) JsonMarshal(prefix, indent string) ([]byte, error) {
+func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
 	b, err := cjson.Marshal(s)
 	if err != nil {
 		return []byte{}, err
