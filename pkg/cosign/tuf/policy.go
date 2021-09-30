@@ -124,6 +124,7 @@ func (r *Role) AddKeysWithThreshold(keys []*Key, threshold int) bool {
 }
 
 func (r *Root) Marshal() (*Signed, error) {
+	// Marshals the Root into a Signed type
 	b, err := cjson.Marshal(r)
 	if err != nil {
 		return nil, err
@@ -132,6 +133,7 @@ func (r *Root) Marshal() (*Signed, error) {
 }
 
 func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
+	// Marshals Signed with prefix and indent.
 	b, err := cjson.Marshal(s)
 	if err != nil {
 		return []byte{}, err

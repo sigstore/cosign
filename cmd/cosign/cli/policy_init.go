@@ -35,16 +35,25 @@ func validEmail(email string) bool {
 	return err == nil
 }
 
-func addPolicyInit(topLevel *cobra.Command) {
+func addPolicy(topLevel *cobra.Command) {
 	o := &options.PolicyInitOptions{}
 
-	cmd := &cobra.Command{
-		Use:   "policy-init",
+	policyCmd := &cobra.Command{
+		Use:   "policy",
+		Short: "subcommand to manage a keyless policy.",
+		Long:  "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	initCmd := &cobra.Command{
+		Use:   "init",
 		Short: "generate a new keyless policy.",
-		Long:  "policy-init is used to generate a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
+		Long:  "init is used to generate a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
 		Example: `
   # extract public key from private key to a specified out file.
-  cosign policy-init -ns <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)`,
+  cosign policy init -ns <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var publicKeys []*tuf.Key
 
@@ -55,6 +64,7 @@ func addPolicyInit(topLevel *cobra.Command) {
 				if !validEmail(email) {
 					panic(fmt.Sprintf("Invalid email format: %s", email))
 				} else {
+					// Currently no issuer is set: this would need to be set by the initializer.
 					key := tuf.FulcioVerificationKey(strings.TrimSpace(email), "")
 					publicKeys = append(publicKeys, key)
 				}
@@ -110,6 +120,7 @@ func addPolicyInit(topLevel *cobra.Command) {
 		},
 	}
 
-	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	o.AddFlags(initCmd)
+	policyCmd.AddCommand(initCmd)
+	topLevel.AddCommand(policyCmd)
 }

@@ -13,32 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tuf
+package cli
 
 import (
-	"encoding/json"
+	"testing"
 )
 
-const (
-	KeyTypeFulcio   = "sigstore-oidc"
-	KeySchemeFulcio = "https://fulcio.sigstore.dev"
-)
+// Tests correctly formatted emails do not fail validEmail call
+// Tests incorrectly formatted emails do not pass validEmail call
+func TestEmailValid(t *testing.T) {
+	goodEmail := "foo@foo.com"
+	strongBadEmail := "foofoocom"
 
-var (
-	KeyAlgorithms = []string{"sha256", "sha512"}
-)
-
-type FulcioKeyVal struct {
-	Identity string `json:"identity"`
-	Issuer   string `json:"issuer"`
-}
-
-func FulcioVerificationKey(email string, issuer string) *Key {
-	keyValBytes, _ := json.Marshal(FulcioKeyVal{Identity: email, Issuer: issuer})
-	return &Key{
-		Type:       KeyTypeFulcio,
-		Scheme:     KeySchemeFulcio,
-		Algorithms: KeyAlgorithms,
-		Value:      keyValBytes,
+	if !validEmail(goodEmail) {
+		t.Errorf("correct email %s, failed valid check", goodEmail)
+	} else if validEmail(strongBadEmail) {
+		t.Errorf("bad email %s, passed valid check", strongBadEmail)
 	}
 }
