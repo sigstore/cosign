@@ -50,11 +50,10 @@ type VerifyCommand struct {
 	Output      string
 	RekorURL    string
 	Attachment  string
-	Annotations *map[string]interface{}
+	Annotations sigs.AnnotationsMap
 }
 
 func ApplyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
-	annotations := sigs.AnnotationsMap{}
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
 	flagset.StringVar(&cmd.CertEmail, "cert-email", "", "the email expected in a valid fulcio cert")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
@@ -66,11 +65,11 @@ func ApplyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
 	options.ApplyRegistryFlags(&cmd.RegistryOptions, flagset)
 
 	// parse annotations
-	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
-	cmd.Annotations = &annotations.Annotations
+	flagset.Var(&cmd.Annotations, "a", "extra key=value pairs to sign")
 }
 
 // Verify builds and returns an ffcli command
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Verify() *ffcli.Command {
 	cmd := VerifyCommand{}
 	flagset := flag.NewFlagSet("cosign verify", flag.ExitOnError)
@@ -117,8 +116,8 @@ EXAMPLES
 }
 
 // Exec runs the verification command
-func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
-	if len(args) == 0 {
+func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
+	if len(images) == 0 {
 		return flag.ErrHelp
 	}
 
@@ -134,7 +133,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 
 	co := &cosign.CheckOpts{
-		Annotations:        *c.Annotations,
+		Annotations:        c.Annotations.Annotations,
 		RegistryClientOpts: c.RegistryOptions.ClientOpts(ctx),
 		CertEmail:          c.CertEmail,
 	}
@@ -167,7 +166,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 	co.SigVerifier = pubKey
 
-	for _, img := range args {
+	for _, img := range images {
 		ref, err := name.ParseReference(img)
 		if err != nil {
 			return errors.Wrap(err, "parsing reference")

@@ -21,6 +21,8 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
+// Dockerfile subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Dockerfile() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign dockerfile", flag.ExitOnError)

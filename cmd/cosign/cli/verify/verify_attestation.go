@@ -56,6 +56,7 @@ func applyVerifyAttestationFlags(cmd *VerifyAttestationCommand, flagset *flag.Fl
 }
 
 // Verify builds and returns an ffcli command
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 // nolint
 func VerifyAttestation() *ffcli.Command {
 	cmd := VerifyAttestationCommand{}
@@ -112,8 +113,8 @@ func (w *reverseDSSEVerifier) VerifySignature(s io.Reader, m io.Reader, opts ...
 }
 
 // Exec runs the verification command
-func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err error) {
-	if len(args) == 0 {
+func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (err error) {
+	if len(images) == 0 {
 		return flag.ErrHelp
 	}
 
@@ -156,7 +157,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, args []string) (err
 		Verifier: dsse.WrapVerifier(pubKey),
 	}
 
-	for _, imageRef := range args {
+	for _, imageRef := range images {
 		ref, err := name.ParseReference(imageRef)
 		if err != nil {
 			return err

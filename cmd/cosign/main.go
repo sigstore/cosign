@@ -54,6 +54,7 @@ func main() {
 			"upload", "download", "attach",
 			"piv-tool",
 			"attest", "copy", "clean", "triangulate",
+			"verify", "verify-attestation", "verify-blob", "dockerfile",
 			"initialize",
 			"version":
 			// cobra.

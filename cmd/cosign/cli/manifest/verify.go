@@ -38,6 +38,7 @@ type VerifyManifestCommand struct {
 }
 
 // VerifyManifest builds and returns an ffcli command
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func VerifyManifest() *ffcli.Command {
 	cmd := VerifyManifestCommand{}
 	flagset := flag.NewFlagSet("cosign manifest verify", flag.ExitOnError)

@@ -44,6 +44,8 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// VerifyBlob builds and returns an ffcli command
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 // nolint
 func VerifyBlob() *ffcli.Command {
 	var (

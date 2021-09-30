@@ -26,7 +26,7 @@ type SignBlobOptions struct {
 	Output       string // TODO: this should be the root output file arg.
 	SecurityKey  SecurityKeyOptions
 	Fulcio       FulcioOptions
-	Rektor       RekorOptions
+	Rekor        RekorOptions
 	OIDC         OIDCOptions
 	Registry     RegistryOptions
 }
@@ -37,7 +37,7 @@ var _ Interface = (*SignBlobOptions)(nil)
 func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
-	o.Rektor.AddFlags(cmd)
+	o.Rekor.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 

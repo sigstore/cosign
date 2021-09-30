@@ -42,7 +42,7 @@ func attachSignature() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "signature",
 		Short:   "Attach signatures to the supplied container image",
-		Example: "cosign attach signature <image uri>",
+		Example: "  cosign attach signature <image uri>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attach.SignatureCmd(cmd.Context(), o.Registry, o.Signature, o.Payload, args[0])
@@ -60,7 +60,7 @@ func attachSBOM() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "sbom",
 		Short:   "Attach sbom to the supplied container image",
-		Example: "cosign attach sbom <image uri>",
+		Example: "  cosign attach sbom <image uri>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			mediaType, err := o.MediaType()

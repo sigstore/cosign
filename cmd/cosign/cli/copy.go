@@ -27,9 +27,9 @@ func addCopy(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "copy",
-		Short: "Copy the supplied container image and signatures.\ncosign copy <source image> <destination image>",
-		Long:  "Copy the supplied container image and signatures.",
-		Example: `
+		Short: "Copy the supplied container image and signatures.",
+		Example: `  cosign copy <source image> <destination image>
+
   # copy a container image and its signatures
   cosign copy example.com/src:latest example.com/dest:latest
 

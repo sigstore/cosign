@@ -44,8 +44,8 @@ func uploadBlob() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "blob",
 		Short: "Upload one or more blobs to the supplied container image address.",
-		Long:  "Upload one or more blobs to the supplied container image address.\ncosign upload blob -f <blob ref> <image uri>",
-		Example: `
+		Example: `  cosign upload blob -f <blob ref> <image uri>
+
   # upload a blob named foo to the location specified by <IMAGE>
   cosign upload blob -f foo <IMAGE>
 
@@ -85,8 +85,7 @@ func uploadWASM() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "wasm",
 		Short:   "Upload a wasm module to the supplied container image reference",
-		Long:    "Upload a wasm module to the supplied container image reference",
-		Example: "cosign upload wasm -f foo.wasm <image uri>",
+		Example: "  cosign upload wasm -f foo.wasm <image uri>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return upload.WasmCmd(cmd.Context(), o.Registry, o.File, args[0])

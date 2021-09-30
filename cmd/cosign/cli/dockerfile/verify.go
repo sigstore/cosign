@@ -35,7 +35,8 @@ type VerifyDockerfileCommand struct {
 	BaseOnly bool
 }
 
-// Verify builds and returns an ffcli command
+// VerifyDockerfile builds and returns an ffcli command
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func VerifyDockerfile() *ffcli.Command {
 	cmd := VerifyDockerfileCommand{VerifyCommand: verify.VerifyCommand{}}
 	flagset := flag.NewFlagSet("cosign dockerfile verify", flag.ExitOnError)
