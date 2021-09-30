@@ -33,6 +33,8 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
+// Signature subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Signature() *ffcli.Command {
 	var (
 		flagset   = flag.NewFlagSet("cosign attach signature", flag.ExitOnError)
@@ -47,11 +49,9 @@ func Signature() *ffcli.Command {
 		ShortHelp:  "Attach signatures to the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-
-			return SignatureCmd(ctx, regOpts, *signature, *payload, args[0])
+			_ = signature
+			_ = payload
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
