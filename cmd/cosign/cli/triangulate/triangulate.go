@@ -28,6 +28,8 @@ import (
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
+// Triangulate subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Triangulate() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign triangulate", flag.ExitOnError)
@@ -41,10 +43,8 @@ func Triangulate() *ffcli.Command {
 		ShortHelp:  "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-			return MungeCmd(ctx, regOpts, args[0], *t)
+			_ = t
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

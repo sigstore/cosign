@@ -51,7 +51,8 @@ func main() {
 		switch os.Args[1] {
 		case "public-key", "generate-key-pair",
 			"generate", "sign", "sign-blob",
-			"attest", "copy", "clean",
+			"attest", "copy", "clean", "triangulate",
+			"initialize",
 			"version":
 			// cobra.
 		default:

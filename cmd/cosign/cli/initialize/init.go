@@ -29,6 +29,8 @@ import (
 //go:embed 1.root.json
 var initialRoot string
 
+// Initialize subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Initialize() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign initialize", flag.ExitOnError)
@@ -67,26 +69,33 @@ EXAMPLES
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			// Get the initial trusted root contents.
-			var rootFileBytes []byte
-			if *root == "" {
-				rootFileBytes = []byte(initialRoot)
-			} else {
-				var err error
-				rootFileBytes, err = blob.LoadFileOrURL(*root)
-				if err != nil {
-					return err
-				}
-			}
-
-			// Initialize the remote repository.
-			remote, err := ctuf.GcsRemoteStore(ctx, *mirror, nil, nil)
-			if err != nil {
-				return err
-			}
-
-			// Initialize and update the local SigStore root.
-			return ctuf.Init(ctx, rootFileBytes, remote, *threshold)
+			_ = mirror
+			_ = root
+			_ = threshold
+			panic("this command is now implemented in cobra.")
 		},
 	}
+}
+
+func DoInitialize(ctx context.Context, root, mirror string, threshold int) error {
+	// Get the initial trusted root contents.
+	var rootFileBytes []byte
+	if root == "" {
+		rootFileBytes = []byte(initialRoot)
+	} else {
+		var err error
+		rootFileBytes, err = blob.LoadFileOrURL(root)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Initialize the remote repository.
+	remote, err := ctuf.GcsRemoteStore(ctx, mirror, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	// Initialize and update the local SigStore root.
+	return ctuf.Init(ctx, rootFileBytes, remote, threshold)
 }
