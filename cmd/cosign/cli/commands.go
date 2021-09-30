@@ -131,6 +131,7 @@ func New() *cobra.Command {
 	addAttest(cmd)
 	addUpload(cmd)
 	addDownload(cmd)
+	addAttach(cmd)
 	addCopy(cmd)
 	addClean(cmd)
 	addTriangulate(cmd)

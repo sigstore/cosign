@@ -32,14 +32,10 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
-	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
-var mediaTypes = map[string]types.MediaType{
-	"cyclonedx": ctypes.CycloneDXMediaType,
-	"spdx":      ctypes.SPDXMediaType,
-}
-
+// SBOM subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func SBOM() *ffcli.Command {
 	var (
 		flagset  = flag.NewFlagSet("cosign attach sbom", flag.ExitOnError)
@@ -54,16 +50,9 @@ func SBOM() *ffcli.Command {
 		ShortHelp:  "Attach sbom to the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-
-			mt, ok := mediaTypes[*sbomType]
-			if !ok {
-				return flag.ErrHelp
-			}
-
-			return SBOMCmd(ctx, regOpts, *sbom, mt, args[0])
+			_ = sbom
+			_ = sbomType
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
