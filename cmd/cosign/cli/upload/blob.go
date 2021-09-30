@@ -57,6 +57,8 @@ func (fs *Files) String() string {
 	return strings.Join(s, ",")
 }
 
+// Blob subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Blob() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload blob", flag.ExitOnError)
@@ -87,16 +89,14 @@ EXAMPLES
   `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 || len(fmap.Files) < 1 {
-				return flag.ErrHelp
-			}
-
-			return BlobCmd(ctx, regOpts, fmap.Files, *ct, args[0])
+			_ = ct
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
 func BlobCmd(ctx context.Context, regOpts options.RegistryOptions, files []cremote.File, contentType, imageRef string) error {
+	// TODO: use contentType.
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

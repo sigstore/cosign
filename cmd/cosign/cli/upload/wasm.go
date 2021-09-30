@@ -31,6 +31,8 @@ import (
 	"github.com/sigstore/cosign/pkg/types"
 )
 
+// Wasm subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Wasm() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload wasm", flag.ExitOnError)
@@ -44,11 +46,8 @@ func Wasm() *ffcli.Command {
 		ShortHelp:  "Upload a wasm module to the supplied container image reference",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-
-			return WasmCmd(ctx, regOpts, *f, args[0])
+			_ = f
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

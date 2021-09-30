@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"flag"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -51,18 +49,17 @@ func addSignBlob(topLevel *cobra.Command) {
 
   # sign a blob with a key pair stored in Hashicorp Vault
   cosign sign-blob --key hashivault://[KEY] <FILE>`,
-
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Args: cobra.MinimumNArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !options.EnableExperimental() {
 				if !options.OneOf(o.Key, o.SecurityKey.Use) {
 					return &options.KeyParseError{}
 				}
 			}
-
-			if len(args) == 0 {
-				return flag.ErrHelp
-			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := sign.KeyOpts{
 				KeyRef:           o.Key,
 				PassFunc:         generate.GetPass,

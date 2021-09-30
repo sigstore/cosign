@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"flag"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -56,11 +54,8 @@ func addAttest(topLevel *cobra.Command) {
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image`,
 
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return flag.ErrHelp
-			}
-
 			ko := sign.KeyOpts{
 				KeyRef:    o.Key,
 				PassFunc:  generate.GetPass,

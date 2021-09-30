@@ -63,11 +63,8 @@ func addSign(topLevel *cobra.Command) {
 
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image`,
-
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return flag.ErrHelp
-			}
 			switch o.Attachment {
 			case "sbom", "":
 				break
