@@ -131,6 +131,8 @@ func New() *cobra.Command {
 	addAttest(cmd)
 	addCopy(cmd)
 	addClean(cmd)
+	addTriangulate(cmd)
+	addInitialize(cmd)
 	addVersion(cmd)
 
 	return cmd
