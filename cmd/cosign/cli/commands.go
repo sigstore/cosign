@@ -134,6 +134,7 @@ func New() *cobra.Command {
 	addClean(cmd)
 	addTriangulate(cmd)
 	addInitialize(cmd)
+	addPIVTool(cmd)
 	addVersion(cmd)
 
 	return cmd
