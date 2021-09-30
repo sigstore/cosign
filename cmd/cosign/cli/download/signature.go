@@ -28,6 +28,8 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
+// Signature subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Signature() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign download signature", flag.ExitOnError)
@@ -40,10 +42,7 @@ func Signature() *ffcli.Command {
 		ShortHelp:  "Download signatures from the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-			return SignatureCmd(ctx, regOpts, args[0])
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

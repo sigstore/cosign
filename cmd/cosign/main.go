@@ -51,7 +51,7 @@ func main() {
 		switch os.Args[1] {
 		case "public-key", "policy", "generate-key-pair",
 			"generate", "sign", "sign-blob",
-			"upload",
+			"upload", "download",
 			"piv-tool",
 			"attest", "copy", "clean", "triangulate",
 			"initialize",

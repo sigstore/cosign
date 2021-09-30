@@ -20,8 +20,6 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/triangulate"
-
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -41,6 +39,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/pivcli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/cmd/cosign/cli/triangulate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )
@@ -131,6 +130,7 @@ func New() *cobra.Command {
 	addGenerateKeyPair(cmd)
 	addAttest(cmd)
 	addUpload(cmd)
+	addDownload(cmd)
 	addCopy(cmd)
 	addClean(cmd)
 	addTriangulate(cmd)

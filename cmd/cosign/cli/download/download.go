@@ -22,6 +22,8 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
+// Download subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Download() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign download", flag.ExitOnError)
@@ -34,7 +36,7 @@ func Download() *ffcli.Command {
 		FlagSet:     flagset,
 		Subcommands: []*ffcli.Command{Signature(), SBOM()},
 		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

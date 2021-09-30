@@ -29,6 +29,8 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/remote"
 )
 
+// SBOM subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func SBOM() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign download sbom", flag.ExitOnError)
@@ -41,11 +43,7 @@ func SBOM() *ffcli.Command {
 		ShortHelp:  "Download SBOMs from the supplied container image",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-			_, err := SBOMCmd(ctx, regOpts, args[0], os.Stdout)
-			return err
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
