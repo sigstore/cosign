@@ -43,11 +43,13 @@ func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func (o *RegistryOptions) ClientOpts(ctx context.Context) []ociremote.Option {
+	var option []ociremote.Option
 	if o.TagSuffix != "" {
-		return []ociremote.Option{ociremote.WithPrefix(o.TagPrefix), ociremote.WithSignatureSuffix(o.TagSuffix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
+		option = []ociremote.Option{ociremote.WithPrefix(o.TagPrefix), ociremote.WithSignatureSuffix(o.TagSuffix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
 	} else {
-		return []ociremote.Option{ociremote.WithPrefix(o.TagPrefix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
+		option = []ociremote.Option{ociremote.WithPrefix(o.TagPrefix), ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
 	}
+	return option
 }
 
 func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Option {
