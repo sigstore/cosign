@@ -19,13 +19,13 @@ package pivcli
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
-	"fmt"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
+// PivKey subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func PivKey() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool", flag.ExitOnError)
@@ -43,11 +43,13 @@ func PivKey() *ffcli.Command {
 		FlagSet:     flagset,
 		Subcommands: []*ffcli.Command{SetManagementKey(), SetPin(), SetPuk(), Unblock(), Attestation(), GenerateKey(), ResetKey()},
 		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
+// SetManagementKey subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func SetManagementKey() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool set-management-key", flag.ExitOnError)
@@ -63,11 +65,16 @@ func SetManagementKey() *ffcli.Command {
 		ShortHelp:  "set-management-key sets the management key of a hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return SetManagementKeyCmd(ctx, *oldKey, *newKey, *randomKey)
+			_ = oldKey
+			_ = newKey
+			_ = randomKey
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
+// SetPuk subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func SetPuk() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool set-puk", flag.ExitOnError)
@@ -82,11 +89,15 @@ func SetPuk() *ffcli.Command {
 		ShortHelp:  "set-puk contains commands to manage a hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return SetPukCmd(ctx, *oldPuk, *newPuk)
+			_ = oldPuk
+			_ = newPuk
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
+// SetPin subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func SetPin() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool set-pin", flag.ExitOnError)
@@ -101,11 +112,15 @@ func SetPin() *ffcli.Command {
 		ShortHelp:  "set-pin contains commands to manage a hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return SetPinCmd(ctx, *oldPin, *newPin)
+			_ = oldPin
+			_ = newPin
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
+// Unblock subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Unblock() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool unblock", flag.ExitOnError)
@@ -120,11 +135,15 @@ func Unblock() *ffcli.Command {
 		ShortHelp:  "unblock contains commands to manage a hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return UnblockCmd(ctx, *oldPuk, *newPin)
+			_ = oldPuk
+			_ = newPin
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
+// Attestation subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Attestation() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool attestation", flag.ExitOnError)
@@ -138,22 +157,15 @@ func Attestation() *ffcli.Command {
 		ShortHelp:  "attestation contains commands to manage a hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			a, err := AttestationCmd(ctx, *slot)
-			switch *output {
-			case "text":
-				a.Output()
-			case "json":
-				b, err := json.Marshal(a)
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(b))
-			}
-			return err
+			_ = output
+			_ = slot
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
+// GenerateKey subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func GenerateKey() *ffcli.Command {
 	var (
 		flagset       = flag.NewFlagSet("cosign piv-tool generate-key", flag.ExitOnError)
@@ -170,12 +182,19 @@ func GenerateKey() *ffcli.Command {
 		ShortHelp:  "generate-key generates a new signing key on the hardware token",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return GenerateKeyCmd(ctx, *managementKey, *randomKey,
-				*slot, *pinPolicy, *touchPolicy)
+			_ = flagset
+			_ = managementKey
+			_ = randomKey
+			_ = slot
+			_ = pinPolicy
+			_ = touchPolicy
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }
 
+// ResetKey subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func ResetKey() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign piv-tool reset", flag.ExitOnError)
@@ -187,7 +206,7 @@ func ResetKey() *ffcli.Command {
 		ShortHelp:  "reset resets the hardware token completely",
 		FlagSet:    flagset,
 		Exec: func(ctx context.Context, args []string) error {
-			return ResetKeyCmd(ctx)
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

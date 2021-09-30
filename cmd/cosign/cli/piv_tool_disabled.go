@@ -15,12 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pivcli
+package cli
 
-import "github.com/peterbourgon/ff/v3/ffcli"
+import (
+	"github.com/spf13/cobra"
+)
 
-// PivKey subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func PivKey() *ffcli.Command {
-	return &ffcli.Command{}
+func addPIVTool(_ *cobra.Command) {
+	// disabled.
 }

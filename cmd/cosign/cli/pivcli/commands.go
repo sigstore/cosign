@@ -131,33 +131,33 @@ type Attestations struct {
 	KeyAttestation *piv.Attestation
 }
 
-func (a *Attestations) Output() {
-	fmt.Fprintln(os.Stderr, "Printing device attestation certificate")
+func (a *Attestations) Output(stdout, stderr io.Writer) {
+	fmt.Fprintln(stderr, "Printing device attestation certificate")
 	b := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: a.DeviceCert.Raw,
 	})
-	fmt.Println(string(b))
+	fmt.Fprintln(stdout, string(b))
 
-	fmt.Fprintln(os.Stderr, "Printing key attestation certificate")
+	fmt.Fprintln(stderr, "Printing key attestation certificate")
 	b = pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: a.KeyCert.Raw,
 	})
-	fmt.Println(string(b))
+	fmt.Fprintln(stdout, string(b))
 
-	fmt.Fprintln(os.Stderr, "Verifying certificates...")
+	fmt.Fprintln(stderr, "Verifying certificates...")
 
-	fmt.Fprintln(os.Stderr, "Verified ok")
+	fmt.Fprintln(stderr, "Verified ok")
 	fmt.Println()
 
-	fmt.Fprintln(os.Stderr, "Device info:")
-	fmt.Println("  Issuer:", a.DeviceCert.Issuer)
-	fmt.Println("  Form factor:", formFactorString(a.KeyAttestation.Formfactor))
-	fmt.Println("  PIN Policy:", pinPolicyStr(a.KeyAttestation.PINPolicy))
+	fmt.Fprintln(stderr, "Device info:")
+	fmt.Fprintln(stdout, "  Issuer:", a.DeviceCert.Issuer)
+	fmt.Fprintln(stdout, "  Form factor:", formFactorString(a.KeyAttestation.Formfactor))
+	fmt.Fprintln(stdout, "  PIN Policy:", pinPolicyStr(a.KeyAttestation.PINPolicy))
 
-	fmt.Printf("  Serial number: %d\n", a.KeyAttestation.Serial)
-	fmt.Printf("  Version: %d.%d.%d\n", a.KeyAttestation.Version.Major, a.KeyAttestation.Version.Minor, a.KeyAttestation.Version.Patch)
+	fmt.Fprintf(stdout, "  Serial number: %d\n", a.KeyAttestation.Serial)
+	fmt.Fprintf(stdout, "  Version: %d.%d.%d\n", a.KeyAttestation.Version.Major, a.KeyAttestation.Version.Minor, a.KeyAttestation.Version.Patch)
 }
 
 func AttestationCmd(_ context.Context, slotArg string) (*Attestations, error) {
@@ -269,7 +269,7 @@ func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool, s
 	if err != nil {
 		return err
 	}
-	att.Output()
+	att.Output(os.Stdout, os.Stderr)
 	return nil
 }
 

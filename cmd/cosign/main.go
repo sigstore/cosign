@@ -52,6 +52,7 @@ func main() {
 		case "public-key", "generate-key-pair",
 			"generate", "sign", "sign-blob",
 			"upload",
+			"piv-tool",
 			"attest", "copy", "clean", "triangulate",
 			"initialize",
 			"version":
