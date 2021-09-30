@@ -50,6 +50,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/cobra v1.2.1
+	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v0.22.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
