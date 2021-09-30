@@ -22,33 +22,69 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+func TestFilesFromFlagList(t *testing.T) {
+	tests := []struct {
+		name string
+		sl   []string
+		want []File
+	}{{
+		name: "empty",
+		sl:   []string{},
+		want: []File{},
+	}, {
+		name: "nil",
+		sl:   nil,
+		want: []File{},
+	}, {
+		name: "plain",
+		sl:   []string{"foo"},
+		want: []File{&file{path: "foo"}},
+	}, {
+		name: "three",
+		sl:   []string{"foo", "foo:darwin", "foo:darwin/amd64"},
+		want: []File{
+			&file{path: "foo"},
+			&file{path: "foo", platform: &v1.Platform{
+				OS: "darwin",
+			}},
+			&file{path: "foo", platform: &v1.Platform{
+				OS:           "darwin",
+				Architecture: "amd64",
+			}},
+		},
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FilesFromFlagList(tt.sl); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("fileFromFlag() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFileFromFlag(t *testing.T) {
 	tests := []struct {
 		name string
 		s    string
 		want File
-	}{
-		{
-			name: "plain",
-			s:    "foo",
-			want: &file{path: "foo"},
-		},
-		{
-			name: "os",
-			s:    "foo:darwin",
-			want: &file{path: "foo", platform: &v1.Platform{
-				OS: "darwin",
-			}},
-		},
-		{
-			name: "os",
-			s:    "foo:darwin/amd64",
-			want: &file{path: "foo", platform: &v1.Platform{
-				OS:           "darwin",
-				Architecture: "amd64",
-			}},
-		},
-	}
+	}{{
+		name: "plain",
+		s:    "foo",
+		want: &file{path: "foo"},
+	}, {
+		name: "os",
+		s:    "foo:darwin",
+		want: &file{path: "foo", platform: &v1.Platform{
+			OS: "darwin",
+		}},
+	}, {
+		name: "os amd64",
+		s:    "foo:darwin/amd64",
+		want: &file{path: "foo", platform: &v1.Platform{
+			OS:           "darwin",
+			Architecture: "amd64",
+		}},
+	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := FileFromFlag(tt.s); !reflect.DeepEqual(got, tt.want) {

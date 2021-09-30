@@ -22,6 +22,8 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 )
 
+// Upload subcommand for ffcli.
+// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
 func Upload() *ffcli.Command {
 	var (
 		flagset = flag.NewFlagSet("cosign upload", flag.ExitOnError)
@@ -34,7 +36,7 @@ func Upload() *ffcli.Command {
 		FlagSet:     flagset,
 		Subcommands: []*ffcli.Command{Blob(), Wasm()},
 		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
+			panic("this command is now implemented in cobra.")
 		},
 	}
 }

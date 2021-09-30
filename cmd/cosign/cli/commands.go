@@ -129,6 +129,7 @@ func New() *cobra.Command {
 	addSignBlob(cmd)
 	addGenerateKeyPair(cmd)
 	addAttest(cmd)
+	addUpload(cmd)
 	addCopy(cmd)
 	addClean(cmd)
 	addTriangulate(cmd)

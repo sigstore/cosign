@@ -50,12 +50,13 @@ func addPublicKey(topLevel *cobra.Command) {
 
   # extract public key from Hashicorp Vault KMS
   cosign public-key --key hashivault://[KEY]`,
-
-		RunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if !options.OneOf(o.Key, o.SecurityKey.Use) {
 				return &options.KeyParseError{}
 			}
-
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			writer := publickey.NamedWriter{Name: "", Writer: nil}
 			var f *os.File
 			// Open output file for public key if specified.

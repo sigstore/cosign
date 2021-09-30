@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"flag"
-
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
@@ -43,10 +41,8 @@ to sign payloads with your own tooling or algorithms.`,
 	# Use this payload in another tool
 	gpg --output image.sig --detach-sig <(cosign generate <IMAGE>)`,
 
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
 			annotationMap, err := o.AnnotationsMap()
 			if err != nil {
 				return err
