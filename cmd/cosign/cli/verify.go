@@ -117,7 +117,7 @@ against the transparency log.`,
 
   # verify image with public key stored in Google Cloud KMS
   cosign verify-attestation --key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>
-  
+
   # verify image with public key stored in Hashicorp Vault
   cosign verify-attestation --key hashivault:///<KEY> <IMAGE>`,
 

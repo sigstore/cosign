@@ -17,12 +17,10 @@ package publickey
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -35,53 +33,6 @@ import (
 type NamedWriter struct {
 	Name string
 	io.Writer
-}
-
-// PublicKey subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func PublicKey() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign public-key", flag.ExitOnError)
-		key     = flagset.String("key", "", "path to the private key file, public key URL, or KMS URI")
-		sk      = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot    = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-		outFile = flagset.String("outfile", "", "file to write public key")
-	)
-
-	return &ffcli.Command{
-		Name:       "public-key",
-		ShortUsage: "cosign public-key gets a public key from the key-pair",
-		ShortHelp:  "Gets a public key from the key-pair",
-		LongHelp: `Gets a public key from the key-pair and
-writes to a specified file. By default, it will write to standard out.
-
-EXAMPLES
-  # extract public key from private key to a specified out file.
-  cosign public-key -key <PRIVATE KEY FILE> -outfile <OUTPUT>
-
-  # extract public key from URL.
-  cosign public-key -key https://host.for/<FILE> -outfile <OUTPUT>
-
-  # extract public key from Azure Key Vault
-  cosign public-key -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY]
-
-  # extract public key from AWS KMS
-  cosign public-key -key awskms://[ENDPOINT]/[ID/ALIAS/ARN]
-
-  # extract public key from Google Cloud KMS
-  cosign public-key -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
-
-  # extract public key from Hashicorp Vault KMS
-  cosign public-key -key hashivault://[KEY]`,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			_ = key
-			_ = sk
-			_ = slot
-			_ = outFile
-			panic("this command is now implemented in cobra.")
-		},
-	}
 }
 
 type Pkopts struct {

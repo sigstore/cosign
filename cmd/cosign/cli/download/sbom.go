@@ -17,36 +17,14 @@ package download
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci/remote"
 )
-
-// SBOM subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func SBOM() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign download sbom", flag.ExitOnError)
-		regOpts options.RegistryOptions
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "sbom",
-		ShortUsage: "cosign download sbom <image uri>",
-		ShortHelp:  "Download SBOMs from the supplied container image",
-		FlagSet:    flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
 
 func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, out io.Writer) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)

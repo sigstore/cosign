@@ -18,7 +18,6 @@ package attach
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,35 +26,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/peterbourgon/ff/v3/ffcli"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
 )
-
-// SBOM subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func SBOM() *ffcli.Command {
-	var (
-		flagset  = flag.NewFlagSet("cosign attach sbom", flag.ExitOnError)
-		sbom     = flagset.String("sbom", "", "path to the sbom, or {-} for stdin")
-		sbomType = flagset.String("type", "spdx", "type of sbom (spdx|cyclonedx), default spdx")
-		regOpts  options.RegistryOptions
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "sbom",
-		ShortUsage: "cosign attach sbom <image uri>",
-		ShortHelp:  "Attach sbom to the supplied container image",
-		FlagSet:    flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			_ = sbom
-			_ = sbomType
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
 
 func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef string, sbomType types.MediaType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)

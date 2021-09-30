@@ -18,34 +18,12 @@ package download
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
-
-// Signature subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func Signature() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign download signature", flag.ExitOnError)
-		regOpts options.RegistryOptions
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "signature",
-		ShortUsage: "cosign download signature <image uri>",
-		ShortHelp:  "Download signatures from the supplied container image",
-		FlagSet:    flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
 
 func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)

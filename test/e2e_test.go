@@ -55,6 +55,7 @@ import (
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/sget"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -74,7 +75,7 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 		KeyRef:      keyRef,
 		RekorURL:    rekorURL,
 		CheckClaims: checkClaims,
-		Annotations: &annotations,
+		Annotations: sigs.AnnotationsMap{Annotations: annotations},
 		Attachment:  attachment,
 	}
 

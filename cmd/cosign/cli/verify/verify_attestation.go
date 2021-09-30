@@ -21,7 +21,6 @@ import (
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
@@ -44,61 +43,6 @@ type VerifyAttestationCommand struct {
 	Output      string
 	FulcioURL   string
 	RekorURL    string
-}
-
-func applyVerifyAttestationFlags(cmd *VerifyAttestationCommand, flagset *flag.FlagSet) {
-	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
-	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
-	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
-	flagset.StringVar(&cmd.FulcioURL, "fulcio-url", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
-	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
-}
-
-// Verify builds and returns an ffcli command
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-// nolint
-func VerifyAttestation() *ffcli.Command {
-	cmd := VerifyAttestationCommand{}
-	flagset := flag.NewFlagSet("cosign verify-attestation", flag.ExitOnError)
-	applyVerifyAttestationFlags(&cmd, flagset)
-	options.ApplyRegistryFlags(&cmd.RegistryOptions, flagset)
-
-	return &ffcli.Command{
-		Name:       "verify-attestation",
-		ShortUsage: "cosign verify-attestation -key <key path>|<key url>|<kms uri> <image uri> [<image uri> ...]",
-		ShortHelp:  "Verify an attestation on the supplied container image",
-		LongHelp: `Verify an attestation on an image by checking the claims
-against the transparency log.
-
-EXAMPLES
-  # verify cosign attestations on the image
-  cosign verify-attestation <IMAGE>
-
-  # verify multiple images
-  cosign verify-attestation <IMAGE_1> <IMAGE_2> ...
-
-  # additionally verify specified annotations
-  cosign verify-attestation -a key1=val1 -a key2=val2 <IMAGE>
-
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign verify-attestation <IMAGE>
-
-  # verify image with public key
-  cosign verify-attestation -key cosign.pub <IMAGE>
-
-  # verify image with public key provided by URL
-  cosign verify-attestation -key https://host.for/<FILE> <IMAGE>
-
-  # verify image with public key stored in Google Cloud KMS
-  cosign verify-attestation -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>
-  
-  # verify image with public key stored in Hashicorp Vault
-  cosign verify-attestation -key hashivault:///<KEY> <IMAGE>`,
-
-		FlagSet: flagset,
-		Exec:    cmd.Exec,
-	}
 }
 
 // DSSE messages contain the signature and payload in one object, but our interface expects a signature and payload

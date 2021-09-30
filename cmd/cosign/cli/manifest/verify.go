@@ -25,7 +25,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
@@ -35,53 +34,6 @@ import (
 // VerifyManifestCommand verifies all image signatures on a supplied k8s resource
 type VerifyManifestCommand struct {
 	verify.VerifyCommand
-}
-
-// VerifyManifest builds and returns an ffcli command
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func VerifyManifest() *ffcli.Command {
-	cmd := VerifyManifestCommand{}
-	flagset := flag.NewFlagSet("cosign manifest verify", flag.ExitOnError)
-	verify.ApplyVerifyFlags(&cmd.VerifyCommand, flagset)
-
-	return &ffcli.Command{
-		Name:       "verify",
-		ShortUsage: "cosign manifest verify -key <key path>|<key url>|<kms uri> <path/to/manifest>",
-		ShortHelp:  "Verify all signatures of images specified in the manifest",
-		LongHelp: `Verify all signature of images in a Kubernetes resource manifest by checking claims
-against the transparency log.
-
-EXAMPLES
-  # verify cosign claims and signing certificates on images in the manifest
-  cosign manifest verify <path/to/my-deployment.yaml>
-
-  # additionally verify specified annotations
-  cosign manifest verify -a key1=val1 -a key2=val2 <path/to/my-deployment.yaml>
-
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign manifest verify <path/to/my-deployment.yaml>
-
-  # verify images with public key
-  cosign manifest verify -key cosign.pub <path/to/my-deployment.yaml>
-
-  # verify images with public key provided by URL
-  cosign manifest verify -key https://host.for/<FILE> <path/to/my-deployment.yaml>
-
-  # verify images with public key stored in Azure Key Vault
-  cosign manifest verify -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <path/to/my-deployment.yaml>
-
-  # verify images with public key stored in AWS KMS
-  cosign manifest verify -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <path/to/my-deployment.yaml>
-
-  # verify images with public key stored in Google Cloud KMS
-  cosign manifest verify -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <path/to/my-deployment.yaml>
-
-  # verify images with public key stored in Hashicorp Vault
-  cosign manifest verify -key hashivault://[KEY] <path/to/my-deployment.yaml>`,
-
-		FlagSet: flagset,
-		Exec:    cmd.Exec,
-	}
 }
 
 // Exec runs the verification command
