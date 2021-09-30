@@ -13,7 +13,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.6.1-0.20210922191434-34b7f00d7a60
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
-	github.com/in-toto/in-toto-golang v0.3.1
+	github.com/in-toto/in-toto-golang v0.3.2
 	github.com/manifoldco/promptui v0.8.0
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
