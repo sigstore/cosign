@@ -132,7 +132,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: sign test image'
-cosign sign -key k8s://cosign-system/verification-key $DIGEST
+cosign sign --key k8s://cosign-system/verification-key $DIGEST
 echo '::endgroup::'
 
 

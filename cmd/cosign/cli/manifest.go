@@ -44,7 +44,7 @@ func manifestVerify() *cobra.Command {
 		Short: "Verify all signatures of images specified in the manifest",
 		Long: `Verify all signature of images in a Kubernetes resource manifest by checking claims
 against the transparency log.`,
-		Example: `  cosign manifest verify -key <key path>|<key url>|<kms uri> <path/to/manifest>
+		Example: `  cosign manifest verify --key <key path>|<key url>|<kms uri> <path/to/manifest>
 
   # verify cosign claims and signing certificates on images in the manifest
   cosign manifest verify <path/to/my-deployment.yaml>
@@ -56,22 +56,22 @@ against the transparency log.`,
   COSIGN_EXPERIMENTAL=1 cosign manifest verify <path/to/my-deployment.yaml>
 
   # verify images with public key
-  cosign manifest verify -key cosign.pub <path/to/my-deployment.yaml>
+  cosign manifest verify --key cosign.pub <path/to/my-deployment.yaml>
 
   # verify images with public key provided by URL
-  cosign manifest verify -key https://host.for/<FILE> <path/to/my-deployment.yaml>
+  cosign manifest verify --key https://host.for/<FILE> <path/to/my-deployment.yaml>
 
   # verify images with public key stored in Azure Key Vault
-  cosign manifest verify -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <path/to/my-deployment.yaml>
+  cosign manifest verify --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <path/to/my-deployment.yaml>
 
   # verify images with public key stored in AWS KMS
-  cosign manifest verify -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <path/to/my-deployment.yaml>
+  cosign manifest verify --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <path/to/my-deployment.yaml>
 
   # verify images with public key stored in Google Cloud KMS
-  cosign manifest verify -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <path/to/my-deployment.yaml>
+  cosign manifest verify --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <path/to/my-deployment.yaml>
 
   # verify images with public key stored in Hashicorp Vault
-  cosign manifest verify -key hashivault://[KEY] <path/to/my-deployment.yaml>`,
+  cosign manifest verify --key hashivault://[KEY] <path/to/my-deployment.yaml>`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			annotations, err := o.AnnotationsMap()

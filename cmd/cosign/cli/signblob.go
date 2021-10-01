@@ -30,7 +30,7 @@ func addSignBlob(topLevel *cobra.Command) {
 	cmd := &cobra.Command{
 		Use:   "sign-blob",
 		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout.",
-		Example: `  cosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>
+		Example: `  cosign sign-blob --key <key path>|<kms uri> <blob>
 
   # sign a blob with Google sign-in (experimental)
   COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>

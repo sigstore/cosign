@@ -116,7 +116,7 @@ Public key written to cosign.pub
 ### Sign a container and store the signature in the registry
 
 ```shell
-$ cosign sign -key cosign.key dlorenc/demo
+$ cosign sign --key cosign.key dlorenc/demo
 Enter password for private key:
 Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
@@ -136,7 +136,7 @@ Note that these signed payloads include the digest of the container image, which
 sure these "detached" signatures cover the correct image.
 
 ```shell
-$ cosign verify -key cosign.pub dlorenc/demo
+$ cosign verify --key cosign.pub dlorenc/demo
 The following checks were performed on these signatures:
   - The cosign claims were validated
   - The signatures were verified against the specified public key
@@ -221,7 +221,7 @@ curl -L gcr.io/v2/dlorenc-vmtest2/artifact/blobs/sha256:97f16c28f6478f3c02d7fff4
 You can sign it with the normal `cosign sign` command and flags:
 
 ```shell
-cosign sign -key cosign.key gcr.io/dlorenc-vmtest2/artifact
+cosign sign --key cosign.key gcr.io/dlorenc-vmtest2/artifact
 Enter password for private key:
 Pushing signature to: gcr.io/dlorenc-vmtest2/artifact:sha256-3f612a4520b2c245d620d0cca029f1173f6bea76819dde8543f5b799ea3c696c.sig
 ```
@@ -271,7 +271,7 @@ Creating Tekton Bundle:
         - Added TaskRun:  to image
 
 Pushed Tekton Bundle to us.gcr.io/dlorenc-vmtest2/pipeline@sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155
-$ cosign sign -key cosign.key us.gcr.io/dlorenc-vmtest2/pipeline:latest
+$ cosign sign --key cosign.key us.gcr.io/dlorenc-vmtest2/pipeline:latest
 Enter password for private key:
 tlog entry created with index: 5086
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/demo:sha256-124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155.sig
@@ -285,7 +285,7 @@ Cosign can upload these using the `cosign wasm upload` command:
 
 ```shell
 $ cosign upload wasm -f hello.wasm us.gcr.io/dlorenc-vmtest2/wasm
-$ cosign sign -key cosign.key us.gcr.io/dlorenc-vmtest2/wasm
+$ cosign sign --key cosign.key us.gcr.io/dlorenc-vmtest2/wasm
 Enter password for private key:
 tlog entry created with index: 5198
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812.sig
@@ -299,7 +299,7 @@ The specification for these is defined [here](https://github.com/in-toto/attesta
 You can create and sign one from a local predicate file using the following commands:
 
 ```shell
-$ cosign attest -predicate <file> -key cosign.pub <image>
+$ cosign attest --predicate <file> --key cosign.pub <image>
 ```
 
 All of the standard key management systems are supported.
@@ -308,7 +308,7 @@ Payloads are signed using the DSSE signing spec, defined [here](https://github.c
 To verify:
 
 ```shell
-$ cosign verify-attestation -key cosign.pub <image>
+$ cosign verify-attestation --key cosign.pub <image>
 ```
 
 ## Detailed Usage
@@ -345,7 +345,7 @@ Today, `cosign` has been tested and works against the following registries:
 
 We aim for wide registry support. To `sign` images in registries which do not yet fully support [OCI media types](https://github.com/sigstore/cosign/blob/main/SPEC.md#object-types), one may need to use `COSIGN_DOCKER_MEDIA_TYPES` to fall back to legacy equivalents. For example:
 ```shell
-COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign -key cosign.key legacy-registry.example.com/my/image
+COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
 ```
 
 Please help test and file bugs if you see issues!
@@ -358,8 +358,8 @@ To publish signed artifacts to a Rekor transparency log and verify their existen
 set the `COSIGN_EXPERIMENTAL=1` environment variable.
 
 ```shell
-COSIGN_EXPERIMENTAL=1 cosign sign -key cosign.key dlorenc/demo
-COSIGN_EXPERIMENTAL=1 cosign verify -key cosign.pub dlorenc/demo
+COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key dlorenc/demo
+COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub dlorenc/demo
 ```
 
 `cosign` defaults to using the public instance of rekor at [rekor.sigstore.dev](https://rekor.sigstore.dev).
@@ -508,7 +508,7 @@ Digest: sha256:551e6cce7ed2e5c914998f931b277bc879e675b74843e6f29bc17f3b5f692bef
 Now sign it! Using `cosign` of course:
 
 ```shell
-$ cosign sign -key cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/artifact@sha256:551e6cce7ed2e5c914998f931b277bc879e675b74843e6f29bc17f3b5f692bef
+$ cosign sign --key cosign.key us-central1-docker.pkg.dev/dlorenc-vmtest2/test/artifact@sha256:551e6cce7ed2e5c914998f931b277bc879e675b74843e6f29bc17f3b5f692bef
 Enter password for private key:
 Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/artifact:sha256-551e6cce7ed2e5c914998f931b277bc879e675b74843e6f29bc17f3b5f692bef.sig
 ```
@@ -516,7 +516,7 @@ Pushing signature to: us-central1-docker.pkg.dev/dlorenc-vmtest2/test/artifact:s
 Finally, verify `cosign` with `cosign` again:
 
 ```shell
-$ cosign verify -key cosign.pub  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/artifact@sha256:551e6cce7ed2e5c914998f931b277bc879e675b74843e6f29bc17f3b5f692bef
+$ cosign verify --key cosign.pub  us-central1-docker.pkg.dev/dlorenc-vmtest2/test/artifact@sha256:551e6cce7ed2e5c914998f931b277bc879e675b74843e6f29bc17f3b5f692bef
 The following checks were performed on each of these signatures:
   - The cosign claims were validated
   - The claims were present in the transparency log
@@ -599,17 +599,17 @@ run something like:
 ```shell
 $ TAG=sign-me
 $ DGST=$(crane digest dlorenc/demo:$TAG)
-$ cosign sign -key cosign.key -a tag=$TAG dlorenc/demo@$DGST
+$ cosign sign --key cosign.key -a tag=$TAG dlorenc/demo@$DGST
 Enter password for private key:
 Pushing signature to: dlorenc/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.sig
 ```
 
 Then you can verify that the tag->digest mapping is also covered in the signature, using the `-a` flag to `cosign verify`.
-This example verifes that the digest `$TAG` points to (`sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36`)
+This example verifies that the digest `$TAG` points to (`sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36`)
 has been signed, **and also** that the `$TAG`:
 
 ```shell
-$ cosign verify -key cosign.pub -a tag=$TAG dlorenc/demo:$TAG | jq .
+$ cosign verify --key cosign.pub -a tag=$TAG dlorenc/demo:$TAG | jq .
 {
   "Critical": {
     "Identity": {
@@ -693,10 +693,10 @@ it to act as an attestation to the **signature(s) themselves**.
 Before we sign the signature artifact, we first give it a memorable name so we can find it later.
 
 ```shell
-$ cosign sign -key cosign.key -a sig=original dlorenc/demo
+$ cosign sign --key cosign.key -a sig=original dlorenc/demo
 Enter password for private key:
 Pushing signature to: dlorenc/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.sig
-$ cosign verify -key cosign.pub dlorenc/demo | jq .
+$ cosign verify --key cosign.pub dlorenc/demo | jq .
 {
   "Critical": {
     "Identity": {
@@ -718,10 +718,10 @@ Now give that signature a memorable name, then sign that:
 ```shell
 $ crane tag $(cosign triangulate dlorenc/demo) mysignature
 2021/02/15 20:22:55 dlorenc/demo:mysignature: digest: sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e size: 556
-$ cosign sign -key cosign.key -a sig=counter dlorenc/demo:mysignature
+$ cosign sign --key cosign.key -a sig=counter dlorenc/demo:mysignature
 Enter password for private key:
 Pushing signature to: dlorenc/demo:sha256-71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e.sig
-$ cosign verify -key cosign.pub dlorenc/demo:mysignature
+$ cosign verify --key cosign.pub dlorenc/demo:mysignature
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e"},"Type":"cosign container image signature"},"Optional":{"sig":"counter"}}
 ```
 
@@ -751,5 +751,5 @@ $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa2
 
 ## Security
 
-Should you discover any security issues, please refer to sigstores [security
+Should you discover any security issues, please refer to sigstore's [security
 process](https://github.com/sigstore/community/blob/main/SECURITY.md)

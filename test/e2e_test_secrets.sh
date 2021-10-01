@@ -100,16 +100,16 @@ echo "myblob2" > myblob2
 ./cosign sign-blob --key ${signing_key} myblob > myblob.sig
 ./cosign sign-blob --key ${signing_key} myblob2 > myblob2.sig
 
-./cosign verify-blob --key ${verification_key} -signature myblob.sig myblob
-if (./cosign verify-blob --key ${verification_key} -signature myblob.sig myblob2); then false; fi
+./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob
+if (./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob2); then false; fi
 
-if (./cosign verify-blob --key ${verification_key} -signature myblob2.sig myblob); then false; fi
-./cosign verify-blob --key ${verification_key} -signature myblob2.sig myblob2
+if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob); then false; fi
+./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob2
 
 ## sign and verify multiple blobs
 ./cosign sign-blob --key ${signing_key} myblob myblob2 > sigs
-./cosign verify-blob --key ${verification_key} -signature <(head -n 1 sigs) myblob
-./cosign verify-blob --key ${verification_key} -signature <(tail -n 1 sigs) myblob2
+./cosign verify-blob --key ${verification_key} --signature <(head -n 1 sigs) myblob
+./cosign verify-blob --key ${verification_key} --signature <(tail -n 1 sigs) myblob2
 
 ## upload blob/sget
 blobimg="${BASE_TEST_REPO}/blob"
@@ -145,7 +145,7 @@ if ( ! cmp -s randomblob randomblob_from_digest ); then false; fi
 ## KMS!
 TEST_KMS=${TEST_KMS:-gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test}
 (crane delete $(./cosign triangulate $img)) || true
-./cosign generate-key-pair -kms $TEST_KMS
+./cosign generate-key-pair --kms $TEST_KMS
 signing_key=$TEST_KMS
 
 if (./cosign verify --key ${verification_key} $img); then false; fi
