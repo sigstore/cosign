@@ -27,7 +27,7 @@ func addInitialize(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "initialize",
-		Short: "Initializes SigStore root to retrieve trusted certificate and key targets for verification.\ncosign initialize -mirror <url> -out <file>",
+		Short: "Initializes SigStore root to retrieve trusted certificate and key targets for verification.",
 		Long: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
 The following options are used by default:
@@ -41,7 +41,8 @@ The resulting updated TUF repository will be written to $HOME/.sigstore/root/.
 
 Trusted keys and certificate used in cosign verification (e.g. verifying Fulcio issued certificates
 with Fulcio root CA) are pulled form the trusted metadata.`,
-		Example: `
+		Example: `  cosign initialize -mirror <url> -out <file>
+
   # initialize root with distributed root keys, default mirror, and default out path.
   cosign initialize
 

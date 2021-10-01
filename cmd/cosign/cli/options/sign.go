@@ -30,7 +30,7 @@ type SignOptions struct {
 	Recursive   bool
 
 	Fulcio FulcioOptions
-	Rektor RekorOptions
+	Rekor  RekorOptions
 
 	OIDC       OIDCOptions
 	Attachment string
@@ -43,7 +43,7 @@ var _ Interface = (*SignOptions)(nil)
 
 // AddFlags implements Interface
 func (o *SignOptions) AddFlags(cmd *cobra.Command) {
-	o.Rektor.AddFlags(cmd)
+	o.Rekor.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
 	o.SecurityKey.AddFlags(cmd)

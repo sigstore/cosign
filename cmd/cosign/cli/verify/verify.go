@@ -24,7 +24,6 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
@@ -50,75 +49,12 @@ type VerifyCommand struct {
 	Output      string
 	RekorURL    string
 	Attachment  string
-	Annotations *map[string]interface{}
-}
-
-func ApplyVerifyFlags(cmd *VerifyCommand, flagset *flag.FlagSet) {
-	annotations := sigs.AnnotationsMap{}
-	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, KMS URI or Kubernetes Secret")
-	flagset.StringVar(&cmd.CertEmail, "cert-email", "", "the email expected in a valid fulcio cert")
-	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
-	flagset.StringVar(&cmd.Slot, "slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-	flagset.StringVar(&cmd.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "address of rekor STL server")
-	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
-	flagset.StringVar(&cmd.Output, "output", "json", "output format for the signing image information (default JSON) (json|text)")
-	flagset.StringVar(&cmd.Attachment, "attachment", "", "related image attachment to sign (none|sbom), default none")
-	options.ApplyRegistryFlags(&cmd.RegistryOptions, flagset)
-
-	// parse annotations
-	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
-	cmd.Annotations = &annotations.Annotations
-}
-
-// Verify builds and returns an ffcli command
-func Verify() *ffcli.Command {
-	cmd := VerifyCommand{}
-	flagset := flag.NewFlagSet("cosign verify", flag.ExitOnError)
-	ApplyVerifyFlags(&cmd, flagset)
-
-	return &ffcli.Command{
-		Name:       "verify",
-		ShortUsage: "cosign verify -key <key path>|<key url>|<kms uri> <image uri> [<image uri> ...]",
-		ShortHelp:  "Verify a signature on the supplied container image",
-		LongHelp: `Verify signature and annotations on an image by checking the claims
-against the transparency log.
-
-EXAMPLES
-  # verify cosign claims and signing certificates on the image
-  cosign verify <IMAGE>
-
-  # verify multiple images
-  cosign verify <IMAGE_1> <IMAGE_2> ...
-
-  # additionally verify specified annotations
-  cosign verify -a key1=val1 -a key2=val2 <IMAGE>
-
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign verify <IMAGE>
-
-  # verify image with public key
-  cosign verify -key cosign.pub <IMAGE>
-
-  # verify image with public key provided by URL
-  cosign verify -key https://host.for/[FILE] <IMAGE>
-
-  # verify image with public key stored in Google Cloud KMS
-  cosign verify -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <IMAGE>
-
-  # verify image with public key stored in Hashicorp Vault
-  cosign verify -key hashivault://[KEY] <IMAGE>
-
-  # verify image with public key stored in a Kubernetes secret
-  cosign verify -key k8s://[NAMESPACE]/[KEY] <IMAGE>`,
-
-		FlagSet: flagset,
-		Exec:    cmd.Exec,
-	}
+	Annotations sigs.AnnotationsMap
 }
 
 // Exec runs the verification command
-func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
-	if len(args) == 0 {
+func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
+	if len(images) == 0 {
 		return flag.ErrHelp
 	}
 
@@ -134,7 +70,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 
 	co := &cosign.CheckOpts{
-		Annotations:        *c.Annotations,
+		Annotations:        c.Annotations.Annotations,
 		RegistryClientOpts: c.RegistryOptions.ClientOpts(ctx),
 		CertEmail:          c.CertEmail,
 	}
@@ -167,7 +103,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, args []string) (err error) {
 	}
 	co.SigVerifier = pubKey
 
-	for _, img := range args {
+	for _, img := range images {
 		ref, err := name.ParseReference(img)
 		if err != nil {
 			return errors.Wrap(err, "parsing reference")

@@ -18,9 +18,6 @@ package initialize
 import (
 	"context"
 	_ "embed" // To enable the `go:embed` directive.
-	"flag"
-
-	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/pkg/blob"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
@@ -28,54 +25,6 @@ import (
 
 //go:embed 1.root.json
 var initialRoot string
-
-// Initialize subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func Initialize() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign initialize", flag.ExitOnError)
-		// TODO: Support HTTP mirrors as well
-		mirror    = flagset.String("mirror", "sigstore-tuf-root", "GCS bucket to a SigStore TUF repository.")
-		root      = flagset.String("root", "", "path to trusted initial root. defaults to embedded root.")
-		threshold = flagset.Int("threshold", 3, "threshold of root key signers")
-	)
-	return &ffcli.Command{
-		Name:       "initialize",
-		ShortUsage: "cosign initialize -mirror <url> -out <file>",
-		ShortHelp:  `Initializes SigStore root to retrieve trusted certificate and key targets for verification.`,
-		LongHelp: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
-
-The following options are used by default:
-	- The initial 1.root.json is embedded inside cosign.
-	- SigStore current TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
-	- A default threshold of 3 root signatures is used. 
-
-To provide an out-of-band trusted initial root.json, use the -root flag with a file or URL reference.
-
-The resulting updated TUF repository will be written to $HOME/.sigstore/root/. 
-
-Trusted keys and certificate used in cosign verification (e.g. verifying Fulcio issued certificates 
-with Fulcio root CA) are pulled form the trusted metadata.
-
-EXAMPLES
-  # initialize root with distributed root keys, default mirror, and default out path.
-  cosign initialize
-
-  # initialize with an out-of-band root key file.
-  cosign initialize
-
-  # initialize with an out-of-band root key file and custom repository mirror.
-  cosign initialize -mirror <url> -root <url>
-  `,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			_ = mirror
-			_ = root
-			_ = threshold
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
 
 func DoInitialize(ctx context.Context, root, mirror string, threshold int) error {
 	// Get the initial trusted root contents.

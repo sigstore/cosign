@@ -42,7 +42,7 @@ func downloadSignature() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "signature",
 		Short:   "Download signatures from the supplied container image",
-		Example: "cosign download signature <image uri>",
+		Example: "  cosign download signature <image uri>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return download.SignatureCmd(cmd.Context(), *o, args[0])
@@ -60,7 +60,7 @@ func downloadSBOM() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "sbom",
 		Short:   "Download SBOMs from the supplied container image",
-		Example: "cosign download sbom <image uri>",
+		Example: "  cosign download sbom <image uri>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, err := download.SBOMCmd(cmd.Context(), *o, args[0], cmd.OutOrStdout())

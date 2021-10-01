@@ -30,9 +30,9 @@ func addAttest(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "attest",
-		Short: "Attest the supplied container image.\ncosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--upload=true|false] [--f] [--r] <image uri>",
-		Long:  "Attest the supplied container image.",
-		Example: `
+		Short: "Attest the supplied container image.",
+		Example: `  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--upload=true|false] [--f] [--r] <image uri>
+
   # attach an attestation to a container image Google sign-in (experimental)
   COSIGN_EXPERIMENTAL=1 cosign attest --predicate <FILE> --type <TYPE> <IMAGE>
 

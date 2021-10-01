@@ -29,9 +29,9 @@ func addSignBlob(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "sign-blob",
-		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout.\ncosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>",
-		Long:  "Sign the supplied blob, outputting the base64-encoded signature to stdout.",
-		Example: `
+		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout.",
+		Example: `  cosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>
+
   # sign a blob with Google sign-in (experimental)
   COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
 
@@ -67,7 +67,7 @@ func addSignBlob(topLevel *cobra.Command) {
 				Slot:             o.SecurityKey.Slot,
 				FulcioURL:        o.Fulcio.URL,
 				IDToken:          o.Fulcio.IdentityToken,
-				RekorURL:         o.Rektor.URL,
+				RekorURL:         o.Rekor.URL,
 				OIDCIssuer:       o.OIDC.Issuer,
 				OIDCClientID:     o.OIDC.ClientID,
 				OIDCClientSecret: o.OIDC.ClientSecret,

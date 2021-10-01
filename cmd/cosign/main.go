@@ -45,24 +45,6 @@ func main() {
 		}
 	}
 
-	// Extra migration hacks, while we still use ffcli, we will add a -- to
-	// escape the remaining args to let them be passed to cobra.
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "public-key", "policy", "generate-key-pair",
-			"generate", "sign", "sign-blob",
-			"upload", "download", "attach",
-			"piv-tool",
-			"attest", "copy", "clean", "triangulate",
-			"initialize",
-			"version":
-			// cobra.
-		default:
-			// ffcli
-			os.Args = append([]string{os.Args[0], "--"}, os.Args[1:]...)
-		}
-	}
-
 	if err := cli.New().Execute(); err != nil {
 		log.Fatalf("error during command execution: %v", err)
 	}

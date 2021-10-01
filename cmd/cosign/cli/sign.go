@@ -31,9 +31,10 @@ func addSign(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "sign",
-		Short: "Sign the supplied container image.\ncosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image uri>",
+		Short: "Sign the supplied container image.",
 		Long:  "Sign the supplied container image.",
-		Example: `
+		Example: `  cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image uri>
+
   # sign a container image with Google sign-in (experimental)
   COSIGN_EXPERIMENTAL=1 cosign sign <IMAGE>
 
@@ -78,7 +79,7 @@ func addSign(topLevel *cobra.Command) {
 				Slot:             o.SecurityKey.Slot,
 				FulcioURL:        o.Fulcio.URL,
 				IDToken:          o.Fulcio.IdentityToken,
-				RekorURL:         o.Rektor.URL,
+				RekorURL:         o.Rekor.URL,
 				OIDCIssuer:       o.OIDC.Issuer,
 				OIDCClientID:     o.OIDC.ClientID,
 				OIDCClientSecret: o.OIDC.ClientSecret,

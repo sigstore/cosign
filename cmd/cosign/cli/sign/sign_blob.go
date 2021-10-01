@@ -19,13 +19,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -34,70 +32,6 @@ import (
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
-
-// SignBlob subcommand for ffcli.
-// nolint
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func SignBlob() *ffcli.Command {
-	var (
-		flagset          = flag.NewFlagSet("cosign sign-blob", flag.ExitOnError)
-		key              = flagset.String("key", "", "path to the private key file or a KMS URI")
-		b64              = flagset.Bool("b64", true, "whether to base64 encode the output")
-		sk               = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot             = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-		fulcioURL        = flagset.String("fulcio-url", "https://fulcio.sigstore.dev", "[EXPERIMENTAL] address of sigstore PKI server")
-		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
-		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
-		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
-		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
-		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
-		output           = flagset.String("output", "", "write the signature to FILE")
-		regOpts          options.RegistryOptions
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "sign-blob",
-		ShortUsage: "cosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>",
-		ShortHelp:  `Sign the supplied blob, outputting the base64-encoded signature to stdout.`,
-		LongHelp: `Sign the supplied blob, outputting the base64-encoded signature to stdout.
-
-EXAMPLES
-  # sign a blob with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
-
-  # sign a blob with a local key pair file
-  cosign sign-blob -key cosign.key <FILE>
-
-  # sign a blob with a key pair stored in Azure Key Vault
-  cosign sign-blob -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
-
-  # sign a blob with a key pair stored in AWS KMS
-  cosign sign-blob -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <FILE>
-
-  # sign a blob with a key pair stored in Google Cloud KMS
-  cosign sign-blob -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
-
-  # sign a blob with a key pair stored in Hashicorp Vault
-  cosign sign-blob -key hashivault://[KEY] <FILE>`,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			_ = flagset
-			_ = key
-			_ = b64
-			_ = sk
-			_ = slot
-			_ = fulcioURL
-			_ = rekorURL
-			_ = idToken
-			_ = oidcIssuer
-			_ = oidcClientID
-			_ = oidcClientSecret
-			_ = output
-			_ = regOpts
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
 
 type KeyOpts struct {
 	Sk               bool
