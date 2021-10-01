@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -75,7 +76,7 @@ func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
 			return false, err
 		}
-		if tlogConfirmResponse != "Y" {
+		if strings.ToUpper(tlogConfirmResponse) != "Y" {
 			fmt.Fprintln(os.Stderr, "not uploading to transparency log")
 			return false, nil
 		}
