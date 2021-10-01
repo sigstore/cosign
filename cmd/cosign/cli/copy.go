@@ -34,7 +34,7 @@ func addCopy(topLevel *cobra.Command) {
   cosign copy example.com/src:latest example.com/dest:latest
 
   # copy the signatures only
-  cosign copy -sig-only example.com/src example.com/dest
+  cosign copy --sig-only example.com/src example.com/dest
 
   # overwrite destination image and signatures
   cosign copy -f example.com/src example.com/dest`,

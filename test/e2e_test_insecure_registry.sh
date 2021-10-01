@@ -37,10 +37,10 @@ img="${INSECURE_REGISTRY_NAME}:${INSECURE_REGISTRY_PORT}/test"
 crane cp gcr.io/distroless/static $img --insecure
 
 # Operations with insecure registries should fail by default, then succeed
-# with `-allow-insecure-registry`
-if (./cosign sign -key ${signing_key} $img); then false; fi
-./cosign sign -allow-insecure-registry -key ${signing_key} $img
-if (./cosign verify -key ${verification_key} $img); then false; fi
-./cosign verify -allow-insecure-registry -key ${verification_key} $img
+# with `--allow-insecure-registry`
+if (./cosign sign --key ${signing_key} $img); then false; fi
+./cosign sign --allow-insecure-registry --key ${signing_key} $img
+if (./cosign verify --key ${verification_key} $img); then false; fi
+./cosign verify --allow-insecure-registry --key ${verification_key} $img
 
 echo "SUCCESS"

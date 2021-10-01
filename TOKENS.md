@@ -91,7 +91,7 @@ You can then use the normal `cosign` commands to sign images and blobs with your
 **NOTE**: The default PIN is `123456`.
 
 ```shell
-$ cosign sign -sk gcr.io/dlorenc-vmtest2/demo
+$ cosign sign --sk gcr.io/dlorenc-vmtest2/demo
 Enter PIN for security key:
 Please tap security key...
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.sig
@@ -100,7 +100,7 @@ Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f94
 To verify, you can either use the hardware key directly:
 
 ```shell
-$ cosign verify -sk gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --sk gcr.io/dlorenc-vmtest2/demo
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
@@ -114,9 +114,9 @@ The following checks were performed on each of these signatures:
 Or export the public key and verify against that:
 
 ```shell
-$ cosign public-key -sk > pub.key
+$ cosign public-key --sk > pub.key
 
-$ cosign verify -key pub.key gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key pub.key gcr.io/dlorenc-vmtest2/demo
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
