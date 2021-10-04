@@ -45,6 +45,7 @@ cosign attest [flags]
       --key string                path to the private key file, KMS URI or Kubernetes Secret
       --predicate string          path to the predicate file.
   -r, --recursive                 if a multi-arch image is specified, additionally sign each discrete image
+      --rekor-url string          [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                        whether to use a hardware security key
       --slot string               security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --type string               specify predicate type (default: custom) (slsaprovenance|link|spdx) (default "custom")
