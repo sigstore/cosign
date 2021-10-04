@@ -62,6 +62,7 @@ func addAttest(topLevel *cobra.Command) {
 				Sk:        o.SecurityKey.Use,
 				Slot:      o.SecurityKey.Slot,
 				IDToken:   o.Fulcio.IdentityToken,
+				RekorURL:  o.Rekor.URL,
 				FulcioURL: o.Fulcio.URL,
 			}
 			for _, img := range args {
