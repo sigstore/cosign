@@ -43,15 +43,15 @@ PKG=github.com/sigstore/cosign/cmd/cosign/cli
 
 LDFLAGS="-X $(PKG).GitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE) -X $(PKG).buildDate=$(BUILD_DATE)"
 
+.PHONY: all lint test clean cosign cross
+
+all: cosign
+
 help: # Display help
 	@awk -F ':|##' \
 		'/^[^\t].+?:.*?##/ {\
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
 		}' $(MAKEFILE_LIST) | sort
-
-.PHONY: all lint test clean cosign cross
-
-all: cosign
 
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 
