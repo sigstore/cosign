@@ -77,6 +77,7 @@ func New() *cobra.Command {
 	addInitialize(cmd)
 	addPIVTool(cmd)
 	addVersion(cmd)
+	addCompletion(cmd)
 
 	return cmd
 }
