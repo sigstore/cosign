@@ -16,6 +16,7 @@
 * [cosign attest](cosign_attest.md)	 - Attest the supplied container image.
 * [cosign clean](cosign_clean.md)	 - Remove all signatures from an image.
 cosign clean <image uri>
+* [cosign completion](cosign_completion.md)	 - Generate completion script
 * [cosign copy](cosign_copy.md)	 - Copy the supplied container image and signatures.
 * [cosign dockerfile](cosign_dockerfile.md)	 - Provides utilities for discovering images in and performing operations on Dockerfiles
 * [cosign download](cosign_download.md)	 - Provides utilities for downloading artifacts and attached artifacts in a registry
