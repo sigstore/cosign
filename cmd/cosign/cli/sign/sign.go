@@ -51,6 +51,7 @@ import (
 	fulcioClient "github.com/sigstore/fulcio/pkg/client"
 	rekorclient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -107,6 +108,19 @@ func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, up
 		return nil, err
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+
+	params := entries.NewGetLogEntryByIndexParams()
+	params.LogIndex = *entry.LogIndex
+
+	resp, err := rekorClient.Entries.GetLogEntryByIndex(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for entryIndex := range resp.Payload {
+		fmt.Fprintf(os.Stderr, "Rekor URL: %s/api/v1/log/entries/%s \n", rekorURL, entryIndex)
+	}
+
 	return Bundle(entry), nil
 }
 
