@@ -35,7 +35,7 @@ const (
 
 // CosignPredicate specifies the format of the Custom Predicate.
 type CosignPredicate struct {
-	Data      string
+	Data      interface{}
 	Timestamp string
 }
 
@@ -63,13 +63,6 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 		return nil, err
 	}
 	switch opts.Type {
-	case "custom":
-		if opts.Time == nil {
-			opts.Time = time.Now
-		}
-		now := opts.Time()
-		stamp := now.UTC().Format(time.RFC3339)
-		return generateCustomStatement(rawPayload, opts.Digest, opts.Repo, stamp)
 	case "slsaprovenance":
 		return generateSLSAProvenanceStatement(rawPayload, opts.Digest, opts.Repo)
 	case "spdx":
@@ -77,8 +70,25 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	case "link":
 		return generateLinkStatement(rawPayload, opts.Digest, opts.Repo)
 	default:
-		return nil, fmt.Errorf("we don't know this predicate type: %q", opts.Type)
+		stamp := timestamp(opts)
+		predicateType := customType(opts)
+		return generateCustomStatement(rawPayload, predicateType, opts.Digest, opts.Repo, stamp)
 	}
+}
+
+func timestamp(opts GenerateOpts) string {
+	if opts.Time == nil {
+		opts.Time = time.Now
+	}
+	now := opts.Time()
+	return now.UTC().Format(time.RFC3339)
+}
+
+func customType(opts GenerateOpts) string {
+	if opts.Type != "custom" {
+		return opts.Type
+	}
+	return CosignCustomProvenanceV01
 }
 
 func generateStatementHeader(digest, repo, predicateType string) in_toto.StatementHeader {
@@ -97,14 +107,32 @@ func generateStatementHeader(digest, repo, predicateType string) in_toto.Stateme
 }
 
 //
-func generateCustomStatement(rawPayload []byte, digest, repo, timestamp string) (interface{}, error) {
+func generateCustomStatement(rawPayload []byte, customType, digest, repo, timestamp string) (interface{}, error) {
+	payload, err := generateCustomPredicate(rawPayload, customType, timestamp)
+	if err != nil {
+		return nil, err
+	}
+
 	return in_toto.Statement{
-		StatementHeader: generateStatementHeader(digest, repo, CosignCustomProvenanceV01),
-		Predicate: CosignPredicate{
+		StatementHeader: generateStatementHeader(digest, repo, customType),
+		Predicate:       payload,
+	}, nil
+}
+
+func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (interface{}, error) {
+	if customType == CosignCustomProvenanceV01 {
+		return &CosignPredicate{
 			Data:      string(rawPayload),
 			Timestamp: timestamp,
-		},
-	}, nil
+		}, nil
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(rawPayload, &result); err != nil {
+		return nil, errors.Wrapf(err, "invalid JSON payload for predicate type %s", customType)
+	}
+
+	return result, nil
 }
 
 func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {

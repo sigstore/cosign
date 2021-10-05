@@ -33,5 +33,5 @@ func (o *PredicateOptions) AddFlags(cmd *cobra.Command) {
 		"path to the predicate file.")
 
 	cmd.Flags().StringVar(&o.Type, "type", "custom",
-		"specify predicate type (default: custom) (slsaprovenance|link|spdx)")
+		"specify a predicate type (slsaprovenance|link|spdx|custom) or an URI")
 }
