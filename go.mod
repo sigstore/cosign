@@ -48,6 +48,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/urfave/cli v1.22.5 // indirect
+	github.com/xanzy/go-gitlab v0.31.0
 	go.opentelemetry.io/contrib v0.24.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect

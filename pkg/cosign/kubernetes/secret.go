@@ -31,7 +31,6 @@ import (
 
 const (
 	KeyReference = "k8s://"
-
 )
 
 func GetKeyPairSecret(ctx context.Context, k8sRef string) (*v1.Secret, error) {

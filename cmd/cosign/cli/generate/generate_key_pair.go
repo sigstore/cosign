@@ -19,14 +19,15 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/git"
 	"github.com/sigstore/cosign/pkg/cosign/git/github"
 	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
 	"golang.org/x/term"
-	"io/ioutil"
-	"os"
-	"strings"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
@@ -62,18 +63,22 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 	}
 
 	if len(args) > 0 {
-		// github://repository/project
 		split := strings.Split(args[0], "://")
+
+		if len(split) < 2 {
+			return errors.New("could not parse scheme, use <protocol>://<ref> format")
+		}
+
 		provider, targetRef := split[0], split[1]
 
 		switch provider {
 		case "k8s":
 			return kubernetes.KeyPairSecret(ctx, targetRef, GetPass)
-		case gitlab.GitLabReference,github.GitHubReference:
-			return git.GetGit(provider).PutSecret(ctx, targetRef, GetPass)
+		case gitlab.ReferenceScheme, github.ReferenceScheme:
+			return git.GetProvider(provider).PutSecret(ctx, targetRef, GetPass)
 		}
 
-		return fmt.Errorf("undefined provider")
+		return fmt.Errorf("undefined provider: %s", provider)
 	}
 
 	keys, err := cosign.GenerateKeyPair(GetPass)

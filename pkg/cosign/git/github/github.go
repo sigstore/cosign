@@ -1,64 +1,119 @@
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package github
 
 import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/google/go-github/v39/github"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"golang.org/x/oauth2"
-	"io"
-	"net/http"
-	"os"
-	"strings"
 )
 
 const (
-	GitHubReference = "github"
+	ReferenceScheme = "github"
 )
 
-type gh struct{}
+type Gh struct{}
 
-func New() *gh {
-	return &gh{}
+func New() *Gh {
+	return &Gh{}
 }
 
-func (g *gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
+func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
 	keys, err := cosign.GenerateKeyPair(pf)
 	if err != nil {
 		return errors.Wrap(err, "generating key pair")
 	}
 
 	var httpClient *http.Client
-	if token, ok := os.LookupEnv("GITHUB_TOKEN"); ok { // todo: if not ok then return error
+	if token, ok := os.LookupEnv("GITHUB_TOKEN"); ok {
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
 		httpClient = oauth2.NewClient(ctx, ts)
+	} else {
+		return errors.New("could not find \"GITHUB_TOKEN\" env variable")
 	}
 	client := github.NewClient(httpClient)
 
 	split := strings.Split(ref, "/")
-	owner, repo := split[0], split[1] // todo: check second element
+	if len(split) < 2 {
+		return errors.New("could not parse scheme, use github://<owner>/<repo> format")
+	}
+	owner, repo := split[0], split[1]
 
-	key, _, err := client.Actions.GetRepoPublicKey(ctx, owner, repo) // todo: check response status
+	key, getRepoPubKeyResp, err := client.Actions.GetRepoPublicKey(ctx, owner, repo)
+	if err != nil {
+		return errors.Wrap(err, "could not get repository public key")
+	}
 
-	secret := &github.EncryptedSecret{
+	if getRepoPubKeyResp.StatusCode < 200 && getRepoPubKeyResp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(getRepoPubKeyResp.Body)
+		return fmt.Errorf("%s", bodyBytes)
+	}
+
+	passwordSecretEnv := &github.EncryptedSecret{
+		Name:           "COSIGN_PASSWORD",
+		KeyID:          key.GetKeyID(),
+		EncryptedValue: base64.StdEncoding.EncodeToString(keys.Password()),
+	}
+
+	passwordSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, passwordSecretEnv)
+	if err != nil {
+		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" environment variable")
+	}
+
+	if passwordSecretEnvResp.StatusCode < 200 && passwordSecretEnvResp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(passwordSecretEnvResp.Body)
+		return fmt.Errorf("%s", bodyBytes)
+	}
+
+	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PASSWORD environment variable")
+
+	privateKeySecretEnv := &github.EncryptedSecret{
 		Name:           "COSIGN_PRIVATE_KEY",
 		KeyID:          key.GetKeyID(),
 		EncryptedValue: base64.StdEncoding.EncodeToString(keys.PrivateBytes),
 	}
 
-	repoSecret, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, secret)
+	repoSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, privateKeySecretEnv)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" environment variable")
 	}
 
-	if repoSecret.StatusCode < 200 && repoSecret.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(repoSecret.Body)
+	if repoSecretEnvResp.StatusCode < 200 && repoSecretEnvResp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(repoSecretEnvResp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
+
+	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PRIVATE_KEY environment variable")
+
+	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
 
 	return nil
 }
