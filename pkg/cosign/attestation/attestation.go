@@ -115,14 +115,14 @@ func generateCustomStatement(rawPayload []byte, customType, digest, repo, timest
 
 	return in_toto.Statement{
 		StatementHeader: generateStatementHeader(digest, repo, customType),
-		Predicate: payload,
+		Predicate:       payload,
 	}, nil
 }
 
 func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (interface{}, error) {
 	if customType == CosignCustomProvenanceV01 {
 		return &CosignPredicate{
-			Data: string(rawPayload),
+			Data:      string(rawPayload),
 			Timestamp: timestamp,
 		}, nil
 	}
