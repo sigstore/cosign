@@ -45,11 +45,11 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 	}
 
 	// PEM encoded file.
-	ed, err := cosign.PemToECDSAKey(raw)
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
 	if err != nil {
-		return nil, errors.Wrap(err, "pem to ecdsa")
+		return nil, errors.Wrap(err, "pem to public key")
 	}
-	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
+	return signature.LoadVerifier(pubKey, crypto.SHA256)
 }
 
 func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier, error) {
