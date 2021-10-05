@@ -29,7 +29,10 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
-const KeyReference = "k8s://"
+const (
+	KeyReference = "k8s://"
+
+)
 
 func GetKeyPairSecret(ctx context.Context, k8sRef string) (*v1.Secret, error) {
 	namespace, name, err := parseRef(k8sRef)
