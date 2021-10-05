@@ -48,7 +48,7 @@ cosign attest [flags]
       --rekor-url string          [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                        whether to use a hardware security key
       --slot string               security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --type string               specify predicate type (default: custom) (slsaprovenance|link|spdx) (default "custom")
+      --type string               specify a predicate type (slsaprovenance|link|spdx|custom) or an URI (default "custom")
       --upload                    whether to upload the signature (default true)
 ```
 
