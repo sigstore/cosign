@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -74,7 +75,11 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 
 	predicateURI, ok := predicateTypeMap[predicateType]
 	if !ok {
-		return fmt.Errorf("invalid predicate type: %s", predicateType)
+		if _, err := url.ParseRequestURI(predicateType); err != nil {
+			return fmt.Errorf("invalid predicate type: %s", predicateType)
+		} else {
+			predicateURI = predicateType
+		}
 	}
 
 	ref, err := name.ParseReference(imageRef)
