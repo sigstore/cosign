@@ -93,9 +93,11 @@ func WithPrefix(prefix string) Option {
 // tag suffix.
 func WithSuffix(suffix string) Option {
 	return func(o *options) {
-		o.SignatureSuffix = suffix
-		o.AttestationSuffix = suffix
-		o.SBOMSuffix = suffix
+		if suffix != "" {
+			o.SignatureSuffix = suffix
+			o.AttestationSuffix = suffix
+			o.SBOMSuffix = suffix
+		}
 	}
 }
 
