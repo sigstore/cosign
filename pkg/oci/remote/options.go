@@ -27,7 +27,7 @@ const (
 	SignatureTagSuffix   = "sig"
 	SBOMTagSuffix        = "sbom"
 	AttestationTagSuffix = "att"
-  CommonTagPrefix      = ""
+	CommonTagPrefix      = ""
 
 	RepoOverrideKey = "COSIGN_REPOSITORY"
 )
