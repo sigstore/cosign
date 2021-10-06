@@ -84,9 +84,9 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 // sha256:d34db33f -> sha256-d34db33f.suffix
 func normalize(h v1.Hash, prefix string, suffix string) string {
 	if suffix == "" {
-		return fmt.Sprint(h.Algorithm, prefix, "-", h.Hex)
+		return fmt.Sprint(prefix, h.Algorithm, "-", h.Hex)
 	}
-	return fmt.Sprint(h.Algorithm, prefix, "-", h.Hex, ".", suffix)
+	return fmt.Sprint(prefix, h.Algorithm, "-", h.Hex, ".", suffix)
 }
 
 // SignatureTag returns the name.Tag that associated signatures with a particular digest.
