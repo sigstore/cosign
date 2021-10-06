@@ -1,5 +1,57 @@
 # Changelog
 
+## v1.3.0
+
+* BREAKING: `verify-manifest` is now `manifest verify` (https://github.com/sigstore/cosign/pull/712)
+* WARNING: The CLI now uses POSIX-style (double-dash `--flag`) for long-form flags. It will temporarily accept the single-dash `-flag` form with a warning, which will become an error in a future release (https://github.com/sigstore/cosign/pull/835)
+* Added `sget` as part of Cosign's releases (https://github.com/sigstore/cosign/pull/752)
+* The `copasetic` binary was unceremoniously [baleeted](https://www.youtube.com/watch?v=07h0ksKx5sM) (https://github.com/sigstore/cosign/pull/785)
+
+### Enhancements
+
+* Began reworking `pkg` around new abstrations for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
+    * Notice: refactoring of `pkg` will continue in the next minor release. Please leave feedback, especially if you've been experimenting with `cosign` as a library and found it lacking (https://github.com/sigstore/cosign/issues/844)
+    * [GGCR-style libraries](https://github.com/google/go-containerregistry#philosophy) for interacting with images now exist under `pkg/oci` (https://github.com/sigstore/cosign/pull/770)
+    * `pkg/cosign/remote.UploadSignature` API was been removed in favor of new `pkg/oci/remote` APIs (https://github.com/sigstore/cosign/pull/774)
+    * The function signature of `cosign.Verify` was changed so that callers must be explicit about which signatures (or attestations) to verify. For matching signatures, see also `cosign.Verify{Signatures,Attestations}` (https://github.com/sigstore/cosign/pull/782)
+    * Removed `cremote.UploadFile` in favor of `static.NewFile` and `remote.Write` (https://github.com/sigstore/cosign/pull/797)
+* Innumerable other improvements to the codebase and automation ([Makin me look bad, @mattmoor](https://github.com/sigstore/cosign/commits?author=mattmoor))
+* Migrated the CLI to `cobra` ([Welcome to the team, @n3wscott](https://github.com/sigstore/cosign/commits?author=n3wscott))
+* Added the `--allow-insecure-registry` flag to disable TLS verification when interacting with insecure (e.g. self-signed) container registries (https://github.com/sigstore/cosign/pull/669)
+* 🔒 `cosigned` now includes a mutating webhook that resolves image tags to digests (https://github.com/sigstore/cosign/pull/800)
+* 🔒 The `cosigned` validating webhook now requires image digest references (https://github.com/sigstore/cosign/pull/799)
+* The `cosigned` webhook now ignores resources that are being deleted (https://github.com/sigstore/cosign/pull/803)
+* The `cosigned` webhook now supports resolving private images that are authenticated via `imagePullSecrets` (https://github.com/sigstore/cosign/pull/804)
+* `manifest verify` now supports verifying images in all Kubernetes objects that fit within `PodSpec`, `PodSpecTemplate`, or `JobSpecTemplate`, including CRDs (https://github.com/sigstore/cosign/pull/697)
+* Added shell auto-completion support (Clutch collab from @erkanzileli, @passcod, and @Dentrax! https://github.com/sigstore/cosign/pull/836)
+* `cosign` has generated Markdown docs available in the `doc/` directory (https://github.com/sigstore/cosign/pull/839)
+
+### Bug Fixes
+
+* `cosigned` now verifies `CronJob` images (Terve, @vaikas https://github.com/sigstore/cosign/pull/809)
+* Fixed the `verify` `--cert-email` option to actually work (Sweet as, @passcod https://github.com/sigstore/cosign/pull/821)
+
+### Contributors
+
+* Aditya Sirish (@adityasaky)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Panato (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Dan Luhring (@luhring)
+* Erkan Zileli (@erkanzileli)
+* Félix Saparelli (@passcod)
+* Furkan Türkal (@Dentrax)
+* Ivan Font (@font)
+* Jake Sanders (@dekkagaijin)
+* Jason Hall (@imjasonh)
+* Jim Bugwadia (@JimBugwadia)
+* Matt Moore (@mattmoor)
+* Rémy Greinhofer (@rgreinho)
+* Scott Nichols (@n3wscott)
+* Viacheslav Vasilyev (@avoidik)
+* Ville Aikas (@vaikas)
+
 ## v1.2.0
 
 ### Enhancements

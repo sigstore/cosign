@@ -13,28 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package attach
+package tuf
 
 import (
-	"context"
-	"flag"
-
-	"github.com/peterbourgon/ff/v3/ffcli"
+	"encoding/json"
 )
 
-func Attach() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign attach", flag.ExitOnError)
-	)
+const (
+	KeyTypeFulcio   = "sigstore-oidc"
+	KeySchemeFulcio = "https://fulcio.sigstore.dev"
+)
 
-	return &ffcli.Command{
-		Name:        "attach",
-		ShortUsage:  "cosign attach",
-		ShortHelp:   "Provides utilities for attaching artifacts to other artifacts in a registry",
-		FlagSet:     flagset,
-		Subcommands: []*ffcli.Command{Signature(), SBOM()},
-		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
-		},
+var (
+	KeyAlgorithms = []string{"sha256", "sha512"}
+)
+
+type FulcioKeyVal struct {
+	Identity string `json:"identity"`
+	Issuer   string `json:"issuer"`
+}
+
+func FulcioVerificationKey(email string, issuer string) *Key {
+	keyValBytes, _ := json.Marshal(FulcioKeyVal{Identity: email, Issuer: issuer})
+	return &Key{
+		Type:       KeyTypeFulcio,
+		Scheme:     KeySchemeFulcio,
+		Algorithms: KeyAlgorithms,
+		Value:      keyValBytes,
 	}
 }

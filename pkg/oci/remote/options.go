@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	SignatureTagSuffix   = ".sig"
-	SBOMTagSuffix        = ".sbom"
-	AttestationTagSuffix = ".att"
-	CommonTagPrefix      = ""
+	SignatureTagSuffix   = "sig"
+	SBOMTagSuffix        = "sbom"
+	AttestationTagSuffix = "att"
+  CommonTagPrefix      = ""
 
 	RepoOverrideKey = "COSIGN_REPOSITORY"
 )

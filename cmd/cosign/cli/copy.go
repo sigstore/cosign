@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"flag"
-
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/copy"
@@ -29,22 +27,20 @@ func addCopy(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "copy",
-		Short: "Copy the supplied container image and signatures.\ncosign copy <source image> <destination image>",
-		Long:  "Copy the supplied container image and signatures.",
-		Example: `
+		Short: "Copy the supplied container image and signatures.",
+		Example: `  cosign copy <source image> <destination image>
+
   # copy a container image and its signatures
   cosign copy example.com/src:latest example.com/dest:latest
 
   # copy the signatures only
-  cosign copy -sig-only example.com/src example.com/dest
+  cosign copy --sig-only example.com/src example.com/dest
 
   # overwrite destination image and signatures
   cosign copy -f example.com/src example.com/dest`,
 
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 2 {
-				return flag.ErrHelp
-			}
 			return copy.CopyCmd(cmd.Context(), o.Registry, args[0], args[1], o.SignatureOnly, o.Force)
 		},
 	}

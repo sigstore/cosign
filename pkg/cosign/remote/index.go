@@ -38,6 +38,14 @@ type File interface {
 	Path() string
 }
 
+func FilesFromFlagList(sl []string) []File {
+	files := make([]File, len(sl))
+	for i, s := range sl {
+		files[i] = FileFromFlag(s)
+	}
+	return files
+}
+
 func FileFromFlag(s string) File {
 	split := strings.Split(s, ":")
 	f := file{

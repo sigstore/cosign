@@ -17,7 +17,6 @@ package options
 
 import (
 	"context"
-	"flag"
 	"reflect"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -38,14 +37,6 @@ func NOf(args ...interface{}) int {
 		}
 	}
 	return n
-}
-
-// ApplyRegistryFlags adds registry go flags to a flagset.
-// Deprecated: this will be deleted when the migration to cobra is finished.
-func ApplyRegistryFlags(regOpts *RegistryOptions, fs *flag.FlagSet) {
-	fs.BoolVar(&regOpts.AllowInsecure, "allow-insecure-registry", false, "whether to allow insecure connections to registries. Don't use this for anything but testing")
-	fs.StringVar(&regOpts.TagPrefix, "tag-prefix", "", "custom prefix to use for tags")
-	fs.StringVar(&regOpts.TagSuffix, "signature-tag-suffix", "", "custom suffix to use for signature tag")
 }
 
 func defaultRegistryClientOpts(ctx context.Context) []remote.Option {

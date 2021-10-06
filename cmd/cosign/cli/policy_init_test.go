@@ -13,28 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package download
+package cli
 
 import (
-	"context"
-	"flag"
-
-	"github.com/peterbourgon/ff/v3/ffcli"
+	"testing"
 )
 
-func Download() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign download", flag.ExitOnError)
-	)
+// Tests correctly formatted emails do not fail validEmail call
+// Tests incorrectly formatted emails do not pass validEmail call
+func TestEmailValid(t *testing.T) {
+	goodEmail := "foo@foo.com"
+	strongBadEmail := "foofoocom"
 
-	return &ffcli.Command{
-		Name:        "download",
-		ShortUsage:  "cosign download",
-		ShortHelp:   "Provides utilities for downloading artifacts and attached artifacts in a registry",
-		FlagSet:     flagset,
-		Subcommands: []*ffcli.Command{Signature(), SBOM()},
-		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
-		},
+	if !validEmail(goodEmail) {
+		t.Errorf("correct email %s, failed valid check", goodEmail)
+	} else if validEmail(strongBadEmail) {
+		t.Errorf("bad email %s, passed valid check", strongBadEmail)
 	}
 }

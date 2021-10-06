@@ -8,7 +8,7 @@ Use `cosign` to generate the payload, sign it with `gcloud kms`, then use `cosig
 $ cosign generate us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun > payload.json
 $ gcloud kms asymmetric-sign --digest-algorithm=sha256 --input-file=payload.json --signature-file=gcpkms.sig --key=foo --keyring=foo --version=1 --location=us-central
 # We have to base64 encode the signature
-$ cat gcpkms.sig | base64 | cosign attach signature -signature - us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
+$ cat gcpkms.sig | base64 | cosign attach signature --signature - us-central1-docker.pkg.dev/dlorenc-vmtest2/test/taskrun
 ```
 
 Now (on another machine) download the public key, payload, signatures and verify it!
@@ -36,9 +36,9 @@ $ cosign generate us.gcr.io/dlorenc-vmtest2/demo > payload.json
 $ openssl dgst -sha256 -sign openssl.key -out payload.sig payload.json
 $ cat payload.sig | base64 > payloadbase64.sig
 # Upload the signature
-$ cosign attach signature -payload payload.json -signature payloadbase64.sig  us.gcr.io/dlorenc-vmtest2/demo
+$ cosign attach signature --payload payload.json --signature payloadbase64.sig us.gcr.io/dlorenc-vmtest2/demo
 # Verify!
-$ cosign verify -key openssl.pub us.gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key openssl.pub us.gcr.io/dlorenc-vmtest2/demo
 Verification for us.gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
   - The cosign claims were validated

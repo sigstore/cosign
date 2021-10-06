@@ -18,85 +18,17 @@ package upload
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
-type Files struct {
-	Files []cremote.File
-}
-
-func (fs *Files) Set(k string) error {
-	f := cremote.FileFromFlag(k)
-	fs.Files = append(fs.Files, f)
-
-	// If we have multiple files, each file must have a platform.
-	if len(fs.Files) > 1 {
-		for _, f := range fs.Files {
-			if f.Platform() == nil {
-				return fmt.Errorf("each file must include a unique platform, %s had no platform", f.Path())
-			}
-		}
-	}
-	return nil
-}
-
-func (fs *Files) String() string {
-	s := []string{}
-	for _, f := range fs.Files {
-		s = append(s, f.String())
-	}
-	return strings.Join(s, ",")
-}
-
-func Blob() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign upload blob", flag.ExitOnError)
-		ct      = flagset.String("ct", "", "content type to set")
-		regOpts options.RegistryOptions
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	fmap := Files{}
-	flagset.Var(&fmap, "f", "<filepath>:[platform/arch]")
-	return &ffcli.Command{
-		Name:       "blob",
-		ShortUsage: "cosign upload blob -f <blob ref> <image uri>",
-		ShortHelp:  "Upload one or more blobs to the supplied container image address",
-		LongHelp: `Upload one or more blobs to the supplied container image address.
-
-EXAMPLES
-  # upload a blob named foo to the location specified by <IMAGE>
-  cosign upload blob -f foo <IMAGE>
-
-  # upload a blob named foo to the location specified by <IMAGE>, setting the os field to "MYOS".
-  cosign upload blob -f foo:MYOS <IMAGE>
-
-  # upload a blob named foo to the location specified by <IMAGE>, setting the os field to "MYOS" and the platform field to "MYPLATFORM".
-  cosign upload blob -f foo:MYOS/MYPLATFORM <IMAGE>
-
-  # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting the os fields
-  cosign upload blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
-  `,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 || len(fmap.Files) < 1 {
-				return flag.ErrHelp
-			}
-
-			return BlobCmd(ctx, regOpts, fmap.Files, *ct, args[0])
-		},
-	}
-}
-
 func BlobCmd(ctx context.Context, regOpts options.RegistryOptions, files []cremote.File, contentType, imageRef string) error {
+	// TODO: use contentType.
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

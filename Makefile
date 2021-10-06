@@ -43,15 +43,15 @@ PKG=github.com/sigstore/cosign/cmd/cosign/cli
 
 LDFLAGS="-X $(PKG).GitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE) -X $(PKG).buildDate=$(BUILD_DATE)"
 
+.PHONY: all lint test clean cosign cross
+
+all: cosign
+
 help: # Display help
 	@awk -F ':|##' \
 		'/^[^\t].+?:.*?##/ {\
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
 		}' $(MAKEFILE_LIST) | sort
-
-.PHONY: all lint test clean cosign cross
-
-all: cosign
 
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 
@@ -108,11 +108,11 @@ ko-local:
 
 .PHONY: sign-container
 sign-container: ko
-	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosign:$(GIT_HASH)
+	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosign:$(GIT_HASH)
 
 .PHONY: sign-cosigned
 sign-cosigned:
-	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosigned:$(GIT_HASH)
+	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosigned:$(GIT_HASH)
 
 # used when releasing together with GCP CloudBuild
 .PHONY: release

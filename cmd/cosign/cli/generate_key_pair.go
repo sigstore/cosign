@@ -27,9 +27,10 @@ func addGenerateKeyPair(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "generate-key-pair",
-		Short: "Generates a key-pair.\ncosign generate-key-pair [--kms KMSPATH]",
+		Short: "Generates a key-pair.",
 		Long:  "Generates a key-pair for signing.",
-		Example: `
+		Example: `  cosign generate-key-pair [--kms KMSPATH]
+
   # generate key-pair and write to cosign.key and cosign.pub files
   cosign generate-key-pair
 

@@ -46,7 +46,7 @@ func (o *AnnotationOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
 	return ann, nil
 }
 
-// AddFlags implements Inteface
+// AddFlags implements Interface
 func (o *AnnotationOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSliceVarP(&o.Annotations, "annotations", "a", nil,
 		"extra key=value pairs to sign")

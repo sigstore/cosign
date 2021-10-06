@@ -27,6 +27,7 @@ type AttestOptions struct {
 	Force     bool
 	Recursive bool
 
+	Rekor       RekorOptions
 	Fulcio      FulcioOptions
 	SecurityKey SecurityKeyOptions
 	Predicate   PredicateOptions
@@ -40,6 +41,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
+	o.Rekor.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",

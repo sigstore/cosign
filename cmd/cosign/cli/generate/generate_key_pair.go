@@ -18,12 +18,10 @@ package generate
 import (
 	"context"
 	"crypto"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"golang.org/x/term"
 
@@ -37,51 +35,6 @@ var (
 	// Read is for fuzzing
 	Read = readPasswordFn
 )
-
-// GenerateKeyPair subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-// nolint
-func GenerateKeyPair() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign generate-key-pair", flag.ExitOnError)
-		kmsVal  = flagset.String("kms", "", "create key pair in KMS service to use for signing")
-	)
-
-	return &ffcli.Command{
-		Name:       "generate-key-pair",
-		ShortUsage: "cosign generate-key-pair [-kms KMSPATH]",
-		ShortHelp:  "Generates a key-pair",
-		LongHelp: `Generates a key-pair for signing.
-
-EXAMPLES:
-  # generate key-pair and write to cosign.key and cosign.pub files
-  cosign generate-key-pair
-
-  # generate a key-pair in Azure Key Vault
-  cosign generate-key-pair -kms azurekms://[VAULT_NAME][VAULT_URI]/[KEY]
-
-  # generate a key-pair in AWS KMS
-  cosign generate-key-pair -kms awskms://[ENDPOINT]/[ID/ALIAS/ARN]
-
-  # generate a key-pair in Google Cloud KMS
-  cosign generate-key-pair -kms gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
-
-  # generate a key-pair in Hashicorp Vault
-  cosign generate-key-pair -kms hashivault://[KEY]
-
-  # generate a key-pair in Kubernetes Secret
-  cosign generate-key-pair k8s://[NAMESPACE]/[NAME]
-
-CAVEATS:
-  This command interactively prompts for a password. You can use
-  the COSIGN_PASSWORD environment variable to provide one.`,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			_ = kmsVal
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
 
 // nolint
 func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
