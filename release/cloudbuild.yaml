@@ -64,11 +64,11 @@ steps:
   - 'verify'
   - '-key'
   - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.2@sha256:24bb133da23e0d21a8e8a54416f652d753c7cb2ad8efb3e6a3ef652f597ada8f'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.2-2@sha256:68bb9634801ab5f3a4ab07fbbf3ff661e49fc5df9e1a8ee03a41cbe4fcdbcc39'
   waitFor: ['-']
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.2@sha256:24bb133da23e0d21a8e8a54416f652d753c7cb2ad8efb3e6a3ef652f597ada8f
+- name: ghcr.io/gythialy/golang-cross:v1.17.2-2@sha256:68bb9634801ab5f3a4ab07fbbf3ff661e49fc5df9e1a8ee03a41cbe4fcdbcc39
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:

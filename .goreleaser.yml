@@ -243,3 +243,11 @@ release:
 
   extra_files:
     - glob: "./release/release-cosign.pub"
+
+rigs:
+  - rig:
+      owner: sigstore
+      name: fish-food
+    homepage: https://sigstore.dev
+    description: Container Signing, Verification and Storage in an OCI registry.
+    license: "Apache License 2.0"
