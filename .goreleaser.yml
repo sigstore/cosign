@@ -213,3 +213,15 @@ release:
 
   extra_files:
     - glob: "./release/release-cosign.pub"
+
+rigs:
+  - rig:
+      owner: sigstore
+      name: fish-food
+    commit_author:
+      name: sigstore-bot
+      email: 86837369+sigstore-bot@users.noreply.github.com
+    homepage: https://sigstore.dev
+    description: Container Signing, Verification and Storage in an OCI registry.
+    license: "Apache License 2.0"
+
