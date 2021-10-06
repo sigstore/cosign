@@ -49,6 +49,12 @@ func addGenerateKeyPair(topLevel *cobra.Command) {
   # generate a key-pair in Kubernetes Secret
   cosign generate-key-pair k8s://[NAMESPACE]/[NAME]
 
+  # generate a key-pair in GitHub
+  cosign generate-key-pair github://owner/project
+
+  # generate a key-pair in GitLab
+  cosign generate-key-pair gitlab://owner/project
+
 CAVEATS:
   This command interactively prompts for a password. You can use
   the COSIGN_PASSWORD environment variable to provide one.`,
