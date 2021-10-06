@@ -13,9 +13,9 @@
 // `-R`, `--recursive`: Apply the operation recursively.
 
 // Single-entry inputs
-// `-o`, `--output`: The output file.
+// `-o`, `--output`: The output file (payload).
 // `-f`, `--output-format`: The format of the output.
-// `-O`, `--output-file`: The file to output to.
+// `-O`, `--output-file`: The file to redirect stdout to (task steps).
 // `-k`, `--key`: Path to the private key file, KMS URI or Kubernetes Secret.
 // '-s', `--signature`: Path to signature, or content or remote URL.
 // `-c`, `--cert`: Path to the public certificate.
