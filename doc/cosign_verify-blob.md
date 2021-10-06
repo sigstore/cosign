@@ -59,6 +59,8 @@ cosign verify-blob [flags]
       --signature string          signature content or path or remote URL
       --sk                        whether to use a hardware security key
       --slot string               security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --tag-prefix string         custom prefix to use for tags
+      --tag-suffix string         custom suffix to use for tags
 ```
 
 ### Options inherited from parent commands

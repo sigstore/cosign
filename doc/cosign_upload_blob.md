@@ -31,6 +31,8 @@ cosign upload blob [flags]
       --ct string                 content type to set
   -f, --files strings             <filepath>:[platform/arch]
   -h, --help                      help for blob
+      --tag-prefix string         custom prefix to use for tags
+      --tag-suffix string         custom suffix to use for tags
 ```
 
 ### Options inherited from parent commands
