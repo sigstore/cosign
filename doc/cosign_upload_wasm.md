@@ -24,7 +24,7 @@ cosign upload wasm [flags]
 
 ```
       --output-file string   log output to a file
-  -d, --verbose              log debug output
+  -v, --verbose              log verbose debug output
 ```
 
 ### SEE ALSO

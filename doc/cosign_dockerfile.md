@@ -12,7 +12,7 @@ Provides utilities for discovering images in and performing operations on Docker
 
 ```
       --output-file string   log output to a file
-  -d, --verbose              log debug output
+  -v, --verbose              log verbose debug output
 ```
 
 ### SEE ALSO

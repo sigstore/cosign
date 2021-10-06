@@ -12,7 +12,7 @@ Provides utilities for attaching artifacts to other artifacts in a registry
 
 ```
       --output-file string   log output to a file
-  -d, --verbose              log debug output
+  -v, --verbose              log verbose debug output
 ```
 
 ### SEE ALSO

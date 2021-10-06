@@ -44,7 +44,7 @@ cosign completion [bash|zsh|fish|powershell]
 
 ```
       --output-file string   log output to a file
-  -d, --verbose              log debug output
+  -v, --verbose              log verbose debug output
 ```
 
 ### SEE ALSO

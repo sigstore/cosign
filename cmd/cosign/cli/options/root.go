@@ -32,6 +32,6 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&o.OutputFile, "output-file", "",
 		"log output to a file")
 
-	cmd.PersistentFlags().BoolVarP(&o.Verbose, "verbose", "d", false,
-		"log debug output")
+	cmd.PersistentFlags().BoolVarP(&o.Verbose, "verbose", "v", false,
+		"log verbose debug output")
 }
