@@ -44,12 +44,12 @@ type image struct {
 
 var _ oci.SignedImage = (*image)(nil)
 
-// Signatures implements oic.SignedImage
+// Signatures implements oci.SignedImage
 func (i *image) Signatures() (oci.Signatures, error) {
 	return signatures(i, i.opt)
 }
 
-// Attestations implements oic.SignedImage
+// Attestations implements oci.SignedImage
 func (i *image) Attestations() (oci.Signatures, error) {
 	return attestations(i, i.opt)
 }
