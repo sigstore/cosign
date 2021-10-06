@@ -67,17 +67,17 @@ type indexWrapper struct {
 
 var _ oci.SignedImageIndex = (*indexWrapper)(nil)
 
-// Signatures implements oic.SignedImageIndex
+// Signatures implements oci.SignedImageIndex
 func (i *indexWrapper) Signatures() (oci.Signatures, error) {
 	return empty.Signatures(), nil
 }
 
-// Attestations implements oic.SignedImageIndex
+// Attestations implements oci.SignedImageIndex
 func (i *indexWrapper) Attestations() (oci.Signatures, error) {
 	return empty.Signatures(), nil
 }
 
-// SignedImage implements oic.SignedImageIndex
+// SignedImage implements oci.SignedImageIndex
 func (i *indexWrapper) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	for _, add := range i.addendum {
 		si, ok := add.Add.(oci.SignedImage)
@@ -99,7 +99,7 @@ func (i *indexWrapper) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	}
 }
 
-// SignedImageIndex implements oic.SignedImageIndex
+// SignedImageIndex implements oci.SignedImageIndex
 func (i *indexWrapper) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error) {
 	for _, add := range i.addendum {
 		sii, ok := add.Add.(oci.SignedImageIndex)

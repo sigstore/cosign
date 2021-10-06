@@ -50,17 +50,17 @@ type index struct {
 
 var _ oci.SignedImageIndex = (*index)(nil)
 
-// Signatures implements oic.SignedImageIndex
+// Signatures implements oci.SignedImageIndex
 func (i *index) Signatures() (oci.Signatures, error) {
 	return signatures(i, i.opt)
 }
 
-// Attestations implements oic.SignedImageIndex
+// Attestations implements oci.SignedImageIndex
 func (i *index) Attestations() (oci.Signatures, error) {
 	return attestations(i, i.opt)
 }
 
-// SignedImage implements oic.SignedImageIndex
+// SignedImage implements oci.SignedImageIndex
 func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	img, err := i.Image(h)
 	if err != nil {
@@ -72,7 +72,7 @@ func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	}, nil
 }
 
-// SignedImageIndex implements oic.SignedImageIndex
+// SignedImageIndex implements oci.SignedImageIndex
 func (i *index) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error) {
 	ii, err := i.ImageIndex(h)
 	if err != nil {
