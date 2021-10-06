@@ -80,9 +80,13 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	}
 }
 
+// normalize turns image digests into tags with an optional suffix:
+// sha256:d34db33f -> sha256-d34db33f.suffix
 func normalize(h v1.Hash, suffix string) string {
-	// sha256:d34db33f -> sha256-d34db33f.suffix
-	return fmt.Sprintf("%s-%s%s", h.Algorithm, h.Hex, suffix)
+	if suffix == "" {
+		return fmt.Sprint(h.Algorithm, "-", h.Hex)
+	}
+	return fmt.Sprint(h.Algorithm, "-", h.Hex, ".", suffix)
 }
 
 // SignatureTag returns the name.Tag that associated signatures with a particular digest.
