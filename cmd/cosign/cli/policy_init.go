@@ -17,7 +17,7 @@ package cli
 
 import (
 	"bytes"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -224,8 +224,8 @@ func signPolicy() *cobra.Command {
 			}
 			signature := tuf.Signature{
 				KeyID:     key.ID(),
-				Signature: hex.EncodeToString(sig),
-				Cert:      hex.EncodeToString(sv.Cert),
+				Signature: base64.StdEncoding.EncodeToString(sig),
+				Cert:      base64.StdEncoding.EncodeToString(sv.Cert),
 			}
 			if err := signed.AddOrUpdateSignature(signature); err != nil {
 				return err
