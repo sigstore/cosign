@@ -16,17 +16,31 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/mail"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
+	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+
+	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
+	"github.com/sigstore/cosign/pkg/sget"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/spf13/cobra"
 )
 
@@ -35,10 +49,12 @@ func validEmail(email string) bool {
 	return err == nil
 }
 
-func addPolicy(topLevel *cobra.Command) {
-	o := &options.PolicyInitOptions{}
+func rootPath(imageRef string) string {
+	return filepath.Join(imageRef, "root.json")
+}
 
-	policyCmd := &cobra.Command{
+func addPolicy(topLevel *cobra.Command) {
+	cmd := &cobra.Command{
 		Use:   "policy",
 		Short: "subcommand to manage a keyless policy.",
 		Long:  "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
@@ -47,7 +63,18 @@ func addPolicy(topLevel *cobra.Command) {
 		},
 	}
 
-	initCmd := &cobra.Command{
+	cmd.AddCommand(
+		initPolicy(),
+		signPolicy(),
+	)
+
+	topLevel.AddCommand(cmd)
+}
+
+func initPolicy() *cobra.Command {
+	o := &options.PolicyInitOptions{}
+
+	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "generate a new keyless policy.",
 		Long:  "init is used to generate a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
@@ -116,11 +143,140 @@ func addPolicy(topLevel *cobra.Command) {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(cmd.Context(), options.RegistryOptions{}, files, "", o.ImageRef+"/root.json")
+			return upload.BlobCmd(cmd.Context(), o.Registry, files, "", rootPath(o.ImageRef))
 		},
 	}
 
-	o.AddFlags(initCmd)
-	policyCmd.AddCommand(initCmd)
-	topLevel.AddCommand(policyCmd)
+	o.AddFlags(cmd)
+
+	return cmd
+}
+
+func signPolicy() *cobra.Command {
+	o := &options.PolicySignOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "sign",
+		Short: "sign a keyless policy.",
+		Long:  "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Get Fulcio signer
+			sv, err := sign.SignerFromKeyOpts(cmd.Context(), "", sign.KeyOpts{
+				FulcioURL:        o.Fulcio.URL,
+				IDToken:          o.Fulcio.IdentityToken,
+				RekorURL:         o.Rekor.URL,
+				OIDCIssuer:       o.OIDC.Issuer,
+				OIDCClientID:     o.OIDC.ClientID,
+				OIDCClientSecret: o.OIDC.ClientSecret,
+			})
+			if err != nil {
+				return err
+			}
+			certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(sv.Cert))
+			if err != nil {
+				return err
+			}
+			if len(certs) == 0 || certs[0].EmailAddresses == nil {
+				return errors.New("error decoding certificate")
+			}
+			signerEmail := certs[0].EmailAddresses[0]
+
+			// Retrieve root.json from registry.
+			imgName := rootPath(o.ImageRef)
+			ref, err := name.ParseReference(imgName)
+			if err != nil {
+				return err
+			}
+			opts := []remote.Option{
+				remote.WithAuthFromKeychain(authn.DefaultKeychain),
+				remote.WithContext(cmd.Context()),
+			}
+
+			img, err := remote.Image(ref, opts...)
+			if err != nil {
+				return err
+			}
+			dgst, err := img.Digest()
+			if err != nil {
+				return err
+			}
+
+			result := &bytes.Buffer{}
+			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(cmd.Context()); err != nil {
+				return errors.Wrap(err, "error getting result")
+			}
+			b, err := ioutil.ReadAll(result)
+			if err != nil {
+				return errors.Wrap(err, "error reading bytes from root.json")
+			}
+
+			// Unmarshal policy and verify that Fulcio signer email is in the trusted
+			signed := &tuf.Signed{}
+			if err := json.Unmarshal(b, signed); err != nil {
+				return errors.Wrap(err, "unmarshalling signed root policy")
+			}
+
+			// Create and add signature
+			key := tuf.FulcioVerificationKey(signerEmail, "")
+			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(cmd.Context()))
+			if err != nil {
+				return errors.Wrap(err, "error occurred while during artifact signing")
+			}
+			signature := tuf.Signature{
+				KeyID:     key.ID(),
+				Signature: hex.EncodeToString(sig),
+				Cert:      hex.EncodeToString(sv.Cert),
+			}
+			if err := signed.AddOrUpdateSignature(signature); err != nil {
+				return err
+			}
+
+			// Upload to rekor
+			if options.EnableExperimental() {
+				// TODO: Refactor with sign.go
+				rekorBytes := sv.Cert
+				rekorClient, err := rekorClient.GetRekorClient(o.Rekor.URL)
+				if err != nil {
+					return err
+				}
+				entry, err := cosign.TLogUpload(rekorClient, sig, signed.Signed, rekorBytes)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+			}
+
+			// Push updated root.json to the registry
+			policyFile, err := signed.JSONMarshal("", "\t")
+			if err != nil {
+				return err
+			}
+
+			var outfile string
+			if o.OutFile != "" {
+				outfile = o.OutFile
+				err = ioutil.WriteFile(o.OutFile, policyFile, 0600)
+				if err != nil {
+					return errors.Wrapf(err, "error writing to root.json")
+				}
+			} else {
+				tempFile, err := os.CreateTemp("", "root")
+				if err != nil {
+					return err
+				}
+				outfile = tempFile.Name()
+				defer os.Remove(tempFile.Name())
+			}
+
+			files := []cremote.File{
+				cremote.FileFromFlag(outfile),
+			}
+
+			return upload.BlobCmd(cmd.Context(), o.Registry, files, "", rootPath(o.ImageRef))
+		},
+	}
+
+	o.AddFlags(cmd)
+
+	return cmd
 }

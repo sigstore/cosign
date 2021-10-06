@@ -25,6 +25,7 @@ type PolicyInitOptions struct {
 	Maintainers []string
 	Threshold   int
 	OutFile     string
+	Registry    RegistryOptions
 }
 
 var _ Interface = (*PolicyInitOptions)(nil)
@@ -42,4 +43,31 @@ func (o *PolicyInitOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringSliceVarP(&o.Maintainers, "maintainers", "m", nil,
 		"list of maintainers to add to the root policy")
+
+	o.Registry.AddFlags(cmd)
+}
+
+type PolicySignOptions struct {
+	ImageRef string
+	OutFile  string
+	Registry RegistryOptions
+	Fulcio   FulcioOptions
+	Rekor    RekorOptions
+
+	OIDC OIDCOptions
+}
+
+var _ Interface = (*PolicySignOptions)(nil)
+
+// AddFlags implements Interface
+func (o *PolicySignOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.ImageRef, "namespace", "ns",
+		"registry namespace that the root policy belongs to")
+
+	cmd.Flags().StringVar(&o.OutFile, "out", "o",
+		"output policy locally")
+	o.Registry.AddFlags(cmd)
+	o.Fulcio.AddFlags(cmd)
+	o.Rekor.AddFlags(cmd)
+	o.OIDC.AddFlags(cmd)
 }

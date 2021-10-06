@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	cjson "github.com/tent/canonical-json-go"
 )
 
@@ -132,6 +134,23 @@ func (r *Root) Marshal() (*Signed, error) {
 	return &Signed{Signed: b}, nil
 }
 
+func (r *Root) ValidKey(keyID string, role string) bool {
+	// Checks if id is a valid key for role
+	if _, ok := r.Keys[keyID]; !ok {
+		return false
+	}
+	rootRole, ok := r.Roles[role]
+	if !ok {
+		return false
+	}
+	for _, id := range rootRole.KeyIDs {
+		if id == keyID {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
 	// Marshals Signed with prefix and indent.
 	b, err := cjson.Marshal(s)
@@ -145,4 +164,23 @@ func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
+}
+
+func (s *Signed) AddOrUpdateSignature(signature Signature) error {
+	root := &Root{}
+	if err := json.Unmarshal(s.Signed, root); err != nil {
+		return errors.Wrap(err, "unmarshalling root policy")
+	}
+	if !root.ValidKey(signature.KeyID, "root") {
+		return errors.New("invalid root key")
+	}
+	signatures := make([]Signature, 0, len(s.Signatures)+1)
+	for _, sig := range s.Signatures {
+		if sig.KeyID != signature.KeyID {
+			signatures = append(signatures, sig)
+		}
+	}
+	signatures = append(signatures, signature)
+	s.Signatures = signatures
+	return nil
 }
