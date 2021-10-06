@@ -16,9 +16,6 @@
 package options
 
 import (
-	"context"
-
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/spf13/cobra"
 )
 
@@ -34,8 +31,4 @@ var _ Interface = (*TagOptions)(nil)
 func (o *TagOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TagPrefix, "tag-prefix", "", "custom prefix to use for tags")
 	cmd.Flags().StringVar(&o.TagSuffix, "tag-suffix", "", "custom suffix to use for tags")
-}
-
-func (o *TagOptions) GetTagOpts(ctx context.Context) []ociremote.Option {
-	return []ociremote.Option{ociremote.WithPrefix(o.TagPrefix), ociremote.WithSuffix(o.TagSuffix)}
 }
