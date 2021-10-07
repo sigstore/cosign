@@ -30,7 +30,11 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef
 	if err != nil {
 		return err
 	}
-	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, regOpts.ClientOpts(ctx)...)
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return err
+	}
+	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremoteOpts...)
 	if err != nil {
 		return err
 	}

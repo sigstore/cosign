@@ -66,8 +66,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return &options.KeyParseError{}
 	}
 
+	ociremoteOpts, err := c.ClientOpts(ctx)
+	if err != nil {
+		return errors.Wrap(err, "constructing client options")
+	}
+
 	co := &cosign.CheckOpts{
-		RegistryClientOpts: c.ClientOpts(ctx),
+		RegistryClientOpts: ociremoteOpts,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier

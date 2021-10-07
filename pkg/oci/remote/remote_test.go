@@ -17,7 +17,6 @@ package remote
 
 import (
 	"encoding/base64"
-	"os"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -139,42 +138,21 @@ func TestTagMethodErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		setenv bool
-		fn     func(name.Reference, ...Option) (name.Tag, error)
-		ref    name.Reference
-		want   error
-	}{{
-		name: "signature passed a tag",
-		fn:   SignatureTag,
-		ref:  name.MustParseReference("gcr.io/distroless/static:nonroot"),
-		want: errRemoteGet,
-	}, {
-		name:   "signature with bad target env var",
-		fn:     SignatureTag,
-		setenv: true,
-		ref:    name.MustParseReference("gcr.io/distroless/static:nonroot"),
-		want:   errors.New("repository can only contain the runes `abcdefghijklmnopqrstuvwxyz0123456789_-./`: bad$repo"),
-	}, {
-		name:   "attestation with bad target env var",
-		fn:     AttestationTag,
-		setenv: true,
-		ref:    name.MustParseReference("gcr.io/distroless/static:nonroot"),
-		want:   errors.New("repository can only contain the runes `abcdefghijklmnopqrstuvwxyz0123456789_-./`: bad$repo"),
-	}, {
-		name:   "sbom with bad target env var",
-		fn:     SBOMTag,
-		setenv: true,
-		ref:    name.MustParseReference("gcr.io/distroless/static:nonroot"),
-		want:   errors.New("repository can only contain the runes `abcdefghijklmnopqrstuvwxyz0123456789_-./`: bad$repo"),
-	}}
+		name string
+		fn   func(name.Reference, ...Option) (name.Tag, error)
+		ref  name.Reference
+		want error
+	}{
+		{
+			name: "signature passed a tag",
+			fn:   SignatureTag,
+			ref:  name.MustParseReference("gcr.io/distroless/static:nonroot"),
+			want: errRemoteGet,
+		},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if test.setenv {
-				os.Setenv(RepoOverrideKey, "bad$repo")
-				defer os.Unsetenv(RepoOverrideKey)
-			}
 			tag, got := test.fn(test.ref)
 			if got == nil {
 				t.Fatalf("fn() = %v, wanted %v", tag, test.want)

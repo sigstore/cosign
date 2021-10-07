@@ -23,10 +23,7 @@ import (
 // If the reference is by digest already, it simply extracts the digest.
 // Otherwise, it looks up the digest from the registry.
 func ResolveDigest(ref name.Reference, opts ...Option) (name.Digest, error) {
-	o, err := makeOptions(ref.Context(), opts...)
-	if err != nil {
-		return name.Digest{}, err
-	}
+	o := makeOptions(ref.Context(), opts...)
 	if d, ok := ref.(name.Digest); ok {
 		return d, nil
 	}

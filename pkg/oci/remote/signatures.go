@@ -29,10 +29,7 @@ import (
 // Signatures fetches the signatures image represented by the named reference.
 // If the tag is not found, this returns an empty oci.Signatures.
 func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
-	o, err := makeOptions(ref.Context(), opts...)
-	if err != nil {
-		return nil, err
-	}
+	o := makeOptions(ref.Context(), opts...)
 	img, err := remoteImage(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) {

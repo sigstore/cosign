@@ -23,10 +23,7 @@ import (
 
 // SignedImageIndex provides access to a remote index reference, and its signatures.
 func SignedImageIndex(ref name.Reference, options ...Option) (oci.SignedImageIndex, error) {
-	o, err := makeOptions(ref.Context(), options...)
-	if err != nil {
-		return nil, err
-	}
+	o := makeOptions(ref.Context(), options...)
 	ri, err := remoteIndex(ref, o.ROpt...)
 	if err != nil {
 		return nil, err

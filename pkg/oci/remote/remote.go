@@ -43,10 +43,7 @@ var (
 // SignedEntity provides access to a remote reference, and its signatures.
 // The SignedEntity will be one of SignedImage or SignedImageIndex.
 func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, error) {
-	o, err := makeOptions(ref.Context(), options...)
-	if err != nil {
-		return nil, err
-	}
+	o := makeOptions(ref.Context(), options...)
 
 	got, err := remoteGet(ref, o.ROpt...)
 	if err != nil {
@@ -91,28 +88,19 @@ func normalize(h v1.Hash, prefix string, suffix string) string {
 
 // SignatureTag returns the name.Tag that associated signatures with a particular digest.
 func SignatureTag(ref name.Reference, opts ...Option) (name.Tag, error) {
-	o, err := makeOptions(ref.Context(), opts...)
-	if err != nil {
-		return name.Tag{}, err
-	}
+	o := makeOptions(ref.Context(), opts...)
 	return suffixTag(ref, o.SignatureSuffix, o)
 }
 
 // AttestationTag returns the name.Tag that associated attestations with a particular digest.
 func AttestationTag(ref name.Reference, opts ...Option) (name.Tag, error) {
-	o, err := makeOptions(ref.Context(), opts...)
-	if err != nil {
-		return name.Tag{}, err
-	}
+	o := makeOptions(ref.Context(), opts...)
 	return suffixTag(ref, o.AttestationSuffix, o)
 }
 
 // SBOMTag returns the name.Tag that associated SBOMs with a particular digest.
 func SBOMTag(ref name.Reference, opts ...Option) (name.Tag, error) {
-	o, err := makeOptions(ref.Context(), opts...)
-	if err != nil {
-		return name.Tag{}, err
-	}
+	o := makeOptions(ref.Context(), opts...)
 	return suffixTag(ref, o.SBOMSuffix, o)
 }
 
