@@ -23,7 +23,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/oci/remote"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
 func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, out io.Writer) ([]string, error) {
@@ -32,12 +32,16 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 		return nil, err
 	}
 
-	opts := append(regOpts.ClientOpts(ctx),
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ociremoteOpts = append(ociremoteOpts,
 		// TODO(mattmoor): This isn't really "signatures", consider shifting to
 		// an SBOMs accessor?
-		remote.WithSignatureSuffix(remote.SBOMTagSuffix))
+		ociremote.WithSignatureSuffix(ociremote.SBOMTagSuffix))
 
-	se, err := remote.SignedEntity(ref, opts...)
+	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
 	if err != nil {
 		return nil, err
 	}

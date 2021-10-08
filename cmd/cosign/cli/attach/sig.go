@@ -43,7 +43,11 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	if err != nil {
 		return err
 	}
-	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return err
+	}
+	digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -67,7 +71,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		return err
 	}
 
-	se, err := ociremote.SignedEntity(digest, regOpts.ClientOpts(ctx)...)
+	se, err := ociremote.SignedEntity(digest, ociremoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -79,7 +83,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	}
 
 	// Publish the signatures associated with this entity
-	return ociremote.WriteSignatures(digest.Repository, newSE, regOpts.ClientOpts(ctx)...)
+	return ociremote.WriteSignatures(digest.Repository, newSE, ociremoteOpts...)
 }
 
 type SignatureArgType uint8

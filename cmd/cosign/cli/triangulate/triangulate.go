@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
@@ -31,14 +32,19 @@ func MungeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef str
 		return err
 	}
 
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return errors.Wrap(err, "constructing client options")
+	}
+
 	var dstRef name.Tag
 	switch attachmentType {
 	case cosign.Signature:
-		dstRef, err = ociremote.SignatureTag(ref, regOpts.ClientOpts(ctx)...)
+		dstRef, err = ociremote.SignatureTag(ref, ociremoteOpts...)
 	case cosign.SBOM:
-		dstRef, err = ociremote.SBOMTag(ref, regOpts.ClientOpts(ctx)...)
+		dstRef, err = ociremote.SBOMTag(ref, ociremoteOpts...)
 	case cosign.Attestation:
-		dstRef, err = ociremote.AttestationTag(ref, regOpts.ClientOpts(ctx)...)
+		dstRef, err = ociremote.AttestationTag(ref, ociremoteOpts...)
 	default:
 		err = fmt.Errorf("unknown attachment type %s", attachmentType)
 	}

@@ -1,4 +1,3 @@
-//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +19,7 @@ import (
 	"crypto/tls"
 	"net/http"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/spf13/cobra"
@@ -40,12 +40,19 @@ func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 	o.RefOpts.AddFlags(cmd)
 }
 
-func (o *RegistryOptions) ClientOpts(ctx context.Context) []ociremote.Option {
+func (o *RegistryOptions) ClientOpts(ctx context.Context) ([]ociremote.Option, error) {
 	opts := []ociremote.Option{ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
 	if o.RefOpts.TagPrefix != "" {
 		opts = append(opts, ociremote.WithPrefix(o.RefOpts.TagPrefix))
 	}
-	return opts
+	targetRepoOverride, err := ociremote.GetEnvTargetRepository()
+	if err != nil {
+		return nil, err
+	}
+	if (targetRepoOverride != name.Repository{}) {
+		opts = append(opts, ociremote.WithTargetRepository(targetRepoOverride))
+	}
+	return opts, nil
 }
 
 func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Option {

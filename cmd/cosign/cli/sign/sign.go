@@ -110,12 +110,12 @@ func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, up
 	return Bundle(entry), nil
 }
 
-func GetAttachedImageRef(ref name.Reference, attachment string, remoteOpts ...remote.Option) (name.Reference, error) {
+func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremote.Option) (name.Reference, error) {
 	if attachment == "" {
 		return ref, nil
 	}
 	if attachment == "sbom" {
-		return ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+		return ociremote.SBOMTag(ref, opts...)
 	}
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
@@ -132,8 +132,6 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			return &options.KeyParseError{}
 		}
 	}
-
-	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
 	sv, err := SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
@@ -161,12 +159,16 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 		if err != nil {
 			return errors.Wrap(err, "parsing reference")
 		}
-		ref, err = GetAttachedImageRef(ref, attachment, remoteOpts...)
+		opts, err := regOpts.ClientOpts(ctx)
+		if err != nil {
+			return errors.Wrap(err, "constructing client options")
+		}
+		ref, err = GetAttachedImageRef(ref, attachment, opts...)
 		if err != nil {
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
-		se, err := ociremote.SignedEntity(ref, regOpts.ClientOpts(ctx)...)
+		se, err := ociremote.SignedEntity(ref, opts...)
 		if err != nil {
 			return err
 		}
@@ -232,8 +234,13 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 				return err
 			}
 
+			walkOpts, err := regOpts.ClientOpts(ctx)
+			if err != nil {
+				return errors.Wrap(err, "constructing client options")
+			}
+
 			// Publish the signatures associated with this entity
-			if err := ociremote.WriteSignatures(digest.Repository, newSE, regOpts.ClientOpts(ctx)...); err != nil {
+			if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
 				return err
 			}
 			return ErrDone

@@ -68,10 +68,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if !options.OneOf(c.KeyRef, c.Sk) && !options.EnableExperimental() {
 		return &options.KeyParseError{}
 	}
-
+	ociremoteOpts, err := c.ClientOpts(ctx)
+	if err != nil {
+		return errors.Wrap(err, "constructing client options")
+	}
 	co := &cosign.CheckOpts{
 		Annotations:        c.Annotations.Annotations,
-		RegistryClientOpts: c.RegistryOptions.ClientOpts(ctx),
+		RegistryClientOpts: ociremoteOpts,
 		CertEmail:          c.CertEmail,
 	}
 	if c.CheckClaims {
@@ -108,7 +111,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "parsing reference")
 		}
-		ref, err = sign.GetAttachedImageRef(ref, c.Attachment, c.RegistryOptions.GetRegistryClientOpts(ctx)...)
+		ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
 		if err != nil {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}

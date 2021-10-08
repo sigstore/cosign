@@ -23,10 +23,7 @@ import (
 // WriteSignature publishes the signatures attached to the given entity
 // into the provided repository.
 func WriteSignatures(repo name.Repository, se oci.SignedEntity, opts ...Option) error {
-	o, err := makeOptions(repo, opts...)
-	if err != nil {
-		return err
-	}
+	o := makeOptions(repo, opts...)
 
 	// Access the signature list to publish
 	sigs, err := se.Signatures()
@@ -48,10 +45,7 @@ func WriteSignatures(repo name.Repository, se oci.SignedEntity, opts ...Option) 
 // WriteAttestations publishes the attestations attached to the given entity
 // into the provided repository.
 func WriteAttestations(repo name.Repository, se oci.SignedEntity, opts ...Option) error {
-	o, err := makeOptions(repo, opts...)
-	if err != nil {
-		return err
-	}
+	o := makeOptions(repo, opts...)
 
 	// Access the signature list to publish
 	atts, err := se.Attestations()

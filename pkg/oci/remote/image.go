@@ -23,10 +23,7 @@ import (
 
 // SignedImage provides access to a remote image reference, and its signatures.
 func SignedImage(ref name.Reference, options ...Option) (oci.SignedImage, error) {
-	o, err := makeOptions(ref.Context(), options...)
-	if err != nil {
-		return nil, err
-	}
+	o := makeOptions(ref.Context(), options...)
 	ri, err := remoteImage(ref, o.ROpt...)
 	if err != nil {
 		return nil, err

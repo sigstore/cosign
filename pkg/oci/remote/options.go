@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -29,7 +30,7 @@ const (
 	AttestationTagSuffix = "att"
 	CustomTagPrefix      = ""
 
-	RepoOverrideKey = "COSIGN_REPOSITORY"
+	RepoOverrideEnvKey = "COSIGN_REPOSITORY"
 )
 
 // Option is a functional option for remote operations.
@@ -51,7 +52,7 @@ var defaultOptions = []remote.Option{
 	// TODO(mattmoor): Incorporate user agent.
 }
 
-func makeOptions(target name.Repository, opts ...Option) (*options, error) {
+func makeOptions(target name.Repository, opts ...Option) *options {
 	o := &options{
 		SignatureSuffix:   SignatureTagSuffix,
 		AttestationSuffix: AttestationTagSuffix,
@@ -65,20 +66,11 @@ func makeOptions(target name.Repository, opts ...Option) (*options, error) {
 		OriginalOptions: opts,
 	}
 
-	// Before applying options, allow the environment to override things.
-	if ro := os.Getenv(RepoOverrideKey); ro != "" {
-		repo, err := name.NewRepository(ro)
-		if err != nil {
-			return nil, err
-		}
-		o.TargetRepository = repo
-	}
-
 	for _, option := range opts {
 		option(o)
 	}
 
-	return o, nil
+	return o
 }
 
 // WithPrefix is a functional option for overriding the default
@@ -127,4 +119,15 @@ func WithTargetRepository(repo name.Repository) Option {
 	return func(o *options) {
 		o.TargetRepository = repo
 	}
+}
+
+// GetEnvTargetRepository returns the Repository specified by
+// `os.Getenv(RepoOverrideEnvKey)`, or the empty value if not set.
+// Returns an error if the value is set but cannot be parsed.
+func GetEnvTargetRepository() (name.Repository, error) {
+	if ro := os.Getenv(RepoOverrideEnvKey); ro != "" {
+		repo, err := name.NewRepository(ro)
+		return repo, errors.Wrap(err, "parsing $"+RepoOverrideEnvKey)
+	}
+	return name.Repository{}, nil
 }

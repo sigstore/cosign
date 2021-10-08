@@ -86,7 +86,11 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
-	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return err
+	}
+	digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -151,7 +155,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return err
 	}
 
-	se, err := ociremote.SignedEntity(digest, regOpts.ClientOpts(ctx)...)
+	se, err := ociremote.SignedEntity(digest, ociremoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -163,5 +167,5 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	}
 
 	// Publish the attestations associated with this entity
-	return ociremote.WriteAttestations(digest.Repository, newSE, regOpts.ClientOpts(ctx)...)
+	return ociremote.WriteAttestations(digest.Repository, newSE, ociremoteOpts...)
 }

@@ -32,7 +32,11 @@ func GenerateCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef 
 	if err != nil {
 		return err
 	}
-	digest, err := ociremote.ResolveDigest(ref, regOpts.ClientOpts(ctx)...)
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return err
+	}
+	digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
 	if err != nil {
 		return err
 	}
