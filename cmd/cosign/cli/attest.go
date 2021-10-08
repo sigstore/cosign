@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"flag"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -32,9 +30,9 @@ func addAttest(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "attest",
-		Short: "Attest the supplied container image.\ncosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--upload=true|false] [--f] [--r] <image uri>",
-		Long:  "Attest the supplied container image.",
-		Example: `
+		Short: "Attest the supplied container image.",
+		Example: `  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--upload=true|false] [--f] [--r] <image uri>
+
   # attach an attestation to a container image Google sign-in (experimental)
   COSIGN_EXPERIMENTAL=1 cosign attest --predicate <FILE> --type <TYPE> <IMAGE>
 
@@ -56,21 +54,19 @@ func addAttest(topLevel *cobra.Command) {
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image`,
 
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return flag.ErrHelp
-			}
-
 			ko := sign.KeyOpts{
 				KeyRef:    o.Key,
 				PassFunc:  generate.GetPass,
 				Sk:        o.SecurityKey.Use,
 				Slot:      o.SecurityKey.Slot,
 				IDToken:   o.Fulcio.IdentityToken,
+				RekorURL:  o.Rekor.URL,
 				FulcioURL: o.Fulcio.URL,
 			}
 			for _, img := range args {
-				if err := attest.AttestCmd(cmd.Context(), ko, o.RegistryOpts, img, o.Cert, o.Upload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {
+				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.Upload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}

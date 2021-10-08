@@ -26,9 +26,9 @@ type SignBlobOptions struct {
 	Output       string // TODO: this should be the root output file arg.
 	SecurityKey  SecurityKeyOptions
 	Fulcio       FulcioOptions
-	Rektor       RekorOptions
+	Rekor        RekorOptions
 	OIDC         OIDCOptions
-	RegistryOpts RegistryOpts
+	Registry     RegistryOptions
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -37,8 +37,9 @@ var _ Interface = (*SignBlobOptions)(nil)
 func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
-	o.Rektor.AddFlags(cmd)
+	o.Rekor.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
+	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
@@ -48,7 +49,4 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Output, "output", "",
 		"write the signature to FILE")
-
-	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
-		"whether to allow insecure connections to registries. Don't use this for anything but testing")
 }

@@ -14,17 +14,17 @@ The URI path syntax is provider specific and explained in the section for each p
 
 ### Key Generation and Management
 
-To generate keys using a KMS provider, you can use the `cosign generate-key-pair` command with the `-kms` flag.
+To generate keys using a KMS provider, you can use the `cosign generate-key-pair` command with the `--kms` flag.
 For example:
 
 ```shell
-$ cosign generate-key-pair -kms <some provider>://<some key>
+$ cosign generate-key-pair --kms <some provider>://<some key>
 ```
 
 The public key can be retrieved with:
 
 ```shell
-$ cosign public-key -key <some provider>://<some key>
+$ cosign public-key --key <some provider>://<some key>
 -----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXc+DQU8Pb7Xo2RWCjFG/f6qbdABN
 jnVtSyKZxNzBfNMLLtVxdu8q+AigrGCS2KPmejda9bICTcHQCRUrD5OLGQ==
@@ -33,13 +33,13 @@ jnVtSyKZxNzBfNMLLtVxdu8q+AigrGCS2KPmejda9bICTcHQCRUrD5OLGQ==
 
 ### Signing and Verification
 
-To sign and verify using a key managed by a KMS provider, you can pass a provider-specific URI to the `-key` command:
+To sign and verify using a key managed by a KMS provider, you can pass a provider-specific URI to the `--key` command:
 
 ```shell
-$ cosign sign -key <some provider>://<some key> gcr.io/dlorenc-vmtest2/demo
+$ cosign sign --key <some provider>://<some key> gcr.io/dlorenc-vmtest2/demo
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.cosign
 
-$ cosign verify -key <some provider>://<some key> gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key <some provider>://<some key> gcr.io/dlorenc-vmtest2/demo
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
@@ -53,8 +53,8 @@ The following checks were performed on each of these signatures:
 You can also export the public key and verify against that file:
 
 ```shell
-$ cosign public-key -key <some provider>://<some key> > kms.pub
-$ cosign verify -key kms.pub gcr.io/dlorenc-vmtest2/demo
+$ cosign public-key --key <some provider>://<some key> > kms.pub
+$ cosign verify --key kms.pub gcr.io/dlorenc-vmtest2/demo
 ```
 
 ### Providers
@@ -173,5 +173,5 @@ $ vault secrets enable transit
 If you enabled `transit` secret engine at different path with the use of `-path` flag (i.e., `$ vault secrets enable -path="someotherpath" transit`), you can use `TRANSIT_SECRET_ENGINE_PATH` environment variable to specify this path while generating a key pair like the following:
 
 ```shell
-$ TRANSIT_SECRET_ENGINE_PATH="someotherpath" cosign generate-key-pair -kms hashivault://testkey
+$ TRANSIT_SECRET_ENGINE_PATH="someotherpath" cosign generate-key-pair --kms hashivault://testkey
 ```

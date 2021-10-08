@@ -1,4 +1,3 @@
-//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,28 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package upload
+package main
 
 import (
-	"context"
-	"flag"
+	"fmt"
+	"os"
 
-	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 )
 
-func Upload() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign upload", flag.ExitOnError)
-	)
-
-	return &ffcli.Command{
-		Name:        "upload",
-		ShortUsage:  "cosign upload",
-		ShortHelp:   "Provides utilities for uploading artifacts to a registry",
-		FlagSet:     flagset,
-		Subcommands: []*ffcli.Command{Blob(), Wasm()},
-		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
+func main() {
+	var dir string
+	root := &cobra.Command{
+		Use:          "gendoc",
+		Short:        "Generate cosign's help docs",
+		SilenceUsage: true,
+		Args:         cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error {
+			return doc.GenMarkdownTree(cli.New(), dir)
 		},
+	}
+	root.Flags().StringVarP(&dir, "dir", "d", "doc", "Path to directory in which to generate docs")
+	if err := root.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

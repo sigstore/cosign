@@ -17,40 +17,16 @@ package download
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci/remote"
 )
 
-func SBOM() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign download sbom", flag.ExitOnError)
-		regOpts options.RegistryOpts
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "sbom",
-		ShortUsage: "cosign download sbom <image uri>",
-		ShortHelp:  "Download SBOMs from the supplied container image",
-		FlagSet:    flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-			_, err := SBOMCmd(ctx, regOpts, args[0], os.Stdout)
-			return err
-		},
-	}
-}
-
-func SBOMCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string, out io.Writer) ([]string, error) {
+func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, out io.Writer) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err

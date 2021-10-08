@@ -74,7 +74,7 @@ func TestTagMethods(t *testing.T) {
 		name: "signature passed a tag (w/ custom suffix)",
 		fn:   SignatureTag,
 		ref:  name.MustParseReference("gcr.io/distroless/static:nonroot"),
-		opts: []Option{WithSignatureSuffix(".snowflake")},
+		opts: []Option{WithSignatureSuffix("snowflake")},
 		want: name.MustParseReference("gcr.io/distroless/static:sha256-be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4.snowflake"),
 	}, {
 		name: "signature passed a digest",
@@ -90,7 +90,7 @@ func TestTagMethods(t *testing.T) {
 		name: "attestation passed a tag (w/ custom suffix)",
 		fn:   AttestationTag,
 		ref:  name.MustParseReference("gcr.io/distroless/static:nonroot"),
-		opts: []Option{WithAttestationSuffix(".snowflake")},
+		opts: []Option{WithAttestationSuffix("snowflake")},
 		want: name.MustParseReference("gcr.io/distroless/static:sha256-be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4.snowflake"),
 	}, {
 		name: "attestation passed a digest",
@@ -106,7 +106,7 @@ func TestTagMethods(t *testing.T) {
 		name: "sbom passed a tag (w/ custom suffix)",
 		fn:   SBOMTag,
 		ref:  name.MustParseReference("gcr.io/distroless/static:nonroot"),
-		opts: []Option{WithSBOMSuffix(".snowflake")},
+		opts: []Option{WithSBOMSuffix("snowflake")},
 		want: name.MustParseReference("gcr.io/distroless/static:sha256-be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4.snowflake"),
 	}, {
 		name: "sbom passed a digest",

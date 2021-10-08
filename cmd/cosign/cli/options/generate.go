@@ -22,7 +22,7 @@ import (
 // GenerateOptions is the top level wrapper for the generate command.
 type GenerateOptions struct {
 	AnnotationOptions
-	RegistryOpts RegistryOpts
+	Registry RegistryOptions
 }
 
 var _ Interface = (*GenerateOptions)(nil)
@@ -30,7 +30,5 @@ var _ Interface = (*GenerateOptions)(nil)
 // AddFlags implements Interface
 func (o *GenerateOptions) AddFlags(cmd *cobra.Command) {
 	o.AnnotationOptions.AddFlags(cmd)
-
-	cmd.Flags().BoolVar(&o.RegistryOpts.AllowInsecure, "allow-insecure-registry", false,
-		"whether to allow insecure connections to registries. Don't use this for anything but testing")
+	o.Registry.AddFlags(cmd)
 }

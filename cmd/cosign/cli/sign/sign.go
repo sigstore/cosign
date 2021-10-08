@@ -24,17 +24,16 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
@@ -77,7 +76,7 @@ func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
 			return false, err
 		}
-		if tlogConfirmResponse != "Y" {
+		if strings.ToUpper(tlogConfirmResponse) != "Y" {
 			fmt.Fprintln(os.Stderr, "not uploading to transparency log")
 			return false, nil
 		}
@@ -111,93 +110,6 @@ func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, up
 	return Bundle(entry), nil
 }
 
-// Sign subcommand for ffcli.
-// Deprecated: this will be deleted when the migration from ffcli to cobra is done.
-func Sign() *ffcli.Command {
-	var (
-		flagset          = flag.NewFlagSet("cosign sign", flag.ExitOnError)
-		key              = flagset.String("key", "", "path to the private key file, KMS URI or Kubernetes Secret")
-		cert             = flagset.String("cert", "", "Path to the x509 certificate to include in the Signature")
-		upload           = flagset.Bool("upload", true, "whether to upload the signature")
-		sk               = flagset.Bool("sk", false, "whether to use a hardware security key")
-		slot             = flagset.String("slot", "", "security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
-		payloadPath      = flagset.String("payload", "", "path to a payload file to use rather than generating one.")
-		force            = flagset.Bool("f", false, "skip warnings and confirmations")
-		recursive        = flagset.Bool("r", false, "if a multi-arch image is specified, additionally sign each discrete image")
-		fulcioURL        = flagset.String("fulcio-url", fulcioClient.SigstorePublicServerURL, "[EXPERIMENTAL] address of sigstore PKI server")
-		rekorURL         = flagset.String("rekor-url", "https://rekor.sigstore.dev", "[EXPERIMENTAL] address of rekor STL server")
-		idToken          = flagset.String("identity-token", "", "[EXPERIMENTAL] identity token to use for certificate from fulcio")
-		oidcIssuer       = flagset.String("oidc-issuer", "https://oauth2.sigstore.dev/auth", "[EXPERIMENTAL] OIDC provider to be used to issue ID token")
-		oidcClientID     = flagset.String("oidc-client-id", "sigstore", "[EXPERIMENTAL] OIDC client ID for application")
-		oidcClientSecret = flagset.String("oidc-client-secret", "", "[EXPERIMENTAL] OIDC client secret for application")
-		attachment       = flagset.String("attachment", "", "related image attachment to sign (sbom), default none")
-		annotations      = sigs.AnnotationsMap{}
-		regOpts          options.RegistryOpts
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
-	return &ffcli.Command{
-		Name:       "sign",
-		ShortUsage: "cosign sign -key <key path>|<kms uri> [-payload <path>] [-a key=value] [-upload=true|false] [-f] [-r] <image uri>",
-		ShortHelp:  `Sign the supplied container image.`,
-		LongHelp: `Sign the supplied container image.
-
-EXAMPLES
-  # sign a container image with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign sign <IMAGE>
-
-  # sign a container image with a local key pair file
-  cosign sign -key cosign.key <IMAGE>
-
-  # sign a multi-arch container image AND all referenced, discrete images
-  cosign sign -key cosign.key -r <MULTI-ARCH IMAGE>
-
-  # sign a container image and add annotations
-  cosign sign -key cosign.key -a key1=value1 -a key2=value2 <IMAGE>
-
-  # sign a container image with a key pair stored in Azure Key Vault
-  cosign sign -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
-
-  # sign a container image with a key pair stored in AWS KMS
-  cosign sign -key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <IMAGE>
-
-  # sign a container image with a key pair stored in Google Cloud KMS
-  cosign sign -key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <IMAGE>
-
-  # sign a container image with a key pair stored in Hashicorp Vault
-  cosign sign -key hashivault://[KEY] <IMAGE>
-
-  # sign a container image with a key pair stored in a Kubernetes secret
-  cosign sign -key k8s://[NAMESPACE]/[KEY] <IMAGE>
-
-  # sign a container in a registry which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign -key cosign.key legacy-registry.example.com/my/image
-  `,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			_ = flagset
-			_ = key
-			_ = cert
-			_ = upload
-			_ = sk
-			_ = slot
-			_ = payloadPath
-			_ = force
-			_ = recursive
-			_ = fulcioURL
-			_ = rekorURL
-			_ = idToken
-			_ = oidcIssuer
-			_ = oidcClientID
-			_ = oidcClientSecret
-			_ = attachment
-			_ = annotations
-			_ = regOpts
-			panic("this command is now implemented in cobra.")
-		},
-	}
-}
-
 func GetAttachedImageRef(ref name.Reference, attachment string, remoteOpts ...remote.Option) (name.Reference, error) {
 	if attachment == "" {
 		return ref, nil
@@ -209,7 +121,7 @@ func GetAttachedImageRef(ref name.Reference, attachment string, remoteOpts ...re
 }
 
 // nolint
-func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOpts, annotations map[string]interface{},
+func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
 	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {

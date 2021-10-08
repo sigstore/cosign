@@ -17,14 +17,10 @@ package options
 
 import (
 	"context"
-	"crypto/tls"
-	"flag"
-	"net/http"
 	"reflect"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
 // OneOf ensures that only one of the supplied interfaces is set to a non-zero value.
@@ -41,26 +37,6 @@ func NOf(args ...interface{}) int {
 		}
 	}
 	return n
-}
-
-type RegistryOpts struct {
-	AllowInsecure bool
-}
-
-func (co *RegistryOpts) ClientOpts(ctx context.Context) []ociremote.Option {
-	return []ociremote.Option{ociremote.WithRemoteOptions(co.GetRegistryClientOpts(ctx)...)}
-}
-
-func (co *RegistryOpts) GetRegistryClientOpts(ctx context.Context) []remote.Option {
-	opts := defaultRegistryClientOpts(ctx)
-	if co != nil && co.AllowInsecure {
-		opts = append(opts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
-	}
-	return opts
-}
-
-func ApplyRegistryFlags(regOpts *RegistryOpts, fs *flag.FlagSet) {
-	fs.BoolVar(&regOpts.AllowInsecure, "allow-insecure-registry", false, "whether to allow insecure connections to registries. Don't use this for anything but testing")
 }
 
 func defaultRegistryClientOpts(ctx context.Context) []remote.Option {

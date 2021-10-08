@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"flag"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -31,9 +29,9 @@ func addSignBlob(topLevel *cobra.Command) {
 
 	cmd := &cobra.Command{
 		Use:   "sign-blob",
-		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout.\ncosign sign-blob -key <key path>|<kms uri> [-sig <sig path>] <blob>",
-		Long:  "Sign the supplied blob, outputting the base64-encoded signature to stdout.",
-		Example: `
+		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout.",
+		Example: `  cosign sign-blob --key <key path>|<kms uri> <blob>
+
   # sign a blob with Google sign-in (experimental)
   COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
 
@@ -51,18 +49,17 @@ func addSignBlob(topLevel *cobra.Command) {
 
   # sign a blob with a key pair stored in Hashicorp Vault
   cosign sign-blob --key hashivault://[KEY] <FILE>`,
-
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Args: cobra.MinimumNArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !options.EnableExperimental() {
 				if !options.OneOf(o.Key, o.SecurityKey.Use) {
 					return &options.KeyParseError{}
 				}
 			}
-
-			if len(args) == 0 {
-				return flag.ErrHelp
-			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := sign.KeyOpts{
 				KeyRef:           o.Key,
 				PassFunc:         generate.GetPass,
@@ -70,13 +67,13 @@ func addSignBlob(topLevel *cobra.Command) {
 				Slot:             o.SecurityKey.Slot,
 				FulcioURL:        o.Fulcio.URL,
 				IDToken:          o.Fulcio.IdentityToken,
-				RekorURL:         o.Rektor.URL,
+				RekorURL:         o.Rekor.URL,
 				OIDCIssuer:       o.OIDC.Issuer,
 				OIDCClientID:     o.OIDC.ClientID,
 				OIDCClientSecret: o.OIDC.ClientSecret,
 			}
 			for _, blob := range args {
-				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.RegistryOpts, blob, o.Base64Output, o.Output); err != nil {
+				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.Output); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}

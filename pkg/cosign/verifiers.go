@@ -22,8 +22,8 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/pkg/errors"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -62,7 +62,7 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, _ map[st
 	}
 
 	// The payload here is an envelope. We already verified the signature earlier.
-	e := ssl.Envelope{}
+	e := dsse.Envelope{}
 	if err := json.Unmarshal(p, &e); err != nil {
 		return err
 	}

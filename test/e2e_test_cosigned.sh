@@ -43,6 +43,22 @@ spec:
         - name: sample
           image: $KO_DOCKER_REPO/sample
 EOF
+cat > cronjob.yaml <<EOF
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  generateName: cronjob-test-
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sample
+            image: $KO_DOCKER_REPO/sample
+          restartPolicy: Never
+EOF
 echo '::endgroup::'
 
 
@@ -72,6 +88,15 @@ else
 fi
 echo '::endgroup::'
 
+echo '::group:: test cronjob success'
+# This time it should succeed!
+if ! kubectl create -f cronjob.yaml ; then
+  echo Failed to create CronJob in namespace without label!
+  exit 1
+else
+  echo Successfully created CronJob in namespace without label.
+fi
+echo '::endgroup::'
 
 echo '::group:: enable verification'
 kubectl label namespace default --overwrite cosigned.sigstore.dev/include=true
@@ -97,9 +122,17 @@ else
 fi
 echo '::endgroup::'
 
+echo '::group:: test cronjob rejection'
+if kubectl create -f cronjob.yaml ; then
+  echo Failed to block CronJob creation!
+  exit 1
+else
+  echo Successfully blocked CronJob creation.
+fi
+echo '::endgroup::'
 
 echo '::group:: sign test image'
-cosign sign -key k8s://cosign-system/verification-key $DIGEST
+cosign sign --key k8s://cosign-system/verification-key $DIGEST
 echo '::endgroup::'
 
 
@@ -126,6 +159,16 @@ else
 fi
 echo '::endgroup::'
 
+echo '::group:: test cronjob digest resolution'
+IMAGE=$(kubectl create --dry-run=server -f cronjob.yaml -oyaml | yq e '.spec.jobTemplate.spec.template.spec.containers[0].image' -)
+
+if [ "$IMAGE" != "$DIGEST" ] ; then
+  echo Failed to resolve tag to digest!
+  exit 1
+else
+  echo Successfully resolved tag to digest.
+fi
+echo '::endgroup::'
 
 echo '::group:: test pod success'
 # This time it should succeed!
@@ -145,5 +188,15 @@ if ! kubectl create -f job.yaml ; then
   exit 1
 else
   echo Successfully created Job from signed image.
+fi
+echo '::endgroup::'
+
+echo '::group:: test cronjob success'
+# This time it should succeed!
+if ! kubectl create -f cronjob.yaml ; then
+  echo Failed to create CronJob with properly signed image!
+  exit 1
+else
+  echo Successfully created CronJob from signed image.
 fi
 echo '::endgroup::'

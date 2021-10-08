@@ -1,3 +1,4 @@
+//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,28 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dockerfile
+package options
 
 import (
-	"context"
-	"flag"
-
-	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/spf13/cobra"
 )
 
-func Dockerfile() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign dockerfile", flag.ExitOnError)
-	)
+// CopyOptions is the top level wrapper for the copy command.
+type CopyOptions struct {
+	SignatureOnly bool
+	Force         bool
+	Registry      RegistryOptions
+}
 
-	return &ffcli.Command{
-		Name:        "dockerfile",
-		ShortUsage:  "cosign dockerfile",
-		ShortHelp:   "Provides utilities for discovering images in and performing operations on Dockerfiles",
-		FlagSet:     flagset,
-		Subcommands: []*ffcli.Command{VerifyDockerfile()},
-		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
-		},
-	}
+var _ Interface = (*CopyOptions)(nil)
+
+// AddFlags implements Interface
+func (o *CopyOptions) AddFlags(cmd *cobra.Command) {
+	o.Registry.AddFlags(cmd)
+
+	cmd.Flags().BoolVar(&o.SignatureOnly, "sig-only", false,
+		"only copy the image signature")
+
+	cmd.Flags().BoolVarP(&o.Force, "force", "f", false,
+		"overwrite destination image(s), if necessary")
 }

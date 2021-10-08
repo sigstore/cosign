@@ -34,7 +34,7 @@ var (
 func New() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sget <image reference>",
-		Short: "sget [-key <key reference>] <image reference>",
+		Short: "sget [--key <key reference>] <image reference>",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return errors.New("a single image reference is required")

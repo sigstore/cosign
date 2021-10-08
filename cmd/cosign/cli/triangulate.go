@@ -16,60 +16,29 @@
 package cli
 
 import (
-	"context"
 	"flag"
-	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/cmd/cosign/cli/triangulate"
 )
 
-func Triangulate() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign triangulate", flag.ExitOnError)
-		t       = flagset.String("type", "signature", "related attachment to triangulate (attestation|sbom|signature), default signature")
-		regOpts options.RegistryOpts
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "triangulate",
-		ShortUsage: "cosign triangulate <image uri>",
-		ShortHelp:  "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.",
-		FlagSet:    flagset,
-		Exec: func(ctx context.Context, args []string) error {
+func addTriangulate(topLevel *cobra.Command) {
+	o := &options.TriangulateOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "triangulate",
+		Short: "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.\ncosign triangulate <image uri>",
+		Long:  "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.",
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return MungeCmd(ctx, regOpts, args[0], *t)
+			return triangulate.MungeCmd(cmd.Context(), o.Registry, args[0], o.Type)
 		},
 	}
-}
 
-func MungeCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string, attachmentType string) error {
-	ref, err := name.ParseReference(imageRef)
-	if err != nil {
-		return err
-	}
-
-	var dstRef name.Tag
-	switch attachmentType {
-	case cosign.Signature:
-		dstRef, err = ociremote.SignatureTag(ref, regOpts.ClientOpts(ctx)...)
-	case cosign.SBOM:
-		dstRef, err = ociremote.SBOMTag(ref, regOpts.ClientOpts(ctx)...)
-	case cosign.Attestation:
-		dstRef, err = ociremote.AttestationTag(ref, regOpts.ClientOpts(ctx)...)
-	default:
-		err = fmt.Errorf("unknown attachment type %s", attachmentType)
-	}
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(dstRef.Name())
-	return nil
+	o.AddFlags(cmd)
+	topLevel.AddCommand(cmd)
 }

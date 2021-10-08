@@ -1,3 +1,4 @@
+//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,28 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manifest
+package options
 
 import (
-	"context"
-	"flag"
-
-	"github.com/peterbourgon/ff/v3/ffcli"
+	"github.com/spf13/cobra"
 )
 
-func Manifest() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign manifest", flag.ExitOnError)
-	)
+// TriangulateOptions is the top level wrapper for the triangulate command.
+type TriangulateOptions struct {
+	Type     string
+	Registry RegistryOptions
+}
 
-	return &ffcli.Command{
-		Name:        "manifest",
-		ShortUsage:  "cosign manifest",
-		ShortHelp:   "Provides utilities for discovering images in and performing operations on Kubernetes manifests",
-		FlagSet:     flagset,
-		Subcommands: []*ffcli.Command{VerifyManifest()},
-		Exec: func(ctx context.Context, args []string) error {
-			return flag.ErrHelp
-		},
-	}
+var _ Interface = (*TriangulateOptions)(nil)
+
+// AddFlags implements Interface
+func (o *TriangulateOptions) AddFlags(cmd *cobra.Command) {
+	o.Registry.AddFlags(cmd)
+
+	cmd.Flags().StringVar(&o.Type, "type", "signature",
+		"related attachment to triangulate (attestation|sbom|signature), default signature")
 }

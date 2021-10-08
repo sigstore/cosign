@@ -18,37 +18,14 @@ package download
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/peterbourgon/ff/v3/ffcli"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
-func Signature() *ffcli.Command {
-	var (
-		flagset = flag.NewFlagSet("cosign download signature", flag.ExitOnError)
-		regOpts options.RegistryOpts
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "signature",
-		ShortUsage: "cosign download signature <image uri>",
-		ShortHelp:  "Download signatures from the supplied container image",
-		FlagSet:    flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return flag.ErrHelp
-			}
-			return SignatureCmd(ctx, regOpts, args[0])
-		},
-	}
-}
-
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOpts, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

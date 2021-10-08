@@ -1,3 +1,4 @@
+//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,117 +16,35 @@
 package cli
 
 import (
-	"context"
-	"flag"
-	"fmt"
+	"github.com/spf13/cobra"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/peterbourgon/ff/v3/ffcli"
-
+	"github.com/sigstore/cosign/cmd/cosign/cli/copy"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
-func Copy() *ffcli.Command {
-	var (
-		flagset     = flag.NewFlagSet("cosign copy", flag.ExitOnError)
-		sigOnlyFlag = flagset.Bool("sig-only", false, "only copy the image signature")
-		forceFlag   = flagset.Bool("f", false, "overwrite destination image(s), if necessary")
-		regOpts     options.RegistryOpts
-	)
-	options.ApplyRegistryFlags(&regOpts, flagset)
-	return &ffcli.Command{
-		Name:       "copy",
-		ShortUsage: "cosign copy <source image> <destination image>",
-		ShortHelp:  `Copy the supplied container image and signatures.`,
-		LongHelp: `Copy the supplied container image and signatures.
+func addCopy(topLevel *cobra.Command) {
+	o := &options.CopyOptions{}
 
-EXAMPLES
+	cmd := &cobra.Command{
+		Use:   "copy",
+		Short: "Copy the supplied container image and signatures.",
+		Example: `  cosign copy <source image> <destination image>
+
   # copy a container image and its signatures
   cosign copy example.com/src:latest example.com/dest:latest
 
   # copy the signatures only
-  cosign copy -sig-only example.com/src example.com/dest
+  cosign copy --sig-only example.com/src example.com/dest
 
   # overwrite destination image and signatures
-  cosign copy -f example.com/src example.com/dest
-  `,
-		FlagSet: flagset,
-		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 2 {
-				return flag.ErrHelp
-			}
-			return CopyCmd(ctx, regOpts, args[0], args[1], *sigOnlyFlag, *forceFlag)
+  cosign copy -f example.com/src example.com/dest`,
+
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return copy.CopyCmd(cmd.Context(), o.Registry, args[0], args[1], o.SignatureOnly, o.Force)
 		},
 	}
-}
 
-func CopyCmd(ctx context.Context, regOpts options.RegistryOpts, srcImg, dstImg string, sigOnly, force bool) error {
-	srcRef, err := name.ParseReference(srcImg)
-	if err != nil {
-		return err
-	}
-	dstRef, err := name.ParseReference(dstImg)
-	if err != nil {
-		return err
-	}
-
-	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	sigSrcRef, err := ociremote.SignatureTag(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
-	if err != nil {
-		return err
-	}
-
-	dstRepoRef := dstRef.Context()
-	sigDstRef := dstRepoRef.Tag(sigSrcRef.Identifier())
-	if err := copyImage(sigSrcRef, sigDstRef, force, remoteOpts...); err != nil {
-		return err
-	}
-
-	if !sigOnly {
-		if err := copyImage(srcRef, dstRef, force, remoteOpts...); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func descriptorsEqual(a, b *v1.Descriptor) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	return a.Digest == b.Digest
-}
-
-func copyImage(src, dest name.Reference, overwrite bool, opts ...remote.Option) error {
-	got, err := remote.Get(src, opts...)
-	if err != nil {
-		return err
-	}
-
-	if !overwrite {
-		if dstDesc, err := remote.Head(dest, opts...); err == nil {
-			if descriptorsEqual(&got.Descriptor, dstDesc) {
-				return nil
-			}
-			return fmt.Errorf("image %q already exists. Use `-f` to overwrite", dest.Name())
-		}
-	}
-
-	if got.MediaType.IsIndex() {
-		imgIdx, err := got.ImageIndex()
-		if err != nil {
-			return err
-		}
-		return remote.WriteIndex(dest, imgIdx, opts...)
-	}
-
-	img, err := got.Image()
-	if err != nil {
-		return err
-	}
-	return remote.Write(dest, img, opts...)
+	o.AddFlags(cmd)
+	topLevel.AddCommand(cmd)
 }
