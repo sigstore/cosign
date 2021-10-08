@@ -29,4 +29,5 @@ cosign policy [flags]
 
 * [cosign](cosign.md)	 - 
 * [cosign policy init](cosign_policy_init.md)	 - generate a new keyless policy.
+* [cosign policy sign](cosign_policy_sign.md)	 - sign a keyless policy.
 

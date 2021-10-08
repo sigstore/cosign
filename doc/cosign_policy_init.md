@@ -23,13 +23,14 @@ cosign policy init [flags]
 ### Options
 
 ```
-  -h, --help                  help for init
-  -m, --maintainers strings   list of maintainers to add to the root policy
-      --namespace string      registry namespace that the root policy belongs to (default "ns")
-      --out string            output policy locally (default "o")
+      --allow-insecure-registry   whether to allow insecure connections to registries. Don't use this for anything but testing
+  -h, --help                      help for init
+  -m, --maintainers strings       list of maintainers to add to the root policy
+      --namespace string          registry namespace that the root policy belongs to (default "ns")
+      --out string                output policy locally (default "o")
       --tag-prefix string     custom prefix to use for tags
       --tag-suffix string     custom suffix to use for tags
-      --threshold int         threshold for root policy signers (default 1)
+      --threshold int             threshold for root policy signers (default 1)
 ```
 
 ### Options inherited from parent commands
