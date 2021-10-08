@@ -214,7 +214,7 @@ func (k *Key) Verifier() (signature.Verifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	k.Pub = (*crypto.PublicKey)(&cert.PublicKey)
+	k.Pub = cert.PublicKey
 
 	return k, nil
 }
@@ -241,7 +241,7 @@ func (k *Key) SignerVerifier() (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	k.Pub = (*crypto.PublicKey)(&cert.PublicKey)
+	k.Pub = cert.PublicKey
 
 	var auth piv.KeyAuth
 	if k.pin == "" {
