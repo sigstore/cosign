@@ -19,16 +19,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// TagOptions is a wrapper for the tag options.
-type TagOptions struct {
+// ReferenceOptions is a wrapper for image reference options.
+type ReferenceOptions struct {
 	TagPrefix string
-	TagSuffix string
 }
 
-var _ Interface = (*TagOptions)(nil)
+var _ Interface = (*ReferenceOptions)(nil)
 
 // AddFlags implements Interface
-func (o *TagOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.TagPrefix, "tag-prefix", "", "custom prefix to use for tags")
-	cmd.Flags().StringVar(&o.TagSuffix, "tag-suffix", "", "custom suffix to use for tags")
+func (o *ReferenceOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.TagPrefix, "attachment-tag-prefix", "", "optional custom prefix to use for attached image tags. Attachment images are tagged as: `[AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]`")
 }

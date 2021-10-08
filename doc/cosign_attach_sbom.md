@@ -15,12 +15,11 @@ cosign attach sbom [flags]
 ### Options
 
 ```
-      --allow-insecure-registry   whether to allow insecure connections to registries. Don't use this for anything but testing
-  -h, --help                      help for sbom
-      --sbom string               path to the sbom, or {-} for stdin
-      --tag-prefix string         custom prefix to use for tags
-      --tag-suffix string         custom suffix to use for tags
-      --type string               type of sbom (spdx|cyclonedx) (default "spdx")
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+  -h, --help                                                                                     help for sbom
+      --sbom string                                                                              path to the sbom, or {-} for stdin
+      --type string                                                                              type of sbom (spdx|cyclonedx) (default "spdx")
 ```
 
 ### Options inherited from parent commands

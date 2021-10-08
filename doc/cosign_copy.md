@@ -24,12 +24,11 @@ cosign copy [flags]
 ### Options
 
 ```
-      --allow-insecure-registry   whether to allow insecure connections to registries. Don't use this for anything but testing
-  -f, --force                     overwrite destination image(s), if necessary
-  -h, --help                      help for copy
-      --sig-only                  only copy the image signature
-      --tag-prefix string         custom prefix to use for tags
-      --tag-suffix string         custom suffix to use for tags
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+  -f, --force                                                                                    overwrite destination image(s), if necessary
+  -h, --help                                                                                     help for copy
+      --sig-only                                                                                 only copy the image signature
 ```
 
 ### Options inherited from parent commands
