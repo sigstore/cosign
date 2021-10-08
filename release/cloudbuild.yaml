@@ -58,8 +58,17 @@ steps:
   - './Dockerfile.cosigned'
   waitFor: ['-']
 
+- name: 'gcr.io/projectsigstore/cosign:v1.2.0@sha256:96ef6fb02c5a56901dc3c2e0ca34eec9ed926ab8d936ea30ec38f9ec9db017a5'
+  dir: "go/src/sigstore/cosign"
+  args:
+  - 'verify'
+  - '-key'
+  - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.2@sha256:24bb133da23e0d21a8e8a54416f652d753c7cb2ad8efb3e6a3ef652f597ada8f'
+  waitFor: ['-']
+
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.1@sha256:d6982c0a6dae690b1f5ac977e377e75ba0db7022483c13b664a130a7934eb393
+- name: ghcr.io/gythialy/golang-cross:v1.17.2@sha256:24bb133da23e0d21a8e8a54416f652d753c7cb2ad8efb3e6a3ef652f597ada8f
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
