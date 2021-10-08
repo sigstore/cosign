@@ -17,6 +17,8 @@ cosign download sbom [flags]
 ```
       --allow-insecure-registry   whether to allow insecure connections to registries. Don't use this for anything but testing
   -h, --help                      help for sbom
+      --tag-prefix string         custom prefix to use for tags
+      --tag-suffix string         custom suffix to use for tags
 ```
 
 ### Options inherited from parent commands

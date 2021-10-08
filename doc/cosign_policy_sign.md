@@ -25,6 +25,8 @@ cosign policy sign [flags]
       --oidc-issuer string          [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
       --out string                  output policy locally (default "o")
       --rekor-url string            [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --tag-prefix string           custom prefix to use for tags
+      --tag-suffix string           custom suffix to use for tags
 ```
 
 ### Options inherited from parent commands

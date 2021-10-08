@@ -28,6 +28,8 @@ cosign copy [flags]
   -f, --force                     overwrite destination image(s), if necessary
   -h, --help                      help for copy
       --sig-only                  only copy the image signature
+      --tag-prefix string         custom prefix to use for tags
+      --tag-suffix string         custom suffix to use for tags
 ```
 
 ### Options inherited from parent commands

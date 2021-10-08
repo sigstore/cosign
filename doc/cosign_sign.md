@@ -66,6 +66,8 @@ cosign sign [flags]
       --rekor-url string            [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                          whether to use a hardware security key
       --slot string                 security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --tag-prefix string           custom prefix to use for tags
+      --tag-suffix string           custom suffix to use for tags
       --upload                      whether to upload the signature (default true)
 ```
 
