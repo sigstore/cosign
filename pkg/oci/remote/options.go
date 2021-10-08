@@ -89,18 +89,6 @@ func WithPrefix(prefix string) Option {
 	}
 }
 
-// WithSuffix is a functional option for overriding the default
-// tag suffix.
-func WithSuffix(suffix string) Option {
-	return func(o *options) {
-		if suffix != "" {
-			o.SignatureSuffix = suffix
-			o.AttestationSuffix = suffix
-			o.SBOMSuffix = suffix
-		}
-	}
-}
-
 // WithSignatureSuffix is a functional option for overriding the default
 // signature tag suffix.
 func WithSignatureSuffix(suffix string) Option {

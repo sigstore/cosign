@@ -15,12 +15,11 @@ cosign attach signature [flags]
 ### Options
 
 ```
-      --allow-insecure-registry   whether to allow insecure connections to registries. Don't use this for anything but testing
-  -h, --help                      help for signature
-      --payload string            path to the payload covered by the signature (if using another format)
-      --signature string          the signature, path to the signature, or {-} for stdin
-      --tag-prefix string         custom prefix to use for tags
-      --tag-suffix string         custom suffix to use for tags
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+  -h, --help                                                                                     help for signature
+      --payload string                                                                           path to the payload covered by the signature (if using another format)
+      --signature string                                                                         the signature, path to the signature, or {-} for stdin
 ```
 
 ### Options inherited from parent commands

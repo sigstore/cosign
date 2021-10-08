@@ -15,11 +15,10 @@ cosign upload wasm [flags]
 ### Options
 
 ```
-      --allow-insecure-registry   whether to allow insecure connections to registries. Don't use this for anything but testing
-  -f, --file string               path to the wasm file to upload
-  -h, --help                      help for wasm
-      --tag-prefix string         custom prefix to use for tags
-      --tag-suffix string         custom suffix to use for tags
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+  -f, --file string                                                                              path to the wasm file to upload
+  -h, --help                                                                                     help for wasm
 ```
 
 ### Options inherited from parent commands

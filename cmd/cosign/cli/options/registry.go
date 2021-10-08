@@ -28,7 +28,7 @@ import (
 // RegistryOptions is the wrapper for the registry options.
 type RegistryOptions struct {
 	AllowInsecure bool
-	Tags          TagOptions
+	RefOpts       ReferenceOptions
 }
 
 var _ Interface = (*RegistryOptions)(nil)
@@ -37,11 +37,15 @@ var _ Interface = (*RegistryOptions)(nil)
 func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
-	o.Tags.AddFlags(cmd)
+	o.RefOpts.AddFlags(cmd)
 }
 
 func (o *RegistryOptions) ClientOpts(ctx context.Context) []ociremote.Option {
-	return []ociremote.Option{ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...), ociremote.WithPrefix(o.Tags.TagPrefix), ociremote.WithSuffix(o.Tags.TagSuffix)}
+	opts := []ociremote.Option{ociremote.WithRemoteOptions(o.GetRegistryClientOpts(ctx)...)}
+	if o.RefOpts.TagPrefix != "" {
+		opts = append(opts, ociremote.WithPrefix(o.RefOpts.TagPrefix))
+	}
+	return opts
 }
 
 func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Option {

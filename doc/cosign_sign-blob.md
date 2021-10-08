@@ -33,21 +33,20 @@ cosign sign-blob [flags]
 ### Options
 
 ```
-      --allow-insecure-registry     whether to allow insecure connections to registries. Don't use this for anything but testing
-      --b64                         whether to base64 encode the output (default true)
-      --fulcio-url string           [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
-  -h, --help                        help for sign-blob
-      --identity-token string       [EXPERIMENTAL] identity token to use for certificate from fulcio
-      --key string                  path to the private key file, KMS URI or Kubernetes Secret
-      --oidc-client-id string       [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
-      --oidc-client-secret string   [EXPERIMENTAL] OIDC client secret for application
-      --oidc-issuer string          [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
-      --output string               write the signature to FILE
-      --rekor-url string            [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --sk                          whether to use a hardware security key
-      --slot string                 security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --tag-prefix string           custom prefix to use for tags
-      --tag-suffix string           custom suffix to use for tags
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --b64                                                                                      whether to base64 encode the output (default true)
+      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+  -h, --help                                                                                     help for sign-blob
+      --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
+      --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
+      --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
+      --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
+      --output string                                                                            write the signature to FILE
+      --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --sk                                                                                       whether to use a hardware security key
+      --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
 ```
 
 ### Options inherited from parent commands
