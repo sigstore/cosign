@@ -34,10 +34,13 @@ cosign generate-key-pair [flags]
   cosign generate-key-pair k8s://[NAMESPACE]/[NAME]
 
   # generate a key-pair in GitHub
-  cosign generate-key-pair github://owner/project
+  cosign generate-key-pair github://[OWNER]/[PROJECT_NAME]
 
-  # generate a key-pair in GitLab
-  cosign generate-key-pair gitlab://owner/project
+  # generate a key-pair in GitLab with project name
+  cosign generate-key-pair gitlab://[OWNER]/[PROJECT_NAME]
+
+  # generate a key-pair in GitLab with project id
+  cosign generate-key-pair gitlab://[PROJECT_ID]
 
 CAVEATS:
   This command interactively prompts for a password. You can use
