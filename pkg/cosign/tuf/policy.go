@@ -174,7 +174,7 @@ func (s *Signed) AddOrUpdateSignature(signature Signature) error {
 	if !root.ValidKey(signature.KeyID, "root") {
 		return errors.New("invalid root key")
 	}
-	signatures := make([]Signature, 0, len(s.Signatures)+1)
+	signatures := []Signature{}
 	for _, sig := range s.Signatures {
 		if sig.KeyID != signature.KeyID {
 			signatures = append(signatures, sig)
