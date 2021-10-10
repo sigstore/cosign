@@ -30,7 +30,7 @@ type AttestOptions struct {
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
 	SecurityKey SecurityKeyOptions
-	Predicate   PredicateOptions
+	Predicate   PredicateLocalOptions
 	Registry    RegistryOptions
 }
 

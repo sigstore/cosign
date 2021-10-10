@@ -22,12 +22,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -45,20 +43,6 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-const (
-	predicateCustom = "custom"
-	predicateSlsa   = "slsaprovenance"
-	predicateSpdx   = "spdx"
-	predicateLink   = "link"
-)
-
-var predicateTypeMap = map[string]string{
-	predicateCustom: attestation.CosignCustomProvenanceV01,
-	predicateSlsa:   in_toto.PredicateSLSAProvenanceV01,
-	predicateSpdx:   in_toto.PredicateSPDX,
-	predicateLink:   in_toto.PredicateLinkV1,
-}
-
 //nolint
 func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string,
 	upload bool, predicatePath string, force bool, predicateType string) error {
@@ -73,19 +57,16 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		}
 	}
 
-	predicateURI, ok := predicateTypeMap[predicateType]
-	if !ok {
-		if _, err := url.ParseRequestURI(predicateType); err != nil {
-			return fmt.Errorf("invalid predicate type: %s", predicateType)
-		} else {
-			predicateURI = predicateType
-		}
+	predicateURI, err := options.ParsePredicateType(predicateType)
+	if err != nil {
+		return err
 	}
 
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
 	}
+
 	ociremoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
 		return err

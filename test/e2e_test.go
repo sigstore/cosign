@@ -171,20 +171,37 @@ func TestAttestVerify(t *testing.T) {
 		KeyRef: pubKeyPath,
 	}
 
-	attestation := "helloworld"
-	ap := filepath.Join(td, "attestation")
-	if err := ioutil.WriteFile(ap, []byte(attestation), 0600); err != nil {
+	// Fail case when using without type and policy flag
+	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
+
+	slsaAttestation := `{ "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := ioutil.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
-
 	// Now attest the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", true, ap, false, "custom"), t)
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", true, slsaAttestationPath, false, "custom"), t)
 
-	// Now verify and download should work!
+	// Use cue to verify attestation
+	policyPath := filepath.Join(td, "policy.cue")
+	verifyAttestation.PredicateType = "slsaprovenance"
+	verifyAttestation.Policies = []string{policyPath}
+
+	// Fail case
+	cuePolicy := `builder: id: "1"`
+	if err := ioutil.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Success case
+	cuePolicy = `builder: id: "2"`
+	if err := ioutil.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+		t.Fatal(err)
+	}
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+
 	// Look for a specific annotation
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 }
