@@ -46,7 +46,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	token, tokenExists := os.LookupEnv("GITLAB_TOKEN")
 
 	if !tokenExists {
-		return errors.New("could not find \"GITLAB_TOKEN\" env variable")
+		return errors.New("could not find \"GITLAB_TOKEN\"")
 	}
 
 	var client *gitlab.Client
@@ -71,7 +71,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		EnvironmentScope: gitlab.String("*"),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" environment variable")
+		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" variable")
 	}
 
 	if passwordResp.StatusCode < 200 && passwordResp.StatusCode >= 300 {
@@ -79,7 +79,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return errors.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Password written to COSIGN_PASSWORD environment variable")
+	fmt.Fprintln(os.Stderr, "Password written to \"COSIGN_PASSWORD\" variable")
 
 	_, privateKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
 		Key:          gitlab.String("COSIGN_PRIVATE_KEY"),
@@ -89,7 +89,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		Masked:       gitlab.Bool(false),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" environment variable")
+		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" variable")
 	}
 
 	if privateKeyResp.StatusCode < 200 && privateKeyResp.StatusCode >= 300 {
@@ -97,7 +97,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return errors.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PRIVATE_KEY environment variable")
+	fmt.Fprintln(os.Stderr, "Private key written to \"COSIGN_PRIVATE_KEY\" variable")
 
 	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
 		return err

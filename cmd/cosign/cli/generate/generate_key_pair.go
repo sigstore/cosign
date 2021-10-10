@@ -66,7 +66,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		split := strings.Split(args[0], "://")
 
 		if len(split) < 2 {
-			return errors.New("could not parse scheme, use <protocol>://<ref> format")
+			return errors.New("could not parse scheme, use <scheme>://<ref> format")
 		}
 
 		provider, targetRef := split[0], split[1]
