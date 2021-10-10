@@ -30,6 +30,21 @@ spec:
   - name: sample
     image: $KO_DOCKER_REPO/sample
 EOF
+cat > distroless-pod.yaml <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  generateName: pod-test-
+spec:
+  restartPolicy: Never
+  containers:
+  - name: sample
+    image: gcr.io/distroless/base:debug
+    command: [/busybox/sh, -c]
+    args:
+    - |
+      echo Testing Fulcio verification
+EOF
 cat > job.yaml <<EOF
 apiVersion: batch/v1
 kind: Job
@@ -60,6 +75,29 @@ spec:
           restartPolicy: Never
 EOF
 echo '::endgroup::'
+
+
+echo '::group:: enable verification'
+kubectl label namespace default --overwrite cosigned.sigstore.dev/include=true
+echo '::endgroup::'
+
+
+echo '::group:: test pod success (Fulcio root)'
+# This time it should succeed!
+if ! kubectl create -f distroless-pod.yaml ; then
+  echo Failed to create Pod signed by Fulcio!
+  exit 1
+else
+  echo Successfully created Pod signed by Fulcio.
+fi
+echo '::endgroup::'
+
+
+echo '::group:: setup verification-key'
+# Update the cosign verification-key secret with a proper key pair.
+cosign generate-key-pair k8s://cosign-system/verification-key
+echo '::endgroup::'
+
 
 
 echo '::group:: disable verification'
