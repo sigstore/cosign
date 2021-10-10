@@ -111,6 +111,24 @@ The user must have the following IAM roles:
 * Safer KMS Viewer Role
 * Cloud KMS CryptoKey Signer/Verifier (`roles/cloudkms.signerVerifier`)
 
+### Azure Key Vault
+
+Azure Key Vault keys can be used in `cosign` for signing and verification.
+
+The URI format for Azure Key Vault is:
+`azurekms://[VAULT_NAME][VAULT_URI]/[KEY]`
+
+where VAULT_NAME, VAULT_URI, and KEY are replaced with the correct values.
+
+The following environment variables must be set to let cosign authenticate to Azure Key Vault. (see this [reference](https://devblogs.microsoft.com/azure-sdk/authentication-and-the-azure-sdk/#environment-variables) for more details about Azure SDK Authentication)
+- AZURE_TENANT_ID
+- AZURE_CLIENT_ID
+- AZURE_CLIENT_SECRET
+
+To create a key using `cosign generate-key-pair -kms azurekms://[VAULT_NAME][VAULT_URI]/[KEY]` you will need a user which has permissions to create keys in Key Vault. For example `Key Vault Crypto Officer` role.
+
+To sign images using `cosign sign -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] [IMAGE]` you will need a user which has permissions to the sign action such as the `Key Vault Crypto User` role.
+
 ### Hashicorp Vault
 
 Hashicorp Vault keys can be used in `cosign` for signing and verification.
