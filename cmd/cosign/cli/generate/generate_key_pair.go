@@ -104,7 +104,7 @@ func readPasswordFn(confirm bool) func() ([]byte, error) {
 		return func() ([]byte, error) {
 			return []byte(pw), nil
 		}
-	case term.IsTerminal(0):
+	case isTerminal():
 		return func() ([]byte, error) {
 			return getPassFromTerm(confirm)
 		}
@@ -114,6 +114,11 @@ func readPasswordFn(confirm bool) func() ([]byte, error) {
 			return ioutil.ReadAll(os.Stdin)
 		}
 	}
+}
+
+func isTerminal() bool {
+	stat, _ := os.Stdin.Stat()
+	return (stat.Mode() & os.ModeCharDevice) != 0
 }
 
 func getPassFromTerm(confirm bool) ([]byte, error) {
