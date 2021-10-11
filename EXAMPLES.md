@@ -46,3 +46,57 @@ The following checks were performed on each of these signatures:
   - Any certificates were verified against the Fulcio roots.
 {"critical":{"identity":{"docker-reference":"us.gcr.io/dlorenc-vmtest2/demo"},"image":{"docker-manifest-digest":"sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155"},"type":"cosign container image signature"},"optional":null}
 ```
+
+## Validate In-Toto Attestations
+
+### [Cosign Custom Predicate](./specs/COSIGN_PREDICATE_SPEC.md) type and CUE policy
+```shell
+$ cosign attest -key cosign.key -predicate foo gcr.io/rekor-testing/distroless
+Enter password for private key: Using payload from: foo
+Pushing attestation to: gcr.io/rekor-testing/distroless:sha256-3ab2f3293a30dde12fc49f10b308dee56f9e25f3c587bc011614339f8fbfe24e.att
+
+$ cosign verify-attestation -key cosign.pub gcr.io/rekor-testing/distroless | jq -r .payload | base64 -D | jq .
+
+Verification for gcr.io/rekor-testing/distroless --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+  - Any certificates were verified against the Fulcio roots.
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "cosign.sigstore.dev/attestation/v1",
+  "subject": [
+    {
+      "name": "gcr.io/rekor-testing/distroless",
+      "digest": {
+        "sha256": "3ab2f3293a30dde12fc49f10b308dee56f9e25f3c587bc011614339f8fbfe24e"
+      }
+    }
+  ],
+  "predicate": {
+    "Data": "foo\n",
+    "Timestamp": "2021-10-10T17:10:27Z"
+  }
+}
+
+$ cat policy.cue
+import "time"
+
+before: time.Parse(time.RFC3339, "2021-10-09T17:10:27Z")
+
+Data: "bar"
+Timestamp: >before
+
+$ cosign verify-attestation --policy policy.cue --key cosign.pub gcr.io/rekor-testing/distroless
+
+[policy.cue]
+will be validating against CUE policies: [policy.cue]
+{"Data":"foo\n","Timestamp":"2021-10-10T17:45:20Z"} {
+	before:    "2021-10-09T17:10:27Z"
+	Data:      "bar"
+	Timestamp: >"2021-10-09T17:10:27Z"
+}
+There are 1 number of errors occurred during the validation:
+- Data: conflicting values "foo\n" and "bar"
+Error: 1 validation errors occurred
+```

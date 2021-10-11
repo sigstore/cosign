@@ -311,6 +311,35 @@ To verify:
 $ cosign verify-attestation --key cosign.pub <image>
 ```
 
+##### Validate In-Toto Attestations
+
+cosign has support of validating In-toto Attestations based CUE and Rego policies.
+
+Let's start with giving a little bit introduction about CUE and Rego who might not familiar with these.
+
+* [CUE](https://cuelang.org) is an open-source data validation language and inference engine with its roots in logic programming.
+
+```shell
+$ cosign verify-attestation --policy policy.cue --key cosign.pub <image>
+```
+
+Find an example CUE policy [here]().
+
+* [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/) was inspired by Datalog, which is a well understood, decades old query language. Rego extends Datalog to support structured document models such as JSON.
+
+```shell
+$ cosign verify-attestation --policy policy.rego --key cosign.pub <image>
+```
+
+If you want to learn more about the development of this feature, you can reach out to it from [here](https://github.com/sigstore/cosign/pull/641).
+
+Next, I think the most important question that we need to answer is that why do we need this kind of validation. I'll quote a sentence for this from the blog post written by [Dan Lorenc](https://twitter.com/lorenc_dan). You can reach out the blog post from [here](https://dlorenc.medium.com/policy-and-attestations-89650fd6f4fa).
+
+> A more important consideration (and relevant back to our vulnerability discussion) is that systems that verify attestations must be carefully designed to work correctly if an attacker can delete or hide any specific attestation or set of attestations. Signatures can guarantee a file has not been tampered with, but they can’t guarantee the file arrives at all. To be safe, your systems should be designed to fail closed rather than open.]
+
+Check out the [verify-attestation](https://github.com/sigstore/cosign/blob/main/doc/cosign_verify-attestation.md) documentation to learn more about the command.
+
+
 ## Detailed Usage
 
 See the [Usage documentation](USAGE.md) for more commands!
