@@ -105,7 +105,9 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (er
 			}
 
 			if !valid(ctx, ref, keys) {
-				errs = errs.Also(apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex(field, i))
+				errorField := apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex(field, i)
+				errorField.Details = c.Image
+				errs = errs.Also(errorField)
 				continue
 			}
 		}
