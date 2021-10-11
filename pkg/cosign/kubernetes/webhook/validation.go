@@ -34,8 +34,26 @@ import (
 )
 
 func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey) bool {
+	if len(keys) == 0 {
+		// If there are no keys, then verify against the fulcio root.
+		sps, err := validSignatures(ctx, ref, nil /* verifier */)
+		if err != nil {
+			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
+			return false
+		}
+		if len(sps) > 0 {
+			return true
+		}
+		return false
+	}
 	for _, k := range keys {
-		sps, err := validSignatures(ctx, ref, k)
+		verifier, err := signature.LoadECDSAVerifier(k, crypto.SHA256)
+		if err != nil {
+			logging.FromContext(ctx).Errorf("error creating verifier: %v", err)
+			return false
+		}
+
+		sps, err := validSignatures(ctx, ref, verifier)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
 			return false
@@ -51,15 +69,10 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey) boo
 // For testing
 var cosignVerifySignatures = cosign.VerifySignatures
 
-func validSignatures(ctx context.Context, ref name.Reference, key *ecdsa.PublicKey) ([]oci.Signature, error) {
-	ecdsaVerifier, err := signature.LoadECDSAVerifier(key, crypto.SHA256)
-	if err != nil {
-		return nil, err
-	}
-
+func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier) ([]oci.Signature, error) {
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RootCerts:     fulcioroots.Get(),
-		SigVerifier:   ecdsaVerifier,
+		SigVerifier:   verifier,
 		ClaimVerifier: cosign.SimpleClaimVerifier,
 	})
 	return sigs, err

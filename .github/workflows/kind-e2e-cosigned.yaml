@@ -175,9 +175,6 @@ jobs:
       run: |
         ko apply -Bf config/
 
-        # Update the cosign verification-key secret with a proper key pair.
-        cosign generate-key-pair k8s://cosign-system/verification-key
-
         # Wait for the webhook to come up and become Ready
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
     

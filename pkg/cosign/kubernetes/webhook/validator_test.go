@@ -212,12 +212,7 @@ func TestValidateCronJob(t *testing.T) {
 			Name:      secretName,
 		},
 		Data: map[string][]byte{
-			// Random public key (cosign generate-key-pair) 2021-09-25
-			"cosign.pub": []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
-UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
------END PUBLIC KEY-----
-`),
+			// No data should make us verify against Fulcio.
 		},
 	})
 
