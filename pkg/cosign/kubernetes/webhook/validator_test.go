@@ -139,6 +139,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: &apis.FieldError{
 			Message: `invalid image signature`,
 			Paths:   []string{"containers[0].image"},
+			Details: digest.String(),
 		},
 		cvs: fail,
 	}}
@@ -330,6 +331,7 @@ func TestValidateCronJob(t *testing.T) {
 		want: &apis.FieldError{
 			Message: `invalid image signature`,
 			Paths:   []string{"spec.jobTemplate.spec.template.spec.containers[0].image"},
+			Details: digest.String(),
 		},
 		cvs: fail,
 	}}
