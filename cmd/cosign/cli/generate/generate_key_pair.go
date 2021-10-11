@@ -21,8 +21,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign/git"
+	"github.com/sigstore/cosign/pkg/cosign/git/github"
+	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -57,8 +61,24 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
 		return nil
 	}
+
 	if len(args) > 0 {
-		return kubernetes.KeyPairSecret(ctx, args[0], GetPass)
+		split := strings.Split(args[0], "://")
+
+		if len(split) < 2 {
+			return errors.New("could not parse scheme, use <scheme>://<ref> format")
+		}
+
+		provider, targetRef := split[0], split[1]
+
+		switch provider {
+		case "k8s":
+			return kubernetes.KeyPairSecret(ctx, targetRef, GetPass)
+		case gitlab.ReferenceScheme, github.ReferenceScheme:
+			return git.GetProvider(provider).PutSecret(ctx, targetRef, GetPass)
+		}
+
+		return fmt.Errorf("undefined provider: %s", provider)
 	}
 
 	keys, err := cosign.GenerateKeyPair(GetPass)
