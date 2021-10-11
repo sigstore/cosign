@@ -33,6 +33,7 @@ func New() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "cosign",
 		DisableAutoGenTag: true,
+		SilenceUsage:      true, // Don't show usage on errors
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if ro.OutputFile != "" {
 				out, err := os.Create(ro.OutputFile)
