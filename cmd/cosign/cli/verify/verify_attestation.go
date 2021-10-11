@@ -242,7 +242,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			for _, v := range validationErrors {
 				_, _ = fmt.Fprintf(os.Stderr, "- %v\n", v)
 			}
-			return fmt.Errorf("%d validation errors occurred", len(validationErrors))
+			return nil
 		}
 
 		// TODO: add CUE validation report to `PrintVerificationHeader`.
