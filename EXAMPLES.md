@@ -24,6 +24,7 @@ $ gcloud kms keys versions get-public-key 1 --key=foo --keyring=foo --location=u
 # Verify in openssl
 $ openssl dgst -sha256 -verify pubkey.pem -signature gcpkms.sig payload
 ```
+
 ## Sign With OpenSSL, Verify With Cosign
 
 ```shell
@@ -50,6 +51,7 @@ The following checks were performed on each of these signatures:
 ## Validate In-Toto Attestations
 
 ### [Cosign Custom Predicate](./specs/COSIGN_PREDICATE_SPEC.md) type and CUE policy
+
 ```shell
 $ cosign attest -key cosign.key -predicate foo gcr.io/rekor-testing/distroless
 Enter password for private key: Using payload from: foo
@@ -99,4 +101,55 @@ will be validating against CUE policies: [policy.cue]
 There are 1 number of errors occurred during the validation:
 - Data: conflicting values "foo\n" and "bar"
 Error: 1 validation errors occurred
+```
+
+### [Cosign Custom Predicate](./specs/COSIGN_PREDICATE_SPEC.md) type and Rego policy
+
+```shell
+$ cosign attest -key cosign.key -predicate foo gcr.io/rekor-testing/distroless
+Enter password for private key: Using payload from: foo
+Pushing attestation to: gcr.io/rekor-testing/distroless:sha256-3ab2f3293a30dde12fc49f10b308dee56f9e25f3c587bc011614339f8fbfe24e.att
+
+$ cosign verify-attestation -key cosign.pub gcr.io/rekor-testing/distroless | jq -r .payload | base64 -D | jq .
+
+Verification for gcr.io/rekor-testing/distroless --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+  - Any certificates were verified against the Fulcio roots.
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "cosign.sigstore.dev/attestation/v1",
+  "subject": [
+    {
+      "name": "gcr.io/rekor-testing/distroless",
+      "digest": {
+        "sha256": "3ab2f3293a30dde12fc49f10b308dee56f9e25f3c587bc011614339f8fbfe24e"
+      }
+    }
+  ],
+  "predicate": {
+    "Data": "foo\n",
+    "Timestamp": "2021-10-10T17:10:27Z"
+  }
+}
+
+$ cat policy.rego
+package signature
+
+default allow = false
+
+allow {
+ input.Data == "bar"
+ before = time.parse_rfc3339_ns("2021-10-10T17:10:27Z")
+ actual = time.parse_rfc3339_ns(input.Timestamp)
+ actual >= before
+}
+
+$ cosign verify-attestation --policy policy.rego --key cosign.pub gcr.io/rekor-testing/distroless
+
+[policy.rego]
+will be validating against Rego policies: [policy.rego]
+There are 1 number of errors occurred during the validation:
+- rego validation failed
 ```
