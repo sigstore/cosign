@@ -103,6 +103,10 @@ See the [Usage documentation](USAGE.md) for more commands!
 
 See the [FUN.md](FUN.md) documentation for some fun tips and tricks!
 
+NOTE: you will need access to a container registry for cosign to work with.
+[ttl.sh](https://ttl.sh) offers free, short-lived (ie: hours), anonymous container image
+hosting if you just want to try these commands out.
+
 ### Generate a keypair
 
 ```shell
@@ -225,8 +229,15 @@ cosign sign --key cosign.key gcr.io/dlorenc-vmtest2/artifact
 Enter password for private key:
 Pushing signature to: gcr.io/dlorenc-vmtest2/artifact:sha256-3f612a4520b2c245d620d0cca029f1173f6bea76819dde8543f5b799ea3c696c.sig
 ```
+#### sget
 
-And we also include the `sget` command for safer, automatic verification of signatures and integration with our binary transparency log, Rekor:
+We also include the `sget` command for safer, automatic verification of signatures and integration with our binary transparency log, Rekor.
+
+To install `sget`, if you have Go 1.16+, you can directly run:
+
+    $ go install github.com/sigstore/cosign/cmd/sget@latest
+
+and the resulting binary will be placed at `$GOPATH/bin/sget` (or `$GOBIN/sget`, if set).
 
 Just like `curl`, `sget` can be used to fetch artifacts by digest using the OCI URL.
 Digest verification is automatic:
