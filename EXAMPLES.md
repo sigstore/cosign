@@ -94,9 +94,9 @@ $ cosign verify-attestation --policy policy.cue --key cosign.pub gcr.io/rekor-te
 [policy.cue]
 will be validating against CUE policies: [policy.cue]
 {"Data":"foo\n","Timestamp":"2021-10-10T17:45:20Z"} {
-	before:    "2021-10-09T17:10:27Z"
-	Data:      "bar"
-	Timestamp: >"2021-10-09T17:10:27Z"
+ before:    "2021-10-09T17:10:27Z"
+ Data:      "bar"
+ Timestamp: >"2021-10-09T17:10:27Z"
 }
 There are 1 number of errors occurred during the validation:
 - Data: conflicting values "foo\n" and "bar"
@@ -137,13 +137,16 @@ The following checks were performed on each of these signatures:
 $ cat policy.rego
 package signature
 
-default allow = false
+allow[msg] {
+ input.Data != "foo\n"
+ msg := sprintf("unexpected data: %v", [input.Data])
+}
 
-allow {
- input.Data == "bar"
- before = time.parse_rfc3339_ns("2021-10-10T17:10:27Z")
+allow[msg] {
+ before = time.parse_rfc3339_ns("2021-11-10T17:10:27Z")
  actual = time.parse_rfc3339_ns(input.Timestamp)
- actual >= before
+ actual != before
+ msg := sprintf("unexpected time: %v", [input.Timestamp])
 }
 
 $ cosign verify-attestation --policy policy.rego --key cosign.pub gcr.io/rekor-testing/distroless
