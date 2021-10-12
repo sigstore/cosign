@@ -24,7 +24,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/triangulate"
 )
 
-func addTriangulate(topLevel *cobra.Command) {
+func Triangulate() *cobra.Command {
 	o := &options.TriangulateOptions{}
 
 	cmd := &cobra.Command{
@@ -40,5 +40,5 @@ func addTriangulate(topLevel *cobra.Command) {
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

@@ -28,7 +28,7 @@ import (
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
-func addClean(topLevel *cobra.Command) {
+func Clean() *cobra.Command {
 	o := &options.RegistryOptions{}
 
 	cmd := &cobra.Command{
@@ -42,7 +42,7 @@ func addClean(topLevel *cobra.Command) {
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {

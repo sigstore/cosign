@@ -21,6 +21,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func addPIVTool(_ *cobra.Command) {
-	// disabled.
+func PIVTool() *cobra.Command {
+	return &cobra.Command{
+		Use:   "piv-tool",
+		Short: "This cosign was not built with piv-tool support!",
+	}
 }

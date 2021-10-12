@@ -24,7 +24,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )
 
-func addVerify(topLevel *cobra.Command) {
+func Verify() *cobra.Command {
 	o := &options.VerifyOptions{}
 
 	cmd := &cobra.Command{
@@ -84,10 +84,10 @@ against the transparency log.`,
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
-func addVerifyAttestation(topLevel *cobra.Command) {
+func VerifyAttestation() *cobra.Command {
 	o := &options.VerifyAttestationOptions{}
 
 	cmd := &cobra.Command{
@@ -140,10 +140,10 @@ against the transparency log.`,
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
-func addVerifyBlob(topLevel *cobra.Command) {
+func VerifyBlob() *cobra.Command {
 	o := &options.VerifyBlobOptions{}
 
 	cmd := &cobra.Command{
@@ -200,5 +200,5 @@ The blob may be specified as a path to a file or - for stdin.`,
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

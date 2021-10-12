@@ -24,7 +24,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 )
 
-func addUpload(topLevel *cobra.Command) {
+func Upload() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upload",
 		Short: "Provides utilities for uploading artifacts to a registry",
@@ -35,7 +35,7 @@ func addUpload(topLevel *cobra.Command) {
 		uploadWASM(),
 	)
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func uploadBlob() *cobra.Command {

@@ -23,7 +23,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addDockerfile(topLevel *cobra.Command) {
+func Dockerfile() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dockerfile",
 		Short: "Provides utilities for discovering images in and performing operations on Dockerfiles",
@@ -33,7 +33,7 @@ func addDockerfile(topLevel *cobra.Command) {
 		dockerfileVerify(),
 	)
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func dockerfileVerify() *cobra.Command {

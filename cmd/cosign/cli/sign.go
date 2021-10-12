@@ -26,7 +26,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 )
 
-func addSign(topLevel *cobra.Command) {
+func Sign() *cobra.Command {
 	o := &options.SignOptions{}
 
 	cmd := &cobra.Command{
@@ -99,5 +99,5 @@ func addSign(topLevel *cobra.Command) {
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

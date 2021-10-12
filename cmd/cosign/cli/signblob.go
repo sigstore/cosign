@@ -24,7 +24,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 )
 
-func addSignBlob(topLevel *cobra.Command) {
+func SignBlob() *cobra.Command {
 	o := &options.SignBlobOptions{}
 
 	cmd := &cobra.Command{
@@ -82,5 +82,5 @@ func addSignBlob(topLevel *cobra.Command) {
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

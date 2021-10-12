@@ -24,7 +24,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addVersion(topLevel *cobra.Command) {
+func Version() *cobra.Command {
 	var outputJSON bool
 
 	cmd := &cobra.Command{
@@ -50,5 +50,5 @@ func addVersion(topLevel *cobra.Command) {
 	cmd.Flags().BoolVar(&outputJSON, "json", false,
 		"print JSON instead of text")
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }

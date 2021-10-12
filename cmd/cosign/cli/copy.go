@@ -22,7 +22,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addCopy(topLevel *cobra.Command) {
+func Copy() *cobra.Command {
 	o := &options.CopyOptions{}
 
 	cmd := &cobra.Command{
@@ -46,5 +46,5 @@ func addCopy(topLevel *cobra.Command) {
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

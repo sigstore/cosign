@@ -53,7 +53,7 @@ func rootPath(imageRef string) string {
 	return filepath.Join(imageRef, "root.json")
 }
 
-func addPolicy(topLevel *cobra.Command) {
+func Policy() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "policy",
 		Short: "subcommand to manage a keyless policy.",
@@ -68,7 +68,7 @@ func addPolicy(topLevel *cobra.Command) {
 		signPolicy(),
 	)
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func initPolicy() *cobra.Command {

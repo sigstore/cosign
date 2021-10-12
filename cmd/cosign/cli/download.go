@@ -22,7 +22,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addDownload(topLevel *cobra.Command) {
+func Download() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download",
 		Short: "Provides utilities for downloading artifacts and attached artifacts in a registry",
@@ -33,7 +33,7 @@ func addDownload(topLevel *cobra.Command) {
 		downloadSBOM(),
 	)
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func downloadSignature() *cobra.Command {

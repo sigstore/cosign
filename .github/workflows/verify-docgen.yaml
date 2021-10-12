@@ -27,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: deps
+        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
