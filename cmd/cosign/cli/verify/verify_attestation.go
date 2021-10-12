@@ -129,8 +129,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 		var cuePolicies, regoPolicies []string
 
-		fmt.Println(c.Policies)
-
 		for _, policy := range c.Policies {
 			switch filepath.Ext(policy) {
 			case ".rego":
