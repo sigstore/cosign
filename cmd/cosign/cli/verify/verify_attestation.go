@@ -231,8 +231,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 			if len(regoPolicies) > 0 {
 				fmt.Fprintf(os.Stderr, "will be validating against Rego policies: %v\n", regoPolicies)
-				if err := rego.ValidateJSON(payload, regoPolicies); err != nil {
-					validationErrors = append(validationErrors, err)
+				if errs := rego.ValidateJSON(payload, regoPolicies); len(errs) > 0 {
+					validationErrors = append(validationErrors, errs...)
 				}
 			}
 		}

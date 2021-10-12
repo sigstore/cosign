@@ -24,7 +24,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ValidateJSON(jsonBody []byte, entrypoints []string) error {
+func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
+	var errs []error
 	ctx := context.Background()
 
 	r := rego.New(
@@ -33,23 +34,31 @@ func ValidateJSON(jsonBody []byte, entrypoints []string) error {
 
 	query, err := r.PrepareForEval(ctx)
 	if err != nil {
-		return err
+		errs = append(errs, err)
 	}
 
 	var input interface{}
 	dec := json.NewDecoder(bytes.NewBuffer(jsonBody))
 	dec.UseNumber()
 	if err := dec.Decode(&input); err != nil {
-		return err
+		errs = append(errs, err)
 	}
 
 	rs, err := query.Eval(ctx, rego.EvalInput(input))
 	if err != nil {
-		return err
+		errs = append(errs, err)
 	}
 
 	if rs.Allowed() {
-		return nil
+		return errs
 	}
-	return errors.New("rego validation failed")
+
+	for _, result := range rs {
+		for _, expression := range result.Expressions {
+			for _, v := range expression.Value.([]interface{}) {
+				errs = append(errs, errors.Errorf("%s", v.(string)))
+			}
+		}
+	}
+	return errs
 }
