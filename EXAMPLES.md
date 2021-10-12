@@ -91,7 +91,6 @@ Timestamp: >before
 
 $ cosign verify-attestation --policy policy.cue --key cosign.pub gcr.io/rekor-testing/distroless
 
-[policy.cue]
 will be validating against CUE policies: [policy.cue]
 {"Data":"foo\n","Timestamp":"2021-10-10T17:45:20Z"} {
  before:    "2021-10-09T17:10:27Z"
@@ -151,8 +150,9 @@ allow[msg] {
 
 $ cosign verify-attestation --policy policy.rego --key cosign.pub gcr.io/rekor-testing/distroless
 
-[policy.rego]
 will be validating against Rego policies: [policy.rego]
-There are 1 number of errors occurred during the validation:
-- rego validation failed
+There are 2 number of errors occurred during the validation:
+- unexpected time: 2021-10-11T17:16:08Z
+- unexpected data: foo
+Error: 2 validation errors occurred
 ```
