@@ -19,44 +19,48 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/open-policy-agent/opa/rego"
-	"github.com/pkg/errors"
 )
 
 func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
-	var errs []error
 	ctx := context.Background()
 
 	r := rego.New(
-		rego.Query("data.signature.allow"), // hardcoded, ? data.cosign.allow→
+		rego.Query("data.signature.deny"), // hardcoded, ? data.cosign.allow→
 		rego.Load(entrypoints, nil))
 
 	query, err := r.PrepareForEval(ctx)
 	if err != nil {
-		errs = append(errs, err)
+		return []error{err}
 	}
 
 	var input interface{}
 	dec := json.NewDecoder(bytes.NewBuffer(jsonBody))
 	dec.UseNumber()
 	if err := dec.Decode(&input); err != nil {
-		errs = append(errs, err)
+		return []error{err}
 	}
 
 	rs, err := query.Eval(ctx, rego.EvalInput(input))
 	if err != nil {
-		errs = append(errs, err)
+		return []error{err}
 	}
 
 	if rs.Allowed() {
-		return errs
+		return nil
 	}
 
+	var errs []error
 	for _, result := range rs {
 		for _, expression := range result.Expressions {
 			for _, v := range expression.Value.([]interface{}) {
-				errs = append(errs, errors.Errorf("%s", v.(string)))
+				if s, ok := v.(string); ok {
+					errs = append(errs, fmt.Errorf(s))
+				} else {
+					errs = append(errs, fmt.Errorf("%s", v))
+				}
 			}
 		}
 	}

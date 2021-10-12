@@ -222,16 +222,12 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 			if len(cuePolicies) > 0 {
 				fmt.Fprintf(os.Stderr, "will be validating against CUE policies: %v\n", cuePolicies)
-				if err := cue.ValidateJSON(payload, cuePolicies); err != nil {
-					validationErrors = append(validationErrors, err)
-				}
+				validationErrors = append(validationErrors, cue.ValidateJSON(payload, cuePolicies))
 			}
 
 			if len(regoPolicies) > 0 {
 				fmt.Fprintf(os.Stderr, "will be validating against Rego policies: %v\n", regoPolicies)
-				if errs := rego.ValidateJSON(payload, regoPolicies); len(errs) > 0 {
-					validationErrors = append(validationErrors, errs...)
-				}
+				validationErrors = append(validationErrors, rego.ValidateJSON(payload, regoPolicies)...)
 			}
 		}
 
