@@ -25,7 +25,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 )
 
-func addAttest(topLevel *cobra.Command) {
+func Attest() *cobra.Command {
 	o := &options.AttestOptions{}
 
 	cmd := &cobra.Command{
@@ -74,5 +74,5 @@ func addAttest(topLevel *cobra.Command) {
 		},
 	}
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

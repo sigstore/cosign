@@ -22,7 +22,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addGenerate(topLevel *cobra.Command) {
+func Generate() *cobra.Command {
 	o := &options.GenerateOptions{}
 
 	cmd := &cobra.Command{
@@ -53,5 +53,5 @@ to sign payloads with your own tooling or algorithms.`,
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

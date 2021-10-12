@@ -18,8 +18,8 @@ set -e
 
 # Verify that generated Markdown docs are up-to-date.
 tmpdir=$(mktemp -d)
-go run cmd/help/main.go --dir "$tmpdir"
+go run -tags pivkey,cgo cmd/help/main.go --dir "$tmpdir"
 echo "###########################################"
-echo "If diffs are found, run: go run ./cmd/help/"
+echo "If diffs are found, run: go run -tags pivkey,cgo ./cmd/help/"
 echo "###########################################"
 diff -Naur "$tmpdir" doc/

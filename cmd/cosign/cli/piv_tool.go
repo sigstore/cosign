@@ -28,7 +28,7 @@ import (
 
 var pivToolForce bool
 
-func addPIVTool(topLevel *cobra.Command) {
+func PIVTool() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "piv-tool",
 		Short: "Provides utilities for managing a hardware token",
@@ -49,7 +49,7 @@ func addPIVTool(topLevel *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&pivToolForce, "no-input", "f", false,
 		"skip warnings and confirmations")
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func pivToolSetManagementKey() *cobra.Command {

@@ -25,7 +25,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/publickey"
 )
 
-func addPublicKey(topLevel *cobra.Command) {
+func PublicKey() *cobra.Command {
 	o := &options.PublicKeyOptions{}
 
 	cmd := &cobra.Command{
@@ -82,5 +82,5 @@ func addPublicKey(topLevel *cobra.Command) {
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

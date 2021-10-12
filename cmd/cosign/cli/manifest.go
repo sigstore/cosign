@@ -23,7 +23,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addManifest(topLevel *cobra.Command) {
+func Manifest() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "manifest",
 		Short: "Provides utilities for discovering images in and performing operations on Kubernetes manifests",
@@ -33,7 +33,7 @@ func addManifest(topLevel *cobra.Command) {
 		manifestVerify(),
 	)
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func manifestVerify() *cobra.Command {

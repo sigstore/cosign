@@ -22,7 +22,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addAttach(topLevel *cobra.Command) {
+func Attach() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "attach",
 		Short: "Provides utilities for attaching artifacts to other artifacts in a registry",
@@ -33,7 +33,7 @@ func addAttach(topLevel *cobra.Command) {
 		attachSBOM(),
 	)
 
-	topLevel.AddCommand(cmd)
+	return cmd
 }
 
 func attachSignature() *cobra.Command {

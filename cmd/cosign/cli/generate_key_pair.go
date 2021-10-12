@@ -22,7 +22,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addGenerateKeyPair(topLevel *cobra.Command) {
+func GenerateKeyPair() *cobra.Command {
 	o := &options.GenerateKeyPairOptions{}
 
 	cmd := &cobra.Command{
@@ -68,5 +68,5 @@ CAVEATS:
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }

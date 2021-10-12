@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func addCompletion(topLevel *cobra.Command) {
+func Completion() *cobra.Command {
 	completionCmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate completion script",
@@ -67,5 +67,5 @@ PowerShell:
 		},
 	}
 
-	topLevel.AddCommand(completionCmd)
+	return completionCmd
 }

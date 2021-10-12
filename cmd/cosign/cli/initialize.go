@@ -22,7 +22,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func addInitialize(topLevel *cobra.Command) {
+func Initialize() *cobra.Command {
 	o := &options.InitializeOptions{}
 
 	cmd := &cobra.Command{
@@ -57,5 +57,5 @@ with Fulcio root CA) are pulled form the trusted metadata.`,
 	}
 
 	o.AddFlags(cmd)
-	topLevel.AddCommand(cmd)
+	return cmd
 }
