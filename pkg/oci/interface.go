@@ -23,4 +23,7 @@ type SignedEntity interface {
 	// Attestations returns the set of attestations currently associated with this
 	// entity, or the empty equivalent if none are found.
 	Attestations() (Signatures, error)
+
+	// Attachment returns a named entity associated with this entity, or error if not found.
+	Attachment(name string) (File, error)
 }

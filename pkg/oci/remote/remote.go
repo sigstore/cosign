@@ -77,8 +77,8 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	}
 }
 
-// normalize turns image digests into tags with an optional suffix:
-// sha256:d34db33f -> sha256-d34db33f.suffix
+// normalize turns image digests into tags with optional prefix & suffix:
+// sha256:d34db33f -> [prefix]sha256-d34db33f[.suffix]
 func normalize(h v1.Hash, prefix string, suffix string) string {
 	if suffix == "" {
 		return fmt.Sprint(prefix, h.Algorithm, "-", h.Hex)
@@ -135,11 +135,24 @@ func signatures(digestable digestable, o *options) (oci.Signatures, error) {
 	return Signatures(o.TargetRepository.Tag(normalize(h, o.TagPrefix, o.SignatureSuffix)), o.OriginalOptions...)
 }
 
-// attestations is a shared implementation of the oci.Signed* Signatures method.
+// attestations is a shared implementation of the oci.Signed* Attestations method.
 func attestations(digestable digestable, o *options) (oci.Signatures, error) {
 	h, err := digestable.Digest()
 	if err != nil {
 		return nil, err
 	}
 	return Signatures(o.TargetRepository.Tag(normalize(h, o.TagPrefix, o.AttestationSuffix)), o.OriginalOptions...)
+}
+
+// attachment is a shared implementation of the oci.Signed* Attachment method.
+func attachment(digestable digestable, attName string, o *options) (oci.File, error) {
+	h, err := digestable.Digest()
+	if err != nil {
+		return nil, err
+	}
+	img, err := SignedImage(o.TargetRepository.Tag(normalize(h, o.TagPrefix, attName)), o.OriginalOptions...)
+	if err != nil {
+		return nil, err
+	}
+	return oci.File(img), nil
 }
