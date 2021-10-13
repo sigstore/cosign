@@ -43,6 +43,7 @@ jobs:
       INSECURE_REGISTRY_NAME: insecure-registry.notlocal
       INSECURE_REGISTRY_PORT: 5001
       KO_DOCKER_REPO: registry.local:5000/cosigned
+      KO_VERSION: 0.9.3
 
     steps:
     - name: Set up Go 1.16.x
@@ -50,18 +51,11 @@ jobs:
       with:
         go-version: 1.16.x
 
-    - name: Install Dependencies
-      working-directory: ./
-      run: |
-        echo '::group:: install ko'
-        curl -L https://github.com/google/ko/releases/download/v0.8.3/ko_0.8.3_Linux_x86_64.tar.gz | tar xzf - ko
-        chmod +x ./ko
-        sudo mv ko /usr/local/bin
-        echo '::endgroup::'
+    - name: Install ko
+      run: GOBIN=/usr/local/bin go install github.com/google/ko@v${{ .Env.KO_VERSION }}
 
-        echo '::group:: install yq'
-        go get github.com/mikefarah/yq/v4
-        echo '::endgroup::'
+    - name: Install yq
+      uses: mikefarah/yq@master
 
     - name: Check out code onto GOPATH
       uses: actions/checkout@v2
@@ -177,12 +171,12 @@ jobs:
 
         # Wait for the webhook to come up and become Ready
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
-    
+
     - name: Run Insecure Registry Tests
       run: |
         go install github.com/google/go-containerregistry/cmd/crane
         ./test/e2e_test_insecure_registry.sh
-    
+
     - name: Run Cosigned Tests
       run: |
         ./test/e2e_test_cosigned.sh
