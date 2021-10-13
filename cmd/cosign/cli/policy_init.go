@@ -128,7 +128,7 @@ func initPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = ioutil.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to root.json")
+					return errors.Wrapf(err, "error writing to %s", outfile)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")
@@ -257,7 +257,7 @@ func signPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = ioutil.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to root.json")
+					return errors.Wrapf(err, "error writing to %s", outfile)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")
