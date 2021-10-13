@@ -129,8 +129,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 		var cuePolicies, regoPolicies []string
 
-		fmt.Println(c.Policies)
-
 		for _, policy := range c.Policies {
 			switch filepath.Ext(policy) {
 			case ".rego":
@@ -224,16 +222,12 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 			if len(cuePolicies) > 0 {
 				fmt.Fprintf(os.Stderr, "will be validating against CUE policies: %v\n", cuePolicies)
-				if err := cue.ValidateJSON(payload, cuePolicies); err != nil {
-					validationErrors = append(validationErrors, err)
-				}
+				validationErrors = append(validationErrors, cue.ValidateJSON(payload, cuePolicies))
 			}
 
 			if len(regoPolicies) > 0 {
 				fmt.Fprintf(os.Stderr, "will be validating against Rego policies: %v\n", regoPolicies)
-				if err := rego.ValidateJSON(payload, regoPolicies); err != nil {
-					validationErrors = append(validationErrors, err)
-				}
+				validationErrors = append(validationErrors, rego.ValidateJSON(payload, regoPolicies)...)
 			}
 		}
 
