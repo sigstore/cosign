@@ -11,7 +11,7 @@ before:
 
 builds:
 - id: linux
-  binary: cosign-linux-{{ .Arch }}
+  binary: cosign
   main: ./cmd/cosign
   goos:
     - linux
@@ -24,7 +24,7 @@ builds:
     - CGO_ENABLED=0
 
 - id: linux-pivkey-amd64
-  binary: cosign-linux-pivkey-amd64
+  binary: cosign-pivkey
   main: ./cmd/cosign
   goos:
     - linux
@@ -42,7 +42,7 @@ builds:
     - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
 
 - id: darwin-amd64
-  binary: cosign-darwin-amd64
+  binary: cosign
   env:
     - CC=o64-clang
     - CXX=o64-clang++
@@ -57,7 +57,7 @@ builds:
     - pivkey
 
 - id: darwin-arm64
-  binary: cosign-darwin-arm64
+  binary: cosign
   env:
     - CC=aarch64-apple-darwin20.2-clang
     - CXX=aarch64-apple-darwin20.2-clang++
@@ -72,7 +72,7 @@ builds:
     - "{{.Env.LDFLAGS}}"
 
 - id: windows-amd64
-  binary: cosign-windows-amd64
+  binary: cosign
   env:
     - CC=x86_64-w64-mingw32-gcc
     - CXX=x86_64-w64-mingw32-g++
@@ -88,7 +88,7 @@ builds:
     - pivkey
 
 - id: linux-cosigned
-  binary: cosigned-linux-{{ .Arch }}
+  binary: cosigned
   main: ./cmd/cosign/webhook
   goos:
     - linux
@@ -101,7 +101,7 @@ builds:
     - CGO_ENABLED=0
 
 - id: sget
-  binary: sget-{{ .Os }}-{{ .Arch }}
+  binary: sget
   main: ./cmd/sget
   goos:
     - linux
@@ -217,7 +217,7 @@ docker_signs:
 
 archives:
 - format: binary
-  name_template: "{{ .Binary }}"
+  name_template: "{{ .Binary }}-{{ .OS }}-{{ .Arch }}"
   allow_different_binary_count: true
 
 checksum:
