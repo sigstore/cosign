@@ -217,7 +217,7 @@ docker_signs:
 
 archives:
 - format: binary
-  name_template: "{{ .Binary }}-{{ .OS }}-{{ .Arch }}"
+  name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
   allow_different_binary_count: true
 
 checksum:
