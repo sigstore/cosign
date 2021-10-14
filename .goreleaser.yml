@@ -148,7 +148,6 @@ dockers:
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=amd64"
   - image_templates:
       - "ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8"
     use: buildx
@@ -157,7 +156,6 @@ dockers:
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=arm64"
 
   # cosigned Image
   - image_templates:
@@ -167,7 +165,6 @@ dockers:
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=amd64"
   - image_templates:
       - "ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8"
     use: buildx
@@ -176,7 +173,6 @@ dockers:
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=arm64"
 
   # sget Image
   - image_templates:
@@ -186,7 +182,6 @@ dockers:
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=amd64"
   - image_templates:
       - "ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8"
     use: buildx
@@ -195,7 +190,6 @@ dockers:
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=arm64"
 
 docker_manifests:
   - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}

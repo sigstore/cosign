@@ -16,8 +16,7 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/base:debug
 
 FROM $RUNTIME_IMAGE
 
-ARG ARCH
-COPY cosigned-linux-${ARCH} /bin/cosigned
+COPY cosigned /bin/cosigned
 
 USER nobody
 ENTRYPOINT [ "/bin/cosigned" ]

@@ -16,8 +16,7 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/base:debug
 
 FROM $RUNTIME_IMAGE
 
-ARG ARCH
-COPY sget-linux-${ARCH} /bin/sget
+COPY sget /bin/sget
 
 USER nobody
 ENTRYPOINT [ "/bin/sget" ]
