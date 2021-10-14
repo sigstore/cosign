@@ -319,7 +319,7 @@ Let's start with giving a brief introduction to `CUE` and `Rego` who might not b
 
 * [CUE](https://cuelang.org) is an open-source data validation language and inference engine with its roots in logic programming.
 
-* [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/) was inspired by Datalog, which is a well understood, decades old query language. Rego extends Datalog to support structured document models such as JSON.
+* [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/) was inspired by Datalog, and supports structured document models such as JSON.
 
 > If you want to learn more about the development of this feature, you can reach out to it from [here](https://github.com/sigstore/cosign/pull/641).
 
