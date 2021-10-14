@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.17.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
 	github.com/go-openapi/runtime v0.19.31
-	github.com/go-openapi/strfmt v0.20.2
+	github.com/go-openapi/strfmt v0.20.3
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-piv/piv-go v1.8.0
 	github.com/google/certificate-transparency-go v1.1.2-0.20210728111105-5f7e9ba4be3d
@@ -33,23 +33,15 @@ require (
 require (
 	cloud.google.com/go/kms v1.0.0 // indirect
 	cuelang.org/go v0.4.0
-	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.6.1 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20211004163346-9ae11fe20941
 	github.com/google/go-github/v39 v39.1.0
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/open-policy-agent/opa v0.33.1
-	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
-	github.com/urfave/cli v1.22.5 // indirect
 	github.com/xanzy/go-gitlab v0.31.0
-	go.opentelemetry.io/contrib v0.24.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 	golang.org/x/text v0.3.7 // indirect
