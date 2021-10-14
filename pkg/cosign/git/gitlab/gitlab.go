@@ -50,7 +50,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	}
 
 	var client *gitlab.Client
-	if url, baseURLExists := os.LookupEnv("GITLAB_BASE_URL"); baseURLExists {
+	if url, baseURLExists := os.LookupEnv("GITLAB_HOST"); baseURLExists {
 		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
 		if err != nil {
 			return errors.Wrap(err, "could not create GitLab client")
