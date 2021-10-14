@@ -12,7 +12,6 @@ before:
 builds:
 - id: linux
   binary: cosign-linux-{{ .Arch }}
-  no_unique_dist_dir: true
   main: ./cmd/cosign
   goos:
     - linux
@@ -44,7 +43,6 @@ builds:
 
 - id: darwin-amd64
   binary: cosign-darwin-amd64
-  no_unique_dist_dir: true
   env:
     - CC=o64-clang
     - CXX=o64-clang++
@@ -60,7 +58,6 @@ builds:
 
 - id: darwin-arm64
   binary: cosign-darwin-arm64
-  no_unique_dist_dir: true
   env:
     - CC=aarch64-apple-darwin20.2-clang
     - CXX=aarch64-apple-darwin20.2-clang++
@@ -76,7 +73,6 @@ builds:
 
 - id: windows-amd64
   binary: cosign-windows-amd64
-  no_unique_dist_dir: true
   env:
     - CC=x86_64-w64-mingw32-gcc
     - CXX=x86_64-w64-mingw32-g++
@@ -93,7 +89,6 @@ builds:
 
 - id: linux-cosigned
   binary: cosigned-linux-{{ .Arch }}
-  no_unique_dist_dir: true
   main: ./cmd/cosign/webhook
   goos:
     - linux
@@ -107,7 +102,6 @@ builds:
 
 - id: sget
   binary: sget-{{ .Os }}-{{ .Arch }}
-  no_unique_dist_dir: true
   main: ./cmd/sget
   goos:
     - linux
