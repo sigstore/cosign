@@ -55,7 +55,7 @@ cosign verify-blob [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --cert string                                                                              path to the public certificate
   -h, --help                                                                                     help for verify-blob
-      --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --signature string                                                                         signature content or path or remote URL
       --sk                                                                                       whether to use a hardware security key
