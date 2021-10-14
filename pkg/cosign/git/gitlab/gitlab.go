@@ -99,10 +99,28 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	fmt.Fprintln(os.Stderr, "Private key written to \"COSIGN_PRIVATE_KEY\" variable")
 
+	_, publicKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
+		Key:          gitlab.String("COSIGN_PUBLIC_KEY"),
+		Value:        gitlab.String(string(keys.PublicBytes)),
+		VariableType: gitlab.VariableType(gitlab.EnvVariableType),
+		Protected:    gitlab.Bool(false),
+		Masked:       gitlab.Bool(false),
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not create \"COSIGN_PUBLIC_KEY\" variable")
+	}
+
+	if publicKeyResp.StatusCode < 200 && publicKeyResp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(publicKeyResp.Body)
+		return errors.Errorf("%s", bodyBytes)
+	}
+
+	fmt.Fprintln(os.Stderr, "Public key written to \"COSIGN_PUBLIC_KEY\" variable")
+
 	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+	fmt.Fprintln(os.Stderr, "Public key also written to cosign.pub")
 
 	return nil
 }

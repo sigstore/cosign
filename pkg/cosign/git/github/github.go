@@ -98,22 +98,40 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		EncryptedValue: base64.StdEncoding.EncodeToString(keys.PrivateBytes),
 	}
 
-	repoSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, privateKeySecretEnv)
+	privateKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, privateKeySecretEnv)
 	if err != nil {
 		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" environment variable")
 	}
 
-	if repoSecretEnvResp.StatusCode < 200 && repoSecretEnvResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(repoSecretEnvResp.Body)
+	if privateKeySecretEnvResp.StatusCode < 200 && privateKeySecretEnvResp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(privateKeySecretEnvResp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PRIVATE_KEY environment variable")
 
+	publicKeySecretEnv := &github.EncryptedSecret{
+		Name:           "COSIGN_PUBLIC_KEY",
+		KeyID:          key.GetKeyID(),
+		EncryptedValue: base64.StdEncoding.EncodeToString(keys.PublicBytes),
+	}
+
+	publicKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, publicKeySecretEnv)
+	if err != nil {
+		return errors.Wrap(err, "could not create \"COSIGN_PUBLIC_KEY\" environment variable")
+	}
+
+	if publicKeySecretEnvResp.StatusCode < 200 && publicKeySecretEnvResp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(publicKeySecretEnvResp.Body)
+		return fmt.Errorf("%s", bodyBytes)
+	}
+
+	fmt.Fprintln(os.Stderr, "Public key written to COSIGN_PUBLIC_KEY environment variable")
+
 	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+	fmt.Fprintln(os.Stderr, "Public key also written to cosign.pub")
 
 	return nil
 }
