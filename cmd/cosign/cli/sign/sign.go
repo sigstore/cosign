@@ -42,6 +42,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/oci"
+	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -168,6 +169,18 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
+		if digest, ok := ref.(name.Digest); ok && !recursive {
+			se, err := ociempty.SignedImage(ref)
+			if err != nil {
+				return err
+			}
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, force, dd, sv, se)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
 		se, err := ociremote.SignedEntity(ref, opts...)
 		if err != nil {
 			return err
@@ -181,66 +194,8 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			}
 			digest := ref.Context().Digest(d.String())
 
-			// The payload can be specified via a flag to skip generation.
-			payload := staticPayload
-			if len(payload) == 0 {
-				payload, err = (&sigPayload.Cosign{
-					Image:       digest,
-					Annotations: annotations,
-				}).MarshalJSON()
-				if err != nil {
-					return errors.Wrap(err, "payload")
-				}
-			}
-
-			signature, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, force, dd, sv, se)
 			if err != nil {
-				return errors.Wrap(err, "signing")
-			}
-			b64sig := base64.StdEncoding.EncodeToString(signature)
-
-			if !upload {
-				fmt.Println(b64sig)
-				return ErrDone
-			}
-
-			opts := []static.Option{}
-			if sv.Cert != nil {
-				opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
-			}
-
-			// Check whether we should be uploading to the transparency log
-			if uploadTLog, err := ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
-				return err
-			} else if uploadTLog {
-				bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-					return cosign.TLogUpload(r, signature, payload, b)
-				})
-				if err != nil {
-					return err
-				}
-				opts = append(opts, static.WithBundle(bundle))
-			}
-
-			// Create the new signature for this entity.
-			sig, err := static.NewSignature(payload, b64sig, opts...)
-			if err != nil {
-				return err
-			}
-
-			// Attach the signature to the entity.
-			newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(dd))
-			if err != nil {
-				return err
-			}
-
-			walkOpts, err := regOpts.ClientOpts(ctx)
-			if err != nil {
-				return errors.Wrap(err, "constructing client options")
-			}
-
-			// Publish the signatures associated with this entity
-			if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
 				return err
 			}
 			return ErrDone
@@ -249,6 +204,75 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 		}
 	}
 
+	return nil
+}
+
+func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyOpts,
+	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, force bool,
+	dd mutate.DupeDetector, sv *CertSignVerifier, se oci.SignedEntity) error {
+	var err error
+	// The payload can be passed to skip generation.
+	if len(payload) == 0 {
+		payload, err = (&sigPayload.Cosign{
+			Image:       digest,
+			Annotations: annotations,
+		}).MarshalJSON()
+		if err != nil {
+			return errors.Wrap(err, "payload")
+		}
+	}
+
+	signature, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "signing")
+	}
+	b64sig := base64.StdEncoding.EncodeToString(signature)
+
+	if !upload {
+		fmt.Println(b64sig)
+		return nil
+	}
+
+	opts := []static.Option{}
+	if sv.Cert != nil {
+		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
+	}
+
+	// Check whether we should be uploading to the transparency log
+	if uploadTLog, err := ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
+		return err
+	} else if uploadTLog {
+		bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+			return cosign.TLogUpload(r, signature, payload, b)
+		})
+		if err != nil {
+			return err
+		}
+		opts = append(opts, static.WithBundle(bundle))
+	}
+
+	// Create the new signature for this entity.
+	sig, err := static.NewSignature(payload, b64sig, opts...)
+	if err != nil {
+		return err
+	}
+
+	// Attach the signature to the entity.
+	newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(dd))
+	if err != nil {
+		return err
+	}
+
+	// Publish the signatures associated with this entity
+	walkOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return errors.Wrap(err, "constructing client options")
+	}
+
+	// Publish the signatures associated with this entity
+	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
+		return err
+	}
 	return nil
 }
 
