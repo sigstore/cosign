@@ -54,7 +54,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	var cert *x509.Certificate
 
 	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) {
-		return &options.KeyParseError{}
+		return &options.PubKeyParseError{}
 	}
 
 	// Keys are optional!

@@ -19,6 +19,14 @@ package options
 // are parsed by the CLI
 type KeyParseError struct{}
 
+// PubKeyParseError is an error returned when an incorrect set of public key
+// flags are parsed by the CLI
+type PubKeyParseError struct{}
+
 func (e *KeyParseError) Error() string {
 	return "exactly one of: key reference (--key), or hardware token (--sk) must be provided"
+}
+
+func (e *PubKeyParseError) Error() string {
+	return "exactly one of: key reference (--key), certificate (--cert) or hardware token (--sk) must be provided"
 }
