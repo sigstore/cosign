@@ -55,9 +55,9 @@ jobs:
 
       - name: check binaries
         run: |
-          ./dist/cosign-linux-amd64 version
-          ./dist/cosigned-linux-amd64 --help
-          ./dist/sget-linux-amd64 --help
+          ./dist/cosign-linux-amd64/cosign version
+          ./dist/cosigned-linux-amd64/cosigned --help
+          ./dist/sget-linux-amd64/sget --help
 
       - name: check images
         run: |
