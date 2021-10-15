@@ -50,7 +50,7 @@ cosign verify-attestation [flags]
       --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for verify-attestation
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
-      --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files will be using for validation
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")

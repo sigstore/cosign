@@ -44,7 +44,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
-		"path to the private key file, KMS URI or Kubernetes Secret")
+		"path to the public key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().StringVar(&o.CertEmail, "cert-email", "",
 		"the email expected in a valid fulcio cert")
@@ -84,7 +84,7 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Predicate.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
-		"path to the private key file, KMS URI or Kubernetes Secret")
+		"path to the public key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
@@ -116,7 +116,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
-		"path to the private key file, KMS URI or Kubernetes Secret")
+		"path to the public key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().StringVar(&o.Cert, "cert", "",
 		"path to the public certificate")

@@ -54,7 +54,7 @@ cosign verify [flags]
       --cert-email string                                                                        the email expected in a valid fulcio cert
       --check-claims                                                                             whether to check the claims found (default true)
   -h, --help                                                                                     help for verify
-      --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
