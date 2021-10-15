@@ -17,7 +17,6 @@ package tuf
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -138,8 +137,19 @@ func TestValidMetadata(t *testing.T) {
 	defer os.Unsetenv(TufRootEnv)
 
 	// Set up client
-	if err := Init(context.Background(), root, remote, 1); err != nil {
-		t.Fatalf("unexpected error initializing root client %v", err)
+	rootClient := client.NewClient(local, remote)
+	if err != nil {
+		t.Fatalf("creating root client")
+	}
+	rootKeys, rootThreshold, err := getRootKeys(root)
+	if err != nil {
+		t.Fatalf("bad trusted root")
+	}
+	if err := rootClient.Init(rootKeys, rootThreshold); err != nil {
+		t.Fatalf("initializing root client")
+	}
+	if err := updateMetadataAndDownloadTargets(rootClient); err != nil {
+		t.Fatalf("updating from remote TUF repository")
 	}
 
 	target := "foo.txt"

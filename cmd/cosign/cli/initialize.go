@@ -31,26 +31,27 @@ func Initialize() *cobra.Command {
 		Long: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
 The following options are used by default:
-	- The initial 1.root.json is embedded inside cosign.
-	- SigStore current TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
+	- The current trusted Sigstore TUF root is embedded inside cosign at the time of release.
+	- SigStore remote TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
 	- A default threshold of 3 root signatures is used.
 
 To provide an out-of-band trusted initial root.json, use the -root flag with a file or URL reference.
+This will enable you to point cosign to a separate TUF root.
 
-The resulting updated TUF repository will be written to $HOME/.sigstore/root/.
+Any updated TUF repository will be written to $HOME/.sigstore/root/.
 
 Trusted keys and certificate used in cosign verification (e.g. verifying Fulcio issued certificates
 with Fulcio root CA) are pulled form the trusted metadata.`,
-		Example: `  cosign initialize -mirror <url> -out <file>
+		Example: `cosign initialize -mirror <url> -out <file>
 
-  # initialize root with distributed root keys, default mirror, and default out path.
-  cosign initialize
+# initialize root with distributed root keys, default mirror, and default out path.
+cosign initialize
 
-  # initialize with an out-of-band root key file.
-  cosign initialize
+# initialize with an out-of-band root key file, using the default mirror.
+cosign initialize -root <url>
 
-  # initialize with an out-of-band root key file and custom repository mirror.
-  cosign initialize -mirror <url> -root <url>`,
+# initialize with an out-of-band root key file and custom repository mirror.
+cosign initialize -mirror <url> -root <url>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return initialize.DoInitialize(cmd.Context(), o.Root, o.Mirror, o.Threshold)
 		},

@@ -20,31 +20,31 @@ import (
 	_ "embed" // To enable the `go:embed` directive.
 
 	"github.com/sigstore/cosign/pkg/blob"
-	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 )
-
-//go:embed 1.root.json
-var initialRoot string
 
 func DoInitialize(ctx context.Context, root, mirror string, threshold int) error {
 	// Get the initial trusted root contents.
 	var rootFileBytes []byte
-	if root == "" {
-		rootFileBytes = []byte(initialRoot)
-	} else {
-		var err error
+	var err error
+	if root != "" {
 		rootFileBytes, err = blob.LoadFileOrURL(root)
+		if err != nil {
+			return err
+		}
+	} else {
+		rootFileBytes, err = tuf.GetEmbeddedRoot()
 		if err != nil {
 			return err
 		}
 	}
 
 	// Initialize the remote repository.
-	remote, err := ctuf.GcsRemoteStore(ctx, mirror, nil, nil)
+	remote, err := tuf.GcsRemoteStore(ctx, mirror, nil, nil)
 	if err != nil {
 		return err
 	}
 
 	// Initialize and update the local SigStore root.
-	return ctuf.Init(ctx, rootFileBytes, remote, threshold)
+	return tuf.Init(ctx, rootFileBytes, remote, threshold)
 }

@@ -25,8 +25,7 @@ import (
 	"strings"
 	"sync"
 
-	_ "embed" // To enable the `go:embed` directive.
-
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 )
 
@@ -36,9 +35,6 @@ var (
 )
 
 // This is the root in the fulcio project.
-//go:embed fulcio.pem
-var rootPem string
-
 var fulcioTargetStr = `fulcio.crt.pem`
 
 const (
@@ -64,22 +60,17 @@ func initRoots() *x509.CertPool {
 			panic("error creating root cert pool")
 		}
 	} else {
-		// First try retrieving from TUF root. Otherwise use rootPem.
+		// Retrieve from the embedded or cached TUF root. If expired, a network
+		// call is made to update the root.
 		ctx := context.Background() // TODO: pass in context?
 		buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-		err := tuf.GetTarget(ctx, fulcioTargetStr, &buf)
-		if err != nil {
-			// The user may not have initialized the local root metadata. Log the error and use the embedded root.
-			fmt.Fprintln(os.Stderr, "No TUF root installed, using embedded CA certificate.")
-			if !cp.AppendCertsFromPEM([]byte(rootPem)) {
-				panic("error creating root cert pool")
-			}
-		} else {
-			// TODO: Remove the string replace when SigStore root is updated.
-			replaced := strings.ReplaceAll(buf.String(), "\n  ", "\n")
-			if !cp.AppendCertsFromPEM([]byte(replaced)) {
-				panic("error creating root cert pool")
-			}
+		if err := tuf.GetTarget(ctx, fulcioTargetStr, &buf); err != nil {
+			panic(errors.Wrap(err, "creating root cert pool"))
+		}
+		// TODO: Remove the string replace when SigStore root is updated.
+		replaced := strings.ReplaceAll(buf.String(), "\n  ", "\n")
+		if !cp.AppendCertsFromPEM([]byte(replaced)) {
+			panic("error creating root cert pool")
 		}
 	}
 	return cp
