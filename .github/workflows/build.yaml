@@ -39,7 +39,7 @@ jobs:
       #   run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: install ko
         run: |
-          GOBIN=/usr/local/bin go install github.com/google/ko@v${{ .Env.KO_VERSION }}
+          GOBIN=/usr/local/bin go install github.com/google/ko@v${KO_VERSION}
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@master
         with:
