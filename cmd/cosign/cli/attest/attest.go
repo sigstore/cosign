@@ -89,11 +89,17 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	dd := cremote.NewDupeDetector(sv)
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
+	predicate, err := os.Open(predicatePath)
+	if err != nil {
+		return err
+	}
+	defer predicate.Close()
+
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
-		Path:   predicatePath,
-		Type:   predicateType,
-		Digest: h.Hex,
-		Repo:   digest.Repository.String(),
+		Predicate: predicate,
+		Type:      predicateType,
+		Digest:    h.Hex,
+		Repo:      digest.Repository.String(),
 	})
 	if err != nil {
 		return err

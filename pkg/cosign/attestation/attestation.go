@@ -18,8 +18,7 @@ package attestation
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
+	"io"
 	"reflect"
 	"strings"
 	"time"
@@ -41,8 +40,8 @@ type CosignPredicate struct {
 
 // GenerateOpts specifies the options of the Statement generator.
 type GenerateOpts struct {
-	// Path is the given path to the predicate file.
-	Path string
+	// Predicate is the source of bytes (e.g. a file) to use as the statement's predicate.
+	Predicate io.Reader
 	// Type is the pre-defined enums (provenance|link|spdx).
 	// default: custom
 	Type string
@@ -55,24 +54,25 @@ type GenerateOpts struct {
 	Time func() time.Time
 }
 
-// GenerateStatement returns corresponding Predicate (custom|provenance|spdx|link)
-// based on the type you specified.
+// GenerateStatement returns an in-toto statement based on the provided
+// predicate type (custom|slsaprovenance|spdx|link).
 func GenerateStatement(opts GenerateOpts) (interface{}, error) {
-	rawPayload, err := readPayload(opts.Path)
+	predicate, err := io.ReadAll(opts.Predicate)
 	if err != nil {
 		return nil, err
 	}
+
 	switch opts.Type {
 	case "slsaprovenance":
-		return generateSLSAProvenanceStatement(rawPayload, opts.Digest, opts.Repo)
+		return generateSLSAProvenanceStatement(predicate, opts.Digest, opts.Repo)
 	case "spdx":
-		return generateSPDXStatement(rawPayload, opts.Digest, opts.Repo)
+		return generateSPDXStatement(predicate, opts.Digest, opts.Repo)
 	case "link":
-		return generateLinkStatement(rawPayload, opts.Digest, opts.Repo)
+		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
 	default:
 		stamp := timestamp(opts)
 		predicateType := customType(opts)
-		return generateCustomStatement(rawPayload, predicateType, opts.Digest, opts.Repo, stamp)
+		return generateCustomStatement(predicate, predicateType, opts.Digest, opts.Repo, stamp)
 	}
 }
 
@@ -106,7 +106,6 @@ func generateStatementHeader(digest, repo, predicateType string) in_toto.Stateme
 	}
 }
 
-//
 func generateCustomStatement(rawPayload []byte, customType, digest, repo, timestamp string) (interface{}, error) {
 	payload, err := generateCustomPredicate(rawPayload, customType, timestamp)
 	if err != nil {
@@ -174,14 +173,6 @@ func generateSPDXStatement(rawPayload []byte, digest string, repo string) (inter
 			Data: string(rawPayload),
 		},
 	}, nil
-}
-
-func readPayload(predicatePath string) ([]byte, error) {
-	rawPayload, err := ioutil.ReadFile(filepath.Clean(predicatePath))
-	if err != nil {
-		return nil, errors.Wrap(err, "payload from file")
-	}
-	return rawPayload, nil
 }
 
 func checkRequiredJSONFields(rawPayload []byte, typ reflect.Type) error {
