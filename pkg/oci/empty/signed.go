@@ -16,6 +16,7 @@
 package empty
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -37,6 +38,10 @@ func (se *signedImage) Signatures() (oci.Signatures, error) {
 
 func (se *signedImage) Attestations() (oci.Signatures, error) {
 	return se.attestations, nil
+}
+
+func (se *signedImage) Attachment(name string) (oci.File, error) {
+	return nil, errors.New("no attachments")
 }
 
 func (se *signedImage) Digest() (v1.Hash, error) {
