@@ -3,12 +3,12 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
-	cloud.google.com/go/storage v1.17.0
+	cloud.google.com/go/storage v1.18.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
-	github.com/go-openapi/runtime v0.19.31
-	github.com/go-openapi/strfmt v0.20.2
+	github.com/go-openapi/runtime v0.20.0
+	github.com/go-openapi/strfmt v0.20.3
 	github.com/go-openapi/swag v0.19.15
-	github.com/go-piv/piv-go v1.8.0
+	github.com/go-piv/piv-go v1.9.0
 	github.com/google/certificate-transparency-go v1.1.2-0.20210728111105-5f7e9ba4be3d
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.6.1-0.20210922191434-34b7f00d7a60
