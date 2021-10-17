@@ -85,6 +85,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
+	defer sv.Close()
 	wrapped := dsse.WrapSigner(sv, predicateURI)
 	dd := cremote.NewDupeDetector(sv)
 

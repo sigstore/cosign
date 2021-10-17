@@ -172,6 +172,8 @@ func signPolicy() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			defer sv.Close()
+
 			certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(sv.Cert))
 			if err != nil {
 				return err

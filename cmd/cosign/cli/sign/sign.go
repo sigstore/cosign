@@ -138,6 +138,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
+	defer sv.Close()
 	dd := cremote.NewDupeDetector(sv)
 
 	var staticPayload []byte
@@ -295,7 +296,6 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 	switch {
 	case ko.Sk:
 		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
-		defer sk.Close()
 		if err != nil {
 			return nil, err
 		}
@@ -309,17 +309,20 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 		// token as the private key. If it's not there, show a warning to the
 		// user.
 		certFromPIV, err := sk.Certificate()
+		var pemBytes []byte
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
-			break
+		} else {
+			pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPIV)
+			if err != nil {
+				return nil, err
+			}
 		}
-		pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPIV)
-		if err != nil {
-			return nil, err
-		}
+
 		return &CertSignVerifier{
 			Cert:           pemBytes,
 			SignerVerifier: sv,
+			close:          sk.Close,
 		}, nil
 
 	case ko.KeyRef != "":
@@ -404,4 +407,11 @@ type CertSignVerifier struct {
 	Cert  []byte
 	Chain []byte
 	signature.SignerVerifier
+	close func()
+}
+
+func (c *CertSignVerifier) Close() {
+	if c.close != nil {
+		c.close()
+	}
 }
