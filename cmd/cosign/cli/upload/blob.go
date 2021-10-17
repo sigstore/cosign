@@ -22,19 +22,28 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
 func BlobCmd(ctx context.Context, regOpts options.RegistryOptions, files []cremote.File, contentType, imageRef string) error {
-	// TODO: use contentType.
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
-	dgstAddr, err := cremote.UploadFiles(ref, files, cremote.DefaultMediaTypeGetter, regOpts.GetRegistryClientOpts(ctx)...)
+	// We normally discover the content media type by inspecting the byte stream.
+	// Just pass it directly if it's set on the command line.
+	mt := cremote.DefaultMediaTypeGetter
+	if contentType != "" {
+		mt = func(_ []byte) types.MediaType {
+			return types.MediaType(contentType)
+		}
+	}
+
+	dgstAddr, err := cremote.UploadFiles(ref, files, mt, regOpts.GetRegistryClientOpts(ctx)...)
 	if err != nil {
 		return err
 	}
