@@ -16,6 +16,7 @@
 package mutate
 
 import (
+	"errors"
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -75,6 +76,11 @@ func (i *indexWrapper) Signatures() (oci.Signatures, error) {
 // Attestations implements oci.SignedImageIndex
 func (i *indexWrapper) Attestations() (oci.Signatures, error) {
 	return empty.Signatures(), nil
+}
+
+// Attachment implements oci.SignedImage
+func (*indexWrapper) Attachment(name string) (oci.File, error) {
+	return nil, errors.New("unimplemented")
 }
 
 // SignedImage implements oci.SignedImageIndex
@@ -208,6 +214,11 @@ func (si *signedImage) Attestations() (oci.Signatures, error) {
 	return AppendSignatures(base, si.att)
 }
 
+// Attachment implements oci.SignedImage
+func (si *signedImage) Attachment(attName string) (oci.File, error) {
+	return nil, errors.New("unimplemented")
+}
+
 // AttachSignatureToImageIndex attaches the provided signature to the provided image index.
 func AttachSignatureToImageIndex(sii oci.SignedImageIndex, sig oci.Signature, opts ...SignOption) (oci.SignedImageIndex, error) {
 	return &signedImageIndex{
@@ -271,4 +282,9 @@ func (sii *signedImageIndex) Attestations() (oci.Signatures, error) {
 		}
 	}
 	return AppendSignatures(base, sii.att)
+}
+
+// Attachment implements oci.SignedImageIndex
+func (sii *signedImageIndex) Attachment(attName string) (oci.File, error) {
+	return nil, errors.New("unimplemented")
 }

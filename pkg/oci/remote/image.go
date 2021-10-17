@@ -50,3 +50,8 @@ func (i *image) Signatures() (oci.Signatures, error) {
 func (i *image) Attestations() (oci.Signatures, error) {
 	return attestations(i, i.opt)
 }
+
+// Attestations implements oci.SignedImage
+func (i *image) Attachment(name string) (oci.File, error) {
+	return attachment(i, name, i.opt)
+}
