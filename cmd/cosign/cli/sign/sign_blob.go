@@ -65,6 +65,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	if err != nil {
 		return nil, err
 	}
+	defer sv.Close()
 
 	sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
