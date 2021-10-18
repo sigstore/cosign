@@ -3,7 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
-	cloud.google.com/go/storage v1.18.0
+	cloud.google.com/go/storage v1.18.1
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
 	github.com/go-openapi/runtime v0.20.0
 	github.com/go-openapi/strfmt v0.20.3
@@ -13,7 +13,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.6.1-0.20210922191434-34b7f00d7a60
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
-	github.com/in-toto/in-toto-golang v0.3.2
+	github.com/in-toto/in-toto-golang v0.3.3
 	github.com/manifoldco/promptui v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
@@ -51,7 +51,7 @@ require (
 	go.opentelemetry.io/contrib v0.24.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
-	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
+	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	k8s.io/klog/v2 v2.20.0 // indirect
