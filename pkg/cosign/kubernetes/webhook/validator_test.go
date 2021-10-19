@@ -65,6 +65,13 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		},
 	})
 
+	kc := fakekube.Get(ctx)
+	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}, metav1.CreateOptions{})
+
 	v := NewValidator(ctx, secretName)
 
 	cvs := cosignVerifySignatures
@@ -149,7 +156,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			cosignVerifySignatures = test.cvs
 
 			// Check the core mechanics
-			got := v.validatePodSpec(context.Background(), test.ps)
+			got := v.validatePodSpec(context.Background(), test.ps, k8schain.Options{})
 			if (got != nil) != (test.want != nil) {
 				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
 			} else if got != nil && got.Error() != test.want.Error() {
@@ -216,6 +223,13 @@ func TestValidateCronJob(t *testing.T) {
 			// No data should make us verify against Fulcio.
 		},
 	})
+
+	kc := fakekube.Get(ctx)
+	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}, metav1.CreateOptions{})
 
 	v := NewValidator(ctx, secretName)
 

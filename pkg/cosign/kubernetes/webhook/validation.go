@@ -30,13 +30,14 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey) bool {
+func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) bool {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
-		sps, err := validSignatures(ctx, ref, nil /* verifier */)
+		sps, err := validSignatures(ctx, ref, nil /* verifier */, opts...)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
 			return false
@@ -53,7 +54,7 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey) boo
 			return false
 		}
 
-		sps, err := validSignatures(ctx, ref, verifier)
+		sps, err := validSignatures(ctx, ref, verifier, opts...)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
 			return false
@@ -69,11 +70,12 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey) boo
 // For testing
 var cosignVerifySignatures = cosign.VerifySignatures
 
-func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier) ([]oci.Signature, error) {
+func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier, opts ...ociremote.Option) ([]oci.Signature, error) {
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
-		RootCerts:     fulcioroots.Get(),
-		SigVerifier:   verifier,
-		ClaimVerifier: cosign.SimpleClaimVerifier,
+		RegistryClientOpts: opts,
+		RootCerts:          fulcioroots.Get(),
+		SigVerifier:        verifier,
+		ClaimVerifier:      cosign.SimpleClaimVerifier,
 	})
 	return sigs, err
 }
