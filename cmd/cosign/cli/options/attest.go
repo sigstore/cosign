@@ -29,6 +29,7 @@ type AttestOptions struct {
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
+	OIDC        OIDCOptions
 	SecurityKey SecurityKeyOptions
 	Predicate   PredicateLocalOptions
 	Registry    RegistryOptions
@@ -41,6 +42,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
+	o.OIDC.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 

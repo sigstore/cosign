@@ -24,17 +24,15 @@ type SignOptions struct {
 	Key         string
 	Cert        string
 	Upload      bool
-	SecurityKey SecurityKeyOptions
 	PayloadPath string
 	Force       bool
 	Recursive   bool
+	Attachment  string
 
-	Fulcio FulcioOptions
-	Rekor  RekorOptions
-
-	OIDC       OIDCOptions
-	Attachment string
-
+	Rekor       RekorOptions
+	Fulcio      FulcioOptions
+	OIDC        OIDCOptions
+	SecurityKey SecurityKeyOptions
 	AnnotationOptions
 	Registry RegistryOptions
 }
