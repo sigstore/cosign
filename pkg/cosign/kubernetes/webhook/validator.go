@@ -54,7 +54,17 @@ func (v *Validator) ValidatePodSpecable(ctx context.Context, wp *duckv1.WithPod)
 		// Don't block things that are being deleted.
 		return nil
 	}
-	return v.validatePodSpec(ctx, &wp.Spec.Template.Spec).ViaField("spec.template.spec")
+
+	imagePullSecrets := make([]string, 0, len(wp.Spec.Template.Spec.ImagePullSecrets))
+	for _, s := range wp.Spec.Template.Spec.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, s.Name)
+	}
+	opt := k8schain.Options{
+		Namespace:          wp.Namespace,
+		ServiceAccountName: wp.Spec.Template.Spec.ServiceAccountName,
+		ImagePullSecrets:   imagePullSecrets,
+	}
+	return v.validatePodSpec(ctx, &wp.Spec.Template.Spec, opt).ViaField("spec.template.spec")
 }
 
 // ValidatePod implements duckv1.PodValidator
@@ -63,7 +73,16 @@ func (v *Validator) ValidatePod(ctx context.Context, p *duckv1.Pod) *apis.FieldE
 		// Don't block things that are being deleted.
 		return nil
 	}
-	return v.validatePodSpec(ctx, &p.Spec).ViaField("spec")
+	imagePullSecrets := make([]string, 0, len(p.Spec.ImagePullSecrets))
+	for _, s := range p.Spec.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, s.Name)
+	}
+	opt := k8schain.Options{
+		Namespace:          p.Namespace,
+		ServiceAccountName: p.Spec.ServiceAccountName,
+		ImagePullSecrets:   imagePullSecrets,
+	}
+	return v.validatePodSpec(ctx, &p.Spec, opt).ViaField("spec")
 }
 
 // ValidateCronJob implements duckv1.CronJobValidator
@@ -72,10 +91,25 @@ func (v *Validator) ValidateCronJob(ctx context.Context, c *duckv1.CronJob) *api
 		// Don't block things that are being deleted.
 		return nil
 	}
-	return v.validatePodSpec(ctx, &c.Spec.JobTemplate.Spec.Template.Spec).ViaField("spec.jobTemplate.spec.template.spec")
+	imagePullSecrets := make([]string, 0, len(c.Spec.JobTemplate.Spec.Template.Spec.ImagePullSecrets))
+	for _, s := range c.Spec.JobTemplate.Spec.Template.Spec.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, s.Name)
+	}
+	opt := k8schain.Options{
+		Namespace:          c.Namespace,
+		ServiceAccountName: c.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName,
+		ImagePullSecrets:   imagePullSecrets,
+	}
+	return v.validatePodSpec(ctx, &c.Spec.JobTemplate.Spec.Template.Spec, opt).ViaField("spec.jobTemplate.spec.template.spec")
 }
 
-func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (errs *apis.FieldError) {
+func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt k8schain.Options) (errs *apis.FieldError) {
+	kc, err := k8schain.New(ctx, v.client, opt)
+	if err != nil {
+		logging.FromContext(ctx).Warnf("Unable to build k8schain: %v", err)
+		return
+	}
+
 	s, err := v.lister.Secrets(system.Namespace()).Get(v.secretName)
 	if err != nil {
 		return apis.ErrGeneric(err.Error(), apis.CurrentField)
@@ -104,7 +138,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec) (er
 				continue
 			}
 
-			if !valid(ctx, ref, keys) {
+			if !valid(ctx, ref, keys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))) {
 				errorField := apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex(field, i)
 				errorField.Details = c.Image
 				errs = errs.Also(errorField)
