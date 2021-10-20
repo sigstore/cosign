@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -37,7 +36,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -55,17 +53,6 @@ type VerifyAttestationCommand struct {
 	Policies      []string
 }
 
-// DSSE messages contain the signature and payload in one object, but our interface expects a signature and payload
-// This means we need to use one field and ignore the other. The DSSE verifier upstream uses the signature field and ignores
-// The message field, but we want the reverse here.
-type reverseDSSEVerifier struct {
-	signature.Verifier
-}
-
-func (w *reverseDSSEVerifier) VerifySignature(s io.Reader, m io.Reader, opts ...signature.VerifyOption) error {
-	return w.Verifier.VerifySignature(m, nil, opts...)
-}
-
 // Exec runs the verification command
 func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (err error) {
 	if len(images) == 0 {
@@ -80,7 +67,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if err != nil {
 		return errors.Wrap(err, "constructing client options")
 	}
-
 	co := &cosign.CheckOpts{
 		RegistryClientOpts: ociremoteOpts,
 	}
@@ -111,9 +97,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return errors.Wrap(err, "initializing piv token verifier")
 		}
 	}
-
-	co.SigVerifier = &reverseDSSEVerifier{
-		Verifier: dsse.WrapVerifier(pubKey),
+	if pubKey != nil {
+		// TODO(vaikas): Should this be private and cosign just figures out
+		// how to wrap things. This would mean we need to pass more context, so
+		// just making it like this for now.
+		co.SigVerifier = cosign.NewReverseDSSEVerifier(pubKey)
 	}
 
 	for _, imageRef := range images {

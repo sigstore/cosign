@@ -49,6 +49,9 @@ func NewSignature(payload []byte, b64sig string, opts ...Option) (oci.Signature,
 }
 
 // NewAttestation constructs a new oci.Signature from the provided options.
+// Since Attestation is treated just like a Signature but the actual signature
+// is baked into the payload, the Signature does not actually have
+// the Base64Signature.
 func NewAttestation(payload []byte, opts ...Option) (oci.Signature, error) {
 	return NewSignature(payload, "", opts...)
 }

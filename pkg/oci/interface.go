@@ -22,6 +22,8 @@ type SignedEntity interface {
 
 	// Attestations returns the set of attestations currently associated with this
 	// entity, or the empty equivalent if none are found.
+	// Attestations are just like a Signature, but they do not contain
+	// Base64Signature because it's baked into the payload.
 	Attestations() (Signatures, error)
 
 	// Attachment returns a named entity associated with this entity, or error if not found.
