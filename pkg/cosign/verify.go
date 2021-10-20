@@ -24,6 +24,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -63,6 +65,23 @@ type CheckOpts struct {
 	RootCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
+}
+
+// DSSE messages (Attestations) contain the signature and payload in one object, but our interface expects a signature and payload
+// This means we need to use one field and ignore the other. The DSSE verifier upstream uses the signature field and ignores
+// The message field, but we want the reverse here.
+type reverseDSSEVerifier struct {
+	signature.Verifier
+}
+
+func NewReverseDSSEVerifier(v signature.Verifier) signature.Verifier {
+	return &reverseDSSEVerifier{
+		Verifier: dsse.WrapVerifier(v),
+	}
+}
+
+func (w *reverseDSSEVerifier) VerifySignature(s io.Reader, m io.Reader, opts ...signature.VerifyOption) error {
+	return w.Verifier.VerifySignature(m, nil, opts...)
 }
 
 // VerifySignatures does all the main cosign checks in a loop, returning the verified signatures.
@@ -154,7 +173,8 @@ func Verify(ctx context.Context, signedImgRef name.Reference, accessor Accessor,
 				if cert == nil {
 					return errors.New("no certificate found on signature")
 				}
-				pub, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+				var pub signature.Verifier
+				pub, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 				if err != nil {
 					return errors.Wrap(err, "invalid certificate found on signature")
 				}
@@ -166,6 +186,14 @@ func Verify(ctx context.Context, signedImgRef name.Reference, accessor Accessor,
 				signature, err := base64.StdEncoding.DecodeString(b64sig)
 				if err != nil {
 					return err
+				}
+
+				// The fact that there's no signature (or empty rather), implies
+				// that this is an Attestation that we're verifying. So, we need
+				// to construct a Verifier that grabs the signature from the
+				// payload instead of the Signatures annotations.
+				if len(signature) == 0 {
+					pub = NewReverseDSSEVerifier(pub)
 				}
 				if err := pub.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
 					return err
