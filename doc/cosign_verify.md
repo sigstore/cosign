@@ -42,6 +42,12 @@ cosign verify [flags]
 
   # verify image with public key stored in a Kubernetes secret
   cosign verify --key k8s://[NAMESPACE]/[KEY] <IMAGE>
+
+  # verify image with public key stored in GitLab with project name
+  cosign verify --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
+
+  # verify image with public key stored in GitLab with project id
+  cosign verify --key gitlab://[PROJECT_ID] <IMAGE>
 ```
 
 ### Options
