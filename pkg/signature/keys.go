@@ -25,6 +25,8 @@ import (
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/git"
+	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -107,6 +109,25 @@ func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 
 		if len(s.Data) > 0 {
 			return loadPublicKey(s.Data["cosign.pub"])
+		}
+	}
+
+	if strings.HasPrefix(keyRef, gitlab.ReferenceScheme) {
+		split := strings.Split(keyRef, "://")
+
+		if len(split) < 2 {
+			return nil, errors.New("could not parse scheme, use <scheme>://<ref> format")
+		}
+
+		provider, targetRef := split[0], split[1]
+
+		keyValue, err := git.GetProvider(provider).GetSecret(ctx, targetRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(keyValue) > 0 {
+			return loadPublicKey([]byte(keyValue))
 		}
 	}
 
