@@ -250,7 +250,7 @@ The cosign `bundle` annotation contains a Signed Entry Timestamp (SET), which is
 The SET is a signed inclusion promise provided by the transparency log, which acts as a guarantee by the log that an element has been included in it.
 The SET can be verified with the logs public key and used to prove that an element is in the log without actually checking the log itself.
 
-For more details on how the `bundle` annotation is formatted, see the cosign [spec](SPEC.md).
+For more details on how the `bundle` annotation is formatted, see the cosign [spec](specs/SIGNATURE_SPEC.md).
 
 To verify the `bundle` annotation, follow these steps:
 1. Marshal the `bundle` Payload into JSON
