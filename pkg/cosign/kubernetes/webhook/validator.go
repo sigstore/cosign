@@ -107,7 +107,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 	kc, err := k8schain.New(ctx, v.client, opt)
 	if err != nil {
 		logging.FromContext(ctx).Warnf("Unable to build k8schain: %v", err)
-		return
+		return apis.ErrGeneric(err.Error(), apis.CurrentField)
 	}
 
 	s, err := v.lister.Secrets(system.Namespace()).Get(v.secretName)
