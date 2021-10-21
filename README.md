@@ -218,14 +218,14 @@ $ curl -L gcr.io/v2/dlorenc-vmtest2/artifact/blobs/sha256:97f16c28f6478f3c02d7ff
 The digest is baked right into the URL, so they can check that as well:
 
 ```shell
-curl -L gcr.io/v2/dlorenc-vmtest2/artifact/blobs/sha256:97f16c28f6478f3c02d7fff4c7f3c2a30041b72eb6852ca85b919fd85534ed4b | shasum -a 256
+$ curl -L gcr.io/v2/dlorenc-vmtest2/artifact/blobs/sha256:97f16c28f6478f3c02d7fff4c7f3c2a30041b72eb6852ca85b919fd85534ed4b | shasum -a 256
 97f16c28f6478f3c02d7fff4c7f3c2a30041b72eb6852ca85b919fd85534ed4b  -
 ```
 
 You can sign it with the normal `cosign sign` command and flags:
 
 ```shell
-cosign sign --key cosign.key gcr.io/dlorenc-vmtest2/artifact
+$ cosign sign --key cosign.key gcr.io/dlorenc-vmtest2/artifact
 Enter password for private key:
 Pushing signature to: gcr.io/dlorenc-vmtest2/artifact:sha256-3f612a4520b2c245d620d0cca029f1173f6bea76819dde8543f5b799ea3c696c.sig
 ```
@@ -371,8 +371,8 @@ To publish signed artifacts to a Rekor transparency log and verify their existen
 set the `COSIGN_EXPERIMENTAL=1` environment variable.
 
 ```shell
-COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key dlorenc/demo
-COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub dlorenc/demo
+$ COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key dlorenc/demo
+$ COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub dlorenc/demo
 ```
 
 `cosign` defaults to using the public instance of rekor at [rekor.sigstore.dev](https://rekor.sigstore.dev).
@@ -447,8 +447,8 @@ To specify a different repo for signatures, you can set the `COSIGN_REPOSITORY` 
 
 This will replace the repo in the provided image like this:
 ```
-export COSIGN_REPOSITORY=gcr.io/my-new-repo
-gcr.io/dlorenc-vmtest2/demo -> gcr.io/my-new-repo/demo:sha256-DIGEST.sig
+$ export COSIGN_REPOSITORY=gcr.io/my-new-repo
+$ gcr.io/dlorenc-vmtest2/demo -> gcr.io/my-new-repo/demo:sha256-DIGEST.sig
 ```
 So the signature for `gcr.io/dlorenc-vmtest2/demo` will be stored in `gcr.io/my-new-repo/demo:sha256-DIGEST.sig`.
 
