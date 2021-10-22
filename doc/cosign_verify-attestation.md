@@ -39,6 +39,12 @@ cosign verify-attestation [flags]
 
   # verify image with public key stored in Hashicorp Vault
   cosign verify-attestation --key hashivault:///<KEY> <IMAGE>
+
+  # verify image with public key stored in GitLab with project name
+  cosign verify-attestation --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
+
+  # verify image with public key stored in GitLab with project id
+  cosign verify-attestation --key gitlab://[PROJECT_ID] <IMAGE>
 ```
 
 ### Options

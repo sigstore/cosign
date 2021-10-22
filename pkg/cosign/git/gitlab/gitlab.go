@@ -124,3 +124,39 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	return nil
 }
+
+func (g *Gl) GetSecret(ctx context.Context, ref string) (string, error) {
+	token, tokenExists := os.LookupEnv("GITLAB_TOKEN")
+	var varPubKeyValue string
+	if !tokenExists {
+		return varPubKeyValue, errors.New("could not find \"GITLAB_TOKEN\"")
+	}
+
+	var client *gitlab.Client
+	var err error
+	if url, baseURLExists := os.LookupEnv("GITLAB_HOST"); baseURLExists {
+		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
+		if err != nil {
+			return varPubKeyValue, errors.Wrap(err, "could not create GitLab client")
+		}
+	} else {
+		client, err = gitlab.NewClient(token)
+		if err != nil {
+			return varPubKeyValue, errors.Wrap(err, "could not create GitLab client")
+		}
+	}
+
+	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, "COSIGN_PUBLIC_KEY")
+	if err != nil {
+		return varPubKeyValue, errors.Wrap(err, "could not retrieve \"COSIGN_PUBLIC_KEY\" variable")
+	}
+
+	varPubKeyValue = varPubKey.Value
+
+	if pubKeyResp.StatusCode < 200 && pubKeyResp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(pubKeyResp.Body)
+		return varPubKeyValue, errors.Errorf("%s", bodyBytes)
+	}
+
+	return varPubKeyValue, nil
+}

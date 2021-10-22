@@ -46,6 +46,12 @@ cosign verify-blob [flags]
 
   # Verify a signature against Hashicorp Vault
   cosign verify-blob --key hashivault://[KEY] --signature $sig <blob>
+
+  # Verify a signature against GitLab with project name
+  cosign verify-blob --key gitlab://[OWNER]/[PROJECT_NAME]  --signature $sig <blob>
+
+  # Verify a signature against GitLab with project id
+  cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 ```
 
 ### Options

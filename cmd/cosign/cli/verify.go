@@ -59,7 +59,13 @@ against the transparency log.`,
   cosign verify --key hashivault://[KEY] <IMAGE>
 
   # verify image with public key stored in a Kubernetes secret
-  cosign verify --key k8s://[NAMESPACE]/[KEY] <IMAGE>`,
+  cosign verify --key k8s://[NAMESPACE]/[KEY] <IMAGE>
+
+  # verify image with public key stored in GitLab with project name
+  cosign verify --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
+
+  # verify image with public key stored in GitLab with project id
+  cosign verify --key gitlab://[PROJECT_ID] <IMAGE>`,
 
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -119,7 +125,13 @@ against the transparency log.`,
   cosign verify-attestation --key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> <IMAGE>
 
   # verify image with public key stored in Hashicorp Vault
-  cosign verify-attestation --key hashivault:///<KEY> <IMAGE>`,
+  cosign verify-attestation --key hashivault:///<KEY> <IMAGE>
+
+  # verify image with public key stored in GitLab with project name
+  cosign verify-attestation --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
+
+  # verify image with public key stored in GitLab with project id
+  cosign verify-attestation --key gitlab://[PROJECT_ID] <IMAGE>`,
 
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -182,7 +194,13 @@ The blob may be specified as a path to a file or - for stdin.`,
   cosign verify-blob --key gcpkms://projects/[PROJECT ID]/locations/[LOCATION]/keyRings/[KEYRING]/cryptoKeys/[KEY] --signature $sig <blob>
 
   # Verify a signature against Hashicorp Vault
-  cosign verify-blob --key hashivault://[KEY] --signature $sig <blob>`,
+  cosign verify-blob --key hashivault://[KEY] --signature $sig <blob>
+
+  # Verify a signature against GitLab with project name
+  cosign verify-blob --key gitlab://[OWNER]/[PROJECT_NAME]  --signature $sig <blob>
+
+  # Verify a signature against GitLab with project id
+  cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>`,
 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

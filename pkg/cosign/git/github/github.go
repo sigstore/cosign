@@ -135,3 +135,8 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	return nil
 }
+
+// NOTE: GetSecret is not implemented for GitHub
+func (g *Gh) GetSecret(ctx context.Context, ref string) (string, error) {
+	return "", nil
+}
