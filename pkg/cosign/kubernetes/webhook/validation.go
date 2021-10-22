@@ -47,17 +47,18 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opt
 		}
 		return false
 	}
+	// We return true if ANY key matches
 	for _, k := range keys {
 		verifier, err := signature.LoadECDSAVerifier(k, crypto.SHA256)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error creating verifier: %v", err)
-			return false
+			continue
 		}
 
 		sps, err := validSignatures(ctx, ref, verifier, opts...)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
-			return false
+			continue
 		}
 		if len(sps) > 0 {
 			return true
@@ -82,7 +83,7 @@ func validSignatures(ctx context.Context, ref name.Reference, verifier signature
 
 func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *apis.FieldError) {
 	keys := []*ecdsa.PublicKey{}
-	errors := []string{}
+	errs := []error{}
 
 	logging.FromContext(ctx).Debugf("Got public key: %v", cfg["cosign.pub"])
 
@@ -90,17 +91,16 @@ func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *a
 	for _, p := range pems {
 		// TODO: (@dlorenc) check header
 		key, err := x509.ParsePKIXPublicKey(p.Bytes)
-		if err == nil {
-			keys = append(keys, key.(*ecdsa.PublicKey))
+		if err != nil {
+			errs = append(errs, err)
 		} else {
-			errors = append(errors, err)
+			keys = append(keys, key.(*ecdsa.PublicKey))
 		}
 	}
 	if keys == nil {
-		return nil, apis.ErrGeneric(fmt.Sprintf("malformed cosign.pub: %v", errors), apis.CurrentField)
-	} else {
-		return keys, nil
+		return nil, apis.ErrGeneric(fmt.Sprintf("malformed cosign.pub: %v", errs), apis.CurrentField)
 	}
+	return keys, nil
 }
 
 func parsePems(b []byte) []*pem.Block {
