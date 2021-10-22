@@ -125,7 +125,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	return nil
 }
 
-func (g *Gl) GetSecret(ctx context.Context, ref string) (string, error) {
+func (g *Gl) GetSecret(ctx context.Context, ref string, key string) (string, error) {
 	token, tokenExists := os.LookupEnv("GITLAB_TOKEN")
 	var varPubKeyValue string
 	if !tokenExists {
@@ -146,7 +146,7 @@ func (g *Gl) GetSecret(ctx context.Context, ref string) (string, error) {
 		}
 	}
 
-	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, "COSIGN_PUBLIC_KEY")
+	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, key)
 	if err != nil {
 		return varPubKeyValue, errors.Wrap(err, "could not retrieve \"COSIGN_PUBLIC_KEY\" variable")
 	}

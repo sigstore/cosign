@@ -32,6 +32,12 @@ cosign public-key [flags]
 
   # extract public key from Hashicorp Vault KMS
   cosign public-key --key hashivault://[KEY]
+
+  # extract public key from GitLab with project name
+  cosign verify --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
+
+  # extract public key from GitLab with project id
+  cosign verify --key gitlab://[PROJECT_ID] <IMAGE>
 ```
 
 ### Options

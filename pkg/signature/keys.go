@@ -95,6 +95,26 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		if len(s.Data) > 0 {
 			return cosign.LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
 		}
+	} else if strings.HasPrefix(keyRef, gitlab.ReferenceScheme) {
+		split := strings.Split(keyRef, "://")
+
+		if len(split) < 2 {
+			return nil, errors.New("could not parse scheme, use <scheme>://<ref> format")
+		}
+
+		provider, targetRef := split[0], split[1]
+
+		pk, err := git.GetProvider(provider).GetSecret(ctx, targetRef, "COSIGN_PRIVATE_KEY")
+		if err != nil {
+			return nil, err
+		}
+
+		pass, err := git.GetProvider(provider).GetSecret(ctx, targetRef, "COSIGN_PASSWORD")
+		if err != nil {
+			return nil, err
+		}
+
+		return cosign.LoadECDSAPrivateKey([]byte(pk), []byte(pass))
 	}
 
 	return loadKey(keyRef, pf)
@@ -121,13 +141,13 @@ func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 
 		provider, targetRef := split[0], split[1]
 
-		keyValue, err := git.GetProvider(provider).GetSecret(ctx, targetRef)
+		pubKey, err := git.GetProvider(provider).GetSecret(ctx, targetRef, "COSIGN_PUBLIC_KEY")
 		if err != nil {
 			return nil, err
 		}
 
-		if len(keyValue) > 0 {
-			return loadPublicKey([]byte(keyValue))
+		if len(pubKey) > 0 {
+			return loadPublicKey([]byte(pubKey))
 		}
 	}
 
