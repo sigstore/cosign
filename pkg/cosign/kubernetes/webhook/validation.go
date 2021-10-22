@@ -82,19 +82,25 @@ func validSignatures(ctx context.Context, ref name.Reference, verifier signature
 
 func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *apis.FieldError) {
 	keys := []*ecdsa.PublicKey{}
+	errors := []string{}
 
 	logging.FromContext(ctx).Debugf("Got public key: %v", cfg["cosign.pub"])
 
 	pems := parsePems(cfg["cosign.pub"])
-	for i, p := range pems {
+	for _, p := range pems {
 		// TODO: (@dlorenc) check header
 		key, err := x509.ParsePKIXPublicKey(p.Bytes)
-		if err != nil {
-			return nil, apis.ErrGeneric(fmt.Sprintf("malformed cosign.pub (pem: %d): %v", i, err), apis.CurrentField)
+		if err == nil {
+			keys = append(keys, key.(*ecdsa.PublicKey))
+		} else {
+			errors = append(errors, err)
 		}
-		keys = append(keys, key.(*ecdsa.PublicKey))
 	}
-	return keys, nil
+	if keys == nil {
+		return nil, apis.ErrGeneric(fmt.Sprintf("malformed cosign.pub: %v", errors), apis.CurrentField)
+	} else {
+		return keys, nil
+	}
 }
 
 func parsePems(b []byte) []*pem.Block {
