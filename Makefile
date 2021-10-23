@@ -56,10 +56,10 @@ help: # Display help
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 
 cosign: $(SRCS)
-	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
+	CGO_ENABLED=0 go build -trimpath -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
 
 cosign-pivkey: $(SRCS)
-	CGO_ENABLED=1 go build -tags=pivkey -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
+	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
 
 GOLANGCI_LINT_DIR = $(shell pwd)/bin
 GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
@@ -78,7 +78,7 @@ ARCHITECTURES=amd64
 cross:
 	$(foreach GOOS, $(PLATFORMS),\
 		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
-	go build -ldflags $(LDFLAGS) -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
+	go build -trimpath -ldflags $(LDFLAGS) -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
 	shasum -a 256 cosign-$(GOOS)-$(GOARCH) > cosign-$(GOOS)-$(GOARCH).sha256 ))) \
 
 test:
@@ -126,8 +126,8 @@ snapshot:
 
 .PHONY: cosigned
 cosigned: lint ## Build cosigned binary
-	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -o $@ ./cmd/cosign/webhook
+	CGO_ENABLED=0 go build -trimpath -ldflags $(LDFLAGS) -o $@ ./cmd/cosign/webhook
 
 .PHONY: sget
 sget: ## Build sget binary
-	go build -o $@ ./cmd/sget
+	go build -trimpath -o $@ ./cmd/sget
