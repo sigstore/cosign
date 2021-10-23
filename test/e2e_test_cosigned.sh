@@ -58,6 +58,7 @@ spec:
         - name: sample
           image: $KO_DOCKER_REPO/sample
 EOF
+
 cat > cronjob.yaml <<EOF
 apiVersion: batch/v1beta1
 kind: CronJob
@@ -74,6 +75,19 @@ spec:
             image: $KO_DOCKER_REPO/sample
           restartPolicy: Never
 EOF
+echo '::endgroup::'
+
+cat > manykeys.pem <<EOF
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQaXTMA1eCVAGCTWxTe8ZQ0JVNSXV
+A+6/ffM1bfNnq3AGkhGNfJTI3P0w1Y69gBTF/AfXhYuEc/SxmX0b3PwzWg==
+-----END PUBLIC KEY-----
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE40I8/4Q4k7IhuJvesexymMH4mQa6
+nD9c9iLu5S/Y5yjCDYtDTB7MzwTy+0RtIdIAv1ePBVGVQ/s7M2QDdrA8SQ==
+-----END PUBLIC KEY-----
+EOF
+
 echo '::endgroup::'
 
 
@@ -98,7 +112,13 @@ echo '::group:: setup verification-key'
 cosign generate-key-pair k8s://cosign-system/verification-key
 echo '::endgroup::'
 
+echo '::group:: setup multiple verification-keys'
+cosign public-key --key k8s://cosign-system/verification-key >> manykeys.pem
 
+# Save the old key
+kubectl get secret -n cosign-system verification-key -o=json | jq -r '.data["cosign.key"]' | base64 --decode > cosign.key
+kubectl delete secret -n cosign-system  verification-key
+kubectl create secret generic -n cosign-system verification-key --from-file=cosign.pub=manykeys.pem --from-literal=cosign.password=${COSIGN_PASSWORD} --from-file=cosign.key
 
 echo '::group:: disable verification'
 kubectl label namespace default --overwrite cosigned.sigstore.dev/include=false
