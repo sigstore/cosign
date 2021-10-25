@@ -21,6 +21,8 @@ on:
     branches: ['main', 'release-*']
   pull_request:
 
+permissions: read-all
+
 jobs:
   docgen:
     name: Verify Docgen

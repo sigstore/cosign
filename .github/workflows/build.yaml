@@ -21,6 +21,8 @@ on:
       - main
       - release-*
 
+permissions: read-all
+
 jobs:
   build:
     name: build

@@ -4,11 +4,13 @@ on:
   pull_request:
     branches: [ 'main', 'release-*' ]
 
-jobs:
+permissions: read-all
 
+jobs:
   autoformat:
     name: Auto-format and Check
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false # Keep running if one leg fails.
       matrix:
