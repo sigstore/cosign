@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -113,6 +114,10 @@ func initPolicy() *cobra.Command {
 			role.AddKeysWithThreshold(publicKeys, o.Threshold)
 			root.Roles["root"] = role
 			root.Namespace = o.ImageRef
+
+			if o.Expires > 0 {
+				root.Expires = time.Now().AddDate(0, 0, o.Expires).UTC().Round(time.Second)
+			}
 
 			policy, err := root.Marshal()
 			if err != nil {

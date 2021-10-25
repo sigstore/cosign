@@ -25,6 +25,7 @@ cosign policy init [flags]
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --expires int                                                                              total expire duration in days
   -h, --help                                                                                     help for init
   -m, --maintainers strings                                                                      list of maintainers to add to the root policy
       --namespace string                                                                         registry namespace that the root policy belongs to (default "ns")

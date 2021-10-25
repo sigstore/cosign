@@ -24,6 +24,7 @@ type PolicyInitOptions struct {
 	ImageRef    string
 	Maintainers []string
 	Threshold   int
+	Expires     int
 	OutFile     string
 	Registry    RegistryOptions
 }
@@ -43,6 +44,9 @@ func (o *PolicyInitOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringSliceVarP(&o.Maintainers, "maintainers", "m", nil,
 		"list of maintainers to add to the root policy")
+
+	cmd.Flags().IntVar(&o.Expires, "expires", 0,
+		"total expire duration in days")
 
 	o.Registry.AddFlags(cmd)
 }
