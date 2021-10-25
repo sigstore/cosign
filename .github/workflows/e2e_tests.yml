@@ -18,6 +18,8 @@ name: e2e-tests
 # Run on every push, and allow it to be run manually.
 on: [push, workflow_dispatch]
 
+permissions: read-all
+
 jobs:
   e2e-tests:
     # Skip if running in a fork that might not have secrets configured.

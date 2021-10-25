@@ -5,6 +5,8 @@ on:
       - release-*
   pull_request:
 
+permissions: read-all
+
 name: Cross
 jobs:
   sanity-build:

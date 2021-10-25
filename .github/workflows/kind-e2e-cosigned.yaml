@@ -18,10 +18,13 @@ on:
   pull_request:
     branches: [ 'main', 'release-*' ]
 
+permissions: read-all
+
 jobs:
   e2e-tests:
     name: e2e tests
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false # Keep running if one leg fails.
       matrix:
