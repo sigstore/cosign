@@ -99,6 +99,11 @@ ko:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign/webhook
 
+	# sget
+	KO_DOCKER_REPO=${KO_PREFIX}/sget CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		github.com/sigstore/cosign/cmd/sget
+
 .PHONY: ko-local
 ko-local:
 	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
@@ -113,6 +118,10 @@ sign-container: ko
 .PHONY: sign-cosigned
 sign-cosigned:
 	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosigned:$(GIT_HASH)
+
+.PHONY: sign-sget
+sign-sget:
+	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/sget:$(GIT_HASH)
 
 # used when releasing together with GCP CloudBuild
 .PHONY: release
