@@ -30,7 +30,7 @@ var providerMap = map[string]Git{
 
 type Git interface {
 	PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error
-	GetSecret(ctx context.Context, ref string) (string, error)
+	GetSecret(ctx context.Context, ref string, key string) (string, error)
 }
 
 func GetProvider(provider string) Git {

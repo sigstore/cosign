@@ -49,7 +49,13 @@ func PublicKey() *cobra.Command {
   cosign public-key --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]
 
   # extract public key from Hashicorp Vault KMS
-  cosign public-key --key hashivault://[KEY]`,
+  cosign public-key --key hashivault://[KEY]
+
+  # extract public key from GitLab with project name
+  cosign verify --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
+
+  # extract public key from GitLab with project id
+  cosign verify --key gitlab://[PROJECT_ID] <IMAGE>`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if !options.OneOf(o.Key, o.SecurityKey.Use) {
 				return &options.KeyParseError{}
