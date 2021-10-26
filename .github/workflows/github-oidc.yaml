@@ -34,19 +34,21 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '1.17.x'
-      - uses: sigstore/cosign-installer@main
+
+      # Install tools.
+      - uses: sigstore/cosign-installer@v1.2.1
+      - uses: imjasonh/setup-ko@v0.4
 
       - name: Build and sign a container image
-        env:
-          KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
         run: |
           set -e
 
-          # Install ko
-          go install github.com/google/ko@v0.9.3
+          # Build and publish an image.
+          image=$(ko publish --preserve-import-paths ./cmd/cosign)
 
-          # Login to ghcr.io
-          echo ${{ github.token }} | ko login ghcr.io --username=${{ github.repository_owner }} --password-stdin
-
-          # Setup ko, publish an image and sign it.
-          cosign sign $(ko publish --preserve-import-paths ./cmd/cosign)
+          # Sign the image and annotate relevant information.
+          cosign sign \
+            -a sha=${{ github.sha }} \
+            -a run_id=${{ github.run_id }} \
+            -a run_attempt=${{ github.run_attempt }} \
+            ${image}
