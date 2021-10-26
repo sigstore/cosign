@@ -19,12 +19,15 @@ on:
   push:
     branches: [ main ]
 
-permissions: read-all
-
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
 
     strategy:
       fail-fast: false
