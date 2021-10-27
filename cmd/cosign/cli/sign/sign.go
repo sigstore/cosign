@@ -36,6 +36,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -392,9 +393,19 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 			return nil, errors.Wrap(err, "fetching ambient OIDC credentials")
 		}
 	}
-	k, err := fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting key from Fulcio")
+
+	var k *fulcio.Signer
+
+	if ko.InsecureSkipFulcioVerify {
+		k, err = fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
+		if err != nil {
+			return nil, errors.Wrap(err, "getting key from Fulcio")
+		}
+	} else {
+		k, err = fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
+		if err != nil {
+			return nil, errors.Wrap(err, "getting key from Fulcio")
+		}
 	}
 	return &CertSignVerifier{
 		Cert:           k.Cert,

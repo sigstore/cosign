@@ -73,16 +73,17 @@ func Sign() *cobra.Command {
 				return flag.ErrHelp
 			}
 			ko := sign.KeyOpts{
-				KeyRef:           o.Key,
-				PassFunc:         generate.GetPass,
-				Sk:               o.SecurityKey.Use,
-				Slot:             o.SecurityKey.Slot,
-				FulcioURL:        o.Fulcio.URL,
-				IDToken:          o.Fulcio.IdentityToken,
-				RekorURL:         o.Rekor.URL,
-				OIDCIssuer:       o.OIDC.Issuer,
-				OIDCClientID:     o.OIDC.ClientID,
-				OIDCClientSecret: o.OIDC.ClientSecret,
+				KeyRef:                   o.Key,
+				PassFunc:                 generate.GetPass,
+				Sk:                       o.SecurityKey.Use,
+				Slot:                     o.SecurityKey.Slot,
+				FulcioURL:                o.Fulcio.URL,
+				IDToken:                  o.Fulcio.IdentityToken,
+				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
+				RekorURL:                 o.Rekor.URL,
+				OIDCIssuer:               o.OIDC.Issuer,
+				OIDCClientID:             o.OIDC.ClientID,
+				OIDCClientSecret:         o.OIDC.ClientSecret,
 			}
 			annotationsMap, err := o.AnnotationsMap()
 			if err != nil {

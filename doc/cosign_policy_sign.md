@@ -20,6 +20,7 @@ cosign policy sign [flags]
       --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
+      --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --namespace string                                                                         registry namespace that the root policy belongs to (default "ns")
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
