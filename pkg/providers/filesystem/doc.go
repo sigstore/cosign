@@ -13,19 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package all
-
-import (
-	"github.com/sigstore/cosign/pkg/providers"
-
-	// Link in all of the providers.
-	_ "github.com/sigstore/cosign/pkg/providers/filesystem"
-	_ "github.com/sigstore/cosign/pkg/providers/github"
-	_ "github.com/sigstore/cosign/pkg/providers/google"
-)
-
-// Alias these methods, so that folks can import this to get all providers.
-var (
-	Enabled = providers.Enabled
-	Provide = providers.Provide
-)
+// Package filesystem defines an implementation of the providers.Interface
+// that reads identity tokens from a well-known filesystem location.
+// This is intended for use with Kubernetes Service Account Projected Volumes,
+// but nothing is stopping other systems from placing identity tokens in
+// the same place.
+package filesystem
