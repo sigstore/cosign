@@ -61,16 +61,17 @@ func SignBlob() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := sign.KeyOpts{
-				KeyRef:           o.Key,
-				PassFunc:         generate.GetPass,
-				Sk:               o.SecurityKey.Use,
-				Slot:             o.SecurityKey.Slot,
-				FulcioURL:        o.Fulcio.URL,
-				IDToken:          o.Fulcio.IdentityToken,
-				RekorURL:         o.Rekor.URL,
-				OIDCIssuer:       o.OIDC.Issuer,
-				OIDCClientID:     o.OIDC.ClientID,
-				OIDCClientSecret: o.OIDC.ClientSecret,
+				KeyRef:                   o.Key,
+				PassFunc:                 generate.GetPass,
+				Sk:                       o.SecurityKey.Use,
+				Slot:                     o.SecurityKey.Slot,
+				FulcioURL:                o.Fulcio.URL,
+				IDToken:                  o.Fulcio.IdentityToken,
+				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
+				RekorURL:                 o.Rekor.URL,
+				OIDCIssuer:               o.OIDC.Issuer,
+				OIDCClientID:             o.OIDC.ClientID,
+				OIDCClientSecret:         o.OIDC.ClientSecret,
 			}
 			for _, blob := range args {
 				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.Output); err != nil {

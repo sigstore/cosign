@@ -22,8 +22,9 @@ import (
 
 // FulcioOptions is the wrapper for Fulcio related options.
 type FulcioOptions struct {
-	URL           string
-	IdentityToken string
+	URL                      string
+	IdentityToken            string
+	InsecureSkipFulcioVerify bool
 }
 
 var _ Interface = (*FulcioOptions)(nil)
@@ -35,4 +36,7 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.IdentityToken, "identity-token", "",
 		"[EXPERIMENTAL] identity token to use for certificate from fulcio")
+
+	cmd.Flags().BoolVar(&o.InsecureSkipFulcioVerify, "insecure-skip-verify", false,
+		"[EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).")
 }

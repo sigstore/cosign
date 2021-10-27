@@ -44,6 +44,10 @@ type KeyOpts struct {
 	OIDCIssuer       string
 	OIDCClientID     string
 	OIDCClientSecret string
+
+	// Modeled after InsecureSkipVerify in tls.Config, this disables
+	// verifying the SCT.
+	InsecureSkipFulcioVerify bool
 }
 
 // nolint

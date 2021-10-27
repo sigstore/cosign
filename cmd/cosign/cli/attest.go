@@ -57,16 +57,17 @@ func Attest() *cobra.Command {
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := sign.KeyOpts{
-				KeyRef:           o.Key,
-				PassFunc:         generate.GetPass,
-				Sk:               o.SecurityKey.Use,
-				Slot:             o.SecurityKey.Slot,
-				FulcioURL:        o.Fulcio.URL,
-				IDToken:          o.Fulcio.IdentityToken,
-				RekorURL:         o.Rekor.URL,
-				OIDCIssuer:       o.OIDC.Issuer,
-				OIDCClientID:     o.OIDC.ClientID,
-				OIDCClientSecret: o.OIDC.ClientSecret,
+				KeyRef:                   o.Key,
+				PassFunc:                 generate.GetPass,
+				Sk:                       o.SecurityKey.Use,
+				Slot:                     o.SecurityKey.Slot,
+				FulcioURL:                o.Fulcio.URL,
+				IDToken:                  o.Fulcio.IdentityToken,
+				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
+				RekorURL:                 o.Rekor.URL,
+				OIDCIssuer:               o.OIDC.Issuer,
+				OIDCClientID:             o.OIDC.ClientID,
+				OIDCClientSecret:         o.OIDC.ClientSecret,
 			}
 			for _, img := range args {
 				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.Upload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {

@@ -167,12 +167,13 @@ func signPolicy() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get Fulcio signer
 			sv, err := sign.SignerFromKeyOpts(cmd.Context(), "", sign.KeyOpts{
-				FulcioURL:        o.Fulcio.URL,
-				IDToken:          o.Fulcio.IdentityToken,
-				RekorURL:         o.Rekor.URL,
-				OIDCIssuer:       o.OIDC.Issuer,
-				OIDCClientID:     o.OIDC.ClientID,
-				OIDCClientSecret: o.OIDC.ClientSecret,
+				FulcioURL:                o.Fulcio.URL,
+				IDToken:                  o.Fulcio.IdentityToken,
+				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
+				RekorURL:                 o.Rekor.URL,
+				OIDCIssuer:               o.OIDC.Issuer,
+				OIDCClientID:             o.OIDC.ClientID,
+				OIDCClientSecret:         o.OIDC.ClientSecret,
 			})
 			if err != nil {
 				return err
