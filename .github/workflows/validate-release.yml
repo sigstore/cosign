@@ -61,6 +61,6 @@ jobs:
 
       - name: check images
         run: |
-          docker run ghcr.io/honk-fake-project/cosign:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 version
-          docker run ghcr.io/honk-fake-project/cosigned:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help
-          docker run ghcr.io/honk-fake-project/sget:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help
+          docker run gcr.io/honk-fake-project/cosign:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 version
+          docker run gcr.io/honk-fake-project/cosigned:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help
+          docker run gcr.io/honk-fake-project/sget:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help
