@@ -148,7 +148,7 @@ signs:
 dockers:
   # cosign Image
   - image_templates:
-      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64"
+      - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64"
     use: buildx
     dockerfile: Dockerfile
     build_flag_templates:
@@ -156,7 +156,7 @@ dockers:
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=amd64"
   - image_templates:
-      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8"
+      - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8"
     use: buildx
     goarch: arm64
     dockerfile: Dockerfile
@@ -167,7 +167,7 @@ dockers:
 
   # cosigned Image
   - image_templates:
-      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64"
+      - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64"
     use: buildx
     dockerfile: Dockerfile.cosigned
     build_flag_templates:
@@ -175,7 +175,7 @@ dockers:
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=amd64"
   - image_templates:
-      - "ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8"
+      - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8"
     use: buildx
     goarch: arm64
     dockerfile: Dockerfile.cosigned
@@ -186,7 +186,7 @@ dockers:
 
   # sget Image
   - image_templates:
-      - "ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64"
+      - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64"
     use: buildx
     dockerfile: Dockerfile.sget
     build_flag_templates:
@@ -194,7 +194,7 @@ dockers:
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=amd64"
   - image_templates:
-      - "ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8"
+      - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8"
     use: buildx
     goarch: arm64
     dockerfile: Dockerfile.sget
@@ -204,18 +204,18 @@ dockers:
       - "--build-arg=ARCH=arm64"
 
 docker_manifests:
-  - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}
+  - name_template: gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}
     image_templates:
-      - ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64
-      - ghcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8
-  - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}
+      - gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64
+      - gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8
+  - name_template: gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}
     image_templates:
-      - ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64
-      - ghcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8
-  - name_template: ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}
+      - gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64
+      - gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8
+  - name_template: gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}
     image_templates:
-      - ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64
-      - ghcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8
+      - gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64
+      - gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8
 
 docker_signs:
   - artifacts: all
