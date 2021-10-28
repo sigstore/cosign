@@ -26,8 +26,6 @@ jobs:
   unit-tests:
     name: Run tests
     runs-on: ubuntu-latest
-    env:
-      KO_VERSION: 0.9.3
 
     steps:
       - uses: actions/checkout@v2
@@ -50,10 +48,10 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '1.17.x'
-      - name: install ko
-        run: go install github.com/google/ko@v${KO_VERSION}
+      - uses: imjasonh/setup-ko@v0.4
       - name: setup kind cluster
         run: |
+          # Used to test: cosign generate-key-pair k8s://...
           go install sigs.k8s.io/kind@v0.11.1
           kind create cluster
       # Required for `make cosign-pivkey`

@@ -53,7 +53,6 @@ jobs:
       INSECURE_REGISTRY_NAME: insecure-registry.notlocal
       INSECURE_REGISTRY_PORT: 5001
       KO_DOCKER_REPO: registry.local:5000/cosigned
-      KO_VERSION: 0.9.3
 
     steps:
     - uses: actions/checkout@v2
@@ -61,8 +60,7 @@ jobs:
       with:
         go-version: 1.17.x
 
-    - name: Install ko
-      run: go install github.com/google/ko@v${KO_VERSION}
+    - uses: imjasonh/setup-ko@v0.4
 
     - name: Install yq
       uses: mikefarah/yq@master

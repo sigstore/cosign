@@ -26,8 +26,6 @@ permissions: read-all
 jobs:
   build:
     name: build
-    env:
-      KO_VERSION: 0.9.3
     runs-on: ubuntu-latest
 
     steps:
@@ -39,9 +37,7 @@ jobs:
       # Required for `make cosign-pivkey`
       # - name: deps
       #   run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
-      - name: install ko
-        run: |
-          GOBIN=/usr/local/bin go install github.com/google/ko@v${KO_VERSION}
+      - uses: imjasonh/setup-ko@v0.4
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@master
         with:
