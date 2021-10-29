@@ -91,17 +91,17 @@ clean:
 ko:
 	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
 	KO_DOCKER_REPO=${KO_PREFIX}/cosign CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
 
 	# cosigned
 	KO_DOCKER_REPO=${KO_PREFIX}/cosigned CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign/webhook
 
 	# sget
 	KO_DOCKER_REPO=${KO_PREFIX}/sget CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/sget
 
 .PHONY: ko-local
