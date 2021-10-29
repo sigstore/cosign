@@ -622,7 +622,7 @@ func TestAttachSBOM(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error")
 	}
-	t.Log(out)
+	t.Log(out.String())
 	out.Reset()
 
 	// Upload it!
@@ -632,7 +632,7 @@ func TestAttachSBOM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(out)
+	t.Log(out.String())
 	if len(sboms) != 1 {
 		t.Fatalf("Expected one sbom, got %d", len(sboms))
 	}

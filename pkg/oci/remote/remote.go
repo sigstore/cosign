@@ -17,6 +17,7 @@ package remote
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -154,5 +155,42 @@ func attachment(digestable digestable, attName string, o *options) (oci.File, er
 	if err != nil {
 		return nil, err
 	}
-	return oci.File(img), nil
+	ls, err := img.Layers()
+	if err != nil {
+		return nil, err
+	}
+	if len(ls) != 1 {
+		return nil, fmt.Errorf("expected exactly one layer in attachment, got %d", len(ls))
+	}
+
+	return &attache{
+		SignedImage: img,
+		layer:       ls[0],
+	}, nil
+}
+
+type attache struct {
+	oci.SignedImage
+	layer v1.Layer
+}
+
+var _ oci.File = (*attache)(nil)
+
+// FileMediaType implements oci.File
+func (f *attache) FileMediaType() (types.MediaType, error) {
+	return f.layer.MediaType()
+}
+
+// Payload implements oci.File
+func (f *attache) Payload() ([]byte, error) {
+	// remote layers are believed to be stored
+	// compressed, but we don't compress attachments
+	// so use "Compressed" to access the raw byte
+	// stream.
+	rc, err := f.layer.Compressed()
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	return io.ReadAll(rc)
 }

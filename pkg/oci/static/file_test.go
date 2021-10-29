@@ -27,12 +27,12 @@ import (
 
 func TestNewFile(t *testing.T) {
 	payload := "this is the content!"
-	img, err := NewFile([]byte(payload), WithLayerMediaType("foo"))
+	file, err := NewFile([]byte(payload), WithLayerMediaType("foo"))
 	if err != nil {
 		t.Fatalf("NewFile() = %v", err)
 	}
 
-	layers, err := img.Layers()
+	layers, err := file.Layers()
 	if err != nil {
 		t.Fatalf("Layers() = %v", err)
 	} else if got, want := len(layers), 1; got != want {
@@ -53,7 +53,7 @@ func TestNewFile(t *testing.T) {
 
 	t.Run("check media type", func(t *testing.T) {
 		wantMT := types.MediaType("foo")
-		gotMT, err := l.MediaType()
+		gotMT, err := file.FileMediaType()
 		if err != nil {
 			t.Fatalf("MediaType() = %v", err)
 		}
@@ -110,6 +110,14 @@ func TestNewFile(t *testing.T) {
 		}
 		if got, want := string(uncompContent), payload; got != want {
 			t.Errorf("Uncompressed() = %s, wanted %s", got, want)
+		}
+
+		gotPayload, err := file.Payload()
+		if err != nil {
+			t.Fatalf("Payload() = %v", err)
+		}
+		if got, want := string(gotPayload), payload; got != want {
+			t.Errorf("Payload() = %s, wanted %s", got, want)
 		}
 	})
 }
