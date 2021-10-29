@@ -159,6 +159,15 @@ func certSubject(c *x509.Certificate) string {
 	return ""
 }
 
+func certIssuerExtension(cert *x509.Certificate) string {
+	for _, ext := range cert.Extensions {
+		if ext.Id.String() == "1.3.6.1.4.1.57264.1.1" {
+			return string(ext.Value)
+		}
+	}
+	return ""
+}
+
 // PrintVerification logs details about the verification to stdout
 func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	switch output {
@@ -166,6 +175,9 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 		for _, sig := range verified {
 			if cert, err := sig.Cert(); err == nil && cert != nil {
 				fmt.Println("Certificate subject: ", certSubject(cert))
+				if issuerURL := certIssuerExtension(cert); issuerURL != "" {
+					fmt.Println("Certificate issuer URL: ", issuerURL)
+				}
 			}
 
 			p, err := sig.Payload()
@@ -196,6 +208,9 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 					ss.Optional = make(map[string]interface{})
 				}
 				ss.Optional["Subject"] = certSubject(cert)
+				if issuerURL := certIssuerExtension(cert); issuerURL != "" {
+					ss.Optional["Issuer"] = issuerURL
+				}
 			}
 			if bundle, err := sig.Bundle(); err == nil && bundle != nil {
 				if ss.Optional == nil {

@@ -195,6 +195,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, accessor Accessor,
 				if len(signature) == 0 {
 					pub = NewReverseDSSEVerifier(pub)
 				}
+
 				if err := pub.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
 					return err
 				}
