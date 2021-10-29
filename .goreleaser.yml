@@ -14,6 +14,8 @@ builds:
   binary: cosign-linux-{{ .Arch }}
   no_unique_dist_dir: true
   main: ./cmd/cosign
+  flags:
+    - -trimpath
   goos:
     - linux
   goarch:
@@ -27,6 +29,8 @@ builds:
 - id: linux-pivkey-amd64
   binary: cosign-linux-pivkey-amd64
   main: ./cmd/cosign
+  flags:
+    - -trimpath
   goos:
     - linux
   goarch:
@@ -49,6 +53,8 @@ builds:
     - CC=o64-clang
     - CXX=o64-clang++
   main: ./cmd/cosign
+  flags:
+    - -trimpath
   goos:
     - darwin
   goarch:
@@ -65,6 +71,8 @@ builds:
     - CC=aarch64-apple-darwin20.2-clang
     - CXX=aarch64-apple-darwin20.2-clang++
   main: ./cmd/cosign
+  flags:
+    - -trimpath
   goos:
     - darwin
   goarch:
@@ -81,6 +89,8 @@ builds:
     - CC=x86_64-w64-mingw32-gcc
     - CXX=x86_64-w64-mingw32-g++
   main: ./cmd/cosign
+  flags:
+    - -trimpath
   goos:
     - windows
   goarch:
@@ -95,6 +105,8 @@ builds:
   binary: cosigned-linux-{{ .Arch }}
   no_unique_dist_dir: true
   main: ./cmd/cosign/webhook
+  flags:
+    - -trimpath
   goos:
     - linux
   goarch:
@@ -109,6 +121,8 @@ builds:
   binary: sget-{{ .Os }}-{{ .Arch }}
   no_unique_dist_dir: true
   main: ./cmd/sget
+  flags:
+    - -trimpath
   goos:
     - linux
     - darwin
