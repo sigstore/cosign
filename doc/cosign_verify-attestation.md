@@ -57,6 +57,7 @@ cosign verify-attestation [flags]
   -h, --help                                                                                     help for verify-attestation
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
+      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files will be using for validation
@@ -69,8 +70,9 @@ cosign verify-attestation [flags]
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -d, --verbose              log debug output
+      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
+      --output-file string                       log output to a file
+  -d, --verbose                                  log debug output
 ```
 
 ### SEE ALSO

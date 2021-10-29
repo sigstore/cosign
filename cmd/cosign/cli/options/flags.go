@@ -16,11 +16,7 @@
 package options
 
 import (
-	"context"
 	"reflect"
-
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 // OneOf ensures that only one of the supplied interfaces is set to a non-zero value.
@@ -37,12 +33,4 @@ func NOf(args ...interface{}) int {
 		}
 	}
 	return n
-}
-
-func defaultRegistryClientOpts(ctx context.Context) []remote.Option {
-	return []remote.Option{
-		remote.WithAuthFromKeychain(authn.DefaultKeychain),
-		remote.WithContext(ctx),
-		remote.WithUserAgent("cosign/" + VersionInfo().GitVersion),
-	}
 }

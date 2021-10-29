@@ -27,6 +27,7 @@ cosign policy init [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --expires int                                                                              total expire duration in days
   -h, --help                                                                                     help for init
+      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
   -m, --maintainers strings                                                                      list of maintainers to add to the root policy
       --namespace string                                                                         registry namespace that the root policy belongs to (default "ns")
       --out string                                                                               output policy locally (default "o")
@@ -36,8 +37,9 @@ cosign policy init [flags]
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -d, --verbose              log debug output
+      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
+      --output-file string                       log output to a file
+  -d, --verbose                                  log debug output
 ```
 
 ### SEE ALSO

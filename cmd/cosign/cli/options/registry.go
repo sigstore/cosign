@@ -19,6 +19,8 @@ import (
 	"crypto/tls"
 	"net/http"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
@@ -27,8 +29,9 @@ import (
 
 // RegistryOptions is the wrapper for the registry options.
 type RegistryOptions struct {
-	AllowInsecure bool
-	RefOpts       ReferenceOptions
+	AllowInsecure      bool
+	KubernetesKeychain bool
+	RefOpts            ReferenceOptions
 }
 
 var _ Interface = (*RegistryOptions)(nil)
@@ -37,6 +40,10 @@ var _ Interface = (*RegistryOptions)(nil)
 func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.AllowInsecure, "allow-insecure-registry", false,
 		"whether to allow insecure connections to registries. Don't use this for anything but testing")
+
+	cmd.Flags().BoolVar(&o.KubernetesKeychain, "k8s-keychain", false,
+		"whether to use the kubernetes keychain instead of the default keychain (supports workload identity).")
+
 	o.RefOpts.AddFlags(cmd)
 }
 
@@ -56,7 +63,21 @@ func (o *RegistryOptions) ClientOpts(ctx context.Context) ([]ociremote.Option, e
 }
 
 func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Option {
-	opts := defaultRegistryClientOpts(ctx)
+	opts := []remote.Option{
+		remote.WithContext(ctx),
+		remote.WithUserAgent("cosign/" + VersionInfo().GitVersion),
+	}
+
+	if o.KubernetesKeychain {
+		kc, err := k8schain.NewNoClient(ctx)
+		if err != nil {
+			panic(err.Error())
+		}
+		opts = append(opts, remote.WithAuthFromKeychain(kc))
+	} else {
+		opts = append(opts, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	}
+
 	if o != nil && o.AllowInsecure {
 		opts = append(opts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
 	}

@@ -32,13 +32,15 @@ cosign upload blob [flags]
       --ct string                                                                                content type to set
   -f, --files strings                                                                            <filepath>:[platform/arch]
   -h, --help                                                                                     help for blob
+      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -d, --verbose              log debug output
+      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
+      --output-file string                       log output to a file
+  -d, --verbose                                  log debug output
 ```
 
 ### SEE ALSO
