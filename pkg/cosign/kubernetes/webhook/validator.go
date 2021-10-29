@@ -138,8 +138,8 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				continue
 			}
 
-			if !valid(ctx, ref, keys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))) {
-				errorField := apis.ErrGeneric("invalid image signature", "image").ViaFieldIndex(field, i)
+			if err := valid(ctx, ref, keys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
+				errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)
 				errorField.Details = c.Image
 				errs = errs.Also(errorField)
 				continue

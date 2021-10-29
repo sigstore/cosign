@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -34,38 +35,40 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) bool {
+func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) error {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
 		sps, err := validSignatures(ctx, ref, nil /* verifier */, opts...)
 		if err != nil {
-			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
-			return false
+			return err
 		}
 		if len(sps) > 0 {
-			return true
+			return nil
 		}
-		return false
+		return errors.New("no valid signatures were found")
 	}
-	// We return true if ANY key matches
+	// We return nil if ANY key matches
+	var lastErr error
 	for _, k := range keys {
 		verifier, err := signature.LoadECDSAVerifier(k, crypto.SHA256)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error creating verifier: %v", err)
+			lastErr = err
 			continue
 		}
 
 		sps, err := validSignatures(ctx, ref, verifier, opts...)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
+			lastErr = err
 			continue
 		}
 		if len(sps) > 0 {
-			return true
+			return nil
 		}
 	}
 	logging.FromContext(ctx).Debug("No valid signatures were found.")
-	return false
+	return lastErr
 }
 
 // For testing
