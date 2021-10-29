@@ -34,13 +34,15 @@ cosign generate [flags]
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
   -h, --help                                                                                     help for generate
+      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -d, --verbose              log debug output
+      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
+      --output-file string                       log output to a file
+  -d, --verbose                                  log debug output
 ```
 
 ### SEE ALSO

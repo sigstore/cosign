@@ -15,9 +15,10 @@ cosign piv-tool reset [flags]
 ### Options inherited from parent commands
 
 ```
-  -f, --no-input             skip warnings and confirmations
-      --output-file string   log output to a file
-  -d, --verbose              log debug output
+      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
+  -f, --no-input                                 skip warnings and confirmations
+      --output-file string                       log output to a file
+  -d, --verbose                                  log debug output
 ```
 
 ### SEE ALSO

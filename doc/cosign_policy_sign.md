@@ -21,6 +21,7 @@ cosign policy sign [flags]
   -h, --help                                                                                     help for sign
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
+      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --namespace string                                                                         registry namespace that the root policy belongs to (default "ns")
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
@@ -32,8 +33,9 @@ cosign policy sign [flags]
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -d, --verbose              log debug output
+      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
+      --output-file string                       log output to a file
+  -d, --verbose                                  log debug output
 ```
 
 ### SEE ALSO

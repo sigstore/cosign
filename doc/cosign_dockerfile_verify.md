@@ -60,6 +60,7 @@ cosign dockerfile verify [flags]
       --cert-email string                                                                        the email expected in a valid fulcio cert
       --check-claims                                                                             whether to check the claims found (default true)
   -h, --help                                                                                     help for verify
+      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
@@ -70,8 +71,9 @@ cosign dockerfile verify [flags]
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -d, --verbose              log debug output
+      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
+      --output-file string                       log output to a file
+  -d, --verbose                                  log debug output
 ```
 
 ### SEE ALSO
