@@ -15,9 +15,16 @@
 
 package oci
 
+import "github.com/google/go-containerregistry/pkg/v1/types"
+
 // File is a degenerate form of SignedImage that stores a single file as a v1.Layer
 type File interface {
 	SignedImage
 
-	// TODO(mattmoor): Consider adding useful helpers.
+	// FileMediaType retrieves the media type of the File
+	FileMediaType() (types.MediaType, error)
+
+	// Payload fetches the opaque data that is being signed.
+	// This will always return data when there is no error.
+	Payload() ([]byte, error)
 }

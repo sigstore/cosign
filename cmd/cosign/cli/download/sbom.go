@@ -36,43 +36,33 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 	if err != nil {
 		return nil, err
 	}
-	ociremoteOpts = append(ociremoteOpts,
-		// TODO(mattmoor): This isn't really "signatures", consider shifting to
-		// an SBOMs accessor?
-		ociremote.WithSignatureSuffix(ociremote.SBOMTagSuffix))
 
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO(mattmoor): This logic does a shallow walk, we should use `mutate.Map`
-	// if we want to collect all of the SBOMs attached at any level of an index.
-	img, err := se.Signatures()
+	file, err := se.Attachment("sbom")
 	if err != nil {
 		return nil, err
-	}
-	sigs, err := img.Get()
-	if err != nil {
-		return nil, err
-	}
-	if len(sigs) == 0 {
-		return nil, fmt.Errorf("no signatures associated with %v", ref)
 	}
 
-	sboms := make([]string, 0, len(sigs))
-	for _, l := range sigs {
-		mt, err := l.MediaType()
-		if err != nil {
-			return nil, err
-		}
-		fmt.Fprintf(os.Stderr, "Found SBOM of media type: %s\n", mt)
-		sbom, err := l.Payload()
-		if err != nil {
-			return nil, err
-		}
-		sboms = append(sboms, string(sbom))
-		fmt.Fprintln(out, string(sbom))
+	// "attach sbom" attaches a single static.NewFile
+	sboms := make([]string, 0, 1)
+
+	mt, err := file.FileMediaType()
+	if err != nil {
+		return nil, err
 	}
+
+	fmt.Fprintf(os.Stderr, "Found SBOM of media type: %s\n", mt)
+	sbom, err := file.Payload()
+	if err != nil {
+		return nil, err
+	}
+
+	sboms = append(sboms, string(sbom))
+	fmt.Fprintln(out, string(sbom))
+
 	return sboms, nil
 }

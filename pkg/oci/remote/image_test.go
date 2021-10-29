@@ -68,3 +68,40 @@ func TestSignedImage(t *testing.T) {
 		t.Errorf("len(Get()) = %d, wanted %d", got, wantLayers)
 	}
 }
+
+func TestSignedImageWithAttachment(t *testing.T) {
+	ri := remote.Image
+	t.Cleanup(func() {
+		remoteImage = ri
+	})
+	wantLayers := int64(1) // File must have a single layer
+
+	remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		// Only called for signature images
+		return random.Image(300 /* byteSize */, wantLayers)
+	}
+
+	ref, err := name.ParseReference("gcr.io/distroless/static:nonroot")
+	if err != nil {
+		t.Fatalf("ParseRef() = %v", err)
+	}
+
+	si, err := SignedImage(ref)
+	if err != nil {
+		t.Fatalf("Signatures() = %v", err)
+	}
+
+	file, err := si.Attachment("sbom")
+	if err != nil {
+		t.Fatalf("Signatures() = %v", err)
+	}
+
+	payload, err := file.Payload()
+	if err != nil {
+		t.Errorf("Payload() = %v", err)
+	}
+	// We check greater than because it's wrapped in a tarball with `random.Layer`
+	if len(payload) < 300 {
+		t.Errorf("Payload() = %d bytes, wanted %d", len(payload), 300)
+	}
+}

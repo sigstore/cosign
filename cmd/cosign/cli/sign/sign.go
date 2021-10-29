@@ -174,35 +174,35 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 		if digest, ok := ref.(name.Digest); ok && !recursive {
 			se, err := ociempty.SignedImage(ref)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "accessing image")
 			}
 			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, force, dd, sv, se)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "signing digest")
 			}
 			continue
 		}
 
 		se, err := ociremote.SignedEntity(ref, opts...)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "accessing entity")
 		}
 
 		if err := walk.SignedEntity(ctx, se, func(ctx context.Context, se oci.SignedEntity) error {
 			// Get the digest for this entity in our walk.
 			d, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
 			if err != nil {
-				return err
+				return errors.Wrap(err, "computing digest")
 			}
 			digest := ref.Context().Digest(d.String())
 
 			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, force, dd, sv, se)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "signing digest")
 			}
 			return ErrDone
 		}); err != nil {
-			return err
+			return errors.Wrap(err, "recursively signing")
 		}
 	}
 

@@ -16,6 +16,9 @@
 package static
 
 import (
+	"io"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -31,14 +34,40 @@ func NewFile(payload []byte, opts ...Option) (oci.File, error) {
 	}
 	base := mutate.MediaType(empty.Image, types.OCIManifestSchema1)
 	base = mutate.ConfigMediaType(base, o.ConfigMediaType)
+	layer := &staticLayer{
+		b:    payload,
+		opts: o,
+	}
 	img, err := mutate.Append(base, mutate.Addendum{
-		Layer: &staticLayer{
-			b:    payload,
-			opts: o,
-		},
+		Layer: layer,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return signed.Image(img), nil
+	return &file{
+		SignedImage: signed.Image(img),
+		layer:       layer,
+	}, nil
+}
+
+type file struct {
+	oci.SignedImage
+	layer v1.Layer
+}
+
+var _ oci.File = (*file)(nil)
+
+// FileMediaType implements oci.File
+func (f *file) FileMediaType() (types.MediaType, error) {
+	return f.layer.MediaType()
+}
+
+// Payload implements oci.File
+func (f *file) Payload() ([]byte, error) {
+	rc, err := f.layer.Uncompressed()
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	return io.ReadAll(rc)
 }
