@@ -74,7 +74,7 @@ type reverseDSSEVerifier struct {
 	signature.Verifier
 }
 
-func NewReverseDSSEVerifier(v signature.Verifier) signature.Verifier {
+func newReverseDSSEVerifier(v signature.Verifier) signature.Verifier {
 	return &reverseDSSEVerifier{
 		Verifier: dsse.WrapVerifier(v),
 	}
@@ -164,6 +164,14 @@ func Verify(ctx context.Context, signedImgRef name.Reference, accessor Accessor,
 				if err != nil {
 					return err
 				}
+
+				// The fact that there's no signature (or empty rather), implies
+				// that this is an Attestation that we're verifying. So, we need
+				// to construct a Verifier that grabs the signature from the
+				// payload instead of the Signatures annotations.
+				if len(signature) == 0 {
+					co.SigVerifier = newReverseDSSEVerifier(co.SigVerifier)
+				}
 				if err := co.SigVerifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
 					return err
 				}
@@ -193,7 +201,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, accessor Accessor,
 				// to construct a Verifier that grabs the signature from the
 				// payload instead of the Signatures annotations.
 				if len(signature) == 0 {
-					pub = NewReverseDSSEVerifier(pub)
+					pub = newReverseDSSEVerifier(pub)
 				}
 				if err := pub.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
 					return err

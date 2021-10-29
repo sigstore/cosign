@@ -35,7 +35,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/cue"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -80,9 +79,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	keyRef := c.KeyRef
 
 	// Keys are optional!
-	var pubKey signature.Verifier
 	if keyRef != "" {
-		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
@@ -92,16 +90,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return errors.Wrap(err, "opening piv token")
 		}
 		defer sk.Close()
-		pubKey, err = sk.Verifier()
+		co.SigVerifier, err = sk.Verifier()
 		if err != nil {
 			return errors.Wrap(err, "initializing piv token verifier")
 		}
-	}
-	if pubKey != nil {
-		// TODO(vaikas): Should this be private and cosign just figures out
-		// how to wrap things. This would mean we need to pass more context, so
-		// just making it like this for now.
-		co.SigVerifier = cosign.NewReverseDSSEVerifier(pubKey)
 	}
 
 	for _, imageRef := range images {
