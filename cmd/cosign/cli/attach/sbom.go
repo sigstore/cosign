@@ -42,9 +42,12 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef strin
 		return err
 	}
 
-	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
+	remoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return err
+	}
 
-	dstRef, err := ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+	dstRef, err := ociremote.SBOMTag(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -54,7 +57,7 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef strin
 	if err != nil {
 		return err
 	}
-	return remote.Write(dstRef, img, remoteOpts...)
+	return remote.Write(dstRef, img, regOpts.GetRegistryClientOpts(ctx)...)
 }
 
 func sbomBytes(sbomRef string) ([]byte, error) {
