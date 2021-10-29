@@ -16,6 +16,7 @@ builds:
   main: ./cmd/cosign
   flags:
     - -trimpath
+  mod_timestamp: '{{ .CommitTimestamp }}'
   goos:
     - linux
   goarch:
@@ -31,6 +32,7 @@ builds:
   main: ./cmd/cosign
   flags:
     - -trimpath
+  mod_timestamp: '{{ .CommitTimestamp }}'
   goos:
     - linux
   goarch:
@@ -55,6 +57,7 @@ builds:
   main: ./cmd/cosign
   flags:
     - -trimpath
+  mod_timestamp: '{{ .CommitTimestamp }}'
   goos:
     - darwin
   goarch:
