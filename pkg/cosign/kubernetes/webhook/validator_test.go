@@ -144,7 +144,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			}},
 		},
 		want: &apis.FieldError{
-			Message: `invalid image signature`,
+			Message: `bad signature`,
 			Paths:   []string{"containers[0].image"},
 			Details: digest.String(),
 		},
@@ -279,6 +279,62 @@ func TestValidateCronJob(t *testing.T) {
 		},
 		cvs: pass,
 	}, {
+		name: "k8schain error (bad service account)",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								ServiceAccountName: "not-found",
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: digest.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: digest.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `serviceaccounts "not-found" not found`,
+			Paths:   []string{"spec.jobTemplate.spec.template.spec"},
+		},
+	}, {
+		name: "k8schain error (bad pull secret)",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								ImagePullSecrets: []corev1.LocalObjectReference{{
+									Name: "not-found",
+								}},
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: digest.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: digest.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `secrets "not-found" not found`,
+			Paths:   []string{"spec.jobTemplate.spec.template.spec"},
+		},
+	}, {
 		name: "bad reference",
 		c: &duckv1.CronJob{
 			Spec: batchv1.CronJobSpec{
@@ -343,7 +399,7 @@ func TestValidateCronJob(t *testing.T) {
 			},
 		},
 		want: &apis.FieldError{
-			Message: `invalid image signature`,
+			Message: `bad signature`,
 			Paths:   []string{"spec.jobTemplate.spec.template.spec.containers[0].image"},
 			Details: digest.String(),
 		},
