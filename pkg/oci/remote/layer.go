@@ -19,7 +19,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -53,7 +53,7 @@ func (s *sigLayer) Payload() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	payload, err := ioutil.ReadAll(r)
+	payload, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

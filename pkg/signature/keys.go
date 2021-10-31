@@ -17,7 +17,7 @@ package signature
 import (
 	"context"
 	"crypto"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +55,7 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 }
 
 func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier, error) {
-	kb, err := ioutil.ReadFile(filepath.Clean(keyPath))
+	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return nil, err
 	}

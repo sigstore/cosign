@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -52,7 +51,7 @@ func initRoots() *x509.CertPool {
 	cp := x509.NewCertPool()
 	rootEnv := os.Getenv(altRoot)
 	if rootEnv != "" {
-		raw, err := ioutil.ReadFile(rootEnv)
+		raw, err := os.ReadFile(rootEnv)
 		if err != nil {
 			panic(fmt.Sprintf("error reading root PEM file: %s", err))
 		}

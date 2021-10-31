@@ -20,7 +20,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -128,7 +127,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	fmt.Fprintln(os.Stderr, "Public key written to COSIGN_PUBLIC_KEY environment variable")
 
-	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
+	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Public key also written to cosign.pub")

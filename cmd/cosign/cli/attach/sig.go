@@ -18,7 +18,7 @@ package attach
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -60,7 +60,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	if payloadRef == "" {
 		payload, err = (&sigPayload.Cosign{Image: digest}).MarshalJSON()
 	} else {
-		payload, err = ioutil.ReadFile(filepath.Clean(payloadRef))
+		payload, err = os.ReadFile(filepath.Clean(payloadRef))
 	}
 	if err != nil {
 		return err
@@ -98,11 +98,11 @@ func signatureBytes(sigRef string) ([]byte, error) {
 	// sigRef can be "-", a string or a file.
 	switch signatureType(sigRef) {
 	case StdinSignature:
-		return ioutil.ReadAll(os.Stdin)
+		return io.ReadAll(os.Stdin)
 	case RawSignature:
 		return []byte(sigRef), nil
 	case FileSignature:
-		return ioutil.ReadFile(filepath.Clean(sigRef))
+		return os.ReadFile(filepath.Clean(sigRef))
 	default:
 		return nil, errors.New("unknown signature arg type")
 	}

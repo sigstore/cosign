@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -46,7 +46,7 @@ func TestPublicKeyLocation(t *testing.T) {
 
 	td := t.TempDir()
 	f := filepath.Join(td, "private.key")
-	if err := ioutil.WriteFile(f, keys.PrivateBytes, 0644); err != nil {
+	if err := os.WriteFile(f, keys.PrivateBytes, 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -74,7 +74,7 @@ func TestPublicKeyBadPrivateKey(t *testing.T) {
 	}
 	td := t.TempDir()
 	f := filepath.Join(td, "private.key")
-	if err := ioutil.WriteFile(f, buf, 0644); err != nil {
+	if err := os.WriteFile(f, buf, 0644); err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer

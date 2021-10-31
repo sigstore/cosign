@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/mail"
 	"os"
 	"path/filepath"
@@ -131,7 +131,7 @@ func initPolicy() *cobra.Command {
 			var outfile string
 			if o.OutFile != "" {
 				outfile = o.OutFile
-				err = ioutil.WriteFile(o.OutFile, policyFile, 0600)
+				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
 					return errors.Wrapf(err, "error writing to %s", outfile)
 				}
@@ -213,7 +213,7 @@ func signPolicy() *cobra.Command {
 			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(cmd.Context()); err != nil {
 				return errors.Wrap(err, "error getting result")
 			}
-			b, err := ioutil.ReadAll(result)
+			b, err := io.ReadAll(result)
 			if err != nil {
 				return errors.Wrap(err, "error reading bytes from root.json")
 			}
@@ -263,7 +263,7 @@ func signPolicy() *cobra.Command {
 			var outfile string
 			if o.OutFile != "" {
 				outfile = o.OutFile
-				err = ioutil.WriteFile(o.OutFile, policyFile, 0600)
+				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
 					return errors.Wrapf(err, "error writing to %s", outfile)
 				}

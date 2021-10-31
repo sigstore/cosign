@@ -24,7 +24,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/pkg/errors"
@@ -75,7 +75,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.Wrap(err, "loading public key from token")
 		}
 	case certRef != "":
-		pems, err := ioutil.ReadFile(certRef)
+		pems, err := os.ReadFile(certRef)
 		if err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 
 	var blobBytes []byte
 	if blobRef == "-" {
-		blobBytes, err = ioutil.ReadAll(os.Stdin)
+		blobBytes, err = io.ReadAll(os.Stdin)
 	} else {
 		blobBytes, err = blob.LoadFileOrURL(blobRef)
 	}

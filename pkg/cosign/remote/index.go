@@ -17,7 +17,6 @@ package remote
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -73,7 +72,7 @@ func (f *file) Path() string {
 }
 
 func (f *file) Contents() ([]byte, error) {
-	return ioutil.ReadFile(f.path)
+	return os.ReadFile(f.path)
 }
 func (f *file) Platform() *v1.Platform {
 	return f.platform

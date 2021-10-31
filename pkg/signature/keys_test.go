@@ -16,7 +16,7 @@ package signature
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -25,12 +25,12 @@ import (
 func generateKeyFile(t *testing.T, tmpDir string, pf cosign.PassFunc) (privFile, pubFile string) {
 	t.Helper()
 
-	tmpPrivFile, err := ioutil.TempFile(tmpDir, "cosign_test_*.key")
+	tmpPrivFile, err := os.CreateTemp(tmpDir, "cosign_test_*.key")
 	if err != nil {
 		t.Fatalf("failed to create temp key file: %v", err)
 	}
 	defer tmpPrivFile.Close()
-	tmpPubFile, err := ioutil.TempFile(tmpDir, "cosign_test_*.pub")
+	tmpPubFile, err := os.CreateTemp(tmpDir, "cosign_test_*.pub")
 	if err != nil {
 		t.Fatalf("failed to create temp pub file: %v", err)
 	}
