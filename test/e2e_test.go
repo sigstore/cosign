@@ -24,7 +24,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -176,7 +176,7 @@ func TestAttestVerify(t *testing.T) {
 
 	slsaAttestation := `{ "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := ioutil.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -191,13 +191,13 @@ func TestAttestVerify(t *testing.T) {
 
 	// Fail case
 	cuePolicy := `builder: id: "1"`
-	if err := ioutil.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	// Success case
 	cuePolicy = `builder: id: "2"`
-	if err := ioutil.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
 		t.Fatal(err)
 	}
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
@@ -384,7 +384,7 @@ func TestSignBlob(t *testing.T) {
 	})
 	bp := filepath.Join(td1, blob)
 
-	if err := ioutil.WriteFile(bp, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -460,12 +460,12 @@ func keypair(t *testing.T, td string) (*cosign.Keys, string, string) {
 	}
 
 	privKeyPath := filepath.Join(td, "cosign.key")
-	if err := ioutil.WriteFile(privKeyPath, keys.PrivateBytes, 0600); err != nil {
+	if err := os.WriteFile(privKeyPath, keys.PrivateBytes, 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	pubKeyPath := filepath.Join(td, "cosign.pub")
-	if err := ioutil.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
+	if err := os.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
 		t.Fatal(err)
 	}
 	return keys, privKeyPath, pubKeyPath
@@ -599,7 +599,7 @@ func TestUploadBlob(t *testing.T) {
 	if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
 		t.Fatal(err)
 	}
-	b, err := ioutil.ReadAll(result)
+	b, err := io.ReadAll(result)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -636,7 +636,7 @@ func TestAttachSBOM(t *testing.T) {
 	if len(sboms) != 1 {
 		t.Fatalf("Expected one sbom, got %d", len(sboms))
 	}
-	want, err := ioutil.ReadFile("./testdata/bom-go-mod.spdx")
+	want, err := os.ReadFile("./testdata/bom-go-mod.spdx")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,13 +726,13 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	}
 	must(publickey.GetPublicKey(ctx, pk, publickey.NamedWriter{Name: outPath, Writer: outWriter}, passFunc), t)
 
-	output, err := ioutil.ReadFile(outPath)
+	output, err := os.ReadFile(outPath)
 	must(err, t)
 	equals(keys.PublicBytes, output, t)
 }
 
 func mkfile(contents, td string, t *testing.T) string {
-	f, err := ioutil.TempFile(td, "")
+	f, err := os.CreateTemp(td, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,7 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -64,11 +64,11 @@ func sbomBytes(sbomRef string) ([]byte, error) {
 	// sbomRef can be "-", a string or a file.
 	switch signatureType(sbomRef) {
 	case StdinSignature:
-		return ioutil.ReadAll(os.Stdin)
+		return io.ReadAll(os.Stdin)
 	case RawSignature:
 		return []byte(sbomRef), nil
 	case FileSignature:
-		return ioutil.ReadFile(filepath.Clean(sbomRef))
+		return os.ReadFile(filepath.Clean(sbomRef))
 	default:
 		return nil, errors.New("unknown SBOM arg type")
 	}

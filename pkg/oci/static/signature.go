@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"crypto/x509"
 	"io"
-	"io/ioutil"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -122,12 +121,12 @@ func (l *staticLayer) DiffID() (v1.Hash, error) {
 
 // Compressed implements v1.Layer
 func (l *staticLayer) Compressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
+	return io.NopCloser(bytes.NewReader(l.b)), nil
 }
 
 // Uncompressed implements v1.Layer
 func (l *staticLayer) Uncompressed() (io.ReadCloser, error) {
-	return ioutil.NopCloser(bytes.NewReader(l.b)), nil
+	return io.NopCloser(bytes.NewReader(l.b)), nil
 }
 
 // Size implements v1.Layer

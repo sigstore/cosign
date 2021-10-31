@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -56,10 +56,10 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	var err error
 
 	if payloadPath == "-" {
-		payload, err = ioutil.ReadAll(os.Stdin)
+		payload, err = io.ReadAll(os.Stdin)
 	} else {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		payload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
+		payload, err = os.ReadFile(filepath.Clean(payloadPath))
 	}
 	if err != nil {
 		return nil, err

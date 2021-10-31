@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,7 +47,7 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "check if extension is valid")
 	}
-	manifest, err := ioutil.ReadFile(manifestPath)
+	manifest, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return fmt.Errorf("could not read manifest: %w", err)
 	}

@@ -19,7 +19,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 
@@ -55,7 +55,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
+		if err := os.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
@@ -100,12 +100,12 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		}
 	}
 	// TODO: make sure the perms are locked down first.
-	if err := ioutil.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
+	if err := os.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
 
-	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
+	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
 		return err
 	} // #nosec G306
 	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
@@ -131,7 +131,7 @@ func readPasswordFn(confirm bool) func() ([]byte, error) {
 	// Handle piped in passwords.
 	default:
 		return func() ([]byte, error) {
-			return ioutil.ReadAll(os.Stdin)
+			return io.ReadAll(os.Stdin)
 		}
 	}
 }

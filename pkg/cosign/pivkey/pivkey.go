@@ -27,7 +27,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/go-piv/piv-go/piv"
@@ -166,11 +165,11 @@ func (k *Key) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, er
 }
 
 func (k *Key) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
-	sig, err := ioutil.ReadAll(signature)
+	sig, err := io.ReadAll(signature)
 	if err != nil {
 		return errors.Wrap(err, "read signature")
 	}
-	msg, err := ioutil.ReadAll(message)
+	msg, err := io.ReadAll(message)
 	if err != nil {
 		return errors.Wrap(err, "read message")
 	}

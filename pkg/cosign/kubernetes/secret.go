@@ -17,7 +17,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -86,7 +85,7 @@ func KeyPairSecret(ctx context.Context, k8sRef string, pf cosign.PassFunc) error
 	}
 
 	fmt.Fprintf(os.Stderr, "Successfully created secret %s in namespace %s\n", s.Name, s.Namespace)
-	if err := ioutil.WriteFile("cosign.pub", keys.PublicBytes, 0600); err != nil {
+	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0600); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")

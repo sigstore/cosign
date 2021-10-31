@@ -18,7 +18,6 @@ package upload
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -29,7 +28,7 @@ import (
 )
 
 func WasmCmd(ctx context.Context, regOpts options.RegistryOptions, wasmPath, imageRef string) error {
-	b, err := ioutil.ReadFile(wasmPath)
+	b, err := os.ReadFile(wasmPath)
 	if err != nil {
 		return err
 	}

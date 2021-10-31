@@ -25,7 +25,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -145,7 +144,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 	var staticPayload []byte
 	if payloadPath != "" {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		staticPayload, err = ioutil.ReadFile(filepath.Clean(payloadPath))
+		staticPayload, err = os.ReadFile(filepath.Clean(payloadPath))
 		if err != nil {
 			return errors.Wrap(err, "payload from file")
 		}
@@ -340,7 +339,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 			return certSigner, nil
 		}
 
-		certBytes, err := ioutil.ReadFile(certPath)
+		certBytes, err := os.ReadFile(certPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "read certificate")
 		}
