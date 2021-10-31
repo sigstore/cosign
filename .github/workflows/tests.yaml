@@ -54,9 +54,6 @@ jobs:
           # Used to test: cosign generate-key-pair k8s://...
           go install sigs.k8s.io/kind@v0.11.1
           kind create cluster
-      # Required for `make cosign-pivkey`
-      # - name: deps
-      #   run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: Run Go tests
         run: go test ./...
 

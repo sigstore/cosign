@@ -34,9 +34,6 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '1.17.x'
-      # Required for `make cosign-pivkey`
-      # - name: deps
-      #   run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - uses: imjasonh/setup-ko@v0.4
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@master
