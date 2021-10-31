@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -45,7 +44,7 @@ import (
 
 //nolint
 func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string,
-	upload bool, predicatePath string, force bool, predicateType string) error {
+	noUpload bool, predicatePath string, force bool, predicateType string) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -115,8 +114,8 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return errors.Wrap(err, "signing")
 	}
 
-	if !upload {
-		fmt.Println(base64.StdEncoding.EncodeToString(signedPayload))
+	if noUpload {
+		fmt.Println(string(signedPayload))
 		return nil
 	}
 

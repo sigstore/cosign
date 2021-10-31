@@ -182,7 +182,8 @@ func TestAttestVerify(t *testing.T) {
 
 	// Now attest the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", true, slsaAttestationPath, false, "custom"), t)
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
+		"custom"), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")

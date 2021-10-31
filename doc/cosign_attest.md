@@ -46,6 +46,7 @@ cosign attest [flags]
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --no-upload                                                                                do not upload the generated attestation
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
       --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
@@ -55,7 +56,6 @@ cosign attest [flags]
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|custom) or an URI (default "custom")
-      --upload                                                                                   whether to upload the signature (default true)
 ```
 
 ### Options inherited from parent commands
