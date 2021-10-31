@@ -23,7 +23,7 @@ import (
 type AttestOptions struct {
 	Key       string
 	Cert      string
-	Upload    bool
+	NoUpload  bool
 	Force     bool
 	Recursive bool
 
@@ -52,8 +52,8 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Cert, "cert", "",
 		"path to the x509 certificate to include in the Signature")
 
-	cmd.Flags().BoolVar(&o.Upload, "upload", true,
-		"whether to upload the signature")
+	cmd.Flags().BoolVar(&o.NoUpload, "no-upload", false,
+		"do not upload the generated attestation")
 
 	cmd.Flags().BoolVarP(&o.Force, "force", "f", false,
 		"skip warnings and confirmations")
