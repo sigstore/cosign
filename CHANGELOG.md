@@ -3,14 +3,16 @@
 ## v1.3.0
 
 * BREAKING: `verify-manifest` is now `manifest verify` (https://github.com/sigstore/cosign/pull/712)
+* BREAKING: `/pkg` has been heavily refactored. [Further refactoring work](https://github.com/sigstore/cosign/issues/844) will make its way into 1.4.0
 * WARNING: The CLI now uses POSIX-style (double-dash `--flag`) for long-form flags. It will temporarily accept the single-dash `-flag` form with a warning, which will become an error in a future release (https://github.com/sigstore/cosign/pull/835)
 * Added `sget` as part of Cosign's releases (https://github.com/sigstore/cosign/pull/752)
-* The `copasetic` binary was unceremoniously [baleeted](https://www.youtube.com/watch?v=07h0ksKx5sM) (https://github.com/sigstore/cosign/pull/785)
+* The `copasetic` utility was unceremoniously [baleeted](https://www.youtube.com/watch?v=07h0ksKx5sM) (https://github.com/sigstore/cosign/pull/785)
+* Release images are now shipped for every architecture distroless ships on (currently: amd64, arm64, arm, s390x, ppc64le) (https://github.com/sigstore/cosign/pull/973)
 
 ### Enhancements
 
-* Began reworking `pkg` around new abstrations for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
-    * Notice: refactoring of `pkg` will continue in the next minor release. Please leave feedback, especially if you've been experimenting with `cosign` as a library and found it lacking (https://github.com/sigstore/cosign/issues/844)
+* Began reworking `/pkg` around new abstrations for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
+    * Notice: refactoring of `/pkg` will continue in the next minor release (1.4.0). Please leave feedback, especially if you've been experimenting with `cosign` as a library and found it lacking (https://github.com/sigstore/cosign/issues/844)
     * [GGCR-style libraries](https://github.com/google/go-containerregistry#philosophy) for interacting with images now exist under `pkg/oci` (https://github.com/sigstore/cosign/pull/770)
     * `pkg/cosign/remote.UploadSignature` API was been removed in favor of new `pkg/oci/remote` APIs (https://github.com/sigstore/cosign/pull/774)
     * The function signature of `cosign.Verify` was changed so that callers must be explicit about which signatures (or attestations) to verify. For matching signatures, see also `cosign.Verify{Signatures,Attestations}` (https://github.com/sigstore/cosign/pull/782)
@@ -25,30 +27,49 @@
 * `manifest verify` now supports verifying images in all Kubernetes objects that fit within `PodSpec`, `PodSpecTemplate`, or `JobSpecTemplate`, including CRDs (https://github.com/sigstore/cosign/pull/697)
 * Added shell auto-completion support (Clutch collab from @erkanzileli, @passcod, and @Dentrax! https://github.com/sigstore/cosign/pull/836)
 * `cosign` has generated Markdown docs available in the `doc/` directory (https://github.com/sigstore/cosign/pull/839)
+* Added support for verifying with secrets from a Gitlab project (https://github.com/sigstore/cosign/pull/934)
+* Added a `--k8s-keychain` option that enables cosign to support ambient registry credentials based on the "k8schain" library (https://github.com/sigstore/cosign/pull/972)
+* `attest`: replaced `--upload` flag with a `--no-upload` flag (https://github.com/sigstore/cosign/pull/979)
 
 ### Bug Fixes
 
 * `cosigned` now verifies `CronJob` images (Terve, @vaikas https://github.com/sigstore/cosign/pull/809)
 * Fixed the `verify` `--cert-email` option to actually work (Sweet as, @passcod https://github.com/sigstore/cosign/pull/821)
+* `public-key -sk` no longer causes  `error: x509: unsupported public key type: *crypto.PublicKey` (https://github.com/sigstore/cosign/pull/864)
+* Fixed interactive terminal support in Windows (https://github.com/sigstore/cosign/pull/871)
+* The `-ct` flag is no longer ignored in `upload blob` (https://github.com/sigstore/cosign/pull/910)
 
 ### Contributors
 
 * Aditya Sirish (@adityasaky)
 * Asra Ali (@asraa)
+* Axel Simon (@axelsimon)
 * Batuhan Apaydın (@developer-guy)
+* Brandon Mitchell (@sudo-bmitch)
 * Carlos Panato (@cpanato)
+* Chao Lin (@blackcat-lin)
 * Dan Lorenc (@dlorenc)
 * Dan Luhring (@luhring)
+* Eng Zer Jun (@Juneezee)
 * Erkan Zileli (@erkanzileli)
 * Félix Saparelli (@passcod)
 * Furkan Türkal (@Dentrax)
+* Hector Fernandez (@hectorj2f)
 * Ivan Font (@font)
 * Jake Sanders (@dekkagaijin)
 * Jason Hall (@imjasonh)
 * Jim Bugwadia (@JimBugwadia)
+* Joel Kamp (@mrjoelkamp)
+* Luke Hinds (@lukehinds)
+* Olivier Gaumond (@oliviergaumond)
 * Matt Moore (@mattmoor)
+* Naveen (@naveensrinivasan)
+* Priya Wadhwa (@priyawadhwa)
+* Radoslav Gerganov (@rgerganov)
+* Ramkumar Chinchani (@rchincha)
 * Rémy Greinhofer (@rgreinho)
 * Scott Nichols (@n3wscott)
+* Shubham Palriwala (@ShubhamPalriwala)
 * Viacheslav Vasilyev (@avoidik)
 * Ville Aikas (@vaikas)
 
