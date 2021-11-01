@@ -7,7 +7,6 @@
 * WARNING: The CLI now uses POSIX-style (double-dash `--flag`) for long-form flags. It will temporarily accept the single-dash `-flag` form with a warning, which will become an error in a future release (https://github.com/sigstore/cosign/pull/835)
 * Added `sget` as part of Cosign's releases (https://github.com/sigstore/cosign/pull/752)
 * The `copasetic` utility was unceremoniously [baleeted](https://www.youtube.com/watch?v=07h0ksKx5sM) (https://github.com/sigstore/cosign/pull/785)
-* Release images are now shipped for every architecture distroless ships on (currently: amd64, arm64, arm, s390x, ppc64le) (https://github.com/sigstore/cosign/pull/973)
 
 ### Enhancements
 
@@ -29,6 +28,7 @@
 * `cosign` has generated Markdown docs available in the `doc/` directory (https://github.com/sigstore/cosign/pull/839)
 * Added support for verifying with secrets from a Gitlab project (https://github.com/sigstore/cosign/pull/934)
 * Added a `--k8s-keychain` option that enables cosign to support ambient registry credentials based on the "k8schain" library (https://github.com/sigstore/cosign/pull/972)
+* CI (test) Images are now created for every architecture distroless ships on (currently: amd64, arm64, arm, s390x, ppc64le) (https://github.com/sigstore/cosign/pull/973)
 * `attest`: replaced `--upload` flag with a `--no-upload` flag (https://github.com/sigstore/cosign/pull/979)
 
 ### Bug Fixes
