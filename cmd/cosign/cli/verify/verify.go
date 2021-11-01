@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
@@ -31,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/oci"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -89,9 +91,31 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	// Keys are optional!
 	var pubKey signature.Verifier
 	if keyRef != "" {
-		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
-		if err != nil {
-			return errors.Wrap(err, "loading public key")
+		// If -key starts with pkcs11:, we assume it is a PKCS11 URI and use it to get the PKCS11 Key.
+		if strings.HasPrefix(keyRef, "pkcs11:") {
+			pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
+			err := pkcs11UriConfig.Parse(keyRef)
+			if err != nil {
+				return errors.Wrap(err, "parsing pkcs11 uri")
+			}
+
+			// Since we'll be verifying a signature, we do not need to set askForPinIsNeeded to true
+			// because we only need access to the public key.
+			sk, err := pkcs11key.GetKeyWithUriConfig(pkcs11UriConfig, false)
+			if err != nil {
+				return errors.Wrap(err, "opening pkcs11 token key")
+			}
+			defer sk.Close()
+
+			pubKey, err = sk.Verifier()
+			if err != nil {
+				return errors.Wrap(err, "initializing pkcs11 token verifier")
+			}
+		} else {
+			pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
+			if err != nil {
+				return errors.Wrap(err, "loading public key")
+			}
 		}
 	} else if c.Sk {
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)

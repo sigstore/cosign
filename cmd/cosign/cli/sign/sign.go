@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
@@ -326,6 +327,48 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 		}, nil
 
 	case ko.KeyRef != "":
+		// If -key starts with pkcs11:, we assume it is a PKCS11 URI and use it to get the PKCS11 Key.
+		if strings.HasPrefix(ko.KeyRef, "pkcs11:") {
+			pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
+			err := pkcs11UriConfig.Parse(ko.KeyRef)
+			if err != nil {
+				return nil, err
+			}
+
+			// Since we'll be signing, we need to set askForPinIsNeeded to true
+			// because we need access to the private key.
+			sk, err := pkcs11key.GetKeyWithUriConfig(pkcs11UriConfig, true)
+			if err != nil {
+				return nil, err
+			}
+
+			sv, err := sk.SignerVerifier()
+			if err != nil {
+				return nil, err
+			}
+
+			// Handle the -cert flag.
+			// With PKCS11, we assume the certificate is in the same slot on the PKCS11
+			// token as the private key. If it's not there, show a warning to the
+			// user.
+			certFromPKCS11, err := sk.Certificate()
+			var pemBytes []byte
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
+			} else {
+				pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return &CertSignVerifier{
+				Cert:           pemBytes,
+				SignerVerifier: sv,
+				close:          sk.Close,
+			}, nil
+		}
+
 		k, err := sigs.SignerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
 		if err != nil {
 			return nil, errors.Wrap(err, "reading key")

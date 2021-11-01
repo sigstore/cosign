@@ -48,6 +48,21 @@ builds:
   env:
     - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
 
+- id: linux-pkcs11key-amd64
+  binary: cosign-linux-pkcs11key-amd64
+  main: ./cmd/cosign
+  flags:
+    - -trimpath
+  mod_timestamp: '{{ .CommitTimestamp }}'
+  goos:
+    - linux
+  goarch:
+    - amd64
+  ldflags:
+    - "{{ .Env.LDFLAGS }}"
+  tags:
+    - pkcs11key
+
 - id: darwin-amd64
   binary: cosign-darwin-amd64
   no_unique_dist_dir: true

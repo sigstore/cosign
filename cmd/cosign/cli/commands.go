@@ -70,6 +70,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Initialize())
 	cmd.AddCommand(Manifest())
 	cmd.AddCommand(PIVTool())
+	cmd.AddCommand(PKCS11Tool())
 	cmd.AddCommand(Policy())
 	cmd.AddCommand(PublicKey())
 	cmd.AddCommand(Sign())

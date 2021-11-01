@@ -33,6 +33,7 @@ require (
 require (
 	cloud.google.com/go/kms v1.0.0 // indirect
 	cuelang.org/go v0.4.0
+	github.com/ThalesIgnite/crypto11 v1.2.4
 	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.1 // indirect
@@ -41,6 +42,7 @@ require (
 	github.com/google/go-github/v39 v39.2.0
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/open-policy-agent/opa v0.34.0
 	github.com/prometheus/procfs v0.7.3 // indirect
