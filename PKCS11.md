@@ -7,7 +7,7 @@ This support is enabled through the [crypto11](https://github.com/ThalesIgnite/c
 
 ### Setup
 
-To get started, make sure you already have your PKCS11 module installed, and insert your PKCS11-compatible token. 
+To get started, make sure you already have your PKCS11 module installed, and insert your PKCS11-compatible token.
 
 Then, run the command `cosign pkcs11-tool list-tokens` to get the slot id of your token, as follows :
 
@@ -59,7 +59,7 @@ $ cosign sign --key "<PKCS11_URI>" gcr.io/dlorenc-vmtest2/demo
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.sig
 ```
 
-To verify, you can either use the PKCS11 token key directly:  
+To verify, you can either use the PKCS11 token key directly:
 
 ```shell
 $ cosign verify --key "<PKCS11_URI>" gcr.io/dlorenc-vmtest2/demo
@@ -72,7 +72,7 @@ The following checks were performed on each of these signatures:
 [{"critical":{"identity":{"docker-reference":"gcr.io/dlorenc-vmtest2/demo"},"image":{"docker-manifest-digest":"sha256:410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd"},"type":"cosign container image signature"},"optional":null}]
 ```
 
-Or export the public key and verify against that:  
+Or export the public key and verify against that:
 
 ```shell
 $ cosign public-key --key "<PKCS11_URI>" > pub.key

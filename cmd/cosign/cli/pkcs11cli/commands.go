@@ -71,7 +71,7 @@ func ListTokensCmd(_ context.Context, modulePath string) error {
 	return nil
 }
 
-func ListKeysUrisCmd(_ context.Context, modulePath string, slotId uint, pin string) error {
+func ListKeysUrisCmd(_ context.Context, modulePath string, SlotID uint, pin string) error {
 	if modulePath == "" || !filepath.IsAbs(modulePath) {
 		return flag.ErrHelp
 	}
@@ -90,7 +90,7 @@ func ListKeysUrisCmd(_ context.Context, modulePath string, slotId uint, pin stri
 
 	// Get token Info.
 	var tokenInfo pkcs11.TokenInfo
-	tokenInfo, err = ctx.GetTokenInfo(uint(slotId))
+	tokenInfo, err = ctx.GetTokenInfo(uint(SlotID))
 	if err != nil {
 		return errors.Wrap(err, "get token info")
 	}
@@ -114,7 +114,7 @@ func ListKeysUrisCmd(_ context.Context, modulePath string, slotId uint, pin stri
 	}
 
 	// Open a new session to the token.
-	session, err := ctx.OpenSession(slotId, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	session, err := ctx.OpenSession(SlotID, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		return errors.Wrap(err, "open session")
 	}
@@ -156,7 +156,7 @@ func ListKeysUrisCmd(_ context.Context, modulePath string, slotId uint, pin stri
 
 	// For each private key, get key label and key id then construct uri.
 	i := 0
-	fmt.Fprintf(os.Stdout, "Listing URIs of keys in slot '%d' of PKCS11 module '%s'\n", slotId, modulePath)
+	fmt.Fprintf(os.Stdout, "Listing URIs of keys in slot '%d' of PKCS11 module '%s'\n", SlotID, modulePath)
 	for _, handle := range handles {
 		attributes := []*pkcs11.Attribute{
 			pkcs11.NewAttribute(pkcs11.CKA_ID, nil),
@@ -165,16 +165,16 @@ func ListKeysUrisCmd(_ context.Context, modulePath string, slotId uint, pin stri
 		if attributes, err = ctx.GetAttributeValue(session, handle, attributes); err != nil {
 			return errors.Wrap(err, "get attributes")
 		}
-		keyId := attributes[0].Value
+		keyID := attributes[0].Value
 		keyLabel := attributes[1].Value
 
 		// If the object has neither a key id nor a key label, we skip it.
-		if (keyId == nil || len(keyId) == 0) && (keyLabel == nil || len(keyLabel) == 0) {
+		if (keyID == nil || len(keyID) == 0) && (keyLabel == nil || len(keyLabel) == 0) {
 			continue
 		}
 
-		slotIdInt := int(slotId)
-		pkcs11Uri := pkcs11key.NewPkcs11UriConfigFromInput(modulePath, &slotIdInt, tokenInfo.Label, keyLabel, keyId, pin)
+		SlotIDInt := int(SlotID)
+		pkcs11Uri := pkcs11key.NewPkcs11UriConfigFromInput(modulePath, &SlotIDInt, tokenInfo.Label, keyLabel, keyID, pin)
 		pkcs11UriStr, err := pkcs11Uri.Construct()
 		if err != nil {
 			return errors.Wrap(err, "construct pkcs11 uri")
@@ -184,8 +184,8 @@ func ListKeysUrisCmd(_ context.Context, modulePath string, slotId uint, pin stri
 		if keyLabel != nil && len(keyLabel) != 0 {
 			fmt.Fprintf(os.Stdout, "\tLabel: %s\n", string(keyLabel))
 		}
-		if keyId != nil && len(keyId) != 0 {
-			fmt.Fprintf(os.Stdout, "\tID: %s\n", hex.EncodeToString(keyId))
+		if keyID != nil && len(keyID) != 0 {
+			fmt.Fprintf(os.Stdout, "\tID: %s\n", hex.EncodeToString(keyID))
 		}
 		fmt.Fprintf(os.Stdout, "\tURI: %s\n", pkcs11UriStr)
 

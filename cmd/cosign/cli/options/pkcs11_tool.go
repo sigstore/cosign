@@ -35,7 +35,7 @@ func (o *PKCS11ToolListTokensOptions) AddFlags(cmd *cobra.Command) {
 // PKCS11ToolListKeysUrisOptions is the wrapper for `pkcs11-tool list-keys-uris` related options.
 type PKCS11ToolListKeysUrisOptions struct {
 	ModulePath string
-	SlotId     uint
+	SlotID     uint
 	Pin        string
 }
 
@@ -46,7 +46,7 @@ func (o *PKCS11ToolListKeysUrisOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.ModulePath, "module-path", "",
 		"absolute path to the PKCS11 module")
 
-	cmd.Flags().UintVar(&o.SlotId, "slot-id", 0,
+	cmd.Flags().UintVar(&o.SlotID, "slot-id", 0,
 		"id of the PKCS11 slot, uses 0 if empty")
 
 	cmd.Flags().StringVar(&o.Pin, "pin", "",

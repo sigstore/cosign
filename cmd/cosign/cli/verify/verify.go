@@ -101,7 +101,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 
 			// Since we'll be verifying a signature, we do not need to set askForPinIsNeeded to true
 			// because we only need access to the public key.
-			sk, err := pkcs11key.GetKeyWithUriConfig(pkcs11UriConfig, false)
+			sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, false)
 			if err != nil {
 				return errors.Wrap(err, "opening pkcs11 token key")
 			}

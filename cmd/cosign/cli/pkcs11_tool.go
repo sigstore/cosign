@@ -70,7 +70,7 @@ func PKCS11ToolListKeysUrisOptions() *cobra.Command {
 		Short: "list-keys-uris lists URIs of all keys in a PKCS11 token",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pkcs11cli.ListKeysUrisCmd(cmd.Context(), o.ModulePath, o.SlotId, o.Pin)
+			return pkcs11cli.ListKeysUrisCmd(cmd.Context(), o.ModulePath, o.SlotID, o.Pin)
 		},
 	}
 

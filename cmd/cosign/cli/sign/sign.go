@@ -337,7 +337,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 
 			// Since we'll be signing, we need to set askForPinIsNeeded to true
 			// because we need access to the private key.
-			sk, err := pkcs11key.GetKeyWithUriConfig(pkcs11UriConfig, true)
+			sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, true)
 			if err != nil {
 				return nil, err
 			}

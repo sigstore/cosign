@@ -12,7 +12,7 @@ cosign pkcs11-tool list-keys-uris [flags]
   -h, --help                    help for list-keys-uris
       --module-path string      absolute path to the PKCS11 module
       --pin string              pin of the PKCS11 slot, uses environment variable COSIGN_PKCS11_PIN if empty
-      --slot-id uint            id of the PKCS11 slot, uses 0 if empty
+      --slot-id int             id of the PKCS11 slot, uses 0 if empty
 
 ```
 

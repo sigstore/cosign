@@ -55,7 +55,7 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 				return errors.Wrap(err, "parsing pkcs11 uri")
 			}
 
-			sk, err := pkcs11key.GetKeyWithUriConfig(pkcs11UriConfig, false)
+			sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, false)
 			if err != nil {
 				return errors.Wrap(err, "opening pkcs11 token key")
 			}

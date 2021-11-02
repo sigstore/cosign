@@ -48,19 +48,19 @@ type Key struct {
 	cert   *x509.Certificate
 }
 
-func GetKeyWithUriConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key, error) {
+func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key, error) {
 	conf := &crypto11.Config{
 		Path: config.modulePath,
 		Pin:  config.pin,
 	}
 
 	// At least one of object and id must be specified.
-	if (config.keyLabel == nil || len(config.keyLabel) == 0) && (config.keyId == nil || len(config.keyId) == 0) {
-		return nil, errors.New("one of keyLabel and keyId must be set")
+	if (config.keyLabel == nil || len(config.keyLabel) == 0) && (config.keyID == nil || len(config.keyID) == 0) {
+		return nil, errors.New("one of keyLabel and keyID must be set")
 	}
 
 	// At least one of token and slot-id must be specified.
-	if config.tokenLabel == "" && config.slotId == nil {
+	if config.tokenLabel == "" && config.slotID == nil {
 		return nil, errors.New("one of token and slot id must be set")
 	}
 
@@ -81,8 +81,8 @@ func GetKeyWithUriConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 			}
 
 			var tokenInfo pkcs11.TokenInfo
-			if config.slotId != nil {
-				tokenInfo, err = p.GetTokenInfo(uint(*config.slotId))
+			if config.slotID != nil {
+				tokenInfo, err = p.GetTokenInfo(uint(*config.slotID))
 				if err != nil {
 					return nil, errors.Wrap(err, "get token info")
 				}
@@ -118,10 +118,10 @@ func GetKeyWithUriConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 		}
 	}
 
-	// We must set one slotId or tokenLabel, never both.
-	// slotId has priority over tokenLabel.
-	if config.slotId != nil {
-		conf.SlotNumber = config.slotId
+	// We must set one SlotID or tokenLabel, never both.
+	// SlotID has priority over tokenLabel.
+	if config.slotID != nil {
+		conf.SlotNumber = config.slotID
 	} else if config.tokenLabel != "" {
 		conf.TokenLabel = config.tokenLabel
 	}
@@ -131,10 +131,10 @@ func GetKeyWithUriConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 		return nil, err
 	}
 
-	// If both keyId and keyLabel are set, keyId has priority.
+	// If both keyID and keyLabel are set, keyID has priority.
 	var signer crypto11.Signer
-	if config.keyId != nil && len(config.keyId) != 0 {
-		signer, err = ctx.FindKeyPair(config.keyId, nil)
+	if config.keyID != nil && len(config.keyID) != 0 {
+		signer, err = ctx.FindKeyPair(config.keyID, nil)
 	} else if config.keyLabel != nil && len(config.keyLabel) != 0 {
 		signer, err = ctx.FindKeyPair(nil, config.keyLabel)
 	}
@@ -145,8 +145,8 @@ func GetKeyWithUriConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 	// Key's corresponding cert might not exist,
 	// therefore, we do not fail if it is the case.
 	var cert *x509.Certificate
-	if config.keyId != nil && len(config.keyId) != 0 {
-		cert, _ = ctx.FindCertificate(config.keyId, nil, nil)
+	if config.keyID != nil && len(config.keyID) != 0 {
+		cert, _ = ctx.FindCertificate(config.keyID, nil, nil)
 	} else if config.keyLabel != nil && len(config.keyLabel) != 0 {
 		cert, _ = ctx.FindCertificate(nil, config.keyLabel, nil)
 	}

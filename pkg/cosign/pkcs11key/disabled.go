@@ -33,7 +33,7 @@ type empty struct{} //nolint
 
 type Key struct{}
 
-func GetKeyWithUriConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key, error) {
+func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key, error) {
 	return nil, errors.New("unimplemented")
 }
 
