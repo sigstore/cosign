@@ -3,6 +3,7 @@ project_name: cosign
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
+  - DOCKER_CLI_EXPERIMENTAL=enabled
 
 # Prevents parallel builds from stepping on eachothers toes downloading modules
 before:
@@ -166,15 +167,14 @@ dockers:
   # cosign Image
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64"
-    use: buildx
     dockerfile: Dockerfile
+    goarch: amd64
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=amd64"
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8"
-    use: buildx
     goarch: arm64
     dockerfile: Dockerfile
     build_flag_templates:
@@ -185,15 +185,14 @@ dockers:
   # cosigned Image
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64"
-    use: buildx
     dockerfile: Dockerfile.cosigned
+    goarch: amd64
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=amd64"
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8"
-    use: buildx
     goarch: arm64
     dockerfile: Dockerfile.cosigned
     build_flag_templates:
@@ -204,15 +203,14 @@ dockers:
   # sget Image
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64"
-    use: buildx
     dockerfile: Dockerfile.sget
+    goarch: amd64
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
       - "--build-arg=ARCH=amd64"
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8"
-    use: buildx
     goarch: arm64
     dockerfile: Dockerfile.sget
     build_flag_templates:
@@ -236,6 +234,7 @@ docker_manifests:
 
 docker_signs:
   - artifacts: all
+    cmd: ./dist/cosign-linux-amd64
     args: [ "sign", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}" ]
 
 archives:
