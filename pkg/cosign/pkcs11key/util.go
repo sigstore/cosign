@@ -211,7 +211,7 @@ func (conf *Pkcs11UriConfig) Construct() (string, error) {
 	}
 	uriString += "?module-path=" + conf.modulePath
 	if conf.pin != "" {
-		uriString += "&pin-value" + conf.pin
+		uriString += "&pin-value=" + conf.pin
 	}
 
 	return uriString, nil
