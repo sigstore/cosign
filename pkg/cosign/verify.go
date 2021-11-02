@@ -260,7 +260,7 @@ func Verify(ctx context.Context, signedImgRef name.Reference, accessor Accessor,
 				// if we have a cert, we should check expiry
 				// The IntegratedTime verified in VerifyTlog
 				if cert != nil {
-					e, err := getTlogEntry(rekorClient, uuid)
+					e, err := GetTlogEntry(rekorClient, uuid)
 					if err != nil {
 						return err
 					}
