@@ -13,11 +13,12 @@
 # limitations under the License.
 
 ARG RUNTIME_IMAGE=gcr.io/distroless/base:debug
+ARG TARGETARCH
 
-FROM $RUNTIME_IMAGE
+FROM --platform=linux/${TARGETARCH} $RUNTIME_IMAGE
 
-ARG ARCH
-COPY cosign-linux-${ARCH} /bin/cosign
+ARG TARGETARCH
+COPY cosign-linux-${TARGETARCH} /bin/cosign
 
 USER nobody
 ENTRYPOINT [ "/bin/cosign" ]

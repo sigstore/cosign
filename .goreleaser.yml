@@ -168,55 +168,67 @@ dockers:
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64"
     dockerfile: Dockerfile
+    goos: linux
     goarch: amd64
     build_flag_templates:
       - "--platform=linux/amd64"
+      - "--no-cache"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=amd64"
+      - "--build-arg=TARGETARCH=amd64"
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8"
+    goos: linux
     goarch: arm64
     dockerfile: Dockerfile
     build_flag_templates:
       - "--platform=linux/arm64/v8"
+      - "--no-cache"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=arm64"
+      - "--build-arg=TARGETARCH=arm64"
 
   # cosigned Image
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64"
     dockerfile: Dockerfile.cosigned
+    goos: linux
     goarch: amd64
     build_flag_templates:
       - "--platform=linux/amd64"
+      - "--no-cache"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=amd64"
+      - "--build-arg=TARGETARCH=amd64"
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8"
+    goos: linux
     goarch: arm64
     dockerfile: Dockerfile.cosigned
     build_flag_templates:
       - "--platform=linux/arm64/v8"
+      - "--no-cache"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=arm64"
+      - "--build-arg=TARGETARCH=arm64"
 
   # sget Image
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64"
     dockerfile: Dockerfile.sget
+    goos: linux
     goarch: amd64
     build_flag_templates:
       - "--platform=linux/amd64"
+      - "--no-cache"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=amd64"
+      - "--build-arg=TARGETARCH=amd64"
   - image_templates:
       - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8"
+    goos: linux
     goarch: arm64
     dockerfile: Dockerfile.sget
     build_flag_templates:
       - "--platform=linux/arm64/v8"
+      - "--no-cache"
       - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-      - "--build-arg=ARCH=arm64"
+      - "--build-arg=TARGETARCH=arm64"
 
 docker_manifests:
   - name_template: gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}
