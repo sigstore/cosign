@@ -13,9 +13,8 @@
 # limitations under the License.
 
 ARG RUNTIME_IMAGE=gcr.io/distroless/base:debug
-ARG TARGETARCH
 
-FROM --platform=linux/${TARGETARCH} $RUNTIME_IMAGE
+FROM $RUNTIME_IMAGE
 
 ARG TARGETARCH
 COPY cosigned-linux-${TARGETARCH} /bin/cosigned
