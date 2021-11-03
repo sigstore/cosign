@@ -16,16 +16,17 @@ package pkcs11key
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
 )
+
+var pathAttrValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:[]@!$'()*+,=&"
+var queryAttrValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:[]@!$'()*+,=/?|"
 
 func insertInto(s string, interval int, sep rune) string {
 	var buffer bytes.Buffer
@@ -40,16 +41,66 @@ func insertInto(s string, interval int, sep rune) string {
 	return buffer.String()
 }
 
+func percentEncode(input []byte) string {
+	if input == nil || len(input) == 0 {
+		return ""
+	}
+
+	var stringBuilder strings.Builder
+	for i := 0; i < len(input); i++ {
+		stringBuilder.WriteByte('%')
+		stringBuilder.WriteString(fmt.Sprintf("%.2x", input[i]))
+	}
+
+	return stringBuilder.String()
+}
+
+func EncodeURIComponent(uriString string, isForPath bool, usePercenttEncoding bool) (string, error) {
+	var stringBuilder strings.Builder
+	var encodedUriString string
+	var allowedChars string
+
+	if isForPath {
+		allowedChars = pathAttrValueChars
+	} else {
+		allowedChars = queryAttrValueChars
+	}
+
+	for i := 0; i < len(uriString); i++ {
+		allowedChar := false
+
+		for j := 0; j < len(allowedChars); j++ {
+			if uriString[i] == allowedChars[j] {
+				allowedChar = true
+				break
+			}
+		}
+
+		if allowedChar {
+			stringBuilder.WriteByte(uriString[i])
+		} else {
+			if usePercenttEncoding {
+				stringBuilder.WriteString(percentEncode([]byte{uriString[i]}))
+			} else {
+				return "", errors.New("string contains an invalid character")
+			}
+		}
+	}
+
+	encodedUriString = stringBuilder.String()
+	return encodedUriString, nil
+}
+
 type Pkcs11UriConfig struct {
 	uriPathAttributes  url.Values
 	uriQueryAttributes url.Values
 
-	modulePath string
-	slotID     *int
-	tokenLabel string
-	keyLabel   []byte
-	keyID      []byte
-	pin        string
+	ModulePath string
+	SlotID     *int
+	TokenLabel string
+	KeyLabel   []byte
+	KeyID      []byte
+	Pin        string
 }
 
 func NewPkcs11UriConfig() *Pkcs11UriConfig {
@@ -63,12 +114,12 @@ func NewPkcs11UriConfigFromInput(modulePath string, slotID *int, tokenLabel stri
 	return &Pkcs11UriConfig{
 		uriPathAttributes:  make(url.Values),
 		uriQueryAttributes: make(url.Values),
-		modulePath:         modulePath,
-		slotID:             slotID,
-		tokenLabel:         tokenLabel,
-		keyLabel:           keyLabel,
-		keyID:              keyID,
-		pin:                pin,
+		ModulePath:         modulePath,
+		SlotID:             slotID,
+		TokenLabel:         tokenLabel,
+		KeyLabel:           keyLabel,
+		KeyID:              keyID,
+		Pin:                pin,
 	}
 }
 
@@ -97,7 +148,6 @@ func (conf *Pkcs11UriConfig) Parse(uriString string) error {
 	if err != nil {
 		return errors.Wrap(err, "parse uri query")
 	}
-
 	modulePath := uriQueryAttributes.Get("module-path")
 	pinValue := uriQueryAttributes.Get("pin-value")
 	tokenLabel := uriPathAttributes.Get("token")
@@ -132,16 +182,6 @@ func (conf *Pkcs11UriConfig) Parse(uriString string) error {
 			return errors.New("invalid uri: module-path or COSIGN_PKCS11_MODULE_PATH must be set to the absolute path of the PKCS11 module")
 		}
 	}
-	if !filepath.IsAbs(modulePath) {
-		return errors.New("invalid uri: module-path or COSIGN_PKCS11_MODULE_PATH does not point to an absolute path")
-	}
-	info, err := os.Stat(modulePath)
-	if err != nil {
-		return errors.Wrap(err, "access module-path or COSIGN_PKCS11_MODULE_PATH")
-	}
-	if !info.Mode().IsRegular() {
-		return errors.New("invalid uri: module-path or COSIGN_PKCS11_MODULE_PATH does not point to a regular file")
-	}
 
 	// At least one of object and id must be specified.
 	if keyLabel == "" && keyID == "" {
@@ -150,68 +190,72 @@ func (conf *Pkcs11UriConfig) Parse(uriString string) error {
 
 	conf.uriPathAttributes = uriPathAttributes
 	conf.uriQueryAttributes = uriQueryAttributes
-	conf.modulePath = modulePath
-	conf.tokenLabel = tokenLabel
-	conf.slotID = slotID
-	conf.keyLabel = []byte(keyLabel)
-	conf.keyID = []byte(keyID) // url.ParseQuery() already calls url.QueryUnescape() on the id, so we only need to cast the result into byte array
-	conf.pin = pin
+	conf.ModulePath = modulePath
+	conf.TokenLabel = tokenLabel
+	conf.SlotID = slotID
+	conf.KeyLabel = []byte(keyLabel)
+	conf.KeyID = []byte(keyID) // url.ParseQuery() already calls url.QueryUnescape() on the id, so we only need to cast the result into byte array
+	conf.Pin = pin
 
 	return nil
 }
 
 func (conf *Pkcs11UriConfig) Construct() (string, error) {
 
-	uriString := ""
+	var modulePath, pinValue, tokenLabel, slotID, keyID, keyLabel string
+	var err error
+
+	uriString := "pkcs11:"
 
 	// module-path should be specified and should point to the absolute path of the PKCS11 module.
-	if conf.modulePath == "" {
-		return uriString, errors.New("module path must be set to the absolute path of the PKCS11 module")
-	}
-	if !filepath.IsAbs(conf.modulePath) {
-		return uriString, errors.New("module path does not point to an absolute path")
-	}
-	info, err := os.Stat(conf.modulePath)
-	if err != nil {
-		return uriString, errors.Wrap(err, "access module path")
-	}
-	if !info.Mode().IsRegular() {
-		return uriString, errors.New("module path does not point to a regular file")
+	if conf.ModulePath == "" {
+		return "", errors.New("module path must be set to the absolute path of the PKCS11 module")
 	}
 
 	// At least one of keyLabel and keyID must be specified.
-	if (conf.keyLabel == nil || len(conf.keyLabel) == 0) && (conf.keyID == nil || len(conf.keyID) == 0) {
-		return uriString, errors.New("one of keyLabel and keyID must be set")
+	if (conf.KeyLabel == nil || len(conf.KeyLabel) == 0) && (conf.KeyID == nil || len(conf.KeyID) == 0) {
+		return "", errors.New("one of keyLabel and keyID must be set")
 	}
 
 	// At least one of tokenLabel and slotID must be specified.
-	if conf.tokenLabel == "" && conf.slotID == nil {
-		return uriString, errors.New("one of tokenLabel and slotID must be set")
+	if conf.TokenLabel == "" && conf.SlotID == nil {
+		return "", errors.New("one of tokenLabel and slotID must be set")
 	}
 
 	// Construct the URI.
-	uriString = "pkcs11:"
-	// We set either of tokenLabel and SlotID.
-	if conf.tokenLabel != "" {
-		uriString += "token=" + conf.tokenLabel
+	if conf.TokenLabel != "" {
+		tokenLabel, err = EncodeURIComponent(conf.TokenLabel, true, true)
+		if err != nil {
+			return "", errors.Wrap(err, "encode token label")
+		}
+		uriString += "token=" + tokenLabel
 	}
-	if conf.slotID != nil {
-		uriString += ";slot-id=" + fmt.Sprintf("%d", *conf.slotID)
+	if conf.SlotID != nil {
+		slotID = fmt.Sprintf("%d", *conf.SlotID)
+		uriString += ";slot-id=" + slotID
 	}
-	// If both keyLabel and keyID are set, keyID has priority.
-	if conf.keyID != nil && len(conf.keyID) != 0 {
-		keyIDStr := hex.EncodeToString(conf.keyID)
-
-		// Need to percent escape the keyID, we do it manually.
-		keyIDStr = insertInto(keyIDStr, 2, '%')
-		keyIDStr = "%" + keyIDStr
-		uriString += ";id=" + keyIDStr
-	} else if conf.keyLabel != nil && len(conf.keyLabel) != 0 {
-		uriString += ";object=" + string(conf.keyLabel)
+	if conf.KeyID != nil && len(conf.KeyID) != 0 {
+		keyID = percentEncode(conf.KeyID)
+		uriString += ";id=" + keyID
 	}
-	uriString += "?module-path=" + conf.modulePath
-	if conf.pin != "" {
-		uriString += "&pin-value=" + conf.pin
+	if conf.KeyLabel != nil && len(conf.KeyLabel) != 0 {
+		keyLabel, err = EncodeURIComponent(string(conf.KeyLabel), true, true)
+		if err != nil {
+			return "", errors.Wrap(err, "encode key label")
+		}
+		uriString += ";object=" + keyLabel
+	}
+	modulePath, err = EncodeURIComponent(conf.ModulePath, false, true)
+	if err != nil {
+		return "", errors.Wrap(err, "encode module path")
+	}
+	uriString += "?module-path=" + modulePath
+	if conf.Pin != "" {
+		pinValue, err = EncodeURIComponent(conf.Pin, false, true)
+		if err != nil {
+			return "", errors.Wrap(err, "encode pin")
+		}
+		uriString += "&pin-value=" + pinValue
 	}
 
 	return uriString, nil

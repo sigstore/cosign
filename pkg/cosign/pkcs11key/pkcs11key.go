@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/ThalesIgnite/crypto11"
 	"github.com/miekg/pkcs11"
@@ -50,18 +51,30 @@ type Key struct {
 
 func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key, error) {
 	conf := &crypto11.Config{
-		Path: config.modulePath,
-		Pin:  config.pin,
+		Path: config.ModulePath,
+		Pin:  config.Pin,
 	}
 
 	// At least one of object and id must be specified.
-	if (config.keyLabel == nil || len(config.keyLabel) == 0) && (config.keyID == nil || len(config.keyID) == 0) {
+	if (config.KeyLabel == nil || len(config.KeyLabel) == 0) && (config.KeyID == nil || len(config.KeyID) == 0) {
 		return nil, errors.New("one of keyLabel and keyID must be set")
 	}
 
 	// At least one of token and slot-id must be specified.
-	if config.tokenLabel == "" && config.slotID == nil {
+	if config.TokenLabel == "" && config.SlotID == nil {
 		return nil, errors.New("one of token and slot id must be set")
+	}
+
+	// modulePath must be specified and must point to the absolute path of the PKCS11 module.
+	if !filepath.IsAbs(config.ModulePath) {
+		return nil, errors.New("modulePath does not point to an absolute path")
+	}
+	info, err := os.Stat(config.ModulePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "access modulePath")
+	}
+	if !info.Mode().IsRegular() {
+		return nil, errors.New("modulePath does not point to a regular file")
 	}
 
 	// If no PIN was specified, and if askForPinIfNeeded is true, check to see if COSIGN_PKCS11_PIN env var is set.
@@ -71,59 +84,74 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 		// If COSIGN_PKCS11_PIN not set, check to see if CKF_LOGIN_REQUIRED is set in Token Info.
 		// If it is, and if askForPinIfNeeded is true, ask the user for the PIN, otherwise, do not.
 		if conf.Pin == "" {
-			p := pkcs11.New(config.modulePath)
-			if p == nil {
-				return nil, errors.New("failed to load PKCS11 module")
-			}
-			err := p.Initialize()
-			if err != nil {
-				return nil, errors.Wrap(err, "initialize PKCS11 module")
-			}
 
-			var tokenInfo pkcs11.TokenInfo
-			if config.slotID != nil {
-				tokenInfo, err = p.GetTokenInfo(uint(*config.slotID))
-				if err != nil {
-					return nil, errors.Wrap(err, "get token info")
+			askForPinIfNeededFunc := func() error {
+				p := pkcs11.New(config.ModulePath)
+				if p == nil {
+					return errors.New("failed to load PKCS11 module")
 				}
-			} else {
-				slots, err := p.GetSlotList(true)
+				err := p.Initialize()
 				if err != nil {
-					return nil, errors.Wrap(err, "get slot list of PKCS11 module")
+					return errors.Wrap(err, "initialize PKCS11 module")
 				}
+				defer p.Destroy()
+				defer p.Finalize()
 
-				for _, slot := range slots {
-					currentTokenInfo, err := p.GetTokenInfo(slot)
+				var tokenInfo pkcs11.TokenInfo
+				bTokenFound := false
+				if config.SlotID != nil {
+					tokenInfo, err = p.GetTokenInfo(uint(*config.SlotID))
 					if err != nil {
-						return nil, errors.Wrap(err, "get token info")
+						return errors.Wrap(err, "get token info")
 					}
-					if currentTokenInfo.Label == config.tokenLabel {
-						tokenInfo = currentTokenInfo
-						break
+				} else {
+					slots, err := p.GetSlotList(true)
+					if err != nil {
+						return errors.Wrap(err, "get slot list of PKCS11 module")
+					}
+
+					for _, slot := range slots {
+						currentTokenInfo, err := p.GetTokenInfo(slot)
+						if err != nil {
+							return errors.Wrap(err, "get token info")
+						}
+						if currentTokenInfo.Label == config.TokenLabel {
+							tokenInfo = currentTokenInfo
+							bTokenFound = true
+							break
+						}
+					}
+
+					if !bTokenFound {
+						return fmt.Errorf("could not find a slot for the token '%s'", config.TokenLabel)
 					}
 				}
-			}
 
-			if tokenInfo.Flags&pkcs11.CKF_LOGIN_REQUIRED == pkcs11.CKF_LOGIN_REQUIRED {
-				fmt.Fprintf(os.Stderr, "Enter PIN for key '%s' in PKCS11 token '%s': ", config.keyLabel, config.tokenLabel)
-				b, err := term.ReadPassword(0)
-				if err != nil {
-					return nil, errors.Wrap(err, "get pin")
+				if tokenInfo.Flags&pkcs11.CKF_LOGIN_REQUIRED == pkcs11.CKF_LOGIN_REQUIRED {
+					fmt.Fprintf(os.Stderr, "Enter PIN for key '%s' in PKCS11 token '%s': ", config.KeyLabel, config.TokenLabel)
+					b, err := term.ReadPassword(0)
+					if err != nil {
+						return errors.Wrap(err, "get pin")
+					}
+					conf.Pin = string(b)
 				}
-				conf.Pin = string(b)
-			}
 
-			p.Finalize()
-			p.Destroy()
+				return nil
+			}()
+
+			err := askForPinIfNeededFunc
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	// We must set one SlotID or tokenLabel, never both.
 	// SlotID has priority over tokenLabel.
-	if config.slotID != nil {
-		conf.SlotNumber = config.slotID
-	} else if config.tokenLabel != "" {
-		conf.TokenLabel = config.tokenLabel
+	if config.SlotID != nil {
+		conf.SlotNumber = config.SlotID
+	} else if config.TokenLabel != "" {
+		conf.TokenLabel = config.TokenLabel
 	}
 
 	ctx, err := crypto11.Configure(conf)
@@ -133,10 +161,10 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 
 	// If both keyID and keyLabel are set, keyID has priority.
 	var signer crypto11.Signer
-	if config.keyID != nil && len(config.keyID) != 0 {
-		signer, err = ctx.FindKeyPair(config.keyID, nil)
-	} else if config.keyLabel != nil && len(config.keyLabel) != 0 {
-		signer, err = ctx.FindKeyPair(nil, config.keyLabel)
+	if config.KeyID != nil && len(config.KeyID) != 0 {
+		signer, err = ctx.FindKeyPair(config.KeyID, nil)
+	} else if config.KeyLabel != nil && len(config.KeyLabel) != 0 {
+		signer, err = ctx.FindKeyPair(nil, config.KeyLabel)
 	}
 	if err != nil {
 		return nil, err
@@ -145,10 +173,10 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 	// Key's corresponding cert might not exist,
 	// therefore, we do not fail if it is the case.
 	var cert *x509.Certificate
-	if config.keyID != nil && len(config.keyID) != 0 {
-		cert, _ = ctx.FindCertificate(config.keyID, nil, nil)
-	} else if config.keyLabel != nil && len(config.keyLabel) != 0 {
-		cert, _ = ctx.FindCertificate(nil, config.keyLabel, nil)
+	if config.KeyID != nil && len(config.KeyID) != 0 {
+		cert, _ = ctx.FindCertificate(config.KeyID, nil, nil)
+	} else if config.KeyLabel != nil && len(config.KeyLabel) != 0 {
+		cert, _ = ctx.FindCertificate(nil, config.KeyLabel, nil)
 	}
 
 	return &Key{ctx: ctx, signer: signer, cert: cert}, nil

@@ -62,7 +62,7 @@ cosign-pivkey: $(SRCS)
 	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
 
 cosign-pkcs11key: $(SRCS)
-	go build -trimpath -tags=pkcs11key -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
+	CGO_ENABLED=1 go build -trimpath -tags=pkcs11key -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
 
 GOLANGCI_LINT_DIR = $(shell pwd)/bin
 GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
