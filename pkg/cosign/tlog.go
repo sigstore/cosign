@@ -17,6 +17,7 @@ package cosign
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -27,9 +28,10 @@ import (
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
-
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/rekor/pkg/generated/client/index"
+
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
@@ -124,7 +126,7 @@ func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
 	}
 }
 
-func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
+func GetTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParams()
 	params.SetEntryUUID(uuid)
 	resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
@@ -175,6 +177,21 @@ func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []b
 		return "", 0, err
 	}
 	return uuid, *verifiedEntry.Verification.InclusionProof.LogIndex, nil
+}
+
+func FindTLogEntriesByPayload(rekorClient *client.Rekor, payload []byte) (uuids []string, err error) {
+	params := index.NewSearchIndexParams()
+	params.Query = &models.SearchIndex{}
+
+	h := sha256.New()
+	h.Write(payload)
+	params.Query.Hash = fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(h.Sum(nil))))
+
+	searchIndex, err := rekorClient.Index.SearchIndex(params)
+	if err != nil {
+		return nil, err
+	}
+	return searchIndex.GetPayload(), nil
 }
 
 func verifyTLogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
