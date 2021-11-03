@@ -130,7 +130,7 @@ func TestConstructPKCS11URI(t *testing.T) {
 	require.Equal(t, uri, uriString)
 }
 
-func TestListTokensCmdCmd(t *testing.T) {
+func TestListTokensCmd(t *testing.T) {
 	ctx := context.Background()
 
 	tokens, err := GetTokens(ctx, modulePath)
