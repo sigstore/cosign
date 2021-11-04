@@ -27,6 +27,7 @@ cosign policy init [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --expires int                                                                              total expire duration in days
   -h, --help                                                                                     help for init
+      --issuer string                                                                            trusted issuer to use for identity tokens, e.g. https://accounts.google.com
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
   -m, --maintainers strings                                                                      list of maintainers to add to the root policy
       --namespace string                                                                         registry namespace that the root policy belongs to (default "ns")

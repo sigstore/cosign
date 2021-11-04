@@ -23,6 +23,7 @@ import (
 type PolicyInitOptions struct {
 	ImageRef    string
 	Maintainers []string
+	Issuer      string
 	Threshold   int
 	Expires     int
 	OutFile     string
@@ -38,6 +39,9 @@ func (o *PolicyInitOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.OutFile, "out", "o",
 		"output policy locally")
+
+	cmd.Flags().StringVar(&o.Issuer, "issuer", "",
+		"trusted issuer to use for identity tokens, e.g. https://accounts.google.com")
 
 	cmd.Flags().IntVar(&o.Threshold, "threshold", 1,
 		"threshold for root policy signers")

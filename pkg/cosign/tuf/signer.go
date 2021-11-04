@@ -30,7 +30,7 @@ var (
 
 type FulcioKeyVal struct {
 	Identity string `json:"identity"`
-	Issuer   string `json:"issuer"`
+	Issuer   string `json:"issuer,omitempty"`
 }
 
 func FulcioVerificationKey(email string, issuer string) *Key {
@@ -41,4 +41,10 @@ func FulcioVerificationKey(email string, issuer string) *Key {
 		Algorithms: KeyAlgorithms,
 		Value:      keyValBytes,
 	}
+}
+
+func GetFulcioKeyVal(key *Key) (*FulcioKeyVal, error) {
+	fulcioKeyVal := &FulcioKeyVal{}
+	err := json.Unmarshal(key.Value, fulcioKeyVal)
+	return fulcioKeyVal, err
 }

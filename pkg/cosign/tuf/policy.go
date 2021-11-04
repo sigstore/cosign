@@ -134,21 +134,41 @@ func (r *Root) Marshal() (*Signed, error) {
 	return &Signed{Signed: b}, nil
 }
 
-func (r *Root) ValidKey(keyID string, role string) bool {
-	// Checks if id is a valid key for role
-	if _, ok := r.Keys[keyID]; !ok {
-		return false
+func (r *Root) ValidKey(key *Key, role string) (string, error) {
+	// Checks if id is a valid key for role by matching the identity and issuer if specified.
+	// Returns the key ID or an error if invalid key.
+	fulcioKeyVal, err := GetFulcioKeyVal(key)
+	if err != nil {
+		return "", errors.Wrap(err, "error parsing signer key")
 	}
-	rootRole, ok := r.Roles[role]
-	if !ok {
-		return false
-	}
-	for _, id := range rootRole.KeyIDs {
-		if id == keyID {
-			return true
+
+	result := ""
+	for keyid, rootKey := range r.Keys {
+		fulcioRootKeyVal, err := GetFulcioKeyVal(rootKey)
+		if err != nil {
+			return "", errors.Wrap(err, "error parsing root key")
+		}
+		if fulcioKeyVal.Identity == fulcioRootKeyVal.Identity {
+			if fulcioRootKeyVal.Issuer == "" || fulcioRootKeyVal.Issuer == fulcioKeyVal.Issuer {
+				result = keyid
+				break
+			}
 		}
 	}
-	return false
+	if result == "" {
+		return "", errors.New("key not found in root keys")
+	}
+
+	rootRole, ok := r.Roles[role]
+	if !ok {
+		return "", errors.New("invalid role")
+	}
+	for _, id := range rootRole.KeyIDs {
+		if id == result {
+			return result, nil
+		}
+	}
+	return "", errors.New("key not found in role")
 }
 
 func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
@@ -166,12 +186,14 @@ func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func (s *Signed) AddOrUpdateSignature(signature Signature) error {
+func (s *Signed) AddOrUpdateSignature(key *Key, signature Signature) error {
 	root := &Root{}
 	if err := json.Unmarshal(s.Signed, root); err != nil {
 		return errors.Wrap(err, "unmarshalling root policy")
 	}
-	if !root.ValidKey(signature.KeyID, "root") {
+	var err error
+	signature.KeyID, err = root.ValidKey(key, "root")
+	if err != nil {
 		return errors.New("invalid root key")
 	}
 	signatures := []Signature{}
