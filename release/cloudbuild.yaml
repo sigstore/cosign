@@ -32,43 +32,52 @@ steps:
     echo "Checking out ${_TOOL_REF}"
     git checkout ${_TOOL_REF}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.2.0@sha256:96ef6fb02c5a56901dc3c2e0ca34eec9ed926ab8d936ea30ec38f9ec9db017a5'
+- name: 'gcr.io/projectsigstore/cosign:1.3.0@sha256:65de2f3f2844815ed20ab939319e3dad4238a9aaaf4893b22ec5702e9bc33755'
   dir: "go/src/sigstore/cosign"
   env:
   - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
   args:
   - 'dockerfile'
   - 'verify'
-  - '-base-image-only'
-  - '-key'
+  - '--base-image-only'
+  - '--key'
   - 'https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub'
   - './Dockerfile'
-  waitFor: ['-']
 
-- name: 'gcr.io/projectsigstore/cosign:v1.2.0@sha256:96ef6fb02c5a56901dc3c2e0ca34eec9ed926ab8d936ea30ec38f9ec9db017a5'
+- name: 'gcr.io/projectsigstore/cosign:1.3.0@sha256:65de2f3f2844815ed20ab939319e3dad4238a9aaaf4893b22ec5702e9bc33755'
   dir: "go/src/sigstore/cosign"
   env:
   - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
   args:
   - 'dockerfile'
   - 'verify'
-  - '-base-image-only'
-  - '-key'
+  - '--base-image-only'
+  - '--key'
   - 'https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub'
   - './Dockerfile.cosigned'
-  waitFor: ['-']
 
-- name: 'gcr.io/projectsigstore/cosign:v1.2.0@sha256:96ef6fb02c5a56901dc3c2e0ca34eec9ed926ab8d936ea30ec38f9ec9db017a5'
+- name: 'gcr.io/projectsigstore/cosign:1.3.0@sha256:65de2f3f2844815ed20ab939319e3dad4238a9aaaf4893b22ec5702e9bc33755'
+  dir: "go/src/sigstore/cosign"
+  env:
+  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
+  args:
+  - 'dockerfile'
+  - 'verify'
+  - '--base-image-only'
+  - '--key'
+  - 'https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub'
+  - './Dockerfile.sget'
+
+- name: 'gcr.io/projectsigstore/cosign:1.3.0@sha256:65de2f3f2844815ed20ab939319e3dad4238a9aaaf4893b22ec5702e9bc33755'
   dir: "go/src/sigstore/cosign"
   args:
   - 'verify'
-  - '-key'
+  - '--key'
   - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.2@sha256:24bb133da23e0d21a8e8a54416f652d753c7cb2ad8efb3e6a3ef652f597ada8f'
-  waitFor: ['-']
+  - 'ghcr.io/gythialy/golang-cross:v1.17.2-1@sha256:51f3c71079f6e1d7d0732b33bcc54ebd310f6ea155ac7dbe244a8695334bd50a'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.2@sha256:24bb133da23e0d21a8e8a54416f652d753c7cb2ad8efb3e6a3ef652f597ada8f
+- name: ghcr.io/gythialy/golang-cross:v1.17.2-1@sha256:51f3c71079f6e1d7d0732b33bcc54ebd310f6ea155ac7dbe244a8695334bd50a
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:

@@ -28,8 +28,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-openapi/runtime"
 	"github.com/pkg/errors"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
@@ -39,6 +39,9 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
+	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigstoresigs "github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -55,8 +58,34 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	var err error
 	var cert *x509.Certificate
 
-	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) {
+	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() {
 		return &options.PubKeyParseError{}
+	}
+
+	var b64sig string
+	targetSig, err := blob.LoadFileOrURL(sigRef)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			// ignore if file does not exist, it can be a base64 encoded string as well
+			return err
+		}
+		targetSig = []byte(sigRef)
+	}
+
+	if isb64(targetSig) {
+		b64sig = string(targetSig)
+	} else {
+		b64sig = base64.StdEncoding.EncodeToString(targetSig)
+	}
+
+	var blobBytes []byte
+	if blobRef == "-" {
+		blobBytes, err = io.ReadAll(os.Stdin)
+	} else {
+		blobBytes, err = blob.LoadFileOrURL(blobRef)
+	}
+	if err != nil {
+		return err
 	}
 
 	// Keys are optional!
@@ -114,32 +143,35 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		if err != nil {
 			return err
 		}
-	}
-
-	var b64sig string
-	targetSig, err := blob.LoadFileOrURL(sigRef)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			// ignore if file does not exist, it can be a base64 encoded string as well
+	case options.EnableExperimental():
+		rClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		if err != nil {
 			return err
 		}
-		targetSig = []byte(sigRef)
-	}
 
-	if isb64(targetSig) {
-		b64sig = string(targetSig)
-	} else {
-		b64sig = base64.StdEncoding.EncodeToString(targetSig)
-	}
+		uuids, err := cosign.FindTLogEntriesByPayload(rClient, blobBytes)
+		if err != nil {
+			return err
+		}
 
-	var blobBytes []byte
-	if blobRef == "-" {
-		blobBytes, err = io.ReadAll(os.Stdin)
-	} else {
-		blobBytes, err = blob.LoadFileOrURL(blobRef)
-	}
-	if err != nil {
-		return err
+		if len(uuids) == 0 {
+			return errors.New("could not find a tlog entry for provided blob")
+		}
+
+		tlogEntry, err := cosign.GetTlogEntry(rClient, uuids[0])
+		if err != nil {
+			return err
+		}
+
+		certs, err := extractCerts(tlogEntry)
+		if err != nil {
+			return err
+		}
+		cert = certs[0]
+		pubKey, err = sigstoresigs.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		if err != nil {
+			return err
+		}
 	}
 
 	sig, err := base64.StdEncoding.DecodeString(b64sig)
@@ -186,4 +218,48 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	}
 
 	return nil
+}
+
+func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {
+	b, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	if err != nil {
+		return nil, err
+	}
+
+	pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+	if err != nil {
+		return nil, err
+	}
+
+	eimpl, err := types.NewEntry(pe)
+	if err != nil {
+		return nil, err
+	}
+
+	var v001Entry *rekord.V001Entry
+	var ok bool
+	if v001Entry, ok = eimpl.(*rekord.V001Entry); !ok {
+		return nil, errors.New("unexpected tlog entry type")
+	}
+
+	publicKeyB64, err := v001Entry.RekordObj.Signature.PublicKey.Content.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey, err := base64.StdEncoding.DecodeString(string(publicKeyB64))
+	if err != nil {
+		return nil, err
+	}
+
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(publicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(certs) == 0 {
+		return nil, errors.New("no certs found in pem tlog")
+	}
+
+	return certs, err
 }
