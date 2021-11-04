@@ -41,6 +41,29 @@ func TestAddKey(t *testing.T) {
 	}
 }
 
+func TestValidKey(t *testing.T) {
+	root := NewRoot()
+	publicKey := FulcioVerificationKey("test@rekor.dev", "https://accounts.google.com")
+	if !root.AddKey(publicKey) {
+		t.Errorf("Adding new key failed")
+	}
+	role := &Role{KeyIDs: []string{}, Threshold: 1}
+	role.AddKeysWithThreshold([]*Key{publicKey}, 2)
+	root.Roles["root"] = role
+
+	if _, ok := root.Keys[publicKey.ID()]; !ok {
+		t.Errorf("Error adding public key")
+	}
+	if _, err := root.ValidKey(publicKey, "root"); err != nil {
+		t.Errorf("Error checking key validit %s", err)
+	}
+	// Now change issuer, and expect error.
+	publicKey = FulcioVerificationKey("test@rekor.dev", "")
+	if _, err := root.ValidKey(publicKey, "root"); err == nil {
+		t.Errorf("Expected invalid key with mismatching issuer")
+	}
+}
+
 func TestRootRole(t *testing.T) {
 	root := NewRoot()
 	publicKey := FulcioVerificationKey("test@rekor.dev", "")

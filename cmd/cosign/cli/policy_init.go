@@ -41,6 +41,7 @@ import (
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/sget"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/spf13/cobra"
 )
@@ -92,8 +93,8 @@ func initPolicy() *cobra.Command {
 				if !validEmail(email) {
 					panic(fmt.Sprintf("Invalid email format: %s", email))
 				} else {
-					// Currently no issuer is set: this would need to be set by the initializer.
-					key := tuf.FulcioVerificationKey(strings.TrimSpace(email), "")
+					// Currently only a single issuer can be set for all the maintainers.
+					key := tuf.FulcioVerificationKey(strings.TrimSpace(email), o.Issuer)
 					publicKeys = append(publicKeys, key)
 				}
 			}
@@ -187,7 +188,8 @@ func signPolicy() *cobra.Command {
 			if len(certs) == 0 || certs[0].EmailAddresses == nil {
 				return errors.New("error decoding certificate")
 			}
-			signerEmail := certs[0].EmailAddresses[0]
+			signerEmail := sigs.CertSubject(certs[0])
+			signerIssuer := sigs.CertIssuerExtension(certs[0])
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
@@ -225,17 +227,16 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Create and add signature
-			key := tuf.FulcioVerificationKey(signerEmail, "")
+			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
 			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(cmd.Context()))
 			if err != nil {
 				return errors.Wrap(err, "error occurred while during artifact signing")
 			}
 			signature := tuf.Signature{
-				KeyID:     key.ID(),
 				Signature: base64.StdEncoding.EncodeToString(sig),
 				Cert:      base64.StdEncoding.EncodeToString(sv.Cert),
 			}
-			if err := signed.AddOrUpdateSignature(signature); err != nil {
+			if err := signed.AddOrUpdateSignature(key, signature); err != nil {
 				return err
 			}
 

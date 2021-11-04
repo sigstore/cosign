@@ -17,7 +17,6 @@ package verify
 
 import (
 	"context"
-	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -149,33 +148,14 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified
 	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
 }
 
-func certSubject(c *x509.Certificate) string {
-	switch {
-	case c.EmailAddresses != nil:
-		return c.EmailAddresses[0]
-	case c.URIs != nil:
-		return c.URIs[0].String()
-	}
-	return ""
-}
-
-func certIssuerExtension(cert *x509.Certificate) string {
-	for _, ext := range cert.Extensions {
-		if ext.Id.String() == "1.3.6.1.4.1.57264.1.1" {
-			return string(ext.Value)
-		}
-	}
-	return ""
-}
-
 // PrintVerification logs details about the verification to stdout
 func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	switch output {
 	case "text":
 		for _, sig := range verified {
 			if cert, err := sig.Cert(); err == nil && cert != nil {
-				fmt.Println("Certificate subject: ", certSubject(cert))
-				if issuerURL := certIssuerExtension(cert); issuerURL != "" {
+				fmt.Println("Certificate subject: ", sigs.CertSubject(cert))
+				if issuerURL := sigs.CertIssuerExtension(cert); issuerURL != "" {
 					fmt.Println("Certificate issuer URL: ", issuerURL)
 				}
 			}
@@ -207,8 +187,8 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["Subject"] = certSubject(cert)
-				if issuerURL := certIssuerExtension(cert); issuerURL != "" {
+				ss.Optional["Subject"] = sigs.CertSubject(cert)
+				if issuerURL := sigs.CertIssuerExtension(cert); issuerURL != "" {
 					ss.Optional["Issuer"] = issuerURL
 				}
 			}

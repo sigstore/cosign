@@ -17,6 +17,7 @@ package signature
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"os"
 	"path/filepath"
 	"strings"
@@ -160,4 +161,23 @@ func PublicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKey
 		return nil, err
 	}
 	return cryptoutils.MarshalPublicKeyToPEM(pub)
+}
+
+func CertSubject(c *x509.Certificate) string {
+	switch {
+	case c.EmailAddresses != nil:
+		return c.EmailAddresses[0]
+	case c.URIs != nil:
+		return c.URIs[0].String()
+	}
+	return ""
+}
+
+func CertIssuerExtension(cert *x509.Certificate) string {
+	for _, ext := range cert.Extensions {
+		if ext.Id.String() == "1.3.6.1.4.1.57264.1.1" {
+			return string(ext.Value)
+		}
+	}
+	return ""
 }
