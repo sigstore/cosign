@@ -31,6 +31,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -183,7 +184,7 @@ func TestAttestVerify(t *testing.T) {
 	// Now attest the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
-		"custom"), t)
+		"custom", time.Duration(30*time.Second)), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -375,8 +376,7 @@ func TestMultipleSignatures(t *testing.T) {
 }
 
 func TestSignBlob(t *testing.T) {
-
-	var blob = "someblob"
+	blob := "someblob"
 	td1 := t.TempDir()
 	td2 := t.TempDir()
 	t.Cleanup(func() {
@@ -409,7 +409,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "")
+	sig, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", time.Duration(30*time.Second))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,7 +557,6 @@ func TestUploadDownload(t *testing.T) {
 			cleanup()
 		})
 	}
-
 }
 
 func TestUploadBlob(t *testing.T) {

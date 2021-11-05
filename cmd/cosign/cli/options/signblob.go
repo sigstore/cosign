@@ -16,6 +16,8 @@
 package options
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 )
 
@@ -29,6 +31,7 @@ type SignBlobOptions struct {
 	Rekor        RekorOptions
 	OIDC         OIDCOptions
 	Registry     RegistryOptions
+	Timeout      time.Duration
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -49,4 +52,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Output, "output", "",
 		"write the signature to FILE")
+
+	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
+		"HTTP Timeout defaults to 30 seconds")
 }

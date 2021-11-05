@@ -248,7 +248,7 @@ func signPolicy() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				entry, err := cosign.TLogUpload(rekorClient, sig, signed.Signed, rekorBytes)
+				entry, err := cosign.TLogUpload(rekorClient, sig, signed.Signed, rekorBytes, o.Timeout)
 				if err != nil {
 					return err
 				}

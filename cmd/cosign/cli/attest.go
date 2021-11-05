@@ -34,7 +34,7 @@ func Attest() *cobra.Command {
 		Example: `  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--upload=true|false] [--f] [--r] <image uri>
 
   # attach an attestation to a container image Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign attest --predicate <FILE> --type <TYPE> <IMAGE>
+  COSIGN_EXPERIMENTAL=1 cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
 
   # attach an attestation to a container image with a local key pair file
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key <IMAGE>
@@ -70,7 +70,8 @@ func Attest() *cobra.Command {
 				OIDCClientSecret:         o.OIDC.ClientSecret,
 			}
 			for _, img := range args {
-				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.NoUpload, o.Predicate.Path, o.Force, o.Predicate.Type); err != nil {
+				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.NoUpload,
+					o.Predicate.Path, o.Force, o.Predicate.Type, o.Timeout); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
