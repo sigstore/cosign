@@ -21,9 +21,9 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"io"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 

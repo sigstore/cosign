@@ -1,6 +1,6 @@
 ## cosign pkcs11-tool
 
-Provides utilities for retrieving information from a PKCS11 token
+Provides utilities for retrieving information from a PKCS11 token.
 
 ### Options
 
@@ -20,6 +20,6 @@ Provides utilities for retrieving information from a PKCS11 token
 ### SEE ALSO
 
 * [cosign](cosign.md)	 - 
-* [cosign pkcs11-tool list-tokens](cosign_pkcs11-tool_list-tokens.md)	     - list-tokens lists all PKCS11 tokens linked to a PKCS11 module
 * [cosign pkcs11-tool list-keys-uris](cosign_pkcs11-tool_list-keys-uris.md)	 - list-keys-uris lists URIs of all keys in a PKCS11 token
+* [cosign pkcs11-tool list-tokens](cosign_pkcs11-tool_list-tokens.md)	 - list-tokens lists all PKCS11 tokens linked to a PKCS11 module
 

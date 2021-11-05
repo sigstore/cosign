@@ -26,6 +26,7 @@ cosign clean <image uri>
 * [cosign initialize](cosign_initialize.md)	 - Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 * [cosign manifest](cosign_manifest.md)	 - Provides utilities for discovering images in and performing operations on Kubernetes manifests
 * [cosign piv-tool](cosign_piv-tool.md)	 - Provides utilities for managing a hardware token
+* [cosign pkcs11-tool](cosign_pkcs11-tool.md)	 - Provides utilities for retrieving information from a PKCS11 token.
 * [cosign policy](cosign_policy.md)	 - subcommand to manage a keyless policy.
 * [cosign public-key](cosign_public-key.md)	 - Gets a public key from the key-pair.
 * [cosign sign](cosign_sign.md)	 - Sign the supplied container image.

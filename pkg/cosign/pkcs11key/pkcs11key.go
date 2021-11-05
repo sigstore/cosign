@@ -56,7 +56,7 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 	}
 
 	// At least one of object and id must be specified.
-	if (config.KeyLabel == nil || len(config.KeyLabel) == 0) && (config.KeyID == nil || len(config.KeyID) == 0) {
+	if len(config.KeyLabel) == 0 && len(config.KeyID) == 0 {
 		return nil, errors.New("one of keyLabel and keyID must be set")
 	}
 
@@ -161,9 +161,9 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 
 	// If both keyID and keyLabel are set, keyID has priority.
 	var signer crypto11.Signer
-	if config.KeyID != nil && len(config.KeyID) != 0 {
+	if len(config.KeyID) != 0 {
 		signer, err = ctx.FindKeyPair(config.KeyID, nil)
-	} else if config.KeyLabel != nil && len(config.KeyLabel) != 0 {
+	} else if len(config.KeyLabel) != 0 {
 		signer, err = ctx.FindKeyPair(nil, config.KeyLabel)
 	}
 	if err != nil {
@@ -173,9 +173,9 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 	// Key's corresponding cert might not exist,
 	// therefore, we do not fail if it is the case.
 	var cert *x509.Certificate
-	if config.KeyID != nil && len(config.KeyID) != 0 {
+	if len(config.KeyID) != 0 {
 		cert, _ = ctx.FindCertificate(config.KeyID, nil, nil)
-	} else if config.KeyLabel != nil && len(config.KeyLabel) != 0 {
+	} else if len(config.KeyLabel) != 0 {
 		cert, _ = ctx.FindCertificate(nil, config.KeyLabel, nil)
 	}
 

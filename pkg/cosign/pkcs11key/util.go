@@ -15,7 +15,6 @@
 package pkcs11key
 
 import (
-	"bytes"
 	"fmt"
 	"net/url"
 	"os"
@@ -28,21 +27,8 @@ import (
 var pathAttrValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:[]@!$'()*+,=&"
 var queryAttrValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:[]@!$'()*+,=/?|"
 
-func insertInto(s string, interval int, sep rune) string {
-	var buffer bytes.Buffer
-	before := interval - 1
-	last := len(s) - 1
-	for i, char := range s {
-		buffer.WriteRune(char)
-		if i%interval == before && i != last {
-			buffer.WriteRune(sep)
-		}
-	}
-	return buffer.String()
-}
-
 func percentEncode(input []byte) string {
-	if input == nil || len(input) == 0 {
+	if len(input) == 0 {
 		return ""
 	}
 
@@ -57,7 +43,6 @@ func percentEncode(input []byte) string {
 
 func EncodeURIComponent(uriString string, isForPath bool, usePercenttEncoding bool) (string, error) {
 	var stringBuilder strings.Builder
-	var encodedUriString string
 	var allowedChars string
 
 	if isForPath {
@@ -87,8 +72,7 @@ func EncodeURIComponent(uriString string, isForPath bool, usePercenttEncoding bo
 		}
 	}
 
-	encodedUriString = stringBuilder.String()
-	return encodedUriString, nil
+	return stringBuilder.String(), nil
 }
 
 type Pkcs11UriConfig struct {
@@ -201,7 +185,6 @@ func (conf *Pkcs11UriConfig) Parse(uriString string) error {
 }
 
 func (conf *Pkcs11UriConfig) Construct() (string, error) {
-
 	var modulePath, pinValue, tokenLabel, slotID, keyID, keyLabel string
 	var err error
 
@@ -213,7 +196,7 @@ func (conf *Pkcs11UriConfig) Construct() (string, error) {
 	}
 
 	// At least one of keyLabel and keyID must be specified.
-	if (conf.KeyLabel == nil || len(conf.KeyLabel) == 0) && (conf.KeyID == nil || len(conf.KeyID) == 0) {
+	if len(conf.KeyLabel) == 0 && len(conf.KeyID) == 0 {
 		return "", errors.New("one of keyLabel and keyID must be set")
 	}
 
@@ -234,11 +217,11 @@ func (conf *Pkcs11UriConfig) Construct() (string, error) {
 		slotID = fmt.Sprintf("%d", *conf.SlotID)
 		uriString += ";slot-id=" + slotID
 	}
-	if conf.KeyID != nil && len(conf.KeyID) != 0 {
+	if len(conf.KeyID) != 0 {
 		keyID = percentEncode(conf.KeyID)
 		uriString += ";id=" + keyID
 	}
-	if conf.KeyLabel != nil && len(conf.KeyLabel) != 0 {
+	if len(conf.KeyLabel) != 0 {
 		keyLabel, err = EncodeURIComponent(string(conf.KeyLabel), true, true)
 		if err != nil {
 			return "", errors.Wrap(err, "encode key label")

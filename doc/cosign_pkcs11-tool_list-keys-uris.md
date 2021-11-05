@@ -1,6 +1,6 @@
 ## cosign pkcs11-tool list-keys-uris
 
-lists URIs of all keys in a PKCS11 token
+list-keys-uris lists URIs of all keys in a PKCS11 token
 
 ```
 cosign pkcs11-tool list-keys-uris [flags]
@@ -9,11 +9,10 @@ cosign pkcs11-tool list-keys-uris [flags]
 ### Options
 
 ```
-  -h, --help                    help for list-keys-uris
-      --module-path string      absolute path to the PKCS11 module
-      --pin string              pin of the PKCS11 slot, uses environment variable COSIGN_PKCS11_PIN if empty
-      --slot-id int             id of the PKCS11 slot, uses 0 if empty
-
+  -h, --help                 help for list-keys-uris
+      --module-path string   absolute path to the PKCS11 module
+      --pin string           pin of the PKCS11 slot, uses environment variable COSIGN_PKCS11_PIN if empty
+      --slot-id uint         id of the PKCS11 slot, uses 0 if empty
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +26,5 @@ cosign pkcs11-tool list-keys-uris [flags]
 
 ### SEE ALSO
 
-* [cosign pkcs11-tool](cosign_pkcs11-tool.md)	 - Provides utilities for retrieving information from a PKCS11 token
+* [cosign pkcs11-tool](cosign_pkcs11-tool.md)	 - Provides utilities for retrieving information from a PKCS11 token.
 
