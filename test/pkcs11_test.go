@@ -259,12 +259,17 @@ func TestSignAndVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	v, err := sk.Verifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	sig, err := sv.SignMessage(bytes.NewReader([]byte("hello, world!")))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = sv.VerifySignature(bytes.NewReader(sig), bytes.NewReader([]byte("hello, world!")))
+	err = v.VerifySignature(bytes.NewReader(sig), bytes.NewReader([]byte("hello, world!")))
 	if err != nil {
 		t.Fatal(err)
 	}

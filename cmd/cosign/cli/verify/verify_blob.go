@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/go-openapi/runtime"
 	"github.com/pkg/errors"
@@ -91,29 +90,13 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	// Keys are optional!
 	switch {
 	case ko.KeyRef != "":
-		// If -key starts with pkcs11:, we assume it is a PKCS11 URI and use it to get the PKCS11 Key.
-		if strings.HasPrefix(ko.KeyRef, "pkcs11:") {
-			pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
-			err := pkcs11UriConfig.Parse(ko.KeyRef)
-			if err != nil {
-				return errors.Wrap(err, "parsing pkcs11 uri")
-			}
-
-			sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, false)
-			if err != nil {
-				return errors.Wrap(err, "opening pkcs11 token key")
-			}
-			defer sk.Close()
-
-			pubKey, err = sk.Verifier()
-			if err != nil {
-				return errors.Wrap(err, "initializing pkcs11 token verifier")
-			}
-		} else {
-			pubKey, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
-			if err != nil {
-				return errors.Wrap(err, "loading public key")
-			}
+		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
+		if err != nil {
+			return errors.Wrap(err, "loading public key")
+		}
+		pkcs11Key, ok := pubKey.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
 		}
 	case ko.Sk:
 		sk, err := pivkey.GetKeyWithSlot(ko.Slot)

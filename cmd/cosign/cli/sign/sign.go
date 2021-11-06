@@ -327,31 +327,18 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 		}, nil
 
 	case ko.KeyRef != "":
-		// If -key starts with pkcs11:, we assume it is a PKCS11 URI and use it to get the PKCS11 Key.
-		if strings.HasPrefix(ko.KeyRef, "pkcs11:") {
-			pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
-			err := pkcs11UriConfig.Parse(ko.KeyRef)
-			if err != nil {
-				return nil, err
-			}
+		k, err := sigs.SignerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
+		if err != nil {
+			return nil, errors.Wrap(err, "reading key")
+		}
 
-			// Since we'll be signing, we need to set askForPinIsNeeded to true
-			// because we need access to the private key.
-			sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, true)
-			if err != nil {
-				return nil, err
-			}
-
-			sv, err := sk.SignerVerifier()
-			if err != nil {
-				return nil, err
-			}
-
-			// Handle the -cert flag.
-			// With PKCS11, we assume the certificate is in the same slot on the PKCS11
-			// token as the private key. If it's not there, show a warning to the
-			// user.
-			certFromPKCS11, err := sk.Certificate()
+		// Handle the -cert flag
+		// With PKCS11, we assume the certificate is in the same slot on the PKCS11
+		// token as the private key. If it's not there, show a warning to the
+		// user.
+		pkcs11Key, ok := k.(*pkcs11key.Key)
+		if ok {
+			certFromPKCS11, err := pkcs11Key.Certificate()
 			var pemBytes []byte
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
@@ -364,20 +351,13 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 
 			return &CertSignVerifier{
 				Cert:           pemBytes,
-				SignerVerifier: sv,
-				close:          sk.Close,
+				SignerVerifier: k,
+				close:          pkcs11Key.Close,
 			}, nil
 		}
-
-		k, err := sigs.SignerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
-		if err != nil {
-			return nil, errors.Wrap(err, "reading key")
-		}
-
 		certSigner := &CertSignVerifier{
 			SignerVerifier: k,
 		}
-		// Handle the -cert flag
 		if certPath == "" {
 			return certSigner, nil
 		}

@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/in-toto/in-toto-golang/in_toto"
@@ -82,29 +81,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 	// Keys are optional!
 	if keyRef != "" {
-		// If -key starts with pkcs11:, we assume it is a PKCS11 URI and use it to get the PKCS11 Key.
-		if strings.HasPrefix(keyRef, "pkcs11:") {
-			pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
-			err := pkcs11UriConfig.Parse(keyRef)
-			if err != nil {
-				return errors.Wrap(err, "parsing pkcs11 uri")
-			}
-
-			sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, false)
-			if err != nil {
-				return errors.Wrap(err, "opening pkcs11 token key")
-			}
-			defer sk.Close()
-
-			co.SigVerifier, err = sk.Verifier()
-			if err != nil {
-				return errors.Wrap(err, "initializing pkcs11 token verifier")
-			}
-		} else {
-			co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
-			if err != nil {
-				return errors.Wrap(err, "loading public key")
-			}
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
+		if err != nil {
+			return errors.Wrap(err, "loading public key")
+		}
+		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
 		}
 	} else if c.Sk {
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)

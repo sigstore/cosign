@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/pkg/errors"
 
@@ -47,32 +46,15 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 	var k signature.PublicKeyProvider
 	switch {
 	case opts.KeyRef != "":
-		// If -key starts with pkcs11:, we assume it is a PKCS11 URI and use it to get the PKCS11 Key.
-		if strings.HasPrefix(opts.KeyRef, "pkcs11:") {
-			pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
-			err := pkcs11UriConfig.Parse(opts.KeyRef)
-			if err != nil {
-				return errors.Wrap(err, "parsing pkcs11 uri")
-			}
-
-			sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, false)
-			if err != nil {
-				return errors.Wrap(err, "opening pkcs11 token key")
-			}
-			defer sk.Close()
-
-			pk, err := sk.Verifier()
-			if err != nil {
-				return errors.Wrap(err, "initializing pkcs11 token verifier")
-			}
-			k = pk
-		} else {
-			s, err := sigs.SignerFromKeyRef(ctx, opts.KeyRef, pf)
-			if err != nil {
-				return err
-			}
-			k = s
+		s, err := sigs.SignerFromKeyRef(ctx, opts.KeyRef, pf)
+		if err != nil {
+			return err
 		}
+		pkcs11Key, ok := s.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
+		}
+		k = s
 	case opts.Sk:
 		sk, err := pivkey.GetKeyWithSlot(opts.Slot)
 		if err != nil {

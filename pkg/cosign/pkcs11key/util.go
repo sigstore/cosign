@@ -24,6 +24,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	ReferenceScheme = "pkcs11:"
+)
+
 var pathAttrValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:[]@!$'()*+,=&"
 var queryAttrValueChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:[]@!$'()*+,=/?|"
 
