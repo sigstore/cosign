@@ -18,7 +18,7 @@ require (
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.3.3
 	github.com/manifoldco/promptui v0.9.0
-	github.com/open-policy-agent/opa v0.34.0
+	github.com/open-policy-agent/opa v0.34.1
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
@@ -32,9 +32,9 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211028175245-ba495a64dcb5
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.60.0
-	k8s.io/api v0.21.4
-	k8s.io/apimachinery v0.21.4
-	k8s.io/client-go v0.21.4
+	k8s.io/api v0.21.6
+	k8s.io/apimachinery v0.21.6
+	k8s.io/client-go v0.21.6
 	knative.dev/pkg v0.0.0-20211004133827-74ac82a333a4
 )
 
