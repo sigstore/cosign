@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
@@ -331,10 +332,32 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 			return nil, errors.Wrap(err, "reading key")
 		}
 
+		// Handle the -cert flag
+		// With PKCS11, we assume the certificate is in the same slot on the PKCS11
+		// token as the private key. If it's not there, show a warning to the
+		// user.
+		pkcs11Key, ok := k.(*pkcs11key.Key)
+		if ok {
+			certFromPKCS11, err := pkcs11Key.Certificate()
+			var pemBytes []byte
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
+			} else {
+				pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return &CertSignVerifier{
+				Cert:           pemBytes,
+				SignerVerifier: k,
+				close:          pkcs11Key.Close,
+			}, nil
+		}
 		certSigner := &CertSignVerifier{
 			SignerVerifier: k,
 		}
-		// Handle the -cert flag
 		if certPath == "" {
 			return certSigner, nil
 		}

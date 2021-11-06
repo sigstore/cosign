@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -92,6 +93,10 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
+		}
+		pkcs11Key, ok := pubKey.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
 		}
 	case ko.Sk:
 		sk, err := pivkey.GetKeyWithSlot(ko.Slot)

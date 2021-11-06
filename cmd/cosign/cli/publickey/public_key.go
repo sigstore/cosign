@@ -25,6 +25,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -48,6 +49,10 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		s, err := sigs.SignerFromKeyRef(ctx, opts.KeyRef, pf)
 		if err != nil {
 			return err
+		}
+		pkcs11Key, ok := s.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
 		}
 		k = s
 	case opts.Sk:

@@ -30,6 +30,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/oci"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -91,6 +92,10 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
+		}
+		pkcs11Key, ok := pubKey.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
 		}
 	} else if c.Sk {
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)

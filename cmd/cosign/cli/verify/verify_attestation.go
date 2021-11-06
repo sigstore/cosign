@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
@@ -83,6 +84,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
+		}
+		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
 		}
 	} else if c.Sk {
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)

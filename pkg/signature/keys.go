@@ -29,6 +29,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/git"
 	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
+	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
@@ -87,7 +88,28 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 	}
 
-	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
+	switch {
+	case strings.HasPrefix(keyRef, pkcs11key.ReferenceScheme):
+		pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
+		err := pkcs11UriConfig.Parse(keyRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "parsing pkcs11 uri")
+		}
+
+		// Since we'll be signing, we need to set askForPinIsNeeded to true
+		// because we need access to the private key.
+		sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, true)
+		if err != nil {
+			return nil, errors.Wrap(err, "opening pkcs11 token key")
+		}
+
+		sv, err := sk.SignerVerifier()
+		if err != nil {
+			return nil, errors.Wrap(err, "initializing pkcs11 token signer verifier")
+		}
+
+		return sv, nil
+	case strings.HasPrefix(keyRef, kubernetes.KeyReference):
 		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
 		if err != nil {
 			return nil, err
@@ -96,7 +118,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		if len(s.Data) > 0 {
 			return cosign.LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
 		}
-	} else if strings.HasPrefix(keyRef, gitlab.ReferenceScheme) {
+	case strings.HasPrefix(keyRef, gitlab.ReferenceScheme):
 		split := strings.Split(keyRef, "://")
 
 		if len(split) < 2 {
@@ -116,6 +138,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		return cosign.LoadECDSAPrivateKey([]byte(pk), []byte(pass))
+	default:
 	}
 
 	return loadKey(keyRef, pf)
@@ -133,7 +156,27 @@ func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 		}
 	}
 
-	if strings.HasPrefix(keyRef, gitlab.ReferenceScheme) {
+	if strings.HasPrefix(keyRef, pkcs11key.ReferenceScheme) {
+		pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
+		err := pkcs11UriConfig.Parse(keyRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "parsing pkcs11 uri")
+		}
+
+		// Since we'll be verifying a signature, we do not need to set askForPinIsNeeded to true
+		// because we only need access to the public key.
+		sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "opening pkcs11 token key")
+		}
+
+		v, err := sk.Verifier()
+		if err != nil {
+			return nil, errors.Wrap(err, "initializing pkcs11 token verifier")
+		}
+
+		return v, nil
+	} else if strings.HasPrefix(keyRef, gitlab.ReferenceScheme) {
 		split := strings.Split(keyRef, "://")
 
 		if len(split) < 2 {
