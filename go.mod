@@ -18,7 +18,7 @@ require (
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.3.3
 	github.com/manifoldco/promptui v0.9.0
-	github.com/open-policy-agent/opa v0.34.0
+	github.com/open-policy-agent/opa v0.34.1
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
@@ -39,22 +39,11 @@ require (
 )
 
 require (
-	cloud.google.com/go/kms v1.1.0 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.4
-	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/miekg/pkcs11 v1.0.3
-	github.com/onsi/gomega v1.16.0 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v1.1.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.10.0 // indirect
-	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	k8s.io/klog/v2 v2.20.0 // indirect
-	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
 )
