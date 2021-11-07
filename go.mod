@@ -5,6 +5,7 @@ go 1.16
 require (
 	cloud.google.com/go/storage v1.18.2
 	cuelang.org/go v0.4.0
+	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
 	github.com/go-openapi/runtime v0.21.0
 	github.com/go-openapi/strfmt v0.21.0
@@ -39,7 +40,6 @@ require (
 )
 
 require (
-	github.com/ThalesIgnite/crypto11 v1.2.4
 	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
