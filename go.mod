@@ -23,7 +23,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
 	github.com/sigstore/rekor v0.3.0
-	github.com/sigstore/sigstore v1.0.0
+	github.com/sigstore/sigstore v1.0.1-0.20211107224741-4e68d3c7fe38
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
@@ -39,7 +39,6 @@ require (
 )
 
 require (
-	cloud.google.com/go/kms v1.1.0 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.4
 	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
