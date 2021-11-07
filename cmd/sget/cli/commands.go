@@ -52,6 +52,10 @@ func New() *cobra.Command {
 		},
 	}
 	ro.AddFlags(cmd)
+
+	// Add sub-commands.
+	cmd.AddCommand(Version())
+
 	return cmd
 }
 
