@@ -50,7 +50,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /go/src/sigstore/cosign \
             --entrypoint="" \
-            ghcr.io/gythialy/golang-cross:v1.17.2-1@sha256:51f3c71079f6e1d7d0732b33bcc54ebd310f6ea155ac7dbe244a8695334bd50a \
+            ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae \
             make snapshot
 
       - name: check binaries
@@ -58,9 +58,3 @@ jobs:
           ./dist/cosign-linux-amd64 version
           ./dist/cosigned-linux-amd64 --help
           ./dist/sget-linux-amd64 --help
-
-      - name: check images
-        run: |
-          docker run gcr.io/honk-fake-project/cosign:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 version
-          docker run gcr.io/honk-fake-project/cosigned:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help
-          docker run gcr.io/honk-fake-project/sget:SNAPSHOT-${GITHUB_SHA:0:7}-amd64 --help

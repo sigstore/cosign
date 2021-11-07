@@ -15,3 +15,49 @@
 
 # We need a shell for a lot of redirection/piping to work
 defaultBaseImage: gcr.io/distroless/base:debug-nonroot
+
+builds:
+- id: cosign
+  dir: .
+  main: ./cmd/cosign
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  - -tags
+  - "{{ .Env.GIT_HASH }}"
+  - -tags
+  - "{{ .Env.GIT_VERSION }}"
+  ldflags:
+  - -extldflags "-static"
+  - "{{ .Env.LDFLAGS }}"
+
+- id: cosigned
+  dir: .
+  main: ./cmd/cosign/webhook
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  - --tags
+  - "{{ .Env.GIT_HASH }}"
+  - --tags
+  - "{{ .Env.GIT_VERSION }}"
+  ldflags:
+  - -extldflags "-static"
+  - "{{ .Env.LDFLAGS }}"
+
+- id: sget
+  dir: .
+  main: ./cmd/sget
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  - --tags
+  - "{{ .Env.GIT_HASH }}"
+  - --tags
+  - "{{ .Env.GIT_VERSION }}"
+  ldflags:
+  - -extldflags "-static"
+  - "{{ .Env.LDFLAGS }}"

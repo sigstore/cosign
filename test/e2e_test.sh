@@ -64,7 +64,7 @@ if (./cosign manifest verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigne
 
 # Run the built container to make sure it doesn't crash
 make ko-local
-img="ko.local:$(git rev-parse HEAD)"
+img="ko.local/cosign:$(git rev-parse HEAD)"
 docker run $img version
 
 echo "cleanup"

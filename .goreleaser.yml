@@ -5,7 +5,7 @@ env:
   - CGO_ENABLED=1
   - DOCKER_CLI_EXPERIMENTAL=enabled
 
-# Prevents parallel builds from stepping on eachothers toes downloading modules
+# Prevents parallel builds from stepping on each others toes downloading modules
 before:
   hooks:
   - go mod tidy
@@ -23,6 +23,11 @@ builds:
   goarch:
     - amd64
     - arm64
+    - arm
+    - s390x
+    - ppc64le
+  goarm:
+    - 7
   ldflags:
     - "{{ .Env.LDFLAGS }}"
   env:
@@ -108,6 +113,7 @@ builds:
     - CC=x86_64-w64-mingw32-gcc
     - CXX=x86_64-w64-mingw32-g++
   main: ./cmd/cosign
+  mod_timestamp: '{{ .CommitTimestamp }}'
   flags:
     - -trimpath
   goos:
@@ -124,6 +130,7 @@ builds:
   binary: cosigned-linux-{{ .Arch }}
   no_unique_dist_dir: true
   main: ./cmd/cosign/webhook
+  mod_timestamp: '{{ .CommitTimestamp }}'
   flags:
     - -trimpath
   goos:
@@ -131,6 +138,11 @@ builds:
   goarch:
     - amd64
     - arm64
+    - arm
+    - s390x
+    - ppc64le
+  goarm:
+    - 7
   ldflags:
     - "{{ .Env.LDFLAGS }}"
   env:
@@ -139,6 +151,7 @@ builds:
 - id: sget
   binary: sget-{{ .Os }}-{{ .Arch }}
   no_unique_dist_dir: true
+  mod_timestamp: '{{ .CommitTimestamp }}'
   main: ./cmd/sget
   flags:
     - -trimpath
@@ -149,9 +162,20 @@ builds:
   goarch:
     - amd64
     - arm64
+    - arm
+    - s390x
+    - ppc64le
+  goarm:
+    - 7
   ignore:
     - goos: windows
       goarch: arm64
+    - goos: windows
+      goarch: arm
+    - goos: windows
+      goarch: s390x
+    - goos: windows
+      goarch: ppc64le
   ldflags:
     - "{{ .Env.LDFLAGS }}"
   env:
@@ -177,92 +201,6 @@ signs:
     artifacts: binary
     ids:
       - sget
-
-dockers:
-  # cosign Image
-  - image_templates:
-      - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64"
-    dockerfile: Dockerfile
-    goos: linux
-    goarch: amd64
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      # TODO(dekkagaijin): remove suffix when race condition fixed
-      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}-amd64"
-      - "--build-arg=TARGETARCH=amd64"
-  - image_templates:
-      - "gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8"
-    goos: linux
-    goarch: arm64
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--platform=linux/arm64/v8"
-      # TODO(dekkagaijin): remove suffix when race condition fixed
-      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}-arm64"
-      - "--build-arg=TARGETARCH=arm64"
-
-  # cosigned Image
-  - image_templates:
-      - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64"
-    dockerfile: Dockerfile.cosigned
-    goos: linux
-    goarch: amd64
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      # TODO(dekkagaijin): remove suffix when race condition fixed
-      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}-amd64"
-      - "--build-arg=TARGETARCH=amd64"
-  - image_templates:
-      - "gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8"
-    goos: linux
-    goarch: arm64
-    dockerfile: Dockerfile.cosigned
-    build_flag_templates:
-      - "--platform=linux/arm64/v8"
-      # TODO(dekkagaijin): remove suffix when race condition fixed
-      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}-arm64"
-      - "--build-arg=TARGETARCH=arm64"
-
-  # sget Image
-  - image_templates:
-      - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64"
-    dockerfile: Dockerfile.sget
-    goos: linux
-    goarch: amd64
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      # TODO(dekkagaijin): remove suffix when race condition fixed
-      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}-amd64"
-      - "--build-arg=TARGETARCH=amd64"
-  - image_templates:
-      - "gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8"
-    goos: linux
-    goarch: arm64
-    dockerfile: Dockerfile.sget
-    build_flag_templates:
-      - "--platform=linux/arm64/v8"
-      # TODO(dekkagaijin): remove suffix when race condition fixed
-      - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}-arm64"
-      - "--build-arg=TARGETARCH=arm64"
-
-docker_manifests:
-  - name_template: gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}
-    image_templates:
-      - gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-amd64
-      - gcr.io/{{ .Env.PROJECT_ID }}/cosign:{{ .Version }}-arm64v8
-  - name_template: gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}
-    image_templates:
-      - gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-amd64
-      - gcr.io/{{ .Env.PROJECT_ID }}/cosigned:{{ .Version }}-arm64v8
-  - name_template: gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}
-    image_templates:
-      - gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-amd64
-      - gcr.io/{{ .Env.PROJECT_ID }}/sget:{{ .Version }}-arm64v8
-
-docker_signs:
-  - artifacts: all
-    cmd: ./dist/cosign-linux-amd64
-    args: [ "sign", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}" ]
 
 archives:
 - format: binary

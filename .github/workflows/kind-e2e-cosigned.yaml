@@ -169,6 +169,10 @@ jobs:
         sudo echo "127.0.0.1 $INSECURE_REGISTRY_NAME" | sudo tee -a /etc/hosts
 
     - name: Install cosigned
+      env:
+        GIT_HASH: $GITHUB_SHA
+        GIT_VERSION: ci
+        LDFLAGS: ""
       run: |
         ko apply -Bf config/
 
