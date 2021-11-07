@@ -16,22 +16,40 @@
 package cli
 
 import (
-	"testing"
+	"fmt"
 
-	"github.com/stretchr/testify/require"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/pkg/version"
 )
 
-func TestVersionText(t *testing.T) {
-	sut := version.GetVersionInfo()
-	require.NotEmpty(t, sut.String())
-}
+func Version() *cobra.Command {
+	var outputJSON bool
 
-func TestVersionJSON(t *testing.T) {
-	sut := version.GetVersionInfo()
-	json, err := sut.JSONString()
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Prints the cosign version",
+		Long:  "Prints the cosign version",
 
-	require.Nil(t, err)
-	require.NotEmpty(t, json)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := version.GetVersionInfo()
+			res := v.String()
+			if outputJSON {
+				j, err := v.JSONString()
+				if err != nil {
+					return errors.Wrap(err, "unable to generate JSON from version info")
+				}
+				res = j
+			}
+			fmt.Println(res)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&outputJSON, "json", false,
+		"print JSON instead of text")
+
+	ro.AddFlags(cmd)
+	return cmd
 }

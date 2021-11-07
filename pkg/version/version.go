@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package version
 
 import (
 	"encoding/json"
@@ -49,7 +49,7 @@ type Info struct {
 	Platform     string
 }
 
-func VersionInfo() Info {
+func GetVersionInfo() Info {
 	return Info{
 		GitVersion:   GitVersion,
 		GitCommit:    gitCommit,

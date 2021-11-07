@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/version"
 )
 
 func Version() *cobra.Command {
@@ -33,7 +33,7 @@ func Version() *cobra.Command {
 		Long:  "Prints the cosign version",
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			v := options.VersionInfo()
+			v := version.GetVersionInfo()
 			res := v.String()
 			if outputJSON {
 				j, err := v.JSONString()

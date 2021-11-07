@@ -18,11 +18,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime/debug"
 	"strings"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
 func main() {
@@ -47,20 +45,4 @@ func main() {
 	if err := cli.New().Execute(); err != nil {
 		log.Fatalf("error during command execution: %v", err)
 	}
-}
-
-func init() {
-	// look for the default version and replace it, if found, from runtime build info
-	if options.GitVersion != "devel" {
-		return
-	}
-
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
-		return
-	}
-
-	// Version is set in artifacts built with -X github.com/sigstore/cosign/cli.GitVersion=1.2.3
-	// Ensure version is also set when installed via go install github.com/sigstore/cosign/cmd/cosign
-	options.GitVersion = bi.Main.Version
 }
