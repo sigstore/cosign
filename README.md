@@ -544,6 +544,13 @@ The following checks were performed on each of these signatures:
 
 ### Why not use Notary v2
 
+It's hard to answer this briefly.
+This post contains some comparisons:
+
+[Notary V2 and Cosign](https://medium.com/@dlorenc/notary-v2-and-cosign-b816658f044d)
+
+If you find other comparison posts, please send a PR here and we'll link them all.
+
 ### Why not use containers/image signing
 
 `containers/image` signing is close to `cosign`, and we reuse payload formats.
