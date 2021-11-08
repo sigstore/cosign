@@ -59,11 +59,10 @@ cosign: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
 
 cosign-pivkey: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
+	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
 cosign-pkcs11key: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pkcs11key -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
-
+	CGO_ENABLED=1 go build -trimpath -tags=pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
 .PHONY: cosigned
 cosigned: ## Build cosigned binary
@@ -79,7 +78,6 @@ cross:
 		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
 	go build -trimpath -ldflags "$(LDFLAGS)" -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
 	shasum -a 256 cosign-$(GOOS)-$(GOARCH) > cosign-$(GOOS)-$(GOARCH).sha256 ))) \
-
 
 #####################
 # lint / test section
@@ -131,52 +129,6 @@ ko-local:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/cosign/cmd/cosign
 
-############
-# signing ci
-############
-
-.PHONY: sign-container
-sign-container: ko
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosign:$(GIT_HASH)
-
-.PHONY: sign-cosigned
-sign-cosigned:
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosigned:$(GIT_HASH)
-
-.PHONY: sign-sget
-sign-sget:
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/sget:$(GIT_HASH)
-
-
-##################
-# release section
-##################
-
-# used when releasing together with GCP CloudBuild
-.PHONY: release
-release:
-	LDFLAGS="$(LDFLAGS)" goreleaser release
-
-.PHONY: sign-cosign-release
-sign-cosign-release:
-	cosign sign --key "gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION}" -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) ${KO_PREFIX}/cosign:$(GIT_VERSION)
-
-.PHONY: sign-cosigned-release
-sign-cosigned-release:
-	cosign sign --key "gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION}" -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) ${KO_PREFIX}/cosigned:$(GIT_VERSION)
-
-.PHONY: sign-sget-release
-sign-sget-release:
-	cosign sign --key "gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION}" -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) ${KO_PREFIX}/sget:$(GIT_VERSION)
-
-.PHONY: sign-container-release
-sign-container-release: ko sign-cosign-release sign-cosigned-release sign-sget-release
-
-# used when need to validate the goreleaser
-.PHONY: snapshot
-snapshot:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
-
 ##################
 # help
 ##################
@@ -186,3 +138,6 @@ help: # Display help
 		'/^[^\t].+?:.*?##/ {\
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
 		}' $(MAKEFILE_LIST) | sort
+
+include release/release.mk
+include test/ci.mk
