@@ -38,14 +38,100 @@ DIFF = $(shell git diff --quiet >/dev/null 2>&1; if [ $$? -eq 1 ]; then echo "1"
 ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
+PLATFORMS=darwin linux windows
+ARCHITECTURES=amd64
 
 PKG=github.com/sigstore/cosign/pkg/version
+LDFLAGS=-X $(PKG).GitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE) -X $(PKG).buildDate=$(BUILD_DATE)
 
-LDFLAGS="-X $(PKG).GitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE) -X $(PKG).buildDate=$(BUILD_DATE)"
+SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
+
+GOLANGCI_LINT_DIR = $(shell pwd)/bin
+GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
+
+KO_PREFIX ?= gcr.io/projectsigstore
+export KO_DOCKER_REPO=$(KO_PREFIX)
 
 .PHONY: all lint test clean cosign cross
-
 all: cosign
+
+cosign: $(SRCS)
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
+
+cosign-pivkey: $(SRCS)
+	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
+
+cosign-pkcs11key: $(SRCS)
+	CGO_ENABLED=1 go build -trimpath -tags=pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
+
+.PHONY: cosigned
+cosigned: ## Build cosigned binary
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/webhook
+
+.PHONY: sget
+sget: ## Build sget binary
+	go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/sget
+
+.PHONY: cross
+cross:
+	$(foreach GOOS, $(PLATFORMS),\
+		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
+	go build -trimpath -ldflags "$(LDFLAGS)" -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
+	shasum -a 256 cosign-$(GOOS)-$(GOARCH) > cosign-$(GOOS)-$(GOARCH).sha256 ))) \
+
+#####################
+# lint / test section
+#####################
+
+golangci-lint:
+	rm -f $(GOLANGCI_LINT_BIN) || :
+	set -e ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0 ;\
+
+lint: golangci-lint ## Run golangci-lint linter
+	$(GOLANGCI_LINT_BIN) run -n
+
+test:
+	go test ./...
+
+clean:
+	rm -rf cosign
+	rm -rf cosigned
+	rm -rf sget
+	rm -rf dist/
+
+##########
+# ko build
+##########
+.PHONY: ko
+ko:
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		github.com/sigstore/cosign/cmd/cosign
+
+	# cosigned
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=${KO_PREFIX}/cosigned ko publish --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		github.com/sigstore/cosign/cmd/cosign/webhook
+
+	# sget
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		github.com/sigstore/cosign/cmd/sget
+
+.PHONY: ko-local
+ko-local:
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths --bare \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		github.com/sigstore/cosign/cmd/cosign
+
+##################
+# help
+##################
 
 help: # Display help
 	@awk -F ':|##' \
@@ -53,93 +139,5 @@ help: # Display help
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
 		}' $(MAKEFILE_LIST) | sort
 
-SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
-
-cosign: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags $(LDFLAGS) -o $@ ./cmd/cosign
-
-cosign-pivkey: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
-
-cosign-pkcs11key: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pkcs11key -ldflags $(LDFLAGS) -o cosign ./cmd/cosign
-
-GOLANGCI_LINT_DIR = $(shell pwd)/bin
-GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
-golangci-lint:
-	rm -f $(GOLANGCI_LINT_BIN) || :
-	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.0 ;\
-
-lint: golangci-lint ## Run golangci-lint linter
-	$(GOLANGCI_LINT_BIN) run -n
-
-
-PLATFORMS=darwin linux windows
-ARCHITECTURES=amd64
-
-cross:
-	$(foreach GOOS, $(PLATFORMS),\
-		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
-	go build -trimpath -ldflags $(LDFLAGS) -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
-	shasum -a 256 cosign-$(GOOS)-$(GOARCH) > cosign-$(GOOS)-$(GOARCH).sha256 ))) \
-
-test:
-	go test ./...
-
-clean:
-	rm -rf cosign
-
-.PHONY: ko
-ko:
-	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
-	KO_DOCKER_REPO=${KO_PREFIX}/cosign CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		github.com/sigstore/cosign/cmd/cosign
-
-	# cosigned
-	KO_DOCKER_REPO=${KO_PREFIX}/cosigned CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		github.com/sigstore/cosign/cmd/cosign/webhook
-
-	# sget
-	KO_DOCKER_REPO=${KO_PREFIX}/sget CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		github.com/sigstore/cosign/cmd/sget
-
-.PHONY: ko-local
-ko-local:
-	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
-	KO_DOCKER_REPO=${KO_PREFIX}/cosign CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
-		github.com/sigstore/cosign/cmd/cosign
-
-.PHONY: sign-container
-sign-container: ko
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosign:$(GIT_HASH)
-
-.PHONY: sign-cosigned
-sign-cosigned:
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosigned:$(GIT_HASH)
-
-.PHONY: sign-sget
-sign-sget:
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/sget:$(GIT_HASH)
-
-# used when releasing together with GCP CloudBuild
-.PHONY: release
-release:
-	LDFLAGS=$(LDFLAGS) goreleaser release
-
-# used when need to validate the goreleaser
-.PHONY: snapshot
-snapshot:
-	LDFLAGS=$(LDFLAGS) goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
-
-.PHONY: cosigned
-cosigned: lint ## Build cosigned binary
-	CGO_ENABLED=0 go build -trimpath -ldflags $(LDFLAGS) -o $@ ./cmd/cosign/webhook
-
-.PHONY: sget
-sget: ## Build sget binary
-	go build -trimpath -ldflags $(LDFLAGS) -o $@ ./cmd/sget
+include release/release.mk
+include test/ci.mk
