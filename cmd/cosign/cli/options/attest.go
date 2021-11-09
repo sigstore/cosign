@@ -16,6 +16,8 @@
 package options
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 )
 
@@ -26,6 +28,7 @@ type AttestOptions struct {
 	NoUpload  bool
 	Force     bool
 	Recursive bool
+	Timeout   time.Duration
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -60,4 +63,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")
+
+	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
+		"HTTP Timeout defaults to 30 seconds")
 }

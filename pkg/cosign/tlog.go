@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -55,27 +56,32 @@ func GetRekorPub() string {
 }
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
-func TLogUpload(rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
+func TLogUpload(rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte, timeout time.Duration) (*models.LogEntryAnon, error) {
 	re := rekorEntry(payload, signature, pemBytes)
 	returnVal := models.Rekord{
 		APIVersion: swag.String(re.APIVersion()),
 		Spec:       re.RekordObj,
 	}
-	return doUpload(rekorClient, &returnVal)
+	return doUpload(rekorClient, &returnVal, timeout)
 }
 
 // TLogUploadInTotoAttestation will upload and in-toto entry for the signature and public key to the transparency log.
-func TLogUploadInTotoAttestation(rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
+func TLogUploadInTotoAttestation(rekorClient *client.Rekor, signature, pemBytes []byte, timeout time.Duration) (*models.LogEntryAnon, error) {
 	e := intotoEntry(signature, pemBytes)
 	returnVal := models.Intoto{
 		APIVersion: swag.String(e.APIVersion()),
 		Spec:       e.IntotoObj,
 	}
-	return doUpload(rekorClient, &returnVal)
+	return doUpload(rekorClient, &returnVal, timeout)
 }
 
-func doUpload(rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEntryAnon, error) {
-	params := entries.NewCreateLogEntryParams()
+func doUpload(rekorClient *client.Rekor, pe models.ProposedEntry, timeout time.Duration) (*models.LogEntryAnon, error) {
+	var params *entries.CreateLogEntryParams
+	if timeout != time.Duration(0) {
+		params = entries.NewCreateLogEntryParamsWithTimeout(timeout)
+	} else {
+		params = entries.NewCreateLogEntryParams()
+	}
 	params.SetProposedEntry(pe)
 	resp, err := rekorClient.Entries.CreateLogEntry(params)
 	if err != nil {

@@ -33,7 +33,7 @@ func SignBlob() *cobra.Command {
 		Example: `  cosign sign-blob --key <key path>|<kms uri> <blob>
 
   # sign a blob with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign sign-blob <FILE>
+  COSIGN_EXPERIMENTAL=1 cosign --timeout 90s sign-blob <FILE>
 
   # sign a blob with a local key pair file
   cosign sign-blob --key cosign.key <FILE>
@@ -74,7 +74,7 @@ func SignBlob() *cobra.Command {
 				OIDCClientSecret:         o.OIDC.ClientSecret,
 			}
 			for _, blob := range args {
-				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.Output); err != nil {
+				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.Output, o.Timeout); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}

@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -51,7 +52,7 @@ type KeyOpts struct {
 }
 
 // nolint
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, output string) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, output string, timeout time.Duration) ([]byte, error) {
 	var payload []byte
 	var err error
 
@@ -93,7 +94,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		if err != nil {
 			return nil, err
 		}
-		entry, err := cosign.TLogUpload(rekorClient, sig, payload, rekorBytes)
+		entry, err := cosign.TLogUpload(rekorClient, sig, payload, rekorBytes, timeout)
 		if err != nil {
 			return nil, err
 		}

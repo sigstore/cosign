@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -44,7 +45,7 @@ import (
 
 //nolint
 func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string,
-	noUpload bool, predicatePath string, force bool, predicateType string) error {
+	noUpload bool, predicatePath string, force bool, predicateType string, timeout time.Duration) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -129,7 +130,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return err
 	} else if uploadTLog {
 		bundle, err := sign.UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUploadInTotoAttestation(r, signedPayload, b)
+			return cosign.TLogUploadInTotoAttestation(r, signedPayload, b, timeout)
 		})
 		if err != nil {
 			return err
