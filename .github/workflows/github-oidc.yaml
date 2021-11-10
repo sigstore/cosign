@@ -28,6 +28,7 @@ jobs:
       contents: read
     env:
       COSIGN_EXPERIMENTAL: "true"
+      GIT_HASH: $GITHUB_SHA
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
