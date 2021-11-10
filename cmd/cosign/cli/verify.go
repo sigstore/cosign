@@ -200,7 +200,11 @@ The blob may be specified as a path to a file or - for stdin.`,
   cosign verify-blob --key gitlab://[OWNER]/[PROJECT_NAME]  --signature $sig <blob>
 
   # Verify a signature against GitLab with project id
-  cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>`,
+  cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
+
+  # Verify a signature against a certificate
+  cosign verify-blob --cert <cert> --signature $sig <blob>
+`,
 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
