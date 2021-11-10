@@ -120,7 +120,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
 		}
 
-		verified, bundleVerified, err := cosign.VerifySignatures(ctx, ref, co)
+		verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 		if err != nil {
 			return err
 		}

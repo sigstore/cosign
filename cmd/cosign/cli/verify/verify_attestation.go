@@ -107,7 +107,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return err
 		}
 
-		verified, bundleVerified, err := cosign.VerifyAttestations(ctx, ref, co)
+		verified, bundleVerified, err := cosign.VerifyImageAttestations(ctx, ref, co)
 		if err != nil {
 			return err
 		}
