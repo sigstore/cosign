@@ -52,6 +52,10 @@ cosign verify-blob [flags]
 
   # Verify a signature against GitLab with project id
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
+
+  # Verify a signature against a certificate
+  cosign verify-blob --cert <cert> --signature $sig <blob>
+
 ```
 
 ### Options
