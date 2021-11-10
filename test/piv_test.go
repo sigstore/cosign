@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build resetyubikey
-// +build e2e
-// +build !pivkeydisabled
+//go:build resetyubikey && e2e && !pivkeydisabled
+// +build resetyubikey,e2e,!pivkeydisabled
 
 // DANGER
 // This test requires a yubikey to be present. It WILL reset the yubikey to exercise functionality.

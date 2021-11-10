@@ -49,6 +49,7 @@ require (
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/spf13/viper v1.8.1
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v1.1.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.10.0 // indirect
