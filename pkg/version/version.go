@@ -28,7 +28,7 @@ import (
 // This is the fallback data used when version information from git is not
 // provided via go ldflags (e.g. via Makefile).
 var (
-	// Output of "git describe". The prerequisite is that the branch should be
+	// OutputSignature of "git describe". The prerequisite is that the branch should be
 	// tagged using the correct versioning strategy.
 	GitVersion = "devel"
 	// SHA1 from git, output of $(git rev-parse HEAD)

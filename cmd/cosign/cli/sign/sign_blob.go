@@ -52,7 +52,7 @@ type KeyOpts struct {
 }
 
 // nolint
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, output string, timeout time.Duration) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSig string, outputCert string, timeout time.Duration) ([]byte, error) {
 	var payload []byte
 	var err error
 
@@ -99,37 +99,49 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 			return nil, err
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+
+		fmt.Fprintln(os.Stderr, "writing certificate to disk:", outputCert)
+		err = writeToDiskOrStdout(outputCert, b64, rekorBytes)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	err = writeToDiskOrStdout(outputSig, b64, sig)
+	if err != nil {
+		return nil, err
+	}
+
+	return sig, nil
+}
+
+func writeToDiskOrStdout(output string, b64 bool, content []byte) error {
 	if output != "" {
 		f, err := os.Create(output)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		defer f.Close()
 
 		if b64 {
-			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(sig)))
+			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(content)))
 			if err != nil {
-				return nil, err
+				return err
 			}
 		} else {
-			_, err = f.Write(sig)
+			_, err = f.Write(content)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
-
-		fmt.Printf("Signature wrote in the file %s\n", f.Name())
 	} else {
 		if b64 {
-			sig = []byte(base64.StdEncoding.EncodeToString(sig))
-			fmt.Println(string(sig))
-		} else if _, err := os.Stdout.Write(sig); err != nil {
+			content = []byte(base64.StdEncoding.EncodeToString(content))
+			fmt.Println(string(content))
+		} else if _, err := os.Stdout.Write(content); err != nil {
 			// No newline if using the raw signature
-			return nil, err
+			return err
 		}
 	}
-
-	return sig, nil
+	return nil
 }

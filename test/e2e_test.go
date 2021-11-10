@@ -409,7 +409,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", time.Duration(30*time.Second))
+	sig, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", time.Duration(30*time.Second))
 	if err != nil {
 		t.Fatal(err)
 	}

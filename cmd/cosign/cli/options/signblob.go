@@ -23,15 +23,16 @@ import (
 
 // SignBlobOptions is the top level wrapper for the sign-blob command.
 type SignBlobOptions struct {
-	Key          string
-	Base64Output bool
-	Output       string // TODO: this should be the root output file arg.
-	SecurityKey  SecurityKeyOptions
-	Fulcio       FulcioOptions
-	Rekor        RekorOptions
-	OIDC         OIDCOptions
-	Registry     RegistryOptions
-	Timeout      time.Duration
+	Key             string
+	Base64Output    bool
+	OutputSignature string // TODO: this should be the root output file arg.
+	OutputCert      string // TODO: this should be the root output file arg.
+	SecurityKey     SecurityKeyOptions
+	Fulcio          FulcioOptions
+	Rekor           RekorOptions
+	OIDC            OIDCOptions
+	Registry        RegistryOptions
+	Timeout         time.Duration
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -50,8 +51,11 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Base64Output, "b64", true,
 		"whether to base64 encode the output")
 
-	cmd.Flags().StringVar(&o.Output, "output", "",
+	cmd.Flags().StringVar(&o.OutputSignature, "output-sig", "",
 		"write the signature to FILE")
+
+	cmd.Flags().StringVar(&o.OutputCert, "output-cert", "",
+		"write the certificate to FILE")
 
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
 		"HTTP Timeout defaults to 30 seconds")
