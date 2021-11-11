@@ -334,9 +334,13 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 
 	payload, err := sig.Payload()
 	if err != nil {
-		return false, errors.Wrap(err, "checking reading payload")
+		return false, errors.Wrap(err, "reading payload")
 	}
-	signature, _ := sig.Base64Signature()
+	signature, err := sig.Base64Signature()
+	if err != nil {
+		return false, errors.Wrap(err, "reading base64signature")
+	}
+
 	alg, bundlehash, err := BundleHash(bundle.Payload.Body.(string), signature, payload)
 	h := sha256.Sum256(payload)
 	payloadHash := hex.EncodeToString(h[:])
