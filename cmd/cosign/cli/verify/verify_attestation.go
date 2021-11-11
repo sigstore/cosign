@@ -172,7 +172,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				if err := json.Unmarshal(decodedPayload, &cosignStatement); err != nil {
 					return fmt.Errorf("unmarshal CosignStatement: %w", err)
 				}
-				payload, err = json.Marshal(cosignStatement.Predicate)
+				payload, err = json.Marshal(cosignStatement)
 				if err != nil {
 					return fmt.Errorf("error when generating CosignStatement: %w", err)
 				}
@@ -181,7 +181,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				if err := json.Unmarshal(decodedPayload, &linkStatement); err != nil {
 					return fmt.Errorf("unmarshal LinkStatement: %w", err)
 				}
-				payload, err = json.Marshal(linkStatement.Predicate)
+				payload, err = json.Marshal(linkStatement)
 				if err != nil {
 					return fmt.Errorf("error when generating LinkStatement: %w", err)
 				}
@@ -190,7 +190,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				if err := json.Unmarshal(decodedPayload, &slsaProvenanceStatement); err != nil {
 					return fmt.Errorf("unmarshal ProvenanceStatement: %w", err)
 				}
-				payload, err = json.Marshal(slsaProvenanceStatement.Predicate)
+				payload, err = json.Marshal(slsaProvenanceStatement)
 				if err != nil {
 					return fmt.Errorf("error when generating ProvenanceStatement: %w", err)
 				}
@@ -199,7 +199,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				if err := json.Unmarshal(decodedPayload, &spdxStatement); err != nil {
 					return fmt.Errorf("unmarshal SPDXStatement: %w", err)
 				}
-				payload, err = json.Marshal(spdxStatement.Predicate)
+				payload, err = json.Marshal(spdxStatement)
 				if err != nil {
 					return fmt.Errorf("error when generating SPDXStatement: %w", err)
 				}
@@ -207,12 +207,18 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 			if len(cuePolicies) > 0 {
 				fmt.Fprintf(os.Stderr, "will be validating against CUE policies: %v\n", cuePolicies)
-				validationErrors = append(validationErrors, cue.ValidateJSON(payload, cuePolicies))
+				cueValidationErr := cue.ValidateJSON(payload, cuePolicies)
+				if cueValidationErr != nil {
+					validationErrors = append(validationErrors, cueValidationErr)
+				}
 			}
 
 			if len(regoPolicies) > 0 {
 				fmt.Fprintf(os.Stderr, "will be validating against Rego policies: %v\n", regoPolicies)
-				validationErrors = append(validationErrors, rego.ValidateJSON(payload, regoPolicies)...)
+				regoValidationErrs := rego.ValidateJSON(payload, regoPolicies)
+				if len(regoValidationErrs) > 0 {
+					validationErrors = append(validationErrors, regoValidationErrs...)
+				}
 			}
 		}
 
