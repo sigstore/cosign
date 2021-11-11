@@ -28,7 +28,7 @@ jobs:
       contents: read
     env:
       COSIGN_EXPERIMENTAL: "true"
-      GIT_HASH: $GITHUB_SHA
+      GIT_HASH: ${{ github.sha }}
       GIT_VERSION: latest
       GITHUB_RUN_ID: ${{ github.run_id }}
       GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
