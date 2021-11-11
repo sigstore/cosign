@@ -2,6 +2,9 @@
 
 ## v1.3.1
 
+* BREAKING [cosign/pkg]: `cosign.Verify` has been removed in favor of explicit `cosign.VerifyImageSignatures` and `cosign.VerifyImageAttestations`
+ (https://github.com/sigstore/cosign/pull/1026)
+
 ### Enhancements
 
 * Add ability for verify-blob to find signing cert in transparency log (https://github.com/sigstore/cosign/pull/991)
