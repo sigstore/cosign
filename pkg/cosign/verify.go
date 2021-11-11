@@ -343,9 +343,8 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 
 	if alg != "sha256" || bundlehash != payloadHash {
 		return false, errors.Wrap(err, "matching bundle to payload")
-	} else {
-		return true, nil
 	}
+	return true, nil
 }
 
 func BundleHash(bundleBody, signature string, payload []byte) (string, string, error) {
@@ -374,22 +373,22 @@ func BundleHash(bundleBody, signature string, payload []byte) (string, string, e
 		}
 
 		return *intotoObj.Content.Hash.Algorithm, *intotoObj.Content.Hash.Value, nil
-	} else {
-		err = json.Unmarshal(bodyDecoded, &rekord)
-		if err != nil {
-			return "", "", err
-		}
-
-		specMarshal, err := json.Marshal(rekord.Spec)
-		if err != nil {
-			return "", "", err
-		}
-		err = json.Unmarshal(specMarshal, &rekordObj)
-		if err != nil {
-			return "", "", err
-		}
-		return *rekordObj.Data.Hash.Algorithm, *rekordObj.Data.Hash.Value, nil
 	}
+
+	err = json.Unmarshal(bodyDecoded, &rekord)
+	if err != nil {
+		return "", "", err
+	}
+
+	specMarshal, err := json.Marshal(rekord.Spec)
+	if err != nil {
+		return "", "", err
+	}
+	err = json.Unmarshal(specMarshal, &rekordObj)
+	if err != nil {
+		return "", "", err
+	}
+	return *rekordObj.Data.Hash.Algorithm, *rekordObj.Data.Hash.Value, nil
 }
 
 func VerifySET(bundlePayload oci.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
