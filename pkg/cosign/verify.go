@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,6 +38,7 @@ import (
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -329,7 +331,65 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 	if err := checkExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
 		return false, errors.Wrap(err, "checking expiry on cert")
 	}
-	return true, nil
+
+	payload, err := sig.Payload()
+	if err != nil {
+		return false, errors.Wrap(err, "checking reading payload")
+	}
+	signature, _ := sig.Base64Signature()
+	alg, bundlehash, err := BundleHash(bundle.Payload.Body.(string), signature, payload)
+	h := sha256.Sum256(payload)
+	payloadHash := hex.EncodeToString(h[:])
+
+	if alg != "sha256" || bundlehash != payloadHash {
+		return false, errors.Wrap(err, "matching bundle to payload")
+	} else {
+		return true, nil
+	}
+}
+
+func BundleHash(bundleBody, signature string, payload []byte) (string, string, error) {
+	var toto models.Intoto
+	var rekord models.Rekord
+	var intotoObj models.IntotoV001Schema
+	var rekordObj models.RekordV001Schema
+
+	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
+	if err != nil {
+		return "", "", err
+	}
+	if len(signature) == 0 {
+		err = json.Unmarshal(bodyDecoded, &toto)
+		if err != nil {
+			return "", "", err
+		}
+
+		specMarshal, err := json.Marshal(toto.Spec)
+		if err != nil {
+			return "", "", err
+		}
+		err = json.Unmarshal(specMarshal, &intotoObj)
+		if err != nil {
+			return "", "", err
+		}
+
+		return *intotoObj.Content.Hash.Algorithm, *intotoObj.Content.Hash.Value, nil
+	} else {
+		err = json.Unmarshal(bodyDecoded, &rekord)
+		if err != nil {
+			return "", "", err
+		}
+
+		specMarshal, err := json.Marshal(rekord.Spec)
+		if err != nil {
+			return "", "", err
+		}
+		err = json.Unmarshal(specMarshal, &rekordObj)
+		if err != nil {
+			return "", "", err
+		}
+		return *rekordObj.Data.Hash.Algorithm, *rekordObj.Data.Hash.Value, nil
+	}
 }
 
 func VerifySET(bundlePayload oci.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {

@@ -137,20 +137,40 @@ func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon,
 	return nil, errors.New("empty response")
 }
 
+func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntry, error) {
+	var proposedEntry []models.ProposedEntry
+	signature, err := base64.StdEncoding.DecodeString(b64Sig)
+	if err != nil {
+		return nil, errors.Wrap(err, "decoding base64 signature")
+	}
+
+	if len(signature) == 0 {
+		te := intotoEntry(payload, pubKey)
+		entry := &models.Intoto{
+			APIVersion: swag.String(te.APIVersion()),
+			Spec:       te.IntotoObj,
+		}
+		proposedEntry = []models.ProposedEntry{entry}
+	} else {
+		re := rekorEntry(payload, signature, pubKey)
+		entry := &models.Rekord{
+			APIVersion: swag.String(re.APIVersion()),
+			Spec:       re.RekordObj,
+		}
+		proposedEntry = []models.ProposedEntry{entry}
+	}
+	return proposedEntry, nil
+}
+
 func FindTlogEntry(rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (uuid string, index int64, err error) {
 	searchParams := entries.NewSearchLogQueryParams()
 	searchLogQuery := models.SearchLogQuery{}
-	signature, err := base64.StdEncoding.DecodeString(b64Sig)
+	proposedEntry, err := proposedEntry(b64Sig, payload, pubKey)
 	if err != nil {
-		return "", 0, errors.Wrap(err, "decoding base64 signature")
-	}
-	re := rekorEntry(payload, signature, pubKey)
-	entry := &models.Rekord{
-		APIVersion: swag.String(re.APIVersion()),
-		Spec:       re.RekordObj,
+		return "", 0, err
 	}
 
-	searchLogQuery.SetEntries([]models.ProposedEntry{entry})
+	searchLogQuery.SetEntries(proposedEntry)
 
 	searchParams.SetEntry(&searchLogQuery)
 	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
