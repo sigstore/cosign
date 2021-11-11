@@ -29,6 +29,10 @@ jobs:
     env:
       COSIGN_EXPERIMENTAL: "true"
       GIT_HASH: $GITHUB_SHA
+      GIT_VERSION: latest
+      GITHUB_RUN_ID: ${{ github.run_id }}
+      GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+      KO_PREFIX: ghcr.io/sigstore/cosign
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -43,13 +47,5 @@ jobs:
       - name: Build and sign a container image
         run: |
           set -e
-
           # Build and publish an image.
-          image=$(ko publish --preserve-import-paths ./cmd/cosign)
-
-          # Sign the image and annotate relevant information.
-          cosign sign \
-            -a sha=${{ github.sha }} \
-            -a run_id=${{ github.run_id }} \
-            -a run_attempt=${{ github.run_attempt }} \
-            ${image}
+          make sign-keyless-container
