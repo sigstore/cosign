@@ -85,7 +85,7 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	if co.SigVerifier != nil || options.EnableExperimental() {
 		co.RootCerts = fulcio.GetRoots()
 
-		sp, bundleVerified, err := cosign.VerifySignatures(ctx, ref, co)
+		sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 		if err != nil {
 			return err
 		}

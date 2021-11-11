@@ -72,7 +72,7 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opt
 }
 
 // For testing
-var cosignVerifySignatures = cosign.VerifySignatures
+var cosignVerifySignatures = cosign.VerifyImageSignatures
 
 func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier, opts ...ociremote.Option) ([]oci.Signature, error) {
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
