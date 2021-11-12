@@ -113,6 +113,15 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oc
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
+func verifyOCIAttestation(ctx context.Context, verifier signature.Verifier, att oci.Signature) error {
+	payload, err := att.Payload()
+	if err != nil {
+		return err
+	}
+	verifier = newReverseDSSEVerifier(verifier)
+	return verifier.VerifySignature(nil, bytes.NewReader(payload), options.WithContext(ctx))
+}
+
 func validateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	verifier, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 	if err != nil {
@@ -330,9 +339,8 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 					return err
 				}
 			}
-			verifier = newReverseDSSEVerifier(verifier)
 
-			if err := verifyOCISignature(ctx, verifier, att); err != nil {
+			if err := verifyOCIAttestation(ctx, verifier, att); err != nil {
 				return err
 			}
 
