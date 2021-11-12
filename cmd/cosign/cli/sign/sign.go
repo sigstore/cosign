@@ -342,7 +342,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 		if ok {
 			certFromPKCS11, err := pkcs11Key.Certificate()
 			var pemBytes []byte
-			if err != nil {
+			if certFromPKCS11 == nil {
 				fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
 			} else {
 				pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
