@@ -62,6 +62,9 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	}
 
 	var b64sig string
+	if sigRef == "" {
+		return fmt.Errorf("missing flag '--signature'")
+	}
 	targetSig, err := blob.LoadFileOrURL(sigRef)
 	if err != nil {
 		if !os.IsNotExist(err) {
