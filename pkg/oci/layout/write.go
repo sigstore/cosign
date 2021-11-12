@@ -47,7 +47,7 @@ func imagePath(path string) string {
 }
 
 func signaturesPath(path string) string {
-	return filepath.Join(path, "signatures")
+	return filepath.Join(path, "sigs")
 }
 
 type pathFunc func(string) string
@@ -60,8 +60,5 @@ func write(path string, pf pathFunc, img v1.Image) error {
 		return err
 	}
 	// write image to disk
-	if err := layoutPath.AppendImage(img); err != nil {
-		return err
-	}
-	return nil
+	return layoutPath.AppendImage(img)
 }

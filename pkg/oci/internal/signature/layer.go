@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package siglayer
+package signature
 
 import (
 	"crypto/x509"
@@ -41,7 +41,7 @@ type sigLayer struct {
 	desc v1.Descriptor
 }
 
-func New(l v1.Layer, img oci.Signatures, desc v1.Descriptor) *sigLayer {
+func New(l v1.Layer, img oci.Signatures, desc v1.Descriptor) oci.Signature {
 	return &sigLayer{
 		Layer: l,
 		img:   img,

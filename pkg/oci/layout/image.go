@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/siglayer"
+	"github.com/sigstore/cosign/pkg/oci/internal/signature"
 )
 
 // SignedImage provides access to a remote image reference, and its signatures.
@@ -31,6 +31,7 @@ func SignedImage(path string) (oci.SignedImage, error) {
 	if err != nil {
 		return nil, err
 	}
+	// there should only be one image in the index, so we can pass in empty hash to get it
 	img, err := p.Image(v1.Hash{})
 	if err != nil {
 		return nil, err
@@ -61,7 +62,7 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	var signatures []oci.Signature
+	signatures := make([]oci.Signature, 0, len(layers))
 	for _, l := range layers {
 		d, err := partial.Descriptor(l)
 		if err != nil {
@@ -70,7 +71,7 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 		if d == nil {
 			continue
 		}
-		signatures = append(signatures, siglayer.New(l, s, *d))
+		signatures = append(signatures, signature.New(l, s, *d))
 	}
 	return signatures, nil
 }
@@ -81,6 +82,7 @@ func (i *image) Signatures() (oci.Signatures, error) {
 	if err != nil {
 		return nil, err
 	}
+	// there should only be one image in the index, so we can pass in empty hash to get it
 	img, err := sigPath.Image(v1.Hash{})
 	if err != nil {
 		return nil, err
