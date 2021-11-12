@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/oci/siglayer"
 )
 
 // SignedImage provides access to a remote image reference, and its signatures.
@@ -69,12 +70,7 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 		if d == nil {
 			continue
 		}
-		// convert descriptor to oci.Signature
-		signatures = append(signatures, &sigLayer{
-			Layer: l,
-			img:   s,
-			desc:  *d,
-		})
+		signatures = append(signatures, siglayer.New(l, s, *d))
 	}
 	return signatures, nil
 }

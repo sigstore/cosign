@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layout
+package siglayer
 
 import (
 	"crypto/x509"
@@ -37,8 +37,16 @@ const (
 
 type sigLayer struct {
 	v1.Layer
-	img  *sigs
+	img  oci.Signatures
 	desc v1.Descriptor
+}
+
+func New(l v1.Layer, img oci.Signatures, desc v1.Descriptor) *sigLayer {
+	return &sigLayer{
+		Layer: l,
+		img:   img,
+		desc:  desc,
+	}
 }
 
 var _ oci.Signature = (*sigLayer)(nil)

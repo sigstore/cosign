@@ -16,7 +16,6 @@
 package remote
 
 import (
-	"encoding/base64"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -24,21 +23,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 )
-
-func must(img v1.Image, err error) v1.Image {
-	if err != nil {
-		panic(err.Error())
-	}
-	return img
-}
-
-func mustDecode(s string) []byte {
-	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err.Error())
-	}
-	return b
-}
 
 func TestTagMethods(t *testing.T) {
 	rg := remoteGet

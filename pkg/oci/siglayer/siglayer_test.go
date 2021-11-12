@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package remote
+package siglayer
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -29,6 +30,46 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
 )
+
+type sigs struct {
+	v1.Image
+}
+
+// Get implements oci.Signatures
+func (s *sigs) Get() ([]oci.Signature, error) {
+	m, err := s.Manifest()
+	if err != nil {
+		return nil, err
+	}
+	signatures := make([]oci.Signature, 0, len(m.Layers))
+	for _, desc := range m.Layers {
+		layer, err := s.Image.LayerByDigest(desc.Digest)
+		if err != nil {
+			return nil, err
+		}
+		signatures = append(signatures, &sigLayer{
+			Layer: layer,
+			img:   s,
+			desc:  desc,
+		})
+	}
+	return signatures, nil
+}
+
+func must(img v1.Image, err error) v1.Image {
+	if err != nil {
+		panic(err.Error())
+	}
+	return img
+}
+
+func mustDecode(s string) []byte {
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err.Error())
+	}
+	return b
+}
 
 func TestSignature(t *testing.T) {
 	layer, err := random.Layer(300 /* byteSize */, types.DockerLayer)

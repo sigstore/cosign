@@ -18,26 +18,24 @@ package layout
 import (
 	"path/filepath"
 
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-
-	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/oci"
 )
 
-func WriteSignedImage(path string, ref name.Reference) error {
+// WriteSignedImage writes the image and all related signatures, attestations and attachments
+func WriteSignedImage(path string, si oci.SignedImage) error {
 	// First, write the image
-	if err := write(path, imagePath, ref); err != nil {
+	if err := write(path, imagePath, si); err != nil {
 		return errors.Wrap(err, "writing image")
 	}
-	// Then, write the signatures
-	sigRef, err := ociremote.SignatureTag(ref)
+	sigs, err := si.Signatures()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "getting signatures")
 	}
-	if err := write(path, signaturesPath, sigRef); err != nil {
+	if err := write(path, signaturesPath, sigs); err != nil {
 		return errors.Wrap(err, "writing signatures")
 	}
 	// TODO (priyawadhwa@) write attestations and attachments
@@ -54,15 +52,10 @@ func signaturesPath(path string) string {
 
 type pathFunc func(string) string
 
-func write(path string, pf pathFunc, ref name.Reference) error {
+func write(path string, pf pathFunc, img v1.Image) error {
 	p := pf(path)
 	// write empty image
 	layoutPath, err := layout.Write(p, empty.Index)
-	if err != nil {
-		return err
-	}
-	// get the image
-	img, err := remote.Image(ref)
 	if err != nil {
 		return err
 	}
