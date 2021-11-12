@@ -53,6 +53,7 @@ cosign attest [flags]
       --predicate string                                                                         path to the predicate file.
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timeout duration                                                                         HTTP Timeout defaults to 30 seconds (default 30s)
