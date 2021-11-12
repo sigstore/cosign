@@ -25,13 +25,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func must(img v1.Image, err error) v1.Image {
-	if err != nil {
-		panic(err.Error())
-	}
-	return img
-}
-
 func mustDecode(s string) []byte {
 	b, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
