@@ -51,6 +51,11 @@ func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
+func ImportKeyPair(pf PassFunc) (*Keys, error) {
+
+	return nil, nil
+}
+
 func GenerateKeyPair(pf PassFunc) (*Keys, error) {
 	priv, err := GeneratePrivateKey()
 	if err != nil {
