@@ -144,6 +144,8 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 		return nil, errors.Wrap(err, "decoding base64 signature")
 	}
 
+	// The fact that there's no signature (or empty rather), implies
+	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
 		te := intotoEntry(payload, pubKey)
 		entry := &models.Intoto{
