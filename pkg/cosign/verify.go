@@ -341,7 +341,7 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 		return false, errors.Wrap(err, "reading base64signature")
 	}
 
-	alg, bundlehash, err := BundleHash(bundle.Payload.Body.(string), signature, payload)
+	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature, payload)
 	h := sha256.Sum256(payload)
 	payloadHash := hex.EncodeToString(h[:])
 
@@ -351,7 +351,7 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 	return true, nil
 }
 
-func BundleHash(bundleBody, signature string, payload []byte) (string, string, error) {
+func bundleHash(bundleBody, signature string, payload []byte) (string, string, error) {
 	var toto models.Intoto
 	var rekord models.Rekord
 	var intotoObj models.IntotoV001Schema
@@ -361,6 +361,9 @@ func BundleHash(bundleBody, signature string, payload []byte) (string, string, e
 	if err != nil {
 		return "", "", err
 	}
+
+	// The fact that there's no signature (or empty rather), implies
+	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
 		err = json.Unmarshal(bodyDecoded, &toto)
 		if err != nil {
