@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	ftime "time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -184,7 +185,7 @@ func TestAttestVerify(t *testing.T) {
 	// Now attest the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
-		"custom", time.Duration(30*time.Second)), t)
+		"custom", false, ftime.Duration(30*time.Second)), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")

@@ -76,14 +76,6 @@ func ReplaceSignatures(base oci.Signatures) (oci.Signatures, error) {
 	}, nil
 }
 
-//func SetSignatures(base oci.Signatures, sigs ...oci.Signature) oci.Signatures {
-//	return &sigAppender{
-//		Image: img,
-//		base:  base,
-//		sigs:  sigs,
-//	}
-//}
-
 type sigAppender struct {
 	v1.Image
 	base oci.Signatures

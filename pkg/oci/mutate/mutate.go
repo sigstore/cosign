@@ -212,11 +212,11 @@ func (si *signedImage) Attestations() (oci.Signatures, error) {
 		}
 	}
 	if si.so.ro != nil {
-		if replace, err := si.so.ro.Replace(base, si.att); err != nil {
+		replace, err := si.so.ro.Replace(base, si.att)
+		if err != nil {
 			return nil, err
-		} else {
-			return AppendSignatures(replace)
 		}
+		return AppendSignatures(replace)
 	}
 	return AppendSignatures(base, si.att)
 }
@@ -289,21 +289,11 @@ func (sii *signedImageIndex) Attestations() (oci.Signatures, error) {
 		}
 	}
 	if sii.so.ro != nil {
-		if replace, err := sii.so.ro.Replace(base, sii.att); err != nil {
+		replace, err := sii.so.ro.Replace(base, sii.att)
+		if err != nil {
 			return nil, err
-		} else {
-			//sigs, err := base.Get()
-			//if err != nil {
-			//	return nil, err
-			//}
-			//
-			//if len(sigs) == 0 {
-			//	return AppendSignatures(replace,sii.att)
-			//}else{
-			//	return ReplaceSignatures(replace)
-			//}
-			return ReplaceSignatures(replace)
 		}
+		return ReplaceSignatures(replace)
 	}
 	return AppendSignatures(base, sii.att)
 }

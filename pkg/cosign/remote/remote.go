@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
@@ -43,7 +44,6 @@ type dd struct {
 
 type ro struct {
 	predicateURI string
-	replace      bool
 }
 
 var _ mutate.DupeDetector = (*dd)(nil)
@@ -140,10 +140,10 @@ func (r *ro) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures
 		}
 
 		if r.predicateURI == payloadData["payloadType"] {
-			fmt.Println("same found")
+			fmt.Fprintln(os.Stderr, "Attestation already present, not adding new one.")
 			continue
 		} else {
-			fmt.Println("adding")
+			fmt.Fprintln(os.Stderr, "Attestation not found, adding new attestation.")
 			sigsCopy = append(sigsCopy, s)
 		}
 	}
