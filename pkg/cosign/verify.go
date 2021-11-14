@@ -341,7 +341,7 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 		return false, errors.Wrap(err, "reading base64signature")
 	}
 
-	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature, payload)
+	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature)
 	h := sha256.Sum256(payload)
 	payloadHash := hex.EncodeToString(h[:])
 
@@ -351,7 +351,7 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 	return true, nil
 }
 
-func bundleHash(bundleBody, signature string, payload []byte) (string, string, error) {
+func bundleHash(bundleBody, signature string) (string, string, error) {
 	var toto models.Intoto
 	var rekord models.Rekord
 	var intotoObj models.IntotoV001Schema
