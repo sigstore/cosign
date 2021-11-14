@@ -17,17 +17,13 @@ package importkeypair
 
 import (
 	"context"
-	//"crypto"
 	"fmt"
 	"io"
 	"os"
 
-	//"strings"
-
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"golang.org/x/term"
-	//"github.com/sigstore/sigstore/pkg/cryptoutils"
-	//"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
 var (
@@ -36,19 +32,16 @@ var (
 )
 
 // nolint
-func ImportKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
+func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 
-	print("hello importkeypair!")
-	return nil
-
-	/*keys, err := cosign.ImportKeyPair(GetPass)
+	keys, err := cosign.ImportKeyPair(keyVal, GetPass)
 	if err != nil {
 		return err
 	}
 
-	if fileExists("cosign.key") {
+	if fileExists("import-cosign.key") {
 		var overwrite string
-		fmt.Fprint(os.Stderr, "File cosign.key already exists. Overwrite (y/n)? ")
+		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)
 		switch overwrite {
 		case "y", "Y":
@@ -60,16 +53,16 @@ func ImportKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
 		}
 	}
 	// TODO: make sure the perms are locked down first.
-	if err := os.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
+	if err := os.WriteFile("import-cosign.key", keys.PrivateBytes, 0600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
+	fmt.Fprintln(os.Stderr, "Private key written to import-cosign.key")
 
-	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
+	if err := os.WriteFile("import-cosign.pub", keys.PublicBytes, 0644); err != nil {
 		return err
 	} // #nosec G306
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
-	return nil*/
+	fmt.Fprintln(os.Stderr, "Public key written to import-cosign.pub")
+	return nil
 }
 
 func GetPass(confirm bool) ([]byte, error) {

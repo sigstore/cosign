@@ -56,7 +56,7 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 	return signature.LoadVerifier(pubKey, crypto.SHA256)
 }
 
-func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier, error) {
+func loadKey(keyPath string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return nil, err
@@ -65,7 +65,8 @@ func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier
 	if err != nil {
 		return nil, err
 	}
-	return cosign.LoadECDSAPrivateKey(kb, pass)
+
+	return cosign.LoadPrivateKey(kb, pass)
 }
 
 func loadPublicKey(raw []byte) (signature.Verifier, error) {

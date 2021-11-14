@@ -27,11 +27,11 @@ func ImportKeyPair() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "import-key-pair",
-		Short: "Imports an RSA key-pair.",
-		Long:  "Imports an RSA key-pair for signing.",
+		Short: "Imports an RSA or EC key-pair.",
+		Long:  "Imports an RSA or EC key-pair for signing.",
 		Example: `  cosign import-key-pair
 
-  # import key-pair and write to cosign.key and cosign.pub files
+  # import key-pair and write to import-cosign.key and import-cosign.pub files
   cosign import-key-pair
 
 CAVEATS:
@@ -39,7 +39,7 @@ CAVEATS:
   the COSIGN_PASSWORD environment variable to provide one.`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return importkeypair.ImportKeyPairCmd(cmd.Context(), o.KMS, args)
+			return importkeypair.ImportKeyPairCmd(cmd.Context(), o.Key, args)
 		},
 	}
 
