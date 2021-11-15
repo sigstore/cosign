@@ -45,7 +45,7 @@ import (
 
 //nolint
 func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string,
-	noUpload bool, predicatePath string, force bool, predicateType string, timeout time.Duration) error {
+	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -148,8 +148,17 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return err
 	}
 
+	signOpts := []mutate.SignOption{
+		mutate.WithDupeDetector(dd),
+	}
+
+	if replace {
+		ro := cremote.NewReplaceOp(predicateURI)
+		signOpts = append(signOpts, mutate.WithReplaceOp(ro))
+	}
+
 	// Attach the attestation to the entity.
-	newSE, err := mutate.AttachAttestationToEntity(se, sig, mutate.WithDupeDetector(dd))
+	newSE, err := mutate.AttachAttestationToEntity(se, sig, signOpts...)
 	if err != nil {
 		return err
 	}
