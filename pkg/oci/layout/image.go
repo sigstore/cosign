@@ -71,7 +71,7 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 		if d == nil {
 			continue
 		}
-		signatures = append(signatures, signature.New(l, s, *d))
+		signatures = append(signatures, signature.New(l, *d))
 	}
 	return signatures, nil
 }

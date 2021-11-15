@@ -64,7 +64,7 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 		if err != nil {
 			return nil, err
 		}
-		signatures = append(signatures, signature.New(layer, s, desc))
+		signatures = append(signatures, signature.New(layer, desc))
 	}
 	return signatures, nil
 }

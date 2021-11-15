@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.3.1
+
+* BREAKING [cosign/pkg]: `cosign.Verify` has been removed in favor of explicit `cosign.VerifyImageSignatures` and `cosign.VerifyImageAttestations`
+ (https://github.com/sigstore/cosign/pull/1026)
+
+### Enhancements
+
+* Add ability for verify-blob to find signing cert in transparency log (https://github.com/sigstore/cosign/pull/991)
+* root policy: add optional issuer to maintainer keys (https://github.com/sigstore/cosign/pull/999)
+* PKCS11 signing support (https://github.com/sigstore/cosign/pull/985)
+* Included timeout option for uploading to Rekor (https://github.com/sigstore/cosign/pull/1001)
+
+### Bug Fixes
+
+* Bump sigstore/sigstore to pickup a fix for azure kms (https://github.com/sigstore/cosign/pull/1011 / https://github.com/sigstore/cosign/pull/1028)
+
+### Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Panato (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Dennis Leon (@DennisDenuto)
+* Erkan Zileli (@erkanzileli)
+* Furkan Türkal (@Dentrax)
+* garantir-km (@garantir-km)
+* Jake Sanders (@dekkagaijin)
+* Naveen (@naveensrinivasan)
+
 ## v1.3.0
 
 * BREAKING: `verify-manifest` is now `manifest verify` (https://github.com/sigstore/cosign/pull/712)

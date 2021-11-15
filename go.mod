@@ -13,12 +13,13 @@ require (
 	github.com/go-piv/piv-go v1.9.0
 	github.com/google/certificate-transparency-go v1.1.2-0.20210728111105-5f7e9ba4be3d
 	github.com/google/go-cmp v0.5.6
-	github.com/google/go-containerregistry v0.6.1-0.20210922191434-34b7f00d7a60
+	github.com/google/go-containerregistry v0.6.1-0.20211111182346-7a6ee45528a9
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20211102215614-dd49079bb93d
 	github.com/google/go-github/v39 v39.2.0
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.3.3
 	github.com/manifoldco/promptui v0.9.0
+	github.com/miekg/pkcs11 v1.0.3
 	github.com/open-policy-agent/opa v0.34.1
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
@@ -41,12 +42,9 @@ require (
 
 require (
 	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/miekg/pkcs11 v1.0.3
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/urfave/cli v1.22.5 // indirect

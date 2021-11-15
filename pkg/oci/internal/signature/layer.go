@@ -37,14 +37,12 @@ const (
 
 type sigLayer struct {
 	v1.Layer
-	img  oci.Signatures
 	desc v1.Descriptor
 }
 
-func New(l v1.Layer, img oci.Signatures, desc v1.Descriptor) oci.Signature {
+func New(l v1.Layer, desc v1.Descriptor) oci.Signature {
 	return &sigLayer{
 		Layer: l,
-		img:   img,
 		desc:  desc,
 	}
 }
@@ -58,13 +56,8 @@ func (s *sigLayer) Annotations() (map[string]string, error) {
 
 // Payload implements oci.Signature
 func (s *sigLayer) Payload() ([]byte, error) {
-	l, err := s.img.LayerByDigest(s.desc.Digest)
-	if err != nil {
-		return nil, err
-	}
-
 	// Compressed is a misnomer here, we just want the raw bytes from the registry.
-	r, err := l.Compressed()
+	r, err := s.Layer.Compressed()
 	if err != nil {
 		return nil, err
 	}
