@@ -20,7 +20,6 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
-	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/internal/signature"
 )
@@ -58,20 +57,17 @@ var _ oci.Signatures = (*sigs)(nil)
 
 // Get implements oci.Signatures
 func (s *sigs) Get() ([]oci.Signature, error) {
-	layers, err := s.Image.Layers()
+	manifest, err := s.Image.Manifest()
 	if err != nil {
 		return nil, err
 	}
-	signatures := make([]oci.Signature, 0, len(layers))
-	for _, l := range layers {
-		d, err := partial.Descriptor(l)
+	signatures := make([]oci.Signature, 0, len(manifest.Layers))
+	for _, desc := range manifest.Layers {
+		l, err := s.Image.LayerByDigest(desc.Digest)
 		if err != nil {
 			return nil, err
 		}
-		if d == nil {
-			continue
-		}
-		signatures = append(signatures, signature.New(l, *d))
+		signatures = append(signatures, signature.New(l, desc))
 	}
 	return signatures, nil
 }
