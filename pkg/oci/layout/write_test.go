@@ -1,0 +1,83 @@
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package layout
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
+	"github.com/sigstore/cosign/pkg/oci/signed"
+	"github.com/sigstore/cosign/pkg/oci/static"
+)
+
+func TestReadWrite(t *testing.T) {
+	// write random signed image to disk
+	i, err := random.Image(300 /* byteSize */, 7 /* layers */)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	si := signed.Image(i)
+
+	want := 6 // Add 6 signatures
+	for i := 0; i < want; i++ {
+		annotationOption := static.WithAnnotations(map[string]string{"layer": fmt.Sprintf("%d", i)})
+		sig, err := static.NewSignature(nil, fmt.Sprintf("%d", i), annotationOption)
+		if err != nil {
+			t.Fatalf("static.NewSignature() = %v", err)
+		}
+		si, err = mutate.AttachSignatureToImage(si, sig)
+		if err != nil {
+			t.Fatalf("SignEntity() = %v", err)
+		}
+	}
+
+	tmp := t.TempDir()
+	if err := WriteSignedImage(tmp, si); err != nil {
+		t.Fatal(err)
+	}
+	// read the image and make sure the signatures exist
+	image, err := SignedImage(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigImage, err := image.Signatures()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigs, err := sigImage.Get()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sigs) != want {
+		t.Fatal("didn't get the expected number of signatures")
+	}
+	// make sure the annotation is correct
+	for i, sig := range sigs {
+		annotations, err := sig.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+		val, ok := annotations["layer"]
+		if !ok {
+			t.Fatal("expected annotation doesn't exist on signature")
+		}
+		if val != fmt.Sprintf("%d", i) {
+			t.Fatal("expected annotation isn't correct")
+		}
+	}
+}
