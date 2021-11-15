@@ -65,7 +65,6 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 		}
 		signatures = append(signatures, &sigLayer{
 			Layer: layer,
-			img:   s,
 			desc:  desc,
 		})
 	}
