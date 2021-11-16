@@ -38,8 +38,6 @@ import (
 	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
 )
 
-var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace that holds the public key for verification.")
-
 // webhookName holds the name of the validating webhook to set up with the
 // types we are watching.  If this changes, you must also change:
 //    ./config/500-webhook-configuration.yaml
@@ -78,7 +76,7 @@ var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 }
 
 func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	validator := cwebhook.NewValidator(ctx, *secretName)
+	validator := cwebhook.NewValidator(ctx)
 
 	return validation.NewAdmissionController(ctx,
 		// Name of the resource webhook.
@@ -108,7 +106,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 }
 
 func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	validator := cwebhook.NewValidator(ctx, *secretName)
+	validator := cwebhook.NewValidator(ctx)
 
 	return defaulting.NewAdmissionController(ctx,
 		// Name of the resource webhook.

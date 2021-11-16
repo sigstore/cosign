@@ -43,6 +43,8 @@ require (
 require (
 	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
@@ -51,6 +53,8 @@ require (
 	go.opentelemetry.io/proto/otlp v0.10.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
+	golang.org/x/tools v0.1.7 // indirect
 	k8s.io/klog/v2 v2.20.0 // indirect
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
+	sigs.k8s.io/controller-runtime v0.9.7 // indirect
 )

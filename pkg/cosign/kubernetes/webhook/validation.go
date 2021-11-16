@@ -27,12 +27,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/logging"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/sigstore/pkg/signature"
+	v1alpha1 "github.com/sigstore/cosign/pkg/cosign/kubernetes/api/v1alpha1"
 )
 
 func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) error {
@@ -84,37 +84,29 @@ func validSignatures(ctx context.Context, ref name.Reference, verifier signature
 	return sigs, err
 }
 
-func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *apis.FieldError) {
+func getKeys(ctx context.Context, keyMappings []v1alpha1.KeyToImageMapping, keyContents []v1alpha1.Key) ([]*ecdsa.PublicKey, *apis.FieldError) {
 	keys := []*ecdsa.PublicKey{}
 	errs := []error{}
 
-	logging.FromContext(ctx).Debugf("Got public key: %v", cfg["cosign.pub"])
-
-	pems := parsePems(cfg["cosign.pub"])
-	for _, p := range pems {
+	for _, keyMapping := range keyMappings {
 		// TODO: (@dlorenc) check header
-		key, err := x509.ParsePKIXPublicKey(p.Bytes)
-		if err != nil {
-			errs = append(errs, err)
-		} else {
-			keys = append(keys, key.(*ecdsa.PublicKey))
+		for _, keyContent := range keyContents{
+			if(keyContent.Name == keyMapping.Name) {
+				pemBlock, _ := pem.Decode([]byte(keyContent.PublicKey))
+				if pemBlock == nil {
+					errs = append(errs, errors.New("error decoding key specified in policy"))
+				}
+				key, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
+				if err != nil {
+					errs = append(errs, err)
+				} else {
+					keys = append(keys, key.(*ecdsa.PublicKey))
+				}
+			} 
 		}
 	}
 	if keys == nil {
 		return nil, apis.ErrGeneric(fmt.Sprintf("malformed cosign.pub: %v", errs), apis.CurrentField)
 	}
 	return keys, nil
-}
-
-func parsePems(b []byte) []*pem.Block {
-	p, rest := pem.Decode(b)
-	if p == nil {
-		return nil
-	}
-	pems := []*pem.Block{p}
-
-	if rest != nil {
-		return append(pems, parsePems(rest)...)
-	}
-	return pems
 }
