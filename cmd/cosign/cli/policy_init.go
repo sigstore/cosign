@@ -52,7 +52,7 @@ func validEmail(email string) bool {
 }
 
 func rootPath(imageRef string) string {
-	return filepath.Join(imageRef, "root.json")
+	return filepath.Join(imageRef, "root")
 }
 
 func Policy() *cobra.Command {
