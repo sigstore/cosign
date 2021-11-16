@@ -25,19 +25,21 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/kubernetes/api/v1alpha1"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	fakekube "knative.dev/pkg/client/injection/kube/client/fake"
-	fakesecret "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
+	fakeDynamicClient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	rtesting "knative.dev/pkg/reconciler/testing"
-	"knative.dev/pkg/system"
 )
 
 func TestValidatePodSpec(t *testing.T) {
@@ -46,24 +48,6 @@ func TestValidatePodSpec(t *testing.T) {
 	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
 
 	ctx, _ := rtesting.SetupFakeContext(t)
-	si := fakesecret.Get(ctx)
-
-	secretName := "blah"
-
-	si.Informer().GetIndexer().Add(&corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      secretName,
-		},
-		Data: map[string][]byte{
-			// Random public key (cosign generate-key-pair) 2021-09-25
-			"cosign.pub": []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
-UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
------END PUBLIC KEY-----
-`),
-		},
-	})
 
 	kc := fakekube.Get(ctx)
 	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
@@ -72,7 +56,51 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		},
 	}, metav1.CreateOptions{})
 
-	v := NewValidator(ctx, secretName)
+	dc := fakeDynamicClient.Get(ctx)
+	var clusterPolicy = schema.GroupVersionResource{Group: "sigstore.dev", Version: "v1alpha1", Resource: "clusterimagepolicies"}
+
+	clusterPolicyType := v1alpha1.ClusterImagePolicy{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec:       v1alpha1.ClusterImagePolicySpec{
+			Verification: v1alpha1.Verification{
+				Exclude: v1alpha1.Exclude{},
+				Keys:    []v1alpha1.Key{},
+				Images:  []v1alpha1.Image{},
+			},
+		},
+	}
+
+	clusterPolicyType.Spec.Verification.Keys = append(clusterPolicyType.Spec.Verification.Keys, v1alpha1.Key{
+		Name: "cosign-public-key-1",
+		PublicKey: `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
+UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
+-----END PUBLIC KEY-----`,
+	})
+
+	keyMapping := make([]v1alpha1.KeyToImageMapping,0)
+	keyMapping = append(keyMapping, v1alpha1.KeyToImageMapping{
+		Name: "cosign-public-key-1",
+	})
+	clusterPolicyType.Spec.Verification.Images = append(clusterPolicyType.Spec.Verification.Images, v1alpha1.Image{
+		NamePattern: "*",
+		Keys: keyMapping,
+	} )
+
+	mapObject, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&clusterPolicyType)
+	unstructuredObject := &unstructured.Unstructured{}
+	unstructuredObject.SetUnstructuredContent(map[string]interface{}{
+		"apiVersion": "sigstore.dev/v1alpha1",
+		"kind": "ClusterImagePolicy",
+		"metadata": map[string]interface{} {
+			"name":      "image-policy",
+		},
+		"spec": mapObject["spec"],
+	})
+	dc.Resource(clusterPolicy).Create(ctx, unstructuredObject, metav1.CreateOptions{})
+
+	v := NewValidator(ctx)
 
 	cvs := cosignVerifySignatures
 	defer func() {
@@ -204,25 +232,11 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 	}
 }
 
-func TestValidateCronJob(t *testing.T) {
-	tag := name.MustParseReference("gcr.io/distroless/static:nonroot")
+func TestValidatePodSpecWithUnmatchingPolicyPattern(t *testing.T){
 	// Resolved via crane digest on 2021/09/25
 	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
 
 	ctx, _ := rtesting.SetupFakeContext(t)
-	si := fakesecret.Get(ctx)
-
-	secretName := "blah"
-
-	si.Informer().GetIndexer().Add(&corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      secretName,
-		},
-		Data: map[string][]byte{
-			// No data should make us verify against Fulcio.
-		},
-	})
 
 	kc := fakekube.Get(ctx)
 	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
@@ -231,7 +245,319 @@ func TestValidateCronJob(t *testing.T) {
 		},
 	}, metav1.CreateOptions{})
 
-	v := NewValidator(ctx, secretName)
+	dc := fakeDynamicClient.Get(ctx)
+	var clusterPolicy = schema.GroupVersionResource{Group: "sigstore.dev", Version: "v1alpha1", Resource: "clusterimagepolicies"}
+
+	clusterPolicyType := v1alpha1.ClusterImagePolicy{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec:       v1alpha1.ClusterImagePolicySpec{
+			Verification: v1alpha1.Verification{
+				Exclude: v1alpha1.Exclude{},
+				Keys:    []v1alpha1.Key{},
+				Images:  []v1alpha1.Image{},
+			},
+		},
+	}
+
+	clusterPolicyType.Spec.Verification.Keys = append(clusterPolicyType.Spec.Verification.Keys, v1alpha1.Key{
+		Name: "cosign-public-key-1",
+		PublicKey: "any-public-key",
+	})
+
+	keyMapping := make([]v1alpha1.KeyToImageMapping,0)
+	keyMapping = append(keyMapping, v1alpha1.KeyToImageMapping{
+		Name: "cosign-public-key-1",
+	})
+	clusterPolicyType.Spec.Verification.Images = append(clusterPolicyType.Spec.Verification.Images, v1alpha1.Image{
+		NamePattern: "non/matching/pattern",
+		Keys: keyMapping,
+	} )
+
+	mapObject, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&clusterPolicyType)
+	unstructuredObject := &unstructured.Unstructured{}
+	unstructuredObject.SetUnstructuredContent(map[string]interface{}{
+		"apiVersion": "sigstore.dev/v1alpha1",
+		"kind": "ClusterImagePolicy",
+		"metadata": map[string]interface{} {
+			"name":      "image-policy",
+		},
+		"spec": mapObject["spec"],
+	})
+	dc.Resource(clusterPolicy).Create(ctx, unstructuredObject, metav1.CreateOptions{})
+
+	v := NewValidator(ctx)
+
+	cvs := cosignVerifySignatures
+	defer func() {
+		cosignVerifySignatures = cvs
+	}()
+
+	// Let's just say that everything is not verified.
+	fail := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		return nil, false, errors.New("bad signature")
+	}
+
+	tests := []struct {
+		name string
+		ps   *corev1.PodSpec
+		want *apis.FieldError
+		cvs  func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
+	}{{
+		name: "Error if no patterns match",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		want: &apis.FieldError{
+			Message: `no pattern matched the image`,
+			Paths:   []string{"containers[0].image", "initContainers[0].image"},
+			Details: digest.String(),
+		},
+		cvs: fail,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cosignVerifySignatures = test.cvs
+
+			// Check the core mechanics
+			got := v.validatePodSpec(context.Background(), test.ps, k8schain.Options{})
+			if (got != nil) != (test.want != nil) {
+				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
+			} else if got != nil && got.Error() != test.want.Error() {
+				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
+			}
+
+			// Check wrapped in a Pod
+			pod := &duckv1.Pod{
+				Spec: *test.ps,
+			}
+			got = v.ValidatePod(context.Background(), pod)
+			want := test.want.ViaField("spec")
+			if (got != nil) != (want != nil) {
+				t.Errorf("ValidatePod() = %v, wanted %v", got, want)
+			} else if got != nil && got.Error() != want.Error() {
+				t.Errorf("ValidatePod() = %v, wanted %v", got, want)
+			}
+			// Check that we don't block things being deleted.
+			pod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			if got := v.ValidatePod(context.Background(), pod); got != nil {
+				t.Errorf("ValidatePod() = %v, wanted nil", got)
+			}
+
+			// Check wrapped in a WithPod
+			withPod := &duckv1.WithPod{
+				Spec: duckv1.WithPodSpec{
+					Template: duckv1.PodSpecable{
+						Spec: *test.ps,
+					},
+				},
+			}
+			got = v.ValidatePodSpecable(context.Background(), withPod)
+			want = test.want.ViaField("spec.template.spec")
+			if (got != nil) != (want != nil) {
+				t.Errorf("ValidatePodSpecable() = %v, wanted %v", got, want)
+			} else if got != nil && got.Error() != want.Error() {
+				t.Errorf("ValidatePodSpecable() = %v, wanted %v", got, want)
+			}
+			// Check that we don't block things being deleted.
+			withPod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			if got := v.ValidatePodSpecable(context.Background(), withPod); got != nil {
+				t.Errorf("ValidatePodSpecable() = %v, wanted nil", got)
+			}
+		})
+	}
+}
+
+func TestValidatedCronJobWithUnmatchingPolicyPattern(t *testing.T){
+	// Resolved via crane digest on 2021/09/25
+	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
+
+	ctx, _ := rtesting.SetupFakeContext(t)
+
+	kc := fakekube.Get(ctx)
+	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}, metav1.CreateOptions{})
+
+	dc := fakeDynamicClient.Get(ctx)
+	var clusterPolicy = schema.GroupVersionResource{Group: "sigstore.dev", Version: "v1alpha1", Resource: "clusterimagepolicies"}
+
+	clusterPolicyType := v1alpha1.ClusterImagePolicy{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec:       v1alpha1.ClusterImagePolicySpec{
+			Verification: v1alpha1.Verification{
+				Exclude: v1alpha1.Exclude{},
+				Keys:    []v1alpha1.Key{},
+				Images:  []v1alpha1.Image{},
+			},
+		},
+	}
+
+	clusterPolicyType.Spec.Verification.Keys = append(clusterPolicyType.Spec.Verification.Keys, v1alpha1.Key{
+		Name: "cosign-public-key-1",
+		PublicKey: "any-public-key",
+	})
+
+	keyMapping := make([]v1alpha1.KeyToImageMapping,0)
+	keyMapping = append(keyMapping, v1alpha1.KeyToImageMapping{
+		Name: "cosign-public-key-1",
+	})
+	clusterPolicyType.Spec.Verification.Images = append(clusterPolicyType.Spec.Verification.Images, v1alpha1.Image{
+		NamePattern: "non/matching/pattern",
+		Keys: keyMapping,
+	} )
+
+	mapObject, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&clusterPolicyType)
+	unstructuredObject := &unstructured.Unstructured{}
+	unstructuredObject.SetUnstructuredContent(map[string]interface{}{
+		"apiVersion": "sigstore.dev/v1alpha1",
+		"kind": "ClusterImagePolicy",
+		"metadata": map[string]interface{} {
+			"name":      "image-policy",
+		},
+		"spec": mapObject["spec"],
+	})
+	dc.Resource(clusterPolicy).Create(ctx, unstructuredObject, metav1.CreateOptions{})
+
+	v := NewValidator(ctx)
+
+	cvs := cosignVerifySignatures
+	defer func() {
+		cosignVerifySignatures = cvs
+	}()
+
+	// Let's just say that everything is not verified.
+	fail := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		return nil, false, errors.New("bad signature")
+	}
+
+	tests := []struct {
+		name string
+		c    *duckv1.CronJob
+		want *apis.FieldError
+		cvs  func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
+	}{{
+		name: "Error if no patterns match",
+		c: &duckv1.CronJob{
+			Spec: batchv1.CronJobSpec{
+				JobTemplate: batchv1.JobTemplateSpec{
+					Spec: batchv1.JobSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								InitContainers: []corev1.Container{{
+									Name:  "setup-stuff",
+									Image: digest.String(),
+								}},
+								Containers: []corev1.Container{{
+									Name:  "user-container",
+									Image: digest.String(),
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `no pattern matched the image`,
+			Paths:   []string{"spec.jobTemplate.spec.template.spec.containers[0].image", "spec.jobTemplate.spec.template.spec.initContainers[0].image"},
+			Details: digest.String(),
+		},
+		cvs: fail,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cosignVerifySignatures = test.cvs
+
+			// Check the core mechanics
+			got := v.ValidateCronJob(context.Background(), test.c)
+			if (got != nil) != (test.want != nil) {
+				t.Errorf("validateCronJob() = %v, wanted %v", got, test.want)
+			} else if got != nil && got.Error() != test.want.Error() {
+				t.Errorf("validateCronJob() = %v, wanted %v", got, test.want)
+			}
+			// Check that we don't block things being deleted.
+			cronJob := test.c.DeepCopy()
+			cronJob.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			if got := v.ValidateCronJob(context.Background(), cronJob); got != nil {
+				t.Errorf("ValidateCronJob() = %v, wanted nil", got)
+			}
+		})
+	}
+}
+
+func TestValidateCronJob(t *testing.T) {
+	tag := name.MustParseReference("gcr.io/distroless/static:nonroot")
+	// Resolved via crane digest on 2021/09/25
+	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
+
+	ctx, _ := rtesting.SetupFakeContext(t)
+
+	kc := fakekube.Get(ctx)
+	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}, metav1.CreateOptions{})
+
+	dc := fakeDynamicClient.Get(ctx)
+	var clusterPolicy = schema.GroupVersionResource{Group: "sigstore.dev", Version: "v1alpha1", Resource: "clusterimagepolicies"}
+
+	clusterPolicyType := v1alpha1.ClusterImagePolicy{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec:       v1alpha1.ClusterImagePolicySpec{
+			Verification: v1alpha1.Verification{
+				Exclude: v1alpha1.Exclude{},
+				Keys:    []v1alpha1.Key{},
+				Images:  []v1alpha1.Image{},
+			},
+		},
+	}
+
+	clusterPolicyType.Spec.Verification.Keys = append(clusterPolicyType.Spec.Verification.Keys, v1alpha1.Key{
+		Name: "cosign-public-key-1",
+		PublicKey: `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
+UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
+-----END PUBLIC KEY-----`,
+	})
+
+	keyMapping := make([]v1alpha1.KeyToImageMapping,0)
+	keyMapping = append(keyMapping, v1alpha1.KeyToImageMapping{
+		Name: "cosign-public-key-1",
+	})
+	clusterPolicyType.Spec.Verification.Images = append(clusterPolicyType.Spec.Verification.Images, v1alpha1.Image{
+		NamePattern: "*",
+		Keys: keyMapping,
+	} )
+
+	mapObject, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&clusterPolicyType)
+	unstructuredObject := &unstructured.Unstructured{}
+	unstructuredObject.SetUnstructuredContent(map[string]interface{}{
+		"apiVersion": "sigstore.dev/v1alpha1",
+		"kind": "ClusterImagePolicy",
+		"metadata": map[string]interface{} {
+			"name":      "image-policy",
+		},
+		"spec": mapObject["spec"],
+	})
+	dc.Resource(clusterPolicy).Create(ctx, unstructuredObject, metav1.CreateOptions{})
+
+
+	v := NewValidator(ctx)
 
 	cvs := cosignVerifySignatures
 	defer func() {
@@ -433,22 +759,6 @@ func TestResolvePodSpec(t *testing.T) {
 	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
 
 	ctx, _ := rtesting.SetupFakeContext(t)
-	si := fakesecret.Get(ctx)
-	secretName := "blah"
-	si.Informer().GetIndexer().Add(&corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      secretName,
-		},
-		Data: map[string][]byte{
-			// Random public key (cosign generate-key-pair) 2021-09-25
-			"cosign.pub": []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
-UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
------END PUBLIC KEY-----
-`),
-		},
-	})
 
 	kc := fakekube.Get(ctx)
 	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
@@ -457,7 +767,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		},
 	}, metav1.CreateOptions{})
 
-	v := NewValidator(ctx, secretName)
+	v := NewValidator(ctx)
 
 	rrd := remoteResolveDigest
 	defer func() {
@@ -634,22 +944,6 @@ func TestResolveCronJob(t *testing.T) {
 	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
 
 	ctx, _ := rtesting.SetupFakeContext(t)
-	si := fakesecret.Get(ctx)
-	secretName := "blah"
-	si.Informer().GetIndexer().Add(&corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      secretName,
-		},
-		Data: map[string][]byte{
-			// Random public key (cosign generate-key-pair) 2021-09-25
-			"cosign.pub": []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
-UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
------END PUBLIC KEY-----
-`),
-		},
-	})
 
 	kc := fakekube.Get(ctx)
 	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
@@ -658,7 +952,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		},
 	}, metav1.CreateOptions{})
 
-	v := NewValidator(ctx, secretName)
+	v := NewValidator(ctx)
 
 	rrd := remoteResolveDigest
 	defer func() {

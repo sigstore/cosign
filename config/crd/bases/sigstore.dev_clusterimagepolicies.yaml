@@ -1,0 +1,121 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: clusterimagepolicies.sigstore.dev
+spec:
+  group: sigstore.dev
+  names:
+    kind: ClusterImagePolicy
+    listKind: ClusterImagePolicyList
+    plural: clusterimagepolicies
+    singular: clusterimagepolicy
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterImagePolicy is the Schema for the imagepolicies API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterImagePolicySpec defines the desired state of ImagePolicy
+            properties:
+              verification:
+                description: Verification defines the requirements for the admission
+                  of a signed container image.
+                properties:
+                  exclude:
+                    description: Used for excluding resources to which the policy
+                      should not be applied
+                    properties:
+                      resources:
+                        description: Resouces is used to specify the resource that
+                          needs to be excluded
+                        properties:
+                          namespaces:
+                            description: Namespaces is used to specify the names of
+                              the namespaces that need to be excluded
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                    type: object
+                  images:
+                    description: Images is list of images that are going to be considered
+                      for this policy.
+                    items:
+                      properties:
+                        keys:
+                          description: Keys is a map with the references to the signing
+                            keys.
+                          items:
+                            properties:
+                              name:
+                                description: Name is the name of the initial signing
+                                  key.
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          minItems: 1
+                          type: array
+                        namePattern:
+                          description: NamePattern defines the image name pattern
+                            as a (e.g. `registry/path/to/image`).
+                          type: string
+                      required:
+                      - keys
+                      - namePattern
+                      type: object
+                    minItems: 1
+                    type: array
+                  keys:
+                    description: Keys is a list of public keys that will be used to
+                      validate the image signature.
+                    items:
+                      properties:
+                        name:
+                          description: Name defines a name of the key.
+                          type: string
+                        publicKey:
+                          description: PublicKey contains the content of the public
+                            key for signing.
+                          type: string
+                      required:
+                      - name
+                      - publicKey
+                      type: object
+                    minItems: 1
+                    type: array
+                required:
+                - images
+                - keys
+                type: object
+            required:
+            - verification
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

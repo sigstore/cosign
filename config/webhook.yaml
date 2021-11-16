@@ -40,10 +40,10 @@ spec:
       serviceAccountName: webhook
       containers:
       - name: webhook
+        imagePullPolicy: Always
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: ko://github.com/sigstore/cosign/cmd/cosign/webhook
-        args: ["-secret-name=verification-key"]
         resources:
           requests:
             cpu: 20m
@@ -96,11 +96,20 @@ spec:
       - emptyDir: {}
         name: writable-home-dir
 ---
-apiVersion: v1
-kind: Secret
+apiVersion: sigstore.dev/v1alpha1
+kind: ClusterImagePolicy
 metadata:
-  name: verification-key
-  namespace: cosign-system
-# stringData:
-#   cosign.pub: |
-#     <PEM encoded public key>
+  name: image-policy
+spec:
+  verification:
+    exclude:
+      resources:
+        namespaces:
+          - kube-system
+    keys:
+    - name: cosign-key-1
+      publicKey:  "<public key goes here>"
+    images:
+    - namePattern: "*"
+      keys:
+      - name: cosign-key-1
