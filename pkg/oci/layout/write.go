@@ -16,8 +16,6 @@
 package layout
 
 import (
-	"path/filepath"
-
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
@@ -27,38 +25,29 @@ import (
 
 // WriteSignedImage writes the image and all related signatures, attestations and attachments
 func WriteSignedImage(path string, si oci.SignedImage) error {
-	// First, write the image
-	if err := write(path, imagePath, si); err != nil {
-		return errors.Wrap(err, "writing image")
+	// First, write an empty index
+	layoutPath, err := layout.Write(path, empty.Index)
+	if err != nil {
+		return err
 	}
+	// write the image
+	if err := appendImage(layoutPath, si, imageAnnotation); err != nil {
+		return errors.Wrap(err, "appending signed image")
+	}
+	// write the signatures
 	sigs, err := si.Signatures()
 	if err != nil {
 		return errors.Wrap(err, "getting signatures")
 	}
-	if err := write(path, signaturesPath, sigs); err != nil {
-		return errors.Wrap(err, "writing signatures")
+	if err := appendImage(layoutPath, sigs, sigsAnnotation); err != nil {
+		return errors.Wrap(err, "appending signatures")
 	}
 	// TODO (priyawadhwa@) write attestations and attachments
 	return nil
 }
 
-func imagePath(path string) string {
-	return filepath.Join(path, "image")
-}
-
-func signaturesPath(path string) string {
-	return filepath.Join(path, "sigs")
-}
-
-type pathFunc func(string) string
-
-func write(path string, pf pathFunc, img v1.Image) error {
-	p := pf(path)
-	// write empty image
-	layoutPath, err := layout.Write(p, empty.Index)
-	if err != nil {
-		return err
-	}
-	// write image to disk
-	return layoutPath.AppendImage(img)
+func appendImage(path layout.Path, img v1.Image, annotation string) error {
+	return path.AppendImage(img, layout.WithAnnotations(
+		map[string]string{annotation: "true"},
+	))
 }

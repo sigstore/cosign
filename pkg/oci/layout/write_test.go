@@ -51,11 +51,11 @@ func TestReadWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	// read the image and make sure the signatures exist
-	image, err := SignedImage(tmp)
+	imageIndex, err := SignedImageIndex(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sigImage, err := image.Signatures()
+	sigImage, err := imageIndex.Signatures()
 	if err != nil {
 		t.Fatal(err)
 	}
