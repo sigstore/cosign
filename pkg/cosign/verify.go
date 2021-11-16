@@ -25,7 +25,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 
+	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	rekor "github.com/sigstore/rekor/pkg/client"
@@ -69,23 +69,6 @@ type CheckOpts struct {
 	CertEmail string
 }
 
-// DSSE messages (Attestations) contain the signature and payload in one object, but our interface expects a signature and payload
-// This means we need to use one field and ignore the other. The DSSE verifier upstream uses the signature field and ignores
-// The message field, but we want the reverse here.
-type reverseDSSEVerifier struct {
-	signature.Verifier
-}
-
-func newReverseDSSEVerifier(v signature.Verifier) signature.Verifier {
-	return &reverseDSSEVerifier{
-		Verifier: dsse.WrapVerifier(v),
-	}
-}
-
-func (w *reverseDSSEVerifier) VerifySignature(s io.Reader, m io.Reader, opts ...signature.VerifyOption) error {
-	return w.Verifier.VerifySignature(m, nil, opts...)
-}
-
 func getSignedEntity(signedImgRef name.Reference, regClientOpts []ociremote.Option) (oci.SignedEntity, v1.Hash, error) {
 	se, err := ociremote.SignedEntity(signedImgRef, regClientOpts...)
 	if err != nil {
@@ -115,13 +98,20 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oc
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
-func verifyOCIAttestation(ctx context.Context, verifier signature.Verifier, att oci.Signature) error {
+func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att oci.Signature) error {
+	// TODO(dekkagaijin): plumb through context
 	payload, err := att.Payload()
 	if err != nil {
 		return err
 	}
-	verifier = newReverseDSSEVerifier(verifier)
-	return verifier.VerifySignature(nil, bytes.NewReader(payload), options.WithContext(ctx))
+
+	env := ssldsse.Envelope{}
+	if err := json.Unmarshal(payload, &env); err != nil {
+		return nil
+	}
+
+	dssev := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
+	return dssev.Verify(&env)
 }
 
 func validateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
