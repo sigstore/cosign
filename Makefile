@@ -92,6 +92,15 @@ cosign-pkcs11key: $(SRCS)
 cosigned: ## Build cosigned binary
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/webhook
 
+
+.PHONY: manifests
+manifests: ## CustomResourceDefinition objects.
+	controller-gen crd rbac:roleName=cosigned-rbac webhook paths="./pkg/cosign/kubernetes/api/..." output:crd:artifacts:config=config/crd/bases
+
+.PHONY: generate
+generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	controller-gen object paths="./pkg/cosign/kubernetes/api/..."
+
 .PHONY: sget
 sget: ## Build sget binary
 	go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/sget
@@ -152,6 +161,12 @@ ko-local:
 	ko publish --base-import-paths --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/cosign/cmd/cosign
+	
+	#cosigned
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths --bare \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		github.com/sigstore/cosign/cmd/cosign/webhook
 
 ##################
 # help

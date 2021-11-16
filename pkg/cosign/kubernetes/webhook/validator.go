@@ -18,6 +18,7 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"errors"
 
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,26 +26,29 @@ import (
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
-	listersv1 "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/system"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"crypto/ecdsa"
+	"k8s.io/apimachinery/pkg/runtime"
+	v1alpha1 "github.com/sigstore/cosign/pkg/cosign/kubernetes/api/v1alpha1"
+	"github.com/gobwas/glob"
 )
 
 type Validator struct {
 	client     kubernetes.Interface
-	lister     listersv1.SecretLister
-	secretName string
+	dynamicClient dynamic.Interface
 }
 
-func NewValidator(ctx context.Context, secretName string) *Validator {
+func NewValidator(ctx context.Context) *Validator {
 	return &Validator{
 		client:     kubeclient.Get(ctx),
-		lister:     secretinformer.Get(ctx).Lister(),
-		secretName: secretName,
+		dynamicClient: dynamicclient.Get(ctx),
 	}
 }
 
@@ -104,20 +108,23 @@ func (v *Validator) ValidateCronJob(ctx context.Context, c *duckv1.CronJob) *api
 }
 
 func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt k8schain.Options) (errs *apis.FieldError) {
+	// Read the CRD
 	kc, err := k8schain.New(ctx, v.client, opt)
 	if err != nil {
 		logging.FromContext(ctx).Warnf("Unable to build k8schain: %v", err)
 		return apis.ErrGeneric(err.Error(), apis.CurrentField)
 	}
-
-	s, err := v.lister.Secrets(system.Namespace()).Get(v.secretName)
-	if err != nil {
-		return apis.ErrGeneric(err.Error(), apis.CurrentField)
-	}
-
-	keys, kerr := getKeys(ctx, s.Data)
-	if kerr != nil {
-		return kerr
+	var clusterPolicy = schema.GroupVersionResource{Group: "sigstore.dev", Version: "v1alpha1", Resource: "clusterimagepolicies"}
+	
+	imagePolicy, _ := v.dynamicClient.Resource(clusterPolicy).Get(ctx, "image-policy", metav1.GetOptions{})
+	unstructured := imagePolicy.UnstructuredContent()
+	
+	var imagePolicyType v1alpha1.ClusterImagePolicy
+	error1 := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured, &imagePolicyType)
+	
+	if error1 != nil {
+		logging.FromContext(ctx).Warnf("Unable to convert unstructured type to imagepolicy struct: %v", error1)
+		return apis.ErrGeneric(error1.Error(), apis.CurrentField)
 	}
 
 	checkContainers := func(cs []corev1.Container, field string) {
@@ -135,6 +142,27 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 					fmt.Sprintf("%s must be an image digest", c.Image),
 					"image",
 				).ViaFieldIndex(field, i))
+				continue
+			}
+			// Match the pattern
+			// if matched, use the respective key to verify
+			// Read the keys from the CRD from the namepattern that matches
+			keys := []*ecdsa.PublicKey{}
+			matched := false
+			for _, imagePattern := range imagePolicyType.Spec.Verification.Images {
+				imagePatternGlob := glob.MustCompile(imagePattern.NamePattern)
+				if(imagePatternGlob.Match(c.Image)){
+					keys, _ = getKeys(ctx, imagePattern.Keys, imagePolicyType.Spec.Verification.Keys)
+					matched = true
+					break
+				}
+			}
+
+			// if no pattern matches we deny the resource creation - this is up for discussion
+			if !matched {
+				errorField := apis.ErrGeneric(errors.New("no pattern matched the image").Error(), "image").ViaFieldIndex(field, i)
+				errorField.Details = c.Image
+				errs = errs.Also(errorField)
 				continue
 			}
 
@@ -178,6 +206,7 @@ func (v *Validator) ResolvePod(ctx context.Context, p *duckv1.Pod) {
 		// Don't mess with things that are being deleted.
 		return
 	}
+
 	imagePullSecrets := make([]string, 0, len(p.Spec.ImagePullSecrets))
 	for _, s := range p.Spec.ImagePullSecrets {
 		imagePullSecrets = append(imagePullSecrets, s.Name)
