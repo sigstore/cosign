@@ -117,7 +117,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		if len(s.Data) > 0 {
-			return cosign.LoadECDSAPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
+			return cosign.LoadPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
 		}
 	case strings.HasPrefix(keyRef, gitlab.ReferenceScheme):
 		split := strings.Split(keyRef, "://")
@@ -138,7 +138,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 			return nil, err
 		}
 
-		return cosign.LoadECDSAPrivateKey([]byte(pk), []byte(pass))
+		return cosign.LoadPrivateKey([]byte(pk), []byte(pass))
 	default:
 	}
 

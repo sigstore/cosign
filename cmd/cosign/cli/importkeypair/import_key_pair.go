@@ -105,13 +105,13 @@ func getPassFromTerm(confirm bool) ([]byte, error) {
 	}
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
-	pw2, err := term.ReadPassword(0)
+	confirmpw, err := term.ReadPassword(0)
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
 	}
 
-	if string(pw1) != string(pw2) {
+	if string(pw1) != string(confirmpw) {
 		return nil, errors.New("passwords do not match")
 	}
 	return pw1, nil

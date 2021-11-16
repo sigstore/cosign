@@ -71,9 +71,6 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*Keys, error) {
 	if p == nil {
 		return nil, errors.New("invalid pem block")
 	}
-	if p.Type != RSAPrivateKeyPemType && p.Type != ECPrivateKeyPemType {
-		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
-	}
 
 	if p.Type == RSAPrivateKeyPemType {
 		pk, err := x509.ParsePKCS1PrivateKey(p.Bytes)
@@ -81,13 +78,15 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*Keys, error) {
 			return nil, fmt.Errorf("parsing error")
 		}
 		return MarshallKeyPair(Key{pk, pk.Public()}, pf)
-	} else {
+	} else if p.Type == ECPrivateKeyPemType {
 
 		pk, err := x509.ParseECPrivateKey(p.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("parsing error")
 		}
 		return MarshallKeyPair(Key{pk, pk.Public()}, pf)
+	} else {
+		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
 }
@@ -202,61 +201,12 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing private key")
 	}
-	switch pk.(type) {
+	switch pk := pk.(type) {
 	case *rsa.PrivateKey:
-		return LoadRSAPrivateKey(key, pass)
+		return signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
 	case *ecdsa.PrivateKey:
-		return LoadECDSAPrivateKey(key, pass)
+		return signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
+	default:
+		return nil, errors.Wrap(err, "unsupported key type")
 	}
-	return nil, errors.Wrap(err, "loading private key")
-}
-
-func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifier, error) {
-	// Decrypt first
-	p, _ := pem.Decode(key)
-	if p == nil {
-		return nil, errors.New("invalid pem block")
-	}
-	if p.Type != PrivateKeyPemType {
-		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
-	}
-
-	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
-	if err != nil {
-		return nil, errors.Wrap(err, "decrypt")
-	}
-
-	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing private key")
-	}
-	epk, ok := pk.(*ecdsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("invalid private key")
-	}
-	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
-}
-
-func LoadRSAPrivateKey(key []byte, pass []byte) (*signature.RSAPKCS1v15SignerVerifier, error) {
-	// Decrypt first
-	p, _ := pem.Decode(key)
-	if p == nil {
-		return nil, errors.New("invalid pem block")
-	}
-	if p.Type != PrivateKeyPemType {
-		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
-	}
-
-	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
-	if err != nil {
-		return nil, errors.Wrap(err, "decrypt")
-	}
-
-	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing private key")
-	}
-
-	return signature.LoadRSAPKCS1v15SignerVerifier(pk.(*rsa.PrivateKey), crypto.SHA256)
 }
