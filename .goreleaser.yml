@@ -33,42 +33,6 @@ builds:
   env:
     - CGO_ENABLED=0
 
-- id: linux-pivkey-amd64
-  binary: cosign-linux-pivkey-amd64
-  main: ./cmd/cosign
-  flags:
-    - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  goos:
-    - linux
-  goarch:
-    - amd64
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  tags:
-    - pivkey
-  hooks:
-    pre:
-      - apt-get update
-      - apt-get -y install libpcsclite-dev
-  env:
-    - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
-
-- id: linux-pkcs11key-amd64
-  binary: cosign-linux-pkcs11key-amd64
-  main: ./cmd/cosign
-  flags:
-    - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  goos:
-    - linux
-  goarch:
-    - amd64
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  tags:
-    - pkcs11key
-
 - id: linux-pivkey-pkcs11key-amd64
   binary: cosign-linux-pivkey-pkcs11key-amd64
   main: ./cmd/cosign

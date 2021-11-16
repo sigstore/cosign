@@ -82,12 +82,6 @@ fmt: ## Format all go files
 cosign: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
 
-cosign-pivkey: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
-
-cosign-pkcs11key: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
-
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 go build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
