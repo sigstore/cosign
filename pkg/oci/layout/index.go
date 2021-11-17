@@ -16,6 +16,7 @@
 package layout
 
 import (
+	"errors"
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -74,8 +75,15 @@ func (i *index) Attachment(name string) (oci.File, error) {
 }
 
 // SignedImage implements oci.SignedImageIndex
+// if an empty hash is passed in, return the original image that was signed
 func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
-	img, err := i.Image(h)
+	var img v1.Image
+	var err error
+	if h.String() == ":" {
+		img, err = i.imageByAnnotation(imageAnnotation)
+	} else {
+		img, err = i.Image(h)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +99,10 @@ func (i *index) imageByAnnotation(annotation string) (v1.Image, error) {
 	}
 	for _, m := range manifest.Manifests {
 		if _, ok := m.Annotations[annotation]; ok {
-			img, err := i.Image(m.Digest)
-			if err != nil {
-				return nil, err
-			}
-			return img, nil
+			return i.Image(m.Digest)
 		}
 	}
-	return nil, fmt.Errorf("unable to find image")
+	return nil, errors.New("unable to find image")
 }
 
 // SignedImageIndex implements oci.SignedImageIndex

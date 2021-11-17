@@ -19,7 +19,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	"github.com/sigstore/cosign/pkg/oci/signed"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -27,6 +30,54 @@ import (
 
 func TestReadWrite(t *testing.T) {
 	// write random signed image to disk
+	si := randomSignedImage(t)
+	tmp := t.TempDir()
+	if err := WriteSignedImage(tmp, si); err != nil {
+		t.Fatal(err)
+	}
+
+	// read the image and make sure the signatures exist
+	imageIndex, err := SignedImageIndex(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotSignedImage, err := imageIndex.SignedImage(v1.Hash{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// compare the image we read with the one we wrote
+	compareDigests(t, si, gotSignedImage)
+
+	// make sure signatures are correct
+	sigImage, err := imageIndex.Signatures()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigs, err := sigImage.Get()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := 6
+	if len(sigs) != want {
+		t.Fatal("didn't get the expected number of signatures")
+	}
+	// make sure the annotation is correct
+	for i, sig := range sigs {
+		annotations, err := sig.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+		val, ok := annotations["layer"]
+		if !ok {
+			t.Fatal("expected annotation doesn't exist on signature")
+		}
+		if val != fmt.Sprintf("%d", i) {
+			t.Fatal("expected annotation isn't correct")
+		}
+	}
+}
+
+func randomSignedImage(t *testing.T) oci.SignedImage {
 	i, err := random.Image(300 /* byteSize */, 7 /* layers */)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -45,39 +96,19 @@ func TestReadWrite(t *testing.T) {
 			t.Fatalf("SignEntity() = %v", err)
 		}
 	}
+	return si
+}
 
-	tmp := t.TempDir()
-	if err := WriteSignedImage(tmp, si); err != nil {
-		t.Fatal(err)
-	}
-	// read the image and make sure the signatures exist
-	imageIndex, err := SignedImageIndex(tmp)
+func compareDigests(t *testing.T, img1 oci.SignedImage, img2 oci.SignedImage) {
+	d1, err := img1.Digest()
 	if err != nil {
 		t.Fatal(err)
 	}
-	sigImage, err := imageIndex.Signatures()
+	d2, err := img2.Digest()
 	if err != nil {
 		t.Fatal(err)
 	}
-	sigs, err := sigImage.Get()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(sigs) != want {
-		t.Fatal("didn't get the expected number of signatures")
-	}
-	// make sure the annotation is correct
-	for i, sig := range sigs {
-		annotations, err := sig.Annotations()
-		if err != nil {
-			t.Fatal(err)
-		}
-		val, ok := annotations["layer"]
-		if !ok {
-			t.Fatal("expected annotation doesn't exist on signature")
-		}
-		if val != fmt.Sprintf("%d", i) {
-			t.Fatal("expected annotation isn't correct")
-		}
+	if d := cmp.Diff(d1, d2); d != "" {
+		t.Fatalf("digests are different: %s", d)
 	}
 }
