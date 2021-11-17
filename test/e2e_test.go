@@ -21,6 +21,7 @@ package test
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -73,11 +74,12 @@ var passFunc = func(_ bool) ([]byte, error) {
 
 var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:      keyRef,
-		RekorURL:    rekorURL,
-		CheckClaims: checkClaims,
-		Annotations: sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:  attachment,
+		KeyRef:        keyRef,
+		RekorURL:      rekorURL,
+		CheckClaims:   checkClaims,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
 	}
 
 	args := []string{imageRef}

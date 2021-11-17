@@ -17,6 +17,7 @@ package verify
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -50,6 +51,8 @@ type VerifyCommand struct {
 	RekorURL    string
 	Attachment  string
 	Annotations sigs.AnnotationsMap
+
+	HashAlgorithm crypto.Hash
 }
 
 // Exec runs the verification command
@@ -63,6 +66,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		break
 	default:
 		return flag.ErrHelp
+	}
+
+	// always default to sha256 if the algorithm hasn't been explicitly set
+	if c.HashAlgorithm == 0 {
+		c.HashAlgorithm = crypto.SHA256
 	}
 
 	if !options.OneOf(c.KeyRef, c.Sk) && !options.EnableExperimental() {
@@ -89,7 +97,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	// Keys are optional!
 	var pubKey signature.Verifier
 	if keyRef != "" {
-		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
+		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}

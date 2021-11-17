@@ -46,8 +46,12 @@ against the transparency log.`,
   # (experimental) additionally, verify with the transparency log
   COSIGN_EXPERIMENTAL=1 cosign verify <IMAGE>
 
-  # verify image with public key
+  # verify image with an on-disk public key
   cosign verify --key cosign.pub <IMAGE>
+
+  # verify image with an on-disk public key, manually specifying the
+  # signature digest algorithm
+  cosign verify --key cosign.pub --signature-digest-algorithm sha512 <IMAGE>
 
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
@@ -73,6 +77,12 @@ against the transparency log.`,
 			if err != nil {
 				return err
 			}
+
+			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
+			if err != nil {
+				return err
+			}
+
 			v := verify.VerifyCommand{
 				RegistryOptions: o.Registry,
 				CheckClaims:     o.CheckClaims,
@@ -84,7 +94,10 @@ against the transparency log.`,
 				RekorURL:        o.Rekor.URL,
 				Attachment:      o.Attachment,
 				Annotations:     annotations,
+
+				HashAlgorithm: hashAlgorithm,
 			}
+
 			return v.Exec(cmd.Context(), args)
 		},
 	}

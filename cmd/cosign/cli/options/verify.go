@@ -30,7 +30,8 @@ type VerifyOptions struct {
 	SecurityKey SecurityKeyOptions
 	Rekor       RekorOptions
 	// TODO: this seems like it should have the Fulcio options.
-	Registry RegistryOptions
+	Registry        RegistryOptions
+	SignatureDigest SignatureDigestOptions
 	AnnotationOptions
 }
 
@@ -41,6 +42,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.SignatureDigest.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
