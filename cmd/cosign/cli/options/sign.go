@@ -24,6 +24,7 @@ type SignOptions struct {
 	Key         string
 	Cert        string
 	Upload      bool
+	Output      string
 	PayloadPath string
 	Force       bool
 	Recursive   bool
@@ -56,6 +57,9 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")
+
+	cmd.Flags().StringVar(&o.Output, "output", "",
+		"write the signature to FILE")
 
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")

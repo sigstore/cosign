@@ -106,7 +106,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Now sign the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -117,7 +117,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Sign the image with an annotation
 	annotations := map[string]interface{}{"foo": "bar"}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, annotations, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, annotations, []string{imgName}, "", true, "", "", false, false, ""), t)
 
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
@@ -141,7 +141,7 @@ func TestSignVerifyClean(t *testing.T) {
 
 	// Now sign the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -233,7 +233,7 @@ func TestBundle(t *testing.T) {
 	}
 
 	// Sign the image
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 	// Make sure verify works
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
@@ -263,14 +263,14 @@ func TestDuplicateSign(t *testing.T) {
 
 	// Now sign the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
 	// Signing again should work just fine...
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 
 	se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
 	must(err, t)
@@ -362,14 +362,14 @@ func TestMultipleSignatures(t *testing.T) {
 
 	// Now sign the image with one key
 	ko := sign.KeyOpts{KeyRef: priv1, PassFunc: passFunc}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil, ""), t)
 	mustErr(verify(pub2, imgName, true, nil, ""), t)
 
 	// Now sign with the other key too
 	ko.KeyRef = priv2
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil, ""), t)
@@ -657,7 +657,7 @@ func TestAttachSBOM(t *testing.T) {
 
 	// Now sign the sbom with one key
 	ko1 := sign.KeyOpts{KeyRef: privKeyPath1, PassFunc: passFunc}
-	must(sign.SignCmd(ctx, ko1, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, "sbom"), t)
+	must(sign.SignCmd(ctx, ko1, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, "sbom"), t)
 
 	// Now verify should work with that one, but not the other
 	must(verify(pubKeyPath1, imgName, true, nil, "sbom"), t)
@@ -695,7 +695,7 @@ func TestTlog(t *testing.T) {
 		PassFunc: passFunc,
 		RekorURL: rekorURL,
 	}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -707,7 +707,7 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Sign again with the tlog env var on
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
 	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }

@@ -125,7 +125,7 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 
 // nolint
 func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
-	imgs []string, certPath string, upload bool, payloadPath string, force bool, recursive bool, attachment string) error {
+	imgs []string, certPath string, upload bool, output string, payloadPath string, force bool, recursive bool, attachment string) error {
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
 			return &options.KeyParseError{}
@@ -177,7 +177,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			if err != nil {
 				return errors.Wrap(err, "accessing image")
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, force, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, output, force, dd, sv, se)
 			if err != nil {
 				return errors.Wrap(err, "signing digest")
 			}
@@ -197,7 +197,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			}
 			digest := ref.Context().Digest(d.String())
 
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, force, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, output, force, dd, sv, se)
 			if err != nil {
 				return errors.Wrap(err, "signing digest")
 			}
@@ -211,7 +211,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyOpts,
-	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, force bool,
+	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, output string, force bool,
 	dd mutate.DupeDetector, sv *CertSignVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
@@ -234,6 +234,17 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if !upload {
 		fmt.Println(b64sig)
 		return nil
+	}
+
+	if output != "" {
+		f, err := os.Create(output)
+		if err != nil {
+			return errors.Wrap(err, "create output")
+		}
+		defer f.Close()
+		_, err = f.Write([]byte(b64sig))
+
+		fmt.Printf("Signature wrote in the file %s\n", f.Name())
 	}
 
 	opts := []static.Option{}
