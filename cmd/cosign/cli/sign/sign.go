@@ -239,12 +239,16 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if output != "" {
 		f, err := os.Create(output)
 		if err != nil {
-			return errors.Wrap(err, "create output")
+			return errors.Wrap(err, "create signature file")
 		}
 		defer f.Close()
 		_, err = f.Write([]byte(b64sig))
 
-		fmt.Printf("Signature wrote in the file %s\n", f.Name())
+		if err != nil {
+			return errors.Wrap(err, "write signature to file")
+		}
+
+		fmt.Fprintf(os.Stderr, "Signature wrote to the file %s\n", f.Name())
 	}
 
 	opts := []static.Option{}
