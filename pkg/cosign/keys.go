@@ -45,12 +45,12 @@ const (
 
 type PassFunc func(bool) ([]byte, error)
 
-type Key struct {
+type Keys struct {
 	private crypto.PrivateKey
 	public  crypto.PublicKey
 }
 
-type Keys struct {
+type KeysBytes struct {
 	PrivateBytes []byte
 	PublicBytes  []byte
 	password     []byte
@@ -60,7 +60,7 @@ func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
-func ImportKeyPair(keyPath string, pf PassFunc) (*Keys, error) {
+func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
@@ -72,26 +72,25 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*Keys, error) {
 		return nil, errors.New("invalid pem block")
 	}
 
-	if p.Type == RSAPrivateKeyPemType {
+	switch p.Type {
+
+	case RSAPrivateKeyPemType:
 		pk, err := x509.ParsePKCS1PrivateKey(p.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("parsing error")
 		}
-		return MarshallKeyPair(Key{pk, pk.Public()}, pf)
-	} else if p.Type == ECPrivateKeyPemType {
-
+		return marshalKeyPair(Keys{pk, pk.Public()}, pf)
+	default:
 		pk, err := x509.ParseECPrivateKey(p.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("parsing error")
 		}
-		return MarshallKeyPair(Key{pk, pk.Public()}, pf)
-	} else {
-		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
+		return marshalKeyPair(Keys{pk, pk.Public()}, pf)
 	}
 
 }
 
-func MarshallKeyPair(keypair Key, pf PassFunc) (*Keys, error) {
+func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
 
 	x509Encoded, err := x509.MarshalPKCS8PrivateKey(keypair.private)
 	if err != nil {
@@ -120,52 +119,23 @@ func MarshallKeyPair(keypair Key, pf PassFunc) (*Keys, error) {
 		return nil, err
 	}
 
-	return &Keys{
+	return &KeysBytes{
 		PrivateBytes: privBytes,
 		PublicBytes:  pubBytes,
 		password:     password,
 	}, nil
 }
 
-func GenerateKeyPair(pf PassFunc) (*Keys, error) {
+func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	priv, err := GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}
 
-	x509Encoded, err := x509.MarshalPKCS8PrivateKey(priv)
-	if err != nil {
-		return nil, errors.Wrap(err, "x509 encoding private key")
-	}
-	// Encrypt the private key and store it.
-	password, err := pf(true)
-	if err != nil {
-		return nil, err
-	}
-	encBytes, err := encrypted.Encrypt(x509Encoded, password)
-	if err != nil {
-		return nil, err
-	}
-	// store in PEM format
-	privBytes := pem.EncodeToMemory(&pem.Block{
-		Bytes: encBytes,
-		Type:  PrivateKeyPemType,
-	})
-
-	// Now do the public key
-	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Keys{
-		PrivateBytes: privBytes,
-		PublicBytes:  pubBytes,
-		password:     password,
-	}, nil
+	return marshalKeyPair(Keys{priv, priv.Public()}, pf)
 }
 
-func (k *Keys) Password() []byte {
+func (k *KeysBytes) Password() []byte {
 	return k.password
 }
 

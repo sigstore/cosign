@@ -25,7 +25,7 @@ import (
 )
 
 func TestSecret(t *testing.T) {
-	keys := &cosign.Keys{
+	keys := &cosign.KeysBytes{
 		PrivateBytes: []byte("private"),
 		PublicBytes:  []byte("public"),
 	}
@@ -49,7 +49,7 @@ func TestSecret(t *testing.T) {
 }
 
 func TestSecretUpdate(t *testing.T) {
-	keys := &cosign.Keys{
+	keys := &cosign.KeysBytes{
 		PrivateBytes: []byte("private"),
 		PublicBytes:  []byte("public"),
 	}

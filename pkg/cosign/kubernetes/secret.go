@@ -96,7 +96,7 @@ func KeyPairSecret(ctx context.Context, k8sRef string, pf cosign.PassFunc) error
 // * cosign.key
 // * cosign.pub
 // * cosign.password
-func secret(keys *cosign.Keys, namespace, name string, data map[string][]byte) *v1.Secret {
+func secret(keys *cosign.KeysBytes, namespace, name string, data map[string][]byte) *v1.Secret {
 	if data == nil {
 		data = map[string][]byte{}
 	}
