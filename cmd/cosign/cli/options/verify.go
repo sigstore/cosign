@@ -21,11 +21,12 @@ import (
 
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {
-	Key         string
-	CertEmail   string // TODO: merge into fulcio option as read mode?
-	CheckClaims bool
-	Attachment  string
-	Output      string
+	Key          string
+	CertEmail    string // TODO: merge into fulcio option as read mode?
+	CheckClaims  bool
+	Attachment   string
+	Output       string
+	SignatureRef string
 
 	SecurityKey SecurityKeyOptions
 	Rekor       RekorOptions
@@ -59,6 +60,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")
+
+	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
+		"signature content or path or remote URL")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.
