@@ -61,6 +61,10 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, name string, args []
 		return nil
 	}
 
+	if name == "" {
+		name = "cosign"
+	}
+
 	if len(args) > 0 {
 		split := strings.Split(args[0], "://")
 
