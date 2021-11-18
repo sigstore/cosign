@@ -22,7 +22,8 @@ import (
 // GenerateKeyPairOptions is the top level wrapper for the generate-key-pair command.
 type GenerateKeyPairOptions struct {
 	// KMS Key Management Service
-	KMS string
+	KMS  string
+	Name string
 }
 
 var _ Interface = (*GenerateKeyPairOptions)(nil)
@@ -31,4 +32,6 @@ var _ Interface = (*GenerateKeyPairOptions)(nil)
 func (o *GenerateKeyPairOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.KMS, "kms", "",
 		"create key pair in KMS service to use for signing")
+	cmd.Flags().StringVar(&o.Name, "name", "",
+		"adds a choosen name to your .pub and .key files")
 }

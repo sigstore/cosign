@@ -1,4 +1,3 @@
-//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +40,7 @@ var (
 )
 
 // nolint
-func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
+func GenerateKeyPairCmd(ctx context.Context, kmsVal string, name string, args []string) error {
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal, crypto.SHA256)
 		if err != nil {
@@ -55,10 +54,10 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
+		if err := os.WriteFile(name+".pub", pemBytes, 0600); err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+		fmt.Fprintln(os.Stderr, "Public key written to "+name+".pub")
 		return nil
 	}
 
@@ -86,9 +85,9 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		return err
 	}
 
-	if fileExists("cosign.key") {
+	if fileExists(name + ".key") {
 		var overwrite string
-		fmt.Fprint(os.Stderr, "File cosign.key already exists. Overwrite (y/n)? ")
+		fmt.Fprint(os.Stderr, "File "+name+".key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)
 		switch overwrite {
 		case "y", "Y":
@@ -100,15 +99,15 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		}
 	}
 	// TODO: make sure the perms are locked down first.
-	if err := os.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
+	if err := os.WriteFile(name+".key", keys.PrivateBytes, 0600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
+	fmt.Fprintln(os.Stderr, "Private key written to "+name+".key")
 
-	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
+	if err := os.WriteFile(name+".pub", keys.PublicBytes, 0644); err != nil {
 		return err
 	} // #nosec G306
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+	fmt.Fprintln(os.Stderr, "Public key written to "+name+".pub")
 	return nil
 }
 
