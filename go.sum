@@ -1567,8 +1567,6 @@ github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb/go.mod h1:LznI5A
 github.com/sigstore/rekor v0.3.0 h1:OBEvo/Rv8NKKtiWq0WRHgXFpVPe1fGiqz93dfBh/Myo=
 github.com/sigstore/rekor v0.3.0/go.mod h1:cL9B3+/gp3BG+/bhkSHBA3MQZMten5xM6BhJYd5b5zU=
 github.com/sigstore/sigstore v0.0.0-20210713222344-1fee53516622/go.mod h1:aOSeNrlcHsfUD8Q1hwWd8KloNqBnxEZlu4k47cFg5rg=
-github.com/sigstore/sigstore v1.0.2-0.20211115201206-a46929e0329c h1:22QFQM23kOrXRES4ri5Uff7rqfaDZyj0oUhmtIK6Kd0=
-github.com/sigstore/sigstore v1.0.2-0.20211115201206-a46929e0329c/go.mod h1:g5b4TN+HWEcODpWBXfK6xAr8ezkPl3tyCVbg6iqYDV8=
 github.com/sigstore/sigstore v1.0.2-0.20211115214857-534e133ebf9d h1:uLxCWW/Y6mN+jgdCMvrD2UmERz6XK80E+v0MTJ7dqKA=
 github.com/sigstore/sigstore v1.0.2-0.20211115214857-534e133ebf9d/go.mod h1:g5b4TN+HWEcODpWBXfK6xAr8ezkPl3tyCVbg6iqYDV8=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
