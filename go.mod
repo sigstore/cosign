@@ -34,21 +34,13 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.60.0
-	k8s.io/api v0.21.6
-	k8s.io/apimachinery v0.21.6
+	k8s.io/api v0.21.7
+	k8s.io/apimachinery v0.21.7
 	k8s.io/client-go v0.21.6
 	knative.dev/pkg v0.0.0-20211004133827-74ac82a333a4
 )
 
 require (
-	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/onsi/gomega v1.16.0 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v1.1.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.10.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	k8s.io/klog/v2 v2.20.0 // indirect
