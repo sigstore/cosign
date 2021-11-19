@@ -23,6 +23,7 @@ cosign clean <image uri>
 * [cosign download](cosign_download.md)	 - Provides utilities for downloading artifacts and attached artifacts in a registry
 * [cosign generate](cosign_generate.md)	 - Generates (unsigned) signature payloads from the supplied container image.
 * [cosign generate-key-pair](cosign_generate-key-pair.md)	 - Generates a key-pair.
+* [cosign import-key-pair](cosign_import-key-pair.md)	 - Imports a PEM-encoded RSA or EC private key.
 * [cosign initialize](cosign_initialize.md)	 - Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 * [cosign manifest](cosign_manifest.md)	 - Provides utilities for discovering images in and performing operations on Kubernetes manifests
 * [cosign piv-tool](cosign_piv-tool.md)	 - Provides utilities for managing a hardware token

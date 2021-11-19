@@ -61,7 +61,6 @@ func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 }
 
 func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
-
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return nil, err
@@ -73,7 +72,6 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	}
 
 	switch p.Type {
-
 	case RSAPrivateKeyPemType:
 		pk, err := x509.ParsePKCS1PrivateKey(p.Bytes)
 		if err != nil {
@@ -91,7 +89,6 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 }
 
 func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
-
 	x509Encoded, err := x509.MarshalPKCS8PrivateKey(keypair.private)
 	if err != nil {
 		return nil, errors.Wrap(err, "x509 encoding private key")
@@ -152,7 +149,6 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 }
 
 func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
-
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {

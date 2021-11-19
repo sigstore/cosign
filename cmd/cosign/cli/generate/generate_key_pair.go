@@ -141,6 +141,7 @@ func isTerminal() bool {
 	return (stat.Mode() & os.ModeCharDevice) != 0
 }
 
+// TODO centralize password prompt logic for code reuse across more use cases -> https://github.com/sigstore/cosign/issues/1078
 func getPassFromTerm(confirm bool) ([]byte, error) {
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
 	pw1, err := term.ReadPassword(0)
@@ -164,6 +165,7 @@ func getPassFromTerm(confirm bool) ([]byte, error) {
 	return pw1, nil
 }
 
+// TODO need to centralize this logic
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {

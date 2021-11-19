@@ -542,12 +542,12 @@ qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
 		os.Chdir(wd)
 	}()
 
-	err = os.WriteFile("/Users/iwallis-dev/validrsa1.key", []byte(validrsa1), 0600)
+	err = os.WriteFile("validrsa1.key", []byte(validrsa1), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	keys, err := cosign.ImportKeyPair("/Users/iwallis-dev/validrsa1.key", passFunc)
+	keys, err := cosign.ImportKeyPair("validrsa1.key", passFunc)
 	if err != nil {
 		t.Fatal(err)
 	}

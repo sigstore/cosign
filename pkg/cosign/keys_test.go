@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
+const validrsa = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAx5piWVlE62NnZ0UzJ8Z6oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+
 25yq6P+0JU/Qvr9veOGEb3R/J9u8JBo+hv2i5X8OtgvP2V2pi6f1s6vK7L0+6uRb
 4YTT/UdMshaVf97MgEqbq41Jf/cuvh+3AV0tZ1BpixZg4aXMKpY6HUP69lbsu27o
@@ -49,7 +49,7 @@ pGAaLxggvtvuncMuTrG+cdmsR9SafSFKRS92NCxhOUonQ+NP6mLskIGzJZoQ5JvQ
 qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
 -----END RSA PRIVATE KEY-----`
 
-const invalidrsa2 = `-----BEGIN PUBLIC KEY-----
+const invalidrsa = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx5piWVlE62NnZ0UzJ8Z6
 oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+25yq6P+0JU/Qvr9veOGEb3R/J9u8JBo+hv2i
 5X8OtgvP2V2pi6f1s6vK7L0+6uRb4YTT/UdMshaVf97MgEqbq41Jf/cuvh+3AV0t
@@ -136,25 +136,61 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 
 func TestImportPrivateKey(t *testing.T) {
 
-	err := os.WriteFile("validrsa1.key", []byte(validrsa1), 0600)
+	err := os.WriteFile("validrsa.key", []byte(validrsa), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = ImportKeyPair("validrsa1.key", pass("hello"))
-	if err != nil {
+	// Test valid RSA private key
+	if _, err = ImportKeyPair("validrsa.key", pass("hello")); err != nil {
+
 		t.Errorf("unexpected error importing key: %s", err)
 	}
+	os.Remove("validrsa.key")
 
-	os.Remove("validrsa1.key")
+	err = os.WriteFile("invalidrsa.key", []byte(invalidrsa), 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test invalid RSA private key
+	if _, err = ImportKeyPair("invalidrsa.key", pass("hello")); err == nil {
+
+		t.Errorf("unexpected error importing key: %s", err)
+	}
+	os.Remove("invalidrsa.key")
+
+	err = os.WriteFile("invalidkey.key", []byte(invalidkey), 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test invalid PGP private key
+	if _, err = ImportKeyPair("invalidkey.key", pass("hello")); err == nil {
+
+		t.Errorf("unexpected error importing key: %s", err)
+	}
+	os.Remove("invalidkey.key")
+
+	err = os.WriteFile("validec.key", []byte(validec), 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test valid EC private key
+	if _, err = ImportKeyPair("validec.key", pass("hello")); err != nil {
+
+		t.Errorf("unexpected error importing key: %s", err)
+	}
+	os.Remove("validec.key")
 
 	err = os.WriteFile("ed25519.key", []byte(ed25519key), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = ImportKeyPair("ed25519.key", pass("hello"))
-	if err != nil {
+	// Test invalid EC private key
+	if _, err = ImportKeyPair("ed25519.key", pass("hello")); err == nil {
 		t.Errorf("unexpected error importing key: %s", err)
 	}
 
