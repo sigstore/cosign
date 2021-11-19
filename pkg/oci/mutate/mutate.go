@@ -151,29 +151,55 @@ func AttachAttestationToEntity(se oci.SignedEntity, att oci.Signature, opts ...S
 	}
 }
 
+// AttachFileToEntity attaches the provided file to the provided entity.
+func AttachFileToEntity(se oci.SignedEntity, name string, f oci.File, opts ...SignOption) (oci.SignedEntity, error) {
+	switch obj := se.(type) {
+	case oci.SignedImage:
+		return AttachFileToImage(obj, name, f, opts...)
+	case oci.SignedImageIndex:
+		return AttachFileToImageIndex(obj, name, f, opts...)
+	default:
+		return nil, fmt.Errorf("unsupported type: %T", se)
+	}
+}
+
 // AttachSignatureToImage attaches the provided signature to the provided image.
 func AttachSignatureToImage(si oci.SignedImage, sig oci.Signature, opts ...SignOption) (oci.SignedImage, error) {
 	return &signedImage{
 		SignedImage: si,
 		sig:         sig,
+		attachments: make(map[string]oci.File),
 		so:          makeSignOpts(opts...),
 	}, nil
 }
 
-// AttachAttestationToImage attaches the provided signature to the provided image.
+// AttachAttestationToImage attaches the provided attestation to the provided image.
 func AttachAttestationToImage(si oci.SignedImage, att oci.Signature, opts ...SignOption) (oci.SignedImage, error) {
 	return &signedImage{
 		SignedImage: si,
 		att:         att,
+		attachments: make(map[string]oci.File),
 		so:          makeSignOpts(opts...),
+	}, nil
+}
+
+// AttachFileToImage attaches the provided file to the provided image.
+func AttachFileToImage(si oci.SignedImage, name string, f oci.File, opts ...SignOption) (oci.SignedImage, error) {
+	return &signedImage{
+		SignedImage: si,
+		attachments: map[string]oci.File{
+			name: f,
+		},
+		so: makeSignOpts(opts...),
 	}, nil
 }
 
 type signedImage struct {
 	oci.SignedImage
-	sig oci.Signature
-	att oci.Signature
-	so  *signOpts
+	sig         oci.Signature
+	att         oci.Signature
+	so          *signOpts
+	attachments map[string]oci.File
 }
 
 // Signatures implements oci.SignedImage
@@ -223,7 +249,10 @@ func (si *signedImage) Attestations() (oci.Signatures, error) {
 
 // Attachment implements oci.SignedImage
 func (si *signedImage) Attachment(attName string) (oci.File, error) {
-	return nil, errors.New("unimplemented")
+	if f, ok := si.attachments[attName]; ok {
+		return f, nil
+	}
+	return nil, fmt.Errorf("attachment %q not found", attName)
 }
 
 // AttachSignatureToImageIndex attaches the provided signature to the provided image index.
@@ -231,6 +260,7 @@ func AttachSignatureToImageIndex(sii oci.SignedImageIndex, sig oci.Signature, op
 	return &signedImageIndex{
 		ociSignedImageIndex: sii,
 		sig:                 sig,
+		attachments:         make(map[string]oci.File),
 		so:                  makeSignOpts(opts...),
 	}, nil
 }
@@ -240,7 +270,19 @@ func AttachAttestationToImageIndex(sii oci.SignedImageIndex, att oci.Signature, 
 	return &signedImageIndex{
 		ociSignedImageIndex: sii,
 		att:                 att,
+		attachments:         make(map[string]oci.File),
 		so:                  makeSignOpts(opts...),
+	}, nil
+}
+
+// AttachFileToImageIndex attaches the provided file to the provided image index.
+func AttachFileToImageIndex(sii oci.SignedImageIndex, name string, f oci.File, opts ...SignOption) (oci.SignedImageIndex, error) {
+	return &signedImageIndex{
+		ociSignedImageIndex: sii,
+		attachments: map[string]oci.File{
+			name: f,
+		},
+		so: makeSignOpts(opts...),
 	}, nil
 }
 
@@ -248,9 +290,10 @@ type ociSignedImageIndex oci.SignedImageIndex
 
 type signedImageIndex struct {
 	ociSignedImageIndex
-	sig oci.Signature
-	att oci.Signature
-	so  *signOpts
+	sig         oci.Signature
+	att         oci.Signature
+	so          *signOpts
+	attachments map[string]oci.File
 }
 
 // Signatures implements oci.SignedImageIndex
@@ -300,5 +343,8 @@ func (sii *signedImageIndex) Attestations() (oci.Signatures, error) {
 
 // Attachment implements oci.SignedImageIndex
 func (sii *signedImageIndex) Attachment(attName string) (oci.File, error) {
-	return nil, errors.New("unimplemented")
+	if f, ok := sii.attachments[attName]; ok {
+		return f, nil
+	}
+	return nil, fmt.Errorf("attachment %q not found", attName)
 }
