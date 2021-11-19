@@ -40,6 +40,7 @@ import (
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigstoresigs "github.com/sigstore/sigstore/pkg/signature"
@@ -233,15 +234,20 @@ func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 
-	var v001Entry *rekord.V001Entry
-	var ok bool
-	if v001Entry, ok = eimpl.(*rekord.V001Entry); !ok {
+	var publicKeyB64 []byte
+	switch e := eimpl.(type) {
+	case *rekord.V001Entry:
+		publicKeyB64, err = e.RekordObj.Signature.PublicKey.Content.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+	case *hashedrekord.V001Entry:
+		publicKeyB64, err = e.HashedRekordObj.Signature.PublicKey.Content.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+	default:
 		return nil, errors.New("unexpected tlog entry type")
-	}
-
-	publicKeyB64, err := v001Entry.RekordObj.Signature.PublicKey.Content.MarshalText()
-	if err != nil {
-		return nil, err
 	}
 
 	publicKey, err := base64.StdEncoding.DecodeString(string(publicKeyB64))
