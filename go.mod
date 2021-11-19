@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
-	github.com/xanzy/go-gitlab v0.51.1
+	github.com/xanzy/go-gitlab v0.52.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.60.0
@@ -41,15 +41,8 @@ require (
 )
 
 require (
-	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/spf13/viper v1.8.1
-	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v1.1.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.10.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	k8s.io/klog/v2 v2.20.0 // indirect
