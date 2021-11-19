@@ -403,7 +403,7 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
 
-	if err := VerifySET(bundle.Payload, []byte(bundle.SignedEntryTimestamp), rekorPubKey); err != nil {
+	if err := VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, rekorPubKey); err != nil {
 		return false, err
 	}
 
