@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package remote
+package signature
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -27,6 +28,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/oci"
 )
+
+func mustDecode(s string) []byte {
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err.Error())
+	}
+	return b
+}
 
 func TestSignature(t *testing.T) {
 	layer, err := random.Layer(300 /* byteSize */, types.DockerLayer)

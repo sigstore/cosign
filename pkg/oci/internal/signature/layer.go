@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package remote
+package signature
 
 import (
 	"crypto/x509"
@@ -28,9 +28,23 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
+const (
+	sigkey    = "dev.cosignproject.cosign/signature"
+	certkey   = "dev.sigstore.cosign/certificate"
+	chainkey  = "dev.sigstore.cosign/chain"
+	BundleKey = "dev.sigstore.cosign/bundle"
+)
+
 type sigLayer struct {
 	v1.Layer
 	desc v1.Descriptor
+}
+
+func New(l v1.Layer, desc v1.Descriptor) oci.Signature {
+	return &sigLayer{
+		Layer: l,
+		desc:  desc,
+	}
 }
 
 var _ oci.Signature = (*sigLayer)(nil)
