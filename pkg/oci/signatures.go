@@ -18,7 +18,6 @@ package oci
 import (
 	"crypto/x509"
 
-	"github.com/go-openapi/strfmt"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
@@ -64,7 +63,7 @@ type Signature interface {
 // Bundle holds metadata about recording a Signature's ephemeral key to
 // a Rekor transparency log.
 type Bundle struct {
-	SignedEntryTimestamp strfmt.Base64
+	SignedEntryTimestamp []byte
 	Payload              BundlePayload
 }
 
