@@ -20,7 +20,7 @@ require (
 	github.com/in-toto/in-toto-golang v0.3.3
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.0.3
-	github.com/open-policy-agent/opa v0.34.1
+	github.com/open-policy-agent/opa v0.34.2
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
-	github.com/xanzy/go-gitlab v0.51.1
+	github.com/xanzy/go-gitlab v0.52.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.60.0
