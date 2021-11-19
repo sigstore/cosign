@@ -52,9 +52,10 @@ type KeyOpts struct {
 }
 
 // nolint
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, output string, timeout time.Duration) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, timeout time.Duration) ([]byte, error) {
 	var payload []byte
 	var err error
+	var rekorBytes []byte
 
 	if payloadPath == "-" {
 		payload, err = io.ReadAll(os.Stdin)
@@ -79,7 +80,6 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 
 	if options.EnableExperimental() {
 		// TODO: Refactor with sign.go
-		var rekorBytes []byte
 		if sv.Cert != nil {
 			fmt.Fprintf(os.Stderr, "signing with ephemeral certificate:\n%s\n", string(sv.Cert))
 			rekorBytes = sv.Cert
@@ -101,8 +101,8 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 	}
 
-	if output != "" {
-		f, err := os.Create(output)
+	if outputSignature != "" {
+		f, err := os.Create(outputSignature)
 		if err != nil {
 			return nil, err
 		}
@@ -128,6 +128,26 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		} else if _, err := os.Stdout.Write(sig); err != nil {
 			// No newline if using the raw signature
 			return nil, err
+		}
+	}
+
+	if outputCertificate != "" {
+		f, err := os.Create(outputCertificate)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+
+		if b64 {
+			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(rekorBytes)))
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			_, err = f.Write(rekorBytes)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

@@ -16,12 +16,14 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
+	"fmt"
+	"os"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/spf13/cobra"
 )
 
 func SignBlob() *cobra.Command {
@@ -74,7 +76,12 @@ func SignBlob() *cobra.Command {
 				OIDCClientSecret:         o.OIDC.ClientSecret,
 			}
 			for _, blob := range args {
-				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.Output, o.Timeout); err != nil {
+				// TODO: remove when the output flag has been deprecated
+				if o.Output != "" {
+					fmt.Fprintln(os.Stderr, "WARNING: the '--output' flag is deprecated and will be removed in the future. Use '--output-signature'")
+					o.OutputSignature = o.Output
+				}
+				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.Timeout); err != nil {
 					return errors.Wrapf(err, "signing %s", blob)
 				}
 			}
