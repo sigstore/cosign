@@ -16,7 +16,8 @@
 package static
 
 import (
-	"github.com/go-openapi/swag"
+	"encoding/json"
+
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci"
 	ctypes "github.com/sigstore/cosign/pkg/types"
@@ -51,7 +52,7 @@ func makeOptions(opts ...Option) (*options, error) {
 	}
 
 	if o.Bundle != nil {
-		b, err := swag.WriteJSON(o.Bundle)
+		b, err := json.Marshal(o.Bundle)
 		if err != nil {
 			return nil, err
 		}
