@@ -60,14 +60,14 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error) {
+func ShouldUploadToTlog(ref name.Reference, force bool, url string) bool {
 	// Check whether experimental is on!
 	if !options.EnableExperimental() {
-		return false, nil
+		return false
 	}
 	// We are forcing publishing to the Tlog.
 	if force {
-		return true, nil
+		return true
 	}
 
 	// Check if the image is public (no auth in Get)
@@ -76,14 +76,14 @@ func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error
 
 		var tlogConfirmResponse string
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
-			return false, err
+			panic(err)
 		}
 		if strings.ToUpper(tlogConfirmResponse) != "Y" {
 			fmt.Fprintln(os.Stderr, "not uploading to transparency log")
-			return false, nil
+			return false
 		}
 	}
-	return true, nil
+	return true
 }
 
 type Uploader func(*rekGenClient.Rekor, []byte) (*models.LogEntryAnon, error)
@@ -254,11 +254,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
-
-	// Check whether we should be uploading to the transparency log
-	if uploadTLog, err := ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
-		return err
-	} else if uploadTLog {
+	if ShouldUploadToTlog(digest, force, ko.RekorURL) {
 		bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			// TODO - Defaulting the timeout to zero as the CLI doesn't accept timeout.
 			return cosign.TLogUpload(r, signature, payload, b, time.Duration(0))
