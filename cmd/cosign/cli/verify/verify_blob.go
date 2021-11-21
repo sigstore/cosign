@@ -117,7 +117,14 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return err
 		}
 
-		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(pems))
+		var out []byte
+		out, err = base64.StdEncoding.DecodeString(string(pems))
+		if err != nil {
+			// not a base64
+			out = pems
+		}
+
+		certs, err := cryptoutils.UnmarshalCertificatesFromPEM(out)
 		if err != nil {
 			return err
 		}
