@@ -230,24 +230,20 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 	b64sig := base64.StdEncoding.EncodeToString(signature)
 
-	if !upload {
-		fmt.Println(b64sig)
-		return nil
-	}
-
+	out := os.Stdout
 	if output != "" {
-		f, err := os.Create(output)
+		out, err = os.Create(output)
 		if err != nil {
 			return errors.Wrap(err, "create signature file")
 		}
-		defer f.Close()
-		_, err = f.Write([]byte(b64sig))
+		defer out.Close()
+	}
+	if _, err := out.Write([]byte(b64sig)); err != nil {
+		return errors.Wrap(err, "write signature to file")
+	}
 
-		if err != nil {
-			return errors.Wrap(err, "write signature to file")
-		}
-
-		fmt.Fprintf(os.Stderr, "Signature wrote to the file %s\n", f.Name())
+	if !upload {
+		return nil
 	}
 
 	opts := []static.Option{}
