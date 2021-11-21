@@ -10,6 +10,9 @@ before:
   hooks:
   - go mod tidy
 
+gomod:
+  proxy: true
+
 builds:
 - id: linux
   binary: cosign-linux-{{ .Arch }}
@@ -27,7 +30,7 @@ builds:
     - s390x
     - ppc64le
   goarm:
-    - 7
+    - '7'
   ldflags:
     - "{{ .Env.LDFLAGS }}"
   env:
