@@ -35,9 +35,16 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
+// LoadPublicKey is a wrapper for VerifierForKeyRef, hardcoding SHA256 as the hash algorithm
 func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
+	return VerifierForKeyRef(ctx, keyRef, crypto.SHA256)
+}
+
+// VerifierForKeyRef parses the given keyRef, loads the key and returns an appropriate
+// verifier using the provided hash algorithm
+func VerifierForKeyRef(ctx context.Context, keyRef string, hashAlgorithm crypto.Hash) (verifier signature.Verifier, err error) {
 	// The key could be plaintext, in a file, at a URL, or in KMS.
-	if kmsKey, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
+	if kmsKey, err := kms.Get(ctx, keyRef, hashAlgorithm); err == nil {
 		// KMS specified
 		return kmsKey, nil
 	}
@@ -53,7 +60,8 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 	if err != nil {
 		return nil, errors.Wrap(err, "pem to public key")
 	}
-	return signature.LoadVerifier(pubKey, crypto.SHA256)
+
+	return signature.LoadVerifier(pubKey, hashAlgorithm)
 }
 
 func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier, error) {
@@ -68,13 +76,13 @@ func loadKey(keyPath string, pf cosign.PassFunc) (*signature.ECDSASignerVerifier
 	return cosign.LoadECDSAPrivateKey(kb, pass)
 }
 
-func loadPublicKey(raw []byte) (signature.Verifier, error) {
+func loadPublicKey(raw []byte, hashAlgorithm crypto.Hash) (signature.Verifier, error) {
 	// PEM encoded file.
 	ed, err := cosign.PemToECDSAKey(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "pem to ecdsa")
 	}
-	return signature.LoadECDSAVerifier(ed, crypto.SHA256)
+	return signature.LoadECDSAVerifier(ed, hashAlgorithm)
 }
 
 func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
@@ -145,6 +153,10 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 }
 
 func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier, error) {
+	return PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, crypto.SHA256)
+}
+
+func PublicKeyFromKeyRefWithHashAlgo(ctx context.Context, keyRef string, hashAlgorithm crypto.Hash) (signature.Verifier, error) {
 	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
 		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
 		if err != nil {
@@ -152,7 +164,7 @@ func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 		}
 
 		if len(s.Data) > 0 {
-			return loadPublicKey(s.Data["cosign.pub"])
+			return loadPublicKey(s.Data["cosign.pub"], hashAlgorithm)
 		}
 	}
 
@@ -191,11 +203,11 @@ func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 		}
 
 		if len(pubKey) > 0 {
-			return loadPublicKey([]byte(pubKey))
+			return loadPublicKey([]byte(pubKey), hashAlgorithm)
 		}
 	}
 
-	return LoadPublicKey(ctx, keyRef)
+	return VerifierForKeyRef(ctx, keyRef, hashAlgorithm)
 }
 
 func PublicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKeyOption) ([]byte, error) {
