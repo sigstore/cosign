@@ -611,6 +611,34 @@ func TestUploadBlob(t *testing.T) {
 	}
 }
 
+func TestSaveLoad(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	keysDir := t.TempDir()
+
+	imgName := path.Join(repo, "save-load")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, keysDir)
+
+	ctx := context.Background()
+	// Now sign the image and verify it
+	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// save the image to a temp dir
+	imageDir := t.TempDir()
+	must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+
+	// load the image from the temp dir into a new image and verify the new image
+	imgName2 := path.Join(repo, "save-load-2")
+	must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
+	must(verify(pubKeyPath, imgName2, true, nil, ""), t)
+}
+
 func TestAttachSBOM(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
