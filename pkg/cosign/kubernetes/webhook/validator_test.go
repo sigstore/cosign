@@ -17,7 +17,6 @@ package webhook
 
 import (
 	"context"
-	"crypto/x509"
 	"errors"
 	"testing"
 	"time"
@@ -72,12 +71,6 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			Name: "default",
 		},
 	}, metav1.CreateOptions{})
-
-	fr := fulcioRoots
-	defer func() { fulcioRoots = fr }()
-	fulcioRoots = func() *x509.CertPool {
-		return nil
-	}
 
 	v := NewValidator(ctx, secretName)
 
@@ -237,12 +230,6 @@ func TestValidateCronJob(t *testing.T) {
 			Name: "default",
 		},
 	}, metav1.CreateOptions{})
-
-	fr := fulcioRoots
-	defer func() { fulcioRoots = fr }()
-	fulcioRoots = func() *x509.CertPool {
-		return nil
-	}
 
 	v := NewValidator(ctx, secretName)
 
