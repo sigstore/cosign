@@ -20,7 +20,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -29,7 +28,6 @@ import (
 
 func Sign() *cobra.Command {
 	o := &options.SignOptions{}
-	viper.RegisterAlias("output", "output-signature")
 
 	cmd := &cobra.Command{
 		Use:   "sign",

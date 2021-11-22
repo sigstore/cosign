@@ -28,7 +28,7 @@ type SignBlobOptions struct {
 	Base64Output      bool
 	Output            string // deprecated: TODO remove when the output flag is fully deprecated
 	OutputSignature   string // TODO: this should be the root output file arg.
-	OutputCertificate string // TODO: this should be the root output file arg.
+	OutputCertificate string
 	SecurityKey       SecurityKeyOptions
 	Fulcio            FulcioOptions
 	Rekor             RekorOptions
