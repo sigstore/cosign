@@ -24,10 +24,12 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func SignBlob() *cobra.Command {
 	o := &options.SignBlobOptions{}
+	viper.RegisterAlias("output", "output-signature")
 
 	cmd := &cobra.Command{
 		Use:   "sign-blob",
