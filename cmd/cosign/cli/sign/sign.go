@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -51,9 +50,9 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/walk"
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	fulcioClient "github.com/sigstore/fulcio/pkg/client"
-	rekorclient "github.com/sigstore/rekor/pkg/client"
-	"github.com/sigstore/rekor/pkg/generated/client"
+	fulcPkgClient "github.com/sigstore/fulcio/pkg/client"
+	rekPkgClient "github.com/sigstore/rekor/pkg/client"
+	rekGenClient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -61,14 +60,14 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error) {
+func ShouldUploadToTlog(ref name.Reference, force bool, url string) bool {
 	// Check whether experimental is on!
 	if !options.EnableExperimental() {
-		return false, nil
+		return false
 	}
 	// We are forcing publishing to the Tlog.
 	if force {
-		return true, nil
+		return true
 	}
 
 	// Check if the image is public (no auth in Get)
@@ -77,19 +76,19 @@ func ShouldUploadToTlog(ref name.Reference, force bool, url string) (bool, error
 
 		var tlogConfirmResponse string
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
-			return false, err
+			panic(err)
 		}
 		if strings.ToUpper(tlogConfirmResponse) != "Y" {
 			fmt.Fprintln(os.Stderr, "not uploading to transparency log")
-			return false, nil
+			return false
 		}
 	}
-	return true, nil
+	return true
 }
 
-type Uploader func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
+type Uploader func(*rekGenClient.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, upload Uploader) (*oci.Bundle, error) {
+func UploadToTlog(ctx context.Context, sv *SignerVerifier, rekorURL string, upload Uploader) (*oci.Bundle, error) {
 	var rekorBytes []byte
 	// Upload the cert or the public key, depending on what we have
 	if sv.Cert != nil {
@@ -101,7 +100,7 @@ func UploadToTlog(ctx context.Context, sv *CertSignVerifier, rekorURL string, up
 		}
 		rekorBytes = pemBytes
 	}
-	rekorClient, err := rekorclient.GetRekorClient(rekorURL)
+	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +211,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyOpts,
 	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, output string, force bool,
-	dd mutate.DupeDetector, sv *CertSignVerifier, se oci.SignedEntity) error {
+	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
 	if len(payload) == 0 {
@@ -231,36 +230,28 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 	b64sig := base64.StdEncoding.EncodeToString(signature)
 
-	if !upload {
-		fmt.Println(b64sig)
-		return nil
-	}
-
+	out := os.Stdout
 	if output != "" {
-		f, err := os.Create(output)
+		out, err = os.Create(output)
 		if err != nil {
 			return errors.Wrap(err, "create signature file")
 		}
-		defer f.Close()
-		_, err = f.Write([]byte(b64sig))
+		defer out.Close()
+	}
+	if _, err := out.Write([]byte(b64sig)); err != nil {
+		return errors.Wrap(err, "write signature to file")
+	}
 
-		if err != nil {
-			return errors.Wrap(err, "write signature to file")
-		}
-
-		fmt.Fprintf(os.Stderr, "Signature wrote to the file %s\n", f.Name())
+	if !upload {
+		return nil
 	}
 
 	opts := []static.Option{}
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
-
-	// Check whether we should be uploading to the transparency log
-	if uploadTLog, err := ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
-		return err
-	} else if uploadTLog {
-		bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+	if ShouldUploadToTlog(digest, force, ko.RekorURL) {
+		bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			// TODO - Defaulting the timeout to zero as the CLI doesn't accept timeout.
 			return cosign.TLogUpload(r, signature, payload, b, time.Duration(0))
 		})
@@ -310,121 +301,119 @@ func Bundle(entry *models.LogEntryAnon) *oci.Bundle {
 	}
 }
 
-func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertSignVerifier, error) {
-	switch {
-	case ko.Sk:
-		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
-		if err != nil {
-			return nil, err
-		}
-		sv, err := sk.SignerVerifier()
-		if err != nil {
-			return nil, err
-		}
+func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {
+	sk, err := pivkey.GetKeyWithSlot(keySlot)
+	if err != nil {
+		return nil, err
+	}
+	sv, err := sk.SignerVerifier()
+	if err != nil {
+		return nil, err
+	}
 
-		// Handle the -cert flag.
-		// With PIV, we assume the certificate is in the same slot on the PIV
-		// token as the private key. If it's not there, show a warning to the
-		// user.
-		certFromPIV, err := sk.Certificate()
-		var pemBytes []byte
+	// Handle the -cert flag.
+	// With PIV, we assume the certificate is in the same slot on the PIV
+	// token as the private key. If it's not there, show a warning to the
+	// user.
+	certFromPIV, err := sk.Certificate()
+	var pemBytes []byte
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
+	} else {
+		pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPIV)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
+			return nil, err
+		}
+	}
+
+	return &SignerVerifier{
+		Cert:           pemBytes,
+		SignerVerifier: sv,
+		close:          sk.Close,
+	}, nil
+}
+
+func signerFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc cosign.PassFunc) (*SignerVerifier, error) {
+	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading key")
+	}
+
+	// Handle the -cert flag
+	// With PKCS11, we assume the certificate is in the same slot on the PKCS11
+	// token as the private key. If it's not there, show a warning to the
+	// user.
+	if pkcs11Key, ok := k.(*pkcs11key.Key); ok {
+		certFromPKCS11, _ := pkcs11Key.Certificate()
+		var pemBytes []byte
+		if certFromPKCS11 == nil {
+			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
 		} else {
-			pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPIV)
+			pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		return &CertSignVerifier{
+		return &SignerVerifier{
 			Cert:           pemBytes,
-			SignerVerifier: sv,
-			close:          sk.Close,
-		}, nil
-
-	case ko.KeyRef != "":
-		k, err := sigs.SignerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
-		if err != nil {
-			return nil, errors.Wrap(err, "reading key")
-		}
-
-		// Handle the -cert flag
-		// With PKCS11, we assume the certificate is in the same slot on the PKCS11
-		// token as the private key. If it's not there, show a warning to the
-		// user.
-		pkcs11Key, ok := k.(*pkcs11key.Key)
-		if ok {
-			certFromPKCS11, _ := pkcs11Key.Certificate()
-			var pemBytes []byte
-			if certFromPKCS11 == nil {
-				fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
-			} else {
-				pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			return &CertSignVerifier{
-				Cert:           pemBytes,
-				SignerVerifier: k,
-				close:          pkcs11Key.Close,
-			}, nil
-		}
-		certSigner := &CertSignVerifier{
 			SignerVerifier: k,
-		}
-		if certPath == "" {
-			return certSigner, nil
-		}
-
-		certBytes, err := os.ReadFile(certPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "read certificate")
-		}
-		// Handle PEM.
-		if bytes.HasPrefix(certBytes, []byte("-----")) {
-			decoded, _ := pem.Decode(certBytes)
-			if decoded.Type != "CERTIFICATE" {
-				return nil, fmt.Errorf("supplied PEM file is not a certificate: %s", certPath)
-			}
-			certBytes = decoded.Bytes
-		}
-		parsedCert, err := x509.ParseCertificate(certBytes)
-		if err != nil {
-			return nil, errors.Wrap(err, "parse x509 certificate")
-		}
-		pk, err := k.PublicKey()
-		if err != nil {
-			return nil, errors.Wrap(err, "get public key")
-		}
-		switch kt := parsedCert.PublicKey.(type) {
-		case *ecdsa.PublicKey:
-			if !kt.Equal(pk) {
-				return nil, errors.New("public key in certificate does not match that in the signing key")
-			}
-		case *rsa.PublicKey:
-			if !kt.Equal(pk) {
-				return nil, errors.New("public key in certificate does not match that in the signing key")
-			}
-		default:
-			return nil, fmt.Errorf("unsupported key type: %T", parsedCert.PublicKey)
-		}
-		pemBytes, err := cryptoutils.MarshalCertificateToPEM(parsedCert)
-		if err != nil {
-			return nil, errors.Wrap(err, "marshaling certificate to PEM")
-		}
-		certSigner.Cert = pemBytes
+			close:          pkcs11Key.Close,
+		}, nil
+	}
+	certSigner := &SignerVerifier{
+		SignerVerifier: k,
+	}
+	if certPath == "" {
 		return certSigner, nil
 	}
-	// Default Keyless!
-	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
+
+	certBytes, err := os.ReadFile(certPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "read certificate")
+	}
+	// Handle PEM.
+	if bytes.HasPrefix(certBytes, []byte("-----")) {
+		decoded, _ := pem.Decode(certBytes)
+		if decoded.Type != "CERTIFICATE" {
+			return nil, fmt.Errorf("supplied PEM file is not a certificate: %s", certPath)
+		}
+		certBytes = decoded.Bytes
+	}
+	parsedCert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse x509 certificate")
+	}
+	pk, err := k.PublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "get public key")
+	}
+	switch kt := parsedCert.PublicKey.(type) {
+	case *ecdsa.PublicKey:
+		if !kt.Equal(pk) {
+			return nil, errors.New("public key in certificate does not match that in the signing key")
+		}
+	case *rsa.PublicKey:
+		if !kt.Equal(pk) {
+			return nil, errors.New("public key in certificate does not match that in the signing key")
+		}
+	default:
+		return nil, fmt.Errorf("unsupported key type: %T", parsedCert.PublicKey)
+	}
+	pemBytes, err := cryptoutils.MarshalCertificateToPEM(parsedCert)
+	if err != nil {
+		return nil, errors.Wrap(err, "marshaling certificate to PEM")
+	}
+	certSigner.Cert = pemBytes
+	return certSigner, nil
+}
+
+func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
 	fulcioServer, err := url.Parse(ko.FulcioURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing Fulcio URL")
 	}
-	fClient := fulcioClient.New(fulcioServer)
+	fClient := fulcPkgClient.New(fulcioServer)
 	tok := ko.IDToken
 	if providers.Enabled(ctx) {
 		tok, err = providers.Provide(ctx, "sigstore")
@@ -446,21 +435,36 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*CertS
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
 	}
-	return &CertSignVerifier{
+
+	return &SignerVerifier{
 		Cert:           k.Cert,
 		Chain:          k.Chain,
 		SignerVerifier: k,
 	}, nil
 }
 
-type CertSignVerifier struct {
+func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*SignerVerifier, error) {
+	if ko.Sk {
+		return signerFromSecurityKey(ko.Slot)
+	}
+
+	if ko.KeyRef != "" {
+		return signerFromKeyRef(ctx, certPath, ko.KeyRef, ko.PassFunc)
+	}
+
+	// Default Keyless!
+	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
+	return keylessSigner(ctx, ko)
+}
+
+type SignerVerifier struct {
 	Cert  []byte
 	Chain []byte
 	signature.SignerVerifier
 	close func()
 }
 
-func (c *CertSignVerifier) Close() {
+func (c *SignerVerifier) Close() {
 	if c.close != nil {
 		c.close()
 	}
