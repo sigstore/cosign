@@ -35,6 +35,10 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
+var (
+	fulcioRoots = fulcioroots.Get
+)
+
 func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) error {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
@@ -77,7 +81,7 @@ var cosignVerifySignatures = cosign.VerifyImageSignatures
 func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier, opts ...ociremote.Option) ([]oci.Signature, error) {
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
-		RootCerts:          fulcioroots.Get(),
+		RootCerts:          fulcioRoots(),
 		SigVerifier:        verifier,
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
 	})

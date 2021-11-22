@@ -32,11 +32,6 @@ func DoInitialize(ctx context.Context, root, mirror string, threshold int) error
 		if err != nil {
 			return err
 		}
-	} else {
-		rootFileBytes, err = tuf.GetEmbeddedRoot()
-		if err != nil {
-			return err
-		}
 	}
 
 	// Initialize the remote repository.
