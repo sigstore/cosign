@@ -34,9 +34,9 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.60.0
-	k8s.io/api v0.21.6
-	k8s.io/apimachinery v0.21.6
-	k8s.io/client-go v0.21.6
+	k8s.io/api v0.21.7
+	k8s.io/apimachinery v0.21.7
+	k8s.io/client-go v0.21.7
 	knative.dev/pkg v0.0.0-20211004133827-74ac82a333a4
 )
 
@@ -46,7 +46,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/spf13/viper v1.8.1
+	github.com/spf13/viper v1.9.0
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v1.1.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.10.0 // indirect
