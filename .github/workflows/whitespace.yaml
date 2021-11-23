@@ -72,11 +72,12 @@ jobs:
           #  - nothing in vendor/
           #  - nothing in third_party
           #  - nothing in .git/
+          #  - nothing in pkg/cosign/tuf/repository
           #  - no *.ai (Adobe Illustrator) files.
           LINT_FILES=$(git ls-files |
           git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
           git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
-          grep -Ev '^(vendor/|third_party/|.git|pkg/cosign/tuf/repository/targets/)' |
+          grep -Ev '^(vendor/|third_party/|.git|pkg/cosign/tuf/repository/)' |
           grep -v '\.ai$')
           for x in $LINT_FILES; do
             # Based on https://stackoverflow.com/questions/34943632/linux-check-if-there-is-an-empty-line-at-the-end-of-a-file
