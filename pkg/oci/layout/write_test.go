@@ -48,6 +48,19 @@ func TestReadWrite(t *testing.T) {
 	// compare the image we read with the one we wrote
 	compareDigests(t, si, gotSignedImage)
 
+	// make sure we have 5 attestations
+	attImg, err := imageIndex.Attestations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	atts, err := attImg.Get()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(atts) != 5 {
+		t.Fatal("expected 5 attestations")
+	}
+
 	// make sure signatures are correct
 	sigImage, err := imageIndex.Signatures()
 	if err != nil {
@@ -96,6 +109,19 @@ func randomSignedImage(t *testing.T) oci.SignedImage {
 			t.Fatalf("SignEntity() = %v", err)
 		}
 	}
+
+	want = 5 // Add 5 attestations
+	for i := 0; i < want; i++ {
+		sig, err := static.NewAttestation([]byte(fmt.Sprintf("%d", i)))
+		if err != nil {
+			t.Fatalf("static.NewSignature() = %v", err)
+		}
+		si, err = mutate.AttachAttestationToImage(si, sig)
+		if err != nil {
+			t.Fatalf("SignEntity() = %v", err)
+		}
+	}
+
 	return si
 }
 

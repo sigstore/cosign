@@ -16,7 +16,6 @@
 package layout
 
 import (
-	"errors"
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -26,8 +25,10 @@ import (
 )
 
 const (
+	kindAnnotation  = "kind"
 	imageAnnotation = "dev.cosignproject.cosign/image"
 	sigsAnnotation  = "dev.cosignproject.cosign/sigs"
+	attsAnnotation  = "dev.cosignproject.cosign/atts"
 )
 
 // SignedImageIndex provides access to a local index reference, and its signatures.
@@ -57,16 +58,26 @@ var _ oci.SignedImageIndex = (*index)(nil)
 
 // Signatures implements oci.SignedImageIndex
 func (i *index) Signatures() (oci.Signatures, error) {
-	sigsImage, err := i.imageByAnnotation(sigsAnnotation)
+	img, err := i.imageByAnnotation(sigsAnnotation)
 	if err != nil {
 		return nil, err
 	}
-	return &sigs{sigsImage}, nil
+	if img == nil {
+		return nil, nil
+	}
+	return &sigs{img}, nil
 }
 
 // Attestations implements oci.SignedImageIndex
 func (i *index) Attestations() (oci.Signatures, error) {
-	return nil, fmt.Errorf("not yet implemented")
+	img, err := i.imageByAnnotation(attsAnnotation)
+	if err != nil {
+		return nil, err
+	}
+	if img == nil {
+		return nil, nil
+	}
+	return &sigs{img}, nil
 }
 
 // Attestations implements oci.SignedImage
@@ -98,11 +109,11 @@ func (i *index) imageByAnnotation(annotation string) (v1.Image, error) {
 		return nil, err
 	}
 	for _, m := range manifest.Manifests {
-		if _, ok := m.Annotations[annotation]; ok {
+		if val, ok := m.Annotations[kindAnnotation]; ok && val == annotation {
 			return i.Image(m.Digest)
 		}
 	}
-	return nil, errors.New("unable to find image")
+	return nil, nil
 }
 
 // SignedImageIndex implements oci.SignedImageIndex
