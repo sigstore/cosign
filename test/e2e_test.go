@@ -639,6 +639,59 @@ func TestSaveLoad(t *testing.T) {
 	must(verify(pubKeyPath, imgName2, true, nil, ""), t)
 }
 
+func TestSaveLoadAttestation(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "save-load")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+	// Now sign the image and verify it
+	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", false, false, ""), t)
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// now, append an attestation to the image
+	slsaAttestation := `{ "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now attest the image
+	ko = sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
+		"custom", false, ftime.Duration(30*time.Second)), t)
+
+	// save the image to a temp dir
+	imageDir := t.TempDir()
+	must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+
+	// load the image from the temp dir into a new image and verify the new image
+	imgName2 := path.Join(repo, "save-load-2")
+	must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
+	must(verify(pubKeyPath, imgName2, true, nil, ""), t)
+	// Use cue to verify attestation on the new image
+	policyPath := filepath.Join(td, "policy.cue")
+	verifyAttestation := cliverify.VerifyAttestationCommand{
+		KeyRef: pubKeyPath,
+	}
+	verifyAttestation.PredicateType = "slsaprovenance"
+	verifyAttestation.Policies = []string{policyPath}
+	// Success case
+	cuePolicy := `builder: id: "2"`
+	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+		t.Fatal(err)
+	}
+	must(verifyAttestation.Exec(ctx, []string{imgName2}), t)
+}
+
 func TestAttachSBOM(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()

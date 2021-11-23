@@ -39,15 +39,34 @@ func WriteSignedImage(path string, si oci.SignedImage) error {
 	if err != nil {
 		return errors.Wrap(err, "getting signatures")
 	}
-	if err := appendImage(layoutPath, sigs, sigsAnnotation); err != nil {
-		return errors.Wrap(err, "appending signatures")
+	if !isEmpty(sigs) {
+		if err := appendImage(layoutPath, sigs, sigsAnnotation); err != nil {
+			return errors.Wrap(err, "appending signatures")
+		}
 	}
-	// TODO (priyawadhwa@) write attestations and attachments
+
+	// write attestations
+	atts, err := si.Attestations()
+	if err != nil {
+		return errors.Wrap(err, "getting atts")
+	}
+	if !isEmpty(atts) {
+		if err := appendImage(layoutPath, atts, attsAnnotation); err != nil {
+			return errors.Wrap(err, "appending atts")
+		}
+	}
+	// TODO (priyawadhwa@) and attachments
 	return nil
+}
+
+// isEmpty returns true if the signatures or attesations are empty
+func isEmpty(s oci.Signatures) bool {
+	ss, _ := s.Get()
+	return ss == nil
 }
 
 func appendImage(path layout.Path, img v1.Image, annotation string) error {
 	return path.AppendImage(img, layout.WithAnnotations(
-		map[string]string{annotation: "true"},
+		map[string]string{kindAnnotation: annotation},
 	))
 }

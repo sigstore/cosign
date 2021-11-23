@@ -44,11 +44,29 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 	if err != nil {
 		return err
 	}
-	sigsTag, err := SignatureTag(ref, opts...)
-	if err != nil {
-		return errors.Wrap(err, "sigs tag")
+	if sigs != nil { // will be nil if there are no associated signatures
+		sigsTag, err := SignatureTag(ref, opts...)
+		if err != nil {
+			return errors.Wrap(err, "sigs tag")
+		}
+		if err := remoteWrite(sigsTag, sigs, o.ROpt...); err != nil {
+			return err
+		}
 	}
-	return remoteWrite(sigsTag, sigs, o.ROpt...)
+
+	// write the attestations
+	atts, err := sii.Attestations()
+	if err != nil {
+		return err
+	}
+	if atts != nil { // will be nil if there are no associated attestations
+		attsTag, err := AttestationTag(ref, opts...)
+		if err != nil {
+			return errors.Wrap(err, "sigs tag")
+		}
+		return remoteWrite(attsTag, atts, o.ROpt...)
+	}
+	return nil
 }
 
 // WriteSignature publishes the signatures attached to the given entity
