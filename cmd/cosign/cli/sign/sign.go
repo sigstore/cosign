@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
@@ -45,7 +46,6 @@ import (
 	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/oci/walk"
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
@@ -252,43 +252,28 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		return nil
 	}
 
-	opts := []static.Option{}
-	if sv.Cert != nil {
-		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
-	}
+	var bundle *oci.Bundle
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
-		bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		bundle, err = UploadToTlog(ctx, sv, ko.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUpload(ctx, r, signature, payload, b)
 		})
 		if err != nil {
 			return err
 		}
-		opts = append(opts, static.WithBundle(bundle))
 	}
 
-	// Create the new signature for this entity.
-	sig, err := static.NewSignature(payload, b64sig, opts...)
-	if err != nil {
-		return err
+	s := &icos.StaticSigner{
+		Digest:    digest,
+		Payload:   payload,
+		Signature: signature,
+		Cert:      sv.Cert,
+		Chain:     sv.Chain,
+		Bundle:    bundle,
+		DD:        dd,
+		RegOpts:   regOpts,
 	}
-
-	// Attach the signature to the entity.
-	newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(dd))
-	if err != nil {
-		return err
-	}
-
-	// Publish the signatures associated with this entity
-	walkOpts, err := regOpts.ClientOpts(ctx)
-	if err != nil {
-		return errors.Wrap(err, "constructing client options")
-	}
-
-	// Publish the signatures associated with this entity
-	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
-		return err
-	}
-	return nil
+	_, err = s.Sign(ctx, se)
+	return err
 }
 
 func Bundle(entry *models.LogEntryAnon) *oci.Bundle {
@@ -430,13 +415,11 @@ func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
 	var k *fulcio.Signer
 
 	if ko.InsecureSkipFulcioVerify {
-		k, err = fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
-		if err != nil {
+		if k, err = fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient); err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
 	} else {
-		k, err = fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient)
-		if err != nil {
+		if k, err = fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, fClient); err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
 	}
