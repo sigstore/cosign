@@ -17,7 +17,7 @@ require (
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20211118220127-abdc633f8305
 	github.com/google/go-github/v39 v39.2.0
 	github.com/google/trillian v1.4.0
-	github.com/in-toto/in-toto-golang v0.3.4-0.20211115151443-952a6cf50fc9
+	github.com/in-toto/in-toto-golang v0.4.0-prerelease
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/open-policy-agent/opa v0.34.2
@@ -30,7 +30,7 @@ require (
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
-	github.com/theupdateframework/go-tuf v0.0.0-20211006142131-1dc15a86c64d
+	github.com/theupdateframework/go-tuf v0.0.0-20211115152232-a4f2dd6ea314
 	github.com/xanzy/go-gitlab v0.52.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
@@ -44,14 +44,14 @@ require (
 
 require (
 	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/fatih/color v1.12.0 // indirect
+	github.com/fatih/color v1.13.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v1.1.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.10.0 // indirect
-	k8s.io/klog/v2 v2.20.0 // indirect
+	go.opentelemetry.io/contrib v1.2.0 // indirect
+	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
+	k8s.io/klog/v2 v2.30.0 // indirect
 )
