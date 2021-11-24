@@ -126,7 +126,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	}
 
 	// Check whether we should be uploading to the transparency log
-	if sign.ShouldUploadToTlog(digest, force, ko.RekorURL) {
+	if sign.ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
 		bundle, err := sign.UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUploadInTotoAttestation(r, signedPayload, b, timeout)
 		})
