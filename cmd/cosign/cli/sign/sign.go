@@ -60,7 +60,7 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func ShouldUploadToTlog(ref name.Reference, force bool, url string) bool {
+func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, url string) bool {
 	// Check whether experimental is on!
 	if !options.EnableExperimental() {
 		return false
@@ -71,7 +71,7 @@ func ShouldUploadToTlog(ref name.Reference, force bool, url string) bool {
 	}
 
 	// Check if the image is public (no auth in Get)
-	if _, err := remote.Get(ref); err != nil {
+	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", url)
 
 		var tlogConfirmResponse string
@@ -250,7 +250,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
-	if ShouldUploadToTlog(digest, force, ko.RekorURL) {
+	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
 		bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			// TODO - Defaulting the timeout to zero as the CLI doesn't accept timeout.
 			return cosign.TLogUpload(r, signature, payload, b, time.Duration(0))
