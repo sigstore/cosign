@@ -17,6 +17,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -166,8 +167,15 @@ func signPolicy() *cobra.Command {
 		Short: "sign a keyless policy.",
 		Long:  "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			if o.Timeout != 0 {
+				var cancelFn context.CancelFunc
+				ctx, cancelFn = context.WithTimeout(ctx, o.Timeout)
+				defer cancelFn()
+			}
+
 			// Get Fulcio signer
-			sv, err := sign.SignerFromKeyOpts(cmd.Context(), "", sign.KeyOpts{
+			sv, err := sign.SignerFromKeyOpts(ctx, "", sign.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
@@ -199,7 +207,7 @@ func signPolicy() *cobra.Command {
 			}
 			opts := []remote.Option{
 				remote.WithAuthFromKeychain(authn.DefaultKeychain),
-				remote.WithContext(cmd.Context()),
+				remote.WithContext(ctx),
 			}
 
 			img, err := remote.Image(ref, opts...)
@@ -212,7 +220,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			result := &bytes.Buffer{}
-			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(cmd.Context()); err != nil {
+			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
 				return errors.Wrap(err, "error getting result")
 			}
 			b, err := io.ReadAll(result)
@@ -228,7 +236,7 @@ func signPolicy() *cobra.Command {
 
 			// Create and add signature
 			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
-			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(cmd.Context()))
+			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(ctx))
 			if err != nil {
 				return errors.Wrap(err, "error occurred while during artifact signing")
 			}
@@ -248,7 +256,7 @@ func signPolicy() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				entry, err := cosign.TLogUpload(rekorClient, sig, signed.Signed, rekorBytes, o.Timeout)
+				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, signed.Signed, rekorBytes)
 				if err != nil {
 					return err
 				}
@@ -281,7 +289,7 @@ func signPolicy() *cobra.Command {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(cmd.Context(), o.Registry, files, "", rootPath(o.ImageRef))
+			return upload.BlobCmd(ctx, o.Registry, files, "", rootPath(o.ImageRef))
 		},
 	}
 

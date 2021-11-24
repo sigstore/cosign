@@ -67,6 +67,12 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return errors.Wrap(err, "parsing reference")
 	}
 
+	if timeout != 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+		defer cancelFn()
+	}
+
 	ociremoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
 		return err
@@ -128,7 +134,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	// Check whether we should be uploading to the transparency log
 	if sign.ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
 		bundle, err := sign.UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUploadInTotoAttestation(r, signedPayload, b, timeout)
+			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})
 		if err != nil {
 			return err

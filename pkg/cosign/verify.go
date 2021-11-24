@@ -139,7 +139,7 @@ func validateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	return verifier, nil
 }
 
-func tlogValidatePublicKey(rekorClient *client.Rekor, pub crypto.PublicKey, sig oci.Signature) error {
+func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub crypto.PublicKey, sig oci.Signature) error {
 	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pub)
 	if err != nil {
 		return err
@@ -152,11 +152,11 @@ func tlogValidatePublicKey(rekorClient *client.Rekor, pub crypto.PublicKey, sig 
 	if err != nil {
 		return err
 	}
-	_, _, err = FindTlogEntry(rekorClient, b64sig, payload, pemBytes)
+	_, _, err = FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
 	return err
 }
 
-func tlogValidateCertificate(rekorClient *client.Rekor, sig oci.Signature) error {
+func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig oci.Signature) error {
 	cert, err := sig.Cert()
 	if err != nil {
 		return err
@@ -173,13 +173,13 @@ func tlogValidateCertificate(rekorClient *client.Rekor, sig oci.Signature) error
 	if err != nil {
 		return err
 	}
-	uuid, _, err := FindTlogEntry(rekorClient, b64sig, payload, pemBytes)
+	uuid, _, err := FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
 	if err != nil {
 		return err
 	}
 	// if we have a cert, we should check expiry
 	// The IntegratedTime verified in VerifyTlog
-	e, err := GetTlogEntry(rekorClient, uuid)
+	e, err := GetTlogEntry(ctx, rekorClient, uuid)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 				}
 			}
 
-			verified, err := VerifyBundle(sig)
+			verified, err := VerifyBundle(ctx, sig)
 			if err != nil && co.RekorURL == "" {
 				return errors.Wrap(err, "unable to verify bundle")
 			}
@@ -261,10 +261,10 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 					if err != nil {
 						return err
 					}
-					return tlogValidatePublicKey(rekorClient, pub, sig)
+					return tlogValidatePublicKey(ctx, rekorClient, pub, sig)
 				}
 
-				return tlogValidateCertificate(rekorClient, sig)
+				return tlogValidateCertificate(ctx, rekorClient, sig)
 			}
 			return nil
 		}(sig); err != nil {
@@ -343,7 +343,7 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 				}
 			}
 
-			verified, err := VerifyBundle(att)
+			verified, err := VerifyBundle(ctx, att)
 			if err != nil && co.RekorURL == "" {
 				return errors.Wrap(err, "unable to verify bundle")
 			}
@@ -355,10 +355,10 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 					if err != nil {
 						return err
 					}
-					return tlogValidatePublicKey(rekorClient, pub, att)
+					return tlogValidatePublicKey(ctx, rekorClient, pub, att)
 				}
 
-				return tlogValidateCertificate(rekorClient, att)
+				return tlogValidateCertificate(ctx, rekorClient, att)
 			}
 			return nil
 		}(att); err != nil {
@@ -390,7 +390,7 @@ func checkExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func VerifyBundle(sig oci.Signature) (bool, error) {
+func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return false, err
@@ -398,7 +398,7 @@ func VerifyBundle(sig oci.Signature) (bool, error) {
 		return false, nil
 	}
 
-	rekorPubKey, err := PemToECDSAKey([]byte(GetRekorPub()))
+	rekorPubKey, err := PemToECDSAKey([]byte(GetRekorPub(ctx)))
 	if err != nil {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
