@@ -66,6 +66,11 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	if err != nil {
 		return nil, err
 	}
+	if timeout != 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+		defer cancelFn()
+	}
 
 	sv, err := SignerFromKeyOpts(ctx, "", ko)
 	if err != nil {
@@ -94,7 +99,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		if err != nil {
 			return nil, err
 		}
-		entry, err := cosign.TLogUpload(rekorClient, sig, payload, rekorBytes, timeout)
+		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}

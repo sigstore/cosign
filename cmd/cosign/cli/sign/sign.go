@@ -28,7 +28,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -134,6 +133,13 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			return &options.KeyParseError{}
 		}
 	}
+
+	// TODO: accept a timeout argument and uncomment the block below
+	// if timeout != 0 {
+	// 	var cancelFn context.CancelFunc
+	// 	ctx, cancelFn = context.WithTimeout(ctx, timeout)
+	// 	defer cancelFn()
+	// }
 
 	sv, err := SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {
@@ -252,8 +258,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
 		bundle, err := UploadToTlog(ctx, sv, ko.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			// TODO - Defaulting the timeout to zero as the CLI doesn't accept timeout.
-			return cosign.TLogUpload(r, signature, payload, b, time.Duration(0))
+			return cosign.TLogUpload(ctx, r, signature, payload, b)
 		})
 		if err != nil {
 			return err

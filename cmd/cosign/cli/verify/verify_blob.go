@@ -142,7 +142,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return err
 		}
 
-		uuids, err := cosign.FindTLogEntriesByPayload(rClient, blobBytes)
+		uuids, err := cosign.FindTLogEntriesByPayload(ctx, rClient, blobBytes)
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.New("could not find a tlog entry for provided blob")
 		}
 
-		tlogEntry, err := cosign.GetTlogEntry(rClient, uuids[0])
+		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, uuids[0])
 		if err != nil {
 			return err
 		}
@@ -206,7 +206,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 				return err
 			}
 		}
-		uuid, index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
+		uuid, index, err := cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
 		if err != nil {
 			return err
 		}
