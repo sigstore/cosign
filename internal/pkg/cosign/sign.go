@@ -15,6 +15,7 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 
@@ -25,66 +26,165 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	"github.com/sigstore/sigstore/pkg/signature"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-type SigningResults struct {
-	SignedDigest name.Digest
-	OCISignature oci.Signature
+type SigningRequest struct {
+	SignaturePayload []byte
+	SignedEntity     oci.SignedEntity
+}
 
-	Info map[string]interface{}
+type SigningResults struct {
+	SignedPayload []byte
+	Signature     []byte
+	Cert, Chain   []byte
+	Bundle        *oci.Bundle
+
+	OCISignature oci.Signature
+	SignedEntity oci.SignedEntity
 }
 
 type Signer interface {
-	Sign(context.Context, oci.SignedEntity) (*SigningResults, error)
+	Sign(context.Context, *SigningRequest) (*SigningResults, error)
 }
 
-type StaticSigner struct {
-	Digest      name.Digest
-	Payload     []byte
-	Signature   []byte
+// type NoOpSigner struct{}
+
+// func (NoOpSigner) Sign(_ context.Context, req *SigningRequest) (*SigningResults, error) {
+// 	return &SigningResults{
+// 		SignedEntity: req.SignedEntity,
+// 	}, nil
+// }
+
+type PayloadSigner struct {
+	PayloadSigner     signature.Signer
+	PayloadSignerOpts []signature.SignOption
+}
+
+func (ps *PayloadSigner) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
+	opts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+	opts = append(opts, ps.PayloadSignerOpts...)
+	sig, err := ps.PayloadSigner.SignMessage(bytes.NewReader(req.SignaturePayload), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SigningResults{
+		Signature:    sig,
+		SignedEntity: req.SignedEntity,
+	}, nil
+}
+
+type FulcioSignerWrapper struct {
+	Inner Signer
+
 	Cert, Chain []byte
-	Bundle      *oci.Bundle
-
-	DD      mutate.DupeDetector
-	RegOpts options.RegistryOptions
 }
 
-func (ls *StaticSigner) Sign(ctx context.Context, se oci.SignedEntity) (*SigningResults, error) {
+func (fs *FulcioSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
+	results, err := fs.Inner.Sign(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	results.Cert = fs.Cert
+	results.Chain = fs.Chain
+
+	return results, nil
+}
+
+type RekorSignerWrapper struct {
+	Inner Signer
+
+	Bundle *oci.Bundle
+}
+
+func (rs *RekorSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
+	results, err := rs.Inner.Sign(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	results.Bundle = rs.Bundle
+
+	return results, nil
+}
+
+type OCISignatureBuilder struct {
+	Inner Signer
+}
+
+func (sb *OCISignatureBuilder) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
+	results, err := sb.Inner.Sign(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
 	opts := []static.Option{}
-	if ls.Cert != nil {
-		opts = append(opts, static.WithCertChain(ls.Cert, ls.Chain))
+	if results.Cert != nil {
+		opts = append(opts, static.WithCertChain(results.Cert, results.Chain))
 	}
-	if ls.Bundle != nil {
-		opts = append(opts, static.WithBundle(ls.Bundle))
+	if results.Bundle != nil {
+		opts = append(opts, static.WithBundle(results.Bundle))
 	}
-	b64sig := base64.StdEncoding.EncodeToString(ls.Signature)
+	b64sig := base64.StdEncoding.EncodeToString(results.Signature)
 
 	// Create the new signature for this entity.
-	sig, err := static.NewSignature(ls.Payload, b64sig, opts...)
+	ociSig, err := static.NewSignature(results.SignedPayload, b64sig, opts...)
+	if err != nil {
+		return nil, err
+	}
+	results.OCISignature = ociSig
+
+	return results, nil
+}
+
+type OCISignatureAttacher struct {
+	Inner Signer
+
+	DD mutate.DupeDetector
+}
+
+func (sa *OCISignatureAttacher) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
+	results, err := sa.Inner.Sign(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
 	// Attach the signature to the entity.
-	newSE, err := mutate.AttachSignatureToEntity(se, sig, mutate.WithDupeDetector(ls.DD))
+	newSE, err := mutate.AttachSignatureToEntity(results.SignedEntity, results.OCISignature, mutate.WithDupeDetector(sa.DD))
+	if err != nil {
+		return nil, err
+	}
+	results.SignedEntity = newSE
+
+	return results, nil
+}
+
+type RemoteSignerWrapper struct {
+	Inner Signer
+
+	SignatureRepo name.Repository
+	RegOpts       options.RegistryOptions
+}
+
+func (rs *RemoteSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
+	results, err := rs.Inner.Sign(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
 	// Publish the signatures associated with this entity
-	walkOpts, err := ls.RegOpts.ClientOpts(ctx)
+	walkOpts, err := rs.RegOpts.ClientOpts(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "constructing client options")
 	}
 
 	// Publish the signatures associated with this entity
-	if err := ociremote.WriteSignatures(ls.Digest.Repository, newSE, walkOpts...); err != nil {
+	if err := ociremote.WriteSignatures(rs.SignatureRepo, results.SignedEntity, walkOpts...); err != nil {
 		return nil, err
 	}
 
-	return &SigningResults{
-		SignedDigest: ls.Digest,
-		OCISignature: sig,
-		Info:         map[string]interface{}{},
-	}, nil
+	return results, nil
 }

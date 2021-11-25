@@ -262,17 +262,38 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		}
 	}
 
-	s := &icos.StaticSigner{
-		Digest:    digest,
-		Payload:   payload,
-		Signature: signature,
-		Cert:      sv.Cert,
-		Chain:     sv.Chain,
-		Bundle:    bundle,
-		DD:        dd,
-		RegOpts:   regOpts,
+	req := &icos.SigningRequest{
+		SignaturePayload: payload,
+		SignedEntity:     se,
 	}
-	_, err = s.Sign(ctx, se)
+
+	var s icos.Signer
+	s = &icos.PayloadSigner{
+		PayloadSigner: sv,
+	}
+	s = &icos.RekorSignerWrapper{
+		Bundle: bundle,
+		Inner:  s,
+	}
+	s = &icos.FulcioSignerWrapper{
+		Cert:  sv.Cert,
+		Chain: sv.Chain,
+		Inner: s,
+	}
+	s = &icos.OCISignatureBuilder{
+		Inner: s,
+	}
+	s = &icos.OCISignatureAttacher{
+		DD:    dd,
+		Inner: s,
+	}
+	s = &icos.RemoteSignerWrapper{
+		SignatureRepo: digest.Repository,
+		RegOpts:       regOpts,
+
+		Inner: s,
+	}
+	_, err = s.Sign(ctx, req)
 	return err
 }
 
