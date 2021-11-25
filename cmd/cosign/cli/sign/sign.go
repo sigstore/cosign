@@ -50,9 +50,6 @@ import (
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	fulcPkgClient "github.com/sigstore/fulcio/pkg/client"
-	rekPkgClient "github.com/sigstore/rekor/pkg/client"
-	rekGenClient "github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -83,32 +80,6 @@ func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, url
 		}
 	}
 	return true
-}
-
-type Uploader func(*rekGenClient.Rekor, []byte) (*models.LogEntryAnon, error)
-
-func UploadToTlog(ctx context.Context, sv *SignerVerifier, rekorURL string, upload Uploader) (*oci.Bundle, error) {
-	var rekorBytes []byte
-	// Upload the cert or the public key, depending on what we have
-	if sv.Cert != nil {
-		rekorBytes = sv.Cert
-	} else {
-		pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-		if err != nil {
-			return nil, err
-		}
-		rekorBytes = pemBytes
-	}
-	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
-	if err != nil {
-		return nil, err
-	}
-	entry, err := upload(rekorClient, rekorBytes)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return Bundle(entry), nil
 }
 
 func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremote.Option) (name.Reference, error) {
@@ -252,16 +223,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		return nil
 	}
 
-	var bundle *oci.Bundle
-	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
-		bundle, err = UploadToTlog(ctx, sv, ko.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUpload(ctx, r, signature, payload, b)
-		})
-		if err != nil {
-			return err
-		}
-	}
-
 	req := &icos.SigningRequest{
 		SignaturePayload: payload,
 		SignedEntity:     se,
@@ -271,13 +232,12 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	s = &icos.PayloadSigner{
 		PayloadSigner: sv,
 	}
-	s = &icos.RekorSignerWrapper{
-		Bundle: bundle,
-		Inner:  s,
-	}
 	s = &icos.FulcioSignerWrapper{
 		Cert:  sv.Cert,
 		Chain: sv.Chain,
+		Inner: s,
+	}
+	s = &icos.RekorSignerWrapper{
 		Inner: s,
 	}
 	s = &icos.OCISignatureBuilder{
@@ -295,21 +255,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 	_, err = s.Sign(ctx, req)
 	return err
-}
-
-func Bundle(entry *models.LogEntryAnon) *oci.Bundle {
-	if entry.Verification == nil {
-		return nil
-	}
-	return &oci.Bundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: oci.BundlePayload{
-			Body:           entry.Body,
-			IntegratedTime: *entry.IntegratedTime,
-			LogIndex:       *entry.LogIndex,
-			LogID:          *entry.LogID,
-		},
-	}
 }
 
 func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {

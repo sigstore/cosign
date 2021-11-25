@@ -17,6 +17,7 @@ package cosign
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"encoding/base64"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -38,6 +39,7 @@ type SigningRequest struct {
 type SigningResults struct {
 	SignedPayload []byte
 	Signature     []byte
+	Pub           crypto.PublicKey
 	Cert, Chain   []byte
 	Bundle        *oci.Bundle
 
@@ -58,21 +60,31 @@ type Signer interface {
 // }
 
 type PayloadSigner struct {
-	PayloadSigner     signature.Signer
-	PayloadSignerOpts []signature.SignOption
+	PayloadSigner         signature.Signer
+	PayloadSignerOpts     []signature.SignOption
+	PublicKeyProviderOpts []signature.PublicKeyOption
 }
 
 func (ps *PayloadSigner) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
-	opts := []signature.SignOption{signatureoptions.WithContext(ctx)}
-	opts = append(opts, ps.PayloadSignerOpts...)
-	sig, err := ps.PayloadSigner.SignMessage(bytes.NewReader(req.SignaturePayload), opts...)
+	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+	sOpts = append(sOpts, ps.PayloadSignerOpts...)
+	sig, err := ps.PayloadSigner.SignMessage(bytes.NewReader(req.SignaturePayload), sOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	pkOpts := []signature.PublicKeyOption{signatureoptions.WithContext(ctx)}
+	pkOpts = append(pkOpts, ps.PublicKeyProviderOpts...)
+	pk, err := ps.PayloadSigner.PublicKey(pkOpts...)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SigningResults{
-		Signature:    sig,
-		SignedEntity: req.SignedEntity,
+		Signature:     sig,
+		SignedPayload: req.SignaturePayload,
+		SignedEntity:  req.SignedEntity,
+		Pub:           pk,
 	}, nil
 }
 
@@ -90,23 +102,6 @@ func (fs *FulcioSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*
 
 	results.Cert = fs.Cert
 	results.Chain = fs.Chain
-
-	return results, nil
-}
-
-type RekorSignerWrapper struct {
-	Inner Signer
-
-	Bundle *oci.Bundle
-}
-
-func (rs *RekorSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
-	results, err := rs.Inner.Sign(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	results.Bundle = rs.Bundle
 
 	return results, nil
 }
