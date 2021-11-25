@@ -52,7 +52,6 @@ import (
 	fulcPkgClient "github.com/sigstore/fulcio/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -201,12 +200,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		}
 	}
 
-	signature, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
-	if err != nil {
-		return errors.Wrap(err, "signing")
-	}
-	b64sig := base64.StdEncoding.EncodeToString(signature)
-
 	out := os.Stdout
 	if output != "" {
 		out, err = os.Create(output)
@@ -214,13 +207,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 			return errors.Wrap(err, "create signature file")
 		}
 		defer out.Close()
-	}
-	if _, err := out.Write([]byte(b64sig)); err != nil {
-		return errors.Wrap(err, "write signature to file")
-	}
-
-	if !upload {
-		return nil
 	}
 
 	req := &icos.SigningRequest{
@@ -237,8 +223,11 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		Chain: sv.Chain,
 		Inner: s,
 	}
-	s = &icos.RekorSignerWrapper{
-		Inner: s,
+	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
+		s = &icos.RekorSignerWrapper{
+			Inner:    s,
+			RekorURL: ko.RekorURL,
+		}
 	}
 	s = &icos.OCISignatureBuilder{
 		Inner: s,
@@ -247,14 +236,25 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		DD:    dd,
 		Inner: s,
 	}
-	s = &icos.RemoteSignerWrapper{
-		SignatureRepo: digest.Repository,
-		RegOpts:       regOpts,
+	if upload {
+		s = &icos.RemoteSignerWrapper{
+			SignatureRepo: digest.Repository,
+			RegOpts:       regOpts,
 
-		Inner: s,
+			Inner: s,
+		}
 	}
-	_, err = s.Sign(ctx, req)
-	return err
+
+	results, err := s.Sign(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	b64sig := base64.StdEncoding.EncodeToString(results.Signature)
+	if _, err := out.Write([]byte(b64sig)); err != nil {
+		return errors.Wrap(err, "write signature to file")
+	}
+	return nil
 }
 
 func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {

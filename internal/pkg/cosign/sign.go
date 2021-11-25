@@ -51,14 +51,6 @@ type Signer interface {
 	Sign(context.Context, *SigningRequest) (*SigningResults, error)
 }
 
-// type NoOpSigner struct{}
-
-// func (NoOpSigner) Sign(_ context.Context, req *SigningRequest) (*SigningResults, error) {
-// 	return &SigningResults{
-// 		SignedEntity: req.SignedEntity,
-// 	}, nil
-// }
-
 type PayloadSigner struct {
 	PayloadSigner         signature.Signer
 	PayloadSignerOpts     []signature.SignOption
@@ -99,6 +91,8 @@ func (fs *FulcioSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO(dekkagaijin): move the fulcio SignerVerififer logic here
 
 	results.Cert = fs.Cert
 	results.Chain = fs.Chain

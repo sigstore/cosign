@@ -44,8 +44,7 @@ func bundle(entry *models.LogEntryAnon) *oci.Bundle {
 
 type tlogUploadFn func(*rekGenClient.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, rekorBytes []byte, rekorURL string, upload tlogUploadFn) (*oci.Bundle, error) {
-
+func uploadToTlog(rekorBytes []byte, rekorURL string, upload tlogUploadFn) (*oci.Bundle, error) {
 	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
 	if err != nil {
 		return nil, err
@@ -79,7 +78,7 @@ func (rs *RekorSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*S
 		}
 	}
 
-	bundle, err := uploadToTlog(ctx, rekorBytes, rs.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
+	bundle, err := uploadToTlog(rekorBytes, rs.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 		return cosignv1.TLogUpload(ctx, r, results.Signature, results.SignedPayload, b)
 	})
 	if err != nil {

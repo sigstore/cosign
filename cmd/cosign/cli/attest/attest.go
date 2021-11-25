@@ -41,7 +41,6 @@ import (
 	"github.com/sigstore/cosign/pkg/types"
 	rekPkgClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
-	rekGenClient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -63,7 +62,7 @@ func bundle(entry *models.LogEntryAnon) *oci.Bundle {
 	}
 }
 
-type tlogUploadFn func(*rekGenClient.Rekor, []byte) (*models.LogEntryAnon, error)
+type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
 func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*oci.Bundle, error) {
 	var rekorBytes []byte
@@ -77,6 +76,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 		}
 		rekorBytes = pemBytes
 	}
+
 	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
 	if err != nil {
 		return nil, err
