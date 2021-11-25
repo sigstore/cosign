@@ -51,12 +51,14 @@ type Signer interface {
 	Sign(context.Context, *SigningRequest) (*SigningResults, error)
 }
 
+// PayloadSigner implements `Signer`
 type PayloadSigner struct {
 	PayloadSigner         signature.Signer
 	PayloadSignerOpts     []signature.SignOption
 	PublicKeyProviderOpts []signature.PublicKeyOption
 }
 
+// Sign uses the PayloadSigner to sign the requested payload, then returns the signature, the public key associated with it, the signed payload
 func (ps *PayloadSigner) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
 	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
 	sOpts = append(sOpts, ps.PayloadSignerOpts...)
@@ -80,6 +82,7 @@ func (ps *PayloadSigner) Sign(ctx context.Context, req *SigningRequest) (*Signin
 	}, nil
 }
 
+// FulcioSignerWrapper implements `Signer`
 type FulcioSignerWrapper struct {
 	Inner Signer
 
@@ -100,10 +103,12 @@ func (fs *FulcioSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*
 	return results, nil
 }
 
+// OCISignatureBuilder implements `Signer`
 type OCISignatureBuilder struct {
 	Inner Signer
 }
 
+// Sign calls the Inner signer and then returns the `oci.Signature` corresponding to the Signature, Cert, Chain, and Bundle in the overall result
 func (sb *OCISignatureBuilder) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
 	results, err := sb.Inner.Sign(ctx, req)
 	if err != nil {
@@ -129,12 +134,14 @@ func (sb *OCISignatureBuilder) Sign(ctx context.Context, req *SigningRequest) (*
 	return results, nil
 }
 
+// OCISignatureAttacher implements `Signer`
 type OCISignatureAttacher struct {
 	Inner Signer
 
 	DD mutate.DupeDetector
 }
 
+// Sign calls the Inner signer and then attaches the resulting `oci.Signature` to the resulting `oci.SignedEntity`
 func (sa *OCISignatureAttacher) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
 	results, err := sa.Inner.Sign(ctx, req)
 	if err != nil {
@@ -151,6 +158,7 @@ func (sa *OCISignatureAttacher) Sign(ctx context.Context, req *SigningRequest) (
 	return results, nil
 }
 
+// RemoteSignerWrapper implements `Signer`
 type RemoteSignerWrapper struct {
 	Inner Signer
 
@@ -158,6 +166,7 @@ type RemoteSignerWrapper struct {
 	RegOpts       options.RegistryOptions
 }
 
+// Sign calls the Inner signer and then uploads the image signature artifacts to the specified remote OCI repository
 func (rs *RemoteSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
 	results, err := rs.Inner.Sign(ctx, req)
 	if err != nil {
