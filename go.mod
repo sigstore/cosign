@@ -31,7 +31,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/theupdateframework/go-tuf v0.0.0-20211115152232-a4f2dd6ea314
-	github.com/xanzy/go-gitlab v0.52.0
+	github.com/xanzy/go-gitlab v0.52.2
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.60.0
