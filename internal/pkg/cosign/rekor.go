@@ -16,11 +16,15 @@ package cosign
 
 import (
 	"context"
+	"crypto"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/oci/static"
 	rekPkgClient "github.com/sigstore/rekor/pkg/client"
 	rekGenClient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -65,28 +69,78 @@ type RekorSignerWrapper struct {
 }
 
 // Sign calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
-func (rs *RekorSignerWrapper) Sign(ctx context.Context, req *SigningRequest) (*SigningResults, error) {
-	results, err := rs.Inner.Sign(ctx, req)
+func (rs *RekorSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
+	sig, pub, err := rs.Inner.Sign(ctx, payload)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	payloadBytes, err := sig.Payload()
+	if err != nil {
+		return nil, nil, err
+	}
+	b64Sig, err := sig.Base64Signature()
+	if err != nil {
+		return nil, nil, err
+	}
+	sigBytes, err := base64.StdEncoding.DecodeString(b64Sig)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Upload the cert or the public key, depending on what we have
-	rekorBytes := results.Cert
-	if rekorBytes == nil {
-		rekorBytes, err = cryptoutils.MarshalPublicKeyToPEM(results.Pub)
-		if err != nil {
-			return nil, err
-		}
+	cert, err := sig.Cert()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var rekorBytes []byte
+	if cert != nil {
+		rekorBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
+	} else {
+		rekorBytes, err = cryptoutils.MarshalPublicKeyToPEM(pub)
+	}
+	if err != nil {
+		return nil, nil, err
 	}
 
 	bundle, err := uploadToTlog(rekorBytes, rs.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		return cosignv1.TLogUpload(ctx, r, results.Signature, results.SignedPayload, b)
+		return cosignv1.TLogUpload(ctx, r, sigBytes, payloadBytes, b)
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	results.Bundle = bundle
-	return results, nil
+	opts := []static.Option{static.WithBundle(bundle)}
+
+	// Copy over the other attributes:
+
+	if cert != nil {
+		chain, err := sig.Chain()
+		if err != nil {
+			return nil, nil, err
+		}
+		chainBytes, err := cryptoutils.MarshalCertificatesToPEM(chain)
+		if err != nil {
+			return nil, nil, err
+		}
+		opts = append(opts, static.WithCertChain(rekorBytes, chainBytes))
+	}
+	if annotations, err := sig.Annotations(); err != nil {
+		return nil, nil, err
+	} else if len(annotations) > 0 {
+		opts = append(opts, static.WithAnnotations(annotations))
+	}
+	if mt, err := sig.MediaType(); err != nil {
+		return nil, nil, err
+	} else if mt != "" {
+		opts = append(opts, static.WithLayerMediaType(mt))
+	}
+
+	newSig, err := static.NewSignature(payloadBytes, b64Sig, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return newSig, pub, nil
 }

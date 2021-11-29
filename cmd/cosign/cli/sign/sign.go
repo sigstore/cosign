@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net/url"
@@ -209,11 +208,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		defer out.Close()
 	}
 
-	req := &icos.SigningRequest{
-		SignaturePayload: payload,
-		SignedEntity:     se,
-	}
-
 	var s icos.Signer
 	s = &icos.PayloadSigner{
 		PayloadSigner: sv,
@@ -229,31 +223,41 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 			RekorURL: ko.RekorURL,
 		}
 	}
-	s = &icos.OCISignatureBuilder{
-		Inner: s,
-	}
-	s = &icos.OCISignatureAttacher{
-		DD:    dd,
-		Inner: s,
-	}
-	if upload {
-		s = &icos.RemoteSignerWrapper{
-			SignatureRepo: digest.Repository,
-			RegOpts:       regOpts,
 
-			Inner: s,
-		}
-	}
-
-	results, err := s.Sign(ctx, req)
+	ociSig, _, err := s.Sign(ctx, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
 
-	b64sig := base64.StdEncoding.EncodeToString(results.Signature)
+	b64sig, err := ociSig.Base64Signature()
+	if err != nil {
+		return err
+	}
 	if _, err := out.Write([]byte(b64sig)); err != nil {
 		return errors.Wrap(err, "write signature to file")
 	}
+
+	if !upload {
+		return nil
+	}
+
+	// Attach the signature to the entity.
+	newSE, err := mutate.AttachSignatureToEntity(se, ociSig, mutate.WithDupeDetector(dd))
+	if err != nil {
+		return err
+	}
+
+	// Publish the signatures associated with this entity
+	walkOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return errors.Wrap(err, "constructing client options")
+	}
+
+	// Publish the signatures associated with this entity
+	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
+		return err
+	}
+
 	return nil
 }
 
