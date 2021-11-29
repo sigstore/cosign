@@ -24,13 +24,13 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb
-	github.com/sigstore/rekor v0.3.1-0.20211117161348-09070aa96aef
+	github.com/sigstore/rekor v0.3.1-0.20211119021052-57b3fef494e0
 	github.com/sigstore/sigstore v1.0.2-0.20211115214857-534e133ebf9d
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
-	github.com/theupdateframework/go-tuf v0.0.0-20211115152232-a4f2dd6ea314
+	github.com/theupdateframework/go-tuf v0.0.0-20211006142131-1dc15a86c64d
 	github.com/xanzy/go-gitlab v0.52.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211

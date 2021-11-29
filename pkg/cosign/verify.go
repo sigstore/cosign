@@ -441,8 +441,10 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 func bundleHash(bundleBody, signature string) (string, string, error) {
 	var toto models.Intoto
 	var rekord models.Rekord
+	var hrekord models.Hashedrekord
 	var intotoObj models.IntotoV001Schema
 	var rekordObj models.RekordV001Schema
+	var hrekordObj models.HashedrekordV001Schema
 
 	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
 	if err != nil {
@@ -469,20 +471,32 @@ func bundleHash(bundleBody, signature string) (string, string, error) {
 		return *intotoObj.Content.Hash.Algorithm, *intotoObj.Content.Hash.Value, nil
 	}
 
-	err = json.Unmarshal(bodyDecoded, &rekord)
-	if err != nil {
-		return "", "", err
+	if err := json.Unmarshal(bodyDecoded, &rekord); err == nil {
+		specMarshal, err := json.Marshal(rekord.Spec)
+		if err != nil {
+			return "", "", err
+		}
+		err = json.Unmarshal(specMarshal, &rekordObj)
+		if err != nil {
+			return "", "", err
+		}
+		return *rekordObj.Data.Hash.Algorithm, *rekordObj.Data.Hash.Value, nil
 	}
 
-	specMarshal, err := json.Marshal(rekord.Spec)
+	// Try hashedRekordObj
+	err = json.Unmarshal(bodyDecoded, &hrekord)
 	if err != nil {
 		return "", "", err
 	}
-	err = json.Unmarshal(specMarshal, &rekordObj)
+	specMarshal, err := json.Marshal(hrekord.Spec)
 	if err != nil {
 		return "", "", err
 	}
-	return *rekordObj.Data.Hash.Algorithm, *rekordObj.Data.Hash.Value, nil
+	err = json.Unmarshal(specMarshal, &hrekordObj)
+	if err != nil {
+		return "", "", err
+	}
+	return *hrekordObj.Data.Hash.Algorithm, *hrekordObj.Data.Hash.Value, nil
 }
 
 func VerifySET(bundlePayload oci.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
