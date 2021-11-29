@@ -18,6 +18,8 @@ package verify
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -34,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/oci"
 	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -43,6 +46,7 @@ import (
 type VerifyCommand struct {
 	options.RegistryOptions
 	CheckClaims bool
+	CertRef     string
 	KeyRef      string
 	CertEmail   string
 	Sk          bool
@@ -73,7 +77,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
-	if !options.OneOf(c.KeyRef, c.Sk) && !options.EnableExperimental() {
+	if !options.OneOf(c.KeyRef, c.CertRef, c.Sk) && !options.EnableExperimental() {
 		return &options.KeyParseError{}
 	}
 	ociremoteOpts, err := c.ClientOpts(ctx)
@@ -93,10 +97,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.RootCerts = fulcio.GetRoots()
 	}
 	keyRef := c.KeyRef
+	certRef := c.CertRef
 
 	// Keys are optional!
 	var pubKey signature.Verifier
-	if keyRef != "" {
+	switch {
+	case keyRef != "":
 		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
@@ -105,7 +111,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if ok {
 			defer pkcs11Key.Close()
 		}
-	} else if c.Sk {
+	case c.Sk:
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
 			return errors.Wrap(err, "opening piv token")
@@ -114,6 +120,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		pubKey, err = sk.Verifier()
 		if err != nil {
 			return errors.Wrap(err, "initializing piv token verifier")
+		}
+	case certRef != "":
+		pubKey, err = loadCertFromFile(c.CertRef)
+		if err != nil {
+			return err
 		}
 	}
 	co.SigVerifier = pubKey
@@ -223,4 +234,28 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 
 		fmt.Printf("\n%s\n", string(b))
 	}
+}
+
+func loadCertFromFile(path string) (*signature.ECDSAVerifier, error) {
+	pems, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []byte
+	out, err = base64.StdEncoding.DecodeString(string(pems))
+	if err != nil {
+		// not a base64
+		out = pems
+	}
+
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(out)
+	if err != nil {
+		return nil, err
+	}
+	if len(certs) == 0 {
+		return nil, errors.New("no certs found in pem file")
+	}
+	cert := certs[0]
+	return signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 }

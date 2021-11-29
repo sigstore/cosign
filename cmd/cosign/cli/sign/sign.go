@@ -123,7 +123,7 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 
 // nolint
 func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
-	imgs []string, certPath string, upload bool, output string, payloadPath string, force bool, recursive bool, attachment string) error {
+	imgs []string, certPath string, upload bool, outputSignature, outputCertificate string, payloadPath string, force bool, recursive bool, attachment string) error {
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
 			return &options.KeyParseError{}
@@ -182,7 +182,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			if err != nil {
 				return errors.Wrap(err, "accessing image")
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, output, force, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, dd, sv, se)
 			if err != nil {
 				return errors.Wrap(err, "signing digest")
 			}
@@ -202,7 +202,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			}
 			digest := ref.Context().Digest(d.String())
 
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, output, force, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, dd, sv, se)
 			if err != nil {
 				return errors.Wrap(err, "signing digest")
 			}
@@ -216,7 +216,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyOpts,
-	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, output string, force bool,
+	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool,
 	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
@@ -237,8 +237,8 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	b64sig := base64.StdEncoding.EncodeToString(signature)
 
 	out := os.Stdout
-	if output != "" {
-		out, err = os.Create(output)
+	if outputSignature != "" {
+		out, err = os.Create(outputSignature)
 		if err != nil {
 			return errors.Wrap(err, "create signature file")
 		}
@@ -288,6 +288,19 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
 		return err
 	}
+
+	if outputCertificate != "" {
+		rekorBytes, err := sv.Bytes(ctx)
+		if err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(outputCertificate, rekorBytes, 0600); err != nil {
+			return err
+		}
+		// TODO: maybe accept a --b64 flag as well?
+	}
+
 	return nil
 }
 
@@ -473,4 +486,17 @@ func (c *SignerVerifier) Close() {
 	if c.close != nil {
 		c.close()
 	}
+}
+
+func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
+	if c.Cert != nil {
+		fmt.Fprintf(os.Stderr, "using ephemeral certificate:\n%s\n", string(c.Cert))
+		return c.Cert, nil
+	}
+
+	pemBytes, err := sigs.PublicKeyPem(c, signatureoptions.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return pemBytes, nil
 }

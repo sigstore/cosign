@@ -112,27 +112,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.Wrap(err, "loading public key from token")
 		}
 	case certRef != "":
-		pems, err := os.ReadFile(certRef)
-		if err != nil {
-			return err
-		}
-
-		var out []byte
-		out, err = base64.StdEncoding.DecodeString(string(pems))
-		if err != nil {
-			// not a base64
-			out = pems
-		}
-
-		certs, err := cryptoutils.UnmarshalCertificatesFromPEM(out)
-		if err != nil {
-			return err
-		}
-		if len(certs) == 0 {
-			return errors.New("no certs found in pem file")
-		}
-		cert = certs[0]
-		pubKey, err = sigstoresigs.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		pubKey, err = loadCertFromFile(certRef)
 		if err != nil {
 			return err
 		}
