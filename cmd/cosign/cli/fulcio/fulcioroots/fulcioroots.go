@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -70,10 +69,7 @@ func initRoots() *x509.CertPool {
 			if err := tuf.GetTarget(ctx, fulcioTarget, &buf); err != nil {
 				panic(errors.Wrap(err, "creating root cert pool"))
 			}
-			// TODO: Remove the string replace when SigStore root is fully migrated and the
-			// fulcioTargetStr is not used any more.
-			replaced := strings.ReplaceAll(buf.String(), "\n  ", "\n")
-			if !cp.AppendCertsFromPEM([]byte(replaced)) {
+			if !cp.AppendCertsFromPEM(buf.Bytes()) {
 				panic("error creating root cert pool")
 			}
 		}
