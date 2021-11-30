@@ -31,6 +31,8 @@ type FulcioSignerWrapper struct {
 	Cert, Chain []byte
 }
 
+var _ Signer = (*FulcioSignerWrapper)(nil)
+
 // Sign implements `Signer`
 func (fs *FulcioSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	sig, pub, err := fs.Inner.Sign(ctx, payload)

@@ -38,6 +38,8 @@ type PayloadSigner struct {
 	PublicKeyProviderOpts []signature.PublicKeyOption
 }
 
+var _ Signer = (*PayloadSigner)(nil)
+
 // Sign implements `Signer`
 func (ps *PayloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	payloadBytes, err := io.ReadAll(payload)

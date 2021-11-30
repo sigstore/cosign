@@ -68,6 +68,8 @@ type RekorSignerWrapper struct {
 	RekorURL string
 }
 
+var _ Signer = (*RekorSignerWrapper)(nil)
+
 // Sign implements `Signer`
 func (rs *RekorSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	sig, pub, err := rs.Inner.Sign(ctx, payload)
