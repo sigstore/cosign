@@ -37,6 +37,8 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	icos "github.com/sigstore/cosign/internal/pkg/cosign"
+	ifulcio "github.com/sigstore/cosign/internal/pkg/cosign/fulcio"
+	irekor "github.com/sigstore/cosign/internal/pkg/cosign/rekor"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
@@ -212,16 +214,9 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	s = &icos.PayloadSigner{
 		PayloadSigner: sv,
 	}
-	s = &icos.FulcioSignerWrapper{
-		Cert:  sv.Cert,
-		Chain: sv.Chain,
-		Inner: s,
-	}
+	s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
-		s = &icos.RekorSignerWrapper{
-			Inner:    s,
-			RekorURL: ko.RekorURL,
-		}
+		s = irekor.NewSigner(s, ko.RekorURL)
 	}
 
 	ociSig, _, err := s.Sign(ctx, bytes.NewReader(payload))

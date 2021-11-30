@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosign
+package rekor
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/sigstore/cosign/internal/pkg/cosign"
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -61,18 +62,18 @@ func uploadToTlog(rekorBytes []byte, rekorURL string, upload tlogUploadFn) (*oci
 	return bundle(entry), nil
 }
 
-// RekorSignerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
-type RekorSignerWrapper struct {
-	Inner Signer
+// SignerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
+type SignerWrapper struct {
+	inner cosign.Signer
 
-	RekorURL string
+	rekorURL string
 }
 
-var _ Signer = (*RekorSignerWrapper)(nil)
+var _ cosign.Signer = (*SignerWrapper)(nil)
 
-// Sign implements `Signer`
-func (rs *RekorSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
-	sig, pub, err := rs.Inner.Sign(ctx, payload)
+// Sign implements `cosign.Signer`
+func (rs *SignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
+	sig, pub, err := rs.inner.Sign(ctx, payload)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -106,7 +107,7 @@ func (rs *RekorSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.
 		return nil, nil, err
 	}
 
-	bundle, err := uploadToTlog(rekorBytes, rs.RekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
+	bundle, err := uploadToTlog(rekorBytes, rs.rekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 		return cosignv1.TLogUpload(ctx, r, sigBytes, payloadBytes, b)
 	})
 	if err != nil {
@@ -145,4 +146,12 @@ func (rs *RekorSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.
 	}
 
 	return newSig, pub, nil
+}
+
+// NewSigner returns a `*SignerWrapper` which uploads the signature to Rekor
+func NewSigner(inner cosign.Signer, rekorURL string) *SignerWrapper {
+	return &SignerWrapper{
+		inner:    inner,
+		rekorURL: rekorURL,
+	}
 }

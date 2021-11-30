@@ -12,30 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosign
+package fulcio
 
 import (
 	"context"
 	"crypto"
 	"io"
 
+	"github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
 )
 
-// FulcioSignerWrapper still needs to actually upload keys to Fulcio and receive
+// SignerWrapper still needs to actually upload keys to Fulcio and receive
 // the resulting `Cert` and `Chain`, which are added to the returned `oci.Signature`
-type FulcioSignerWrapper struct {
-	Inner Signer
+type SignerWrapper struct {
+	inner cosign.Signer
 
-	Cert, Chain []byte
+	cert, chain []byte
 }
 
-var _ Signer = (*FulcioSignerWrapper)(nil)
+var _ cosign.Signer = (*SignerWrapper)(nil)
 
-// Sign implements `Signer`
-func (fs *FulcioSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
-	sig, pub, err := fs.Inner.Sign(ctx, payload)
+// Sign implements `cosign.Signer`
+func (fs *SignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
+	sig, pub, err := fs.inner.Sign(ctx, payload)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -51,7 +52,7 @@ func (fs *FulcioSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci
 
 	// TODO(dekkagaijin): move the fulcio SignerVerififer logic here
 
-	opts := []static.Option{static.WithCertChain(fs.Cert, fs.Chain)}
+	opts := []static.Option{static.WithCertChain(fs.cert, fs.chain)}
 
 	// Copy over the other attributes:
 	if annotations, err := sig.Annotations(); err != nil {
@@ -76,4 +77,13 @@ func (fs *FulcioSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci
 	}
 
 	return newSig, pub, nil
+}
+
+// NewSigner returns a *SignerWrapper which signs and uploads the given payload to Fulcio.
+func NewSigner(inner cosign.Signer, cert, chain []byte) *SignerWrapper {
+	return &SignerWrapper{
+		inner: inner,
+		cert:  cert,
+		chain: chain,
+	}
 }
