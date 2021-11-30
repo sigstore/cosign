@@ -262,6 +262,7 @@ func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {
 	}
 	sv, err := sk.SignerVerifier()
 	if err != nil {
+		sk.Close()
 		return nil, err
 	}
 
@@ -276,6 +277,7 @@ func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {
 	} else {
 		pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPIV)
 		if err != nil {
+			sk.Close()
 			return nil, err
 		}
 	}
@@ -305,6 +307,7 @@ func signerFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc cos
 		} else {
 			pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
 			if err != nil {
+				pkcs11Key.Close()
 				return nil, err
 			}
 		}
