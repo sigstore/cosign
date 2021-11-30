@@ -33,15 +33,61 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/cosign/pkg/types"
+	rekPkgClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
+
+// TODO(dekkagaijin): remove this in favor of a function in pkg which handles both signatures and attestations
+func bundle(entry *models.LogEntryAnon) *oci.Bundle {
+	if entry.Verification == nil {
+		return nil
+	}
+	return &oci.Bundle{
+		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
+		Payload: oci.BundlePayload{
+			Body:           entry.Body,
+			IntegratedTime: *entry.IntegratedTime,
+			LogIndex:       *entry.LogIndex,
+			LogID:          *entry.LogID,
+		},
+	}
+}
+
+type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
+
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*oci.Bundle, error) {
+	var rekorBytes []byte
+	// Upload the cert or the public key, depending on what we have
+	if sv.Cert != nil {
+		rekorBytes = sv.Cert
+	} else {
+		pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
+		if err != nil {
+			return nil, err
+		}
+		rekorBytes = pemBytes
+	}
+
+	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
+	if err != nil {
+		return nil, err
+	}
+	entry, err := upload(rekorClient, rekorBytes)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+	return bundle(entry), nil
+}
 
 //nolint
 func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string,
@@ -133,7 +179,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 
 	// Check whether we should be uploading to the transparency log
 	if sign.ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
-		bundle, err := sign.UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		bundle, err := uploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})
 		if err != nil {
