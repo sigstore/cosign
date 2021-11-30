@@ -23,13 +23,15 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/static"
 )
 
-// FulcioSignerWrapper implements `Signer`
+// FulcioSignerWrapper still needs to actually upload keys to Fulcio and receive
+// the resulting `Cert` and `Chain`, which are added to the returned `oci.Signature`
 type FulcioSignerWrapper struct {
 	Inner Signer
 
 	Cert, Chain []byte
 }
 
+// Sign implements `Signer`
 func (fs *FulcioSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	sig, pub, err := fs.Inner.Sign(ctx, payload)
 	if err != nil {

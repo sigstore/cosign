@@ -31,14 +31,14 @@ type Signer interface {
 	Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error)
 }
 
-// PayloadSigner implements `Signer`
+// PayloadSigner uses the given `signature.Signer` to sign the requested payload, then returns the signature, the public key associated with it, the signed payload
 type PayloadSigner struct {
 	PayloadSigner         signature.Signer
 	PayloadSignerOpts     []signature.SignOption
 	PublicKeyProviderOpts []signature.PublicKeyOption
 }
 
-// Sign uses the PayloadSigner to sign the requested payload, then returns the signature, the public key associated with it, the signed payload
+// Sign implements `Signer`
 func (ps *PayloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	payloadBytes, err := io.ReadAll(payload)
 	if err != nil {

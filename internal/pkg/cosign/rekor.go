@@ -61,14 +61,14 @@ func uploadToTlog(rekorBytes []byte, rekorURL string, upload tlogUploadFn) (*oci
 	return bundle(entry), nil
 }
 
-// RekorSignerWrapper implements `Signer`
+// RekorSignerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
 type RekorSignerWrapper struct {
 	Inner Signer
 
 	RekorURL string
 }
 
-// Sign calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
+// Sign implements `Signer`
 func (rs *RekorSignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	sig, pub, err := rs.Inner.Sign(ctx, payload)
 	if err != nil {
