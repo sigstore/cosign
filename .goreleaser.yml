@@ -4,6 +4,7 @@ env:
   - GO111MODULE=on
   - CGO_ENABLED=1
   - DOCKER_CLI_EXPERIMENTAL=enabled
+  - COSIGN_EXPERIMENTAL=true
 
 # Prevents parallel builds from stepping on each others toes downloading modules
 before:
@@ -190,6 +191,26 @@ signs:
     signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--output", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    artifacts: binary
+    ids:
+      - sget
+  # Keyless
+  - id: cosign-keyless
+    signature: "${artifact}-keyless.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output", "${artifact}-keyless.sig", "${artifact}"]
+    artifacts: binary
+  - id: cosigned-keyless
+    signature: "${artifact}-keyless.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output", "${artifact}-keyless.sig", "${artifact}"]
+    artifacts: binary
+    ids:
+      - linux-cosigned
+  - id: sget-keyless
+    signature: "${artifact}-keyless.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output", "${artifact}-keyless.sig", "${artifact}"]
     artifacts: binary
     ids:
       - sget

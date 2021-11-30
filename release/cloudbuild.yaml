@@ -29,8 +29,8 @@ steps:
   - '-c'
   - |
     git fetch
-    echo "Checking out ${_TOOL_REF}"
-    git checkout ${_TOOL_REF}
+    echo "Checking out ${_GIT_TAG}"
+    git checkout ${_GIT_TAG}
 
 - name: 'gcr.io/projectsigstore/cosign:v1.3.1@sha256:3cd9b3a866579dc2e0cf2fdea547f4c9a27139276cc373165c26842bc594b8bd'
   dir: "go/src/sigstore/cosign"
@@ -54,12 +54,12 @@ steps:
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+  - COSIGN_EXPERIMENTAL=true
   secretEnv:
   - GITHUB_TOKEN
   args:
     - '-c'
     - |
-      git tag ${_GIT_TAG}
       make release
 
 - name: ghcr.io/gythialy/golang-cross:v1.17.3-2@sha256:7129cf015701ce65e6527707b0d2b79ae86729240d4f06646352e0d41dc88f4a
@@ -106,13 +106,11 @@ tags:
 - ${_GIT_TAG}
 - ${_TOOL_ORG}
 - ${_TOOL_REPO}
-- ${_TOOL_REF}
 
 substitutions:
   _GIT_TAG: 'v1.23.45'
   _TOOL_ORG: 'honk'
   _TOOL_REPO: 'honk-repo'
-  _TOOL_REF: 'release-honk'
   _STORAGE_LOCATION: 'honk'
   _KEY_RING: 'honk-ring'
   _KEY_NAME: 'honk-crypto'
