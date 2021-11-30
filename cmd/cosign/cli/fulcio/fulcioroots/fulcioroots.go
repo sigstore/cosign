@@ -36,6 +36,9 @@ var (
 // This is the root in the fulcio project.
 var fulcioTargetStr = `fulcio.crt.pem`
 
+// This is the v1 migrated root.
+var fulcioV1TargetStr = `fulcio_v1.crt.pem`
+
 const (
 	altRoot = "SIGSTORE_ROOT_FILE"
 )
@@ -62,14 +65,17 @@ func initRoots() *x509.CertPool {
 		// Retrieve from the embedded or cached TUF root. If expired, a network
 		// call is made to update the root.
 		ctx := context.Background() // TODO: pass in context?
-		buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-		if err := tuf.GetTarget(ctx, fulcioTargetStr, &buf); err != nil {
-			panic(errors.Wrap(err, "creating root cert pool"))
-		}
-		// TODO: Remove the string replace when SigStore root is updated.
-		replaced := strings.ReplaceAll(buf.String(), "\n  ", "\n")
-		if !cp.AppendCertsFromPEM([]byte(replaced)) {
-			panic("error creating root cert pool")
+		for _, fulcioTarget := range []string{fulcioTargetStr, fulcioV1TargetStr} {
+			buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
+			if err := tuf.GetTarget(ctx, fulcioTarget, &buf); err != nil {
+				panic(errors.Wrap(err, "creating root cert pool"))
+			}
+			// TODO: Remove the string replace when SigStore root is fully migrated and the
+			// fulcioTargetStr is not used any more.
+			replaced := strings.ReplaceAll(buf.String(), "\n  ", "\n")
+			if !cp.AppendCertsFromPEM([]byte(replaced)) {
+				panic("error creating root cert pool")
+			}
 		}
 	}
 	return cp
