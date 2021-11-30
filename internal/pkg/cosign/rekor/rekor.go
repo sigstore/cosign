@@ -26,8 +26,7 @@ import (
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
-	rekPkgClient "github.com/sigstore/rekor/pkg/client"
-	rekGenClient "github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -47,14 +46,10 @@ func bundle(entry *models.LogEntryAnon) *oci.Bundle {
 	}
 }
 
-type tlogUploadFn func(*rekGenClient.Rekor, []byte) (*models.LogEntryAnon, error)
+type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(rekorBytes []byte, rekorURL string, upload tlogUploadFn) (*oci.Bundle, error) {
-	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
-	if err != nil {
-		return nil, err
-	}
-	entry, err := upload(rekorClient, rekorBytes)
+func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*oci.Bundle, error) {
+	entry, err := upload(rClient, rekorBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +61,7 @@ func uploadToTlog(rekorBytes []byte, rekorURL string, upload tlogUploadFn) (*oci
 type signerWrapper struct {
 	inner cosign.Signer
 
-	rekorURL string
+	rClient *client.Rekor
 }
 
 var _ cosign.Signer = (*signerWrapper)(nil)
@@ -107,7 +102,7 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	bundle, err := uploadToTlog(rekorBytes, rs.rekorURL, func(r *rekGenClient.Rekor, b []byte) (*models.LogEntryAnon, error) {
+	bundle, err := uploadToTlog(rekorBytes, rs.rClient, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 		return cosignv1.TLogUpload(ctx, r, sigBytes, payloadBytes, b)
 	})
 	if err != nil {
@@ -149,9 +144,9 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 }
 
 // NewSigner returns a `cosign.Signer` which uploads the signature to Rekor
-func NewSigner(inner cosign.Signer, rekorURL string) cosign.Signer {
+func NewSigner(inner cosign.Signer, rClient *client.Rekor) cosign.Signer {
 	return &signerWrapper{
-		inner:    inner,
-		rekorURL: rekorURL,
+		inner:   inner,
+		rClient: rClient,
 	}
 }
