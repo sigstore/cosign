@@ -24,18 +24,18 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/static"
 )
 
-// SignerWrapper still needs to actually upload keys to Fulcio and receive
+// signerWrapper still needs to actually upload keys to Fulcio and receive
 // the resulting `Cert` and `Chain`, which are added to the returned `oci.Signature`
-type SignerWrapper struct {
+type signerWrapper struct {
 	inner cosign.Signer
 
 	cert, chain []byte
 }
 
-var _ cosign.Signer = (*SignerWrapper)(nil)
+var _ cosign.Signer = (*signerWrapper)(nil)
 
 // Sign implements `cosign.Signer`
-func (fs *SignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
+func (fs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	sig, pub, err := fs.inner.Sign(ctx, payload)
 	if err != nil {
 		return nil, nil, err
@@ -79,9 +79,9 @@ func (fs *SignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	return newSig, pub, nil
 }
 
-// NewSigner returns a *SignerWrapper which signs and uploads the given payload to Fulcio.
-func NewSigner(inner cosign.Signer, cert, chain []byte) *SignerWrapper {
-	return &SignerWrapper{
+// NewSigner returns a `cosign.Signer` which leverages Fulcio to create a Cert and Chain for the signature
+func NewSigner(inner cosign.Signer, cert, chain []byte) cosign.Signer {
+	return &signerWrapper{
 		inner: inner,
 		cert:  cert,
 		chain: chain,

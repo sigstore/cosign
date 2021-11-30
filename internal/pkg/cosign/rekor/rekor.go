@@ -62,17 +62,17 @@ func uploadToTlog(rekorBytes []byte, rekorURL string, upload tlogUploadFn) (*oci
 	return bundle(entry), nil
 }
 
-// SignerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
-type SignerWrapper struct {
+// signerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
+type signerWrapper struct {
 	inner cosign.Signer
 
 	rekorURL string
 }
 
-var _ cosign.Signer = (*SignerWrapper)(nil)
+var _ cosign.Signer = (*signerWrapper)(nil)
 
 // Sign implements `cosign.Signer`
-func (rs *SignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
+func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	sig, pub, err := rs.inner.Sign(ctx, payload)
 	if err != nil {
 		return nil, nil, err
@@ -148,9 +148,9 @@ func (rs *SignerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	return newSig, pub, nil
 }
 
-// NewSigner returns a `*SignerWrapper` which uploads the signature to Rekor
-func NewSigner(inner cosign.Signer, rekorURL string) *SignerWrapper {
-	return &SignerWrapper{
+// NewSigner returns a `cosign.Signer` which uploads the signature to Rekor
+func NewSigner(inner cosign.Signer, rekorURL string) cosign.Signer {
+	return &signerWrapper{
 		inner:    inner,
 		rekorURL: rekorURL,
 	}
