@@ -70,11 +70,12 @@ func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, url
 
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: uploading to the transparency log at %s for a private image, please confirm [Y/N]: ", url)
+		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), url)
 
 		var tlogConfirmResponse string
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, "\nWARNING: skipping transparency log upload (use --force to upload from scripts): %v\n", err)
+			return false
 		}
 		if strings.ToUpper(tlogConfirmResponse) != "Y" {
 			fmt.Fprintln(os.Stderr, "not uploading to transparency log")
