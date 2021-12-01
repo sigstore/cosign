@@ -31,6 +31,7 @@ func Dockerfile() *cobra.Command {
 
 	cmd.AddCommand(
 		dockerfileVerify(),
+		dockerfileResolve(),
 	)
 
 	return cmd
@@ -106,6 +107,28 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					Annotations:                  annotations,
 				},
 				BaseOnly: o.BaseImageOnly,
+			}
+			return v.Exec(cmd.Context(), args)
+		},
+	}
+
+	o.AddFlags(cmd)
+
+	return cmd
+}
+
+func dockerfileResolve() *cobra.Command {
+	o := &options.ResolveDockerfileOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "resolve",
+		Short:   "",
+		Long:    ``,
+		Example: ``,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := &dockerfile.ResolveDockerfileCommand{
+				Output: o.Output,
 			}
 			return v.Exec(cmd.Context(), args)
 		},
