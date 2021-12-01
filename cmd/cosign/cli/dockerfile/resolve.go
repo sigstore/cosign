@@ -1,3 +1,17 @@
+// Copyright 2021 The Sigstore Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package dockerfile
 
 import (
@@ -6,11 +20,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/pkg/oci/remote"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/cosign/pkg/oci/remote"
 
 	"github.com/pkg/errors"
 )
@@ -38,7 +53,11 @@ func (c *ResolveDockerfileCommand) Exec(ctx context.Context, args []string) erro
 		return fmt.Errorf("failed extracting images from Dockerfile: %w", err)
 	}
 
-	fmt.Fprintln(os.Stderr, string(resolvedDockerfile))
+	if c.Output != "" {
+		_ = os.WriteFile(c.Output, resolvedDockerfile, 0600)
+	} else {
+		_, _ = fmt.Fprintln(os.Stdout, string(resolvedDockerfile))
+	}
 
 	return nil
 }

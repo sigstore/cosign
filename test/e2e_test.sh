@@ -53,6 +53,11 @@ if (./cosign dockerfile verify ./test/testdata/unsigned_build_stage.Dockerfile -
 ./cosign dockerfile verify --base-image-only ./test/testdata/unsigned_build_stage.Dockerfile --certificate-identity https://github.com/distroless/static/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ./cosign dockerfile verify ./test/testdata/fancy_from.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
 test_image="ghcr.io/distroless/alpine-base" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Test dockerfile resolve and verify
+./cosign dockerfile resolve -o ./test/testdata/fancy_from.Dockerfile.resolved ./test/testdata/fancy_from.Dockerfile
+./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/fancy_from.Dockerfile.resolved
+
 # Image exists, but is unsigned
 if (test_image="ubuntu" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
 ./cosign dockerfile verify ./test/testdata/with_lowercase.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
