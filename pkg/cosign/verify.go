@@ -25,8 +25,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
+
+	"github.com/sigstore/cosign/pkg/blob"
+	"github.com/sigstore/cosign/pkg/oci/static"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -43,6 +47,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 // CheckOpts are the options for checking signatures.
@@ -67,6 +72,9 @@ type CheckOpts struct {
 	RootCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
+
+	// SignatureRef is the reference to the signature file
+	SignatureRef string
 }
 
 func getSignedEntity(signedImgRef name.Reference, regClientOpts []ociremote.Option) (oci.SignedEntity, v1.Hash, error) {
@@ -186,6 +194,15 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	return checkExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
+type fakeOCISignatures struct {
+	oci.Signatures
+	signatures []oci.Signature
+}
+
+func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
+	return fos.signatures, nil
+}
+
 // VerifySignatures does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error.
 func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
@@ -196,15 +213,25 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 
 	// TODO(mattmoor): We could implement recursive verification if we just wrapped
 	// most of the logic below here in a call to mutate.Map
-
 	se, h, err := getSignedEntity(signedImgRef, co.RegistryClientOpts)
 	if err != nil {
 		return nil, false, err
 	}
-	sigs, err := se.Signatures()
-	if err != nil {
-		return nil, false, err
+
+	var sigs oci.Signatures
+	sigRef := co.SignatureRef
+	if sigRef == "" {
+		sigs, err = se.Signatures()
+		if err != nil {
+			return nil, false, err
+		}
+	} else {
+		sigs, err = loadSignatureFromFile(sigRef, signedImgRef, co)
+		if err != nil {
+			return nil, false, err
+		}
 	}
+
 	sl, err := sigs.Get()
 	if err != nil {
 		return nil, false, err
@@ -279,6 +306,44 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		return nil, false, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n "))
 	}
 	return checkedSignatures, bundleVerified, nil
+}
+
+func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
+	var b64sig string
+	targetSig, err := blob.LoadFileOrURL(sigRef)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		targetSig = []byte(sigRef)
+	}
+
+	_, err = base64.StdEncoding.DecodeString(string(targetSig))
+
+	if err == nil {
+		b64sig = string(targetSig)
+	} else {
+		b64sig = base64.StdEncoding.EncodeToString(targetSig)
+	}
+
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := (&sigPayload.Cosign{Image: digest}).MarshalJSON()
+
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := static.NewSignature(payload, b64sig)
+	if err != nil {
+		return nil, err
+	}
+	return &fakeOCISignatures{
+		signatures: []oci.Signature{sig},
+	}, nil
 }
 
 // VerifyAttestations does all the main cosign checks in a loop, returning the verified attestations.
