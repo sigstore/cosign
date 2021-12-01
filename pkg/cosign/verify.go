@@ -226,38 +226,9 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 			return nil, false, err
 		}
 	} else {
-		var b64sig string
-		targetSig, err := blob.LoadFileOrURL(sigRef)
-		if err != nil {
-			if !os.IsNotExist(err) {
-				return nil, false, err
-			}
-			targetSig = []byte(sigRef)
-		}
-
-		if isb64(targetSig) {
-			b64sig = string(targetSig)
-		} else {
-			b64sig = base64.StdEncoding.EncodeToString(targetSig)
-		}
-
-		digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+		sigs, err = loadSignatureFromFile(sigRef, signedImgRef, co)
 		if err != nil {
 			return nil, false, err
-		}
-
-		payload, err := (&sigPayload.Cosign{Image: digest}).MarshalJSON()
-
-		if err != nil {
-			return nil, false, err
-		}
-
-		sig, err := static.NewSignature(payload, b64sig)
-		if err != nil {
-			return nil, false, err
-		}
-		sigs = &fakeOCISignatures{
-			signatures: []oci.Signature{sig},
 		}
 	}
 
@@ -286,7 +257,7 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 					return err
 				}
 				if cert == nil {
-					return errors.New("no certificate found on sigRef")
+					return errors.New("no certificate found on signature")
 				}
 				verifier, err = validateAndUnpackCert(cert, co)
 				if err != nil {
@@ -337,9 +308,42 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 	return checkedSignatures, bundleVerified, nil
 }
 
-func isb64(data []byte) bool {
-	_, err := base64.StdEncoding.DecodeString(string(data))
-	return err == nil
+func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
+	var b64sig string
+	targetSig, err := blob.LoadFileOrURL(sigRef)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		targetSig = []byte(sigRef)
+	}
+
+	_, err = base64.StdEncoding.DecodeString(string(targetSig))
+
+	if err == nil {
+		b64sig = string(targetSig)
+	} else {
+		b64sig = base64.StdEncoding.EncodeToString(targetSig)
+	}
+
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := (&sigPayload.Cosign{Image: digest}).MarshalJSON()
+
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := static.NewSignature(payload, b64sig)
+	if err != nil {
+		return nil, err
+	}
+	return &fakeOCISignatures{
+		signatures: []oci.Signature{sig},
+	}, nil
 }
 
 // VerifyAttestations does all the main cosign checks in a loop, returning the verified attestations.
