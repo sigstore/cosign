@@ -203,15 +203,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		}
 	}
 
-	out := os.Stdout
-	if output != "" {
-		out, err = os.Create(output)
-		if err != nil {
-			return errors.Wrap(err, "create signature file")
-		}
-		defer out.Close()
-	}
-
 	var s icos.Signer
 	s = ipayload.NewSigner(sv, nil, nil)
 	s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
@@ -232,8 +223,17 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if err != nil {
 		return err
 	}
-	if _, err := out.Write([]byte(b64sig)); err != nil {
-		return errors.Wrap(err, "write signature to file")
+
+	if output != "" {
+		out, err := os.Create(output)
+		if err != nil {
+			return errors.Wrap(err, "create signature file")
+		}
+		defer out.Close()
+
+		if _, err := out.Write([]byte(b64sig)); err != nil {
+			return errors.Wrap(err, "write signature to file")
+		}
 	}
 
 	if !upload {
@@ -251,6 +251,8 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if err != nil {
 		return errors.Wrap(err, "constructing client options")
 	}
+
+	fmt.Fprintln(os.Stderr, "Pushing signature to:", digest.Repository)
 
 	// Publish the signatures associated with this entity
 	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
