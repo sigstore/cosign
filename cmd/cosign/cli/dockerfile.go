@@ -121,11 +121,15 @@ func dockerfileResolve() *cobra.Command {
 	o := &options.ResolveDockerfileOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "resolve",
-		Short:   "",
-		Long:    ``,
-		Example: ``,
-		Args:    cobra.ExactArgs(1),
+		Use:   "resolve",
+		Short: "Resolve the digest of the images and rewrites them with fully qualified image reference",
+		Long:  ``,
+		Example: `  cosign dockerfile resolve Dockerfile
+		
+		# specify output file
+		cosign dockerfile resolve -o Dockerfile.edited Dockerfile
+`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := &dockerfile.ResolveDockerfileCommand{
 				Output: o.Output,

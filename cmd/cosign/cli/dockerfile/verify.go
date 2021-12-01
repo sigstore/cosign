@@ -66,7 +66,6 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 	fileScanner := bufio.NewScanner(dockerfile)
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
-		// what about the COPY --from=image:tag cases?
 		if strings.HasPrefix(strings.ToUpper(line), "FROM") {
 			switch image := getImageFromLine(line); image {
 			case "scratch":

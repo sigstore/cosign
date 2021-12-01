@@ -48,11 +48,16 @@ go test -tags=e2e -race $(go list ./... | grep -v third_party/)
 
 # Test `cosign dockerfile verify`
 export COSIGN_EXPERIMENTAL=true
+
 ./cosign dockerfile verify ./test/testdata/single_stage.Dockerfile
 if (./cosign dockerfile verify ./test/testdata/unsigned_build_stage.Dockerfile); then false; fi
 ./cosign dockerfile verify --base-image-only ./test/testdata/unsigned_build_stage.Dockerfile
 ./cosign dockerfile verify ./test/testdata/fancy_from.Dockerfile
 test_image="ghcr.io/distroless/alpine-base" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile
+
+# Test dockerfile resolve and verify
+./cosign dockerfile resolve -o ./test/testdata/fancy_from.Dockerfile.resolved ./test/testdata/fancy_from.Dockerfile
+./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/fancy_from.Dockerfile.resolved
 # Image exists, but is unsigned
 if (test_image="ubuntu" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile); then false; fi
 ./cosign dockerfile verify ./test/testdata/with_lowercase.Dockerfile
