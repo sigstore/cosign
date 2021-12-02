@@ -17,6 +17,7 @@ package rekor
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -27,34 +28,29 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-func bundle(entry *models.LogEntryAnon) *oci.Bundle {
-	if entry.Verification == nil {
-		return nil
-	}
-	return &oci.Bundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: oci.BundlePayload{
-			Body:           entry.Body,
-			IntegratedTime: *entry.IntegratedTime,
-			LogIndex:       *entry.LogIndex,
-			LogID:          *entry.LogID,
-		},
-	}
-}
-
-type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
-
-func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*oci.Bundle, error) {
-	entry, err := upload(rClient, rekorBytes)
+func unpackSignature(ociSig oci.Signature) (payload []byte, b64Sig string, sig []byte, cert *x509.Certificate, err error) {
+	payload, err = ociSig.Payload()
 	if err != nil {
-		return nil, err
+		return nil, "", nil, nil, err
 	}
-	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return bundle(entry), nil
+	b64Sig, err = ociSig.Base64Signature()
+	if err != nil {
+		return nil, "", nil, nil, err
+	}
+	sig, err = base64.StdEncoding.DecodeString(b64Sig)
+	if err != nil {
+		return nil, "", nil, nil, err
+	}
+
+	cert, err = ociSig.Cert()
+	if err != nil {
+		return nil, "", nil, nil, err
+	}
+
+	return payload, b64Sig, sig, cert, nil
 }
 
 // signerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
@@ -73,46 +69,26 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	payloadBytes, err := sig.Payload()
-	if err != nil {
-		return nil, nil, err
-	}
-	b64Sig, err := sig.Base64Signature()
-	if err != nil {
-		return nil, nil, err
-	}
-	sigBytes, err := base64.StdEncoding.DecodeString(b64Sig)
+	payloadBytes, b64Sig, sigBytes, cert, err := unpackSignature(sig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Upload the cert or the public key, depending on what we have
-	cert, err := sig.Cert()
+	rekorBytes, err := rekorBytes(cert, pub)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var rekorBytes []byte
-	if cert != nil {
-		rekorBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
-	} else {
-		rekorBytes, err = cryptoutils.MarshalPublicKeyToPEM(pub)
-	}
+	entry, err := cosignv1.TLogUpload(ctx, rs.rClient, sigBytes, payloadBytes, rekorBytes)
 	if err != nil {
 		return nil, nil, err
 	}
+	// TODO: hook up to real logging
+	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 
-	bundle, err := uploadToTlog(rekorBytes, rs.rClient, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		return cosignv1.TLogUpload(ctx, r, sigBytes, payloadBytes, b)
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	opts := []static.Option{static.WithBundle(bundle)}
+	opts := []static.Option{static.WithBundle(bundle(entry))}
 
 	// Copy over the other attributes:
-
 	if cert != nil {
 		chain, err := sig.Chain()
 		if err != nil {

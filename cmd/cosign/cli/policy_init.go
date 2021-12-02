@@ -38,12 +38,11 @@ import (
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 
-	"github.com/sigstore/cosign/pkg/cosign"
+	irekor "github.com/sigstore/cosign/internal/pkg/cosign/rekor"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/sget"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/spf13/cobra"
 )
 
@@ -175,7 +174,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Get Fulcio signer
-			sv, err := sign.SignerFromKeyOpts(ctx, "", sign.KeyOpts{
+			signer, _, closeFn, err := sign.SignerFromKeyOpts(ctx, "", sign.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
@@ -187,17 +186,18 @@ func signPolicy() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer sv.Close()
+			if closeFn != nil {
+				defer closeFn()
+			}
 
-			certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(sv.Cert))
-			if err != nil {
-				return err
+			if options.EnableExperimental() {
+				// Upload to rekor
+				rekorClient, err := rekorClient.GetRekorClient(o.Rekor.URL)
+				if err != nil {
+					return err
+				}
+				signer = irekor.NewSigner(signer, rekorClient)
 			}
-			if len(certs) == 0 || certs[0].EmailAddresses == nil {
-				return errors.New("error decoding certificate")
-			}
-			signerEmail := sigs.CertSubject(certs[0])
-			signerIssuer := sigs.CertIssuerExtension(certs[0])
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
@@ -234,33 +234,40 @@ func signPolicy() *cobra.Command {
 				return errors.Wrap(err, "unmarshalling signed root policy")
 			}
 
-			// Create and add signature
-			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
-			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(ctx))
+			ociSig, _, err := signer.Sign(ctx, bytes.NewReader(signed.Signed))
 			if err != nil {
-				return errors.Wrap(err, "error occurred while during artifact signing")
-			}
-			signature := tuf.Signature{
-				Signature: base64.StdEncoding.EncodeToString(sig),
-				Cert:      base64.StdEncoding.EncodeToString(sv.Cert),
-			}
-			if err := signed.AddOrUpdateSignature(key, signature); err != nil {
-				return err
+				errors.Wrap(err, "signing")
 			}
 
-			// Upload to rekor
-			if options.EnableExperimental() {
-				// TODO: Refactor with sign.go
-				rekorBytes := sv.Cert
-				rekorClient, err := rekorClient.GetRekorClient(o.Rekor.URL)
-				if err != nil {
-					return err
-				}
-				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, signed.Signed, rekorBytes)
-				if err != nil {
-					return err
-				}
-				fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+			b64Sig, err := ociSig.Base64Signature()
+			if err != nil {
+				errors.Wrap(err, "extracting fulcio cert")
+			}
+
+			cert, err := ociSig.Cert()
+			if err != nil {
+				errors.Wrap(err, "extracting fulcio cert")
+			}
+			certPEM, err := cryptoutils.MarshalCertificateToPEM(cert)
+			if err != nil {
+				errors.Wrap(err, "marshalling cert to PEM")
+			}
+
+			if cert.EmailAddresses == nil {
+				return errors.New("error decoding certificate")
+			}
+			signerEmail := sigs.CertSubject(cert)
+			signerIssuer := sigs.CertIssuerExtension(cert)
+
+			// Create and add signature
+			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
+
+			tufSig := tuf.Signature{
+				Signature: b64Sig,
+				Cert:      base64.StdEncoding.EncodeToString(certPEM),
+			}
+			if err := signed.AddOrUpdateSignature(key, tufSig); err != nil {
+				return err
 			}
 
 			// Push updated root.json to the registry

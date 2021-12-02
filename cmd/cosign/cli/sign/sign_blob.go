@@ -28,10 +28,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	irekor "github.com/sigstore/cosign/internal/pkg/cosign/rekor"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/signature"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 type KeyOpts struct {
@@ -55,7 +55,6 @@ type KeyOpts struct {
 func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, timeout time.Duration) ([]byte, error) {
 	var payload []byte
 	var err error
-	var rekorBytes []byte
 
 	if payloadPath == "-" {
 		payload, err = io.ReadAll(os.Stdin)
@@ -72,38 +71,37 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		defer cancelFn()
 	}
 
-	sv, err := SignerFromKeyOpts(ctx, "", ko)
+	signer, _, closeFn, err := SignerFromKeyOpts(ctx, "", ko)
 	if err != nil {
 		return nil, err
 	}
-	defer sv.Close()
+	if closeFn != nil {
+		defer closeFn()
+	}
 
-	sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	if options.EnableExperimental() {
+		rClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		if err != nil {
+			return nil, err
+		}
+		signer = irekor.NewSigner(signer, rClient)
+	}
+
+	ociSig, _, err := signer.Sign(ctx, bytes.NewReader(payload))
 	if err != nil {
 		return nil, errors.Wrap(err, "signing blob")
 	}
 
-	if options.EnableExperimental() {
-		// TODO: Refactor with sign.go
-		if sv.Cert != nil {
-			fmt.Fprintf(os.Stderr, "signing with ephemeral certificate:\n%s\n", string(sv.Cert))
-			rekorBytes = sv.Cert
-		} else {
-			pemBytes, err := signature.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-			if err != nil {
-				return nil, err
-			}
-			rekorBytes = pemBytes
-		}
-		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+	b64Sig, err := ociSig.Base64Signature()
+	if err != nil {
+		return nil, errors.Wrap(err, "retrieving base64-encoded signature")
+	}
+	sigToOutput := []byte(b64Sig)
+	if !b64 {
+		sigToOutput, err = base64.StdEncoding.DecodeString(b64Sig)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "base64-decoding signature")
 		}
-		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, payload, rekorBytes)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 	}
 
 	if outputSignature != "" {
@@ -113,24 +111,16 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		}
 		defer f.Close()
 
-		if b64 {
-			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(sig)))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			_, err = f.Write(sig)
-			if err != nil {
-				return nil, err
-			}
+		_, err = f.Write(sigToOutput)
+		if err != nil {
+			return nil, err
 		}
 
-		fmt.Printf("Signature wrote in the file %s\n", f.Name())
+		fmt.Printf("Signature written to file: %s\n", f.Name())
 	} else {
 		if b64 {
-			sig = []byte(base64.StdEncoding.EncodeToString(sig))
-			fmt.Println(string(sig))
-		} else if _, err := os.Stdout.Write(sig); err != nil {
+			fmt.Println(string(sigToOutput))
+		} else if _, err := os.Stdout.Write(sigToOutput); err != nil {
 			// No newline if using the raw signature
 			return nil, err
 		}
@@ -143,18 +133,23 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		}
 		defer f.Close()
 
+		cert, err := ociSig.Cert()
+		if err != nil {
+			return nil, err
+		}
+		certBytes, err := cryptoutils.MarshalCertificateToPEM(cert)
+		if err != nil {
+			return nil, err
+		}
+
 		if b64 {
-			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(rekorBytes)))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			_, err = f.Write(rekorBytes)
-			if err != nil {
-				return nil, err
-			}
+			certBytes = []byte(base64.StdEncoding.EncodeToString(certBytes))
+		}
+		_, err = f.Write(certBytes)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return sig, nil
+	return sigToOutput, nil
 }
