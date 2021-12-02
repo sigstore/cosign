@@ -36,8 +36,8 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
-	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 )
 
 // This is the rekor public key target name
@@ -56,9 +56,9 @@ func GetRekorPub(ctx context.Context) string {
 // TLogUpload will upload the signature, public key and payload to the transparency log.
 func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
 	re := rekorEntry(payload, signature, pemBytes)
-	returnVal := models.Rekord{
+	returnVal := models.Hashedrekord{
 		APIVersion: swag.String(re.APIVersion()),
-		Spec:       re.RekordObj,
+		Spec:       re.HashedRekordObj,
 	}
 	return doUpload(ctx, rekorClient, &returnVal)
 }
@@ -108,16 +108,22 @@ func intotoEntry(signature, pubKey []byte) intoto_v001.V001Entry {
 	}
 }
 
-func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {
-	return rekord_v001.V001Entry{
-		RekordObj: models.RekordV001Schema{
-			Data: &models.RekordV001SchemaData{
-				Content: strfmt.Base64(payload),
+func rekorEntry(payload, signature, pubKey []byte) hashedrekord_v001.V001Entry {
+	// TODO: Signatures created on a digest using a hash algorithm other than SHA256 will fail
+	// upload right now. Plumb information on the hash algorithm used when signing from the
+	// SignerVerifier to use for the HashedRekordObj.Data.Hash.Algorithm.
+	h := sha256.Sum256(payload)
+	return hashedrekord_v001.V001Entry{
+		HashedRekordObj: models.HashedrekordV001Schema{
+			Data: &models.HashedrekordV001SchemaData{
+				Hash: &models.HashedrekordV001SchemaDataHash{
+					Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+					Value:     swag.String(hex.EncodeToString(h[:])),
+				},
 			},
-			Signature: &models.RekordV001SchemaSignature{
+			Signature: &models.HashedrekordV001SchemaSignature{
 				Content: strfmt.Base64(signature),
-				Format:  models.RekordV001SchemaSignatureFormatX509,
-				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+				PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
 					Content: strfmt.Base64(pubKey),
 				},
 			},
@@ -156,9 +162,9 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 		proposedEntry = []models.ProposedEntry{entry}
 	} else {
 		re := rekorEntry(payload, signature, pubKey)
-		entry := &models.Rekord{
+		entry := &models.Hashedrekord{
 			APIVersion: swag.String(re.APIVersion()),
-			Spec:       re.RekordObj,
+			Spec:       re.HashedRekordObj,
 		}
 		proposedEntry = []models.ProposedEntry{entry}
 	}

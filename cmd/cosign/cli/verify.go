@@ -95,8 +95,8 @@ against the transparency log.`,
 				RekorURL:        o.Rekor.URL,
 				Attachment:      o.Attachment,
 				Annotations:     annotations,
-
-				HashAlgorithm: hashAlgorithm,
+				HashAlgorithm:   hashAlgorithm,
+				SignatureRef:    o.SignatureRef,
 			}
 
 			return v.Exec(cmd.Context(), args)

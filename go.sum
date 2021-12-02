@@ -1627,8 +1627,8 @@ github.com/shibumi/go-pathspec v1.2.0/go.mod h1:bDxCftD0fST3qXIlHoQ/fChsU4mWMVkl
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb h1:smRYK5Ii+6MzPPz6yisB65v2Pam5oHPOTLDlxyM3qYY=
 github.com/sigstore/fulcio v0.1.2-0.20210831152525-42f7422734bb/go.mod h1:LznI5ABAkquvZrJ1PQaGCgspMfw2CB6ODBCQyhU3Q0w=
-github.com/sigstore/rekor v0.3.1-0.20211117161348-09070aa96aef h1:J+1FOZHzCHYwicegic7eexEie6xHibAZVMlvDuy4rik=
-github.com/sigstore/rekor v0.3.1-0.20211117161348-09070aa96aef/go.mod h1:pU8CqroYfpVyklvAn2g6TrJrlyLYNlUlqPT5Kgrkw2E=
+github.com/sigstore/rekor v0.3.1-0.20211119021052-57b3fef494e0 h1:5HDUQ3jh0+coG+nJWAc4NItb4LqMoPTJcduWtAS4GZ8=
+github.com/sigstore/rekor v0.3.1-0.20211119021052-57b3fef494e0/go.mod h1:pU8CqroYfpVyklvAn2g6TrJrlyLYNlUlqPT5Kgrkw2E=
 github.com/sigstore/sigstore v0.0.0-20210729211320-56a91f560f44/go.mod h1:rJpRn7XmR/YrfNGDU9jh+vy5WMeSv5YKfNDBwnFg+Qg=
 github.com/sigstore/sigstore v1.0.2-0.20211115214857-534e133ebf9d h1:uLxCWW/Y6mN+jgdCMvrD2UmERz6XK80E+v0MTJ7dqKA=
 github.com/sigstore/sigstore v1.0.2-0.20211115214857-534e133ebf9d/go.mod h1:g5b4TN+HWEcODpWBXfK6xAr8ezkPl3tyCVbg6iqYDV8=
@@ -1726,9 +1726,8 @@ github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613/go.mod h1:g
 github.com/thales-e-security/pool v0.0.2 h1:RAPs4q2EbWsTit6tpzuvTFlgFRJ3S8Evf5gtvVDbmPg=
 github.com/thales-e-security/pool v0.0.2/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpupY8mv0Phz0gjhU=
 github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396/go.mod h1:L+uU/NRFK/7h0NYAnsmvsX9EghDB5QVCcHCIrK2h5nw=
+github.com/theupdateframework/go-tuf v0.0.0-20211006142131-1dc15a86c64d h1:6u8WdfsjnV7hMFBekqY6j9WrOLEzhWFOAWmb8Yys0J8=
 github.com/theupdateframework/go-tuf v0.0.0-20211006142131-1dc15a86c64d/go.mod h1:oujGMqigj0NWDqeWBCzleayXXtux27r+kHAR2t5Yuk8=
-github.com/theupdateframework/go-tuf v0.0.0-20211115152232-a4f2dd6ea314 h1:9/PITRn3kVL1/nM5BYA+VaxQaLs616yG45m4xPaiZ6k=
-github.com/theupdateframework/go-tuf v0.0.0-20211115152232-a4f2dd6ea314/go.mod h1:pQW1KcCMYPCuZ4pvCkYQhoE2k9SzTuh31AWhf1j/7HM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
 github.com/tidwall/pretty v1.2.0/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=
