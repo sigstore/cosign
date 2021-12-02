@@ -206,7 +206,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 
 	var s icos.Signer
-	s = ipayload.NewSigner(sv, nil, nil)
+	s = ipayload.NewSigner(sv, nil, nil, sv.Cert, sv.Chain)
 	s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
 		rClient, err := rekorClient.GetRekorClient(ko.RekorURL)
