@@ -155,9 +155,9 @@ func NewSigner(s signature.Signer,
 	return &ps
 }
 
-// NewInTotoAttestor returns a `cosign.Attestor` which uses the given `signature.Signer` to create an attestation out of given payloads.
+// NewDSSEAttestor returns a `cosign.Attestor` which uses the given `signature.Signer` to create an attestation out of given payloads.
 // The cert and chain, if provided, will be included in returned `oci.Signature`s.
-func NewInTotoAttestor(s signature.Signer,
+func NewDSSEAttestor(s signature.Signer,
 	sOpts []signature.SignOption,
 	pkOpts []signature.PublicKeyOption,
 	certPEM, chainPEM []byte,

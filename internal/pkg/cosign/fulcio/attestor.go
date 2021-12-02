@@ -74,9 +74,9 @@ func (fa *fulcioAttestor) Attest(ctx context.Context, payload io.Reader) (oci.Si
 	return newAtt, pub, nil
 }
 
-// NewInTotoAttestor returns a `cosign.Attestor` which leverages Fulcio to create
-// a Cert and Chain for the attestation's signature created by the inner `Attestor``
-func NewInTotoAttestor(inner cosign.Attestor, cert, chain []byte) cosign.Attestor {
+// WrapAttestor returns a `cosign.Attestor` which leverages Fulcio to create
+// a Cert and Chain for the attestation's signature created by the inner `Attestor`
+func WrapAttestor(inner cosign.Attestor, cert, chain []byte) cosign.Attestor {
 	return &fulcioAttestor{
 		inner: inner,
 		cert:  cert,

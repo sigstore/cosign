@@ -110,8 +110,8 @@ func (ra *attestorWrapper) Attest(ctx context.Context, payload io.Reader) (oci.S
 	return newAtt, pub, nil
 }
 
-// NewInTotoAttestor returns a `cosign.Attestor` which uploads the InToto attestation to Rekor
-func NewInTotoAttestor(inner cosign.Attestor, rClient *client.Rekor) cosign.Attestor {
+// WrapDSSEAttestor returns a `cosign.Attestor` which uploads the signature in the DSSE attestation to Rekor
+func WrapDSSEAttestor(inner cosign.Attestor, rClient *client.Rekor) cosign.Attestor {
 	return &attestorWrapper{
 		inner:   inner,
 		rClient: rClient,

@@ -138,7 +138,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		if err != nil {
 			return err
 		}
-		attestor = irekor.NewInTotoAttestor(attestor, rClient)
+		attestor = irekor.WrapDSSEAttestor(attestor, rClient)
 	}
 
 	ociAtt, _, err := attestor.Attest(ctx, bytes.NewReader(payload))
@@ -203,7 +203,7 @@ func attestorFromSecurityKey(keySlot, predicateURI string) (attestor icos.Attest
 		}
 	}
 
-	return payload.NewInTotoAttestor(sv, nil, nil, certPem, nil, predicateURI), sv, sk.Close, nil
+	return payload.NewDSSEAttestor(sv, nil, nil, certPem, nil, predicateURI), sv, sk.Close, nil
 }
 
 func attestorFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc cosign.PassFunc, predicateURI string) (attestor icos.Attestor, sv signature.SignerVerifier, closeFn func(), err error) {
@@ -230,11 +230,11 @@ func attestorFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc c
 			}
 		}
 
-		return payload.NewInTotoAttestor(k, nil, nil, certBytes, nil, predicateURI), k, pkcs11Key.Close, nil
+		return payload.NewDSSEAttestor(k, nil, nil, certBytes, nil, predicateURI), k, pkcs11Key.Close, nil
 	}
 
 	if certPath == "" {
-		return payload.NewInTotoAttestor(k, nil, nil, nil, nil, predicateURI), k, nil, nil
+		return payload.NewDSSEAttestor(k, nil, nil, nil, nil, predicateURI), k, nil, nil
 	}
 
 	certBytes, err = os.ReadFile(certPath)
@@ -274,7 +274,7 @@ func attestorFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc c
 		return nil, nil, nil, errors.Wrap(err, "marshaling certificate to PEM")
 	}
 
-	return payload.NewInTotoAttestor(k, nil, nil, pemBytes, nil, predicateURI), k, nil, nil
+	return payload.NewDSSEAttestor(k, nil, nil, pemBytes, nil, predicateURI), k, nil, nil
 }
 
 func keylessAttestor(ctx context.Context, predicateURI string, ko sign.KeyOpts) (attestor icos.Attestor, sv signature.SignerVerifier, err error) {
@@ -303,7 +303,7 @@ func keylessAttestor(ctx context.Context, predicateURI string, ko sign.KeyOpts) 
 		}
 	}
 
-	return ifulcio.NewInTotoAttestor(payload.NewInTotoAttestor(k, nil, nil, nil, nil, predicateURI), k.Cert, k.Chain), k, nil
+	return ifulcio.WrapAttestor(payload.NewDSSEAttestor(k, nil, nil, nil, nil, predicateURI), k.Cert, k.Chain), k, nil
 }
 
 func AttestorFromKeyOpts(ctx context.Context, certPath, predicateURI string, ko sign.KeyOpts) (attestor icos.Attestor, sv signature.SignerVerifier, closeFn func(), err error) {

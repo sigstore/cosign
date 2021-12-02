@@ -215,7 +215,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		if err != nil {
 			return err
 		}
-		s = irekor.NewSigner(s, rClient)
+		s = irekor.WrapSigner(s, rClient)
 	}
 
 	ociSig, _, err := s.Sign(ctx, bytes.NewReader(payload))

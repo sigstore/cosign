@@ -119,8 +119,8 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	return newSig, pub, nil
 }
 
-// NewSigner returns a `cosign.Signer` which uploads the signature to Rekor
-func NewSigner(inner cosign.Signer, rClient *client.Rekor) cosign.Signer {
+// WrapSigner returns a `cosign.Signer` which uploads the signature to Rekor
+func WrapSigner(inner cosign.Signer, rClient *client.Rekor) cosign.Signer {
 	return &signerWrapper{
 		inner:   inner,
 		rClient: rClient,
