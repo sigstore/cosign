@@ -236,21 +236,21 @@ func signPolicy() *cobra.Command {
 
 			ociSig, _, err := signer.Sign(ctx, bytes.NewReader(signed.Signed))
 			if err != nil {
-				errors.Wrap(err, "signing")
+				return errors.Wrap(err, "signing")
 			}
 
 			b64Sig, err := ociSig.Base64Signature()
 			if err != nil {
-				errors.Wrap(err, "extracting fulcio cert")
+				return errors.Wrap(err, "extracting fulcio cert")
 			}
 
 			cert, err := ociSig.Cert()
 			if err != nil {
-				errors.Wrap(err, "extracting fulcio cert")
+				return errors.Wrap(err, "extracting fulcio cert")
 			}
 			certPEM, err := cryptoutils.MarshalCertificateToPEM(cert)
 			if err != nil {
-				errors.Wrap(err, "marshalling cert to PEM")
+				return errors.Wrap(err, "marshalling cert to PEM")
 			}
 
 			if cert.EmailAddresses == nil {

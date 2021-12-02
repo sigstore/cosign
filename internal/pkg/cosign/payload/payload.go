@@ -116,14 +116,14 @@ func (pa *payloadAttestor) Attest(ctx context.Context, payload io.Reader) (oci.S
 		},
 	}
 
-	envelopeJson, err := json.Marshal(envelope)
+	envelopeJSON, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
 
-	att, err := static.NewAttestation(envelopeJson, opts...)
+	att, err := static.NewAttestation(envelopeJSON, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
