@@ -29,7 +29,6 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/signature"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -84,16 +83,9 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	}
 
 	if options.EnableExperimental() {
-		// TODO: Refactor with sign.go
-		if sv.Cert != nil {
-			fmt.Fprintf(os.Stderr, "signing with ephemeral certificate:\n%s\n", string(sv.Cert))
-			rekorBytes = sv.Cert
-		} else {
-			pemBytes, err := signature.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-			if err != nil {
-				return nil, err
-			}
-			rekorBytes = pemBytes
+		rekorBytes, err := sv.Bytes(ctx)
+		if err != nil {
+			return nil, err
 		}
 		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
 		if err != nil {

@@ -51,6 +51,7 @@ cosign manifest verify [flags]
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment string                                                                        related image attachment to sign (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --cert string                                                                              path to the public certificate
       --cert-email string                                                                        the email expected in a valid fulcio cert
       --check-claims                                                                             whether to check the claims found (default true)
   -h, --help                                                                                     help for verify

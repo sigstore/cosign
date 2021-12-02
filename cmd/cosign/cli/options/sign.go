@@ -21,14 +21,16 @@ import (
 
 // SignOptions is the top level wrapper for the sign command.
 type SignOptions struct {
-	Key         string
-	Cert        string
-	Upload      bool
-	Output      string
-	PayloadPath string
-	Force       bool
-	Recursive   bool
-	Attachment  string
+	Key               string
+	Cert              string
+	Upload            bool
+	Output            string // deprecated: TODO remove when the output flag is fully deprecated
+	OutputSignature   string // TODO: this should be the root output file arg.
+	OutputCertificate string
+	PayloadPath       string
+	Force             bool
+	Recursive         bool
+	Attachment        string
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -58,8 +60,15 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")
 
+	// TODO: remove when output flag is fully deprecated
 	cmd.Flags().StringVar(&o.Output, "output", "",
 		"write the signature to FILE")
+
+	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
+		"write the signature to FILE")
+
+	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
+		"write the certificate to FILE")
 
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")

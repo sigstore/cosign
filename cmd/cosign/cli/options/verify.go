@@ -22,6 +22,7 @@ import (
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {
 	Key          string
+	Cert         string
 	CertEmail    string // TODO: merge into fulcio option as read mode?
 	CheckClaims  bool
 	Attachment   string
@@ -48,6 +49,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
+
+	cmd.Flags().StringVar(&o.Cert, "cert", "",
+		"path to the public certificate")
 
 	cmd.Flags().StringVar(&o.CertEmail, "cert-email", "",
 		"the email expected in a valid fulcio cert")
