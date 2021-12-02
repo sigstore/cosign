@@ -226,9 +226,8 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		return err
 	}
 
-	out := os.Stdout
 	if outputSignature != "" {
-		out, err = os.Create(outputSignature)
+		out, err := os.Create(outputSignature)
 		if err != nil {
 			return errors.Wrap(err, "create signature file")
 		}
