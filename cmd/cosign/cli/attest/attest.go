@@ -142,6 +142,9 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	}
 
 	ociAtt, _, err := attestor.Attest(ctx, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
 
 	if noUpload {
 		signedPayload, err := ociAtt.Payload()
