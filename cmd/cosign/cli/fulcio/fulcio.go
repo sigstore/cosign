@@ -22,25 +22,17 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"net/url"
 	"os"
 
-	"github.com/go-openapi/runtime"
-	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/go-openapi/strfmt"
 	"github.com/pkg/errors"
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
 	clioptions "github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
-	fulcPkgClient "github.com/sigstore/fulcio/pkg/client"
-	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
-	"github.com/sigstore/fulcio/pkg/generated/client/operations"
-	"github.com/sigstore/fulcio/pkg/generated/models"
+	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -50,12 +42,6 @@ const (
 	FlowDevice = "device"
 	FlowToken  = "token"
 )
-
-type Resp struct {
-	CertPEM  []byte
-	ChainPEM []byte
-	SCT      []byte
-}
 
 type oidcConnector interface {
 	OIDConnect(string, string, string) (*oauthflow.OIDCIDToken, error)
@@ -69,66 +55,37 @@ func (rf *realConnector) OIDConnect(url, clientID, secret string) (*oauthflow.OI
 	return oauthflow.OIDConnect(url, clientID, secret, rf.flow)
 }
 
-type signingCertProvider interface {
-	SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter, opts ...operations.ClientOption) (*operations.SigningCertCreated, error)
-}
-
-func getCertForOauthID(priv *ecdsa.PrivateKey, scp signingCertProvider, connector oidcConnector, oidcIssuer string, oidcClientID string) (Resp, error) {
+func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConnector, oidcIssuer string, oidcClientID string) (*api.CertificateResponse, error) {
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
-		return Resp{}, err
+		return nil, err
 	}
 
 	tok, err := connector.OIDConnect(oidcIssuer, oidcClientID, "")
 	if err != nil {
-		return Resp{}, err
+		return nil, err
 	}
 
 	// Sign the email address as part of the request
 	h := sha256.Sum256([]byte(tok.Subject))
 	proof, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
 	if err != nil {
-		return Resp{}, err
+		return nil, err
 	}
 
-	bearerAuth := httptransport.BearerToken(tok.RawString)
-
-	content := strfmt.Base64(pubBytes)
-	signedChallenge := strfmt.Base64(proof)
-	params := operations.NewSigningCertParams()
-	params.SetCertificateRequest(
-		&models.CertificateRequest{
-			PublicKey: &models.CertificateRequestPublicKey{
-				Algorithm: models.CertificateRequestPublicKeyAlgorithmEcdsa,
-				Content:   &content,
-			},
-			SignedEmailAddress: &signedChallenge,
+	cr := api.CertificateRequest{
+		PublicKey: api.Key{
+			Algorithm: "ecdsa",
+			Content:   pubBytes,
 		},
-	)
-
-	resp, err := scp.SigningCert(params, bearerAuth)
-	if err != nil {
-		return Resp{}, err
-	}
-	sct, err := base64.StdEncoding.DecodeString(resp.SCT.String())
-	if err != nil {
-		return Resp{}, err
+		SignedEmailAddress: proof,
 	}
 
-	// split the cert and the chain
-	certBlock, chainPem := pem.Decode([]byte(resp.Payload))
-	certPem := pem.EncodeToMemory(certBlock)
-	fr := Resp{
-		CertPEM:  certPem,
-		ChainPEM: chainPem,
-		SCT:      sct,
-	}
-
-	return fr, nil
+	return fc.SigningCert(cr, tok.RawString)
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID string, fClient *fulcioClient.Fulcio) (Resp, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID string, fClient api.Client) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
 	case FlowDevice:
@@ -139,10 +96,10 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 	case FlowToken:
 		c.flow = &oauthflow.StaticTokenGetter{RawToken: idToken}
 	default:
-		return Resp{}, fmt.Errorf("unsupported oauth flow: %s", flow)
+		return nil, fmt.Errorf("unsupported oauth flow: %s", flow)
 	}
 
-	return getCertForOauthID(priv, fClient.Operations, c, oidcIssuer, oidcClientID)
+	return getCertForOauthID(priv, fClient, c, oidcIssuer, oidcClientID)
 }
 
 type Signer struct {
@@ -153,7 +110,7 @@ type Signer struct {
 	*signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fClient *fulcioClient.Fulcio) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fClient api.Client) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
@@ -200,11 +157,11 @@ func GetRoots() *x509.CertPool {
 	return fulcioroots.Get()
 }
 
-func NewClient(fulcioURL string) (*fulcioClient.Fulcio, error) {
+func NewClient(fulcioURL string) (api.Client, error) {
 	fulcioServer, err := url.Parse(fulcioURL)
 	if err != nil {
 		return nil, err
 	}
-	fClient := fulcPkgClient.New(fulcioServer, fulcPkgClient.WithUserAgent(clioptions.UserAgent()))
+	fClient := api.NewClient(fulcioServer, api.WithUserAgent(clioptions.UserAgent()))
 	return fClient, nil
 }

@@ -23,7 +23,7 @@ require (
 	github.com/open-policy-agent/opa v0.35.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.2.0
-	github.com/sigstore/fulcio v0.1.2-0.20211204001059-48e1a254cf10
+	github.com/sigstore/fulcio v0.1.2-0.20211207184413-f4746cc4ff3d
 	github.com/sigstore/rekor v0.3.1-0.20211203233407-3278f72b78bd
 	github.com/sigstore/sigstore v1.0.2-0.20211203233310-c8e7f70eab4e
 	github.com/spf13/cobra v1.2.1

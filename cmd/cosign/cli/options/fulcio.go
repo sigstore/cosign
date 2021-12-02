@@ -30,7 +30,7 @@ var _ Interface = (*FulcioOptions)(nil)
 
 // AddFlags implements Interface
 func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
-	// TODO: change this back to https://fulcio.sigstore.dev after the v1 migration is complete.
+	// TODO: change this back to api.SigstorePublicServerURL after the v1 migration is complete.
 	cmd.Flags().StringVar(&o.URL, "fulcio-url", "https://v1.fulcio.sigstore.dev",
 		"[EXPERIMENTAL] address of sigstore PKI server")
 
