@@ -73,27 +73,23 @@ func TestRekorbytes(t *testing.T) {
 		pub  crypto.PublicKey
 
 		expected []byte
-	}{
-		{
-			desc: "cert only",
+	}{{
+		desc: "cert only",
 
-			cert:     testCert,
-			expected: []byte(testCertPEM),
-		},
-		{
-			desc: "pub only",
+		cert:     testCert,
+		expected: []byte(testCertPEM),
+	}, {
+		desc: "pub only",
 
-			pub:      testPub,
-			expected: testPubPEM,
-		},
-		{
-			desc: "pub and cert",
+		pub:      testPub,
+		expected: testPubPEM,
+	}, {
+		desc: "pub and cert",
 
-			cert:     testCert,
-			pub:      testPub,
-			expected: []byte(testCertPEM),
-		},
-	}
+		cert:     testCert,
+		pub:      testPub,
+		expected: []byte(testCertPEM),
+	}}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
