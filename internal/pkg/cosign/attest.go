@@ -25,6 +25,6 @@ import (
 // Attestor creates attestations in the form of `oci.Signature`s
 type Attestor interface {
 	// Attest creates an attestation, in the form of an `oci.Signature`, from the given payload.
-	// The signature and payload are stored as an envelope in `osi.Signature.Payload()`
+	// The signature and payload are stored as a DSSE envelope in `osi.Signature.Payload()`
 	Attest(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error)
 }

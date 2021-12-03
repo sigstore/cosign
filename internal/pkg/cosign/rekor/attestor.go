@@ -54,6 +54,7 @@ type attestorWrapper struct {
 
 var _ cosign.Attestor = (*attestorWrapper)(nil)
 
+// Attest implements `cosign.Attestor`
 func (ra *attestorWrapper) Attest(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	att, pub, err := ra.inner.Attest(ctx, payload)
 	if err != nil {
