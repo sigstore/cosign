@@ -24,6 +24,7 @@ $ gcloud kms keys versions get-public-key 1 --key=foo --keyring=foo --location=u
 # Verify in openssl
 $ openssl dgst -sha256 -verify pubkey.pem -signature gcpkms.sig payload
 ```
+
 ## Sign With OpenSSL, Verify With Cosign
 
 ```shell
@@ -45,4 +46,47 @@ The following checks were performed on each of these signatures:
   - The signatures were verified against the specified public key
   - Any certificates were verified against the Fulcio roots.
 {"critical":{"identity":{"docker-reference":"us.gcr.io/dlorenc-vmtest2/demo"},"image":{"docker-manifest-digest":"sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155"},"type":"cosign container image signature"},"optional":null}
+```
+
+## AWS KMS with `aws`
+
+Use `aws` to create a CMK for sign and verification (just need this once):
+
+```shell
+$ export KEY_ID=$(aws kms create-key --customer-master-key-spec RSA_4096 \
+                                   --key-usage SIGN_VERIFY \
+                                   --description "Cosign Signature Key Pair" \
+                                   --query KeyMetadata.KeyId --output text)
+```
+
+Use `cosign` to generate the payload, sign it with `aws kms`, then use `cosign` to upload it.
+
+```shell
+$ cosign generate docker.io/davivcgarcia/cosign-demo:latest > payload.json
+
+$ aws kms sign  --key-id $KEY_ID \
+              --message file://payload.json \
+              --message-type RAW \
+              --signing-algorithm RSASSA_PKCS1_V1_5_SHA_256 \
+              --output text \
+              --query Signature > payload.sig
+
+$ cosign attach signature docker.io/davivcgarcia/cosign-demo:latest --signature $(< payload.sig)
+```
+
+Now (on another machine) use the `cosign` to download signature bundle, extract payload and signature value, and verify it with `aws kms`!
+
+```shell
+$ cosign download signature docker.io/davivcgarcia/cosign-demo:latest > signatures.json 
+
+$ cat signatures.json | tail -1 | jq -r .Base64Signature | base64 -D > remote_payload.sig
+$ cat signatures.json | tail -1 | jq -r .Payload | base64 -D > remote_payload.json
+
+$ aws kms verify --key-id $KEY_ID \
+               --message file://remote_payload.json \
+               --message-type RAW \
+               --signing-algorithm RSASSA_PKCS1_V1_5_SHA_256 \
+               --signature fileb://remote_payload.sig \
+               --output text \
+               --query SignatureValid
 ```
