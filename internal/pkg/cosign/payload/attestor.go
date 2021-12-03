@@ -54,11 +54,9 @@ func (pa *payloadAttestor) Attest(ctx context.Context, payload io.Reader) (oci.S
 	envelope := dsse.Envelope{
 		PayloadType: pa.payloadType,
 		Payload:     base64.StdEncoding.EncodeToString(p),
-		Signatures: []dsse.Signature{
-			{
-				Sig: base64.StdEncoding.EncodeToString(sig),
-			},
-		},
+		Signatures: []dsse.Signature{{
+			Sig: base64.StdEncoding.EncodeToString(sig),
+		}},
 	}
 
 	envelopeJSON, err := json.Marshal(envelope)
