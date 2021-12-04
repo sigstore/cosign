@@ -22,7 +22,7 @@ require (
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/open-policy-agent/opa v0.34.2
 	github.com/pkg/errors v0.9.1
-	github.com/secure-systems-lab/go-securesystemslib v0.1.0
+	github.com/secure-systems-lab/go-securesystemslib v0.2.0
 	github.com/sigstore/fulcio v0.1.2-0.20211204001059-48e1a254cf10
 	github.com/sigstore/rekor v0.3.1-0.20211203233407-3278f72b78bd
 	github.com/sigstore/sigstore v1.0.2-0.20211115214857-534e133ebf9d
@@ -43,15 +43,8 @@ require (
 )
 
 require (
-	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/fatih/color v1.13.0 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v1.2.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
 	k8s.io/klog/v2 v2.30.0 // indirect
 )
