@@ -87,7 +87,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		if err != nil {
 			return nil, err
 		}
-		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL, rekorClient.WithUserAgent(options.UserAgent()))
 		if err != nil {
 			return nil, err
 		}

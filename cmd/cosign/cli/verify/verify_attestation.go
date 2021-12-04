@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/cue"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	sigs "github.com/sigstore/cosign/pkg/signature"
+	rekor "github.com/sigstore/rekor/pkg/client"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -74,7 +75,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 	if options.EnableExperimental() {
-		co.RekorURL = c.RekorURL
+		if c.RekorURL != "" {
+			rekorClient, err := rekor.GetRekorClient(c.RekorURL, rekor.WithUserAgent(options.UserAgent()))
+			if err != nil {
+				return errors.Wrap(err, "creating Rekor client")
+			}
+			co.RekorClient = rekorClient
+		}
 		co.RootCerts = fulcio.GetRoots()
 	}
 	keyRef := c.KeyRef

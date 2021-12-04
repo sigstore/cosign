@@ -23,7 +23,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,7 +50,6 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/walk"
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	fulcPkgClient "github.com/sigstore/fulcio/pkg/client"
 	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -209,7 +207,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	s = ipayload.NewSigner(sv, nil, nil)
 	s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
-		rClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		rClient, err := rekorClient.GetRekorClient(ko.RekorURL, rekorClient.WithUserAgent(options.UserAgent()))
 		if err != nil {
 			return err
 		}
@@ -387,11 +385,10 @@ func signerFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc cos
 }
 
 func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
-	fulcioServer, err := url.Parse(ko.FulcioURL)
+	fClient, err := fulcio.NewClient(ko.FulcioURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing Fulcio URL")
+		return nil, errors.Wrap(err, "creating Fulcio client")
 	}
-	fClient := fulcPkgClient.New(fulcioServer)
 	tok := ko.IDToken
 	if providers.Enabled(ctx) {
 		tok, err = providers.Provide(ctx, "sigstore")

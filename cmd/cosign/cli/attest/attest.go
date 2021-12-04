@@ -77,7 +77,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 		rekorBytes = pemBytes
 	}
 
-	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
+	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL, rekPkgClient.WithUserAgent(options.UserAgent()))
 	if err != nil {
 		return nil, err
 	}

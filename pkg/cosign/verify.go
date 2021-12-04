@@ -40,7 +40,6 @@ import (
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -60,8 +59,8 @@ type CheckOpts struct {
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
 	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
 
-	// RekorURL is the URL for the rekor server to use to verify signatures and public keys.
-	RekorURL string
+	// RekorClient, if set, is used to use to verify signatures and public keys.
+	RekorClient *client.Rekor
 
 	// SigVerifier is used to verify signatures.
 	SigVerifier signature.Verifier
@@ -239,14 +238,6 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 
 	validationErrs := []string{}
 
-	var rekorClient *client.Rekor
-	if co.RekorURL != "" {
-		rekorClient, err = rekor.GetRekorClient(co.RekorURL)
-		if err != nil {
-			return nil, false, err
-		}
-	}
-
 	for _, sig := range sl {
 		if err := func(sig oci.Signature) error {
 			verifier := co.SigVerifier
@@ -277,21 +268,21 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 			}
 
 			verified, err := VerifyBundle(ctx, sig)
-			if err != nil && co.RekorURL == "" {
+			if err != nil && co.RekorClient == nil {
 				return errors.Wrap(err, "unable to verify bundle")
 			}
 			bundleVerified = bundleVerified || verified
 
-			if !verified && co.RekorURL != "" {
+			if !verified && co.RekorClient != nil {
 				if co.SigVerifier != nil {
 					pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
 					if err != nil {
 						return err
 					}
-					return tlogValidatePublicKey(ctx, rekorClient, pub, sig)
+					return tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
 				}
 
-				return tlogValidateCertificate(ctx, rekorClient, sig)
+				return tlogValidateCertificate(ctx, co.RekorClient, sig)
 			}
 			return nil
 		}(sig); err != nil {
@@ -371,14 +362,6 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	}
 
 	validationErrs := []string{}
-
-	var rekorClient *client.Rekor
-	if co.RekorURL != "" {
-		rekorClient, err = rekor.GetRekorClient(co.RekorURL)
-		if err != nil {
-			return nil, false, err
-		}
-	}
 	for _, att := range sl {
 		if err := func(att oci.Signature) error {
 			verifier := co.SigVerifier
@@ -409,21 +392,21 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 			}
 
 			verified, err := VerifyBundle(ctx, att)
-			if err != nil && co.RekorURL == "" {
+			if err != nil && co.RekorClient == nil {
 				return errors.Wrap(err, "unable to verify bundle")
 			}
 			bundleVerified = bundleVerified || verified
 
-			if !verified && co.RekorURL != "" {
+			if !verified && co.RekorClient != nil {
 				if co.SigVerifier != nil {
 					pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
 					if err != nil {
 						return err
 					}
-					return tlogValidatePublicKey(ctx, rekorClient, pub, att)
+					return tlogValidatePublicKey(ctx, co.RekorClient, pub, att)
 				}
 
-				return tlogValidateCertificate(ctx, rekorClient, att)
+				return tlogValidateCertificate(ctx, co.RekorClient, att)
 			}
 			return nil
 		}(att); err != nil {

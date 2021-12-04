@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/oci"
 	sigs "github.com/sigstore/cosign/pkg/signature"
+	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -94,7 +95,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 	if options.EnableExperimental() {
-		co.RekorURL = c.RekorURL
+		if c.RekorURL != "" {
+			rekorClient, err := rekor.GetRekorClient(c.RekorURL, rekor.WithUserAgent(options.UserAgent()))
+			if err != nil {
+				return errors.Wrap(err, "creating Rekor client")
+			}
+			co.RekorClient = rekorClient
+		}
 		co.RootCerts = fulcio.GetRoots()
 	}
 	keyRef := c.KeyRef
@@ -163,7 +170,7 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified
 	}
 	if bundleVerified {
 		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
-	} else if co.RekorURL != "" {
+	} else if co.RekorClient != nil {
 		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
 		fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
 	}

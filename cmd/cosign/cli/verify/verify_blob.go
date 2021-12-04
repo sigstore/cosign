@@ -170,7 +170,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	fmt.Fprintln(os.Stderr, "Verified OK")
 
 	if options.EnableExperimental() {
-		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL, rekorClient.WithUserAgent(options.UserAgent()))
 		if err != nil {
 			return err
 		}

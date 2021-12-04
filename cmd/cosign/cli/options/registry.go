@@ -25,8 +25,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/spf13/cobra"
-
-	"github.com/sigstore/cosign/pkg/version"
 )
 
 // RegistryOptions is the wrapper for the registry options.
@@ -67,7 +65,7 @@ func (o *RegistryOptions) ClientOpts(ctx context.Context) ([]ociremote.Option, e
 func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Option {
 	opts := []remote.Option{
 		remote.WithContext(ctx),
-		remote.WithUserAgent("cosign/" + version.GetVersionInfo().GitVersion),
+		remote.WithUserAgent(UserAgent()),
 	}
 
 	if o.KubernetesKeychain {
