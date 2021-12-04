@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	ifulcio "github.com/sigstore/cosign/internal/pkg/cosign/fulcio"
 	ipayload "github.com/sigstore/cosign/internal/pkg/cosign/payload"
@@ -50,7 +51,6 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/walk"
 	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -207,7 +207,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	s = ipayload.NewSigner(sv, nil, nil)
 	s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
-		rClient, err := rekorClient.GetRekorClient(ko.RekorURL, rekorClient.WithUserAgent(options.UserAgent()))
+		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
 		}
