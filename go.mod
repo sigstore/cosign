@@ -20,7 +20,7 @@ require (
 	github.com/in-toto/in-toto-golang v0.4.0-prerelease
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.0.3
-	github.com/open-policy-agent/opa v0.34.2
+	github.com/open-policy-agent/opa v0.35.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/sigstore/fulcio v0.1.2-0.20211204001059-48e1a254cf10
@@ -40,18 +40,4 @@ require (
 	k8s.io/client-go v0.21.7
 	k8s.io/utils v0.0.0-20211116205334-6203023598ed
 	knative.dev/pkg v0.0.0-20211123135150-787aec59e70a
-)
-
-require (
-	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/fatih/color v1.13.0 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v1.2.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
-	k8s.io/klog/v2 v2.30.0 // indirect
 )
