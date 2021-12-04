@@ -90,12 +90,6 @@ func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (s
 }
 
 func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
-	for prefix := range kms.ProvidersMux().Providers() {
-		if strings.HasPrefix(keyRef, prefix) {
-			return kms.Get(ctx, keyRef, crypto.SHA256)
-		}
-	}
-
 	switch {
 	case strings.HasPrefix(keyRef, pkcs11key.ReferenceScheme):
 		pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
@@ -147,6 +141,9 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 
 		return cosign.LoadECDSAPrivateKey([]byte(pk), []byte(pass))
 	default:
+		if sv, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
+			return sv, nil
+		}
 	}
 
 	return loadKey(keyRef, pf)
