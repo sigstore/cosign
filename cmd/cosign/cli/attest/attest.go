@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
@@ -39,7 +40,6 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/cosign/pkg/types"
-	rekPkgClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -77,7 +77,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 		rekorBytes = pemBytes
 	}
 
-	rekorClient, err := rekPkgClient.GetRekorClient(rekorURL)
+	rekorClient, err := rekor.NewClient(rekorURL)
 	if err != nil {
 		return nil, err
 	}

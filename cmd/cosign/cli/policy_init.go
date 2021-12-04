@@ -33,9 +33,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
-	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -252,7 +252,7 @@ func signPolicy() *cobra.Command {
 			if options.EnableExperimental() {
 				// TODO: Refactor with sign.go
 				rekorBytes := sv.Cert
-				rekorClient, err := rekorClient.GetRekorClient(o.Rekor.URL)
+				rekorClient, err := rekor.NewClient(o.Rekor.URL)
 				if err != nil {
 					return err
 				}

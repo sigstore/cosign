@@ -25,6 +25,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/go-openapi/runtime"
@@ -34,7 +35,9 @@ import (
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
+	clioptions "github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
+	fulcPkgClient "github.com/sigstore/fulcio/pkg/client"
 	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/fulcio/pkg/generated/models"
@@ -195,4 +198,13 @@ var _ signature.Signer = &Signer{}
 
 func GetRoots() *x509.CertPool {
 	return fulcioroots.Get()
+}
+
+func NewClient(fulcioURL string) (*fulcioClient.Fulcio, error) {
+	fulcioServer, err := url.Parse(fulcioURL)
+	if err != nil {
+		return nil, err
+	}
+	fClient := fulcPkgClient.New(fulcioServer, fulcPkgClient.WithUserAgent(clioptions.UserAgent()))
+	return fClient, nil
 }

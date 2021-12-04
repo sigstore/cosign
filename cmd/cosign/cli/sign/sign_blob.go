@@ -28,8 +28,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/pkg/cosign"
-	rekorClient "github.com/sigstore/rekor/pkg/client"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -87,7 +87,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		if err != nil {
 			return nil, err
 		}
-		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		rekorClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return nil, err
 		}
