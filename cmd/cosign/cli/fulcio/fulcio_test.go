@@ -21,10 +21,13 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/go-openapi/runtime"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/fulcio/pkg/generated/client/operations"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 )
@@ -136,5 +139,35 @@ func TestGetCertForOauthID(t *testing.T) {
 				t.Errorf("getCertForOauthID returned chain %q, wanted %q", actualChain, expectedChain)
 			}
 		})
+	}
+}
+
+func TestNewClient(t *testing.T) {
+	t.Parallel()
+	expectedUserAgent := options.UserAgent()
+	requestReceived := false
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			requestReceived = true
+			file := []byte{}
+
+			got := r.UserAgent()
+			if got != expectedUserAgent {
+				t.Errorf("wanted User-Agent %q, got %q", expectedUserAgent, got)
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(file)
+		}))
+	defer testServer.Close()
+
+	client, err := NewClient(testServer.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, _ = client.Operations.SigningCert(nil, nil)
+
+	if !requestReceived {
+		t.Fatal("no requests were received")
 	}
 }
