@@ -135,7 +135,6 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 }
 
 func TestImportPrivateKey(t *testing.T) {
-
 	err := os.WriteFile("validrsa.key", []byte(validrsa), 0600)
 	if err != nil {
 		t.Fatal(err)
@@ -143,7 +142,6 @@ func TestImportPrivateKey(t *testing.T) {
 
 	// Test valid RSA private key
 	if _, err = ImportKeyPair("validrsa.key", pass("hello")); err != nil {
-
 		t.Errorf("unexpected error importing key: %s", err)
 	}
 	os.Remove("validrsa.key")
@@ -155,7 +153,6 @@ func TestImportPrivateKey(t *testing.T) {
 
 	// Test invalid RSA private key
 	if _, err = ImportKeyPair("invalidrsa.key", pass("hello")); err == nil {
-
 		t.Errorf("unexpected error importing key: %s", err)
 	}
 	os.Remove("invalidrsa.key")
@@ -167,7 +164,6 @@ func TestImportPrivateKey(t *testing.T) {
 
 	// Test invalid PGP private key
 	if _, err = ImportKeyPair("invalidkey.key", pass("hello")); err == nil {
-
 		t.Errorf("unexpected error importing key: %s", err)
 	}
 	os.Remove("invalidkey.key")
@@ -179,7 +175,6 @@ func TestImportPrivateKey(t *testing.T) {
 
 	// Test valid EC private key
 	if _, err = ImportKeyPair("validec.key", pass("hello")); err != nil {
-
 		t.Errorf("unexpected error importing key: %s", err)
 	}
 	os.Remove("validec.key")
@@ -195,5 +190,4 @@ func TestImportPrivateKey(t *testing.T) {
 	}
 
 	os.Remove("ed25519.key")
-
 }

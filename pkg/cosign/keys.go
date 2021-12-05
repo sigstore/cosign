@@ -85,7 +85,6 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		}
 		return marshalKeyPair(Keys{pk, pk.Public()}, pf)
 	}
-
 }
 
 func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
