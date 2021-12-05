@@ -28,7 +28,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	cjson "github.com/tent/canonical-json-go"
+	cjson "github.com/secure-systems-lab/go-securesystemslib/cjson"
 )
 
 type Signed struct {
@@ -54,7 +54,7 @@ type Key struct {
 
 func (k *Key) ID() string {
 	k.idOnce.Do(func() {
-		data, _ := cjson.Marshal(k)
+		data, _ := cjson.EncodeCanonical(k)
 		digest := sha256.Sum256(data)
 		k.id = hex.EncodeToString(digest[:])
 	})
@@ -127,7 +127,7 @@ func (r *Role) AddKeysWithThreshold(keys []*Key, threshold int) bool {
 
 func (r *Root) Marshal() (*Signed, error) {
 	// Marshals the Root into a Signed type
-	b, err := cjson.Marshal(r)
+	b, err := cjson.EncodeCanonical(r)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (r *Root) ValidKey(key *Key, role string) (string, error) {
 
 func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
 	// Marshals Signed with prefix and indent.
-	b, err := cjson.Marshal(s)
+	b, err := cjson.EncodeCanonical(s)
 	if err != nil {
 		return []byte{}, err
 	}

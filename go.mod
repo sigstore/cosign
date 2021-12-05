@@ -29,7 +29,6 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
-	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/theupdateframework/go-tuf v0.0.0-20211203210025-7ded50136bf9
 	github.com/xanzy/go-gitlab v0.52.2
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
