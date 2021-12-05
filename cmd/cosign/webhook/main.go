@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -36,6 +37,7 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 
 	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
+	"github.com/sigstore/cosign/pkg/version"
 )
 
 var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace that holds the public key for verification.")
@@ -56,6 +58,9 @@ func main() {
 	// Allow folks to configure the port the webhook serves on.
 	flag.IntVar(&opts.Port, "secure-port", opts.Port, "The port on which to serve HTTPS.")
 
+	v := version.GetVersionInfo()
+	vJSON, _ := v.JSONString()
+	log.Printf("%v", vJSON)
 	// This calls flag.Parse()
 	sharedmain.MainWithContext(ctx, "cosigned",
 		certificates.NewController,
