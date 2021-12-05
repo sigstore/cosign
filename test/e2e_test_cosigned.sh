@@ -39,11 +39,9 @@ spec:
   restartPolicy: Never
   containers:
   - name: sample
-    image: gcr.io/distroless/base:debug
-    command: [/busybox/sh, -c]
-    args:
-    - |
-      echo Testing Fulcio verification
+    image: gcr.io/distroless/base
+    # This is just an executable file present in the image
+    command: [/usr/bin/openssl, version]
 EOF
 cat > job.yaml <<EOF
 apiVersion: batch/v1
