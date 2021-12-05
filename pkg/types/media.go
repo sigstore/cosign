@@ -17,7 +17,7 @@ package types
 
 const (
 	CycloneDXMediaType     = "application/vnd.cyclonedx"
-	SyftMediaType          = "application/vnd.syft"
+	SyftMediaType          = "application/vnd.syft+json"
 	SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
 	SPDXMediaType          = "text/spdx"
 	WasmLayerMediaType     = "application/vnd.wasm.content.layer.v1+wasm"
