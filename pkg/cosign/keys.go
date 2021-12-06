@@ -71,20 +71,21 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		return nil, errors.New("invalid pem block")
 	}
 
+	var pk crypto.Signer
+
 	switch p.Type {
 	case RSAPrivateKeyPemType:
-		pk, err := x509.ParsePKCS1PrivateKey(p.Bytes)
+		pk, err = x509.ParsePKCS1PrivateKey(p.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("parsing error")
 		}
-		return marshalKeyPair(Keys{pk, pk.Public()}, pf)
 	default:
-		pk, err := x509.ParseECPrivateKey(p.Bytes)
+		pk, err = x509.ParseECPrivateKey(p.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("parsing error")
 		}
-		return marshalKeyPair(Keys{pk, pk.Public()}, pf)
 	}
+	return marshalKeyPair(Keys{pk, pk.Public()}, pf)
 }
 
 func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
