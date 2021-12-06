@@ -73,8 +73,7 @@ jobs:
       - name: Check license headers
         run: |
           set -e
-          addlicense -l apache -c 'The Sigstore Authors' -v *
-          git diff --exit-code
+          addlicense --check -l apache -c 'The Sigstore Authors' -v *
 
   golangci:
     name: lint
