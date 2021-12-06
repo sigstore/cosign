@@ -67,6 +67,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Download())
 	cmd.AddCommand(Generate())
 	cmd.AddCommand(GenerateKeyPair())
+	cmd.AddCommand(Helm())
 	cmd.AddCommand(Initialize())
 	cmd.AddCommand(Load())
 	cmd.AddCommand(Manifest())
