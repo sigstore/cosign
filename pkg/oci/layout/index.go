@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	kindAnnotation  = "kind"
-	imageAnnotation = "dev.cosignproject.cosign/image"
-	sigsAnnotation  = "dev.cosignproject.cosign/sigs"
-	attsAnnotation  = "dev.cosignproject.cosign/atts"
+	kindAnnotation       = "kind"
+	imageAnnotation      = "dev.cosignproject.cosign/image"
+	imageIndexAnnotation = "dev.cosignproject.cosign/imageIndex"
+	sigsAnnotation       = "dev.cosignproject.cosign/sigs"
+	attsAnnotation       = "dev.cosignproject.cosign/atts"
 )
 
 // SignedImageIndex provides access to a local index reference, and its signatures.
@@ -98,6 +99,9 @@ func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	if err != nil {
 		return nil, err
 	}
+	if img == nil {
+		return nil, nil
+	}
 	return signed.Image(img), nil
 }
 
@@ -116,11 +120,33 @@ func (i *index) imageByAnnotation(annotation string) (v1.Image, error) {
 	return nil, nil
 }
 
-// SignedImageIndex implements oci.SignedImageIndex
-func (i *index) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error) {
-	ii, err := i.ImageIndex(h)
+func (i *index) imageIndexByAnnotation(annotation string) (v1.ImageIndex, error) {
+	manifest, err := i.IndexManifest()
 	if err != nil {
 		return nil, err
+	}
+	for _, m := range manifest.Manifests {
+		if val, ok := m.Annotations[kindAnnotation]; ok && val == annotation {
+			return i.ImageIndex(m.Digest)
+		}
+	}
+	return nil, nil
+}
+
+// SignedImageIndex implements oci.SignedImageIndex
+func (i *index) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error) {
+	var ii v1.ImageIndex
+	var err error
+	if h.String() == ":" {
+		ii, err = i.imageIndexByAnnotation(imageIndexAnnotation)
+	} else {
+		ii, err = i.ImageIndex(h)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if ii == nil {
+		return nil, nil
 	}
 	return &index{
 		v1Index: ii,
