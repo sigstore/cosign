@@ -44,7 +44,7 @@ func Sign() *cobra.Command {
   cosign sign --key cosign.key <IMAGE>
 
   # sign a multi-arch container image AND all referenced, discrete images
-  cosign sign --key cosign.key --r <MULTI-ARCH IMAGE>
+  cosign sign --key cosign.key --recursive <MULTI-ARCH IMAGE>
 
   # sign a container image and add annotations
   cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE>
