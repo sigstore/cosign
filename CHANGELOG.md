@@ -14,7 +14,7 @@
 * Validate the whole attestation statement, not just the predicate (https://github.com/sigstore/cosign/pull/1035)
 * Added the options to replace attestations using `cosign attest --replace` (https://github.com/sigstore/cosign/pull/1039)
 * Added URI to `cosign verify-blob` output (https://github.com/sigstore/cosign/pull/1047)
-* Signatures and certificates created by `cosgin sign` and `cosgin sign-blob` can be output to file using the `--output-signature` and `--output-certificate` flags, respectively (https://github.com/sigstore/cosign/pull/1016, https://github.com/sigstore/cosign/pull/1093, https://github.com/sigstore/cosign/pull/1066, https://github.com/sigstore/cosign/pull/1095)
+* Signatures and certificates created by `cosign sign` and `cosign sign-blob` can be output to file using the `--output-signature` and `--output-certificate` flags, respectively (https://github.com/sigstore/cosign/pull/1016, https://github.com/sigstore/cosign/pull/1093, https://github.com/sigstore/cosign/pull/1066, https://github.com/sigstore/cosign/pull/1095)
 * [cosign/pkg] Added the `pkg/oci/layout` package for storing signatures and attestations on disk (https://github.com/sigstore/cosign/pull/1040, https://github.com/sigstore/cosign/pull/1096)
 * [cosign/pkg] Added `mutate` methods to attach `oci.File`s to `oci.Signed*` objects (https://github.com/sigstore/cosign/pull/1084)
 * Added the `--signature-digest-algorithm` flag to `cosign verify`, allowing verification of container image signatures which were generated with a non-SHA256 signature algorithm (https://github.com/sigstore/cosign/pull/1071)
@@ -24,7 +24,7 @@
 * Added `cosign save` and `cosign load` commands to save and upload container images and associated signatures to disk (https://github.com/sigstore/cosign/pull/1094)
 * `cosign sign` will no longer fail to sign private images in keyless mode without `--force` (https://github.com/sigstore/cosign/pull/1116)
 * `cosign verify` now supports signatures stored in files and remote URLs with `--signature` (https://github.com/sigstore/cosign/pull/1068)
-* `cosgin verify` now supports certs stored in files (https://github.com/sigstore/cosign/pull/1095)
+* `cosign verify` now supports certs stored in files (https://github.com/sigstore/cosign/pull/1095)
 * Added support for `syft` format in `cosign attach sbom` (https://github.com/sigstore/cosign/pull/1137)
 
 ### Bug Fixes
