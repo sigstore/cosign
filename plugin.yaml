@@ -1,0 +1,8 @@
+name: "cosign"
+usage: "helm cosign --key cosign.key <CHART>"
+description: |
+  "Allows you to sign container images with public/private keypairs or keyless mode"
+command: "$HELM_PLUGIN_DIR/cosign version"
+hooks:
+  install: "$HELM_PLUGIN_DIR/install-binary.sh"
+  update: "$HELM_PLUGIN_DIR/install-binary.sh"
