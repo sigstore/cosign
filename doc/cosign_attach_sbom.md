@@ -20,7 +20,7 @@ cosign attach sbom [flags]
   -h, --help                                                                                     help for sbom
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --sbom string                                                                              path to the sbom, or {-} for stdin
-      --type string                                                                              type of sbom (spdx|cyclonedx) (default "spdx")
+      --type string                                                                              type of sbom (spdx|cyclonedx|syft) (default "spdx")
 ```
 
 ### Options inherited from parent commands

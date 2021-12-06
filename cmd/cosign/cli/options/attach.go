@@ -61,7 +61,7 @@ func (o *AttachSBOMOptions) AddFlags(cmd *cobra.Command) {
 		"path to the sbom, or {-} for stdin")
 
 	cmd.Flags().StringVar(&o.SBOMType, "type", "spdx",
-		"type of sbom (spdx|cyclonedx)")
+		"type of sbom (spdx|cyclonedx|syft)")
 }
 
 func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
@@ -70,7 +70,9 @@ func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
 		return ctypes.CycloneDXMediaType, nil
 	case "spdx":
 		return ctypes.SPDXMediaType, nil
+	case "syft":
+		return ctypes.SyftMediaType, nil
 	default:
-		return "unknown", fmt.Errorf("unknown SBOM type: %q, expected (spdx|cyclonedx)", o.SBOMType)
+		return "unknown", fmt.Errorf("unknown SBOM type: %q, expected (spdx|cyclonedx|syft)", o.SBOMType)
 	}
 }
