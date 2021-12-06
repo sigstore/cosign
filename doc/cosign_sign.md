@@ -64,7 +64,6 @@ cosign sign [flags]
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
       --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
-      --output string                                                                            write the signature to FILE
       --output-certificate string                                                                write the certificate to FILE
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
