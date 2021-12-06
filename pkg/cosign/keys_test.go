@@ -18,6 +18,7 @@ package cosign
 import (
 	"crypto/rand"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -135,59 +136,60 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 }
 
 func TestImportPrivateKey(t *testing.T) {
-	err := os.WriteFile("validrsa.key", []byte(validrsa), 0600)
+	td := t.TempDir()
+	err := os.WriteFile(filepath.Join(td, "validrsa.key"), []byte(validrsa), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Test valid RSA private key
-	if _, err = ImportKeyPair("validrsa.key", pass("hello")); err != nil {
+	if _, err = ImportKeyPair(filepath.Join(td, "validrsa.key"), pass("hello")); err != nil {
 		t.Errorf("unexpected error importing key: %s", err)
 	}
-	os.Remove("validrsa.key")
+	os.Remove(filepath.Join(td, "validrsa.key"))
 
-	err = os.WriteFile("invalidrsa.key", []byte(invalidrsa), 0600)
+	err = os.WriteFile(filepath.Join(td, "invalidrsa.key"), []byte(invalidrsa), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Test invalid RSA private key
-	if _, err = ImportKeyPair("invalidrsa.key", pass("hello")); err == nil {
+	if _, err = ImportKeyPair(filepath.Join(td, "invalidrsa.key"), pass("hello")); err == nil {
 		t.Errorf("unexpected error importing key: %s", err)
 	}
-	os.Remove("invalidrsa.key")
+	os.Remove(filepath.Join(td, "invalidrsa.key"))
 
-	err = os.WriteFile("invalidkey.key", []byte(invalidkey), 0600)
+	err = os.WriteFile(filepath.Join(td, "invalidkey.key"), []byte(invalidkey), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Test invalid PGP private key
-	if _, err = ImportKeyPair("invalidkey.key", pass("hello")); err == nil {
+	if _, err = ImportKeyPair(filepath.Join(td, "invalidkey.key"), pass("hello")); err == nil {
 		t.Errorf("unexpected error importing key: %s", err)
 	}
-	os.Remove("invalidkey.key")
+	os.Remove(filepath.Join(td, "invalidkey.key"))
 
-	err = os.WriteFile("validec.key", []byte(validec), 0600)
+	err = os.WriteFile(filepath.Join(td, "validec.key"), []byte(validec), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Test valid EC private key
-	if _, err = ImportKeyPair("validec.key", pass("hello")); err != nil {
+	if _, err = ImportKeyPair(filepath.Join(td, "validec.key"), pass("hello")); err != nil {
 		t.Errorf("unexpected error importing key: %s", err)
 	}
-	os.Remove("validec.key")
+	os.Remove(filepath.Join(td, "validec.key"))
 
-	err = os.WriteFile("ed25519.key", []byte(ed25519key), 0600)
+	err = os.WriteFile(filepath.Join(td, "ed25519.key"), []byte(ed25519key), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Test invalid EC private key
-	if _, err = ImportKeyPair("ed25519.key", pass("hello")); err == nil {
+	if _, err = ImportKeyPair(filepath.Join(td, "ed25519.key"), pass("hello")); err == nil {
 		t.Errorf("unexpected error importing key: %s", err)
 	}
 
-	os.Remove("ed25519.key")
+	os.Remove(filepath.Join(td, "ed25519.key"))
 }
