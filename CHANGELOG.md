@@ -1,5 +1,58 @@
 # Changelog
 
+## v1.4.0
+
+### Highlights
+
+* BREAKING [COSIGN_EXPERIMENTAL]: This and future `cosign` releases will generate signatures that do not validate in older versions of `cosign`. This only applies to "keyless" experimental mode. To opt out of this behavior, use: `--fulcio-url=https://fulcio.sigstore.dev` when signing payloads (https://github.com/sigstore/cosign/pull/1127)
+* BREAKING [cosign/pkg]: `SignedEntryTimestamp` is now of type `[]byte`. To get the previous behavior, call `strfmt.Base64(SignedEntryTimestamp)` (https://github.com/sigstore/cosign/pull/1083)
+* `cosign-linux-pivkey-amd64` releases are now of the form `cosign-linux-pivkey-pkcs11key-amd64` (https://github.com/sigstore/cosign/pull/1052)
+* Releases are now additionally signed using the keyless workflow (https://github.com/sigstore/cosign/pull/1073, https://github.com/sigstore/cosign/pull/1111)
+
+### Enhancements
+
+* Validate the whole attestation statement, not just the predicate (https://github.com/sigstore/cosign/pull/1035)
+* Added the options to replace attestations using `cosign attest --replace` (https://github.com/sigstore/cosign/pull/1039)
+* Added URI to `cosign verify-blob` output (https://github.com/sigstore/cosign/pull/1047)
+* Signatures and certificates created by `cosgin sign` and `cosgin sign-blob` can be output to file using the `--output-signature` and `--output-certificate` flags, respectively (https://github.com/sigstore/cosign/pull/1016, https://github.com/sigstore/cosign/pull/1093, https://github.com/sigstore/cosign/pull/1066, https://github.com/sigstore/cosign/pull/1095)
+* [cosign/pkg] Added the `pkg/oci/layout` package for storing signatures and attestations on disk (https://github.com/sigstore/cosign/pull/1040, https://github.com/sigstore/cosign/pull/1096)
+* [cosign/pkg] Added `mutate` methods to attach `oci.File`s to `oci.Signed*` objects (https://github.com/sigstore/cosign/pull/1084)
+* Added the `--signature-digest-algorithm` flag to `cosign verify`, allowing verification of container image signatures which were generated with a non-SHA256 signature algorithm (https://github.com/sigstore/cosign/pull/1071)
+* Builds should now be reproducible (https://github.com/sigstore/cosign/pull/1053)
+* Allows base64 files as `--cert` in `cosign verify-blob` (https://github.com/sigstore/cosign/pull/1088)
+* Kubernetes secrets generated for version >= 1.21 clusters have the immutible bit set (https://github.com/sigstore/cosign/pull/1091)
+* Added `cosign save` and `cosign load` commands to save and upload container images and associated signatures to disk (https://github.com/sigstore/cosign/pull/1094)
+* `cosign sign` will no longer fail to sign private images in keyless mode without `--force` (https://github.com/sigstore/cosign/pull/1116)
+* `cosign verify` now supports signatures stored in files and remote URLs with `--signature` (https://github.com/sigstore/cosign/pull/1068)
+* `cosgin verify` now supports certs stored in files (https://github.com/sigstore/cosign/pull/1095)
+* Added support for `syft` format in `cosign attach sbom` (https://github.com/sigstore/cosign/pull/1137)
+
+### Bug Fixes
+
+* Fixed verification of Rekor bundles for InToto attestations (https://github.com/sigstore/cosign/pull/1030)
+* Fixed a potential memory leak when signing and verifying with security keys (https://github.com/sigstore/cosign/pull/1113)
+
+### Contributors
+
+* Ashley Davis (@SgtCoDFish)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Brandon Philips (@philips)
+* Carlos Alexandro Becker (@caarlos0)
+* Carlos Panato (@cpanato)
+* Christian Rebischke (@shibumi)
+* Dan Lorenc (@dlorenc)
+* Erkan Zileli (@erkanzileli)
+* Furkan Türkal (@Dentrax)
+* garantir-km (@garantir-km)
+* Jake Sanders (@dekkagaijin)
+* jbpratt (@jbpratt)
+* Matt Moore (@mattmoor)
+* Mikey Strauss (@houdini91)
+* Naveen Srinivasan (@naveensrinivasan)
+* Priya Wadhwa (@priyawadhwa)
+* Sambhav Kothari (@samj1912)
+
 ## v1.3.1
 
 * BREAKING [cosign/pkg]: `cosign.Verify` has been removed in favor of explicit `cosign.VerifyImageSignatures` and `cosign.VerifyImageAttestations`
