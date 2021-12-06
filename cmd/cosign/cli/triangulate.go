@@ -28,9 +28,9 @@ func Triangulate() *cobra.Command {
 	o := &options.TriangulateOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "triangulate",
-		Short: "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.\ncosign triangulate <image uri>",
-		Long:  "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.",
+		Use:     "triangulate",
+		Short:   "Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.",
+		Example: "  cosign triangulate <IMAGE>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return flag.ErrHelp

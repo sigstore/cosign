@@ -145,13 +145,13 @@ func isTerminal() bool {
 func getPassFromTerm(confirm bool) ([]byte, error) {
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
 	pw1, err := term.ReadPassword(0)
+	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
 	}
 	if !confirm {
 		return pw1, nil
 	}
-	fmt.Fprintln(os.Stderr)
 	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
 	pw2, err := term.ReadPassword(0)
 	fmt.Fprintln(os.Stderr)

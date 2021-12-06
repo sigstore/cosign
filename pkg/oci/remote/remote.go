@@ -26,13 +26,6 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
-const (
-	sigkey    = "dev.cosignproject.cosign/signature"
-	certkey   = "dev.sigstore.cosign/certificate"
-	chainkey  = "dev.sigstore.cosign/chain"
-	BundleKey = "dev.sigstore.cosign/bundle"
-)
-
 // These enable mocking for unit testing without faking an entire registry.
 var (
 	remoteImage = remote.Image

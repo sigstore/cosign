@@ -1,14 +1,15 @@
 ## cosign clean
 
 Remove all signatures from an image.
-cosign clean <image uri>
-
-### Synopsis
-
-Remove all signatures from an image.
 
 ```
 cosign clean [flags]
+```
+
+### Examples
+
+```
+  cosign clean <IMAGE>
 ```
 
 ### Options

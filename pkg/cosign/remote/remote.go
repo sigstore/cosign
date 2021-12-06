@@ -18,6 +18,9 @@ package remote
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"os"
 
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
@@ -31,11 +34,20 @@ func NewDupeDetector(v signature.Verifier) mutate.DupeDetector {
 	return &dd{verifier: v}
 }
 
+func NewReplaceOp(predicateURI string) mutate.ReplaceOp {
+	return &ro{predicateURI: predicateURI}
+}
+
 type dd struct {
 	verifier signature.Verifier
 }
 
+type ro struct {
+	predicateURI string
+}
+
 var _ mutate.DupeDetector = (*dd)(nil)
+var _ mutate.ReplaceOp = (*ro)(nil)
 
 func (dd *dd) Find(sigImage oci.Signatures, newSig oci.Signature) (oci.Signature, error) {
 	newDigest, err := newSig.Digest()
@@ -96,4 +108,56 @@ LayerLoop:
 		}
 	}
 	return nil, nil
+}
+
+func (r *ro) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures, error) {
+	sigs, err := signatures.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	ros := &replaceOCISignatures{Signatures: signatures}
+
+	sigsCopy := make([]oci.Signature, 0, len(sigs))
+	sigsCopy = append(sigsCopy, o)
+
+	if len(sigs) == 0 {
+		ros.attestations = append(ros.attestations, sigsCopy...)
+		return ros, nil
+	}
+
+	for _, s := range sigs {
+		var payloadData map[string]interface{}
+
+		p, err := s.Payload()
+		if err != nil {
+			return nil, fmt.Errorf("could not get payload: %w", err)
+		}
+
+		err = json.Unmarshal(p, &payloadData)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal payload data: %w", err)
+		}
+
+		if r.predicateURI == payloadData["payloadType"] {
+			fmt.Fprintln(os.Stderr, "Attestation already present, not adding new one.")
+			continue
+		} else {
+			fmt.Fprintln(os.Stderr, "Attestation not found, adding new attestation.")
+			sigsCopy = append(sigsCopy, s)
+		}
+	}
+
+	ros.attestations = append(ros.attestations, sigsCopy...)
+
+	return ros, nil
+}
+
+type replaceOCISignatures struct {
+	oci.Signatures
+	attestations []oci.Signature
+}
+
+func (r *replaceOCISignatures) Get() ([]oci.Signature, error) {
+	return r.attestations, nil
 }

@@ -71,7 +71,7 @@ func Attest() *cobra.Command {
 			}
 			for _, img := range args {
 				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.NoUpload,
-					o.Predicate.Path, o.Force, o.Predicate.Type, o.Timeout); err != nil {
+					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, o.Timeout); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}
 			}
