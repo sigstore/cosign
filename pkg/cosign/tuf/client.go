@@ -41,7 +41,6 @@ import (
 const (
 	TufRootEnv        = "TUF_ROOT"
 	SigstoreNoCache   = "SIGSTORE_NO_CACHE"
-	defaultLocalStore = ".sigstore/root/"
 	DefaultRemoteRoot = "sigstore-tuf-root"
 )
 
@@ -68,7 +67,7 @@ func CosignCachedRoot() string {
 		if err != nil {
 			home = ""
 		}
-		return path.Join(home, defaultLocalStore)
+		return path.Join(home, ".sigstore", "root")
 	}
 	return rootDir
 }
@@ -102,7 +101,7 @@ func getLocalTarget(name string) (fs.File, error) {
 		// Return local cached target
 		return os.Open(path.Join(CosignCachedTargets(), name))
 	}
-	return root.Open(path.Join("repository/targets", name))
+	return root.Open(path.Join("repository", "targets", name))
 }
 
 type signedMeta struct {

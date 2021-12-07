@@ -446,7 +446,12 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, nil
 	}
 
-	rekorPubKey, err := PemToECDSAKey([]byte(GetRekorPub(ctx)))
+	pub, err := GetRekorPub(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "retrieving rekor public key")
+	}
+
+	rekorPubKey, err := PemToECDSAKey(pub)
 	if err != nil {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}
