@@ -220,6 +220,7 @@ func getTargetHelper(name string, out client.Destination, c *client.Client) erro
 	if err != nil {
 		return errors.Wrap(err, "reading local targets")
 	}
+	defer localTarget.Close()
 
 	tee := io.TeeReader(localTarget, out)
 	localMeta, err := util.GenerateTargetFileMeta(tee)
@@ -233,7 +234,7 @@ func getTargetHelper(name string, out client.Destination, c *client.Client) erro
 		return errors.Wrap(err, "bad local target")
 	}
 
-	return localTarget.Close()
+	return nil
 }
 
 func GetTarget(ctx context.Context, name string, out client.Destination) error {
