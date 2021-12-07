@@ -83,7 +83,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	}
 
 	if options.EnableExperimental() {
-		rekorBytes, err := sv.Bytes(ctx)
+		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
 			return nil, err
 		}
