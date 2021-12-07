@@ -18,7 +18,7 @@ Provides utilities for discovering images in and performing operations on Docker
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign dockerfile resolve](cosign_dockerfile_resolve.md)	 - Resolve the digest of the images and rewrites them with fully qualified image reference
 * [cosign dockerfile verify](cosign_dockerfile_verify.md)	 - Verify a signature on the base image specified in the Dockerfile
 

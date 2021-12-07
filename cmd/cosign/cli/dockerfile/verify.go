@@ -27,14 +27,14 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 )
 
-// VerifyCommand verifies a signature on a supplied container image
+// VerifyDockerfileCommand verifies a signature on a supplied container image.
 // nolint
 type VerifyDockerfileCommand struct {
 	verify.VerifyCommand
 	BaseOnly bool
 }
 
-// Exec runs the verification command
+// Exec runs the verification command.
 func (c *VerifyDockerfileCommand) Exec(ctx context.Context, args []string) error {
 	if len(args) != 1 {
 		return flag.ErrHelp
@@ -66,8 +66,11 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 	fileScanner := bufio.NewScanner(dockerfile)
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
-		if strings.HasPrefix(strings.ToUpper(line), "FROM") {
+		if strings.HasPrefix(strings.ToUpper(line), "FROM") ||
+			strings.HasPrefix(strings.ToUpper(line), "COPY") {
 			switch image := getImageFromLine(line); image {
+			case "":
+				continue
 			case "scratch":
 				fmt.Fprintln(os.Stderr, "- scratch image ignored")
 			default:
@@ -82,6 +85,20 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 }
 
 func getImageFromLine(line string) string {
+	if strings.HasPrefix(strings.ToUpper(line), "COPY") {
+		line = strings.TrimPrefix(line, "COPY") // Remove "COPY" prefix
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "--from") // Remove "--from" prefix
+		foo := strings.Split(line, "=")           // Get image ref after "="
+		if len(foo) != 2 {
+			return ""
+		}
+		// to support `COPY --from=stage /foo/bar` cases
+		if strings.Contains(foo[1], " ") {
+			return ""
+		}
+		return os.ExpandEnv(foo[1]) // Substitute templated vars
+	}
 	line = strings.TrimPrefix(line, "FROM") // Remove "FROM" prefix
 	line = os.ExpandEnv(line)               // Substitute templated vars
 	fields := strings.Fields(line)

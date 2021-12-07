@@ -86,6 +86,27 @@ func TestGetImagesFromDockerfile(t *testing.T) {
 			},
 			expected: []string{"gcr.io/gauntlet/test/one", "gcr.io/gauntlet/test/two:latest", "gcr.io/gauntlet/test/runtime"},
 		},
+		{
+			name: "copy",
+			fileContents: `FROM gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5
+COPY --from=gcr.io/hello/world`,
+			expected: []string{
+				"gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5",
+				"gcr.io/hello/world",
+			},
+		},
+		{
+			name: "copy with stage",
+			fileContents: `FROM gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5
+COPY --from=stage /foo/bar`,
+			expected: []string{"gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5"},
+		},
+		{
+			name: "copy files",
+			fileContents: `FROM gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5
+COPY . .`,
+			expected: []string{"gcr.io/test/image@sha256:d131624e6f5d8695e9aea7a0439f7bac0fcc50051282e0c3d4d627cab8845ba5"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
