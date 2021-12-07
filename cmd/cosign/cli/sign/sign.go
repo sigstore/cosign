@@ -225,14 +225,8 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 
 	if outputSignature != "" {
-		out, err := os.Create(outputSignature)
-		if err != nil {
+		if err := os.WriteFile(outputSignature, []byte(b64sig), 0600); err != nil {
 			return errors.Wrap(err, "create signature file")
-		}
-		defer out.Close()
-
-		if _, err := out.Write([]byte(b64sig)); err != nil {
-			return errors.Wrap(err, "write signature to file")
 		}
 	}
 
@@ -262,13 +256,14 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if outputCertificate != "" {
 		rekorBytes, err := sv.Bytes(ctx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "create certificate file")
 		}
 
 		if err := os.WriteFile(outputCertificate, rekorBytes, 0600); err != nil {
-			return err
+			return errors.Wrap(err, "create certificate file")
 		}
 		// TODO: maybe accept a --b64 flag as well?
+		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}
 
 	return nil
