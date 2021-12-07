@@ -31,7 +31,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
-	fulcioClient "github.com/sigstore/fulcio/pkg/generated/client"
+	"github.com/sigstore/fulcio/pkg/api"
 )
 
 // This is the CT log public key target name
@@ -69,7 +69,7 @@ func verifySCT(certPEM, rawSCT []byte) error {
 	return ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fClient *fulcioClient.Fulcio) (*fulcio.Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fClient api.Client) (*fulcio.Signer, error) {
 	fs, err := fulcio.NewSigner(ctx, idToken, oidcIssuer, oidcClientID, fClient)
 	if err != nil {
 		return nil, err
