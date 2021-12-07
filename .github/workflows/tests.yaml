@@ -53,6 +53,9 @@ jobs:
           go-version: '1.17.x'
       - name: Run Go tests
         run: go test ./...
+      - name: Run Go tests w/ `-race`
+        if: ${{ runner.os == 'Linux' }}
+        run: go test -race ./...
   
   e2e-tests:
     name: Run e2e tests
