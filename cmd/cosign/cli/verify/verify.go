@@ -58,6 +58,7 @@ type VerifyCommand struct {
 	Annotations   sigs.AnnotationsMap
 	SignatureRef  string
 	HashAlgorithm crypto.Hash
+	LocalImage    bool
 }
 
 // Exec runs the verification command
@@ -138,22 +139,31 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	co.SigVerifier = pubKey
 
 	for _, img := range images {
-		ref, err := name.ParseReference(img)
-		if err != nil {
-			return errors.Wrap(err, "parsing reference")
-		}
-		ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
-		if err != nil {
-			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
-		}
+		if c.LocalImage {
+			verified, bundleVerified, err := cosign.VerifyLocalImageSignatures(ctx, img, co)
+			if err != nil {
+				return err
+			}
+			PrintVerificationHeader(img, co, bundleVerified)
+			PrintVerification(img, verified, c.Output)
+		} else {
+			ref, err := name.ParseReference(img)
+			if err != nil {
+				return errors.Wrap(err, "parsing reference")
+			}
+			ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
+			if err != nil {
+				return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
+			}
 
-		verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
-		if err != nil {
-			return err
-		}
+			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
+			if err != nil {
+				return err
+			}
 
-		PrintVerificationHeader(ref.Name(), co, bundleVerified)
-		PrintVerification(ref.Name(), verified, c.Output)
+			PrintVerificationHeader(ref.Name(), co, bundleVerified)
+			PrintVerification(ref.Name(), verified, c.Output)
+		}
 	}
 
 	return nil

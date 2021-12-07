@@ -28,6 +28,7 @@ type VerifyOptions struct {
 	Attachment   string
 	Output       string
 	SignatureRef string
+	LocalImage   bool
 
 	SecurityKey SecurityKeyOptions
 	Rekor       RekorOptions
@@ -67,6 +68,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
+
+	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
+		"whether the path to the image is a local directory")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.

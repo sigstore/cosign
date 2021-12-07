@@ -35,6 +35,9 @@ cosign verify [flags]
   # signature digest algorithm
   cosign verify --key cosign.pub --signature-digest-algorithm sha512 <IMAGE>
 
+  # verify image with an on-disk signed image from 'cosign save'
+  cosign verify --key cosign.pub --local-image <PATH>
+
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
 
@@ -67,6 +70,7 @@ cosign verify [flags]
   -h, --help                                                                                     help for verify
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
+      --local-image                                                                              whether the path to the image is a local directory
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --signature string                                                                         signature content or path or remote URL
