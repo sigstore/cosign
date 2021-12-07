@@ -131,7 +131,7 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 		// Instantiate the global TUF client from the local embedded root or the cached root unless altRoot is provided.
 		// In that case, always instantiate from altRoot.
 		path := filepath.Join(CosignCachedRoot(), "tuf.db")
-		_, err := os.Open(path)
+		_, err := os.Stat(path)
 		if os.IsNotExist(err) && altRoot == nil {
 			// Cache does not exist, check if the embedded metadata is currently valid.
 			// TODO(asraa): Need a better way to check if local metadata is verified at this stage.
