@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"net/url"
 
+	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/spf13/cobra"
 
@@ -35,7 +37,7 @@ const (
 // PredicateTypeMap is the mapping between the predicate `type` option to predicate URI.
 var PredicateTypeMap = map[string]string{
 	PredicateCustom: attestation.CosignCustomProvenanceV01,
-	PredicateSLSA:   in_toto.PredicateSLSAProvenanceV01,
+	PredicateSLSA:   slsa.PredicateSLSAProvenance,
 	PredicateSPDX:   in_toto.PredicateSPDX,
 	PredicateLink:   in_toto.PredicateLinkV1,
 }

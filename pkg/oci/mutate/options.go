@@ -22,10 +22,15 @@ type DupeDetector interface {
 	Find(oci.Signatures, oci.Signature) (oci.Signature, error)
 }
 
+type ReplaceOp interface {
+	Replace(oci.Signatures, oci.Signature) (oci.Signatures, error)
+}
+
 type SignOption func(*signOpts)
 
 type signOpts struct {
 	dd DupeDetector
+	ro ReplaceOp
 }
 
 func makeSignOpts(opts ...SignOption) *signOpts {
@@ -41,5 +46,11 @@ func makeSignOpts(opts ...SignOption) *signOpts {
 func WithDupeDetector(dd DupeDetector) SignOption {
 	return func(so *signOpts) {
 		so.dd = dd
+	}
+}
+
+func WithReplaceOp(ro ReplaceOp) SignOption {
+	return func(so *signOpts) {
+		so.ro = ro
 	}
 }

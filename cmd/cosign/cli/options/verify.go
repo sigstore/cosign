@@ -21,16 +21,19 @@ import (
 
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {
-	Key         string
-	CertEmail   string // TODO: merge into fulcio option as read mode?
-	CheckClaims bool
-	Attachment  string
-	Output      string
+	Key          string
+	Cert         string
+	CertEmail    string // TODO: merge into fulcio option as read mode?
+	CheckClaims  bool
+	Attachment   string
+	Output       string
+	SignatureRef string
 
 	SecurityKey SecurityKeyOptions
 	Rekor       RekorOptions
 	// TODO: this seems like it should have the Fulcio options.
-	Registry RegistryOptions
+	Registry        RegistryOptions
+	SignatureDigest SignatureDigestOptions
 	AnnotationOptions
 }
 
@@ -41,10 +44,14 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.SignatureDigest.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
+
+	cmd.Flags().StringVar(&o.Cert, "cert", "",
+		"path to the public certificate")
 
 	cmd.Flags().StringVar(&o.CertEmail, "cert-email", "",
 		"the email expected in a valid fulcio cert")
@@ -57,6 +64,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")
+
+	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
+		"signature content or path or remote URL")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.

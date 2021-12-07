@@ -32,6 +32,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/cue"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
@@ -74,7 +75,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 	if options.EnableExperimental() {
-		co.RekorURL = c.RekorURL
+		if c.RekorURL != "" {
+			rekorClient, err := rekor.NewClient(c.RekorURL)
+			if err != nil {
+				return errors.Wrap(err, "creating Rekor client")
+			}
+			co.RekorClient = rekorClient
+		}
 		co.RootCerts = fulcio.GetRoots()
 	}
 	keyRef := c.KeyRef

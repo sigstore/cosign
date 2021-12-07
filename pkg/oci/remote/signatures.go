@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/empty"
+	"github.com/sigstore/cosign/pkg/oci/internal/signature"
 )
 
 // Signatures fetches the signatures image represented by the named reference.
@@ -63,11 +64,7 @@ func (s *sigs) Get() ([]oci.Signature, error) {
 		if err != nil {
 			return nil, err
 		}
-		signatures = append(signatures, &sigLayer{
-			Layer: layer,
-			img:   s,
-			desc:  desc,
-		})
+		signatures = append(signatures, signature.New(layer, desc))
 	}
 	return signatures, nil
 }

@@ -17,6 +17,9 @@ package verify
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -27,12 +30,14 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/oci"
 	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -41,15 +46,18 @@ import (
 // nolint
 type VerifyCommand struct {
 	options.RegistryOptions
-	CheckClaims bool
-	KeyRef      string
-	CertEmail   string
-	Sk          bool
-	Slot        string
-	Output      string
-	RekorURL    string
-	Attachment  string
-	Annotations sigs.AnnotationsMap
+	CheckClaims   bool
+	KeyRef        string
+	CertRef       string
+	CertEmail     string
+	Sk            bool
+	Slot          string
+	Output        string
+	RekorURL      string
+	Attachment    string
+	Annotations   sigs.AnnotationsMap
+	SignatureRef  string
+	HashAlgorithm crypto.Hash
 }
 
 // Exec runs the verification command
@@ -65,7 +73,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		return flag.ErrHelp
 	}
 
-	if !options.OneOf(c.KeyRef, c.Sk) && !options.EnableExperimental() {
+	// always default to sha256 if the algorithm hasn't been explicitly set
+	if c.HashAlgorithm == 0 {
+		c.HashAlgorithm = crypto.SHA256
+	}
+
+	if !options.OneOf(c.KeyRef, c.CertRef, c.Sk) && !options.EnableExperimental() {
 		return &options.KeyParseError{}
 	}
 	ociremoteOpts, err := c.ClientOpts(ctx)
@@ -76,20 +89,29 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		Annotations:        c.Annotations.Annotations,
 		RegistryClientOpts: ociremoteOpts,
 		CertEmail:          c.CertEmail,
+		SignatureRef:       c.SignatureRef,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 	if options.EnableExperimental() {
-		co.RekorURL = c.RekorURL
+		if c.RekorURL != "" {
+			rekorClient, err := rekor.NewClient(c.RekorURL)
+			if err != nil {
+				return errors.Wrap(err, "creating Rekor client")
+			}
+			co.RekorClient = rekorClient
+		}
 		co.RootCerts = fulcio.GetRoots()
 	}
 	keyRef := c.KeyRef
+	certRef := c.CertRef
 
 	// Keys are optional!
 	var pubKey signature.Verifier
-	if keyRef != "" {
-		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
+	switch {
+	case keyRef != "":
+		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
@@ -97,7 +119,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if ok {
 			defer pkcs11Key.Close()
 		}
-	} else if c.Sk {
+	case c.Sk:
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
 			return errors.Wrap(err, "opening piv token")
@@ -106,6 +128,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		pubKey, err = sk.Verifier()
 		if err != nil {
 			return errors.Wrap(err, "initializing piv token verifier")
+		}
+	case certRef != "":
+		pubKey, err = loadCertFromFile(c.CertRef)
+		if err != nil {
+			return err
 		}
 	}
 	co.SigVerifier = pubKey
@@ -143,7 +170,7 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified
 	}
 	if bundleVerified {
 		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
-	} else if co.RekorURL != "" {
+	} else if co.RekorClient != nil {
 		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
 		fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
 	}
@@ -215,4 +242,28 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 
 		fmt.Printf("\n%s\n", string(b))
 	}
+}
+
+func loadCertFromFile(path string) (*signature.ECDSAVerifier, error) {
+	pems, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []byte
+	out, err = base64.StdEncoding.DecodeString(string(pems))
+	if err != nil {
+		// not a base64
+		out = pems
+	}
+
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(out)
+	if err != nil {
+		return nil, err
+	}
+	if len(certs) == 0 {
+		return nil, errors.New("no certs found in pem file")
+	}
+	cert := certs[0]
+	return signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 }

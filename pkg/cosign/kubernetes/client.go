@@ -19,6 +19,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
+	utilversion "k8s.io/apimachinery/pkg/util/version"
 	// Initialize all known client auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -56,4 +57,17 @@ func Client() (kubernetes.Interface, error) {
 		return nil, fmt.Errorf("getting client config for Kubernetes client: %w", err)
 	}
 	return kubernetes.NewForConfig(config)
+}
+
+func checkImmutableSecretSupported(client kubernetes.Interface) (bool, error) {
+	k8sVer, err := client.Discovery().ServerVersion()
+	if err != nil {
+		return false, err
+	}
+	semVer, err := utilversion.ParseSemantic(k8sVer.String())
+	if err != nil {
+		return false, err
+	}
+	// https://kubernetes.io/docs/concepts/configuration/secret/#secret-immutable
+	return semVer.Major() >= 1 && semVer.Minor() >= 21, nil
 }

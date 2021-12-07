@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package remote
+package signature
 
 import (
 	"crypto/x509"
@@ -28,10 +28,23 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
+const (
+	sigkey    = "dev.cosignproject.cosign/signature"
+	certkey   = "dev.sigstore.cosign/certificate"
+	chainkey  = "dev.sigstore.cosign/chain"
+	BundleKey = "dev.sigstore.cosign/bundle"
+)
+
 type sigLayer struct {
 	v1.Layer
-	img  *sigs
 	desc v1.Descriptor
+}
+
+func New(l v1.Layer, desc v1.Descriptor) oci.Signature {
+	return &sigLayer{
+		Layer: l,
+		desc:  desc,
+	}
 }
 
 var _ oci.Signature = (*sigLayer)(nil)
@@ -43,13 +56,8 @@ func (s *sigLayer) Annotations() (map[string]string, error) {
 
 // Payload implements oci.Signature
 func (s *sigLayer) Payload() ([]byte, error) {
-	l, err := s.img.LayerByDigest(s.desc.Digest)
-	if err != nil {
-		return nil, err
-	}
-
 	// Compressed is a misnomer here, we just want the raw bytes from the registry.
-	r, err := l.Compressed()
+	r, err := s.Layer.Compressed()
 	if err != nil {
 		return nil, err
 	}

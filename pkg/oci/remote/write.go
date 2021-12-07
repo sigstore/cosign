@@ -17,8 +17,57 @@ package remote
 
 import (
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/oci"
 )
+
+// WriteSignedImageIndexImages writes the images within the image index
+// This includes the signed image and associated signatures in the image index
+// TODO (priyawadhwa@): write the `index.json` itself to the repo as well
+// TODO (priyawadhwa@): write the attestations
+func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, opts ...Option) error {
+	repo := ref.Context()
+	o := makeOptions(repo, opts...)
+
+	// write the image
+	si, err := sii.SignedImage(v1.Hash{})
+	if err != nil {
+		return err
+	}
+	if err := remoteWrite(ref, si, o.ROpt...); err != nil {
+		return err
+	}
+
+	// write the signatures
+	sigs, err := sii.Signatures()
+	if err != nil {
+		return err
+	}
+	if sigs != nil { // will be nil if there are no associated signatures
+		sigsTag, err := SignatureTag(ref, opts...)
+		if err != nil {
+			return errors.Wrap(err, "sigs tag")
+		}
+		if err := remoteWrite(sigsTag, sigs, o.ROpt...); err != nil {
+			return err
+		}
+	}
+
+	// write the attestations
+	atts, err := sii.Attestations()
+	if err != nil {
+		return err
+	}
+	if atts != nil { // will be nil if there are no associated attestations
+		attsTag, err := AttestationTag(ref, opts...)
+		if err != nil {
+			return errors.Wrap(err, "sigs tag")
+		}
+		return remoteWrite(attsTag, atts, o.ROpt...)
+	}
+	return nil
+}
 
 // WriteSignature publishes the signatures attached to the given entity
 // into the provided repository.

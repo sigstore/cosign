@@ -31,15 +31,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	rekorClient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigstoresigs "github.com/sigstore/sigstore/pkg/signature"
@@ -112,30 +113,17 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.Wrap(err, "loading public key from token")
 		}
 	case certRef != "":
-		pems, err := os.ReadFile(certRef)
-		if err != nil {
-			return err
-		}
-
-		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(pems))
-		if err != nil {
-			return err
-		}
-		if len(certs) == 0 {
-			return errors.New("no certs found in pem file")
-		}
-		cert = certs[0]
-		pubKey, err = sigstoresigs.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		pubKey, err = loadCertFromFile(certRef)
 		if err != nil {
 			return err
 		}
 	case options.EnableExperimental():
-		rClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
 		}
 
-		uuids, err := cosign.FindTLogEntriesByPayload(rClient, blobBytes)
+		uuids, err := cosign.FindTLogEntriesByPayload(ctx, rClient, blobBytes)
 		if err != nil {
 			return err
 		}
@@ -144,7 +132,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.New("could not find a tlog entry for provided blob")
 		}
 
-		tlogEntry, err := cosign.GetTlogEntry(rClient, uuids[0])
+		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, uuids[0])
 		if err != nil {
 			return err
 		}
@@ -174,11 +162,15 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		}
 		fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
 		fmt.Fprintln(os.Stderr, "Email:", cert.EmailAddresses)
+		for _, uri := range cert.URIs {
+			fmt.Fprintf(os.Stderr, "URI: %s://%s%s\n", uri.Scheme, uri.Host, uri.Path)
+		}
+		fmt.Fprintln(os.Stderr, "Issuer: ", sigs.CertIssuerExtension(cert))
 	}
 	fmt.Fprintln(os.Stderr, "Verified OK")
 
 	if options.EnableExperimental() {
-		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		rekorClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
 		}
@@ -195,7 +187,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 				return err
 			}
 		}
-		uuid, index, err := cosign.FindTlogEntry(rekorClient, b64sig, blobBytes, pubBytes)
+		uuid, index, err := cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
 		if err != nil {
 			return err
 		}
@@ -222,15 +214,20 @@ func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 
-	var v001Entry *rekord.V001Entry
-	var ok bool
-	if v001Entry, ok = eimpl.(*rekord.V001Entry); !ok {
+	var publicKeyB64 []byte
+	switch e := eimpl.(type) {
+	case *rekord.V001Entry:
+		publicKeyB64, err = e.RekordObj.Signature.PublicKey.Content.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+	case *hashedrekord.V001Entry:
+		publicKeyB64, err = e.HashedRekordObj.Signature.PublicKey.Content.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+	default:
 		return nil, errors.New("unexpected tlog entry type")
-	}
-
-	publicKeyB64, err := v001Entry.RekordObj.Signature.PublicKey.Content.MarshalText()
-	if err != nil {
-		return nil, err
 	}
 
 	publicKey, err := base64.StdEncoding.DecodeString(string(publicKeyB64))

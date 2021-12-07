@@ -17,7 +17,7 @@ cosign policy sign [flags]
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
-      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://v1.fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).

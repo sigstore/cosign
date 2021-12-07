@@ -22,16 +22,19 @@ import (
 )
 
 // SignBlobOptions is the top level wrapper for the sign-blob command.
+// The new output-certificate flag is only in use when COSIGN_EXPERIMENTAL is enabled
 type SignBlobOptions struct {
-	Key          string
-	Base64Output bool
-	Output       string // TODO: this should be the root output file arg.
-	SecurityKey  SecurityKeyOptions
-	Fulcio       FulcioOptions
-	Rekor        RekorOptions
-	OIDC         OIDCOptions
-	Registry     RegistryOptions
-	Timeout      time.Duration
+	Key               string
+	Base64Output      bool
+	Output            string // deprecated: TODO remove when the output flag is fully deprecated
+	OutputSignature   string // TODO: this should be the root output file arg.
+	OutputCertificate string
+	SecurityKey       SecurityKeyOptions
+	Fulcio            FulcioOptions
+	Rekor             RekorOptions
+	OIDC              OIDCOptions
+	Registry          RegistryOptions
+	Timeout           time.Duration
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -50,8 +53,14 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Base64Output, "b64", true,
 		"whether to base64 encode the output")
 
-	cmd.Flags().StringVar(&o.Output, "output", "",
+	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
+
+	// TODO: remove when output flag is fully deprecated
+	cmd.Flags().StringVar(&o.Output, "output", "", "write the signature to FILE")
+
+	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
+		"write the certificate to FILE")
 
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
 		"HTTP Timeout defaults to 30 seconds")

@@ -18,6 +18,8 @@ import (
 	"reflect"
 	"testing"
 
+	"k8s.io/utils/pointer"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -41,8 +43,9 @@ func TestSecret(t *testing.T) {
 			"cosign.pub":      []byte("public"),
 			"cosign.password": nil,
 		},
+		Immutable: pointer.Bool(true),
 	}
-	actual := secret(keys, namespace, name, nil)
+	actual := secret(keys, namespace, name, nil, true)
 	if !reflect.DeepEqual(actual, expect) {
 		t.Errorf("secret: %v, want %v", expect, actual)
 	}
@@ -73,7 +76,7 @@ func TestSecretUpdate(t *testing.T) {
 			"cosign.password": nil,
 		},
 	}
-	actual := secret(keys, namespace, name, existing)
+	actual := secret(keys, namespace, name, existing, false)
 	if !reflect.DeepEqual(actual, expect) {
 		t.Errorf("secret: %v, want %v", expect, actual)
 	}

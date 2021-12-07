@@ -68,7 +68,7 @@ func (h *gcsRemoteStore) get(s string) (io.ReadCloser, int64, error) {
 	obj := h.client.Bucket(h.bucket).Object(s)
 	attrs, err := obj.Attrs(h.ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, client.ErrNotFound{File: s}
 	}
 	rc, err := obj.NewReader(h.ctx)
 	if err != nil {

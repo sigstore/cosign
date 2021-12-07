@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci"
 	ctypes "github.com/sigstore/cosign/pkg/types"
@@ -86,7 +87,7 @@ func TestOptions(t *testing.T) {
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
 			Annotations: map[string]string{
-				BundleAnnotationKey: "{\"SignedEntryTimestamp\":\"\",\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
+				BundleAnnotationKey: "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
 			},
 			Bundle: bundle,
 		},
@@ -100,7 +101,7 @@ func TestOptions(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("makeOptions() = %#v, wanted %#v", got, test.want)
+				t.Errorf("makeOptions() = %s", cmp.Diff(got, test.want))
 			}
 		})
 	}
