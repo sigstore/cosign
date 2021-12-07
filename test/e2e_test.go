@@ -612,31 +612,48 @@ func TestUploadBlob(t *testing.T) {
 }
 
 func TestSaveLoad(t *testing.T) {
-	repo, stop := reg(t)
-	defer stop()
-	keysDir := t.TempDir()
+	tests := []struct {
+		description     string
+		getSignedEntity func(t *testing.T, n string) (name.Reference, *remote.Descriptor, func())
+	}{
+		{
+			description:     "save and load an image",
+			getSignedEntity: mkimage,
+		},
+		{
+			description:     "save and load an image index",
+			getSignedEntity: mkimageindex,
+		},
+	}
+	for i, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			repo, stop := reg(t)
+			defer stop()
+			keysDir := t.TempDir()
 
-	imgName := path.Join(repo, "save-load")
+			imgName := path.Join(repo, fmt.Sprintf("save-load-%d", i))
 
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
+			_, _, cleanup := test.getSignedEntity(t, imgName)
+			defer cleanup()
 
-	_, privKeyPath, pubKeyPath := keypair(t, keysDir)
+			_, privKeyPath, pubKeyPath := keypair(t, keysDir)
 
-	ctx := context.Background()
-	// Now sign the image and verify it
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", "", false, false, ""), t)
-	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+			ctx := context.Background()
+			// Now sign the image and verify it
+			ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+			must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", "", false, false, ""), t)
+			must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// save the image to a temp dir
-	imageDir := t.TempDir()
-	must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+			// save the image to a temp dir
+			imageDir := t.TempDir()
+			must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
 
-	// load the image from the temp dir into a new image and verify the new image
-	imgName2 := path.Join(repo, "save-load-2")
-	must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
-	must(verify(pubKeyPath, imgName2, true, nil, ""), t)
+			// load the image from the temp dir into a new image and verify the new image
+			imgName2 := path.Join(repo, fmt.Sprintf("save-load-%d-2", i))
+			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
+			must(verify(pubKeyPath, imgName2, true, nil, ""), t)
+		})
+	}
 }
 
 func TestSaveLoadAttestation(t *testing.T) {
@@ -854,6 +871,35 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 		_ = remote.Delete(ref, regClientOpts...)
 	}
 	return ref, remoteImage, cleanup
+}
+
+func mkimageindex(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()) {
+	ref, err := name.ParseReference(n, name.WeakValidation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ii, err := random.Index(512, 5, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	regClientOpts := registryClientOpts(context.Background())
+
+	if err := remote.WriteIndex(ref, ii, regClientOpts...); err != nil {
+		t.Fatal(err)
+	}
+
+	remoteIndex, err := remote.Get(ref, regClientOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup := func() {
+		_ = remote.Delete(ref, regClientOpts...)
+		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteIndex.Descriptor.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
+		_ = remote.Delete(ref, regClientOpts...)
+	}
+	return ref, remoteIndex, cleanup
 }
 
 func must(err error, t *testing.T) {

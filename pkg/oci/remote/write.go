@@ -18,6 +18,7 @@ package remote
 import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/oci"
 )
@@ -30,13 +31,26 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 	repo := ref.Context()
 	o := makeOptions(repo, opts...)
 
-	// write the image
+	// write the image index if there is one
+	ii, err := sii.SignedImageIndex(v1.Hash{})
+	if err != nil {
+		return errors.Wrap(err, "signed image index")
+	}
+	if ii != nil {
+		if err := remote.WriteIndex(ref, ii, o.ROpt...); err != nil {
+			return errors.Wrap(err, "writing index")
+		}
+	}
+
+	// write the image if there is one
 	si, err := sii.SignedImage(v1.Hash{})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "signed image")
 	}
-	if err := remoteWrite(ref, si, o.ROpt...); err != nil {
-		return err
+	if si != nil {
+		if err := remoteWrite(ref, si, o.ROpt...); err != nil {
+			return errors.Wrap(err, "remote write")
+		}
 	}
 
 	// write the signatures
