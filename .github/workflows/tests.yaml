@@ -25,7 +25,10 @@ permissions: read-all
 jobs:
   unit-tests:
     name: Run tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v2
