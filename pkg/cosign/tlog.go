@@ -43,14 +43,14 @@ import (
 // This is the rekor public key target name
 var rekorTargetStr = `rekor.pub`
 
-func GetRekorPub(ctx context.Context) string {
+// GetRekorPub retrieves the rekor public key from the embedded or cached TUF root. If expired, makes a
+// network call to retrieve the updated target.
+func GetRekorPub(ctx context.Context) ([]byte, error) {
 	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-	// Retrieves the rekor public key from the embedded or cached TUF root. If expired, makes a
-	// network call to retrieve the updated target.
 	if err := tuf.GetTarget(ctx, rekorTargetStr, &buf); err != nil {
-		panic("error retrieving rekor public key")
+		return nil, err
 	}
-	return buf.String()
+	return buf.Bytes(), nil
 }
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
