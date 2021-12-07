@@ -23,7 +23,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -67,13 +66,13 @@ func CosignCachedRoot() string {
 		if err != nil {
 			home = ""
 		}
-		return path.Join(home, ".sigstore", "root")
+		return filepath.Join(home, ".sigstore", "root")
 	}
 	return rootDir
 }
 
 func CosignCachedTargets() string {
-	return path.Join(CosignCachedRoot(), "targets")
+	return filepath.Join(CosignCachedRoot(), "targets")
 }
 
 // Target destinations compatible with go-tuf.
@@ -97,11 +96,12 @@ func (b *ByteDestination) Delete() error {
 
 // Retrieves a local target, either from the cached root or the embedded metadata.
 func getLocalTarget(name string) (fs.File, error) {
+
 	if _, err := os.Stat(CosignCachedTargets()); !os.IsNotExist(err) {
 		// Return local cached target
-		return os.Open(path.Join(CosignCachedTargets(), name))
+		return os.Open(filepath.Join(CosignCachedTargets(), name))
 	}
-	return root.Open(path.Join("repository", "targets", name))
+	return root.Open(filepath.Join("repository", "targets", name))
 }
 
 type signedMeta struct {
@@ -283,7 +283,7 @@ func updateMetadataAndDownloadTargets(c *client.Client) error {
 }
 
 func downloadRemoteTarget(name string, c *client.Client, out client.Destination) error {
-	f, err := os.Create(path.Join(CosignCachedTargets(), name))
+	f, err := os.Create(filepath.Join(CosignCachedTargets(), name))
 	if err != nil {
 		return errors.Wrap(err, "creating target file")
 	}

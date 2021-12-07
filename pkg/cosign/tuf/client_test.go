@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/theupdateframework/go-tuf"
@@ -130,7 +130,7 @@ func TestValidMetadata(t *testing.T) {
 	meta, _ := store.GetMeta()
 	root := meta["root.json"]
 	local.SetMeta("root.json", root)
-	db := path.Join(tmp, "tuf.db")
+	db := filepath.Join(tmp, "tuf.db")
 	if err := os.Setenv(TufRootEnv, db); err != nil {
 		t.Fatalf("error setting env")
 	}
