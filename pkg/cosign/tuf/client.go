@@ -96,10 +96,9 @@ func (b *ByteDestination) Delete() error {
 
 // Retrieves a local target, either from the cached root or the embedded metadata.
 func getLocalTarget(name string) (fs.File, error) {
-
-	if _, err := os.Stat(CosignCachedTargets()); !os.IsNotExist(err) {
+	if f, err := os.Open(filepath.Join(CosignCachedTargets(), name)); err == nil {
 		// Return local cached target
-		return os.Open(filepath.Join(CosignCachedTargets(), name))
+		return f, nil
 	}
 	return root.Open(filepath.Join("repository", "targets", name))
 }
