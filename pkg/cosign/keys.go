@@ -68,7 +68,7 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 
 	p, _ := pem.Decode(kb)
 	if p == nil {
-		return nil, errors.New("invalid pem block")
+		return nil, fmt.Errorf("invalid pem block")
 	}
 
 	var pk crypto.Signer
