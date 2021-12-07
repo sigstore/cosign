@@ -56,8 +56,8 @@ if (./cosign dockerfile verify ./test/testdata/unsigned_build_stage.Dockerfile);
 test_image="ghcr.io/distroless/alpine-base" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile
 
 # Test dockerfile resolve and verify
-./cosign dockerfile resolve -o ./test/testdata/fancy_from.Dockerfile.resolved ./test/testdata/fancy_from.Dockerfile
-./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/fancy_from.Dockerfile.resolved
+./cosign dockerfile resolve -o ./test/testdata/with_copy.Dockerfile.resolved ./test/testdata/with_copy.Dockerfile
+./cosign dockerfile verify ./test/testdata/with_copy.Dockerfile.resolved
 # Image exists, but is unsigned
 if (test_image="ubuntu" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile); then false; fi
 ./cosign dockerfile verify ./test/testdata/with_lowercase.Dockerfile

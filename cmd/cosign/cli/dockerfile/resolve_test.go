@@ -30,14 +30,31 @@ func Test_resolveDigest(t *testing.T) {
 		{
 			"happy alpine",
 			`FROM alpine:3.13`,
-			`FROM index.docker.io/library/alpine@sha256:026f721af4cf2843e07bba648e158fb35ecc876d822130633cc49f707f0fc88c
+			`FROM index.docker.io/library/alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553
+`,
+			false,
+		},
+		{
+			"happy alpine trim",
+			`   FROM    alpine:3.13   `,
+			`FROM    index.docker.io/library/alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553
+`,
+			false,
+		},
+		{
+			"happy alpine copy",
+			`FROM alpine:3.13
+COPY --from=alpine:3.13
+`,
+			`FROM index.docker.io/library/alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553
+COPY --from=index.docker.io/library/alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553
 `,
 			false,
 		},
 		{
 			"alpine with digest",
-			`FROM alpine@sha256:026f721af4cf2843e07bba648e158fb35ecc876d822130633cc49f707f0fc88c`,
-			`FROM alpine@sha256:026f721af4cf2843e07bba648e158fb35ecc876d822130633cc49f707f0fc88c
+			`FROM alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553`,
+			`FROM alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553
 `,
 			false,
 		},
@@ -47,7 +64,7 @@ func Test_resolveDigest(t *testing.T) {
 COPY . .
 
 RUN ls`,
-			`FROM index.docker.io/library/alpine@sha256:026f721af4cf2843e07bba648e158fb35ecc876d822130633cc49f707f0fc88c
+			`FROM index.docker.io/library/alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553
 COPY . .
 
 RUN ls
@@ -59,7 +76,7 @@ RUN ls
 			`FROM alpine:3.13
 FROM scratch
 RUN ls`,
-			`FROM index.docker.io/library/alpine@sha256:026f721af4cf2843e07bba648e158fb35ecc876d822130633cc49f707f0fc88c
+			`FROM index.docker.io/library/alpine@sha256:100448e45467d4f3838fc8d95faab2965e22711b6edf67bbd8ec9c07f612b553
 FROM scratch
 RUN ls
 `,
@@ -72,6 +89,25 @@ FROM $(IMAGE)
 `,
 			`FROM alpine:$(TAG)
 FROM $(IMAGE)
+`,
+			false,
+		},
+		{
+			"should not break for invalid --from image reference",
+			`FROM golang:latest AS builder
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
+
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /go/src/github.com/foo/bar/app .
+CMD ["./app"]`,
+			`FROM index.docker.io/library/golang@sha256:27ff940e5e460ef6dc80311c7bb9c633871bb99a1f45e190fa29864a1ea7209a AS builder
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
+
+FROM index.docker.io/library/alpine@sha256:bc41182d7ef5ffc53a40b044e725193bc10142a1243f395ee852a8d9730fc2ad
+WORKDIR /root/
+COPY --from=builder /go/src/github.com/foo/bar/app .
+CMD ["./app"]
 `,
 			false,
 		},

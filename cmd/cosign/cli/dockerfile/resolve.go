@@ -54,9 +54,11 @@ func (c *ResolveDockerfileCommand) Exec(ctx context.Context, args []string) erro
 	}
 
 	if c.Output != "" {
-		_ = os.WriteFile(c.Output, resolvedDockerfile, 0600)
+		if err := os.WriteFile(c.Output, resolvedDockerfile, 0600); err != nil {
+			return fmt.Errorf("failed writing resolved Dockerfile: %w", err)
+		}
 	} else {
-		_, _ = fmt.Fprintln(os.Stdout, string(resolvedDockerfile))
+		fmt.Fprintln(os.Stdout, string(resolvedDockerfile))
 	}
 
 	return nil
@@ -69,8 +71,8 @@ func resolveDigest(dockerfile io.Reader) ([]byte, error) {
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
 
-		// TODO(developer-guy): support the COPY --from=image:tag cases
-		if strings.HasPrefix(strings.ToUpper(line), "FROM") {
+		if strings.HasPrefix(strings.ToUpper(line), "FROM") ||
+			strings.HasPrefix(strings.ToUpper(line), "COPY") {
 			switch image := getImageFromLine(line); image {
 			case "scratch":
 				tmp.WriteString(line)
@@ -80,6 +82,8 @@ func resolveDigest(dockerfile io.Reader) ([]byte, error) {
 					// we should not return err here since
 					// we can define the image refs smth like
 					// i.e., FROM alpine:$(TAG), FROM $(IMAGE), etc.
+					// TODO: support parameter substitution by passing a `--build-arg` flag
+					fmt.Fprintf(os.Stderr, "WARNING: parameter substitution for images is not supported yet. consider setting all environment variables before resolving the Dockerfile. Image: %s.\n", image)
 					tmp.WriteString(line)
 					tmp.WriteString("\n")
 					continue
