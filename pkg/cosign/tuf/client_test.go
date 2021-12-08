@@ -129,7 +129,7 @@ func TestValidMetadata(t *testing.T) {
 		t.Fatalf("unexpected error")
 	}
 	if cl, isCloser := local.(io.Closer); isCloser {
-		// TODO: this is a hack to free the file descriptors, need to patch `tuf_leveldbstore.FileLocalStore` to return a io.Closer
+		// TODO(https://github.com/sigstore/cosign/issues/1160): this is a hack to free the file descriptors, need to patch `tuf_leveldbstore.FileLocalStore` to return a io.Closer
 		defer cl.Close()
 	}
 	meta, _ := store.GetMeta()
