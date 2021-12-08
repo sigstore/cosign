@@ -162,3 +162,11 @@ help: # Display help
 
 include release/release.mk
 include test/ci.mk
+
+##########################
+# Documentation generation
+##########################
+
+.PHONY: docgen
+docgen:
+	go run -tags pivkey,pkcs11key,cgo ./cmd/help/
