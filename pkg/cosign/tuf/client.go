@@ -131,6 +131,17 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 		return rootClient, nil
 	}
 
+	// Local cached metadata exists, altRoot is provided, or embedded metadata is expired.
+	// In these cases, we need to pull from remote and may cache locally.
+	// TODO(asraa): Respect SIGSTORE_NO_CACHE.
+	// Initialize the remote repository.
+	if remote == nil {
+		remote, err = GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Instantiate the global TUF client from the local embedded root or the cached root unless altRoot is provided.
 	// In that case, always instantiate from altRoot.
 	localCacheDBPath := filepath.Join(CosignCachedRoot(), "tuf.db")
@@ -160,16 +171,6 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 		}
 	}
 
-	// Local cached metadata exists, altRoot is provided, or embedded metadata is expired.
-	// In these cases, we need to pull from remote and may cache locally.
-	// TODO(asraa): Respect SIGSTORE_NO_CACHE.
-	// Initialize the remote repository.
-	if remote == nil {
-		remote, err = GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
 	local, err := tuf_leveldbstore.FileLocalStore(localCacheDBPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating cached local store")
