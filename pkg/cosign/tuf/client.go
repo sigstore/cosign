@@ -99,7 +99,7 @@ func getLocalTarget(name string) (fs.File, error) {
 		// Return local cached target
 		return f, nil
 	}
-	return root.Open(filepath.Join("repository", "targets", name))
+	return root.Open("repository/targets/" + name)
 }
 
 type signedMeta struct {
