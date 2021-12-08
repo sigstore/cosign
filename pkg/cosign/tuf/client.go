@@ -264,6 +264,7 @@ func GetTarget(ctx context.Context, name string, out client.Destination) error {
 	}
 
 	// Retrieves the target and writes to out.
+	// We allow for Targets to be retrieved without requiring that the local cache be updated.
 	return getTargetHelper(name, out, c, false /* requiresCoherence */)
 }
 
