@@ -136,6 +136,9 @@ against the transparency log.`,
   # verify image with public key
   cosign verify-attestation --key cosign.pub <IMAGE>
 
+  # verify image attestations with an on-disk signed image from 'cosign save'
+  cosign verify-attestation --key cosign.pub --local-image <PATH>
+
   # verify image with public key provided by URL
   cosign verify-attestation --key https://host.for/<FILE> <IMAGE>
 
@@ -164,6 +167,7 @@ against the transparency log.`,
 				FulcioURL:       o.Fulcio.URL,
 				PredicateType:   o.Predicate.Type,
 				Policies:        o.Policies,
+				LocalImage:      o.LocalImage,
 			}
 			return v.Exec(cmd.Context(), args)
 		},
