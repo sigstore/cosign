@@ -217,7 +217,7 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 	return rootClient, nil
 }
 
-func getTargetHelper(name string, out client.Destination, c *client.Client) error {
+func getTargetHelper(name string, out client.Destination, c *client.Client, requireCoherence bool) error {
 	// Get valid target metadata. Does a local verification.
 	validMeta, err := c.Target(name)
 	if err != nil {
@@ -237,10 +237,12 @@ func getTargetHelper(name string, out client.Destination, c *client.Client) erro
 		return errors.Wrap(err, "generating local target metadata")
 	}
 
-	// If local target meta does not match the valid local meta, consider this an error.
-	// We may want to make a network call to update the local metadata and re-download.
-	if err := util.TargetFileMetaEqual(validMeta, localMeta); err != nil {
-		return errors.Wrap(err, "bad local target")
+	if requireCoherence {
+		// If local target meta does not match the valid local meta, consider this an error.
+		// We may want to make a network call to update the local metadata and re-download.
+		if err := util.TargetFileMetaEqual(validMeta, localMeta); err != nil {
+			return errors.Wrap(err, "bad local target")
+		}
 	}
 
 	return nil
@@ -256,7 +258,7 @@ func GetTarget(ctx context.Context, name string, out client.Destination) error {
 
 	// Retrieves the target and writes to out. This may make a network call and cache if
 	// the embedded or cached root is invalid (e.g. expired).
-	return getTargetHelper(name, out, c)
+	return getTargetHelper(name, out, c, false)
 }
 
 func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {

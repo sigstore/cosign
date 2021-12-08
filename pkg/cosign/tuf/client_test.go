@@ -155,7 +155,7 @@ func TestValidMetadata(t *testing.T) {
 
 	target := "foo.txt"
 	buf := ByteDestination{Buffer: &bytes.Buffer{}}
-	err = getTargetHelper(target, &buf, rootClient)
+	err = getTargetHelper(target, &buf, rootClient, false)
 	if err != nil {
 		t.Fatalf("retrieving target %v", err)
 	}
