@@ -62,6 +62,7 @@ func embeddedOpenFile(pathSegments ...string) (fs.File, error) {
 // unless SIGSTORE_NO_CACHE is set.
 var rootClient *client.Client
 var globalRootInitOnce sync.Once
+var globalRootInitErr error
 
 func GetEmbeddedRoot() ([]byte, error) {
 	return embeddedReadFile("repository", "root.json")
@@ -166,8 +167,7 @@ func initGlobalRootClient(ctx context.Context, remote client.RemoteStore, altRoo
 					return nil, errors.Wrap(err, "setting local meta")
 				}
 			}
-			rootClient = client.NewClient(local, remote)
-			return rootClient, nil
+			return client.NewClient(local, remote), nil
 		}
 	}
 
@@ -212,20 +212,17 @@ func initGlobalRootClient(ctx context.Context, remote client.RemoteStore, altRoo
 		}
 	}
 
-	rootClient = uninitializedClient
-	return rootClient, nil
+	return uninitializedClient, nil
 }
 
 // Gets the global TUF client if the directory exists.
 // This will not make a remote call unless fetch is true.
 func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) (*client.Client, error) {
-	var err error
-
 	globalRootInitOnce.Do(func() {
-		rootClient, err = initGlobalRootClient(ctx, remote, altRoot)
+		rootClient, globalRootInitErr = initGlobalRootClient(ctx, remote, altRoot)
 	})
 
-	return rootClient, err
+	return rootClient, globalRootInitErr
 }
 
 func getTargetHelper(name string, out client.Destination, c *client.Client, requireCoherence bool) error {
