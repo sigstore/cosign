@@ -13,7 +13,7 @@ require (
 	github.com/go-piv/piv-go v1.9.0
 	github.com/google/certificate-transparency-go v1.1.2
 	github.com/google/go-cmp v0.5.6
-	github.com/google/go-containerregistry v0.7.1-0.20211118220127-abdc633f8305
+	github.com/google/go-containerregistry v0.7.1-0.20211203164431-c75901cce627
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20211203164431-c75901cce627
 	github.com/google/go-github/v39 v39.2.0
 	github.com/google/trillian v1.4.0
