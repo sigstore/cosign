@@ -43,8 +43,7 @@ const (
 	DefaultRemoteRoot = "sigstore-tuf-root"
 )
 
-//go:embed repository/*.json
-//go:embed repository/targets/*.pem repository/targets/*.pub
+//go:embed repository
 var root embed.FS
 
 // Global TUF client.
