@@ -61,7 +61,8 @@ func embeddedOpenFile(pathSegments ...string) (fs.File, error) {
 // If this metadata is invalid, e.g. expired, makes a call to the remote repository and caches
 // unless SIGSTORE_NO_CACHE is set.
 var rootClient *client.Client
-var rootClientMu = &sync.Mutex{}
+var globalRootInitOnce sync.Once
+var globalRootInitErr error
 
 func GetEmbeddedRoot() ([]byte, error) {
 	return embeddedReadFile("repository", "root.json")
@@ -129,99 +130,99 @@ func isExpiredMetadata(metadata []byte) bool {
 	return time.Until(sm.Expires) <= 0
 }
 
+func initGlobalRootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) (*client.Client, error) {
+	var err error
+	// Local cached metadata exists, altRoot is provided, or embedded metadata is expired.
+	// In these cases, we need to pull from remote and may cache locally.
+	// TODO(asraa): Respect SIGSTORE_NO_CACHE.
+	// Initialize the remote repository.
+	if remote == nil {
+		remote, err = GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Instantiate the global TUF client from the local embedded root or the cached root unless altRoot is provided.
+	// In that case, always instantiate from altRoot.
+	localCacheDBPath := filepath.Join(CosignCachedRoot(), "tuf.db")
+	if _, err := os.Stat(localCacheDBPath); os.IsNotExist(err) && altRoot == nil {
+		// Cache does not exist, check if the embedded metadata is currently valid.
+		// TODO(asraa): Need a better way to check if local metadata is verified at this stage.
+		timestamp, err := embeddedReadFile("repository", "timestamp.json")
+		if err != nil {
+			return nil, errors.Wrap(err, "reading local timestamp")
+		}
+		if !isExpiredMetadata(timestamp) {
+			local := client.MemoryLocalStore()
+			if err := local.SetMeta("timestamp.json", timestamp); err != nil {
+				return nil, errors.Wrap(err, "setting local meta")
+			}
+			for _, mdFilename := range []string{"root.json", "targets.json", "snapshot.json"} {
+				msg, err := embeddedReadFile("repository", mdFilename)
+				if err != nil {
+					return nil, errors.Wrap(err, "reading embedded meta")
+				}
+				if err := local.SetMeta(mdFilename, msg); err != nil {
+					return nil, errors.Wrap(err, "setting local meta")
+				}
+			}
+			return client.NewClient(local, remote), nil
+		}
+	}
+
+	local, err := tuf_leveldbstore.FileLocalStore(localCacheDBPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "creating cached local store")
+	}
+
+	// We may need to download latest metadata and targets if the cache is un-initialized or expired.
+	trustedMeta, err := local.GetMeta()
+	if err != nil {
+		return nil, errors.Wrap(err, "getting trusted meta")
+	}
+
+	uninitializedClient := client.NewClient(local, remote)
+
+	trustedTimestamp, ok := trustedMeta["timestamp.json"]
+	if !ok || isExpiredMetadata(trustedTimestamp) {
+		var trustedRoot []byte
+		trustedRoot, ok := trustedMeta["root.json"]
+		if !ok {
+			// Use embedded root or altRoot as trusted if cached root does not exist
+			if altRoot != nil {
+				trustedRoot = altRoot
+			} else {
+				trustedRoot, err = embeddedReadFile("repository", "root.json")
+				if err != nil {
+					return nil, errors.Wrap(err, "reading embedded trusted root")
+				}
+			}
+		}
+		rootKeys, rootThreshold, err := getRootKeys(trustedRoot)
+		if err != nil {
+			return nil, errors.Wrap(err, "bad trusted root")
+		}
+
+		if err := uninitializedClient.Init(rootKeys, rootThreshold); err != nil {
+			return nil, errors.Wrap(err, "initializing root client")
+		}
+		if err := updateMetadataAndDownloadTargets(uninitializedClient); err != nil {
+			return nil, errors.Wrap(err, "updating from remote TUF repository")
+		}
+	}
+
+	return uninitializedClient, nil
+}
+
 // Gets the global TUF client if the directory exists.
 // This will not make a remote call unless fetch is true.
 func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) (*client.Client, error) {
-	var err error
-	rootClientMu.Lock()
-	defer rootClientMu.Unlock()
+	globalRootInitOnce.Do(func() {
+		rootClient, globalRootInitErr = initGlobalRootClient(ctx, remote, altRoot)
+	})
 
-	if rootClient == nil {
-		// Local cached metadata exists, altRoot is provided, or embedded metadata is expired.
-		// In these cases, we need to pull from remote and may cache locally.
-		// TODO(asraa): Respect SIGSTORE_NO_CACHE.
-		// Initialize the remote repository.
-		if remote == nil {
-			remote, err = GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// Instantiate the global TUF client from the local embedded root or the cached root unless altRoot is provided.
-		// In that case, always instantiate from altRoot.
-		localCacheDBPath := filepath.Join(CosignCachedRoot(), "tuf.db")
-		if _, err := os.Stat(localCacheDBPath); os.IsNotExist(err) && altRoot == nil {
-			// Cache does not exist, check if the embedded metadata is currently valid.
-			// TODO(asraa): Need a better way to check if local metadata is verified at this stage.
-			timestamp, err := embeddedReadFile("repository", "timestamp.json")
-			if err != nil {
-				return nil, errors.Wrap(err, "reading local timestamp")
-			}
-			if !isExpiredMetadata(timestamp) {
-				local := client.MemoryLocalStore()
-				if err := local.SetMeta("timestamp.json", timestamp); err != nil {
-					return nil, errors.Wrap(err, "setting local meta")
-				}
-				for _, mdFilename := range []string{"root.json", "targets.json", "snapshot.json"} {
-					msg, err := embeddedReadFile("repository", mdFilename)
-					if err != nil {
-						return nil, errors.Wrap(err, "reading embedded meta")
-					}
-					if err := local.SetMeta(mdFilename, msg); err != nil {
-						return nil, errors.Wrap(err, "setting local meta")
-					}
-				}
-				rootClient = client.NewClient(local, remote)
-				return rootClient, nil
-			}
-		}
-
-		local, err := tuf_leveldbstore.FileLocalStore(localCacheDBPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "creating cached local store")
-		}
-
-		// We may need to download latest metadata and targets if the cache is un-initialized or expired.
-		trustedMeta, err := local.GetMeta()
-		if err != nil {
-			return nil, errors.Wrap(err, "getting trusted meta")
-		}
-
-		uninitializedClient := client.NewClient(local, remote)
-
-		trustedTimestamp, ok := trustedMeta["timestamp.json"]
-		if !ok || isExpiredMetadata(trustedTimestamp) {
-			var trustedRoot []byte
-			trustedRoot, ok := trustedMeta["root.json"]
-			if !ok {
-				// Use embedded root or altRoot as trusted if cached root does not exist
-				if altRoot != nil {
-					trustedRoot = altRoot
-				} else {
-					trustedRoot, err = embeddedReadFile("repository", "root.json")
-					if err != nil {
-						return nil, errors.Wrap(err, "reading embedded trusted root")
-					}
-				}
-			}
-			rootKeys, rootThreshold, err := getRootKeys(trustedRoot)
-			if err != nil {
-				return nil, errors.Wrap(err, "bad trusted root")
-			}
-
-			if err := uninitializedClient.Init(rootKeys, rootThreshold); err != nil {
-				return nil, errors.Wrap(err, "initializing root client")
-			}
-			if err := updateMetadataAndDownloadTargets(uninitializedClient); err != nil {
-				return nil, errors.Wrap(err, "updating from remote TUF repository")
-			}
-		}
-
-		rootClient = uninitializedClient
-	}
-
-	return rootClient, nil
+	return rootClient, globalRootInitErr
 }
 
 func getTargetHelper(name string, out client.Destination, c *client.Client, requireCoherence bool) error {
