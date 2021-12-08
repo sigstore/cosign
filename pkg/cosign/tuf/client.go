@@ -245,8 +245,8 @@ func getTargetHelper(name string, out client.Destination, c *client.Client, requ
 	}
 
 	if requireCoherence {
-		// If local target meta does not match the valid local meta, consider this an error.
-		// We may want to make a network call to update the local metadata and re-download.
+		// If local target meta does not match the valid local meta,
+		// we may want to make a network call to update the local metadata and re-download.
 		if err := util.TargetFileMetaEqual(validMeta, localMeta); err != nil {
 			return errors.Wrap(err, "bad local target")
 		}
@@ -263,9 +263,8 @@ func GetTarget(ctx context.Context, name string, out client.Destination) error {
 		return errors.Wrap(err, "retrieving trusted root; local cache may be corrupt")
 	}
 
-	// Retrieves the target and writes to out. This may make a network call and cache if
-	// the embedded or cached root is invalid (e.g. expired).
-	return getTargetHelper(name, out, c, false)
+	// Retrieves the target and writes to out.
+	return getTargetHelper(name, out, c, false /* requiresCoherence */)
 }
 
 func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
