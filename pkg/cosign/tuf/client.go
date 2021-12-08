@@ -55,7 +55,7 @@ var rootClient *client.Client
 var rootClientMu = &sync.Mutex{}
 
 func GetEmbeddedRoot() ([]byte, error) {
-	return root.ReadFile(filepath.Join("repository", "root.json"))
+	return root.ReadFile("repository/root.json")
 }
 
 func CosignCachedRoot() string {
@@ -133,7 +133,7 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 		if os.IsNotExist(err) && altRoot == nil {
 			// Cache does not exist, check if the embedded metadata is currently valid.
 			// TODO(asraa): Need a better way to check if local metadata is verified at this stage.
-			timestamp, err := root.ReadFile(filepath.Join("repository", "timestamp.json"))
+			timestamp, err := root.ReadFile("repository/timestamp.json")
 			if err != nil {
 				return nil, errors.Wrap(err, "reading local timestamp")
 			}
@@ -142,12 +142,12 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 				if err := local.SetMeta("timestamp.json", timestamp); err != nil {
 					return nil, errors.Wrap(err, "setting local meta")
 				}
-				for _, metadata := range []string{"root.json", "targets.json", "snapshot.json"} {
-					msg, err := root.ReadFile(filepath.Join("repository", metadata))
+				for _, mdFilename := range []string{"root.json", "targets.json", "snapshot.json"} {
+					msg, err := root.ReadFile("repository/" + mdFilename)
 					if err != nil {
 						return nil, errors.Wrap(err, "reading local root")
 					}
-					if err := local.SetMeta(metadata, msg); err != nil {
+					if err := local.SetMeta(mdFilename, msg); err != nil {
 						return nil, errors.Wrap(err, "setting local meta")
 					}
 				}
@@ -185,7 +185,7 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 				if altRoot != nil {
 					trustedRoot = altRoot
 				} else {
-					trustedRoot, err = root.ReadFile(filepath.Join("repository", "root.json"))
+					trustedRoot, err = root.ReadFile("repository/root.json")
 					if err != nil {
 						return nil, errors.Wrap(err, "reading embedded trusted root")
 					}
