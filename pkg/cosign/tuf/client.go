@@ -23,6 +23,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -44,7 +45,15 @@ const (
 )
 
 //go:embed repository
-var root embed.FS
+var embeddedRootRepo embed.FS
+
+// embeddedRootRepo's `embed.FS` expects unix-like path separators (i.e. `/`), even on Windows.
+func embeddedReadFile(pathSegments ...string) ([]byte, error) {
+	return embeddedRootRepo.ReadFile(path.Join(pathSegments...))
+}
+func embeddedOpenFile(pathSegments ...string) (fs.File, error) {
+	return embeddedRootRepo.Open(path.Join(pathSegments...))
+}
 
 // Global TUF client.
 // Uses TUF metadata and targets embedded in repository/* or cached in ${TUF_ROOT} (by default
@@ -55,7 +64,7 @@ var rootClient *client.Client
 var rootClientMu = &sync.Mutex{}
 
 func GetEmbeddedRoot() ([]byte, error) {
-	return root.ReadFile("repository/root.json")
+	return embeddedReadFile("repository", "root.json")
 }
 
 func CosignCachedRoot() string {
@@ -99,7 +108,7 @@ func getLocalTarget(name string) (fs.File, error) {
 		// Return local cached target
 		return f, nil
 	}
-	return root.Open("repository/targets/" + name)
+	return embeddedOpenFile("repository", "targets", name)
 }
 
 type signedMeta struct {
@@ -148,7 +157,7 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 	if _, err := os.Stat(localCacheDBPath); os.IsNotExist(err) && altRoot == nil {
 		// Cache does not exist, check if the embedded metadata is currently valid.
 		// TODO(asraa): Need a better way to check if local metadata is verified at this stage.
-		timestamp, err := root.ReadFile("repository/timestamp.json")
+		timestamp, err := embeddedReadFile("repository", "timestamp.json")
 		if err != nil {
 			return nil, errors.Wrap(err, "reading local timestamp")
 		}
@@ -158,7 +167,7 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 				return nil, errors.Wrap(err, "setting local meta")
 			}
 			for _, mdFilename := range []string{"root.json", "targets.json", "snapshot.json"} {
-				msg, err := root.ReadFile("repository/" + mdFilename)
+				msg, err := embeddedReadFile("repository", mdFilename)
 				if err != nil {
 					return nil, errors.Wrap(err, "reading embedded meta")
 				}
@@ -193,7 +202,7 @@ func RootClient(ctx context.Context, remote client.RemoteStore, altRoot []byte) 
 			if altRoot != nil {
 				trustedRoot = altRoot
 			} else {
-				trustedRoot, err = root.ReadFile("repository/root.json")
+				trustedRoot, err = embeddedReadFile("repository", "root.json")
 				if err != nil {
 					return nil, errors.Wrap(err, "reading embedded trusted root")
 				}
