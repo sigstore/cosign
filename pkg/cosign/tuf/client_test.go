@@ -20,9 +20,10 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/theupdateframework/go-tuf"
 	"github.com/theupdateframework/go-tuf/client"
 	tuf_leveldbstore "github.com/theupdateframework/go-tuf/client/leveldbstore"
@@ -127,10 +128,14 @@ func TestValidMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error")
 	}
+	if cl, isCloser := local.(io.Closer); isCloser {
+		// TODO(https://github.com/sigstore/cosign/issues/1160): this is a hack to free the file descriptors, need to patch `tuf_leveldbstore.FileLocalStore` to return a io.Closer
+		defer cl.Close()
+	}
 	meta, _ := store.GetMeta()
 	root := meta["root.json"]
 	local.SetMeta("root.json", root)
-	db := path.Join(tmp, "tuf.db")
+	db := filepath.Join(tmp, "tuf.db")
 	if err := os.Setenv(TufRootEnv, db); err != nil {
 		t.Fatalf("error setting env")
 	}
@@ -154,11 +159,27 @@ func TestValidMetadata(t *testing.T) {
 
 	target := "foo.txt"
 	buf := ByteDestination{Buffer: &bytes.Buffer{}}
-	err = getTargetHelper(target, &buf, rootClient)
+	err = getTargetHelper(target, &buf, rootClient, false)
 	if err != nil {
 		t.Fatalf("retrieving target %v", err)
 	}
 	if !bytes.Equal(buf.Bytes(), targetFiles[target]) {
 		t.Fatalf("error retrieving target, expected %s got %s", buf.String(), targetFiles[target])
+	}
+}
+
+func TestGetEmbeddedRoot(t *testing.T) {
+	got, err := GetEmbeddedRoot()
+	if err != nil {
+		t.Fatalf("GetEmbeddedRoot() returned error: %v", err)
+	}
+
+	want, err := os.ReadFile(filepath.Join("repository", "root.json"))
+	if err != nil {
+		t.Fatalf("failed to read expected root from file: %v", err)
+	}
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("GetEmbeddedRoot() mismatch (-want +got):\n%s", diff)
 	}
 }

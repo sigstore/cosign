@@ -26,7 +26,10 @@ jobs:
     # Skip if running in a fork that might not have secrets configured.
     if: ${{ github.repository == 'sigstore/cosign' }}
     name: Run tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
 
     permissions:
       id-token: write
