@@ -88,6 +88,22 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 	return cmd.Exec(context.Background(), args)
 }
 
+// Used to verify local images stored on disk
+var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        keyRef,
+		CheckClaims:   checkClaims,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
+		LocalImage:    true,
+	}
+
+	args := []string{path}
+
+	return cmd.Exec(context.Background(), args)
+}
+
 func TestSignVerify(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
@@ -647,6 +663,9 @@ func TestSaveLoad(t *testing.T) {
 			// save the image to a temp dir
 			imageDir := t.TempDir()
 			must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+
+			// verify the local image using a local key
+			must(verifyLocal(pubKeyPath, imageDir, true, nil, ""), t)
 
 			// load the image from the temp dir into a new image and verify the new image
 			imgName2 := path.Join(repo, fmt.Sprintf("save-load-%d-2", i))

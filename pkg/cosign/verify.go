@@ -39,6 +39,7 @@ import (
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/oci/layout"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -202,7 +203,7 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 	return fos.signatures, nil
 }
 
-// VerifySignatures does all the main cosign checks in a loop, returning the verified signatures.
+// VerifyImageSignatures does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error.
 func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
@@ -231,6 +232,56 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		}
 	}
 
+	return verifySignatures(ctx, sigs, h, co)
+}
+
+// VerifyLocalImageSignatures verifies signatures from a saved, local image, without any network calls, returning the verified signatures.
+// If there were no valid signatures, we return an error.
+func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	// Enforce this up front.
+	if co.RootCerts == nil && co.SigVerifier == nil {
+		return nil, false, errors.New("one of verifier or root certs is required")
+	}
+
+	se, err := layout.SignedImageIndex(path)
+	if err != nil {
+		return nil, false, err
+	}
+
+	var h v1.Hash
+	// Verify either an image index or image.
+	ii, err := se.SignedImageIndex(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	i, err := se.SignedImage(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	switch {
+	case ii != nil:
+		h, err = ii.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	case i != nil:
+		h, err = i.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	default:
+		return nil, false, errors.New("must verify either an image index or image")
+	}
+
+	sigs, err := se.Signatures()
+	if err != nil {
+		return nil, false, err
+	}
+
+	return verifySignatures(ctx, sigs, h, co)
+}
+
+func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	sl, err := sigs.Get()
 	if err != nil {
 		return nil, false, err
