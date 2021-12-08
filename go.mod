@@ -35,18 +35,10 @@ require (
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.61.0
 	k8s.io/api v0.21.7
-	k8s.io/apimachinery v0.21.7
+	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.21.7
 	k8s.io/utils v0.0.0-20211203121628-587287796c64
 	knative.dev/pkg v0.0.0-20211203062937-d37811b71d6a
 )
 
-require (
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/urfave/cli v1.22.5 // indirect
-	go.opentelemetry.io/contrib v1.2.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
-	k8s.io/klog/v2 v2.30.0 // indirect
-)
+require github.com/prometheus/procfs v0.7.3 // indirect
