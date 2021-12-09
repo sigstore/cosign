@@ -59,7 +59,10 @@ jobs:
   
   e2e-tests:
     name: Run e2e tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -83,13 +86,13 @@ jobs:
         with:
           go-version: '1.17.x'
       - uses: imjasonh/setup-ko@v0.4
-      - name: setup kind cluster
-        run: |
-          # Used to test: cosign generate-key-pair k8s://...
-          go install sigs.k8s.io/kind@v0.11.1
-          kind create cluster
-
+      - name: Install `kind`
+        # Used to test: cosign generate-key-pair k8s://...
+        run: go install sigs.k8s.io/kind@v0.11.1
+      - name: Setup kind cluster
+        run: kind create cluster
       - name: Run end-to-end tests
+        shell: bash
         run: ./test/e2e_test.sh
 
   license-check:
