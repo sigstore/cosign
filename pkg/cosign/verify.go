@@ -407,6 +407,57 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	if err != nil {
 		return nil, false, err
 	}
+
+	return verifyImageAttestations(ctx, atts, h, co)
+}
+
+// VerifyLocalImageAttestations verifies attestations from a saved, local image, without any network calls,
+// returning the verified attestations.
+// If there were no valid signatures, we return an error.
+func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	// Enforce this up front.
+	if co.RootCerts == nil && co.SigVerifier == nil {
+		return nil, false, errors.New("one of verifier or root certs is required")
+	}
+
+	se, err := layout.SignedImageIndex(path)
+	if err != nil {
+		return nil, false, err
+	}
+
+	var h v1.Hash
+	// Verify either an image index or image.
+	ii, err := se.SignedImageIndex(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	i, err := se.SignedImage(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	switch {
+	case ii != nil:
+		h, err = ii.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	case i != nil:
+		h, err = i.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	default:
+		return nil, false, errors.New("must verify either an image index or image")
+	}
+
+	atts, err := se.Attestations()
+	if err != nil {
+		return nil, false, err
+	}
+	return verifyImageAttestations(ctx, atts, h, co)
+}
+
+func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err

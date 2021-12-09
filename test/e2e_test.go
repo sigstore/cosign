@@ -720,12 +720,15 @@ func TestSaveLoadAttestation(t *testing.T) {
 	}
 	verifyAttestation.PredicateType = "slsaprovenance"
 	verifyAttestation.Policies = []string{policyPath}
-	// Success case
+	// Success case (remote)
 	cuePolicy := `builder: id: "2"`
 	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
 		t.Fatal(err)
 	}
 	must(verifyAttestation.Exec(ctx, []string{imgName2}), t)
+	// Success case (local)
+	verifyAttestation.LocalImage = true
+	must(verifyAttestation.Exec(ctx, []string{imageDir}), t)
 }
 
 func TestAttachSBOM(t *testing.T) {
