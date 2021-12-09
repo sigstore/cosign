@@ -109,8 +109,10 @@ if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblo
 
 ## sign and verify multiple blobs
 ./cosign sign-blob --key ${signing_key} myblob myblob2 > sigs
-./cosign verify-blob --key ${verification_key} --signature <(head -n 1 sigs) myblob
-./cosign verify-blob --key ${verification_key} --signature <(tail -n 1 sigs) myblob2
+head -n 1 sigs > car.sig
+tail -n 1 sigs > cdr.sig
+./cosign verify-blob --key ${verification_key} --signature car.sig myblob
+./cosign verify-blob --key ${verification_key} --signature cdr.sig myblob2
 
 ## upload blob/sget
 blobimg="${TEST_INSTANCE_REPO}/blob"

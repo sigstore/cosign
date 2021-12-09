@@ -25,7 +25,10 @@ jobs:
     # Skip if running in a fork that might not have secrets configured.
     if: ${{ github.repository == 'sigstore/cosign' }}
     name: Run tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -38,7 +41,10 @@ jobs:
           project_id: projectsigstore
           service_account_key: ${{ secrets.GCP_CI_SERVICE_ACCOUNT }}
           export_default_credentials: true
-      - run: |
-          go install github.com/google/go-containerregistry/cmd/crane@v0.7.0
-          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-          ./test/e2e_test_secrets.sh
+      - name: Set up `crane`
+        run: go install github.com/google/go-containerregistry/cmd/crane@v0.7.0
+      - name: gcloud auth configure-docker
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      - name: Run e2e_test_secrets.sh
+        shell: bash
+        run: ./test/e2e_test_secrets.sh
