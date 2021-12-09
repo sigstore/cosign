@@ -179,6 +179,7 @@ func initGlobalRootClient(ctx context.Context, remote client.RemoteStore, altRoo
 	// We may need to download latest metadata and targets if the cache is un-initialized or expired.
 	trustedMeta, err := local.GetMeta()
 	if err != nil {
+		local.Close()
 		return nil, errors.Wrap(err, "getting trusted meta")
 	}
 
@@ -195,19 +196,23 @@ func initGlobalRootClient(ctx context.Context, remote client.RemoteStore, altRoo
 			} else {
 				trustedRoot, err = embeddedReadFile("repository", "root.json")
 				if err != nil {
+					local.Close()
 					return nil, errors.Wrap(err, "reading embedded trusted root")
 				}
 			}
 		}
 		rootKeys, rootThreshold, err := getRootKeys(trustedRoot)
 		if err != nil {
+			local.Close()
 			return nil, errors.Wrap(err, "bad trusted root")
 		}
 
 		if err := uninitializedClient.Init(rootKeys, rootThreshold); err != nil {
+			local.Close()
 			return nil, errors.Wrap(err, "initializing root client")
 		}
 		if err := updateMetadataAndDownloadTargets(uninitializedClient); err != nil {
+			local.Close()
 			return nil, errors.Wrap(err, "updating from remote TUF repository")
 		}
 	}
