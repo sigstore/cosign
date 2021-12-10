@@ -1755,8 +1755,8 @@ github.com/thales-e-security/pool v0.0.2/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpu
 github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396/go.mod h1:L+uU/NRFK/7h0NYAnsmvsX9EghDB5QVCcHCIrK2h5nw=
 github.com/theupdateframework/go-tuf v0.0.0-20211006142131-1dc15a86c64d/go.mod h1:oujGMqigj0NWDqeWBCzleayXXtux27r+kHAR2t5Yuk8=
 github.com/theupdateframework/go-tuf v0.0.0-20211115152232-a4f2dd6ea314/go.mod h1:pQW1KcCMYPCuZ4pvCkYQhoE2k9SzTuh31AWhf1j/7HM=
-github.com/theupdateframework/go-tuf v0.0.0-20211203210025-7ded50136bf9 h1:Toe1Dy1nG62nh3CLZ6/izUrdgjhV/aGHvvu+uwGykxk=
-github.com/theupdateframework/go-tuf v0.0.0-20211203210025-7ded50136bf9/go.mod h1:n2n6wwC9BEnYS/C/APAtNln0eM5zYAYOkOTx6VEG/mA=
+github.com/theupdateframework/go-tuf v0.0.0-20211209174453-13f0687177ba h1:sGi7h9lGQCr2GnYTNThTtgSVaQftO3bel0SzdOMdoKA=
+github.com/theupdateframework/go-tuf v0.0.0-20211209174453-13f0687177ba/go.mod h1:n2n6wwC9BEnYS/C/APAtNln0eM5zYAYOkOTx6VEG/mA=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
 github.com/tidwall/pretty v1.2.0/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=
