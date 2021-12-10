@@ -91,6 +91,31 @@ jobs:
 
       - name: Run end-to-end tests
         run: ./test/e2e_test.sh
+  
+  e2e-windows-powershell-tests:
+    name: Run PowerShell E2E tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+
+      # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
+      - uses: actions/cache@v2
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Windows)
+          path: |
+            ~/go/pkg/mod
+            %LocalAppData%\go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run e2e_test.ps1
+        run: ./test/e2e_test.ps1
 
   license-check:
     name: license boilerplate check
