@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.4.1
+
+### Highlights
+
+A whole buncha bugfixes!
+
+### Enhancements
+
+* Files created with `--output-signature` and `--output-certificate` now created with 0600 permissions (https://github.com/sigstore/cosign/pull/1151)
+* Added `cosign verify-attestation --local-image` for verifying signed images with attestations from disk (https://github.com/sigstore/cosign/pull/1174)
+* Added the ability to fetch the TUF root over HTTP with `cosign initialize --mirror` (https://github.com/sigstore/cosign/pull/1185)
+
+### Bug Fixes
+
+* Fixed saving and loading a signed image index to disk (https://github.com/sigstore/cosign/pull/1147)
+* Fixed `sign-blob --output-certificate` writing an empty file (https://github.com/sigstore/cosign/pull/1149)
+* Fixed assorted issues related to the initialization and use of Sigstore's TUF root of trust (https://github.com/sigstore/cosign/pull/1157)
+
+### Contributors
+
+* Carlos Alexandro Becker (@caarlos0)
+* Carlos Panato (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* Jake Sanders (@dekkagaijin)
+* Matt Moore (@mattmoor)
+* Priya Wadhwa (@priyawadhwa)
+* Radoslav Gerganov (@rgerganov)
+
 ## v1.4.0
 
 ### Highlights
