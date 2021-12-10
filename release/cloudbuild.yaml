@@ -38,10 +38,10 @@ steps:
   - 'verify'
   - '--key'
   - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.4-0@sha256:266b7cf2059a18e0709e090a51dfc48cdd7c89abc7fa11afbd9b18fd9e491dbc'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.4-0@sha256:266b7cf2059a18e0709e090a51dfc48cdd7c89abc7fa11afbd9b18fd9e491dbc
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -62,7 +62,7 @@ steps:
     - |
       make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.4-0@sha256:266b7cf2059a18e0709e090a51dfc48cdd7c89abc7fa11afbd9b18fd9e491dbc
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803
   entrypoint: 'bash'
   dir: "go/src/sigstore/cosign"
   env:

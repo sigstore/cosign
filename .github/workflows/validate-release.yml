@@ -50,7 +50,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -w /go/src/sigstore/cosign \
             --entrypoint="" \
-            ghcr.io/gythialy/golang-cross:v1.17.4-0@sha256:266b7cf2059a18e0709e090a51dfc48cdd7c89abc7fa11afbd9b18fd9e491dbc \
+            ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803 \
             make snapshot
 
       - name: check binaries
