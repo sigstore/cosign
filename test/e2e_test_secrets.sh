@@ -48,6 +48,9 @@ multiarch_img="${TEST_INSTANCE_REPO}/multiarch-test"
 crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${tag}" ; done
 crane cp gcr.io/distroless/base $multiarch_img
 
+# `initialize`
+./cosign initialize
+
 ## sign/verify
 ./cosign sign --key ${signing_key} $img
 ./cosign verify --key ${verification_key} $img
