@@ -21,7 +21,6 @@ function New-TmpDir {
 make cosign
 $TmpDir = New-TmpDir
 Copy-Item -Path .\cosign -Destination (Join-Path $TmpDir cosign.exe)
-# Copy-Item -Path (Join-Path $pwd sget.exe) -Destination (Join-Path $TmpDir sget.exe)
 
 Push-Location $TmpDir
 
@@ -29,8 +28,7 @@ Push-Location $TmpDir
 .\cosign.exe version
 
 # Generate a random alphanumeric password for the private key
-$pass = -join (((48..57)+(65..90)+(97..122)) * 80 | Get-Random -Count 10 | %{[char]$_})
-# $Env:COSIGN_PASSWORD = $pass
+$pass = Get-Random
 
 Write-Output $pass | .\cosign.exe generate-key-pair
 $signing_key = "cosign.key"
