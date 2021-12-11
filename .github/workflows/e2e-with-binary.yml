@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  e2e-tests-with-binary:
+  e2e-tests-with-cosign:
     # Skip if running in a fork that might not have secrets configured.
     if: ${{ github.repository == 'sigstore/cosign' }}
     name: Run tests
@@ -63,4 +63,36 @@ jobs:
           else
             echo "file does not exist, or is empty"
             exit 1
+          fi
+  e2e-tests-with-sget:
+    # Skip if running in a fork that might not have secrets configured.
+    if: ${{ github.repository == 'sigstore/cosign' }}
+    name: Run tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
+
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      COSIGN_EXPERIMENTAL: "true"
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+      - name: build cosign and check
+        shell: bash
+        run: |
+          set -e
+          make sget
+          # this should work
+          ./sget blob --signature https://github.com/sigstore/cosign/releases/download/v1.4.1/sget-darwin-amd64.sig https://github.com/sigstore/cosign/releases/download/v1.4.1/sget-darwin-amd64 --output sget-darwin-amd64
+          # check if the following command fails due to a signature mismatch. Return true if it does
+          if ./sget blob --signature https://github.com/sigstore/cosign/releases/download/v1.4.1/sget-windows-amd64.sig https://github.com/sigstore/cosign/releases/download/v1.4.1/sget-darwin-amd64 --output sget-darwin-amd64
+          then
+            true
           fi

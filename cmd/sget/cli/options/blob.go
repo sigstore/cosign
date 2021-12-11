@@ -20,23 +20,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// RootOptions define flags and options for the root sget cli.
-type RootOptions struct {
-	OutputFile string
-	PublicKey  string
-	RekorURL   string
+type BlobOptions struct {
+	Signature string
+	Output    bool
 }
 
-var _ options.Interface = (*RootOptions)(nil)
+var _ options.Interface = (*BlobOptions)(nil)
 
 // AddFlags implements options.Interface
-func (o *RootOptions) AddFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVarP(&o.OutputFile, "output", "o", "",
-		"output file")
-
-	cmd.PersistentFlags().StringVar(&o.PublicKey, "key", "",
-		"path to the public key file, URL, or KMS URI")
-
-	cmd.PersistentFlags().StringVar(&o.RekorURL, "rekor-url", "https://rekor.sigstore.dev",
-		"address of rekor STL server")
+func (o *BlobOptions) AddFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVar(&o.Signature, "signature", "",
+		"signature path or remote URL, if empty signature will be <artifact>.sig")
 }

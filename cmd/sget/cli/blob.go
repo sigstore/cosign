@@ -16,30 +16,24 @@
 package cli
 
 import (
-	"bytes"
-	"io"
-	"os"
-
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/cmd/sget/cli/options"
 	"github.com/sigstore/cosign/pkg/sget"
+	"github.com/spf13/cobra"
 )
 
 var (
-	ro = &options.RootOptions{}
+	bo = &options.BlobOptions{}
 )
 
-func New() *cobra.Command {
+func Blob() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sget <image reference>",
-		Short: "sget [--key <key reference>] <image reference>",
+		Use:   "blob [--signature <signature uri] <artifact uri>",
+		Short: "download a blob and verify its signature [EXPERIMENTAL]",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return errors.New("a single image reference is required")
+				return errors.New("an artifact uri is required")
 			}
-			ro.ImageRef = args[0]
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -48,36 +42,10 @@ func New() *cobra.Command {
 				return err
 			}
 			defer wc.Close()
-			return sget.New(ro.ImageRef, ro.PublicKey, wc).Do(cmd.Context())
+			return sget.New(ro.PublicKey, wc, ro.RekorURL).GetBlob(cmd.Context(), bo.Signature, args[0])
 		},
 	}
-	ro.AddFlags(cmd)
 
-	// Add sub-commands.
-	cmd.AddCommand(Version())
-
+	bo.AddFlags(cmd)
 	return cmd
-}
-
-func createSink(path string) (io.WriteCloser, error) {
-	if path == "" {
-		// When writing to stdout, buffer so we can check the digest first.
-		return &buffered{w: os.Stdout, buf: &bytes.Buffer{}}, nil
-	}
-
-	return os.Create(path)
-}
-
-type buffered struct {
-	w   io.Writer
-	buf *bytes.Buffer
-}
-
-func (b *buffered) Write(p []byte) (n int, err error) {
-	return b.buf.Write(p)
-}
-
-func (b *buffered) Close() error {
-	_, err := io.Copy(b.w, b.buf)
-	return err
 }

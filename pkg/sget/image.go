@@ -32,22 +32,25 @@ import (
 	sigs "github.com/sigstore/cosign/pkg/signature"
 )
 
-func New(image, key string, out io.Writer) *SecureGet {
+func New(key string, out io.Writer, rekorURL string) *SecureGet {
+	if rekorURL == "" {
+		rekorURL = "https://rekor.sigstore.dev"
+	}
 	return &SecureGet{
-		ImageRef: image,
 		KeyRef:   key,
 		Out:      out,
+		RekorURL: rekorURL,
 	}
 }
 
 type SecureGet struct {
-	ImageRef string
 	KeyRef   string
 	Out      io.Writer
+	RekorURL string
 }
 
-func (sg *SecureGet) Do(ctx context.Context) error {
-	ref, err := name.ParseReference(sg.ImageRef)
+func (sg *SecureGet) GetImage(ctx context.Context, imageRef string) error {
+	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
@@ -89,8 +92,8 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		verify.PrintVerificationHeader(sg.ImageRef, co, bundleVerified)
-		verify.PrintVerification(sg.ImageRef, sp, "text")
+		verify.PrintVerificationHeader(imageRef, co, bundleVerified)
+		verify.PrintVerification(imageRef, sp, "text")
 	}
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.
