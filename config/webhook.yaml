@@ -93,8 +93,8 @@ spec:
       terminationGracePeriodSeconds: 300
 
       volumes:
-        - emptyDir: {}
-          name: writable-home-dir
+      - emptyDir: {}
+        name: writable-home-dir
 ---
 apiVersion: v1
 kind: Secret
