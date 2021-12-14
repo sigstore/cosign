@@ -171,12 +171,10 @@ func initGlobalRootClient(ctx context.Context, remote client.RemoteStore, altRoo
 		}
 	}
 
-	local, err := tuf_leveldbstore.FileLocalStore(localCacheDBPath)
-	if err != nil {
-		if !errors.Is(err, fs.ErrPermission) {
-			return nil, errors.Wrap(err, "creating cached local store")
-		}
-		local = client.MemoryLocalStore()
+	local := client.MemoryLocalStore()
+	if localDB, err := tuf_leveldbstore.FileLocalStore(localCacheDBPath); err == nil {
+		// TODO: log errors
+		local = localDB
 	}
 
 	// We may need to download latest metadata and targets if the cache is un-initialized or expired.
