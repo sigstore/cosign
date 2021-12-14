@@ -31,6 +31,7 @@ func Download() *cobra.Command {
 	cmd.AddCommand(
 		downloadSignature(),
 		downloadSBOM(),
+		downloadAttestation(),
 	)
 
 	return cmd
@@ -65,6 +66,24 @@ func downloadSBOM() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, err := download.SBOMCmd(cmd.Context(), *o, args[0], cmd.OutOrStdout())
 			return err
+		},
+	}
+
+	o.AddFlags(cmd)
+
+	return cmd
+}
+
+func downloadAttestation() *cobra.Command {
+	o := &options.RegistryOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "attestation",
+		Short:   "Download in-toto attestations from the supplied container image",
+		Example: "  cosign download attesation <image uri>",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return download.AttestationCmd(cmd.Context(), *o, args[0])
 		},
 	}
 

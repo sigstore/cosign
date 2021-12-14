@@ -18,6 +18,7 @@ package cosign
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"runtime"
 
@@ -35,6 +36,17 @@ type SignedPayload struct {
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
 	Bundle          *oci.Bundle
+}
+
+type Signatures struct {
+	KeyID string `json:"keyid"`
+	Sig   string `json:"sig"`
+}
+
+type AttestationPayload struct {
+	PayloadType string       `json:"payloadType"`
+	PayLoad     string       `json:"payload"`
+	Signatures  []Signatures `json:"signatures"`
 }
 
 const (
@@ -97,4 +109,42 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 	}
 
 	return signatures, nil
+}
+
+func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]AttestationPayload, error) {
+	simg, err := ociremote.SignedEntity(ref, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	atts, err := simg.Attestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "remote image")
+	}
+	l, err := atts.Get()
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching attestations")
+	}
+	if len(l) == 0 {
+		return nil, fmt.Errorf("no attestations associated with %v", ref)
+	}
+
+	g := pool.New(runtime.NumCPU())
+	attestations := make([]AttestationPayload, len(l))
+	for i, att := range l {
+		i, att := i, att
+		g.Go(func() (err error) {
+			attestPayload, _ := att.Payload()
+			json.Unmarshal(attestPayload, &attestations[i])
+			if err != nil {
+				return err
+			}
+			return err
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	return attestations, nil
 }
