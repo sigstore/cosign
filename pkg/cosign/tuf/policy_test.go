@@ -75,7 +75,7 @@ func TestRootRole(t *testing.T) {
 		t.Errorf("Error marshalling root policy")
 	}
 	newRoot := Root{}
-	if err := json.Unmarshal(policy.Signed, &newRoot); err != nil {
+	if err := json.Unmarshal(policy.Policy, &newRoot); err != nil {
 		t.Errorf("Error marshalling root policy")
 	}
 	rootRole, ok := newRoot.Roles["root"]

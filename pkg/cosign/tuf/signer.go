@@ -36,10 +36,9 @@ type FulcioKeyVal struct {
 func FulcioVerificationKey(email string, issuer string) *Key {
 	keyValBytes, _ := json.Marshal(FulcioKeyVal{Identity: email, Issuer: issuer})
 	return &Key{
-		Type:       KeyTypeFulcio,
-		Scheme:     KeySchemeFulcio,
-		Algorithms: KeyAlgorithms,
-		Value:      keyValBytes,
+		Type:   KeyTypeFulcio,
+		Scheme: KeySchemeFulcio,
+		Value:  keyValBytes,
 	}
 }
 

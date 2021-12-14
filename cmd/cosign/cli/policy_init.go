@@ -18,7 +18,7 @@ package cli
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
+	// "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,7 +42,7 @@ import (
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/sget"
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	// sigs "github.com/sigstore/cosign/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/spf13/cobra"
 )
@@ -116,6 +116,7 @@ func initPolicy() *cobra.Command {
 			role.AddKeysWithThreshold(publicKeys, o.Threshold)
 			root.Roles["root"] = role
 			root.Namespace = o.ImageRef
+			root.PreviousRoot = "null"
 
 			if o.Expires > 0 {
 				root.Expires = time.Now().AddDate(0, 0, o.Expires).UTC().Round(time.Second)
@@ -196,8 +197,6 @@ func signPolicy() *cobra.Command {
 			if len(certs) == 0 || certs[0].EmailAddresses == nil {
 				return errors.New("error decoding certificate")
 			}
-			signerEmail := sigs.CertSubject(certs[0])
-			signerIssuer := sigs.CertIssuerExtension(certs[0])
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
@@ -229,23 +228,14 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Unmarshal policy and verify that Fulcio signer email is in the trusted
-			signed := &tuf.Signed{}
-			if err := json.Unmarshal(b, signed); err != nil {
+			policy := &tuf.Policy{}
+			if err := json.Unmarshal(b, policy); err != nil {
 				return errors.Wrap(err, "unmarshalling signed root policy")
 			}
 
-			// Create and add signature
-			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
-			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(ctx))
+			sig, err := sv.SignMessage(bytes.NewReader(policy.Policy), signatureoptions.WithContext(ctx))
 			if err != nil {
 				return errors.Wrap(err, "error occurred while during artifact signing")
-			}
-			signature := tuf.Signature{
-				Signature: base64.StdEncoding.EncodeToString(sig),
-				Cert:      base64.StdEncoding.EncodeToString(sv.Cert),
-			}
-			if err := signed.AddOrUpdateSignature(key, signature); err != nil {
-				return err
 			}
 
 			// Upload to rekor
@@ -256,7 +246,7 @@ func signPolicy() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, signed.Signed, rekorBytes)
+				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, policy.Policy, rekorBytes)
 				if err != nil {
 					return err
 				}
@@ -264,7 +254,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Push updated root.json to the registry
-			policyFile, err := signed.JSONMarshal("", "\t")
+			policyFile, err := policy.JSONMarshal("", "\t")
 			if err != nil {
 				return err
 			}

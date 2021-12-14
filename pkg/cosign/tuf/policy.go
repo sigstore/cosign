@@ -31,22 +31,14 @@ import (
 	cjson "github.com/secure-systems-lab/go-securesystemslib/cjson"
 )
 
-type Signed struct {
-	Signed     json.RawMessage `json:"signed"`
-	Signatures []Signature     `json:"signatures"`
-}
-
-type Signature struct {
-	KeyID     string `json:"keyid"`
-	Signature string `json:"sig"`
-	Cert      string `json:"cert,omitempty"`
+type Policy struct {
+	Policy json.RawMessage `json:"policy"`
 }
 
 type Key struct {
-	Type       string          `json:"keytype"`
-	Scheme     string          `json:"scheme"`
-	Algorithms []string        `json:"keyid_hash_algorithms,omitempty"`
-	Value      json.RawMessage `json:"keyval"`
+	Type   string          `json:"keytype"`
+	Scheme string          `json:"scheme"`
+	Value  json.RawMessage `json:"keyval"`
 
 	id     string
 	idOnce sync.Once
@@ -66,15 +58,14 @@ func (k *Key) ContainsID(id string) bool {
 }
 
 type Root struct {
-	Type        string           `json:"_type"`
-	SpecVersion string           `json:"spec_version"`
-	Version     int              `json:"version"`
-	Expires     time.Time        `json:"expires"`
-	Keys        map[string]*Key  `json:"keys"`
-	Roles       map[string]*Role `json:"roles"`
-	Namespace   string           `json:"namespace"`
-
-	ConsistentSnapshot bool `json:"consistent_snapshot"`
+	Type         string           `json:"_type"`
+	SpecVersion  string           `json:"spec_version"`
+	Version      int              `json:"version"`
+	Expires      time.Time        `json:"expires"`
+	Keys         map[string]*Key  `json:"keys"`
+	Roles        map[string]*Role `json:"roles"`
+	Namespace    string           `json:"namespace"`
+	PreviousRoot string           `json:"previous_root"`
 }
 
 func DefaultExpires(role string) time.Time {
@@ -84,13 +75,12 @@ func DefaultExpires(role string) time.Time {
 
 func NewRoot() *Root {
 	return &Root{
-		Type:               "root",
-		SpecVersion:        "1.0",
-		Version:            1,
-		Expires:            DefaultExpires("root"),
-		Keys:               make(map[string]*Key),
-		Roles:              make(map[string]*Role),
-		ConsistentSnapshot: true,
+		Type:        "root",
+		SpecVersion: "1.0",
+		Version:     1,
+		Expires:     DefaultExpires("root"),
+		Keys:        make(map[string]*Key),
+		Roles:       make(map[string]*Role),
 	}
 }
 
@@ -125,13 +115,13 @@ func (r *Role) AddKeysWithThreshold(keys []*Key, threshold int) bool {
 	return changed
 }
 
-func (r *Root) Marshal() (*Signed, error) {
+func (r *Root) Marshal() (*Policy, error) {
 	// Marshals the Root into a Signed type
 	b, err := cjson.EncodeCanonical(r)
 	if err != nil {
 		return nil, err
 	}
-	return &Signed{Signed: b}, nil
+	return &Policy{Policy: b}, nil
 }
 
 func (r *Root) ValidKey(key *Key, role string) (string, error) {
@@ -171,7 +161,7 @@ func (r *Root) ValidKey(key *Key, role string) (string, error) {
 	return "", errors.New("key not found in role")
 }
 
-func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
+func (s *Policy) JSONMarshal(prefix, indent string) ([]byte, error) {
 	// Marshals Signed with prefix and indent.
 	b, err := cjson.EncodeCanonical(s)
 	if err != nil {
@@ -184,25 +174,4 @@ func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
-}
-
-func (s *Signed) AddOrUpdateSignature(key *Key, signature Signature) error {
-	root := &Root{}
-	if err := json.Unmarshal(s.Signed, root); err != nil {
-		return errors.Wrap(err, "unmarshalling root policy")
-	}
-	var err error
-	signature.KeyID, err = root.ValidKey(key, "root")
-	if err != nil {
-		return errors.New("invalid root key")
-	}
-	signatures := []Signature{}
-	for _, sig := range s.Signatures {
-		if sig.KeyID != signature.KeyID {
-			signatures = append(signatures, sig)
-		}
-	}
-	signatures = append(signatures, signature)
-	s.Signatures = signatures
-	return nil
 }
