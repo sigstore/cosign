@@ -72,8 +72,9 @@ spec:
             - all
 
         volumeMounts:
+        # Failing to provide a writable $HOME can cause TUF client initialization to panic
         - mountPath: /home/nonroot
-          name: writable-home
+          name: writable-home-dir
 
         readinessProbe: &probe
           failureThreshold: 6
@@ -93,7 +94,7 @@ spec:
 
       volumes:
         - emptyDir: {}
-          name: writable-home
+          name: writable-home-dir
 ---
 apiVersion: v1
 kind: Secret
