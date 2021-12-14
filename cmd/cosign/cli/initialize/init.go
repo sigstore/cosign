@@ -25,7 +25,7 @@ import (
 	"github.com/theupdateframework/go-tuf/client"
 )
 
-func DoInitialize(ctx context.Context, root, mirror string, threshold int) error {
+func DoInitialize(ctx context.Context, root, mirror string) error {
 	// Get the initial trusted root contents.
 	var rootFileBytes []byte
 	var err error
@@ -48,5 +48,5 @@ func DoInitialize(ctx context.Context, root, mirror string, threshold int) error
 	}
 
 	// Initialize and update the local SigStore root.
-	return tuf.Init(ctx, rootFileBytes, remote, threshold)
+	return tuf.Init(ctx, rootFileBytes, remote)
 }
