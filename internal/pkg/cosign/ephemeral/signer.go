@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package keyless
+package ephemeral
 
 import (
 	"bytes"
@@ -69,7 +69,7 @@ func NewSigner() (icosign.Signer, error) {
 	}
 	s, err := signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "creating a SignerVerifier from ephemeral key")
 	}
 	return keylessSigner{
 		signer: s,
