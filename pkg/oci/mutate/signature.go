@@ -124,6 +124,7 @@ func (sw *sigWrapper) Size() (int64, error) {
 	return sw.wrapped.Size()
 }
 
+// Signature returns a new oci.Signature based on the provided original, plus the requested mutations.
 func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, error) {
 	newSig := sigWrapper{wrapped: original}
 

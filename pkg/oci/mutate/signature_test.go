@@ -16,7 +16,7 @@ package mutate
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"io"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -82,110 +82,191 @@ func mustBase64Decode(t *testing.T, s string) []byte {
 func assertSignaturesEqual(t *testing.T, wanted, got oci.Signature) {
 	t.Helper()
 
-	// Compare Payloads
-	wantedPayload, err := wanted.Payload()
-	if err != nil {
-		t.Errorf("wanted.Payload() returned error: %v", err)
-	}
-	gotPayload, err := got.Payload()
-	if err != nil {
-		t.Errorf("got.Payload() returned error: %v", err)
-	}
-	if diff := cmp.Diff(wantedPayload, gotPayload); diff != "" {
-		t.Errorf("Payload() mismatch (-want +got):\n%s", diff)
-	}
-
-	// Compare Base64Signatures
-	wantedB64Sig, err := wanted.Base64Signature()
-	if err != nil {
-		t.Errorf("wanted.Base64Signature() returned error: %v", err)
-	}
-	gotB64Sig, err := got.Base64Signature()
-	if err != nil {
-		t.Errorf("got.Base64Signature() returned error: %v", err)
-	}
-	if diff := cmp.Diff(wantedB64Sig, gotB64Sig); diff != "" {
-		t.Errorf("Base64Signature() mismatch (-want +got):\n%s", diff)
-	}
-
-	// Compare Bundles
-	wantedBundle, err := wanted.Bundle()
-	if err != nil {
-		t.Errorf("wanted.Bundle() returned error: %v", err)
-	}
-	gotBundle, err := got.Bundle()
-	if err != nil {
-		t.Errorf("got.Bundle() returned error: %v", err)
-	}
-	if diff := cmp.Diff(wantedBundle, gotBundle); diff != "" {
-		t.Errorf("Bundle() mismatch (-want +got):\n%s", diff)
-	}
-
-	// Compare Certs
-	wantedCert, err := wanted.Cert()
-	if err != nil {
-		t.Errorf("wanted.Bundle() returned error: %v", err)
-	}
-	gotCert, err := got.Cert()
-	if err != nil {
-		t.Errorf("got.Cert() returned error: %v", err)
-	}
-	if diff := cmp.Diff(wantedCert, gotCert); diff != "" {
-		t.Errorf("Cert() mismatch (-want +got):\n%s", diff)
-	}
-
-	// Compare Chains
-	wantedChain, err := wanted.Chain()
-	if err != nil {
-		t.Errorf("wanted.Bundle() returned error: %v", err)
-	}
-	gotChain, err := got.Chain()
-	if err != nil {
-		t.Errorf("got.Chain() returned error: %v", err)
-	}
-	if diff := cmp.Diff(wantedChain, gotChain); diff != "" {
-		t.Errorf("Chain() mismatch (-want +got):\n%s", diff)
-	}
-
-	// Compare MediaTypes
-	wantedMediaType, err := wanted.MediaType()
-	if err != nil {
-		t.Errorf("wanted.MediaType() returned error: %v", err)
-	}
-	gotMediaType, err := got.MediaType()
-	if err != nil {
-		t.Errorf("got.MediaType() returned error: %v", err)
-	}
-	if diff := cmp.Diff(wantedMediaType, gotMediaType); diff != "" {
-		t.Errorf("MediaType() mismatch (-want +got):\n%s", diff)
-	}
-
-	// Compare Annotations
-	wantedAnnotations, err := wanted.Annotations()
-	if err != nil {
-		t.Errorf("wanted.Annotations() returned error: %v", err)
-	}
-	gotAnnotations, err := got.Annotations()
-	if err != nil {
-		t.Errorf("got.Annotations() returned error: %v", err)
-	}
-	if diff := cmp.Diff(wantedAnnotations, gotAnnotations); diff != "" {
-		t.Errorf("Annotations() mismatch (-want +got):\n%s", diff)
-	}
-	if gotAnnotations[static.SignatureAnnotationKey] != wantedB64Sig {
-		t.Errorf("gotAnnotations[static.SignatureAnnotationKey] was %q, wanted %q", gotAnnotations[static.SignatureAnnotationKey], wantedB64Sig)
-	}
-	wantedBundleStr := ""
-	if wantedBundle != nil {
-		b, err := json.Marshal(wantedBundle)
+	t.Run("Payloads match", func(t *testing.T) {
+		t.Helper()
+		wantedPayload, err := wanted.Payload()
 		if err != nil {
-			t.Fatalf("json.Marshal(wantedBundle) failed: %v", err)
+			t.Fatalf("wanted.Payload() returned error: %v", err)
 		}
-		wantedBundleStr = string(b)
-	}
-	if gotAnnotations[static.BundleAnnotationKey] != wantedBundleStr {
-		t.Errorf("gotAnnotations[static.BundleAnnotationKey] was %q, wanted %q", gotAnnotations[static.BundleAnnotationKey], wantedBundleStr)
-	}
+		gotPayload, err := got.Payload()
+		if err != nil {
+			t.Fatalf("got.Payload() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedPayload, gotPayload); diff != "" {
+			t.Errorf("Payload() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("Base64Signatures match", func(t *testing.T) {
+		t.Helper()
+		wantedB64Sig, err := wanted.Base64Signature()
+		if err != nil {
+			t.Fatalf("wanted.Base64Signature() returned error: %v", err)
+		}
+		gotB64Sig, err := got.Base64Signature()
+		if err != nil {
+			t.Fatalf("got.Base64Signature() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedB64Sig, gotB64Sig); diff != "" {
+			t.Errorf("Base64Signature() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("Bundles match", func(t *testing.T) {
+		t.Helper()
+		wantedBundle, err := wanted.Bundle()
+		if err != nil {
+			t.Fatalf("wanted.Bundle() returned error: %v", err)
+		}
+		gotBundle, err := got.Bundle()
+		if err != nil {
+			t.Fatalf("got.Bundle() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedBundle, gotBundle); diff != "" {
+			t.Errorf("Bundle() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("Certs match", func(t *testing.T) {
+		t.Helper()
+		wantedCert, err := wanted.Cert()
+		if err != nil {
+			t.Fatalf("wanted.Bundle() returned error: %v", err)
+		}
+		gotCert, err := got.Cert()
+		if err != nil {
+			t.Fatalf("got.Cert() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedCert, gotCert); diff != "" {
+			t.Errorf("Cert() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("Chains match", func(t *testing.T) {
+		t.Helper()
+		wantedChain, err := wanted.Chain()
+		if err != nil {
+			t.Fatalf("wanted.Bundle() returned error: %v", err)
+		}
+		gotChain, err := got.Chain()
+		if err != nil {
+			t.Fatalf("got.Chain() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedChain, gotChain); diff != "" {
+			t.Errorf("Chain() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("MediaTypes match", func(t *testing.T) {
+		t.Helper()
+		wantedMediaType, err := wanted.MediaType()
+		if err != nil {
+			t.Fatalf("wanted.MediaType() returned error: %v", err)
+		}
+		gotMediaType, err := got.MediaType()
+		if err != nil {
+			t.Fatalf("got.MediaType() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedMediaType, gotMediaType); diff != "" {
+			t.Errorf("MediaType() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	var gotAnnotations map[string]string
+	t.Run("Annotations match", func(t *testing.T) {
+		t.Helper()
+		wantedAnnotations, err := wanted.Annotations()
+		if err != nil {
+			t.Fatalf("wanted.Annotations() returned error: %v", err)
+		}
+		gotAnnotations, err = got.Annotations()
+		if err != nil {
+			t.Fatalf("got.Annotations() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedAnnotations, gotAnnotations); diff != "" {
+			t.Errorf("Annotations() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("DiffIDs match", func(t *testing.T) {
+		t.Helper()
+		wantedDiffID, err := wanted.DiffID()
+		if err != nil {
+			t.Fatalf("wanted.DiffID() returned error: %v", err)
+		}
+		gotDiffID, err := got.DiffID()
+		if err != nil {
+			t.Fatalf("got.DiffID() returned error: %v", err)
+		}
+		if wantedDiffID != gotDiffID {
+			t.Errorf("DiffID() mismatch. Wanted: %v, got: %v", wantedDiffID, gotDiffID)
+		}
+	})
+
+	t.Run("Sizes match", func(t *testing.T) {
+		t.Helper()
+		wantedSize, err := wanted.Size()
+		if err != nil {
+			t.Fatalf("wanted.Size() returned error: %v", err)
+		}
+		gotSize, err := got.Size()
+		if err != nil {
+			t.Fatalf("got.Size() returned error: %v", err)
+		}
+		if wantedSize != gotSize {
+			t.Errorf("Size() mismatch. Wanted: %v, got: %v", wantedSize, gotSize)
+		}
+	})
+
+	t.Run("Compressed values match", func(t *testing.T) {
+		t.Helper()
+		wantedCompReader, err := wanted.Compressed()
+		if err != nil {
+			t.Fatalf("wanted.Compressed() returned error: %v", err)
+		}
+		defer wantedCompReader.Close()
+		wantedCompressed, err := io.ReadAll(wantedCompReader)
+		if err != nil {
+			t.Fatalf("io.ReadAll(wanted.Compressed()) returned error: %v", err)
+		}
+		gotCompReader, err := got.Compressed()
+		if err != nil {
+			t.Fatalf("got.Compressed() returned error: %v", err)
+		}
+		defer gotCompReader.Close()
+		gotCompressed, err := io.ReadAll(gotCompReader)
+		if err != nil {
+			t.Fatalf("io.ReadAll(got.Compressed()) returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedCompressed, gotCompressed); diff != "" {
+			t.Errorf("MediaType() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("Uncompressed values match", func(t *testing.T) {
+		t.Helper()
+		wantedUncompReader, err := wanted.Uncompressed()
+		if err != nil {
+			t.Fatalf("wanted.Uncompressed() returned error: %v", err)
+		}
+		defer wantedUncompReader.Close()
+		wantedUncompressed, err := io.ReadAll(wantedUncompReader)
+		if err != nil {
+			t.Fatalf("io.ReadAll(wanted.Uncompressed()) returned error: %v", err)
+		}
+		gotUncompReader, err := got.Uncompressed()
+		if err != nil {
+			t.Fatalf("got.Compressed() returned error: %v", err)
+		}
+		defer gotUncompReader.Close()
+		gotUncompressed, err := io.ReadAll(gotUncompReader)
+		if err != nil {
+			t.Fatalf("io.ReadAll(got.Uncompressed()) returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedUncompressed, gotUncompressed); diff != "" {
+			t.Errorf("MediaType() mismatch (-want +got):\n%s", diff)
+		}
+	})
 }
 
 func TestSignatureWithAnnotations(t *testing.T) {
@@ -279,6 +360,7 @@ func TestSignatureWithEverything(t *testing.T) {
 	mediaType := types.MediaType("test/media.type")
 
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
+
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig,
 		static.WithAnnotations(annotations),
 		static.WithBundle(bundle),
@@ -290,6 +372,7 @@ func TestSignatureWithEverything(t *testing.T) {
 		WithBundle(bundle),
 		WithCertChain(testCertBytes, testChainBytes),
 		WithMediaType(mediaType))
+
 	if err != nil {
 		t.Fatalf("Signature(With...) returned error: %v", err)
 	}
