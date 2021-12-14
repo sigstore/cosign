@@ -188,8 +188,8 @@ func assertSignaturesEqual(t *testing.T, wanted, got oci.Signature) {
 	}
 }
 
-func TestSignatureAnnotations(t *testing.T) {
-	payload := "this is the TestSignatureAnnotations content!"
+func TestSignatureWithAnnotations(t *testing.T) {
+	payload := "this is the TestSignatureWithAnnotations content!"
 	b64sig := "b64 content1="
 	annotations := map[string]string{
 		"foo":  "bar",
@@ -198,16 +198,16 @@ func TestSignatureAnnotations(t *testing.T) {
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithAnnotations(annotations))
 
-	newSig, err := SignatureAnnotations(originalSig, annotations)
+	newSig, err := Signature(originalSig, WithAnnotations(annotations))
 	if err != nil {
-		t.Fatalf("SignatureAnnotations() returned error: %v", err)
+		t.Fatalf("Signature(WithAnnotations()) returned error: %v", err)
 	}
 
 	assertSignaturesEqual(t, expectedSig, newSig)
 }
 
-func TestSignatureBundle(t *testing.T) {
-	payload := "this is the TestSignatureBundle content!"
+func TestSignatureWithBundle(t *testing.T) {
+	payload := "this is the TestSignatureWithBundle content!"
 	b64sig := "b64 content2="
 	bundle := &oci.Bundle{
 		SignedEntryTimestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
@@ -221,44 +221,47 @@ func TestSignatureBundle(t *testing.T) {
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithBundle(bundle))
 
-	newSig, err := SignatureBundle(originalSig, bundle)
+	newSig, err := Signature(originalSig, WithBundle(bundle))
 	if err != nil {
-		t.Fatalf("SignatureBundle() returned error: %v", err)
+		t.Fatalf("Signature(WithBundle()) returned error: %v", err)
 	}
 
 	assertSignaturesEqual(t, expectedSig, newSig)
 }
 
-func TestSignatureCertAndChain(t *testing.T) {
-	payload := "this is the TestSignatureCertAndChain content!"
+func TestSignatureWithCertChain(t *testing.T) {
+	payload := "this is the TestSignatureWithCertChain content!"
 	b64sig := "b64 content3="
 
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithCertChain(testCertBytes, testChainBytes))
 
-	newSig, err := SignatureCertAndChain(originalSig, testCertBytes, testChainBytes)
+	newSig, err := Signature(originalSig, WithCertChain(testCertBytes, testChainBytes))
 	if err != nil {
-		t.Fatalf("SignatureCertAndChain() returned error: %v", err)
+		t.Fatalf("Signature(WithCertChain()) returned error: %v", err)
 	}
 
 	assertSignaturesEqual(t, expectedSig, newSig)
 }
 
-func TestSignatureMediaType(t *testing.T) {
-	payload := "this is the TestSignatureMediaType content!"
+func TestSignatureWithMediaType(t *testing.T) {
+	payload := "this is the TestSignatureWithMediaType content!"
 	b64sig := "b64 content4="
 	mediaType := types.MediaType("test/media.type")
 
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithLayerMediaType(mediaType))
 
-	newSig := SignatureMediaType(originalSig, mediaType)
+	newSig, err := Signature(originalSig, WithMediaType(mediaType))
+	if err != nil {
+		t.Fatalf("Signature(WithMediaType()) returned error: %v", err)
+	}
 
 	assertSignaturesEqual(t, expectedSig, newSig)
 }
 
-func TestSignatureMutateEverything(t *testing.T) {
-	payload := "this is the TestSignatureMutateEverything content!"
+func TestSignatureWithEverything(t *testing.T) {
+	payload := "this is the TestSignatureWithEverything content!"
 	b64sig := "b64 content5="
 	annotations := map[string]string{
 		"foo":  "bar",
@@ -282,19 +285,14 @@ func TestSignatureMutateEverything(t *testing.T) {
 		static.WithCertChain(testCertBytes, testChainBytes),
 		static.WithLayerMediaType(mediaType))
 
-	newSig, err := SignatureAnnotations(originalSig, annotations)
+	newSig, err := Signature(originalSig,
+		WithAnnotations(annotations),
+		WithBundle(bundle),
+		WithCertChain(testCertBytes, testChainBytes),
+		WithMediaType(mediaType))
 	if err != nil {
-		t.Fatalf("SignatureAnnotations() returned error: %v", err)
+		t.Fatalf("Signature(With...) returned error: %v", err)
 	}
-	newSig, err = SignatureBundle(newSig, bundle)
-	if err != nil {
-		t.Fatalf("SignatureBundle() returned error: %v", err)
-	}
-	newSig, err = SignatureCertAndChain(newSig, testCertBytes, testChainBytes)
-	if err != nil {
-		t.Fatalf("SignatureCertAndChain() returned error: %v", err)
-	}
-	newSig = SignatureMediaType(newSig, mediaType)
 
 	assertSignaturesEqual(t, expectedSig, newSig)
 }

@@ -124,70 +124,68 @@ func (sw *sigWrapper) Size() (int64, error) {
 	return sw.wrapped.Size()
 }
 
-// SignatureAnnotations returns a new `oci.Signature` based on the provided one
-func SignatureAnnotations(sig oci.Signature, newAnnotations map[string]string) (oci.Signature, error) {
-	newAnnotations = copyAnnotations(newAnnotations)
-	oldAnnotations, err := sig.Annotations()
+func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, error) {
+	newSig := sigWrapper{wrapped: original}
+
+	so := makeSignatureOption(opts...)
+	oldAnn, err := original.Annotations()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get annotations from signature to mutate")
 	}
-	newAnnotations[static.SignatureAnnotationKey] = oldAnnotations[static.SignatureAnnotationKey]
-	for _, key := range []string{static.BundleAnnotationKey, static.CertificateAnnotationKey, static.ChainAnnotationKey} {
-		if val, isSet := oldAnnotations[key]; isSet {
-			newAnnotations[key] = val
-		} else {
-			delete(newAnnotations, key)
+
+	var newAnn map[string]string
+	if so.annotations != nil {
+		newAnn = copyAnnotations(so.annotations)
+		newAnn[static.SignatureAnnotationKey] = oldAnn[static.SignatureAnnotationKey]
+		for _, key := range []string{static.BundleAnnotationKey, static.CertificateAnnotationKey, static.ChainAnnotationKey} {
+			if val, isSet := oldAnn[key]; isSet {
+				newAnn[key] = val
+			} else {
+				delete(newAnn, key)
+			}
 		}
+	} else {
+		newAnn = copyAnnotations(oldAnn)
 	}
 
-	return &sigWrapper{wrapped: sig, annotations: newAnnotations}, nil
-}
-
-func SignatureBundle(sig oci.Signature, newBundle *oci.Bundle) (oci.Signature, error) {
-	annotations, err := sig.Annotations()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get annotations from signature to mutate")
-	}
-	delete(annotations, static.BundleAnnotationKey)
-	if newBundle != nil {
-		b, err := json.Marshal(newBundle)
+	if so.bundle != nil {
+		newSig.bundle = so.bundle
+		b, err := json.Marshal(so.bundle)
 		if err != nil {
 			return nil, err
 		}
-		annotations[static.BundleAnnotationKey] = string(b)
+		newAnn[static.BundleAnnotationKey] = string(b)
 	}
-	return &sigWrapper{wrapped: sig, bundle: newBundle, annotations: annotations}, nil
-}
 
-func SignatureCertAndChain(sig oci.Signature, newCert, newChain []byte) (oci.Signature, error) {
-	var cert *x509.Certificate
-	var chain []*x509.Certificate
-	var err error
-	annotations, err := sig.Annotations()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get annotations from signature to mutate")
-	}
-	delete(annotations, static.CertificateAnnotationKey)
-	delete(annotations, static.ChainAnnotationKey)
-	if newCert != nil {
-		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(newCert))
+	if so.cert != nil {
+		var cert *x509.Certificate
+		var chain []*x509.Certificate
+
+		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(so.cert))
 		if err != nil {
 			return nil, err
 		}
-		annotations[static.CertificateAnnotationKey] = string(newCert)
+		newAnn[static.CertificateAnnotationKey] = string(so.cert)
 		cert = certs[0]
-	}
-	if newChain != nil {
-		chain, err = cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(newChain))
-		if err != nil {
-			return nil, err
+
+		delete(newAnn, static.ChainAnnotationKey)
+		if so.chain != nil {
+			chain, err = cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(so.chain))
+			if err != nil {
+				return nil, err
+			}
+			newAnn[static.ChainAnnotationKey] = string(so.chain)
 		}
-		annotations[static.ChainAnnotationKey] = string(newChain)
+
+		newSig.cert = cert
+		newSig.chain = chain
 	}
 
-	return &sigWrapper{wrapped: sig, cert: cert, chain: chain, annotations: annotations}, nil
-}
+	if so.mediaType != "" {
+		newSig.mediaType = so.mediaType
+	}
 
-func SignatureMediaType(sig oci.Signature, newMT types.MediaType) oci.Signature {
-	return &sigWrapper{wrapped: sig, mediaType: newMT}
+	newSig.annotations = newAnn
+
+	return &newSig, nil
 }

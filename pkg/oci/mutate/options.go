@@ -15,7 +15,10 @@
 
 package mutate
 
-import "github.com/sigstore/cosign/pkg/oci"
+import (
+	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/pkg/oci"
+)
 
 // DupeDetector scans a list of signatures looking for a duplicate.
 type DupeDetector interface {
@@ -53,4 +56,47 @@ func WithReplaceOp(ro ReplaceOp) SignOption {
 	return func(so *signOpts) {
 		so.ro = ro
 	}
+}
+
+type signatureOpts struct {
+	annotations map[string]string
+	bundle      *oci.Bundle
+	cert        []byte
+	chain       []byte
+	mediaType   types.MediaType
+}
+
+type SignatureOption func(*signatureOpts)
+
+func WithAnnotations(annotations map[string]string) SignatureOption {
+	return func(so *signatureOpts) {
+		so.annotations = annotations
+	}
+}
+
+func WithBundle(bundle *oci.Bundle) SignatureOption {
+	return func(so *signatureOpts) {
+		so.bundle = bundle
+	}
+}
+
+func WithCertChain(cert, chain []byte) SignatureOption {
+	return func(so *signatureOpts) {
+		so.cert = cert
+		so.chain = chain
+	}
+}
+
+func WithMediaType(mediaType types.MediaType) SignatureOption {
+	return func(so *signatureOpts) {
+		so.mediaType = mediaType
+	}
+}
+
+func makeSignatureOption(opts ...SignatureOption) *signatureOpts {
+	so := &signatureOpts{}
+	for _, opt := range opts {
+		opt(so)
+	}
+	return so
 }
