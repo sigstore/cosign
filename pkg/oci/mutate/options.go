@@ -68,18 +68,21 @@ type signatureOpts struct {
 
 type SignatureOption func(*signatureOpts)
 
+// WithAnnotations specifies the annotations the Signature should have.
 func WithAnnotations(annotations map[string]string) SignatureOption {
 	return func(so *signatureOpts) {
 		so.annotations = annotations
 	}
 }
 
+// WithBundle specifies the new Bundle the Signature should have.
 func WithBundle(bundle *oci.Bundle) SignatureOption {
 	return func(so *signatureOpts) {
 		so.bundle = bundle
 	}
 }
 
+// WithCertChain specifies the new cert and chain the Signature should have.
 func WithCertChain(cert, chain []byte) SignatureOption {
 	return func(so *signatureOpts) {
 		so.cert = cert
@@ -87,6 +90,7 @@ func WithCertChain(cert, chain []byte) SignatureOption {
 	}
 }
 
+// WithMediaType specifies the new MediaType the Signature should have.
 func WithMediaType(mediaType types.MediaType) SignatureOption {
 	return func(so *signatureOpts) {
 		so.mediaType = mediaType
