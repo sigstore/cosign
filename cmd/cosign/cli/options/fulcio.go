@@ -16,7 +16,6 @@
 package options
 
 import (
-	fulcioclient "github.com/sigstore/fulcio/pkg/client"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +30,8 @@ var _ Interface = (*FulcioOptions)(nil)
 
 // AddFlags implements Interface
 func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.URL, "fulcio-url", fulcioclient.SigstorePublicServerURL,
+	// TODO: change this back to api.SigstorePublicServerURL after the v1 migration is complete.
+	cmd.Flags().StringVar(&o.URL, "fulcio-url", "https://v1.fulcio.sigstore.dev",
 		"[EXPERIMENTAL] address of sigstore PKI server")
 
 	cmd.Flags().StringVar(&o.IdentityToken, "identity-token", "",

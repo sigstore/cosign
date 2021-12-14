@@ -46,8 +46,15 @@ against the transparency log.`,
   # (experimental) additionally, verify with the transparency log
   COSIGN_EXPERIMENTAL=1 cosign verify <IMAGE>
 
-  # verify image with public key
+  # verify image with an on-disk public key
   cosign verify --key cosign.pub <IMAGE>
+
+  # verify image with an on-disk public key, manually specifying the
+  # signature digest algorithm
+  cosign verify --key cosign.pub --signature-digest-algorithm sha512 <IMAGE>
+
+  # verify image with an on-disk signed image from 'cosign save'
+  cosign verify --key cosign.pub --local-image <PATH>
 
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
@@ -73,10 +80,17 @@ against the transparency log.`,
 			if err != nil {
 				return err
 			}
+
+			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
+			if err != nil {
+				return err
+			}
+
 			v := verify.VerifyCommand{
 				RegistryOptions: o.Registry,
 				CheckClaims:     o.CheckClaims,
 				KeyRef:          o.Key,
+				CertRef:         o.Cert,
 				CertEmail:       o.CertEmail,
 				Sk:              o.SecurityKey.Use,
 				Slot:            o.SecurityKey.Slot,
@@ -84,7 +98,11 @@ against the transparency log.`,
 				RekorURL:        o.Rekor.URL,
 				Attachment:      o.Attachment,
 				Annotations:     annotations,
+				HashAlgorithm:   hashAlgorithm,
+				SignatureRef:    o.SignatureRef,
+				LocalImage:      o.LocalImage,
 			}
+
 			return v.Exec(cmd.Context(), args)
 		},
 	}
@@ -118,6 +136,9 @@ against the transparency log.`,
   # verify image with public key
   cosign verify-attestation --key cosign.pub <IMAGE>
 
+  # verify image attestations with an on-disk signed image from 'cosign save'
+  cosign verify-attestation --key cosign.pub --local-image <PATH>
+
   # verify image with public key provided by URL
   cosign verify-attestation --key https://host.for/<FILE> <IMAGE>
 
@@ -146,6 +167,7 @@ against the transparency log.`,
 				FulcioURL:       o.Fulcio.URL,
 				PredicateType:   o.Predicate.Type,
 				Policies:        o.Policies,
+				LocalImage:      o.LocalImage,
 			}
 			return v.Exec(cmd.Context(), args)
 		},

@@ -29,13 +29,16 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -43,9 +46,52 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// TODO(dekkagaijin): remove this in favor of a function in pkg which handles both signatures and attestations
+func bundle(entry *models.LogEntryAnon) *oci.Bundle {
+	if entry.Verification == nil {
+		return nil
+	}
+	return &oci.Bundle{
+		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
+		Payload: oci.BundlePayload{
+			Body:           entry.Body,
+			IntegratedTime: *entry.IntegratedTime,
+			LogIndex:       *entry.LogIndex,
+			LogID:          *entry.LogID,
+		},
+	}
+}
+
+type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
+
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*oci.Bundle, error) {
+	var rekorBytes []byte
+	// Upload the cert or the public key, depending on what we have
+	if sv.Cert != nil {
+		rekorBytes = sv.Cert
+	} else {
+		pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
+		if err != nil {
+			return nil, err
+		}
+		rekorBytes = pemBytes
+	}
+
+	rekorClient, err := rekor.NewClient(rekorURL)
+	if err != nil {
+		return nil, err
+	}
+	entry, err := upload(rekorClient, rekorBytes)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+	return bundle(entry), nil
+}
+
 //nolint
 func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string,
-	noUpload bool, predicatePath string, force bool, predicateType string, timeout time.Duration) error {
+	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -65,6 +111,12 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return errors.Wrap(err, "parsing reference")
+	}
+
+	if timeout != 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+		defer cancelFn()
 	}
 
 	ociremoteOpts, err := regOpts.ClientOpts(ctx)
@@ -126,11 +178,9 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	}
 
 	// Check whether we should be uploading to the transparency log
-	if uploadTLog, err := sign.ShouldUploadToTlog(digest, force, ko.RekorURL); err != nil {
-		return err
-	} else if uploadTLog {
-		bundle, err := sign.UploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUploadInTotoAttestation(r, signedPayload, b, timeout)
+	if sign.ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
+		bundle, err := uploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})
 		if err != nil {
 			return err
@@ -148,8 +198,17 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return err
 	}
 
+	signOpts := []mutate.SignOption{
+		mutate.WithDupeDetector(dd),
+	}
+
+	if replace {
+		ro := cremote.NewReplaceOp(predicateURI)
+		signOpts = append(signOpts, mutate.WithReplaceOp(ro))
+	}
+
 	// Attach the attestation to the entity.
-	newSE, err := mutate.AttachAttestationToEntity(se, sig, mutate.WithDupeDetector(dd))
+	newSE, err := mutate.AttachAttestationToEntity(se, sig, signOpts...)
 	if err != nil {
 		return err
 	}

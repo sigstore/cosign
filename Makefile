@@ -20,6 +20,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+GOFILES ?= $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+
 # Set version variables for LDFLAGS
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
@@ -55,14 +57,33 @@ export KO_DOCKER_REPO=$(KO_PREFIX)
 .PHONY: all lint test clean cosign cross
 all: cosign
 
+log-%:
+	@grep -h -E '^$*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk \
+			'BEGIN { \
+				FS = ":.*?## " \
+			}; \
+			{ \
+				printf "\033[36m==> %s\033[0m\n", $$2 \
+			}'
+
+.PHONY: checkfmt
+checkfmt: SHELL := /usr/bin/env bash
+checkfmt: ## Check formatting of all go files
+	@ $(MAKE) --no-print-directory log-$@
+ 	$(shell test -z "$(shell gofmt -l $(GOFILES) | tee /dev/stderr)")
+ 	$(shell test -z "$(shell goimports -l $(GOFILES) | tee /dev/stderr)")
+
+.PHONY: fmt
+fmt: ## Format all go files
+	@ $(MAKE) --no-print-directory log-$@
+	goimports -w $(GOFILES)
+
 cosign: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
 
-cosign-pivkey: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pivkey -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
-
-cosign-pkcs11key: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
+cosign-pivkey-pkcs11key: $(SRCS)
+	CGO_ENABLED=1 go build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
 .PHONY: cosigned
 cosigned: ## Build cosigned binary
@@ -141,3 +162,11 @@ help: # Display help
 
 include release/release.mk
 include test/ci.mk
+
+##########################
+# Documentation generation
+##########################
+
+.PHONY: docgen
+docgen:
+	go run -tags pivkey,pkcs11key,cgo ./cmd/help/

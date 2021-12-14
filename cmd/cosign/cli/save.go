@@ -1,0 +1,75 @@
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cli
+
+import (
+	"context"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/oci/layout"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/spf13/cobra"
+)
+
+func Save() *cobra.Command {
+	o := &options.SaveOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "save",
+		Short:   "Save the container image and associated signatures to disk at the specified directory.",
+		Long:    "Save the container image and associated signatures to disk at the specified directory.",
+		Example: `  cosign save --dir <path to directory> <IMAGE>`,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return SaveCmd(cmd.Context(), *o, args[0])
+		},
+	}
+
+	o.AddFlags(cmd)
+	return cmd
+}
+
+func SaveCmd(ctx context.Context, opts options.SaveOptions, imageRef string) error {
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return errors.Wrapf(err, "parsing image name %s", imageRef)
+	}
+
+	se, err := ociremote.SignedEntity(ref)
+	if err != nil {
+		return errors.Wrap(err, "signed entity")
+	}
+
+	if _, ok := se.(oci.SignedImage); ok {
+		si, err := ociremote.SignedImage(ref)
+		if err != nil {
+			return errors.Wrap(err, "getting signed image")
+		}
+		return layout.WriteSignedImage(opts.Directory, si)
+	}
+
+	if _, ok := se.(oci.SignedImageIndex); ok {
+		sii, err := ociremote.SignedImageIndex(ref)
+		if err != nil {
+			return errors.Wrap(err, "getting signed image index")
+		}
+		return layout.WriteSignedImageIndex(opts.Directory, sii)
+	}
+	return errors.New("unknown signed entity")
+}

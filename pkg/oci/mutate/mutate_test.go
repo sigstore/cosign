@@ -16,8 +16,10 @@
 package mutate
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -160,6 +162,39 @@ func TestSignEntity(t *testing.T) {
 		t.Fatalf("random.Index() = %v", err)
 	}
 	sii := signed.ImageIndex(ii)
+
+	t.Run("attach SBOMs", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii} {
+			want := make([]byte, 300)
+			rand.Read(want)
+
+			orig, err := static.NewFile(want)
+			if err != nil {
+				t.Fatalf("static.NewFile() = %v", err)
+			}
+			se, err = AttachFileToEntity(se, "sbom", orig)
+			if err != nil {
+				t.Fatalf("AttachFileToEntity() = %v", err)
+			}
+
+			f, err := se.Attachment("sbom")
+			if err != nil {
+				t.Fatalf("Attachment(sbom) = %v", err)
+			}
+			got, err := f.Payload()
+			if err != nil {
+				t.Fatalf("Payload() = %v", err)
+			}
+			if !reflect.DeepEqual(want, got) {
+				t.Errorf("Payload() = %v, wanted %v", got, want)
+			}
+
+			f, err = se.Attachment("gitbom")
+			if err == nil {
+				t.Errorf("Attachment(gitbom) = %T, wanted error", f)
+			}
+		}
+	})
 
 	t.Run("without duplicate detector (signature)", func(t *testing.T) {
 		for _, se := range []oci.SignedEntity{si, sii} {

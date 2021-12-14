@@ -4,11 +4,15 @@ env:
   - GO111MODULE=on
   - CGO_ENABLED=1
   - DOCKER_CLI_EXPERIMENTAL=enabled
+  - COSIGN_EXPERIMENTAL=true
 
 # Prevents parallel builds from stepping on each others toes downloading modules
 before:
   hooks:
   - go mod tidy
+
+gomod:
+  proxy: true
 
 builds:
 - id: linux
@@ -27,14 +31,14 @@ builds:
     - s390x
     - ppc64le
   goarm:
-    - 7
+    - '7'
   ldflags:
     - "{{ .Env.LDFLAGS }}"
   env:
     - CGO_ENABLED=0
 
-- id: linux-pivkey-amd64
-  binary: cosign-linux-pivkey-amd64
+- id: linux-pivkey-pkcs11key-amd64
+  binary: cosign-linux-pivkey-pkcs11key-amd64
   main: ./cmd/cosign
   flags:
     - -trimpath
@@ -47,27 +51,13 @@ builds:
     - "{{ .Env.LDFLAGS }}"
   tags:
     - pivkey
+    - pkcs11key
   hooks:
     pre:
       - apt-get update
       - apt-get -y install libpcsclite-dev
   env:
     - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
-
-- id: linux-pkcs11key-amd64
-  binary: cosign-linux-pkcs11key-amd64
-  main: ./cmd/cosign
-  flags:
-    - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  goos:
-    - linux
-  goarch:
-    - amd64
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  tags:
-    - pkcs11key
 
 - id: darwin-amd64
   binary: cosign-darwin-amd64
@@ -87,6 +77,7 @@ builds:
     - "{{ .Env.LDFLAGS }}"
   tags:
     - pivkey
+    - pkcs11key
 
 - id: darwin-arm64
   binary: cosign-darwin-arm64
@@ -103,6 +94,7 @@ builds:
     - arm64
   tags:
     - pivkey
+    - pkcs11key
   ldflags:
     - "{{.Env.LDFLAGS}}"
 
@@ -125,6 +117,7 @@ builds:
     - "{{ .Env.LDFLAGS }}"
   tags:
     - pivkey
+    - pkcs11key
 
 - id: linux-cosigned
   binary: cosigned-linux-{{ .Arch }}
@@ -185,19 +178,39 @@ signs:
   - id: cosign
     signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
   - id: cosigned
     signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
     ids:
       - linux-cosigned
   - id: sget
     signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    artifacts: binary
+    ids:
+      - sget
+  # Keyless
+  - id: cosign-keyless
+    signature: "${artifact}-keyless.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
+    artifacts: binary
+  - id: cosigned-keyless
+    signature: "${artifact}-keyless.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
+    artifacts: binary
+    ids:
+      - linux-cosigned
+  - id: sget-keyless
+    signature: "${artifact}-keyless.sig"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
     artifacts: binary
     ids:
       - sget
@@ -224,3 +237,15 @@ release:
 
   extra_files:
     - glob: "./release/release-cosign.pub"
+
+rigs:
+  - rig:
+      owner: sigstore
+      name: fish-food
+    commit_author:
+      name: sigstore-bot
+      email: 86837369+sigstore-bot@users.noreply.github.com
+    homepage: https://sigstore.dev
+    description: Container Signing, Verification and Storage in an OCI registry.
+    license: "Apache License 2.0"
+

@@ -32,10 +32,10 @@ func Clean() *cobra.Command {
 	o := &options.RegistryOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "clean",
-		Short: "Remove all signatures from an image.\ncosign clean <image uri>",
-		Long:  "Remove all signatures from an image.",
-		Args:  cobra.ExactArgs(1),
+		Use:     "clean",
+		Short:   "Remove all signatures from an image.",
+		Example: "  cosign clean <IMAGE>",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return CleanCmd(cmd.Context(), *o, args[0])
 		},

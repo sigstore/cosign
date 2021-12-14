@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"knative.dev/pkg/kmeta"
 )
 
 const (
@@ -66,9 +65,12 @@ var _ oci.Signature = (*staticLayer)(nil)
 
 // Annotations implements oci.Signature
 func (l *staticLayer) Annotations() (map[string]string, error) {
-	return kmeta.UnionMaps(l.opts.Annotations, map[string]string{
-		SignatureAnnotationKey: l.b64sig,
-	}), nil
+	m := make(map[string]string, len(l.opts.Annotations)+1)
+	for k, v := range l.opts.Annotations {
+		m[k] = v
+	}
+	m[SignatureAnnotationKey] = l.b64sig
+	return m, nil
 }
 
 // Payload implements oci.Signature

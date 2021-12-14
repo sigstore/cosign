@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 )
@@ -135,7 +137,7 @@ func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (i
 }
 
 func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var predicate in_toto.ProvenancePredicate
+	var predicate slsa.ProvenancePredicate
 	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
 	if err != nil {
 		return nil, fmt.Errorf("provenance predicate: %w", err)
@@ -145,7 +147,7 @@ func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo stri
 		return "", errors.Wrap(err, "unmarshal Provenance predicate")
 	}
 	return in_toto.ProvenanceStatement{
-		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateSLSAProvenanceV01),
+		StatementHeader: generateStatementHeader(digest, repo, slsa.PredicateSLSAProvenance),
 		Predicate:       predicate,
 	}, nil
 }

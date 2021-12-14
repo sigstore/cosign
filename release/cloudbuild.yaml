@@ -29,8 +29,8 @@ steps:
   - '-c'
   - |
     git fetch
-    echo "Checking out ${_TOOL_REF}"
-    git checkout ${_TOOL_REF}
+    echo "Checking out ${_GIT_TAG}"
+    git checkout ${_GIT_TAG}
 
 - name: 'gcr.io/projectsigstore/cosign:v1.3.1@sha256:3cd9b3a866579dc2e0cf2fdea547f4c9a27139276cc373165c26842bc594b8bd'
   dir: "go/src/sigstore/cosign"
@@ -38,10 +38,10 @@ steps:
   - 'verify'
   - '--key'
   - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -53,15 +53,16 @@ steps:
   - KEY_NAME=${_KEY_NAME}
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
+  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+  - COSIGN_EXPERIMENTAL=true
   secretEnv:
   - GITHUB_TOKEN
   args:
     - '-c'
     - |
-      git tag ${_GIT_TAG}
       make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803
   entrypoint: 'bash'
   dir: "go/src/sigstore/cosign"
   env:
@@ -74,13 +75,16 @@ steps:
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   - KO_PREFIX=gcr.io/${PROJECT_ID}
+  - COSIGN_EXPERIMENTAL=true
+  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
   secretEnv:
   - GITHUB_TOKEN
   args:
-    - '-c'
-    - |
-      gcloud auth configure-docker \
-      && make sign-container-release
+  - '-c'
+  - |
+    gcloud auth configure-docker \
+    && make sign-container-release \
+    && make sign-keyless-release
 
 availableSecrets:
   secretManager:
@@ -102,13 +106,11 @@ tags:
 - ${_GIT_TAG}
 - ${_TOOL_ORG}
 - ${_TOOL_REPO}
-- ${_TOOL_REF}
 
 substitutions:
   _GIT_TAG: 'v1.23.45'
   _TOOL_ORG: 'honk'
   _TOOL_REPO: 'honk-repo'
-  _TOOL_REF: 'release-honk'
   _STORAGE_LOCATION: 'honk'
   _KEY_RING: 'honk-ring'
   _KEY_NAME: 'honk-crypto'

@@ -28,9 +28,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/signature"
-	rekorClient "github.com/sigstore/rekor/pkg/client"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -52,9 +51,10 @@ type KeyOpts struct {
 }
 
 // nolint
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, output string, timeout time.Duration) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, timeout time.Duration) ([]byte, error) {
 	var payload []byte
 	var err error
+	var rekorBytes []byte
 
 	if payloadPath == "-" {
 		payload, err = io.ReadAll(os.Stdin)
@@ -64,6 +64,11 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	}
 	if err != nil {
 		return nil, err
+	}
+	if timeout != 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+		defer cancelFn()
 	}
 
 	sv, err := SignerFromKeyOpts(ctx, "", ko)
@@ -78,49 +83,31 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	}
 
 	if options.EnableExperimental() {
-		// TODO: Refactor with sign.go
-		var rekorBytes []byte
-		if sv.Cert != nil {
-			fmt.Fprintf(os.Stderr, "signing with ephemeral certificate:\n%s\n", string(sv.Cert))
-			rekorBytes = sv.Cert
-		} else {
-			pemBytes, err := signature.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-			if err != nil {
-				return nil, err
-			}
-			rekorBytes = pemBytes
-		}
-		rekorClient, err := rekorClient.GetRekorClient(ko.RekorURL)
+		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
 			return nil, err
 		}
-		entry, err := cosign.TLogUpload(rekorClient, sig, payload, rekorBytes, timeout)
+		rekorClient, err := rekor.NewClient(ko.RekorURL)
+		if err != nil {
+			return nil, err
+		}
+		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 	}
 
-	if output != "" {
-		f, err := os.Create(output)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-
+	if outputSignature != "" {
+		var bts = sig
 		if b64 {
-			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(sig)))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			_, err = f.Write(sig)
-			if err != nil {
-				return nil, err
-			}
+			bts = []byte(base64.StdEncoding.EncodeToString(sig))
+		}
+		if err := os.WriteFile(outputSignature, bts, 0600); err != nil {
+			return nil, errors.Wrap(err, "create signature file")
 		}
 
-		fmt.Printf("Signature wrote in the file %s\n", f.Name())
+		fmt.Printf("Signature wrote in the file %s\n", outputSignature)
 	} else {
 		if b64 {
 			sig = []byte(base64.StdEncoding.EncodeToString(sig))
@@ -129,6 +116,17 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 			// No newline if using the raw signature
 			return nil, err
 		}
+	}
+
+	if outputCertificate != "" && len(rekorBytes) > 0 {
+		bts := rekorBytes
+		if b64 {
+			bts = []byte(base64.StdEncoding.EncodeToString(rekorBytes))
+		}
+		if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
+			return nil, errors.Wrap(err, "create certificate file")
+		}
+		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}
 
 	return sig, nil

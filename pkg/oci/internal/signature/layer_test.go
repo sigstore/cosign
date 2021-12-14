@@ -13,22 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package remote
+package signature
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/oci"
-	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
 )
+
+func mustDecode(s string) []byte {
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err.Error())
+	}
+	return b
+}
 
 func TestSignature(t *testing.T) {
 	layer, err := random.Layer(300 /* byteSize */, types.DockerLayer)
@@ -55,9 +62,7 @@ func TestSignature(t *testing.T) {
 	}{{
 		name: "just payload and signature",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
@@ -69,9 +74,7 @@ func TestSignature(t *testing.T) {
 	}, {
 		name: "with empty other keys",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
@@ -84,26 +87,9 @@ func TestSignature(t *testing.T) {
 		},
 		wantSig: "blah",
 	}, {
-		name: "bad digest",
-		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
-			desc: v1.Descriptor{
-				Digest: v1.Hash{Algorithm: "bad", Hex: "f00d"},
-				Annotations: map[string]string{
-					sigkey: "blah",
-				},
-			},
-		},
-		wantPayloadErr: errors.New("unknown blob bad:f00d"),
-		wantSig:        "blah",
-	}, {
 		name: "missing signature",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 			},
@@ -112,9 +98,7 @@ func TestSignature(t *testing.T) {
 	}, {
 		name: "min plus bad bundle",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
@@ -128,9 +112,7 @@ func TestSignature(t *testing.T) {
 	}, {
 		name: "min plus bad cert",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
@@ -144,9 +126,7 @@ func TestSignature(t *testing.T) {
 	}, {
 		name: "min plus bad chain",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
@@ -160,9 +140,7 @@ func TestSignature(t *testing.T) {
 	}, {
 		name: "min plus bundle",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
@@ -186,9 +164,7 @@ func TestSignature(t *testing.T) {
 	}, {
 		name: "min plus good cert",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
@@ -220,9 +196,7 @@ uThR1Z6JuA21HwxtL3GyJ8UQZcEPOlTBV593HrSAwBhiCoY=
 	}, {
 		name: "min plus bad chain",
 		l: &sigLayer{
-			img: &sigs{
-				Image: must(mutate.Append(ociempty.Signatures(), mutate.Addendum{Layer: layer})),
-			},
+			Layer: layer,
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{

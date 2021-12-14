@@ -22,7 +22,7 @@ cosign sign [flags]
   cosign sign --key cosign.key <IMAGE>
 
   # sign a multi-arch container image AND all referenced, discrete images
-  cosign sign --key cosign.key --r <MULTI-ARCH IMAGE>
+  cosign sign --key cosign.key --recursive <MULTI-ARCH IMAGE>
 
   # sign a container image and add annotations
   cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE>
@@ -55,7 +55,7 @@ cosign sign [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --cert string                                                                              path to the x509 certificate to include in the Signature
   -f, --force                                                                                    skip warnings and confirmations
-      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://v1.fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
@@ -64,6 +64,8 @@ cosign sign [flags]
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
       --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
+      --output-certificate string                                                                write the certificate to FILE
+      --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")

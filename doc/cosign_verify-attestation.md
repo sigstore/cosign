@@ -31,6 +31,9 @@ cosign verify-attestation [flags]
   # verify image with public key
   cosign verify-attestation --key cosign.pub <IMAGE>
 
+  # verify image attestations with an on-disk signed image from 'cosign save'
+  cosign verify-attestation --key cosign.pub --local-image <PATH>
+
   # verify image with public key provided by URL
   cosign verify-attestation --key https://host.for/<FILE> <IMAGE>
 
@@ -53,12 +56,13 @@ cosign verify-attestation [flags]
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --check-claims                                                                             whether to check the claims found (default true)
-      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://v1.fulcio.sigstore.dev")
   -h, --help                                                                                     help for verify-attestation
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
+      --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files will be using for validation
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
