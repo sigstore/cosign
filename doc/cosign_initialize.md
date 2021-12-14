@@ -7,9 +7,8 @@ Initializes SigStore root to retrieve trusted certificate and key targets for ve
 Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
 The following options are used by default:
-	- The current trusted Sigstore TUF root is embedded inside cosign at the time of release.
-	- SigStore remote TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
-	- A default threshold of 3 root signatures is used.
+ - The current trusted Sigstore TUF root is embedded inside cosign at the time of release.
+ - SigStore remote TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
 
 To provide an out-of-band trusted initial root.json, use the -root flag with a file or URL reference.
 This will enable you to point cosign to a separate TUF root.
@@ -44,7 +43,6 @@ cosign initialize -mirror <url> -root <url>
   -h, --help            help for initialize
       --mirror string   GCS bucket to a SigStore TUF repository or HTTP(S) base URL (default "sigstore-tuf-root")
       --root string     path to trusted initial root. defaults to embedded root
-      --upload int      threshold of root key signers (default 3)
 ```
 
 ### Options inherited from parent commands
