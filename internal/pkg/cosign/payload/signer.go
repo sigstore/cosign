@@ -38,20 +38,7 @@ var _ cosign.Signer = (*payloadSigner)(nil)
 
 // Sign implements `Signer`
 func (ps *payloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
-	payloadBytes, err := io.ReadAll(payload)
-	if err != nil {
-		return nil, nil, err
-	}
-	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
-	sOpts = append(sOpts, ps.payloadSignerOpts...)
-	sig, err := ps.payloadSigner.SignMessage(bytes.NewReader(payloadBytes), sOpts...)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pkOpts := []signature.PublicKeyOption{signatureoptions.WithContext(ctx)}
-	pkOpts = append(pkOpts, ps.publicKeyProviderOpts...)
-	pk, err := ps.payloadSigner.PublicKey(pkOpts...)
+	payloadBytes, sig, pk, err := ps.signPayload(ctx, payload)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,13 +52,43 @@ func (ps *payloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	return ociSig, pk, nil
 }
 
-// NewSigner returns a `cosign.Signer` uses the given `signature.Signer` to sign the requested payload, then returns the signature, the public key associated with it, the signed payload
-func NewSigner(s signature.Signer,
+func (ps *payloadSigner) signPayload(ctx context.Context, payload io.Reader) (payloadBytes, sig []byte, pk crypto.PublicKey, err error) {
+	payloadBytes, err = io.ReadAll(payload)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+	sOpts = append(sOpts, ps.payloadSignerOpts...)
+	sig, err = ps.payloadSigner.SignMessage(bytes.NewReader(payloadBytes), sOpts...)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	pkOpts := []signature.PublicKeyOption{signatureoptions.WithContext(ctx)}
+	pkOpts = append(pkOpts, ps.publicKeyProviderOpts...)
+	pk, err = ps.payloadSigner.PublicKey(pkOpts...)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return payloadBytes, sig, pk, nil
+}
+
+func newSigner(s signature.Signer,
 	sOpts []signature.SignOption,
-	pkOpts []signature.PublicKeyOption) cosign.Signer {
-	return &payloadSigner{
+	pkOpts []signature.PublicKeyOption) payloadSigner {
+	return payloadSigner{
 		payloadSigner:         s,
 		payloadSignerOpts:     sOpts,
 		publicKeyProviderOpts: pkOpts,
 	}
+}
+
+// NewSigner returns a `cosign.Signer` which uses the given `signature.Signer` to sign requested payloads.
+func NewSigner(s signature.Signer,
+	sOpts []signature.SignOption,
+	pkOpts []signature.PublicKeyOption) cosign.Signer {
+	ps := newSigner(s, sOpts, pkOpts)
+	return &ps
 }
