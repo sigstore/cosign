@@ -58,7 +58,6 @@ func (ps *payloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 }
 
 func (ps *payloadSigner) signPayload(ctx context.Context, payloadBytes []byte) (sig []byte, pk crypto.PublicKey, err error) {
-
 	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
 	sOpts = append(sOpts, ps.payloadSignerOpts...)
 	sig, err = ps.payloadSigner.SignMessage(bytes.NewReader(payloadBytes), sOpts...)
