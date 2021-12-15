@@ -44,9 +44,8 @@ func (pa *payloadAttestor) DSSEAttest(ctx context.Context, payload io.Reader) (o
 	if err != nil {
 		return nil, nil, err
 	}
-	pae := dsse.PAE(pa.payloadType, p)
 
-	pb, sig, pk, err := pa.signPayload(ctx, bytes.NewReader(pae))
+	pb, sig, pk, err := pa.signPayload(ctx, bytes.NewReader(dsse.PAE(pa.payloadType, p)))
 	if err != nil {
 		return nil, nil, err
 	}
