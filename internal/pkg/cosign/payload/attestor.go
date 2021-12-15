@@ -30,8 +30,7 @@ import (
 )
 
 type payloadAttestor struct {
-	payloadSigner
-
+	signer      payloadSigner
 	payloadType string
 }
 
@@ -46,7 +45,7 @@ func (pa *payloadAttestor) DSSEAttest(ctx context.Context, payload io.Reader) (o
 
 	pb := dsse.PAE(pa.payloadType, p)
 
-	sig, pk, err := pa.signPayload(ctx, pb)
+	sig, pk, err := pa.signer.signPayload(ctx, pb)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,7 +79,7 @@ func NewDSSEAttestor(payloadType string,
 	s signature.Signer,
 	signAndPublicKeyOptions ...interface{}) cosign.DSSEAttestor {
 	return &payloadAttestor{
-		payloadSigner: newSigner(s, signAndPublicKeyOptions...),
-		payloadType:   payloadType,
+		signer:      newSigner(s, signAndPublicKeyOptions...),
+		payloadType: payloadType,
 	}
 }
