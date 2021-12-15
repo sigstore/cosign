@@ -45,7 +45,11 @@ func (pa *payloadAttestor) DSSEAttest(ctx context.Context, payload io.Reader) (o
 
 	pb := dsse.PAE(pa.payloadType, p)
 
-	sig, pk, err := pa.signer.signPayload(ctx, pb)
+	sig, err := pa.signer.signPayload(ctx, pb)
+	if err != nil {
+		return nil, nil, err
+	}
+	pk, err := pa.signer.publicKey(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
