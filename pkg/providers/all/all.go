@@ -22,6 +22,7 @@ import (
 	_ "github.com/sigstore/cosign/pkg/providers/filesystem"
 	_ "github.com/sigstore/cosign/pkg/providers/github"
 	_ "github.com/sigstore/cosign/pkg/providers/google"
+	_ "github.com/sigstore/cosign/pkg/providers/spiffe"
 )
 
 // Alias these methods, so that folks can import this to get all providers.
