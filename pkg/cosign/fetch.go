@@ -135,7 +135,7 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 		i, att := i, att
 		g.Go(func() (err error) {
 			attestPayload, _ := att.Payload()
-			json.Unmarshal(attestPayload, &attestations[i])
+			err = json.Unmarshal(attestPayload, &attestations[i])
 			if err != nil {
 				return err
 			}
