@@ -25,7 +25,7 @@ import (
 	"github.com/sigstore/cosign/internal/pkg/cosign"
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/static"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -109,33 +109,7 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	opts := []static.Option{static.WithBundle(bundle)}
-
-	// Copy over the other attributes:
-
-	if cert != nil {
-		chain, err := sig.Chain()
-		if err != nil {
-			return nil, nil, err
-		}
-		chainBytes, err := cryptoutils.MarshalCertificatesToPEM(chain)
-		if err != nil {
-			return nil, nil, err
-		}
-		opts = append(opts, static.WithCertChain(rekorBytes, chainBytes))
-	}
-	if annotations, err := sig.Annotations(); err != nil {
-		return nil, nil, err
-	} else if len(annotations) > 0 {
-		opts = append(opts, static.WithAnnotations(annotations))
-	}
-	if mt, err := sig.MediaType(); err != nil {
-		return nil, nil, err
-	} else if mt != "" {
-		opts = append(opts, static.WithLayerMediaType(mt))
-	}
-
-	newSig, err := static.NewSignature(payloadBytes, b64Sig, opts...)
+	newSig, err := mutate.Signature(sig, mutate.WithBundle(bundle))
 	if err != nil {
 		return nil, nil, err
 	}
