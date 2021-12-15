@@ -15,7 +15,6 @@
 package payload
 
 import (
-	"bytes"
 	"context"
 	"crypto"
 	"encoding/base64"
@@ -45,7 +44,9 @@ func (pa *payloadAttestor) DSSEAttest(ctx context.Context, payload io.Reader) (o
 		return nil, nil, err
 	}
 
-	pb, sig, pk, err := pa.signPayload(ctx, bytes.NewReader(dsse.PAE(pa.payloadType, p)))
+	pb := dsse.PAE(pa.payloadType, p)
+
+	sig, pk, err := pa.signPayload(ctx, pb)
 	if err != nil {
 		return nil, nil, err
 	}
