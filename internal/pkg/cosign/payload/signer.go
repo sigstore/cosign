@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/base64"
+	"fmt"
 	"io"
 
 	"github.com/sigstore/cosign/internal/pkg/cosign"
@@ -76,8 +77,21 @@ func (ps *payloadSigner) signPayload(ctx context.Context, payload io.Reader) (pa
 }
 
 func newSigner(s signature.Signer,
-	sOpts []signature.SignOption,
-	pkOpts []signature.PublicKeyOption) payloadSigner {
+	signAndPublicKeyOptions ...interface{}) payloadSigner {
+	var sOpts []signature.SignOption
+	var pkOpts []signature.PublicKeyOption
+
+	for _, opt := range signAndPublicKeyOptions {
+		switch o := opt.(type) {
+		case signature.SignOption:
+			sOpts = append(sOpts, o)
+		case signature.PublicKeyOption:
+			pkOpts = append(pkOpts, o)
+		default:
+			panic(fmt.Sprintf("options must be of type `signature.SignOption` or `signature.PublicKeyOption`. Got a %T: %v", o, o))
+		}
+	}
+
 	return payloadSigner{
 		payloadSigner:         s,
 		payloadSignerOpts:     sOpts,
@@ -86,9 +100,9 @@ func newSigner(s signature.Signer,
 }
 
 // NewSigner returns a `cosign.Signer` which uses the given `signature.Signer` to sign requested payloads.
+// Option types other than `signature.SignOption` and `signature.PublicKeyOption` cause a runtime panic.
 func NewSigner(s signature.Signer,
-	sOpts []signature.SignOption,
-	pkOpts []signature.PublicKeyOption) cosign.Signer {
-	ps := newSigner(s, sOpts, pkOpts)
-	return &ps
+	signAndPublicKeyOptions ...interface{}) cosign.Signer {
+	signer := newSigner(s, signAndPublicKeyOptions...)
+	return &signer
 }

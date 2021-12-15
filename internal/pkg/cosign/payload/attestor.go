@@ -75,12 +75,12 @@ func (pa *payloadAttestor) DSSEAttest(ctx context.Context, payload io.Reader) (o
 }
 
 // NewDSSEAttestor returns a `cosign.DSSEAttestor` which uses the given `signature.Signer` to sign and create a DSSE attestation of given payloads.
+// Option types other than `signature.SignOption` and `signature.PublicKeyOption` cause a runtime panic.
 func NewDSSEAttestor(payloadType string,
 	s signature.Signer,
-	sOpts []signature.SignOption,
-	pkOpts []signature.PublicKeyOption) cosign.DSSEAttestor {
+	signAndPublicKeyOptions ...interface{}) cosign.DSSEAttestor {
 	return &payloadAttestor{
-		payloadSigner: newSigner(s, sOpts, pkOpts),
+		payloadSigner: newSigner(s, signAndPublicKeyOptions...),
 		payloadType:   payloadType,
 	}
 }

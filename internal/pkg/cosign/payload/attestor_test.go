@@ -30,7 +30,7 @@ import (
 
 func TestDSSEAttestor(t *testing.T) {
 	testPayloadType := "atTESTation type"
-	testSigner := NewDSSEAttestor(testPayloadType, mustGetNewSigner(t), nil, nil)
+	testSigner := NewDSSEAttestor(testPayloadType, mustGetNewSigner(t))
 
 	testPayload := "test payload"
 

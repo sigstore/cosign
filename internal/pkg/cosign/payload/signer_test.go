@@ -40,7 +40,7 @@ func mustGetNewSigner(t *testing.T) signature.Signer {
 }
 
 func TestSigner(t *testing.T) {
-	testSigner := NewSigner(mustGetNewSigner(t), nil, nil)
+	testSigner := NewSigner(mustGetNewSigner(t))
 
 	testPayload := "test payload"
 
