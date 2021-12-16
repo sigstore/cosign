@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/base64"
+	"fmt"
 	"io"
 
 	"github.com/sigstore/cosign/internal/pkg/cosign"
@@ -42,16 +43,11 @@ func (ps *payloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	if err != nil {
 		return nil, nil, err
 	}
-	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
-	sOpts = append(sOpts, ps.payloadSignerOpts...)
-	sig, err := ps.payloadSigner.SignMessage(bytes.NewReader(payloadBytes), sOpts...)
+	sig, err := ps.signPayload(ctx, payloadBytes)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	pkOpts := []signature.PublicKeyOption{signatureoptions.WithContext(ctx)}
-	pkOpts = append(pkOpts, ps.publicKeyProviderOpts...)
-	pk, err := ps.payloadSigner.PublicKey(pkOpts...)
+	pk, err := ps.publicKey(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,13 +61,54 @@ func (ps *payloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	return ociSig, pk, nil
 }
 
-// NewSigner returns a `cosign.Signer` uses the given `signature.Signer` to sign the requested payload, then returns the signature, the public key associated with it, the signed payload
-func NewSigner(s signature.Signer,
-	sOpts []signature.SignOption,
-	pkOpts []signature.PublicKeyOption) cosign.Signer {
-	return &payloadSigner{
+func (ps *payloadSigner) publicKey(ctx context.Context) (pk crypto.PublicKey, err error) {
+	pkOpts := []signature.PublicKeyOption{signatureoptions.WithContext(ctx)}
+	pkOpts = append(pkOpts, ps.publicKeyProviderOpts...)
+	pk, err = ps.payloadSigner.PublicKey(pkOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return pk, nil
+}
+
+func (ps *payloadSigner) signPayload(ctx context.Context, payloadBytes []byte) (sig []byte, err error) {
+	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+	sOpts = append(sOpts, ps.payloadSignerOpts...)
+	sig, err = ps.payloadSigner.SignMessage(bytes.NewReader(payloadBytes), sOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return sig, nil
+}
+
+func newSigner(s signature.Signer,
+	signAndPublicKeyOptions ...interface{}) payloadSigner {
+	var sOpts []signature.SignOption
+	var pkOpts []signature.PublicKeyOption
+
+	for _, opt := range signAndPublicKeyOptions {
+		switch o := opt.(type) {
+		case signature.SignOption:
+			sOpts = append(sOpts, o)
+		case signature.PublicKeyOption:
+			pkOpts = append(pkOpts, o)
+		default:
+			panic(fmt.Sprintf("options must be of type `signature.SignOption` or `signature.PublicKeyOption`. Got a %T: %v", o, o))
+		}
+	}
+
+	return payloadSigner{
 		payloadSigner:         s,
 		payloadSignerOpts:     sOpts,
 		publicKeyProviderOpts: pkOpts,
 	}
+}
+
+// NewSigner returns a `cosign.Signer` which uses the given `signature.Signer` to sign requested payloads.
+// Option types other than `signature.SignOption` and `signature.PublicKeyOption` cause a runtime panic.
+func NewSigner(s signature.Signer,
+	signAndPublicKeyOptions ...interface{}) cosign.Signer {
+	signer := newSigner(s, signAndPublicKeyOptions...)
+	return &signer
 }
