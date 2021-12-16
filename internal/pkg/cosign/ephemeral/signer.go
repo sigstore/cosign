@@ -29,14 +29,14 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-type keylessSigner struct {
+type ephemeralSigner struct {
 	signer signature.Signer
 }
 
-var _ icosign.Signer = keylessSigner{}
+var _ icosign.Signer = ephemeralSigner{}
 
 // Sign implements `Signer`
-func (ks keylessSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
+func (ks ephemeralSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	pub, err := ks.signer.PublicKey()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "retrieving the static public key somehow failed")
@@ -71,7 +71,7 @@ func NewSigner() (icosign.Signer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "creating a SignerVerifier from ephemeral key")
 	}
-	return keylessSigner{
+	return ephemeralSigner{
 		signer: s,
 	}, nil
 }
