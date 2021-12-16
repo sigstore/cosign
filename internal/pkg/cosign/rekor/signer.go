@@ -28,23 +28,7 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
-
-func bundle(entry *models.LogEntryAnon) *oci.Bundle {
-	if entry.Verification == nil {
-		return nil
-	}
-	return &oci.Bundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: oci.BundlePayload{
-			Body:           entry.Body,
-			IntegratedTime: *entry.IntegratedTime,
-			LogIndex:       *entry.LogIndex,
-			LogID:          *entry.LogID,
-		},
-	}
-}
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
@@ -92,12 +76,7 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	var rekorBytes []byte
-	if cert != nil {
-		rekorBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
-	} else {
-		rekorBytes, err = cryptoutils.MarshalPublicKeyToPEM(pub)
-	}
+	rekorBytes, err := rekorBytes(cert, pub)
 	if err != nil {
 		return nil, nil, err
 	}
