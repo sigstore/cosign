@@ -25,7 +25,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func TestKeylessSigner(t *testing.T) {
+func TestEphemeralSigner(t *testing.T) {
 	testSigner, err := NewSigner()
 	if err != nil {
 		t.Fatalf("NewSigner() returned error: %v", err)
