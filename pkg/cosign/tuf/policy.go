@@ -65,7 +65,7 @@ type Root struct {
 	Keys         map[string]*Key  `json:"keys"`
 	Roles        map[string]*Role `json:"roles"`
 	Namespace    string           `json:"namespace"`
-	PreviousRoot string           `json:"previous_root"`
+	PreviousRoot string           `json:"previous_root, omitempty"`
 }
 
 func DefaultExpires(role string) time.Time {

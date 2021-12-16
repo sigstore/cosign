@@ -114,7 +114,7 @@ func initPolicy() *cobra.Command {
 			role.AddKeysWithThreshold(publicKeys, o.Threshold)
 			root.Roles["root"] = role
 			root.Namespace = o.ImageRef
-			root.PreviousRoot = "null"
+			root.PreviousRoot = ""
 
 			if o.Expires > 0 {
 				root.Expires = time.Now().AddDate(0, 0, o.Expires).UTC().Round(time.Second)
