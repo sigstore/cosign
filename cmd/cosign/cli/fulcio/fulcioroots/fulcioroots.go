@@ -23,7 +23,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 )
 
@@ -64,14 +63,18 @@ func initRoots() *x509.CertPool {
 		// Retrieve from the embedded or cached TUF root. If expired, a network
 		// call is made to update the root.
 		ctx := context.Background() // TODO: pass in context?
+		rootFound := false
 		for _, fulcioTarget := range []string{fulcioTargetStr, fulcioV1TargetStr} {
 			buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-			if err := tuf.GetTarget(ctx, fulcioTarget, &buf); err != nil {
-				panic(errors.Wrap(err, "creating root cert pool"))
+			if err := tuf.GetTarget(ctx, fulcioTarget, &buf); err == nil {
+				rootFound = true
+				if !cp.AppendCertsFromPEM(buf.Bytes()) {
+					panic("error creating root cert pool")
+				}
 			}
-			if !cp.AppendCertsFromPEM(buf.Bytes()) {
-				panic("error creating root cert pool")
-			}
+		}
+		if !rootFound {
+			panic("none of the Fulcio roots have been found")
 		}
 	}
 	return cp
