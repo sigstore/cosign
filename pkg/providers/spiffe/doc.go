@@ -13,20 +13,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package all
-
-import (
-	"github.com/sigstore/cosign/pkg/providers"
-
-	// Link in all of the providers.
-	_ "github.com/sigstore/cosign/pkg/providers/filesystem"
-	_ "github.com/sigstore/cosign/pkg/providers/github"
-	_ "github.com/sigstore/cosign/pkg/providers/google"
-	_ "github.com/sigstore/cosign/pkg/providers/spiffe"
-)
-
-// Alias these methods, so that folks can import this to get all providers.
-var (
-	Enabled = providers.Enabled
-	Provide = providers.Provide
-)
+// Package spiffe defines a SPIFFE/SPIRE implementation of the providers.Interface.
+package spiffe
