@@ -35,6 +35,8 @@ jobs:
         with:
           go-version: '1.17.x'
       - uses: imjasonh/setup-ko@v0.4
+        with:
+          version: tip
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@master
         with:
