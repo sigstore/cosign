@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/fulcio/pkg/api"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 // This is the CT log public key target name
@@ -49,14 +50,40 @@ func getCTPub() string {
 	return buf.String()
 }
 
-// verifySCT verifies the SCT against the Fulcio CT log public key
+// verifySCTPublic verifies the SCT against the Fulcio CT log public key
 // The SCT is a `Signed Certificate Timestamp`, which promises that
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
-func verifySCT(certPEM, rawSCT []byte) error {
+func verifySCTPublic(certPEM, rawSCT []byte) error {
 	pubKey, err := cosign.PemToECDSAKey([]byte(getCTPub()))
 	if err != nil {
 		return err
+	}
+	cert, err := x509util.CertificateFromPEM(certPEM)
+	if err != nil {
+		return err
+	}
+	var sct ct.SignedCertificateTimestamp
+	if err := json.Unmarshal(rawSCT, &sct); err != nil {
+		return errors.Wrap(err, "unmarshal")
+	}
+	return ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
+}
+
+func verifySCT(certPEM, rawSCT []byte) error {
+	rootEnv := os.Getenv("SIGSTORE_ROOT_FILE")
+	if rootEnv == "" {
+		return verifySCTPublic(certPEM, rawSCT)
+	}
+	fmt.Fprintf(os.Stderr, "Trying to read an alternate file for SCT public key: %s", rootEnv)
+	raw, err := os.ReadFile(rootEnv)
+	if err != nil {
+		panic(fmt.Sprintf("error reading root PEM file: %s", err))
+	}
+	fmt.Fprintf(os.Stderr, "Using alternate root file for verifying SCT")
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
+	if err != nil {
+		panic("Failed to parse pubkey")
 	}
 	cert, err := x509util.CertificateFromPEM(certPEM)
 	if err != nil {
