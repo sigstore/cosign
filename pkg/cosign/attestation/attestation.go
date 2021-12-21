@@ -32,12 +32,46 @@ import (
 const (
 	// CosignCustomProvenanceV01 specifies the type of the Predicate.
 	CosignCustomProvenanceV01 = "cosign.sigstore.dev/attestation/v1"
+
+	// CosignVulnProvenanceV01 specifies the type of VulnerabilityScan Predicate
+	CosignVulnProvenanceV01 = "cosign.sigstore.dev/attestation/vuln/v1"
 )
 
 // CosignPredicate specifies the format of the Custom Predicate.
 type CosignPredicate struct {
 	Data      interface{}
 	Timestamp string
+}
+
+// VulnPredicate specifies the format of the Vulnerability Scan Predicate
+type CosignVulnPredicate struct {
+	Invocation Invocation `json:"invocation"`
+	Scanners   []Scanner  `json:"scanners"`
+	Metadata   Metadata   `json:"metadata"`
+}
+
+type Invocation struct {
+	Parameters interface{} `json:"parameters"`
+	URI        string      `json:"uri"`
+	EventID    string      `json:"event_id"`
+	BuilderID  string      `json:"builder.id"`
+}
+
+type DB struct {
+	URI     string `json:"uri"`
+	Version string `json:"version"`
+}
+
+type Scanner struct {
+	URI     string                 `json:"uri"`
+	Version string                 `json:"version"`
+	DB      DB                     `json:"db"`
+	Result  map[string]interface{} `json:"result"`
+}
+
+type Metadata struct {
+	ScanStartedOn  time.Time `json:"scanStartedOn"`
+	ScanFinishedOn time.Time `json:"scanFinishedOn"`
 }
 
 // GenerateOpts specifies the options of the Statement generator.
@@ -71,11 +105,27 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 		return generateSPDXStatement(predicate, opts.Digest, opts.Repo)
 	case "link":
 		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
+	case "vuln":
+		return generateVulnStatement(predicate, opts.Digest, opts.Repo)
 	default:
 		stamp := timestamp(opts)
 		predicateType := customType(opts)
 		return generateCustomStatement(predicate, predicateType, opts.Digest, opts.Repo, stamp)
 	}
+}
+
+func generateVulnStatement(predicate []byte, digest string, repo string) (interface{}, error) {
+	var vuln CosignVulnPredicate
+
+	err := json.Unmarshal(predicate, &vuln)
+	if err != nil {
+		return nil, err
+	}
+
+	return in_toto.Statement{
+		StatementHeader: generateStatementHeader(digest, repo, CosignVulnProvenanceV01),
+		Predicate:       vuln,
+	}, nil
 }
 
 func timestamp(opts GenerateOpts) string {
