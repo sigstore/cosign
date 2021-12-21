@@ -83,6 +83,8 @@ func verifySCT(certPEM, rawSCT []byte) error {
 	fmt.Fprintf(os.Stderr, "Using alternate root file for verifying SCT")
 	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Using alternate root file for verifying SCT: %v", err)
+		fmt.Fprintf(os.Stderr, "Raw bytes were: %s", raw)
 		panic("Failed to parse pubkey")
 	}
 	cert, err := x509util.CertificateFromPEM(certPEM)
