@@ -246,7 +246,13 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		return errors.Wrap(err, "constructing client options")
 	}
 
-	fmt.Fprintln(os.Stderr, "Pushing signature to:", digest.Repository)
+	// Check if we are overriding the signatures repository location
+	repo, _ := ociremote.GetEnvTargetRepository()
+	if repo.RepositoryStr() == "" {
+		fmt.Fprintln(os.Stderr, "Pushing signature to:", digest.Repository)
+	} else {
+		fmt.Fprintln(os.Stderr, "Pushing signature to:", repo.RepositoryStr())
+	}
 
 	// Publish the signatures associated with this entity
 	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
