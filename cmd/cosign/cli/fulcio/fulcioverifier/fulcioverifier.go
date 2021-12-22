@@ -18,7 +18,10 @@ package fulcioverifier
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"os"
 
@@ -37,6 +40,10 @@ import (
 // This is the CT log public key target name
 var ctPublicKeyStr = `ctfe.pub`
 
+// Setting this env variable will over ride what is used to validate
+// the SCT coming back from Fulcio.
+const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
+
 func getCTPub() string {
 	ctx := context.Background() // TODO: pass in context?
 	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
@@ -49,14 +56,34 @@ func getCTPub() string {
 	return buf.String()
 }
 
-// verifySCT verifies the SCT against the Fulcio CT log public key
+// verifySCT verifies the SCT against the Fulcio CT log public key.
+// By default this comes from TUF, but you can override this (for test)
+// purposes by using an env variable `SIGSTOE_CT_LOG_PUBLIC_KEY_FILE`. If using
+// an alternate, the file can be PEM, or DER format.
+//
 // The SCT is a `Signed Certificate Timestamp`, which promises that
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
 func verifySCT(certPEM, rawSCT []byte) error {
-	pubKey, err := cosign.PemToECDSAKey([]byte(getCTPub()))
-	if err != nil {
-		return err
+	var pubKey crypto.PublicKey
+	var err error
+	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
+	if rootEnv == "" {
+		// Is there a reason why this must be ECDSA key?
+		pubKey, err = cosign.PemToECDSAKey([]byte(getCTPub()))
+		if err != nil {
+			return errors.Wrap(err, "converting Public CT to ECDSAKey")
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
+		raw, err := os.ReadFile(rootEnv)
+		if err != nil {
+			return errors.Wrap(err, "error reading alternate public key file")
+		}
+		pubKey, err = getAlternatePublicKey(raw)
+		if err != nil {
+			return errors.Wrap(err, "error parsing alternate public key from the file")
+		}
 	}
 	cert, err := x509util.CertificateFromPEM(certPEM)
 	if err != nil {
@@ -82,4 +109,29 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID string, fC
 	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")
 
 	return fs, nil
+}
+
+// Given a byte array, try to construct a public key from it.
+// Will try first to see if it's PEM formatted, if not, then it will
+// try to parse it as der publics, and failing that
+func getAlternatePublicKey(in []byte) (crypto.PublicKey, error) {
+	var pubKey crypto.PublicKey
+	var err error
+	var derBytes []byte
+	pemBlock, _ := pem.Decode(in)
+	if pemBlock == nil {
+		fmt.Fprintf(os.Stderr, "Failed to decode non-standard public key for verifying SCT using PEM decode, trying as DER")
+		derBytes = in
+	} else {
+		derBytes = pemBlock.Bytes
+	}
+	pubKey, err = x509.ParsePKIXPublicKey(derBytes)
+	if err != nil {
+		// Try using the PKCS1 before giving up.
+		pubKey, err = x509.ParsePKCS1PublicKey(derBytes)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse alternate public key")
+		}
+	}
+	return pubKey, nil
 }
