@@ -42,7 +42,7 @@ var ctPublicKeyStr = `ctfe.pub`
 
 // Setting this env variable will over ride what is used to validate
 // the SCT coming back from Fulcio.
-const altCTLogPublicKeyLocation = "CT_LOG_PUBLIC_KEY_FILE"
+const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 
 func getCTPub() string {
 	ctx := context.Background() // TODO: pass in context?
@@ -58,7 +58,7 @@ func getCTPub() string {
 
 // verifySCT verifies the SCT against the Fulcio CT log public key.
 // By default this comes from TUF, but you can override this (for test)
-// purposes by using an env variable `CT_LOG_PUBLIC_KEY_FILE`. If using
+// purposes by using an env variable `SIGSTOE_CT_LOG_PUBLIC_KEY_FILE`. If using
 // an alternate, the file can be PEM, or DER format.
 //
 // The SCT is a `Signed Certificate Timestamp`, which promises that
