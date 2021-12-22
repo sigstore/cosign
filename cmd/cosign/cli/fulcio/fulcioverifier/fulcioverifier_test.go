@@ -50,20 +50,22 @@ func TestGetAlternatePublicKey(t *testing.T) {
 			t.Fatalf("Failed to read testfile %s : %v", tc.file, err)
 		}
 		got, err := getAlternatePublicKey(bytes)
-		if err == nil && tc.wantErrSub != "" {
+		switch {
+		case err == nil && tc.wantErrSub != "":
 			t.Errorf("Wanted Error for %s but got none", tc.file)
-		} else if err != nil && tc.wantErrSub == "" {
+		case err != nil && tc.wantErrSub == "":
 			t.Errorf("Did not want error for %s but got: %v", tc.file, err)
-		} else if err != nil && tc.wantErrSub != "" {
+		case err != nil && tc.wantErrSub != "":
 			if !strings.Contains(err.Error(), tc.wantErrSub) {
 				t.Errorf("Unexpected error for %s: %s wanted to contain: %s", tc.file, err.Error(), tc.wantErrSub)
 			}
 		}
-		if got == nil && tc.wantType != "" {
+		switch {
+		case got == nil && tc.wantType != "":
 			t.Errorf("Wanted public key for %s but got none", tc.file)
-		} else if got != nil && tc.wantType == "" {
+		case got != nil && tc.wantType == "":
 			t.Errorf("Did not want error for %s but got: %v", tc.file, err)
-		} else if got != nil && tc.wantType != "" {
+		case got != nil && tc.wantType != "":
 			if reflect.TypeOf(got).String() != tc.wantType {
 				t.Errorf("Unexpected type for %s: %+T wanted: %s", tc.file, got, tc.wantType)
 			}
