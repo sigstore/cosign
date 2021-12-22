@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
@@ -131,7 +132,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return errors.Wrap(err, "initializing piv token verifier")
 		}
 	case certRef != "":
-		pubKey, err = loadCertFromFile(c.CertRef)
+		pubKey, err = loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
 		}
@@ -254,8 +255,8 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	}
 }
 
-func loadCertFromFile(path string) (*signature.ECDSAVerifier, error) {
-	pems, err := os.ReadFile(path)
+func loadCertFromFileOrURL(path string) (*signature.ECDSAVerifier, error) {
+	pems, err := blob.LoadFileOrURL(path)
 	if err != nil {
 		return nil, err
 	}
