@@ -412,7 +412,7 @@ See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 * Dan Lorenc
 * Priya Wadhwa
 * Ivan Font
-* Depandabot!
+* Dependabot!
 * Mark Bestavros
 * Jake Sanders
 * Carlos Tadeu Panato Junior 
