@@ -130,7 +130,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 		}
 	}
 
-	// Set up an ErrDone considerion to return along "success" paths
+	// Set up an ErrDone consideration to return along "success" paths
 	var ErrDone error
 	if !recursive {
 		ErrDone = mutate.ErrSkipChildren
