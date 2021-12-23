@@ -392,7 +392,7 @@ A whole buncha bugfixes!
 This is the third release of `cosign`!
 
 We still expect many flags, commands, and formats to change going forward, but we're getting closer.
-No backwards compatiblity is promised or implied yet, though we are hoping to formalize this policy in the next release.
+No backwards compatibility is promised or implied yet, though we are hoping to formalize this policy in the next release.
 See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 
 ## Enhancements
@@ -422,7 +422,7 @@ See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 This is the second release of `cosign`!
 
 We still expect many flags, commands, and formats to change going forward, but we're getting closer.
-No backwards compatiblity is promised or implied.
+No backwards compatibility is promised or implied.
 
 ## Enhancements
 
@@ -464,7 +464,7 @@ This is the first release of `cosign`!
 The main goal of this release is to release something we can start using to sign other releases of [sigstore](sigstore.dev) projects, including `cosign` itself.
 
 We expect many flags, commands, and formats to change going forward.
-No backwards compatiblity is promised or implied.
+No backwards compatibility is promised or implied.
 
 ## Enhancements
 
