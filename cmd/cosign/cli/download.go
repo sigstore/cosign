@@ -80,7 +80,7 @@ func downloadAttestation() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "attestation",
 		Short:   "Download in-toto attestations from the supplied container image",
-		Example: "  cosign download attesation <image uri>",
+		Example: "  cosign download attestation <image uri>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return download.AttestationCmd(cmd.Context(), *o, args[0])

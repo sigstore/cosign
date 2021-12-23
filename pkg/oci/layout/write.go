@@ -79,7 +79,7 @@ func writeSignedEntity(path layout.Path, se oci.SignedEntity) error {
 	return nil
 }
 
-// isEmpty returns true if the signatures or attesations are empty
+// isEmpty returns true if the signatures or attestations are empty
 func isEmpty(s oci.Signatures) bool {
 	ss, _ := s.Get()
 	return ss == nil
