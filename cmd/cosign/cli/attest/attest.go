@@ -138,7 +138,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 		return errors.Wrap(err, "getting signer")
 	}
 	defer sv.Close()
-	wrapped := dsse.WrapSigner(sv, predicateURI)
+	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 	dd := cremote.NewDupeDetector(sv)
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
