@@ -53,7 +53,7 @@ Where:
 3. When the job finish, whithout issues, you should be able to see in GitHub a draft release.
 You now can review the release, make any changes if needed and then publish to make it an official release.
 
-4. Send an annoucement email to `sigstore-dev@googlegroups.com` mailling list
+4. Send an announcement email to `sigstore-dev@googlegroups.com` mailling list
 
 5. Tweet about the new release with a fun new trigonometry pun!
 
