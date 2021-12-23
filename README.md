@@ -651,7 +651,7 @@ Note that this could be applied recursively, for multiple intermediate base imag
 
 ### Counter-Signing
 
-Cosign signatures (and their protected paylaods) are stored as artifacts in a registry.
+Cosign signatures (and their protected payloads) are stored as artifacts in a registry.
 These signature objects can also be signed, resulting in a new, "counter-signature" artifact.
 This "counter-signature" protects the signature (or set of signatures) **and** the referenced artifact, which allows
 it to act as an attestation to the **signature(s) themselves**.
