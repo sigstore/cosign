@@ -100,7 +100,7 @@ To configure this flow:
 
 1. Create a service account to use for signatures (the email address will be present in the certificate subject).
 2. Grant the Cloud Build service account the `roles/iam.serviceAccountTokenCreator` role for this target account.
-3. Set the `GOOGLE_SERVICE_ACCOUNT_NAME` environment variable to the name of the target account in your cloudbuid.yaml
+3. Set the `GOOGLE_SERVICE_ACCOUNT_NAME` environment variable to the name of the target account in your cloudbuild.yaml
 4. Sign images in GCB, without keys!
 
 ### Timestamps
