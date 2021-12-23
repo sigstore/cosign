@@ -788,7 +788,7 @@ func TestAttachSBOM(t *testing.T) {
 
 func setenv(t *testing.T, k, v string) func() {
 	if err := os.Setenv(k, v); err != nil {
-		t.Fatalf("error setitng env: %v", err)
+		t.Fatalf("error setting env: %v", err)
 	}
 	return func() {
 		os.Unsetenv(k)
