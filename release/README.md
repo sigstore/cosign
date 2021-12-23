@@ -46,8 +46,8 @@ Where:
 - `_STORAGE_LOCATION` where to push the built artifacts. Default `cosign-releases`.
 - `_KEY_RING` key ring name of your cosign key.
 - `_KEY_NAME` key name of your  cosign key.
-- `_KEY_VERSION` version of the key storaged in KMS. Default `1`.
-- `_KEY_LOCATION` location in GCP where the key is storaged. Default `global`.
+- `_KEY_VERSION` version of the key stored in KMS. Default `1`.
+- `_KEY_LOCATION` location in GCP where the key is stored. Default `global`.
 
 
 3. When the job finish, whithout issues, you should be able to see in GitHub a draft release.
