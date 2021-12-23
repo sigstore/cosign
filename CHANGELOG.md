@@ -118,7 +118,7 @@ A whole buncha bugfixes!
 
 ## Enhancements
 
-* Began reworking `/pkg` around new abstrations for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
+* Began reworking `/pkg` around new abstractions for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
     * Notice: refactoring of `/pkg` will continue in the next minor release (1.4.0). Please leave feedback, especially if you've been experimenting with `cosign` as a library and found it lacking (https://github.com/sigstore/cosign/issues/844)
     * [GGCR-style libraries](https://github.com/google/go-containerregistry#philosophy) for interacting with images now exist under `pkg/oci` (https://github.com/sigstore/cosign/pull/770)
     * `pkg/cosign/remote.UploadSignature` API was been removed in favor of new `pkg/oci/remote` APIs (https://github.com/sigstore/cosign/pull/774)
