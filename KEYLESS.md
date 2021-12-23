@@ -117,7 +117,7 @@ Signature timestamps are checked in the [rekor](https://github.com/sigstore/reko
 
 ## Custom Infrastructure
 
-If you're running your own sigtore services flags are available to set your own endpoint's, e.g
+If you're running your own sigstore services flags are available to set your own endpoint's, e.g
 
 ```
  COSIGN_EXPERIMENTAL=1 go run cmd/cosign/main.go sign -oidc-issuer "https://oauth2.example.com/auth" \

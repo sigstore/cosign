@@ -58,7 +58,7 @@ func getCTPub() string {
 
 // verifySCT verifies the SCT against the Fulcio CT log public key.
 // By default this comes from TUF, but you can override this (for test)
-// purposes by using an env variable `SIGSTOE_CT_LOG_PUBLIC_KEY_FILE`. If using
+// purposes by using an env variable `SIGSTORE_CT_LOG_PUBLIC_KEY_FILE`. If using
 // an alternate, the file can be PEM, or DER format.
 //
 // The SCT is a `Signed Certificate Timestamp`, which promises that
