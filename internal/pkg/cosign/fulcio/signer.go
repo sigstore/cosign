@@ -41,7 +41,7 @@ func (fs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	// TODO(dekkagaijin): move the fulcio SignerVerififer logic here
+	// TODO(dekkagaijin): move the fulcio SignerVerifier logic here
 	newSig, err := mutate.Signature(sig, mutate.WithCertChain(fs.cert, fs.chain))
 	if err != nil {
 		return nil, nil, err
