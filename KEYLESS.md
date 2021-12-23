@@ -66,7 +66,7 @@ These can be supplied on the command line with the `--identity-token` flag.
 The `audiences` field must contain `sigstore`.
 
 `cosign` also has support for detecting some of these automated environments
-and producing an identity token.  Currently this supports Google and Github.
+and producing an identity token.  Currently this supports Google and GitHub.
 
 #### On GCP
 
