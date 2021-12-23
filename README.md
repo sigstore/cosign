@@ -598,7 +598,7 @@ Timestamps could also be added here, to implement TUF-style freeze-attack preven
 
 Again, `cosign` can sign anything in a registry.
 You could use `cosign` to sign an image that is intended to be used as a base image,
-and inlcude that provenance metadata in resulting derived images.
+and include that provenance metadata in resulting derived images.
 This could be used to enforce that an image was built from an authorized base image.
 
 Rough Idea:
