@@ -66,7 +66,7 @@ These can be supplied on the command line with the `--identity-token` flag.
 The `audiences` field must contain `sigstore`.
 
 `cosign` also has support for detecting some of these automated environments
-and producing an identity token.  Currently this supports Google and Github.
+and producing an identity token.  Currently this supports Google and GitHub.
 
 #### On GCP
 
@@ -100,7 +100,7 @@ To configure this flow:
 
 1. Create a service account to use for signatures (the email address will be present in the certificate subject).
 2. Grant the Cloud Build service account the `roles/iam.serviceAccountTokenCreator` role for this target account.
-3. Set the `GOOGLE_SERVICE_ACCOUNT_NAME` environment variable to the name of the target account in your cloudbuid.yaml
+3. Set the `GOOGLE_SERVICE_ACCOUNT_NAME` environment variable to the name of the target account in your cloudbuild.yaml
 4. Sign images in GCB, without keys!
 
 ### Timestamps
@@ -117,7 +117,7 @@ Signature timestamps are checked in the [rekor](https://github.com/sigstore/reko
 
 ## Custom Infrastructure
 
-If you're running your own sigtore services flags are available to set your own endpoint's, e.g
+If you're running your own sigstore services flags are available to set your own endpoint's, e.g
 
 ```
  COSIGN_EXPERIMENTAL=1 go run cmd/cosign/main.go sign -oidc-issuer "https://oauth2.example.com/auth" \
@@ -129,7 +129,7 @@ If you're running your own sigtore services flags are available to set your own 
 
 ### Custom root Cert
 
-You can override the public good instance root CA using the enviromental variable `SIGSTORE_ROOT_FILE`, e.g.
+You can override the public good instance root CA using the environment variable `SIGSTORE_ROOT_FILE`, e.g.
 
 ```
 export SIGSTORE_ROOT_FILE="/home/jdoe/myrootCA.pem"

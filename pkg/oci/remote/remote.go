@@ -156,26 +156,26 @@ func attachment(digestable digestable, attName string, o *options) (oci.File, er
 		return nil, fmt.Errorf("expected exactly one layer in attachment, got %d", len(ls))
 	}
 
-	return &attache{
+	return &attached{
 		SignedImage: img,
 		layer:       ls[0],
 	}, nil
 }
 
-type attache struct {
+type attached struct {
 	oci.SignedImage
 	layer v1.Layer
 }
 
-var _ oci.File = (*attache)(nil)
+var _ oci.File = (*attached)(nil)
 
 // FileMediaType implements oci.File
-func (f *attache) FileMediaType() (types.MediaType, error) {
+func (f *attached) FileMediaType() (types.MediaType, error) {
 	return f.layer.MediaType()
 }
 
 // Payload implements oci.File
-func (f *attache) Payload() ([]byte, error) {
+func (f *attached) Payload() ([]byte, error) {
 	// remote layers are believed to be stored
 	// compressed, but we don't compress attachments
 	// so use "Compressed" to access the raw byte

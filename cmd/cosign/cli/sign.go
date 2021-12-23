@@ -93,7 +93,7 @@ func Sign() *cobra.Command {
 				if o.Attachment == "" {
 					return errors.Wrapf(err, "signing %v", args)
 				}
-				return errors.Wrapf(err, "signing attachement %s for image %v", o.Attachment, args)
+				return errors.Wrapf(err, "signing attachment %s for image %v", o.Attachment, args)
 			}
 			return nil
 		},

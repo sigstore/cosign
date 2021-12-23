@@ -55,7 +55,7 @@ func TestValidKey(t *testing.T) {
 		t.Errorf("Error adding public key")
 	}
 	if _, err := root.ValidKey(publicKey, "root"); err != nil {
-		t.Errorf("Error checking key validit %s", err)
+		t.Errorf("Error checking key validity %s", err)
 	}
 	// Now change issuer, and expect error.
 	publicKey = FulcioVerificationKey("test@rekor.dev", "")

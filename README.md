@@ -598,7 +598,7 @@ Timestamps could also be added here, to implement TUF-style freeze-attack preven
 
 Again, `cosign` can sign anything in a registry.
 You could use `cosign` to sign an image that is intended to be used as a base image,
-and inlcude that provenance metadata in resulting derived images.
+and include that provenance metadata in resulting derived images.
 This could be used to enforce that an image was built from an authorized base image.
 
 Rough Idea:
@@ -651,7 +651,7 @@ Note that this could be applied recursively, for multiple intermediate base imag
 
 ### Counter-Signing
 
-Cosign signatures (and their protected paylaods) are stored as artifacts in a registry.
+Cosign signatures (and their protected payloads) are stored as artifacts in a registry.
 These signature objects can also be signed, resulting in a new, "counter-signature" artifact.
 This "counter-signature" protects the signature (or set of signatures) **and** the referenced artifact, which allows
 it to act as an attestation to the **signature(s) themselves**.

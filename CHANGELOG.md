@@ -46,7 +46,7 @@ A whole buncha bugfixes!
 * Added the `--signature-digest-algorithm` flag to `cosign verify`, allowing verification of container image signatures which were generated with a non-SHA256 signature algorithm (https://github.com/sigstore/cosign/pull/1071)
 * Builds should now be reproducible (https://github.com/sigstore/cosign/pull/1053)
 * Allows base64 files as `--cert` in `cosign verify-blob` (https://github.com/sigstore/cosign/pull/1088)
-* Kubernetes secrets generated for version >= 1.21 clusters have the immutible bit set (https://github.com/sigstore/cosign/pull/1091)
+* Kubernetes secrets generated for version >= 1.21 clusters have the immutable bit set (https://github.com/sigstore/cosign/pull/1091)
 * Added `cosign save` and `cosign load` commands to save and upload container images and associated signatures to disk (https://github.com/sigstore/cosign/pull/1094)
 * `cosign sign` will no longer fail to sign private images in keyless mode without `--force` (https://github.com/sigstore/cosign/pull/1116)
 * `cosign verify` now supports signatures stored in files and remote URLs with `--signature` (https://github.com/sigstore/cosign/pull/1068)
@@ -118,7 +118,7 @@ A whole buncha bugfixes!
 
 ## Enhancements
 
-* Began reworking `/pkg` around new abstrations for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
+* Began reworking `/pkg` around new abstractions for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
     * Notice: refactoring of `/pkg` will continue in the next minor release (1.4.0). Please leave feedback, especially if you've been experimenting with `cosign` as a library and found it lacking (https://github.com/sigstore/cosign/issues/844)
     * [GGCR-style libraries](https://github.com/google/go-containerregistry#philosophy) for interacting with images now exist under `pkg/oci` (https://github.com/sigstore/cosign/pull/770)
     * `pkg/cosign/remote.UploadSignature` API was been removed in favor of new `pkg/oci/remote` APIs (https://github.com/sigstore/cosign/pull/774)
@@ -134,7 +134,7 @@ A whole buncha bugfixes!
 * `manifest verify` now supports verifying images in all Kubernetes objects that fit within `PodSpec`, `PodSpecTemplate`, or `JobSpecTemplate`, including CRDs (https://github.com/sigstore/cosign/pull/697)
 * Added shell auto-completion support (Clutch collab from @erkanzileli, @passcod, and @Dentrax! https://github.com/sigstore/cosign/pull/836)
 * `cosign` has generated Markdown docs available in the `doc/` directory (https://github.com/sigstore/cosign/pull/839)
-* Added support for verifying with secrets from a Gitlab project (https://github.com/sigstore/cosign/pull/934)
+* Added support for verifying with secrets from a GitLab project (https://github.com/sigstore/cosign/pull/934)
 * Added a `--k8s-keychain` option that enables cosign to support ambient registry credentials based on the "k8schain" library (https://github.com/sigstore/cosign/pull/972)
 * CI (test) Images are now created for every architecture distroless ships on (currently: amd64, arm64, arm, s390x, ppc64le) (https://github.com/sigstore/cosign/pull/973)
 * `attest`: replaced `--upload` flag with a `--no-upload` flag (https://github.com/sigstore/cosign/pull/979)
@@ -392,7 +392,7 @@ A whole buncha bugfixes!
 This is the third release of `cosign`!
 
 We still expect many flags, commands, and formats to change going forward, but we're getting closer.
-No backwards compatiblity is promised or implied yet, though we are hoping to formalize this policy in the next release.
+No backwards compatibility is promised or implied yet, though we are hoping to formalize this policy in the next release.
 See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 
 ## Enhancements
@@ -412,7 +412,7 @@ See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 * Dan Lorenc
 * Priya Wadhwa
 * Ivan Font
-* Depandabot!
+* Dependabot!
 * Mark Bestavros
 * Jake Sanders
 * Carlos Tadeu Panato Junior 
@@ -422,7 +422,7 @@ See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 This is the second release of `cosign`!
 
 We still expect many flags, commands, and formats to change going forward, but we're getting closer.
-No backwards compatiblity is promised or implied.
+No backwards compatibility is promised or implied.
 
 ## Enhancements
 
@@ -464,7 +464,7 @@ This is the first release of `cosign`!
 The main goal of this release is to release something we can start using to sign other releases of [sigstore](sigstore.dev) projects, including `cosign` itself.
 
 We expect many flags, commands, and formats to change going forward.
-No backwards compatiblity is promised or implied.
+No backwards compatibility is promised or implied.
 
 ## Enhancements
 

@@ -9,7 +9,7 @@ cosign download attestation [flags]
 ### Examples
 
 ```
-  cosign download attesation <image uri>
+  cosign download attestation <image uri>
 ```
 
 ### Options

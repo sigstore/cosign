@@ -7,7 +7,7 @@ doesn't fit well into other types.
 The format for this is defined as follows:
 
 `data`: Raw data to place in the attestation. This is a base64-encoded string of bytes.
-`timestamp`: The timestamp the attestion was generated at in the RFC3339 format in the UTC timezone.
+`timestamp`: The timestamp the attestation was generated at in the RFC3339 format in the UTC timezone.
 
 Here is an example attestation containing a data file containing `foo`:
 
