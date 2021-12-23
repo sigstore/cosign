@@ -46,7 +46,7 @@ A whole buncha bugfixes!
 * Added the `--signature-digest-algorithm` flag to `cosign verify`, allowing verification of container image signatures which were generated with a non-SHA256 signature algorithm (https://github.com/sigstore/cosign/pull/1071)
 * Builds should now be reproducible (https://github.com/sigstore/cosign/pull/1053)
 * Allows base64 files as `--cert` in `cosign verify-blob` (https://github.com/sigstore/cosign/pull/1088)
-* Kubernetes secrets generated for version >= 1.21 clusters have the immutible bit set (https://github.com/sigstore/cosign/pull/1091)
+* Kubernetes secrets generated for version >= 1.21 clusters have the immutable bit set (https://github.com/sigstore/cosign/pull/1091)
 * Added `cosign save` and `cosign load` commands to save and upload container images and associated signatures to disk (https://github.com/sigstore/cosign/pull/1094)
 * `cosign sign` will no longer fail to sign private images in keyless mode without `--force` (https://github.com/sigstore/cosign/pull/1116)
 * `cosign verify` now supports signatures stored in files and remote URLs with `--signature` (https://github.com/sigstore/cosign/pull/1068)
