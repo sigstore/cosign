@@ -47,6 +47,5 @@ func DoInitialize(ctx context.Context, root, mirror string) error {
 		return err
 	}
 
-	// Initialize and update the local SigStore root.
-	return tuf.Init(ctx, rootFileBytes, remote)
+	return tuf.Initialize(remote, rootFileBytes)
 }
