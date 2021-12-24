@@ -31,6 +31,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	"github.com/sigstore/cosign/pkg/types"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -106,8 +107,12 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oc
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
-func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att oci.Signature) error {
-	// TODO(dekkagaijin): plumb through context
+// For unit testing
+type payloader interface {
+	Payload() ([]byte, error)
+}
+
+func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att payloader) error {
 	payload, err := att.Payload()
 	if err != nil {
 		return err
@@ -115,9 +120,12 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att oc
 
 	env := ssldsse.Envelope{}
 	if err := json.Unmarshal(payload, &env); err != nil {
-		return nil
+		return err
 	}
 
+	if env.PayloadType != types.IntotoPayloadType {
+		return fmt.Errorf("invalid payloadType %s on envelepe. Expected %s", env.PayloadType, types.IntotoPayloadType)
+	}
 	dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
 	if err != nil {
 		return err
