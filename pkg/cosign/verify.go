@@ -124,7 +124,7 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 	}
 
 	if env.PayloadType != types.IntotoPayloadType {
-		return fmt.Errorf("invalid payloadType %s on envelepe. Expected %s", env.PayloadType, types.IntotoPayloadType)
+		return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
 	}
 	dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
 	if err != nil {
