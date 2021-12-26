@@ -16,10 +16,9 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/spf13/cobra"
 )
 
 func Attach() *cobra.Command {
@@ -31,6 +30,7 @@ func Attach() *cobra.Command {
 	cmd.AddCommand(
 		attachSignature(),
 		attachSBOM(),
+		attachAttestation(),
 	)
 
 	return cmd
@@ -68,6 +68,24 @@ func attachSBOM() *cobra.Command {
 				return err
 			}
 			return attach.SBOMCmd(cmd.Context(), o.Registry, o.SBOM, mediaType, args[0])
+		},
+	}
+
+	o.AddFlags(cmd)
+
+	return cmd
+}
+
+func attachAttestation() *cobra.Command {
+	o := &options.AttachAttestationOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "attestation",
+		Short:   "Attach attestation to the supplied container image",
+		Example: "  cosign attach attestation <image uri>",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return attach.AttestationCmd(cmd.Context(), o.Registry, o.Attestation, args[0])
 		},
 	}
 
