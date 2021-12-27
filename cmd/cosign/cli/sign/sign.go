@@ -230,6 +230,19 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		}
 	}
 
+	if outputCertificate != "" {
+		rekorBytes, err := sv.Bytes(ctx)
+		if err != nil {
+			return errors.Wrap(err, "create certificate file")
+		}
+
+		if err := os.WriteFile(outputCertificate, rekorBytes, 0600); err != nil {
+			return errors.Wrap(err, "create certificate file")
+		}
+		// TODO: maybe accept a --b64 flag as well?
+		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
+	}
+
 	if !upload {
 		return nil
 	}
@@ -257,19 +270,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	// Publish the signatures associated with this entity
 	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
 		return err
-	}
-
-	if outputCertificate != "" {
-		rekorBytes, err := sv.Bytes(ctx)
-		if err != nil {
-			return errors.Wrap(err, "create certificate file")
-		}
-
-		if err := os.WriteFile(outputCertificate, rekorBytes, 0600); err != nil {
-			return errors.Wrap(err, "create certificate file")
-		}
-		// TODO: maybe accept a --b64 flag as well?
-		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}
 
 	return nil
