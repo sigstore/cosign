@@ -17,7 +17,6 @@ package fulcioverifier
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -45,7 +44,7 @@ func TestGetAlternatePublicKey(t *testing.T) {
 	}
 	for _, tc := range tests {
 		filepath := fmt.Sprintf("%s/testdata/%s", wd, tc.file)
-		bytes, err := ioutil.ReadFile(filepath)
+		bytes, err := os.ReadFile(filepath)
 		if err != nil {
 			t.Fatalf("Failed to read testfile %s : %v", tc.file, err)
 		}
