@@ -16,167 +16,153 @@
 package tuf
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
+	"context"
 	"os"
-	"path/filepath"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/theupdateframework/go-tuf"
-	"github.com/theupdateframework/go-tuf/client"
-	tuf_leveldbstore "github.com/theupdateframework/go-tuf/client/leveldbstore"
 )
 
-// Only test the client without the remote fetch.
+var targets = []string{
+	"fulcio.crt.pem",
+	"fulcio_v1.crt.pem",
+	"ctfe.pub",
+	"rekor.pub",
+}
 
-// Set up a temporary file system store
-func generateTestRepo(t *testing.T, files map[string][]byte) (*fakeRemoteStore, tuf.LocalStore) {
-	store := tuf.MemoryStore(nil, files)
-	repo, err := tuf.NewRepo(store)
-	if err := repo.Init(false); err != nil {
-		t.Fatalf("unexpected error")
-	}
+func TestNewFromEnv(t *testing.T) {
+	td := t.TempDir()
+	t.Setenv("TUF_ROOT", td)
+	ctx := context.Background()
+
+	// Make sure nothing is expired
+	forceExpiration(t, false)
+	tuf, err := NewFromEnv(ctx)
 	if err != nil {
-		t.Fatalf("unexpected error")
+		t.Fatal(err)
 	}
-	for _, role := range []string{"root", "snapshot", "targets", "timestamp"} {
-		_, err := repo.GenKey(role)
-		if err != nil {
-			t.Fatalf("unexpected error")
+
+	checkTargets(t, tuf)
+	tuf.Close()
+
+	// Now try with expired targets
+
+	forceExpiration(t, true)
+	tuf, err = NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tuf.Close()
+	checkTargets(t, tuf)
+
+	// Now let's explicitly make a root.
+	remote, err := GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Initialize(remote, nil); err != nil {
+		t.Error()
+	}
+	if l := dirLen(t, td); l == 0 {
+		t.Errorf("expected filesystem writes, got %d entries", l)
+	}
+
+	// And go from there!
+	tuf, err = NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTargets(t, tuf)
+	tuf.Close()
+}
+
+func TestNoCache(t *testing.T) {
+	ctx := context.Background()
+	// Once more with NO_CACHE
+	t.Setenv("SIGSTORE_NO_CACHE", "true")
+	td := t.TempDir()
+	t.Setenv("TUF_ROOT", td)
+
+	// Force expiration so we have some content to download
+	forceExpiration(t, true)
+
+	tuf, err := NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTargets(t, tuf)
+	tuf.Close()
+
+	if l := dirLen(t, td); l != 0 {
+		t.Errorf("expected no filesystem writes, got %d entries", l)
+	}
+}
+
+func TestCache(t *testing.T) {
+	ctx := context.Background()
+	// Once more with NO_CACHE
+	t.Setenv("SIGSTORE_NO_CACHE", "false")
+	td := t.TempDir()
+	t.Setenv("TUF_ROOT", td)
+
+	// Make sure nothing is in that directory to start with
+	if l := dirLen(t, td); l != 0 {
+		t.Errorf("expected no filesystem writes, got %d entries", l)
+	}
+
+	// Nothing should get downloaded if everything is up to date
+	forceExpiration(t, false)
+	tuf, err := NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tuf.Close()
+
+	if l := dirLen(t, td); l != 0 {
+		t.Errorf("expected no filesystem writes, got %d entries", l)
+	}
+
+	// Force expiration so that content gets downloaded. This should write to disk
+	forceExpiration(t, true)
+	tuf, err = NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tuf.Close()
+
+	if l := dirLen(t, td); l == 0 {
+		t.Errorf("expected filesystem writes, got %d entries", l)
+	}
+	checkTargets(t, tuf)
+}
+
+func checkTargets(t *testing.T, tuf *TUF) {
+	// Check the targets
+	for _, target := range targets {
+		if _, err := tuf.GetTarget(target); err != nil {
+			t.Fatal(err)
 		}
 	}
-	for file := range files {
-		repo.AddTarget(file, nil)
-	}
-	repo.Snapshot()
-	repo.Timestamp()
-	repo.Commit()
 
-	meta, err := store.GetMeta()
+	// An invalid target
+	if _, err := tuf.GetTarget("invalid"); err == nil {
+		t.Error("expected error reading target, got nil")
+	}
+}
+
+func dirLen(t *testing.T, td string) int {
+	t.Helper()
+	de, err := os.ReadDir(td)
 	if err != nil {
-		t.Fatalf("unexpected error")
+		t.Fatal(err)
 	}
-	remote := newFakeRemoteStore(meta, files)
-	return remote, store
+	return len(de)
 }
 
-func newFakeFile(b []byte) *fakeFile {
-	return &fakeFile{buf: bytes.NewReader(b), size: int64(len(b))}
-}
-
-type fakeFile struct {
-	buf       *bytes.Reader
-	bytesRead int
-	size      int64
-}
-
-func (f *fakeFile) Read(p []byte) (int, error) {
-	n, err := f.buf.Read(p)
-	f.bytesRead += n
-	return n, err
-}
-
-func (f *fakeFile) Close() error {
-	f.buf.Seek(0, io.SeekStart)
-	return nil
-}
-
-func newFakeRemoteStore(meta map[string]json.RawMessage, targets map[string][]byte) *fakeRemoteStore {
-	remote := &fakeRemoteStore{meta: make(map[string]*fakeFile),
-		targets: make(map[string]*fakeFile)}
-	for name, data := range meta {
-		remote.meta[name] = newFakeFile(data)
+func forceExpiration(t *testing.T, expire bool) {
+	oldIsExpiredMetadata := isExpiredMetadata
+	isExpiredMetadata = func(_ []byte) bool {
+		return expire
 	}
-	for name, data := range targets {
-		remote.targets[name] = newFakeFile(data)
-	}
-	return remote
-}
-
-type fakeRemoteStore struct {
-	meta    map[string]*fakeFile
-	targets map[string]*fakeFile
-}
-
-func (f *fakeRemoteStore) GetMeta(name string) (io.ReadCloser, int64, error) {
-	return f.get(name, f.meta)
-}
-
-func (f *fakeRemoteStore) GetTarget(path string) (io.ReadCloser, int64, error) {
-	return f.get(path, f.targets)
-}
-
-func (f *fakeRemoteStore) get(name string, store map[string]*fakeFile) (io.ReadCloser, int64, error) {
-	file, ok := store[name]
-	if !ok {
-		return nil, 0, client.ErrNotFound{File: name}
-	}
-	return file, file.size, nil
-}
-
-// Correct metadata, retrieve target
-func TestValidMetadata(t *testing.T) {
-	targetFiles := map[string][]byte{
-		"foo.txt": []byte("foo")}
-	remote, store := generateTestRepo(t, targetFiles)
-
-	// Set up local with initial root.json
-	tmp := t.TempDir()
-	local, err := tuf_leveldbstore.FileLocalStore(tmp)
-	if err != nil {
-		t.Fatalf("unexpected error")
-	}
-	defer local.Close()
-	meta, _ := store.GetMeta()
-	root := meta["root.json"]
-	local.SetMeta("root.json", root)
-	db := filepath.Join(tmp, "tuf.db")
-	if err := os.Setenv(TufRootEnv, db); err != nil {
-		t.Fatalf("error setting env")
-	}
-	defer os.Unsetenv(TufRootEnv)
-
-	// Set up client
-	rootClient := client.NewClient(local, remote)
-	if err != nil {
-		t.Fatalf("creating root client")
-	}
-	rootKeys, rootThreshold, err := getRootKeys(root)
-	if err != nil {
-		t.Fatalf("bad trusted root")
-	}
-	if err := rootClient.Init(rootKeys, rootThreshold); err != nil {
-		t.Fatalf("initializing root client")
-	}
-	if err := updateMetadataAndDownloadTargets(rootClient); err != nil {
-		t.Fatalf("updating from remote TUF repository")
-	}
-
-	target := "foo.txt"
-	buf := ByteDestination{Buffer: &bytes.Buffer{}}
-	err = getTargetHelper(target, &buf, rootClient, false)
-	if err != nil {
-		t.Fatalf("retrieving target %v", err)
-	}
-	if !bytes.Equal(buf.Bytes(), targetFiles[target]) {
-		t.Fatalf("error retrieving target, expected %s got %s", buf.String(), targetFiles[target])
-	}
-}
-
-func TestGetEmbeddedRoot(t *testing.T) {
-	got, err := GetEmbeddedRoot()
-	if err != nil {
-		t.Fatalf("GetEmbeddedRoot() returned error: %v", err)
-	}
-
-	want, err := os.ReadFile(filepath.Join("repository", "root.json"))
-	if err != nil {
-		t.Fatalf("failed to read expected root from file: %v", err)
-	}
-
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("GetEmbeddedRoot() mismatch (-want +got):\n%s", diff)
-	}
+	t.Cleanup(func() {
+		isExpiredMetadata = oldIsExpiredMetadata
+	})
 }

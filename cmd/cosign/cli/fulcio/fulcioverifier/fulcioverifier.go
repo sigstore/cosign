@@ -16,7 +16,6 @@
 package fulcioverifier
 
 import (
-	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
@@ -44,18 +43,6 @@ var ctPublicKeyStr = `ctfe.pub`
 // the SCT coming back from Fulcio.
 const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 
-func getCTPub() string {
-	ctx := context.Background() // TODO: pass in context?
-	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-	// Retrieves the CT public key from the embedded or cached TUF root. If expired, makes a
-	// network call to retrieve the updated target.
-	if err := tuf.GetTarget(ctx, ctPublicKeyStr, &buf); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		panic("error retrieving CT public key")
-	}
-	return buf.String()
-}
-
 // verifySCT verifies the SCT against the Fulcio CT log public key.
 // By default this comes from TUF, but you can override this (for test)
 // purposes by using an env variable `SIGSTORE_CT_LOG_PUBLIC_KEY_FILE`. If using
@@ -69,8 +56,18 @@ func verifySCT(certPEM, rawSCT []byte) error {
 	var err error
 	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
 	if rootEnv == "" {
+		ctx := context.TODO()
+		tuf, err := tuf.NewFromEnv(ctx)
+		if err != nil {
+			return err
+		}
+		defer tuf.Close()
+		ctPub, err := tuf.GetTarget(ctPublicKeyStr)
+		if err != nil {
+			return err
+		}
 		// Is there a reason why this must be ECDSA key?
-		pubKey, err = cosign.PemToECDSAKey([]byte(getCTPub()))
+		pubKey, err = cosign.PemToECDSAKey(ctPub)
 		if err != nil {
 			return errors.Wrap(err, "converting Public CT to ECDSAKey")
 		}
