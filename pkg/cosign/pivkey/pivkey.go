@@ -37,7 +37,7 @@ import (
 )
 
 var (
-	KeyNotInitialized error = errors.New("key not initialzied")
+	KeyNotInitialized error = errors.New("key not initialized")
 	SlotNotSet        error = errors.New("slot not set")
 )
 

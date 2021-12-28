@@ -83,7 +83,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	}
 
 	if options.EnableExperimental() {
-		rekorBytes, err := sv.Bytes(ctx)
+		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -99,25 +99,15 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	}
 
 	if outputSignature != "" {
-		f, err := os.Create(outputSignature)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-
+		var bts = sig
 		if b64 {
-			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(sig)))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			_, err = f.Write(sig)
-			if err != nil {
-				return nil, err
-			}
+			bts = []byte(base64.StdEncoding.EncodeToString(sig))
+		}
+		if err := os.WriteFile(outputSignature, bts, 0600); err != nil {
+			return nil, errors.Wrap(err, "create signature file")
 		}
 
-		fmt.Printf("Signature wrote in the file %s\n", f.Name())
+		fmt.Printf("Signature wrote in the file %s\n", outputSignature)
 	} else {
 		if b64 {
 			sig = []byte(base64.StdEncoding.EncodeToString(sig))
@@ -128,24 +118,15 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		}
 	}
 
-	if outputCertificate != "" {
-		f, err := os.Create(outputCertificate)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-
+	if outputCertificate != "" && len(rekorBytes) > 0 {
+		bts := rekorBytes
 		if b64 {
-			_, err = f.Write([]byte(base64.StdEncoding.EncodeToString(rekorBytes)))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			_, err = f.Write(rekorBytes)
-			if err != nil {
-				return nil, err
-			}
+			bts = []byte(base64.StdEncoding.EncodeToString(rekorBytes))
 		}
+		if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
+			return nil, errors.Wrap(err, "create certificate file")
+		}
+		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}
 
 	return sig, nil

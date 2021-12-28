@@ -21,7 +21,7 @@ import (
 
 	"github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/static"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
 )
 
 // signerWrapper still needs to actually upload keys to Fulcio and receive
@@ -41,37 +41,8 @@ func (fs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	payloadBytes, err := sig.Payload()
-	if err != nil {
-		return nil, nil, err
-	}
-	b64Sig, err := sig.Base64Signature()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// TODO(dekkagaijin): move the fulcio SignerVerififer logic here
-
-	opts := []static.Option{static.WithCertChain(fs.cert, fs.chain)}
-
-	// Copy over the other attributes:
-	if annotations, err := sig.Annotations(); err != nil {
-		return nil, nil, err
-	} else if len(annotations) > 0 {
-		opts = append(opts, static.WithAnnotations(annotations))
-	}
-	if bundle, err := sig.Bundle(); err != nil {
-		return nil, nil, err
-	} else if bundle != nil {
-		opts = append(opts, static.WithBundle(bundle))
-	}
-	if mt, err := sig.MediaType(); err != nil {
-		return nil, nil, err
-	} else if mt != "" {
-		opts = append(opts, static.WithLayerMediaType(mt))
-	}
-
-	newSig, err := static.NewSignature(payloadBytes, b64Sig, opts...)
+	// TODO(dekkagaijin): move the fulcio SignerVerifier logic here
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(fs.cert, fs.chain))
 	if err != nil {
 		return nil, nil, err
 	}

@@ -113,7 +113,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.Wrap(err, "loading public key from token")
 		}
 	case certRef != "":
-		pubKey, err = loadCertFromFile(certRef)
+		pubKey, err = loadCertFromFileOrURL(certRef)
 		if err != nil {
 			return err
 		}

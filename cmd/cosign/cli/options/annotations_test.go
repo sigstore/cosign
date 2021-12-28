@@ -56,7 +56,7 @@ func TestAnnotationOptions_AnnotationsMap(t *testing.T) {
 				return
 			}
 			if diff := cmp.Diff(got, tt.want); diff != "" {
-				t.Errorf("AnnoxtationsMap() got = %v, want %v\n diff: %s", got, tt.want, diff)
+				t.Errorf("AnnotationsMap() got = %v, want %v\n diff: %s", got, tt.want, diff)
 			}
 		})
 	}

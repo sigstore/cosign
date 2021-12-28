@@ -24,7 +24,41 @@ permissions: read-all
 
 jobs:
   unit-tests:
-    name: Run tests
+    name: Run unit tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+      # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
+      - uses: actions/cache@v2
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          # * Build cache (Mac)
+          # * Build cache (Windows)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/Library/Caches/go-build
+            %LocalAppData%\go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+      - name: Run Go tests
+        run: go test ./...
+      - name: Run Go tests w/ `-race`
+        if: ${{ runner.os == 'Linux' }}
+        run: go test -race ./...
+  
+  e2e-tests:
+    name: Run e2e tests
     runs-on: ubuntu-latest
 
     steps:
@@ -54,11 +88,34 @@ jobs:
           # Used to test: cosign generate-key-pair k8s://...
           go install sigs.k8s.io/kind@v0.11.1
           kind create cluster
-      - name: Run Go tests
-        run: go test ./...
 
       - name: Run end-to-end tests
         run: ./test/e2e_test.sh
+  
+  e2e-windows-powershell-tests:
+    name: Run PowerShell E2E tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+
+      # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
+      - uses: actions/cache@v2
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Windows)
+          path: |
+            ~/go/pkg/mod
+            %LocalAppData%\go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run e2e_test.ps1
+        run: ./test/e2e_test.ps1
 
   license-check:
     name: license boilerplate check

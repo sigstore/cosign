@@ -91,7 +91,7 @@ In this example, the SBOM only refers to a single layer:
       "mediaType": "text/spdx",
       "size": 246,
       "digest": "sha256:ed3ad03d3b87843b5419d7dce9d50a3e0f45554b2ba93bf378611cae6b450cff",
-      "annotatons": {
+      "annotations": {
         "dev.sigstore.sbom.scope": "layer=sha256:a69d803ab2179a570eda27135989ee850de53bbd98efc8f0284f13700a94149f",
       }
     }

@@ -34,24 +34,44 @@ func WriteSignedImage(path string, si oci.SignedImage) error {
 	if err := appendImage(layoutPath, si, imageAnnotation); err != nil {
 		return errors.Wrap(err, "appending signed image")
 	}
+	return writeSignedEntity(layoutPath, si)
+}
+
+// WriteSignedImageIndex writes the image index and all related signatures, attestations and attachments
+func WriteSignedImageIndex(path string, si oci.SignedImageIndex) error {
+	// First, write an empty index
+	layoutPath, err := layout.Write(path, empty.Index)
+	if err != nil {
+		return err
+	}
+	// write the image index
+	if err := layoutPath.AppendIndex(si, layout.WithAnnotations(
+		map[string]string{kindAnnotation: imageIndexAnnotation},
+	)); err != nil {
+		return errors.Wrap(err, "appending signed image index")
+	}
+	return writeSignedEntity(layoutPath, si)
+}
+
+func writeSignedEntity(path layout.Path, se oci.SignedEntity) error {
 	// write the signatures
-	sigs, err := si.Signatures()
+	sigs, err := se.Signatures()
 	if err != nil {
 		return errors.Wrap(err, "getting signatures")
 	}
 	if !isEmpty(sigs) {
-		if err := appendImage(layoutPath, sigs, sigsAnnotation); err != nil {
+		if err := appendImage(path, sigs, sigsAnnotation); err != nil {
 			return errors.Wrap(err, "appending signatures")
 		}
 	}
 
 	// write attestations
-	atts, err := si.Attestations()
+	atts, err := se.Attestations()
 	if err != nil {
 		return errors.Wrap(err, "getting atts")
 	}
 	if !isEmpty(atts) {
-		if err := appendImage(layoutPath, atts, attsAnnotation); err != nil {
+		if err := appendImage(path, atts, attsAnnotation); err != nil {
 			return errors.Wrap(err, "appending atts")
 		}
 	}
@@ -59,7 +79,7 @@ func WriteSignedImage(path string, si oci.SignedImage) error {
 	return nil
 }
 
-// isEmpty returns true if the signatures or attesations are empty
+// isEmpty returns true if the signatures or attestations are empty
 func isEmpty(s oci.Signatures) bool {
 	ss, _ := s.Get()
 	return ss == nil

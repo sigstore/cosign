@@ -15,7 +15,6 @@
 package cosign
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -43,14 +42,15 @@ import (
 // This is the rekor public key target name
 var rekorTargetStr = `rekor.pub`
 
-func GetRekorPub(ctx context.Context) string {
-	buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-	// Retrieves the rekor public key from the embedded or cached TUF root. If expired, makes a
-	// network call to retrieve the updated target.
-	if err := tuf.GetTarget(ctx, rekorTargetStr, &buf); err != nil {
-		panic("error retrieving rekor public key")
+// GetRekorPub retrieves the rekor public key from the embedded or cached TUF root. If expired, makes a
+// network call to retrieve the updated target.
+func GetRekorPub(ctx context.Context) ([]byte, error) {
+	tuf, err := tuf.NewFromEnv(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return buf.String()
+	defer tuf.Close()
+	return tuf.GetTarget(rekorTargetStr)
 }
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.

@@ -45,7 +45,6 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"strings"
@@ -351,7 +350,7 @@ func importKey(slotID uint) error {
 	keyLabelBytes := []byte(keyLabel)
 
 	r := strings.NewReader(rsaPrivKey)
-	pemBytes, err = ioutil.ReadAll(r)
+	pemBytes, err = os.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("unable to read pem")
 	}

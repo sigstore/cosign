@@ -18,7 +18,7 @@ set -ex
 
 go build -o cosign ./cmd/cosign
 go build -o sget ./cmd/sget
-tmp=$(mktemp -d)
+tmp=$(mktemp -d -t cosign-e2e-secrets.XXXX)
 cp cosign $tmp/
 cp sget $tmp/
 
@@ -28,14 +28,15 @@ pass="$RANDOM"
 export COSIGN_PASSWORD=$pass
 
 BASE_TEST_REPO=${BASE_TEST_REPO:-us-central1-docker.pkg.dev/projectsigstore/cosign-ci}
+TEST_INSTANCE_REPO="${BASE_TEST_REPO}/$(date +'%Y/%m/%d')/$RANDOM"
 
 # setup
 ./cosign generate-key-pair
 signing_key=cosign.key
 verification_key=cosign.pub
-img="${BASE_TEST_REPO}/test"
-img2="${BASE_TEST_REPO}/test-2"
-legacy_img="${BASE_TEST_REPO}/legacy-test"
+img="${TEST_INSTANCE_REPO}/test"
+img2="${TEST_INSTANCE_REPO}/test-2"
+legacy_img="${TEST_INSTANCE_REPO}/legacy-test"
 for image in $img $img2 $legacy_img
 do
     (crane delete $(./cosign triangulate $image)) || true
@@ -43,9 +44,12 @@ do
 done
 img_copy="${img}/copy"
 crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; done
-multiarch_img="${BASE_TEST_REPO}/multiarch-test"
+multiarch_img="${TEST_INSTANCE_REPO}/multiarch-test"
 crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${tag}" ; done
 crane cp gcr.io/distroless/base $multiarch_img
+
+# `initialize`
+./cosign initialize
 
 ## sign/verify
 ./cosign sign --key ${signing_key} $img
@@ -108,11 +112,13 @@ if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblo
 
 ## sign and verify multiple blobs
 ./cosign sign-blob --key ${signing_key} myblob myblob2 > sigs
-./cosign verify-blob --key ${verification_key} --signature <(head -n 1 sigs) myblob
-./cosign verify-blob --key ${verification_key} --signature <(tail -n 1 sigs) myblob2
+head -n 1 sigs > car.sig
+tail -n 1 sigs > cdr.sig
+./cosign verify-blob --key ${verification_key} --signature car.sig myblob
+./cosign verify-blob --key ${verification_key} --signature cdr.sig myblob2
 
 ## upload blob/sget
-blobimg="${BASE_TEST_REPO}/blob"
+blobimg="${TEST_INSTANCE_REPO}/blob"
 crane ls ${blobimg} | while read tag ; do crane delete "${blobimg}:${tag}" ; done
 
 # make a random blob
@@ -157,11 +163,19 @@ if (./cosign verify -a foo=bar --key ${verification_key} $img); then false; fi
 ./cosign verify --key ${verification_key} -a foo=bar $img
 
 # store signatures in a different repo
-export COSIGN_REPOSITORY=${BASE_TEST_REPO}/subbedrepo
+export COSIGN_REPOSITORY=${TEST_INSTANCE_REPO}/subbedrepo
 (crane delete $(./cosign triangulate $img)) || true
 ./cosign sign --key ${signing_key} $img
 ./cosign verify --key ${verification_key} $img
 unset COSIGN_REPOSITORY
+
+# test stdin interaction for private key password
+stdin_password=${COSIGN_PASSWORD}
+unset COSIGN_PASSWORD
+(crane delete $(./cosign triangulate $img)) || true
+echo $stdin_password | ./cosign sign --key ${signing_key} --output-signature interactive.sig  $img
+./cosign verify --key ${verification_key} --signature interactive.sig $img
+export COSIGN_PASSWORD=${stdin_password}
 
 # What else needs auth?
 echo "SUCCESS"

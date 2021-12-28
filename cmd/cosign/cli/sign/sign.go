@@ -130,7 +130,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 		}
 	}
 
-	// Set up an ErrDone considerion to return along "success" paths
+	// Set up an ErrDone consideration to return along "success" paths
 	var ErrDone error
 	if !recursive {
 		ErrDone = mutate.ErrSkipChildren
@@ -204,7 +204,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 
 	var s icos.Signer
-	s = ipayload.NewSigner(sv, nil, nil)
+	s = ipayload.NewSigner(sv)
 	s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
@@ -225,15 +225,22 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 
 	if outputSignature != "" {
-		out, err := os.Create(outputSignature)
-		if err != nil {
+		if err := os.WriteFile(outputSignature, []byte(b64sig), 0600); err != nil {
 			return errors.Wrap(err, "create signature file")
 		}
-		defer out.Close()
+	}
 
-		if _, err := out.Write([]byte(b64sig)); err != nil {
-			return errors.Wrap(err, "write signature to file")
+	if outputCertificate != "" {
+		rekorBytes, err := sv.Bytes(ctx)
+		if err != nil {
+			return errors.Wrap(err, "create certificate file")
 		}
+
+		if err := os.WriteFile(outputCertificate, rekorBytes, 0600); err != nil {
+			return errors.Wrap(err, "create certificate file")
+		}
+		// TODO: maybe accept a --b64 flag as well?
+		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}
 
 	if !upload {
@@ -252,23 +259,17 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 		return errors.Wrap(err, "constructing client options")
 	}
 
-	fmt.Fprintln(os.Stderr, "Pushing signature to:", digest.Repository)
+	// Check if we are overriding the signatures repository location
+	repo, _ := ociremote.GetEnvTargetRepository()
+	if repo.RepositoryStr() == "" {
+		fmt.Fprintln(os.Stderr, "Pushing signature to:", digest.Repository)
+	} else {
+		fmt.Fprintln(os.Stderr, "Pushing signature to:", repo.RepositoryStr())
+	}
 
 	// Publish the signatures associated with this entity
 	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
 		return err
-	}
-
-	if outputCertificate != "" {
-		rekorBytes, err := sv.Bytes(ctx)
-		if err != nil {
-			return err
-		}
-
-		if err := os.WriteFile(outputCertificate, rekorBytes, 0600); err != nil {
-			return err
-		}
-		// TODO: maybe accept a --b64 flag as well?
 	}
 
 	return nil

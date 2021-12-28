@@ -16,10 +16,8 @@
 package fulcioroots
 
 import (
-	"bytes"
 	"context"
 	"crypto/x509"
-	"fmt"
 	"os"
 	"sync"
 
@@ -44,35 +42,47 @@ const (
 
 func Get() *x509.CertPool {
 	rootsOnce.Do(func() {
-		roots = initRoots()
+		var err error
+		roots, err = initRoots()
+		if err != nil {
+			panic(err)
+		}
 	})
 	return roots
 }
 
-func initRoots() *x509.CertPool {
+func initRoots() (*x509.CertPool, error) {
 	cp := x509.NewCertPool()
 	rootEnv := os.Getenv(altRoot)
 	if rootEnv != "" {
 		raw, err := os.ReadFile(rootEnv)
 		if err != nil {
-			panic(fmt.Sprintf("error reading root PEM file: %s", err))
+			return nil, errors.Wrap(err, "error reading root PEM file")
 		}
 		if !cp.AppendCertsFromPEM(raw) {
-			panic("error creating root cert pool")
+			return nil, errors.New("error creating root cert pool")
 		}
 	} else {
+		tuf, err := tuf.NewFromEnv(context.Background())
+		if err != nil {
+			return nil, errors.Wrap(err, "initializing tuf")
+		}
+		defer tuf.Close()
 		// Retrieve from the embedded or cached TUF root. If expired, a network
 		// call is made to update the root.
-		ctx := context.Background() // TODO: pass in context?
+		rootFound := false
 		for _, fulcioTarget := range []string{fulcioTargetStr, fulcioV1TargetStr} {
-			buf := tuf.ByteDestination{Buffer: &bytes.Buffer{}}
-			if err := tuf.GetTarget(ctx, fulcioTarget, &buf); err != nil {
-				panic(errors.Wrap(err, "creating root cert pool"))
-			}
-			if !cp.AppendCertsFromPEM(buf.Bytes()) {
-				panic("error creating root cert pool")
+			b, err := tuf.GetTarget(fulcioTarget)
+			if err == nil {
+				rootFound = true
+				if !cp.AppendCertsFromPEM(b) {
+					return nil, errors.New("error creating root cert pool")
+				}
 			}
 		}
+		if !rootFound {
+			return nil, errors.New("none of the Fulcio roots have been found")
+		}
 	}
-	return cp
+	return cp, nil
 }

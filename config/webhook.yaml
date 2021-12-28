@@ -71,6 +71,11 @@ spec:
             drop:
             - all
 
+        volumeMounts:
+        # Failing to provide a writable $HOME can cause TUF client initialization to panic
+        - mountPath: /home/nonroot
+          name: writable-home-dir
+
         readinessProbe: &probe
           failureThreshold: 6
           initialDelaySeconds: 20
@@ -86,6 +91,10 @@ spec:
       # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently
       # high value that we respect whatever value it has configured for the lame duck grace period.
       terminationGracePeriodSeconds: 300
+
+      volumes:
+      - emptyDir: {}
+        name: writable-home-dir
 ---
 apiVersion: v1
 kind: Secret

@@ -25,10 +25,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/fulcio/pkg/generated/client/operations"
+	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 )
 
@@ -45,15 +43,15 @@ func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDT
 	return tf.idt, nil
 }
 
-type testSigningCertProvider struct {
-	payload string
+type testClient struct {
+	payload api.CertificateResponse
 	err     error
 }
 
-func (p *testSigningCertProvider) SigningCert(params *operations.SigningCertParams, authInfo runtime.ClientAuthInfoWriter, opts ...operations.ClientOption) (*operations.SigningCertCreated, error) {
-	return &operations.SigningCertCreated{
-		Payload: p.payload,
-	}, p.err
+var _ api.Client = (*testClient)(nil)
+
+func (p *testClient) SigningCert(cr api.CertificateRequest, token string) (*api.CertificateResponse, error) {
+	return &p.payload, p.err
 }
 
 func TestGetCertForOauthID(t *testing.T) {
@@ -73,27 +71,23 @@ func TestGetCertForOauthID(t *testing.T) {
 		signingCertErr error
 
 		expectErr bool
-	}{
-		{
-			desc:        "happy case",
-			email:       "example@oidc.id",
-			accessToken: "abc123foobar",
-		},
-		{
-			desc:           "getIDToken error",
-			email:          "example@oidc.id",
-			accessToken:    "abc123foobar",
-			tokenGetterErr: errors.New("getIDToken() failed"),
-			expectErr:      true,
-		},
-		{
-			desc:           "SigningCert error",
-			email:          "example@oidc.id",
-			accessToken:    "abc123foobar",
-			signingCertErr: errors.New("SigningCert() failed"),
-			expectErr:      true,
-		},
-	}
+	}{{
+		desc:        "happy case",
+		email:       "example@oidc.id",
+		accessToken: "abc123foobar",
+	}, {
+		desc:           "getIDToken error",
+		email:          "example@oidc.id",
+		accessToken:    "abc123foobar",
+		tokenGetterErr: errors.New("getIDToken() failed"),
+		expectErr:      true,
+	}, {
+		desc:           "SigningCert error",
+		email:          "example@oidc.id",
+		accessToken:    "abc123foobar",
+		signingCertErr: errors.New("SigningCert() failed"),
+		expectErr:      true,
+	}}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -103,9 +97,12 @@ func TestGetCertForOauthID(t *testing.T) {
 			}
 			expectedCertBytes := pem.EncodeToMemory(expectedCertPem)
 			expectedExtraBytes := []byte("0123456789abcdef")
-			tscp := &testSigningCertProvider{
-				payload: string(append(expectedCertBytes, expectedExtraBytes...)),
-				err:     tc.signingCertErr,
+			tscp := &testClient{
+				payload: api.CertificateResponse{
+					CertPEM:  expectedCertBytes,
+					ChainPEM: expectedExtraBytes,
+				},
+				err: tc.signingCertErr,
 			}
 
 			tf := testFlow{
@@ -165,7 +162,7 @@ func TestNewClient(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, _ = client.Operations.SigningCert(nil, nil)
+	_, _ = client.SigningCert(api.CertificateRequest{}, "")
 
 	if !requestReceived {
 		t.Fatal("no requests were received")

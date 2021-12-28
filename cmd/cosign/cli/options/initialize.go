@@ -21,9 +21,8 @@ import (
 
 // InitializeOptions is the top level wrapper for the initialize command.
 type InitializeOptions struct {
-	Mirror    string
-	Root      string
-	Threshold int
+	Mirror string
+	Root   string
 }
 
 var _ Interface = (*InitializeOptions)(nil)
@@ -31,11 +30,8 @@ var _ Interface = (*InitializeOptions)(nil)
 // AddFlags implements Interface
 func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Mirror, "mirror", "sigstore-tuf-root",
-		"GCS bucket to a SigStore TUF repository.")
+		"GCS bucket to a SigStore TUF repository or HTTP(S) base URL")
 
 	cmd.Flags().StringVar(&o.Root, "root", "",
 		"path to trusted initial root. defaults to embedded root")
-
-	cmd.Flags().IntVar(&o.Threshold, "upload", 3,
-		"threshold of root key signers")
 }

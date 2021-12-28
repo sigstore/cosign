@@ -31,6 +31,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	"github.com/sigstore/cosign/pkg/types"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -39,6 +40,7 @@ import (
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/oci/layout"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -105,8 +107,12 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oc
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
-func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att oci.Signature) error {
-	// TODO(dekkagaijin): plumb through context
+// For unit testing
+type payloader interface {
+	Payload() ([]byte, error)
+}
+
+func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att payloader) error {
 	payload, err := att.Payload()
 	if err != nil {
 		return err
@@ -114,11 +120,18 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att oc
 
 	env := ssldsse.Envelope{}
 	if err := json.Unmarshal(payload, &env); err != nil {
-		return nil
+		return err
 	}
 
-	dssev := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
-	return dssev.Verify(&env)
+	if env.PayloadType != types.IntotoPayloadType {
+		return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
+	}
+	dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
+	if err != nil {
+		return err
+	}
+	_, err = dssev.Verify(&env)
+	return err
 }
 
 func validateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
@@ -202,7 +215,7 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 	return fos.signatures, nil
 }
 
-// VerifySignatures does all the main cosign checks in a loop, returning the verified signatures.
+// VerifyImageSignatures does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error.
 func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
@@ -231,6 +244,56 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		}
 	}
 
+	return verifySignatures(ctx, sigs, h, co)
+}
+
+// VerifyLocalImageSignatures verifies signatures from a saved, local image, without any network calls, returning the verified signatures.
+// If there were no valid signatures, we return an error.
+func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	// Enforce this up front.
+	if co.RootCerts == nil && co.SigVerifier == nil {
+		return nil, false, errors.New("one of verifier or root certs is required")
+	}
+
+	se, err := layout.SignedImageIndex(path)
+	if err != nil {
+		return nil, false, err
+	}
+
+	var h v1.Hash
+	// Verify either an image index or image.
+	ii, err := se.SignedImageIndex(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	i, err := se.SignedImage(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	switch {
+	case ii != nil:
+		h, err = ii.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	case i != nil:
+		h, err = i.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	default:
+		return nil, false, errors.New("must verify either an image index or image")
+	}
+
+	sigs, err := se.Signatures()
+	if err != nil {
+		return nil, false, err
+	}
+
+	return verifySignatures(ctx, sigs, h, co)
+}
+
+func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	sl, err := sigs.Get()
 	if err != nil {
 		return nil, false, err
@@ -356,6 +419,57 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	if err != nil {
 		return nil, false, err
 	}
+
+	return verifyImageAttestations(ctx, atts, h, co)
+}
+
+// VerifyLocalImageAttestations verifies attestations from a saved, local image, without any network calls,
+// returning the verified attestations.
+// If there were no valid signatures, we return an error.
+func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	// Enforce this up front.
+	if co.RootCerts == nil && co.SigVerifier == nil {
+		return nil, false, errors.New("one of verifier or root certs is required")
+	}
+
+	se, err := layout.SignedImageIndex(path)
+	if err != nil {
+		return nil, false, err
+	}
+
+	var h v1.Hash
+	// Verify either an image index or image.
+	ii, err := se.SignedImageIndex(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	i, err := se.SignedImage(v1.Hash{})
+	if err != nil {
+		return nil, false, err
+	}
+	switch {
+	case ii != nil:
+		h, err = ii.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	case i != nil:
+		h, err = i.Digest()
+		if err != nil {
+			return nil, false, err
+		}
+	default:
+		return nil, false, errors.New("must verify either an image index or image")
+	}
+
+	atts, err := se.Attestations()
+	if err != nil {
+		return nil, false, err
+	}
+	return verifyImageAttestations(ctx, atts, h, co)
+}
+
+func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err
@@ -446,7 +560,12 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, nil
 	}
 
-	rekorPubKey, err := PemToECDSAKey([]byte(GetRekorPub(ctx)))
+	pub, err := GetRekorPub(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "retrieving rekor public key")
+	}
+
+	rekorPubKey, err := PemToECDSAKey(pub)
 	if err != nil {
 		return false, errors.Wrap(err, "pem to ecdsa")
 	}

@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
+	"github.com/sigstore/cosign/pkg/oci"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -52,6 +53,7 @@ type VerifyAttestationCommand struct {
 	RekorURL      string
 	PredicateType string
 	Policies      []string
+	LocalImage    bool
 }
 
 // Exec runs the verification command
@@ -109,14 +111,24 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	for _, imageRef := range images {
-		ref, err := name.ParseReference(imageRef)
-		if err != nil {
-			return err
-		}
+		var verified []oci.Signature
+		var bundleVerified bool
 
-		verified, bundleVerified, err := cosign.VerifyImageAttestations(ctx, ref, co)
-		if err != nil {
-			return err
+		if c.LocalImage {
+			verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, imageRef, co)
+			if err != nil {
+				return err
+			}
+		} else {
+			ref, err := name.ParseReference(imageRef)
+			if err != nil {
+				return err
+			}
+
+			verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co)
+			if err != nil {
+				return err
+			}
 		}
 
 		var cuePolicies, regoPolicies []string

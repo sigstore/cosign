@@ -60,10 +60,6 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")
 
-	// TODO: remove when output flag is fully deprecated
-	cmd.Flags().StringVar(&o.Output, "output", "",
-		"write the signature to FILE")
-
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
 

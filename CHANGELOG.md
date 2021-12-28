@@ -1,22 +1,101 @@
-# Changelog
+# v1.4.1
 
-## v1.3.1
+## Highlights
+
+A whole buncha bugfixes!
+
+## Enhancements
+
+* Files created with `--output-signature` and `--output-certificate` now created with 0600 permissions (https://github.com/sigstore/cosign/pull/1151)
+* Added `cosign verify-attestation --local-image` for verifying signed images with attestations from disk (https://github.com/sigstore/cosign/pull/1174)
+* Added the ability to fetch the TUF root over HTTP with `cosign initialize --mirror` (https://github.com/sigstore/cosign/pull/1185)
+
+## Bug Fixes
+
+* Fixed saving and loading a signed image index to disk (https://github.com/sigstore/cosign/pull/1147)
+* Fixed `sign-blob --output-certificate` writing an empty file (https://github.com/sigstore/cosign/pull/1149)
+* Fixed assorted issues related to the initialization and use of Sigstore's TUF root of trust (https://github.com/sigstore/cosign/pull/1157)
+
+## Contributors
+
+* Carlos Alexandro Becker (@caarlos0)
+* Carlos Panato (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* Jake Sanders (@dekkagaijin)
+* Matt Moore (@mattmoor)
+* Priya Wadhwa (@priyawadhwa)
+* Radoslav Gerganov (@rgerganov)
+
+# v1.4.0
+
+## Highlights
+
+* BREAKING [COSIGN_EXPERIMENTAL]: This and future `cosign` releases will generate signatures that do not validate in older versions of `cosign`. This only applies to "keyless" experimental mode. To opt out of this behavior, use: `--fulcio-url=https://fulcio.sigstore.dev` when signing payloads (https://github.com/sigstore/cosign/pull/1127)
+* BREAKING [cosign/pkg]: `SignedEntryTimestamp` is now of type `[]byte`. To get the previous behavior, call `strfmt.Base64(SignedEntryTimestamp)` (https://github.com/sigstore/cosign/pull/1083)
+* `cosign-linux-pivkey-amd64` releases are now of the form `cosign-linux-pivkey-pkcs11key-amd64` (https://github.com/sigstore/cosign/pull/1052)
+* Releases are now additionally signed using the keyless workflow (https://github.com/sigstore/cosign/pull/1073, https://github.com/sigstore/cosign/pull/1111)
+
+## Enhancements
+
+* Validate the whole attestation statement, not just the predicate (https://github.com/sigstore/cosign/pull/1035)
+* Added the options to replace attestations using `cosign attest --replace` (https://github.com/sigstore/cosign/pull/1039)
+* Added URI to `cosign verify-blob` output (https://github.com/sigstore/cosign/pull/1047)
+* Signatures and certificates created by `cosign sign` and `cosign sign-blob` can be output to file using the `--output-signature` and `--output-certificate` flags, respectively (https://github.com/sigstore/cosign/pull/1016, https://github.com/sigstore/cosign/pull/1093, https://github.com/sigstore/cosign/pull/1066, https://github.com/sigstore/cosign/pull/1095)
+* [cosign/pkg] Added the `pkg/oci/layout` package for storing signatures and attestations on disk (https://github.com/sigstore/cosign/pull/1040, https://github.com/sigstore/cosign/pull/1096)
+* [cosign/pkg] Added `mutate` methods to attach `oci.File`s to `oci.Signed*` objects (https://github.com/sigstore/cosign/pull/1084)
+* Added the `--signature-digest-algorithm` flag to `cosign verify`, allowing verification of container image signatures which were generated with a non-SHA256 signature algorithm (https://github.com/sigstore/cosign/pull/1071)
+* Builds should now be reproducible (https://github.com/sigstore/cosign/pull/1053)
+* Allows base64 files as `--cert` in `cosign verify-blob` (https://github.com/sigstore/cosign/pull/1088)
+* Kubernetes secrets generated for version >= 1.21 clusters have the immutable bit set (https://github.com/sigstore/cosign/pull/1091)
+* Added `cosign save` and `cosign load` commands to save and upload container images and associated signatures to disk (https://github.com/sigstore/cosign/pull/1094)
+* `cosign sign` will no longer fail to sign private images in keyless mode without `--force` (https://github.com/sigstore/cosign/pull/1116)
+* `cosign verify` now supports signatures stored in files and remote URLs with `--signature` (https://github.com/sigstore/cosign/pull/1068)
+* `cosign verify` now supports certs stored in files (https://github.com/sigstore/cosign/pull/1095)
+* Added support for `syft` format in `cosign attach sbom` (https://github.com/sigstore/cosign/pull/1137)
+
+## Bug Fixes
+
+* Fixed verification of Rekor bundles for InToto attestations (https://github.com/sigstore/cosign/pull/1030)
+* Fixed a potential memory leak when signing and verifying with security keys (https://github.com/sigstore/cosign/pull/1113)
+
+## Contributors
+
+* Ashley Davis (@SgtCoDFish)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Brandon Philips (@philips)
+* Carlos Alexandro Becker (@caarlos0)
+* Carlos Panato (@cpanato)
+* Christian Rebischke (@shibumi)
+* Dan Lorenc (@dlorenc)
+* Erkan Zileli (@erkanzileli)
+* Furkan Türkal (@Dentrax)
+* garantir-km (@garantir-km)
+* Jake Sanders (@dekkagaijin)
+* jbpratt (@jbpratt)
+* Matt Moore (@mattmoor)
+* Mikey Strauss (@houdini91)
+* Naveen Srinivasan (@naveensrinivasan)
+* Priya Wadhwa (@priyawadhwa)
+* Sambhav Kothari (@samj1912)
+
+# v1.3.1
 
 * BREAKING [cosign/pkg]: `cosign.Verify` has been removed in favor of explicit `cosign.VerifyImageSignatures` and `cosign.VerifyImageAttestations`
  (https://github.com/sigstore/cosign/pull/1026)
 
-### Enhancements
+## Enhancements
 
 * Add ability for verify-blob to find signing cert in transparency log (https://github.com/sigstore/cosign/pull/991)
 * root policy: add optional issuer to maintainer keys (https://github.com/sigstore/cosign/pull/999)
 * PKCS11 signing support (https://github.com/sigstore/cosign/pull/985)
 * Included timeout option for uploading to Rekor (https://github.com/sigstore/cosign/pull/1001)
 
-### Bug Fixes
+## Bug Fixes
 
 * Bump sigstore/sigstore to pickup a fix for azure kms (https://github.com/sigstore/cosign/pull/1011 / https://github.com/sigstore/cosign/pull/1028)
 
-### Contributors
+## Contributors
 
 * Asra Ali (@asraa)
 * Batuhan Apaydın (@developer-guy)
@@ -29,7 +108,7 @@
 * Jake Sanders (@dekkagaijin)
 * Naveen (@naveensrinivasan)
 
-## v1.3.0
+# v1.3.0
 
 * BREAKING: `verify-manifest` is now `manifest verify` (https://github.com/sigstore/cosign/pull/712)
 * BREAKING: `/pkg` has been heavily refactored. [Further refactoring work](https://github.com/sigstore/cosign/issues/844) will make its way into 1.4.0
@@ -37,9 +116,9 @@
 * Added `sget` as part of Cosign's releases (https://github.com/sigstore/cosign/pull/752)
 * The `copasetic` utility was unceremoniously [baleeted](https://www.youtube.com/watch?v=07h0ksKx5sM) (https://github.com/sigstore/cosign/pull/785)
 
-### Enhancements
+## Enhancements
 
-* Began reworking `/pkg` around new abstrations for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
+* Began reworking `/pkg` around new abstractions for signing, verification, and storage (https://github.com/sigstore/cosign/issues/666)
     * Notice: refactoring of `/pkg` will continue in the next minor release (1.4.0). Please leave feedback, especially if you've been experimenting with `cosign` as a library and found it lacking (https://github.com/sigstore/cosign/issues/844)
     * [GGCR-style libraries](https://github.com/google/go-containerregistry#philosophy) for interacting with images now exist under `pkg/oci` (https://github.com/sigstore/cosign/pull/770)
     * `pkg/cosign/remote.UploadSignature` API was been removed in favor of new `pkg/oci/remote` APIs (https://github.com/sigstore/cosign/pull/774)
@@ -55,12 +134,12 @@
 * `manifest verify` now supports verifying images in all Kubernetes objects that fit within `PodSpec`, `PodSpecTemplate`, or `JobSpecTemplate`, including CRDs (https://github.com/sigstore/cosign/pull/697)
 * Added shell auto-completion support (Clutch collab from @erkanzileli, @passcod, and @Dentrax! https://github.com/sigstore/cosign/pull/836)
 * `cosign` has generated Markdown docs available in the `doc/` directory (https://github.com/sigstore/cosign/pull/839)
-* Added support for verifying with secrets from a Gitlab project (https://github.com/sigstore/cosign/pull/934)
+* Added support for verifying with secrets from a GitLab project (https://github.com/sigstore/cosign/pull/934)
 * Added a `--k8s-keychain` option that enables cosign to support ambient registry credentials based on the "k8schain" library (https://github.com/sigstore/cosign/pull/972)
 * CI (test) Images are now created for every architecture distroless ships on (currently: amd64, arm64, arm, s390x, ppc64le) (https://github.com/sigstore/cosign/pull/973)
 * `attest`: replaced `--upload` flag with a `--no-upload` flag (https://github.com/sigstore/cosign/pull/979)
 
-### Bug Fixes
+## Bug Fixes
 
 * `cosigned` now verifies `CronJob` images (Terve, @vaikas https://github.com/sigstore/cosign/pull/809)
 * Fixed the `verify` `--cert-email` option to actually work (Sweet as, @passcod https://github.com/sigstore/cosign/pull/821)
@@ -68,7 +147,7 @@
 * Fixed interactive terminal support in Windows (https://github.com/sigstore/cosign/pull/871)
 * The `-ct` flag is no longer ignored in `upload blob` (https://github.com/sigstore/cosign/pull/910)
 
-### Contributors
+## Contributors
 
 * Aditya Sirish (@adityasaky)
 * Asra Ali (@asraa)
@@ -102,9 +181,9 @@
 * Viacheslav Vasilyev (@avoidik)
 * Ville Aikas (@vaikas)
 
-## v1.2.0
+# v1.2.0
 
-### Enhancements
+## Enhancements
 * BREAKING: move `verify-dockerfile` to `dockerfile verify` (https://github.com/sigstore/cosign/pull/662)
 * Have the keyless `cosign sign` flow use a single 3LO. (https://github.com/sigstore/cosign/pull/665)
 * Allow to `verify-blob` from urls (https://github.com/sigstore/cosign/pull/646)
@@ -122,7 +201,7 @@
 * Improve documentation about predicate type and change predicate type from provenance to slsaprovenance (https://github.com/sigstore/cosign/pull/583)
 * Upgrade in-toto-golang to adapt SLSA Provenance (https://github.com/sigstore/cosign/pull/582)
 
-### Bug Fixes
+## Bug Fixes
 * Fix verify-dockerfile to allow lowercase FROM (https://github.com/sigstore/cosign/pull/643)
 * Fix signing for the cosigned image. (https://github.com/sigstore/cosign/pull/634)
 * Make sure generate-key-pair doesn't overwrite existing key-pair (https://github.com/sigstore/cosign/pull/623)
@@ -131,7 +210,7 @@
 * Warnings on admissionregistration version (https://github.com/sigstore/cosign/pull/581)
 * Remove unnecessary COSIGN_PASSWORD (https://github.com/sigstore/cosign/pull/572)
 
-### Contributors
+## Contributors
 * Batuhan Apaydın
 * Ben Walding
 * Carlos Alexandro Becker
@@ -149,9 +228,9 @@
 * priyawadhwa
 
 
-## v1.1.0
+# v1.1.0
 
-### Enhancements
+## Enhancements
 
 * BREAKING: The `-attestation` flag has been renamed to `-predicate` in `attest` (https://github.com/sigstore/cosign/pull/500)
 * Added `verify-manifest` command (https://github.com/sigstore/cosign/pull/490)
@@ -160,14 +239,14 @@
 * Added timestamps to Cosign's custom In-Toto predicate (https://github.com/sigstore/cosign/pull/533)
 * `verify` now always verifies that the image exists (even when referenced by digest) before verification (https://github.com/sigstore/cosign/pull/543)
 
-### Bug Fixes
+## Bug Fixes
 
 * `verify-dockerfile` no longer fails on `FROM scratch` (https://github.com/sigstore/cosign/pull/509)
 * Fixed reading from STDIN with `attach sbom` (https://github.com/sigstore/cosign/pull/517)
 * Fixed broken documentation and implementation of `-output` for `verify` and `verify-attestation` (https://github.com/sigstore/cosign/pull/546)
 * Fixed nil pointer error when calling `upload blob` without specifying `-f` (https://github.com/sigstore/cosign/pull/563)
 
-### Contributors
+## Contributors
 
 * Adolfo García Veytia (@puerco)
 * Anton Semjonov (@ansemjo)
@@ -187,9 +266,9 @@
 * Stephan Renatus (@srenatus)
 * Li Yi (@denverdino)
 
-## v1.0.0
+# v1.0.0
 
-### Enhancements
+## Enhancements
 
 * BREAKING: The default HSM key slot is now "signature" instead of "authentication" (https://github.com/sigstore/cosign/pull/450)
 * BREAKING: `--fulcio-server` is now `--fulcio-url` (https://github.com/sigstore/cosign/pull/471)
@@ -199,11 +278,11 @@
 * `cosign` will now send its version string as part of the `user-agent` when interacting with a container registry (https://github.com/sigstore/cosign/pull/479)
 * Files containing certificates for custom Fulcio endpoints can now be specified via the `COSIGN_ROOT` environment variable (https://github.com/sigstore/cosign/pull/477)
 
-### Bug Fixes
+## Bug Fixes
 
 * Fixed a situation where lower-case `as` would break `verify-dockerfile` (Complements to @Dentrax https://github.com/sigstore/cosign/pull/433)
 
-### Contributors
+## Contributors
 
 * Appu Goundan (@loosebazooka)
 * Batuhan Apaydın (@developer-guy)
@@ -218,9 +297,9 @@
 * Luke Hinds (@lukehinds)
 * Tom Hennen (@TomHennen)
 
-## v0.6.0
+# v0.6.0
 
-### Enhancements
+## Enhancements
 
 * BREAKING: Moved `cosign upload-blob` to `cosign upload blob` (https://github.com/sigstore/cosign/pull/378)
 * BREAKING: Moved `cosign upload` to `cosign attach signature` (https://github.com/sigstore/cosign/pull/378)
@@ -232,11 +311,11 @@
 * Added support for AWS KMS (谢谢, @codysoyland https://github.com/sigstore/cosign/pull/426)
 * Numerous enhancements to our build & release process, courtesy @cpanato
 
-### Bug Fixes
+## Bug Fixes
 
 * Verify entry timestamp signatures of fetched Tlog entries (https://github.com/sigstore/cosign/pull/371)
 
-### Contributors
+## Contributors
 
 * Asra Ali (@asraa)
 * Batuhan Apaydın (@developer-guy)
@@ -252,20 +331,20 @@
 * Rémy Greinhofer (@rgreinho)
 * Russell Brown (@rjbrown57)
 
-## v0.5.0
+# v0.5.0
 
-### Enhancements
+## Enhancements
 
 * Added `cosign copy` to easily move images and signatures between repositories (https://github.com/sigstore/cosign/pull/317)
 * Added `-r` flag to `cosign sign` for recursively signing multi-arch images (https://github.com/sigstore/cosign/pull/320)
 * Added `cosign clean` to delete signatures for an image (Thanks, @developer-guy! https://github.com/sigstore/cosign/pull/324)
 * Added `-k8s` flag to `cosign generate-key-pair` to create a Kubernetes secret (Hell yeah, @priyawadhwa! https://github.com/sigstore/cosign/pull/345)
 
-### Bug Fixes
+## Bug Fixes
 
 * Fixed an issue with misdirected image signatures when `COSIGN_REPOSITORY` was used (https://github.com/sigstore/cosign/pull/323)
 
-### Contributors
+## Contributors
 
 * Balazs Zachar (@Cajga)
 * Batuhan Apaydın (@developer-guy)
@@ -275,24 +354,24 @@
 * Jon Johnson (@jonjohnsonjr)
 * Priya Wadhwa (@priyawadhwa)
 
-## v0.4.0
+# v0.4.0
 
-### Action Required
+## Action Required
 
 * Signatures created with `cosign` before v0.4.0 are not compatible with those created after
     * The signature image's manifest now uses OCI mediaTypes ([#300](https://github.com/sigstore/cosign/pull/300))
     * The signature image's tag is now terminated with `.sig` (instead of `.cosign`, [#287](https://github.com/sigstore/cosign/pull/287))
 
-### Enhancements
+## Enhancements
 
 * 🎉 Added support for "offline" verification of Rekor signatures 🎉 (ありがとう, priyawadhwa! [#285](https://github.com/sigstore/cosign/pull/285))
 * Support for Hashicorp vault as a KMS provider has been added (Danke, RichiCoder1! [sigstore/sigstore #44](https://github.com/sigstore/sigstore/pull/44), [sigstore/sigstore #49](https://github.com/sigstore/sigstore/pull/44))
 
-### Bug Fixes
+## Bug Fixes
 
 * GCP KMS URIs now include the key version ([#45](https://github.com/sigstore/sigstore/pull/45))
 
-### Contributors
+## Contributors
 
 * Christian Pearce (@pearcec)
 * Dan Lorenc (@dlorenc)
@@ -301,51 +380,51 @@
 * Richard Simpson (@RichiCoder1)
 * Ross Timson (@rosstimson)
 
-## v0.3.1
+# v0.3.1
 
-### Bug Fixes
+## Bug Fixes
 
 * Fixed CI container image breakage introduced in v0.3.0
 * Fixed lack of version information in release binaries
 
-## v0.3.0
+# v0.3.0
 
 This is the third release of `cosign`!
 
 We still expect many flags, commands, and formats to change going forward, but we're getting closer.
-No backwards compatiblity is promised or implied yet, though we are hoping to formalize this policy in the next release.
+No backwards compatibility is promised or implied yet, though we are hoping to formalize this policy in the next release.
 See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 
-### Enhancements
+## Enhancements
 
 * The `-output-file` flag supports writing output to a specific file
 * The `-key` flag now supports `kms` references and URLs, the `kms` specific flag has been removed
 * Yubikey/PIV hardware support is now included!
 * Support for signing and verifying multiple images in one invocation
 
-### Bug Fixes
+## Bug Fixes
 
 * Bug fixes in KMS keypair generation
 * Bug fixes in key type parsing
 
-### Contributors
+## Contributors
 
 * Dan Lorenc
 * Priya Wadhwa
 * Ivan Font
-* Depandabot!
+* Dependabot!
 * Mark Bestavros
 * Jake Sanders
 * Carlos Tadeu Panato Junior 
 
-## v0.2.0
+# v0.2.0
 
 This is the second release of `cosign`!
 
 We still expect many flags, commands, and formats to change going forward, but we're getting closer.
-No backwards compatiblity is promised or implied.
+No backwards compatibility is promised or implied.
 
-### Enhancements
+## Enhancements
 
 * The password for private keys can now be passed via the `COSIGN_PASSWORD`
 * KMS keys can now be used to sign and verify blobs
@@ -354,13 +433,13 @@ No backwards compatiblity is promised or implied.
 * The `COSIGN_REPOSITORY` environment variable can be used to store signatures in an alternate location
 * Tons of new EXAMPLES in our help text
 
-### Bug Fixes
+## Bug Fixes
 
 * Improved error messages for command line flag verification
 * TONS more unit and integration testing
 * Too many others to count :)
 
-### Contributors
+## Contributors
 
 We would love to thank the contributors:
 
@@ -378,26 +457,26 @@ We would love to thank the contributors:
 * Mark Bestavros
 * Jake Sanders
 
-## v0.1.0
+# v0.1.0
 
 This is the first release of `cosign`!
 
 The main goal of this release is to release something we can start using to sign other releases of [sigstore](sigstore.dev) projects, including `cosign` itself.
 
 We expect many flags, commands, and formats to change going forward.
-No backwards compatiblity is promised or implied.
+No backwards compatibility is promised or implied.
 
-### Enhancements
+## Enhancements
 
 This release added a feature to `cosign` called `cosign`.
 The `cosign` feature can be used to sign container images and blobs.
 Detailed documentation can be found in the [README](README.md) and the [Detailed Usage](USAGE.md).
 
-### Bug Fixes
+## Bug Fixes
 
 There was no way to sign container images. Now there is!
 
-### Contributors
+## Contributors
 
 We would love to thank the contributors:
 

@@ -28,6 +28,7 @@ type VerifyOptions struct {
 	Attachment   string
 	Output       string
 	SignatureRef string
+	LocalImage   bool
 
 	SecurityKey SecurityKeyOptions
 	Rekor       RekorOptions
@@ -67,6 +68,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
+
+	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
+		"whether the specified image is a path to an image saved locally via 'cosign save'")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.
@@ -81,6 +85,7 @@ type VerifyAttestationOptions struct {
 	Registry    RegistryOptions
 	Predicate   PredicateRemoteOptions
 	Policies    []string
+	LocalImage  bool
 }
 
 var _ Interface = (*VerifyAttestationOptions)(nil)
@@ -104,6 +109,9 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")
+
+	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
+		"whether the specified image is a path to an image saved locally via 'cosign save'")
 }
 
 // VerifyBlobOptions is the top level wrapper for the `verify blob` command.

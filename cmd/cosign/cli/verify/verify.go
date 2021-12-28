@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
@@ -58,6 +59,7 @@ type VerifyCommand struct {
 	Annotations   sigs.AnnotationsMap
 	SignatureRef  string
 	HashAlgorithm crypto.Hash
+	LocalImage    bool
 }
 
 // Exec runs the verification command
@@ -130,7 +132,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return errors.Wrap(err, "initializing piv token verifier")
 		}
 	case certRef != "":
-		pubKey, err = loadCertFromFile(c.CertRef)
+		pubKey, err = loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
 		}
@@ -138,22 +140,31 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	co.SigVerifier = pubKey
 
 	for _, img := range images {
-		ref, err := name.ParseReference(img)
-		if err != nil {
-			return errors.Wrap(err, "parsing reference")
-		}
-		ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
-		if err != nil {
-			return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
-		}
+		if c.LocalImage {
+			verified, bundleVerified, err := cosign.VerifyLocalImageSignatures(ctx, img, co)
+			if err != nil {
+				return err
+			}
+			PrintVerificationHeader(img, co, bundleVerified)
+			PrintVerification(img, verified, c.Output)
+		} else {
+			ref, err := name.ParseReference(img)
+			if err != nil {
+				return errors.Wrap(err, "parsing reference")
+			}
+			ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
+			if err != nil {
+				return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
+			}
 
-		verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
-		if err != nil {
-			return err
-		}
+			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
+			if err != nil {
+				return err
+			}
 
-		PrintVerificationHeader(ref.Name(), co, bundleVerified)
-		PrintVerification(ref.Name(), verified, c.Output)
+			PrintVerificationHeader(ref.Name(), co, bundleVerified)
+			PrintVerification(ref.Name(), verified, c.Output)
+		}
 	}
 
 	return nil
@@ -244,8 +255,8 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	}
 }
 
-func loadCertFromFile(path string) (*signature.ECDSAVerifier, error) {
-	pems, err := os.ReadFile(path)
+func loadCertFromFileOrURL(path string) (*signature.ECDSAVerifier, error) {
+	pems, err := blob.LoadFileOrURL(path)
 	if err != nil {
 		return nil, err
 	}

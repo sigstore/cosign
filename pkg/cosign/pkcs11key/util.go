@@ -45,7 +45,7 @@ func percentEncode(input []byte) string {
 	return stringBuilder.String()
 }
 
-func EncodeURIComponent(uriString string, isForPath bool, usePercenttEncoding bool) (string, error) {
+func EncodeURIComponent(uriString string, isForPath bool, usePercentEncoding bool) (string, error) {
 	var stringBuilder strings.Builder
 	var allowedChars string
 
@@ -68,7 +68,7 @@ func EncodeURIComponent(uriString string, isForPath bool, usePercenttEncoding bo
 		if allowedChar {
 			stringBuilder.WriteByte(uriString[i])
 		} else {
-			if usePercenttEncoding {
+			if usePercentEncoding {
 				stringBuilder.WriteString(percentEncode([]byte{uriString[i]}))
 			} else {
 				return "", errors.New("string contains an invalid character")

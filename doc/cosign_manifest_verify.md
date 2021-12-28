@@ -57,6 +57,7 @@ cosign manifest verify [flags]
   -h, --help                                                                                     help for verify
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
+      --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --signature string                                                                         signature content or path or remote URL
