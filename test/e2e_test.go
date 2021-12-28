@@ -188,7 +188,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	// Now sign the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, options.RegistryOptions{}, nil, []string{imgName}, "", true, "", "", "", false, false, ""), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
