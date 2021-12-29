@@ -36,14 +36,15 @@ steps:
   dir: "go/src/sigstore/cosign"
   env:
   - COSIGN_EXPERIMENTAL=true
+  - TUF_ROOT=/tmp
   args:
   - 'verify'
   - '--key'
   - 'https://raw.githubusercontent.com/gythialy/golang-cross/main/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.5-1@sha256:f6cc024baf829eaa61972c7fd20d0d62bf9faad31246fd61d9d78fc122cbcd29'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.5-4@sha256:e1ae043ca969c0b46bb23aa3dd0443a9271c2f665513168091864aa3b751f12a'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.5-1@sha256:f6cc024baf829eaa61972c7fd20d0d62bf9faad31246fd61d9d78fc122cbcd29
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-4@sha256:e1ae043ca969c0b46bb23aa3dd0443a9271c2f665513168091864aa3b751f12a
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -64,7 +65,7 @@ steps:
     - |
       make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.5-1@sha256:f6cc024baf829eaa61972c7fd20d0d62bf9faad31246fd61d9d78fc122cbcd29
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-4@sha256:e1ae043ca969c0b46bb23aa3dd0443a9271c2f665513168091864aa3b751f12a
   entrypoint: 'bash'
   dir: "go/src/sigstore/cosign"
   env:
@@ -97,7 +98,7 @@ artifacts:
   objects:
     location: 'gs://${_STORAGE_LOCATION}/${_GIT_TAG}'
     paths:
-    - "go/src/sigstore/cosign/dist/cosign*"
+    - "go/src/sigstore/cosign/dist/*"
     - "go/src/sigstore/cosign/release/release-cosign.pub"
 
 options:
