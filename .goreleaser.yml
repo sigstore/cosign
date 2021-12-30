@@ -14,6 +14,9 @@ before:
 gomod:
   proxy: true
 
+sboms:
+- artifacts: binary
+
 builds:
 - id: linux
   binary: cosign-linux-{{ .Arch }}
@@ -197,23 +200,32 @@ signs:
   # Keyless
   - id: cosign-keyless
     signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: binary
   - id: cosigned-keyless
     signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: binary
     ids:
       - linux-cosigned
   - id: sget-keyless
     signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: binary
     ids:
       - sget
+  - id: checksum-keyless
+    signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    artifacts: checksum
 
 archives:
 - format: binary
@@ -248,4 +260,3 @@ rigs:
     homepage: https://sigstore.dev
     description: Container Signing, Verification and Storage in an OCI registry.
     license: "Apache License 2.0"
-
