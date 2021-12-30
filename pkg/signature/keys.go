@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -140,12 +141,14 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		return cosign.LoadECDSAPrivateKey([]byte(pk), []byte(pass))
-	default:
-		if sv, err := kms.Get(ctx, keyRef, crypto.SHA256); err == nil {
-			return sv, nil
-		}
 	}
 
+	sv, err := kms.Get(ctx, keyRef, crypto.SHA256)
+	if err == nil {
+		return sv, nil
+	}
+
+	fmt.Fprintf(os.Stderr, "an error occurred: %v, will try to load key from disk...\n", err)
 	return loadKey(keyRef, pf)
 }
 
