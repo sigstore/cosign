@@ -76,3 +76,17 @@ func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
 		return "unknown", fmt.Errorf("unknown SBOM type: %q, expected (spdx|cyclonedx|syft)", o.SBOMType)
 	}
 }
+
+// AttachAttestationOptions is the top level wrapper for the attach attestation command.
+type AttachAttestationOptions struct {
+	Attestation string
+	Registry    RegistryOptions
+}
+
+// AddFlags implements Interface
+func (o *AttachAttestationOptions) AddFlags(cmd *cobra.Command) {
+	o.Registry.AddFlags(cmd)
+
+	cmd.Flags().StringVar(&o.Attestation, "attestation", "",
+		"path to the predicate")
+}

@@ -7,7 +7,6 @@
 release:
 	LDFLAGS="$(LDFLAGS)" goreleaser release
 
-
 ###########################
 # sign with GCP KMS section
 ###########################
