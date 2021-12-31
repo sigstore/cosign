@@ -30,21 +30,22 @@ var (
 )
 
 func New() *cobra.Command {
+	var (
+		out, stdout *os.File
+	)
+
 	cmd := &cobra.Command{
 		Use:               "cosign",
 		DisableAutoGenTag: true,
 		SilenceUsage:      true, // Don't show usage on errors
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if ro.OutputFile != "" {
-				out, err := os.Create(ro.OutputFile)
+				var err error
+				out, err = os.Create(ro.OutputFile)
 				if err != nil {
 					return errors.Wrapf(err, "Error creating output file %s", ro.OutputFile)
 				}
-				stdout := os.Stdout
-				defer func() {
-					os.Stdout = stdout
-					_ = out.Close()
-				}()
+				stdout = os.Stdout
 				os.Stdout = out // TODO: don't do this.
 				cmd.SetOut(out)
 			}
@@ -53,6 +54,12 @@ func New() *cobra.Command {
 				logs.Debug.SetOutput(os.Stderr)
 			}
 			return nil
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			if out != nil {
+				_ = out.Close()
+			}
+			os.Stdout = stdout
 		},
 	}
 	ro.AddFlags(cmd)
