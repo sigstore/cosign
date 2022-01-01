@@ -20,10 +20,13 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
@@ -34,14 +37,20 @@ import (
 )
 
 const (
-	PrivakeKeyPemType = "ENCRYPTED COSIGN PRIVATE KEY"
-
-	BundleKey = static.BundleAnnotationKey
+	PrivateKeyPemType    = "ENCRYPTED COSIGN PRIVATE KEY"
+	RSAPrivateKeyPemType = "RSA PRIVATE KEY"
+	ECPrivateKeyPemType  = "EC PRIVATE KEY"
+	BundleKey            = static.BundleAnnotationKey
 )
 
 type PassFunc func(bool) ([]byte, error)
 
 type Keys struct {
+	private crypto.PrivateKey
+	public  crypto.PublicKey
+}
+
+type KeysBytes struct {
 	PrivateBytes []byte
 	PublicBytes  []byte
 	password     []byte
@@ -51,45 +60,79 @@ func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
-func GenerateKeyPair(pf PassFunc) (*Keys, error) {
-	priv, err := GeneratePrivateKey()
+func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
+	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
 		return nil, err
 	}
 
-	x509Encoded, err := x509.MarshalPKCS8PrivateKey(priv)
+	p, _ := pem.Decode(kb)
+	if p == nil {
+		return nil, fmt.Errorf("invalid pem block")
+	}
+
+	var pk crypto.Signer
+
+	switch p.Type {
+	case RSAPrivateKeyPemType:
+		pk, err = x509.ParsePKCS1PrivateKey(p.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parsing error")
+		}
+	default:
+		pk, err = x509.ParseECPrivateKey(p.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parsing error")
+		}
+	}
+	return marshalKeyPair(Keys{pk, pk.Public()}, pf)
+}
+
+func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
+	x509Encoded, err := x509.MarshalPKCS8PrivateKey(keypair.private)
 	if err != nil {
 		return nil, errors.Wrap(err, "x509 encoding private key")
 	}
-	// Encrypt the private key and store it.
+
 	password, err := pf(true)
 	if err != nil {
 		return nil, err
 	}
+
 	encBytes, err := encrypted.Encrypt(x509Encoded, password)
 	if err != nil {
 		return nil, err
 	}
+
 	// store in PEM format
 	privBytes := pem.EncodeToMemory(&pem.Block{
 		Bytes: encBytes,
-		Type:  PrivakeKeyPemType,
+		Type:  PrivateKeyPemType,
 	})
 
 	// Now do the public key
-	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
+	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(keypair.public)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Keys{
+	return &KeysBytes{
 		PrivateBytes: privBytes,
 		PublicBytes:  pubBytes,
 		password:     password,
 	}, nil
 }
 
-func (k *Keys) Password() []byte {
+func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
+	priv, err := GeneratePrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return marshalKeyPair(Keys{priv, priv.Public()}, pf)
+}
+
+func (k *KeysBytes) Password() []byte {
 	return k.password
 }
 
@@ -105,13 +148,13 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	return ecdsaPub, nil
 }
 
-func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifier, error) {
+func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
 		return nil, errors.New("invalid pem block")
 	}
-	if p.Type != PrivakeKeyPemType {
+	if p.Type != PrivateKeyPemType {
 		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
@@ -124,9 +167,12 @@ func LoadECDSAPrivateKey(key []byte, pass []byte) (*signature.ECDSASignerVerifie
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing private key")
 	}
-	epk, ok := pk.(*ecdsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("invalid private key")
+	switch pk := pk.(type) {
+	case *rsa.PrivateKey:
+		return signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
+	case *ecdsa.PrivateKey:
+		return signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
+	default:
+		return nil, errors.Wrap(err, "unsupported key type")
 	}
-	return signature.LoadECDSASignerVerifier(epk, crypto.SHA256)
 }

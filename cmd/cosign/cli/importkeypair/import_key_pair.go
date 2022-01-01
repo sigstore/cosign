@@ -13,26 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package generate
+package importkeypair
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/sigstore/cosign/pkg/cosign/git"
-	"github.com/sigstore/cosign/pkg/cosign/git/github"
-	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
-	"golang.org/x/term"
-
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature/kms"
+	"golang.org/x/term"
 )
 
 var (
@@ -41,54 +32,16 @@ var (
 )
 
 // nolint
-func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
-	if kmsVal != "" {
-		k, err := kms.Get(ctx, kmsVal, crypto.SHA256)
-		if err != nil {
-			return err
-		}
-		pubKey, err := k.CreateKey(ctx, k.DefaultAlgorithm())
-		if err != nil {
-			return errors.Wrap(err, "creating key")
-		}
-		pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pubKey)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
-		return nil
-	}
+func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 
-	if len(args) > 0 {
-		split := strings.Split(args[0], "://")
-
-		if len(split) < 2 {
-			return errors.New("could not parse scheme, use <scheme>://<ref> format")
-		}
-
-		provider, targetRef := split[0], split[1]
-
-		switch provider {
-		case "k8s":
-			return kubernetes.KeyPairSecret(ctx, targetRef, GetPass)
-		case gitlab.ReferenceScheme, github.ReferenceScheme:
-			return git.GetProvider(provider).PutSecret(ctx, targetRef, GetPass)
-		}
-
-		return fmt.Errorf("undefined provider: %s", provider)
-	}
-
-	keys, err := cosign.GenerateKeyPair(GetPass)
+	keys, err := cosign.ImportKeyPair(keyVal, GetPass)
 	if err != nil {
 		return err
 	}
 
-	if fileExists("cosign.key") {
+	if fileExists("import-cosign.key") {
 		var overwrite string
-		fmt.Fprint(os.Stderr, "File cosign.key already exists. Overwrite (y/n)? ")
+		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)
 		switch overwrite {
 		case "y", "Y":
@@ -100,15 +53,15 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		}
 	}
 	// TODO: make sure the perms are locked down first.
-	if err := os.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
+	if err := os.WriteFile("import-cosign.key", keys.PrivateBytes, 0600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
+	fmt.Fprintln(os.Stderr, "Private key written to import-cosign.key")
 
-	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
+	if err := os.WriteFile("import-cosign.pub", keys.PublicBytes, 0644); err != nil {
 		return err
 	} // #nosec G306
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+	fmt.Fprintln(os.Stderr, "Public key written to import-cosign.pub")
 	return nil
 }
 
@@ -145,21 +98,21 @@ func isTerminal() bool {
 func getPassFromTerm(confirm bool) ([]byte, error) {
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
 	pw1, err := term.ReadPassword(0)
-	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
 	}
 	if !confirm {
 		return pw1, nil
 	}
+	fmt.Fprintln(os.Stderr)
 	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
-	pw2, err := term.ReadPassword(0)
+	confirmpw, err := term.ReadPassword(0)
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
 	}
 
-	if string(pw1) != string(pw2) {
+	if string(pw1) != string(confirmpw) {
 		return nil, errors.New("passwords do not match")
 	}
 	return pw1, nil
