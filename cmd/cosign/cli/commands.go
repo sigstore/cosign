@@ -70,6 +70,7 @@ func New() *cobra.Command {
 	// Add sub-commands.
 	cmd.AddCommand(Attach())
 	cmd.AddCommand(Attest())
+	cmd.AddCommand(AttestBlob())
 	cmd.AddCommand(Clean())
 	cmd.AddCommand(Tree())
 	cmd.AddCommand(Completion())
