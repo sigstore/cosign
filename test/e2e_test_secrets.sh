@@ -51,6 +51,11 @@ crane cp gcr.io/distroless/base $multiarch_img
 # `initialize`
 ./cosign initialize
 
+## Generate (also test output redirection
+./cosign generate $img > payload1
+./cosign generate --output-file=payload2 $img
+diff payload1 payload2
+
 ## sign/verify
 ./cosign sign --key ${signing_key} $img
 ./cosign verify --key ${verification_key} $img
