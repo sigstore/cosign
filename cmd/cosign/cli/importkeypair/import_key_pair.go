@@ -21,9 +21,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"golang.org/x/term"
 )
 
 var (
@@ -39,7 +37,7 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 		return err
 	}
 
-	if fileExists("import-cosign.key") {
+	if cosign.FileExists("import-cosign.key") {
 		var overwrite string
 		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)
@@ -77,9 +75,9 @@ func readPasswordFn(confirm bool) func() ([]byte, error) {
 		return func() ([]byte, error) {
 			return []byte(pw), nil
 		}
-	case isTerminal():
+	case cosign.IsTerminal():
 		return func() ([]byte, error) {
-			return getPassFromTerm(confirm)
+			return cosign.GetPassFromTerm(confirm)
 		}
 	// Handle piped in passwords.
 	default:
@@ -87,42 +85,4 @@ func readPasswordFn(confirm bool) func() ([]byte, error) {
 			return io.ReadAll(os.Stdin)
 		}
 	}
-}
-
-func isTerminal() bool {
-	stat, _ := os.Stdin.Stat()
-	return (stat.Mode() & os.ModeCharDevice) != 0
-}
-
-// TODO centralize password prompt logic for code reuse across more use cases -> https://github.com/sigstore/cosign/issues/1078
-func getPassFromTerm(confirm bool) ([]byte, error) {
-	fmt.Fprint(os.Stderr, "Enter password for private key: ")
-	pw1, err := term.ReadPassword(0)
-	if err != nil {
-		return nil, err
-	}
-	if !confirm {
-		return pw1, nil
-	}
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
-	confirmpw, err := term.ReadPassword(0)
-	fmt.Fprintln(os.Stderr)
-	if err != nil {
-		return nil, err
-	}
-
-	if string(pw1) != string(confirmpw) {
-		return nil, errors.New("passwords do not match")
-	}
-	return pw1, nil
-}
-
-// TODO need to centralize this logic
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
