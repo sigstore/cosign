@@ -34,7 +34,6 @@ func TestNewFromEnv(t *testing.T) {
 	ctx := context.Background()
 
 	// Make sure nothing is expired
-	forceExpiration(t, false)
 	tuf, err := NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +43,6 @@ func TestNewFromEnv(t *testing.T) {
 	tuf.Close()
 
 	// Now try with expired targets
-
 	forceExpiration(t, true)
 	tuf, err = NewFromEnv(ctx)
 	if err != nil {
@@ -136,6 +134,7 @@ func TestCache(t *testing.T) {
 
 func checkTargets(t *testing.T, tuf *TUF) {
 	// Check the targets
+	t.Helper()
 	for _, target := range targets {
 		if _, err := tuf.GetTarget(target); err != nil {
 			t.Fatal(err)
