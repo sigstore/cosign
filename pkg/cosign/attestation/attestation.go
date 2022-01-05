@@ -46,7 +46,7 @@ type CosignPredicate struct {
 // VulnPredicate specifies the format of the Vulnerability Scan Predicate
 type CosignVulnPredicate struct {
 	Invocation Invocation `json:"invocation"`
-	Scanners   []Scanner  `json:"scanners"`
+	Scanner    Scanner    `json:"scanner"`
 	Metadata   Metadata   `json:"metadata"`
 }
 
