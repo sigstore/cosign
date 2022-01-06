@@ -101,7 +101,7 @@ In this example, the SBOM only refers to a single layer:
 
 ## MediaTypes
 
-The three main SBOM formats in use are [SPDX](https://spdx.org), [CycloneDX](https://cyclonedx.org/) and [syft](https://github.com/anchore/syft).
+The SBOM formats supported by cosign are [SPDX](https://spdx.org), [CycloneDX](https://cyclonedx.org/) and [syft](https://github.com/anchore/syft).
 The `mediaTypes` for these should be indicated in the `descriptor` for each `layer`.
 
 The `mediaTypes` are:
