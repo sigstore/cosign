@@ -101,13 +101,14 @@ In this example, the SBOM only refers to a single layer:
 
 ## MediaTypes
 
-The two main SBOM formats in use are [SPDX](https://spdx.org) and [CycloneDX](https://cyclonedx.org/).
+The SBOM formats supported by cosign are [SPDX](https://spdx.org), [CycloneDX](https://cyclonedx.org/) and [syft](https://github.com/anchore/syft).
 The `mediaTypes` for these should be indicated in the `descriptor` for each `layer`.
 
 The `mediaTypes` are:
 
 * `application/vnd.cyclonedx`
 * `text/spdx`
+* `application/vnd.syft+json` (`syft` is a JSON only format)
 
 These `mediaTypes` can contain format-specific suffixes as well. For example:
 
