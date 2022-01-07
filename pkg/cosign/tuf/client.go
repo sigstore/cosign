@@ -138,11 +138,12 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 }
 
 func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
-	trustedRoot, ok := meta[filepath.Join("repository", "root.json")]
+	trustedRoot, ok := meta["root.json"]
 	if ok {
 		return trustedRoot, nil
 	}
-	trustedRoot, err := embeddedRootRepo.ReadFile("repository/root.json")
+	// On first initialize, there will be no root in the TUF DB, so read from embedded.
+	trustedRoot, err := embeddedRootRepo.ReadFile(path.Join("repository", "root.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +175,9 @@ func Initialize(remote client.RemoteStore, root []byte) error {
 	c := client.NewClient(local, remote)
 	if err := c.Init(rootKeys, rootThreshold); err != nil {
 		return errors.Wrap(err, "initializing root")
+	}
+	if err := updateMetadataAndDownloadTargets(c, newFileImpl()); err != nil {
+		return errors.Wrap(err, "updating local metadata and targets")
 	}
 	return nil
 }
@@ -259,8 +263,12 @@ func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
 }
 
 func (t *TUF) updateMetadataAndDownloadTargets() error {
+	return updateMetadataAndDownloadTargets(t.client, t.targets)
+}
+
+func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl) error {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
-	targetFiles, err := t.client.Update()
+	targetFiles, err := c.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
 		return errors.Wrap(err, "updating tuf metadata")
 	}
@@ -269,10 +277,10 @@ func (t *TUF) updateMetadataAndDownloadTargets() error {
 	// If the cache directory is enabled, update that too.
 	for name := range targetFiles {
 		buf := bytes.Buffer{}
-		if err := downloadRemoteTarget(name, t.client, &buf); err != nil {
+		if err := downloadRemoteTarget(name, c, &buf); err != nil {
 			return err
 		}
-		if err := t.targets.Set(name, buf.Bytes()); err != nil {
+		if err := t.Set(name, buf.Bytes()); err != nil {
 			return err
 		}
 	}
