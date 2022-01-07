@@ -43,9 +43,10 @@ const (
 )
 
 type TUF struct {
-	client  *client.Client
-	targets targetImpl
-	close   func() error
+	client    *client.Client
+	targets   targetImpl
+	timestamp json.RawMessage
+	close     func() error
 }
 
 // We have to close the local storage passed into the tuf.Client object, but tuf.Client doesn't expose a
@@ -115,6 +116,7 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 	// Now check to see if it needs to be updated.
 	trustedTimestamp, ok := trustedMeta["timestamp.json"]
 	if ok && !isExpiredMetadata(trustedTimestamp) {
+		t.timestamp = trustedTimestamp
 		return t, nil
 	}
 
@@ -130,7 +132,7 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 	if err := t.client.Init(rootKeys, rootThreshold); err != nil {
 		return nil, errors.Wrap(err, "unable to initialize client")
 	}
-	if err := t.updateMetadataAndDownloadTargets(); err != nil {
+	if err := t.updateMetadataAndDownloadTargets(local); err != nil {
 		return nil, errors.Wrap(err, "updating local metadata and targets")
 	}
 
@@ -176,7 +178,8 @@ func Initialize(remote client.RemoteStore, root []byte) error {
 	if err := c.Init(rootKeys, rootThreshold); err != nil {
 		return errors.Wrap(err, "initializing root")
 	}
-	if err := updateMetadataAndDownloadTargets(c, newFileImpl()); err != nil {
+	// Timestamp does not need to be saved in memory on Initialize
+	if _, err := updateMetadataAndDownloadTargets(c, newFileImpl(), local); err != nil {
 		return errors.Wrap(err, "updating local metadata and targets")
 	}
 	return nil
@@ -203,6 +206,13 @@ func (t *TUF) GetTarget(name string) ([]byte, error) {
 	}
 
 	return targetBytes, nil
+}
+
+func (t *TUF) GetTimestamp() ([]byte, error) {
+	if len(t.timestamp) == 0 {
+		return nil, errors.New("unable to get TUF timestamp")
+	}
+	return t.timestamp, nil
 }
 
 func localStore(cacheRoot string) (client.LocalStore, error) {
@@ -235,17 +245,11 @@ var isExpiredMetadata = func(metadata []byte) bool {
 	if err := json.Unmarshal(metadata, s); err != nil {
 		return true
 	}
-	sm := &signedMeta{}
+	sm := &data.Timestamp{}
 	if err := json.Unmarshal(s.Signed, sm); err != nil {
 		return true
 	}
 	return time.Until(sm.Expires) <= 0
-}
-
-type signedMeta struct {
-	Type    string    `json:"_type"`
-	Expires time.Time `json:"expires"`
-	Version int       `json:"version"`
 }
 
 func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
@@ -262,15 +266,29 @@ func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
 	return rootKeys, rootThreshold, err
 }
 
-func (t *TUF) updateMetadataAndDownloadTargets() error {
-	return updateMetadataAndDownloadTargets(t.client, t.targets)
+func (t *TUF) updateMetadataAndDownloadTargets(local client.LocalStore) error {
+	timestamp, err := updateMetadataAndDownloadTargets(t.client, t.targets, local)
+	if err != nil {
+		return err
+	}
+	t.timestamp = timestamp
+	return nil
 }
 
-func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl) error {
+func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl, local client.LocalStore) (json.RawMessage, error) {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
 	targetFiles, err := c.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
-		return errors.Wrap(err, "updating tuf metadata")
+		return nil, errors.Wrap(err, "updating tuf metadata")
+	}
+
+	trustedMeta, err := local.GetMeta()
+	if err != nil {
+		return nil, errors.Wrap(err, "getting trusted meta during update")
+	}
+	timestamp, ok := trustedMeta["timestamp.json"]
+	if !ok {
+		return nil, errors.Wrap(err, "getting timestamp from local store")
 	}
 
 	// Update the in-memory targets.
@@ -278,14 +296,14 @@ func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl) error {
 	for name := range targetFiles {
 		buf := bytes.Buffer{}
 		if err := downloadRemoteTarget(name, c, &buf); err != nil {
-			return err
+			return nil, err
 		}
 		if err := t.Set(name, buf.Bytes()); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return timestamp, nil
 }
 
 func downloadRemoteTarget(name string, c *client.Client, w io.Writer) error {

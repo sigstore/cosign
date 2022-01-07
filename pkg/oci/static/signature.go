@@ -32,6 +32,7 @@ const (
 	CertificateAnnotationKey = "dev.sigstore.cosign/certificate"
 	ChainAnnotationKey       = "dev.sigstore.cosign/chain"
 	BundleAnnotationKey      = "dev.sigstore.cosign/bundle"
+	TimestampAnnotationKey   = "dev.sigstore.cosign/timestamp"
 )
 
 // NewSignature constructs a new oci.Signature from the provided options.
@@ -108,6 +109,11 @@ func (l *staticLayer) Chain() ([]*x509.Certificate, error) {
 // Bundle implements oci.Signature
 func (l *staticLayer) Bundle() (*bundle.RekorBundle, error) {
 	return l.opts.Bundle, nil
+}
+
+// Timestamp implements oci.Signature
+func (l *staticLayer) Timestamp() (*oci.Timestamp, error) {
+	return l.opts.Timestamp, nil
 }
 
 // Digest implements v1.Layer

@@ -30,10 +30,11 @@ import (
 )
 
 const (
-	sigkey    = "dev.cosignproject.cosign/signature"
-	certkey   = "dev.sigstore.cosign/certificate"
-	chainkey  = "dev.sigstore.cosign/chain"
-	BundleKey = "dev.sigstore.cosign/bundle"
+	sigkey       = "dev.cosignproject.cosign/signature"
+	certkey      = "dev.sigstore.cosign/certificate"
+	chainkey     = "dev.sigstore.cosign/chain"
+	BundleKey    = "dev.sigstore.cosign/bundle"
+	TimestampKey = "dev.sigstore.cosign/timestamp"
 )
 
 type sigLayer struct {
@@ -115,4 +116,17 @@ func (s *sigLayer) Bundle() (*bundle.RekorBundle, error) {
 		return nil, errors.Wrap(err, "unmarshaling bundle")
 	}
 	return &b, nil
+}
+
+// Timestamp implements oci.Signature
+func (s *sigLayer) Timestamp() (*oci.Timestamp, error) {
+	timestamp := s.desc.Annotations[TimestampKey]
+	if timestamp == "" {
+		return nil, nil
+	}
+	var ts oci.Timestamp
+	if err := json.Unmarshal([]byte(timestamp), &ts); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling timestamp")
+	}
+	return &ts, nil
 }

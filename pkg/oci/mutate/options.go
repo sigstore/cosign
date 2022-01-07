@@ -65,6 +65,7 @@ type signatureOpts struct {
 	cert        []byte
 	chain       []byte
 	mediaType   types.MediaType
+	timestamp   *oci.Timestamp
 }
 
 type SignatureOption func(*signatureOpts)
@@ -95,6 +96,13 @@ func WithCertChain(cert, chain []byte) SignatureOption {
 func WithMediaType(mediaType types.MediaType) SignatureOption {
 	return func(so *signatureOpts) {
 		so.mediaType = mediaType
+	}
+}
+
+// WithTimestamp specifies the new Timestamp the Signature should have.
+func WithTimestamp(timestamp *oci.Timestamp) SignatureOption {
+	return func(so *signatureOpts) {
+		so.timestamp = timestamp
 	}
 }
 
