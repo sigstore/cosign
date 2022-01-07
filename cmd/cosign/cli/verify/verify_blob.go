@@ -55,38 +55,18 @@ func isb64(data []byte) bool {
 // nolint
 func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRef string) error {
 	var pubKey sigstoresigs.Verifier
-	var err error
 	var cert *x509.Certificate
 
 	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() {
 		return &options.PubKeyParseError{}
 	}
 
-	var b64sig string
-	if sigRef == "" {
-		return fmt.Errorf("missing flag '--signature'")
-	}
-	targetSig, err := blob.LoadFileOrURL(sigRef)
+	sig, b64sig, err := signatures(sigRef)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			// ignore if file does not exist, it can be a base64 encoded string as well
-			return err
-		}
-		targetSig = []byte(sigRef)
+		return err
 	}
 
-	if isb64(targetSig) {
-		b64sig = string(targetSig)
-	} else {
-		b64sig = base64.StdEncoding.EncodeToString(targetSig)
-	}
-
-	var blobBytes []byte
-	if blobRef == "-" {
-		blobBytes, err = io.ReadAll(os.Stdin)
-	} else {
-		blobBytes, err = blob.LoadFileOrURL(blobRef)
-	}
+	blobBytes, err := payloadBytes(blobRef)
 	if err != nil {
 		return err
 	}
@@ -148,53 +128,111 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		}
 	}
 
-	sig, err := base64.StdEncoding.DecodeString(b64sig)
+	// verify the signature
+	if err := pubKey.VerifySignature(bytes.NewReader([]byte(sig)), bytes.NewReader(blobBytes)); err != nil {
+		return err
+	}
+
+	// verify the cert
+	if err := verifyCert(cert); err != nil {
+		return err
+	}
+
+	// verify the rekor entry
+	if err := verifyRekorEntry(ctx, ko, pubKey, cert, b64sig, blobBytes); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(os.Stderr, "Verified OK")
+	return nil
+}
+
+// signatures returns the raw signature and the base64 encoded signature
+func signatures(sigRef string) (string, string, error) {
+	var targetSig []byte
+	var err error
+	switch {
+	case sigRef != "":
+		targetSig, err = blob.LoadFileOrURL(sigRef)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				// ignore if file does not exist, it can be a base64 encoded string as well
+				return "", "", err
+			}
+			targetSig = []byte(sigRef)
+		}
+	default:
+		return "", "", fmt.Errorf("missing flag '--signature'")
+	}
+
+	var sig, b64sig string
+	if isb64(targetSig) {
+		b64sig = string(targetSig)
+		sigBytes, _ := base64.StdEncoding.DecodeString(b64sig)
+		sig = string(sigBytes)
+	} else {
+		sig = string(targetSig)
+		b64sig = base64.StdEncoding.EncodeToString(targetSig)
+	}
+	return sig, b64sig, nil
+}
+
+func payloadBytes(blobRef string) ([]byte, error) {
+	var blobBytes []byte
+	var err error
+	if blobRef == "-" {
+		blobBytes, err = io.ReadAll(os.Stdin)
+	} else {
+		blobBytes, err = blob.LoadFileOrURL(blobRef)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return blobBytes, nil
+}
+
+func verifyCert(cert *x509.Certificate) error {
+	if cert == nil {
+		return nil
+	}
+	if err := cosign.TrustedCert(cert, fulcio.GetRoots()); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
+	fmt.Fprintln(os.Stderr, "Email:", cert.EmailAddresses)
+	for _, uri := range cert.URIs {
+		fmt.Fprintf(os.Stderr, "URI: %s://%s%s\n", uri.Scheme, uri.Host, uri.Path)
+	}
+	fmt.Fprintln(os.Stderr, "Issuer: ", sigs.CertIssuerExtension(cert))
+	return nil
+}
+
+func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey sigstoresigs.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
+	if !options.EnableExperimental() {
+		return nil
+	}
+	rekorClient, err := rekor.NewClient(ko.RekorURL)
 	if err != nil {
 		return err
 	}
-	if err := pubKey.VerifySignature(bytes.NewReader(sig), bytes.NewReader(blobBytes)); err != nil {
+	var pubBytes []byte
+	if pubKey != nil {
+		pubBytes, err = sigs.PublicKeyPem(pubKey, signatureoptions.WithContext(ctx))
+		if err != nil {
+			return err
+		}
+	}
+	if cert != nil {
+		pubBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
+		if err != nil {
+			return err
+		}
+	}
+	uuid, index, err := cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
+	if err != nil {
 		return err
 	}
-
-	if cert != nil { // cert
-		if err := cosign.TrustedCert(cert, fulcio.GetRoots()); err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
-		fmt.Fprintln(os.Stderr, "Email:", cert.EmailAddresses)
-		for _, uri := range cert.URIs {
-			fmt.Fprintf(os.Stderr, "URI: %s://%s%s\n", uri.Scheme, uri.Host, uri.Path)
-		}
-		fmt.Fprintln(os.Stderr, "Issuer: ", sigs.CertIssuerExtension(cert))
-	}
-	fmt.Fprintln(os.Stderr, "Verified OK")
-
-	if options.EnableExperimental() {
-		rekorClient, err := rekor.NewClient(ko.RekorURL)
-		if err != nil {
-			return err
-		}
-		var pubBytes []byte
-		if pubKey != nil {
-			pubBytes, err = sigs.PublicKeyPem(pubKey, signatureoptions.WithContext(ctx))
-			if err != nil {
-				return err
-			}
-		}
-		if cert != nil {
-			pubBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
-			if err != nil {
-				return err
-			}
-		}
-		uuid, index, err := cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, index)
-		return nil
-	}
-
+	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, index)
 	return nil
 }
 
