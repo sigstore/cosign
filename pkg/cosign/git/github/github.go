@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	sodium "github.com/GoKillers/libsodium-go/cryptobox"
 	"github.com/google/go-github/v39/github"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -73,10 +74,21 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
+	decodedPublicKey, err := base64.StdEncoding.DecodeString(key.GetKey())
+	if err != nil {
+		return errors.Wrap(err, "could not decode repository public key")
+	}
+
+	secretBytes := []byte(keys.Password())
+	encryptedBytes, exit := sodium.CryptoBoxSeal(secretBytes, decodedPublicKey)
+	if exit != 0 {
+		return errors.Wrap(err, "sodium.CryptoBoxSeal exited with non zero exit code")
+	}
+
 	passwordSecretEnv := &github.EncryptedSecret{
 		Name:           "COSIGN_PASSWORD",
 		KeyID:          key.GetKeyID(),
-		EncryptedValue: base64.StdEncoding.EncodeToString(keys.Password()),
+		EncryptedValue: base64.StdEncoding.EncodeToString(encryptedBytes),
 	}
 
 	passwordSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, passwordSecretEnv)
@@ -91,10 +103,15 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PASSWORD environment variable")
 
+	secretBytes = []byte(keys.PrivateBytes)
+	encryptedBytes, exit = sodium.CryptoBoxSeal(secretBytes, decodedPublicKey)
+	if exit != 0 {
+		return errors.Wrap(err, "sodium.CryptoBoxSeal exited with non zero exit code")
+	}
 	privateKeySecretEnv := &github.EncryptedSecret{
 		Name:           "COSIGN_PRIVATE_KEY",
 		KeyID:          key.GetKeyID(),
-		EncryptedValue: base64.StdEncoding.EncodeToString(keys.PrivateBytes),
+		EncryptedValue: base64.StdEncoding.EncodeToString(encryptedBytes),
 	}
 
 	privateKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, privateKeySecretEnv)
@@ -109,10 +126,15 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PRIVATE_KEY environment variable")
 
+	secretBytes = []byte(keys.PublicBytes)
+	encryptedBytes, exit = sodium.CryptoBoxSeal(secretBytes, decodedPublicKey)
+	if exit != 0 {
+		return errors.Wrap(err, "sodium.CryptoBoxSeal exited with non zero exit code")
+	}
 	publicKeySecretEnv := &github.EncryptedSecret{
 		Name:           "COSIGN_PUBLIC_KEY",
 		KeyID:          key.GetKeyID(),
-		EncryptedValue: base64.StdEncoding.EncodeToString(keys.PublicBytes),
+		EncryptedValue: base64.StdEncoding.EncodeToString(encryptedBytes),
 	}
 
 	publicKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, publicKeySecretEnv)

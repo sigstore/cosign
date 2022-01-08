@@ -42,6 +42,7 @@ require (
 )
 
 require (
+	github.com/GoKillers/libsodium-go v0.0.0-20171022220152-dd733721c3cb // indirect
 	github.com/bytecodealliance/wasmtime-go v0.32.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/go-logr/logr v1.2.2 // indirect
