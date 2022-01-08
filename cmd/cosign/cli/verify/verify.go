@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -132,7 +133,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return errors.Wrap(err, "initializing piv token verifier")
 		}
 	case certRef != "":
-		pubKey, err = loadCertFromFileOrURL(c.CertRef)
+		cert, err := loadCertFromFileOrURL(c.CertRef)
+		if err != nil {
+			return err
+		}
+		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
 			return err
 		}
@@ -255,7 +260,7 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	}
 }
 
-func loadCertFromFileOrURL(path string) (*signature.ECDSAVerifier, error) {
+func loadCertFromFileOrURL(path string) (*x509.Certificate, error) {
 	pems, err := blob.LoadFileOrURL(path)
 	if err != nil {
 		return nil, err
@@ -275,6 +280,5 @@ func loadCertFromFileOrURL(path string) (*signature.ECDSAVerifier, error) {
 	if len(certs) == 0 {
 		return nil, errors.New("no certs found in pem file")
 	}
-	cert := certs[0]
-	return signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+	return certs[0], nil
 }

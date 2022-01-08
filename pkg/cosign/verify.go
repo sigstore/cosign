@@ -203,7 +203,7 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	return checkExpiry(cert, time.Unix(*e.IntegratedTime, 0))
+	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
 type fakeOCISignatures struct {
@@ -537,7 +537,8 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 	return checkedAttestations, bundleVerified, nil
 }
 
-func checkExpiry(cert *x509.Certificate, it time.Time) error {
+// CheckExpiry confirms the time provided is within the valid period of the cert
+func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 	ft := func(t time.Time) string {
 		return t.Format(time.RFC3339)
 	}
@@ -582,7 +583,7 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 	}
 
 	// verify the cert against the integrated time
-	if err := checkExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
+	if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
 		return false, errors.Wrap(err, "checking expiry on cert")
 	}
 

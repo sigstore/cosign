@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	"github.com/pkg/errors"
@@ -43,7 +44,7 @@ import (
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	sigstoresigs "github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -54,7 +55,7 @@ func isb64(data []byte) bool {
 
 // nolint
 func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRef string) error {
-	var pubKey sigstoresigs.Verifier
+	var pubKey signature.Verifier
 	var cert *x509.Certificate
 
 	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() {
@@ -93,7 +94,11 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.Wrap(err, "loading public key from token")
 		}
 	case certRef != "":
-		pubKey, err = loadCertFromFileOrURL(certRef)
+		cert, err = loadCertFromFileOrURL(certRef)
+		if err != nil {
+			return err
+		}
+		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
 			return err
 		}
@@ -122,7 +127,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return err
 		}
 		cert = certs[0]
-		pubKey, err = sigstoresigs.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
 			return err
 		}
@@ -207,7 +212,7 @@ func verifyCert(cert *x509.Certificate) error {
 	return nil
 }
 
-func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey sigstoresigs.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
+func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
 	if !options.EnableExperimental() {
 		return nil
 	}
@@ -233,7 +238,16 @@ func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey sigstoresigs.
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, index)
-	return nil
+	if cert == nil {
+		return nil
+	}
+	// if we have a cert, we should check expiry
+	// The IntegratedTime verified in VerifyTlog
+	e, err := cosign.GetTlogEntry(ctx, rekorClient, uuid)
+	if err != nil {
+		return err
+	}
+	return cosign.CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
 func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {
