@@ -13,5 +13,5 @@ Public key written to import-cosign.pub
 ### Sign a container with imported keypair
 
 ```shell
-$ cosign sign --key import import-cosign.key dlorenc/demo
+$ cosign sign --key import-cosign.key dlorenc/demo
 ```
