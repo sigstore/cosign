@@ -21,12 +21,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
 func TestOptions(t *testing.T) {
-	bundle := &oci.Bundle{}
+	bundle := &bundle.RekorBundle{}
 
 	tests := []struct {
 		name string

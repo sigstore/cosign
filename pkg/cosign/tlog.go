@@ -27,8 +27,8 @@ import (
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
-	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 
 	"github.com/sigstore/rekor/pkg/generated/client"
@@ -262,7 +262,7 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
 	}
 
-	payload := oci.BundlePayload{
+	payload := bundle.RekorPayload{
 		Body:           e.Body,
 		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       *e.LogIndex,

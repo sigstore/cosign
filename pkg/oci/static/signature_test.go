@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 )
 
 func TestNewSignatureBasic(t *testing.T) {
@@ -375,9 +375,9 @@ Ve/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup
 Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 -----END CERTIFICATE-----
 `)
-		bundle = &oci.Bundle{
+		b = &bundle.RekorBundle{
 			SignedEntryTimestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-			Payload: oci.BundlePayload{
+			Payload: bundle.RekorPayload{
 				Body:           "REMOVED",
 				IntegratedTime: 1631646761,
 				LogIndex:       693591,
@@ -387,7 +387,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	)
 
 	l, err := NewSignature([]byte(payload), b64sig,
-		WithCertChain(cert, chain), WithBundle(bundle))
+		WithCertChain(cert, chain), WithBundle(b))
 	if err != nil {
 		t.Fatalf("NewSignature() = %v", err)
 	}
@@ -411,8 +411,8 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 
 		if got, err := l.Bundle(); err != nil {
 			t.Fatalf("Bundle() = %v", err)
-		} else if got != bundle {
-			t.Errorf("Bundle() = %#v, wanted %#v", got, bundle)
+		} else if got != b {
+			t.Errorf("Bundle() = %#v, wanted %#v", got, b)
 		}
 
 		if got, err := l.Cert(); err != nil {

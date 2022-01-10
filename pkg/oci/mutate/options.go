@@ -17,6 +17,7 @@ package mutate
 
 import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
@@ -60,7 +61,7 @@ func WithReplaceOp(ro ReplaceOp) SignOption {
 
 type signatureOpts struct {
 	annotations map[string]string
-	bundle      *oci.Bundle
+	bundle      *bundle.RekorBundle
 	cert        []byte
 	chain       []byte
 	mediaType   types.MediaType
@@ -76,9 +77,9 @@ func WithAnnotations(annotations map[string]string) SignatureOption {
 }
 
 // WithBundle specifies the new Bundle the Signature should have.
-func WithBundle(bundle *oci.Bundle) SignatureOption {
+func WithBundle(b *bundle.RekorBundle) SignatureOption {
 	return func(so *signatureOpts) {
-		so.bundle = bundle
+		so.bundle = b
 	}
 }
 

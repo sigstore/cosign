@@ -24,10 +24,9 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
-	"knative.dev/pkg/pool"
-
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"knative.dev/pkg/pool"
 )
 
 type SignedPayload struct {
@@ -35,7 +34,7 @@ type SignedPayload struct {
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
-	Bundle          *oci.Bundle
+	Bundle          *bundle.RekorBundle
 }
 
 type Signatures struct {

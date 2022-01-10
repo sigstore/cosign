@@ -24,37 +24,24 @@ import (
 
 	"github.com/sigstore/cosign/internal/pkg/cosign"
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
+
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-func bundle(entry *models.LogEntryAnon) *oci.Bundle {
-	if entry.Verification == nil {
-		return nil
-	}
-	return &oci.Bundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: oci.BundlePayload{
-			Body:           entry.Body,
-			IntegratedTime: *entry.IntegratedTime,
-			LogIndex:       *entry.LogIndex,
-			LogID:          *entry.LogID,
-		},
-	}
-}
-
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*oci.Bundle, error) {
+func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
 	entry, err := upload(rClient, rekorBytes)
 	if err != nil {
 		return nil, err
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return bundle(entry), nil
+	return cbundle.EntryToBundle(entry), nil
 }
 
 // signerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
