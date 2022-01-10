@@ -18,13 +18,16 @@ import (
 	"context"
 	"crypto"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/internal/pkg/cosign"
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 
@@ -42,6 +45,25 @@ func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn)
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 	return cbundle.EntryToBundle(entry), nil
+}
+
+// getTimestamp fetches the TUF timestamp metadata to be bundled
+// with the OCI signature.
+func getTimestamp(ctx context.Context) (*oci.Timestamp, error) {
+	tuf, err := tuf.NewFromEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tuf.Close()
+	tsBytes, err := tuf.GetTimestamp()
+	if err != nil {
+		return nil, err
+	}
+	var timestamp oci.Timestamp
+	if err := json.Unmarshal(tsBytes, &timestamp); err != nil {
+		return nil, errors.Wrap(err, "unable to unmarshal timestamp")
+	}
+	return &timestamp, nil
 }
 
 // signerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
@@ -96,7 +118,12 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	newSig, err := mutate.Signature(sig, mutate.WithBundle(bundle))
+	timestamp, err := getTimestamp(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newSig, err := mutate.Signature(sig, mutate.WithBundle(bundle), mutate.WithTimestamp(timestamp))
 	if err != nil {
 		return nil, nil, err
 	}

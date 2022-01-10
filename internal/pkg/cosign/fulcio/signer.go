@@ -17,9 +17,12 @@ package fulcio
 import (
 	"context"
 	"crypto"
+	"encoding/json"
 	"io"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/internal/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 )
@@ -32,6 +35,25 @@ type signerWrapper struct {
 	cert, chain []byte
 }
 
+// getTimestamp fetches the TUF timestamp metadata to be bundled
+// with the OCI signature.
+func getTimestamp(ctx context.Context) (*oci.Timestamp, error) {
+	tuf, err := tuf.NewFromEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tuf.Close()
+	tsBytes, err := tuf.GetTimestamp()
+	if err != nil {
+		return nil, err
+	}
+	var timestamp oci.Timestamp
+	if err := json.Unmarshal(tsBytes, &timestamp); err != nil {
+		return nil, errors.Wrap(err, "unable to unmarshal timestamp")
+	}
+	return &timestamp, nil
+}
+
 var _ cosign.Signer = (*signerWrapper)(nil)
 
 // Sign implements `cosign.Signer`
@@ -41,8 +63,13 @@ func (fs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
+	timestamp, err := getTimestamp(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// TODO(dekkagaijin): move the fulcio SignerVerifier logic here
-	newSig, err := mutate.Signature(sig, mutate.WithCertChain(fs.cert, fs.chain))
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(fs.cert, fs.chain), mutate.WithTimestamp(timestamp))
 	if err != nil {
 		return nil, nil, err
 	}
