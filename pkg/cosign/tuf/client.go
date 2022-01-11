@@ -43,19 +43,14 @@ const (
 )
 
 type TUF struct {
-	client    *client.Client
-	targets   targetImpl
-	timestamp json.RawMessage
-	close     func() error
+	client  *client.Client
+	targets targetImpl
+	local   client.LocalStore
 }
 
-// We have to close the local storage passed into the tuf.Client object, but tuf.Client doesn't expose a
-// Close method. So we capture the method of the inner local storage and close that.
+// Close closes the local TUF store. Should only be called once per client.
 func (t *TUF) Close() error {
-	if t.close != nil {
-		return t.close()
-	}
-	return nil
+	return t.local.Close()
 }
 
 func NewFromEnv(ctx context.Context) (*TUF, error) {
@@ -104,9 +99,8 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 		t.targets = newFileImpl()
 	}
 
+	t.local = local
 	t.client = client.NewClient(local, remote)
-	// Capture the Close method on the local storage object so we can close it.
-	t.close = local.Close
 	trustedMeta, err := local.GetMeta()
 	if err != nil {
 		return nil, errors.Wrap(err, "getting trusted meta")
@@ -115,8 +109,7 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 	// We have our local store, whether it was embedded or not!
 	// Now check to see if it needs to be updated.
 	trustedTimestamp, ok := trustedMeta["timestamp.json"]
-	if ok && !isExpiredMetadata(trustedTimestamp) {
-		t.timestamp = trustedTimestamp
+	if ok && !isExpiredTimestamp(trustedTimestamp) {
 		return t, nil
 	}
 
@@ -132,7 +125,7 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 	if err := t.client.Init(rootKeys, rootThreshold); err != nil {
 		return nil, errors.Wrap(err, "unable to initialize client")
 	}
-	if err := t.updateMetadataAndDownloadTargets(local); err != nil {
+	if err := t.updateMetadataAndDownloadTargets(); err != nil {
 		return nil, errors.Wrap(err, "updating local metadata and targets")
 	}
 
@@ -179,7 +172,7 @@ func Initialize(remote client.RemoteStore, root []byte) error {
 		return errors.Wrap(err, "initializing root")
 	}
 	// Timestamp does not need to be saved in memory on Initialize
-	if _, err := updateMetadataAndDownloadTargets(c, newFileImpl(), local); err != nil {
+	if err := updateMetadataAndDownloadTargets(c, newFileImpl()); err != nil {
 		return errors.Wrap(err, "updating local metadata and targets")
 	}
 	return nil
@@ -209,10 +202,15 @@ func (t *TUF) GetTarget(name string) ([]byte, error) {
 }
 
 func (t *TUF) GetTimestamp() ([]byte, error) {
-	if len(t.timestamp) == 0 {
+	trustedMeta, err := t.local.GetMeta()
+	if err != nil {
+		return nil, errors.Wrap(err, "getting trusted meta")
+	}
+	timestamp, ok := trustedMeta["timestamp.json"]
+	if !ok || len(timestamp) == 0 {
 		return nil, errors.New("unable to get TUF timestamp")
 	}
-	return t.timestamp, nil
+	return timestamp, nil
 }
 
 func localStore(cacheRoot string) (client.LocalStore, error) {
@@ -240,7 +238,7 @@ func embeddedLocalStore() (client.LocalStore, error) {
 //go:embed repository
 var embeddedRootRepo embed.FS
 
-var isExpiredMetadata = func(metadata []byte) bool {
+var isExpiredTimestamp = func(metadata []byte) bool {
 	s := &data.Signed{}
 	if err := json.Unmarshal(metadata, s); err != nil {
 		return true
@@ -266,29 +264,15 @@ func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
 	return rootKeys, rootThreshold, err
 }
 
-func (t *TUF) updateMetadataAndDownloadTargets(local client.LocalStore) error {
-	timestamp, err := updateMetadataAndDownloadTargets(t.client, t.targets, local)
-	if err != nil {
-		return err
-	}
-	t.timestamp = timestamp
-	return nil
+func (t *TUF) updateMetadataAndDownloadTargets() error {
+	return updateMetadataAndDownloadTargets(t.client, t.targets)
 }
 
-func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl, local client.LocalStore) (json.RawMessage, error) {
+func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl) error {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
 	targetFiles, err := c.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
-		return nil, errors.Wrap(err, "updating tuf metadata")
-	}
-
-	trustedMeta, err := local.GetMeta()
-	if err != nil {
-		return nil, errors.Wrap(err, "getting trusted meta during update")
-	}
-	timestamp, ok := trustedMeta["timestamp.json"]
-	if !ok {
-		return nil, errors.Wrap(err, "getting timestamp from local store")
+		return errors.Wrap(err, "updating tuf metadata")
 	}
 
 	// Update the in-memory targets.
@@ -296,14 +280,14 @@ func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl, local clie
 	for name := range targetFiles {
 		buf := bytes.Buffer{}
 		if err := downloadRemoteTarget(name, c, &buf); err != nil {
-			return nil, err
+			return err
 		}
 		if err := t.Set(name, buf.Bytes()); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return timestamp, nil
+	return nil
 }
 
 func downloadRemoteTarget(name string, c *client.Client, w io.Writer) error {

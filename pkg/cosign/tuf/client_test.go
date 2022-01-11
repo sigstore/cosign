@@ -164,11 +164,11 @@ func dirLen(t *testing.T, td string) int {
 }
 
 func forceExpiration(t *testing.T, expire bool) {
-	oldIsExpiredMetadata := isExpiredMetadata
-	isExpiredMetadata = func(_ []byte) bool {
+	oldIsExpiredTimestamp := isExpiredTimestamp
+	isExpiredTimestamp = func(_ []byte) bool {
 		return expire
 	}
 	t.Cleanup(func() {
-		isExpiredMetadata = oldIsExpiredMetadata
+		isExpiredTimestamp = oldIsExpiredTimestamp
 	})
 }
