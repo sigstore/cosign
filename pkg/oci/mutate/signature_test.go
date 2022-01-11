@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
 )
@@ -290,9 +291,9 @@ func TestSignatureWithAnnotations(t *testing.T) {
 func TestSignatureWithBundle(t *testing.T) {
 	payload := "this is the TestSignatureWithBundle content!"
 	b64sig := "b64 content2="
-	bundle := &oci.Bundle{
+	b := &bundle.RekorBundle{
 		SignedEntryTimestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-		Payload: oci.BundlePayload{
+		Payload: bundle.RekorPayload{
 			Body:           "REMOVED",
 			IntegratedTime: 1631646761,
 			LogIndex:       693591,
@@ -300,9 +301,9 @@ func TestSignatureWithBundle(t *testing.T) {
 		},
 	}
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
-	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithBundle(bundle))
+	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithBundle(b))
 
-	newSig, err := Signature(originalSig, WithBundle(bundle))
+	newSig, err := Signature(originalSig, WithBundle(b))
 	if err != nil {
 		t.Fatalf("Signature(WithBundle()) returned error: %v", err)
 	}
@@ -348,9 +349,9 @@ func TestSignatureWithEverything(t *testing.T) {
 		"foo":  "bar",
 		"test": "yes",
 	}
-	bundle := &oci.Bundle{
+	b := &bundle.RekorBundle{
 		SignedEntryTimestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-		Payload: oci.BundlePayload{
+		Payload: bundle.RekorPayload{
 			Body:           "REMOVED",
 			IntegratedTime: 1631646761,
 			LogIndex:       693591,
@@ -363,13 +364,13 @@ func TestSignatureWithEverything(t *testing.T) {
 
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig,
 		static.WithAnnotations(annotations),
-		static.WithBundle(bundle),
+		static.WithBundle(b),
 		static.WithCertChain(testCertBytes, testChainBytes),
 		static.WithLayerMediaType(mediaType))
 
 	newSig, err := Signature(originalSig,
 		WithAnnotations(annotations),
-		WithBundle(bundle),
+		WithBundle(b),
 		WithCertChain(testCertBytes, testChainBytes),
 		WithMediaType(mediaType))
 

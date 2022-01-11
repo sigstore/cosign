@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
+
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
@@ -667,7 +669,7 @@ func bundleHash(bundleBody, signature string) (string, string, error) {
 	return *hrekordObj.Data.Hash.Algorithm, *hrekordObj.Data.Hash.Value, nil
 }
 
-func VerifySET(bundlePayload oci.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
+func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {
 	contents, err := json.Marshal(bundlePayload)
 	if err != nil {
 		return errors.Wrap(err, "marshaling")

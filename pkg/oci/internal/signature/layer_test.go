@@ -26,7 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 )
 
 func mustDecode(s string) []byte {
@@ -57,7 +57,7 @@ func TestSignature(t *testing.T) {
 		wantCertErr    error
 		wantChain      int
 		wantChainErr   error
-		wantBundle     *oci.Bundle
+		wantBundle     *bundle.RekorBundle
 		wantBundleErr  error
 	}{{
 		name: "just payload and signature",
@@ -152,9 +152,9 @@ func TestSignature(t *testing.T) {
 			},
 		},
 		wantSig: "blah",
-		wantBundle: &oci.Bundle{
+		wantBundle: &bundle.RekorBundle{
 			SignedEntryTimestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-			Payload: oci.BundlePayload{
+			Payload: bundle.RekorPayload{
 				Body:           "REMOVED",
 				IntegratedTime: 1631646761,
 				LogIndex:       693591,
