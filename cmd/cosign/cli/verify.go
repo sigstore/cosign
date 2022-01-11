@@ -246,3 +246,73 @@ The blob may be specified as a path to a file or - for stdin.`,
 	o.AddFlags(cmd)
 	return cmd
 }
+
+func VerifyString() *cobra.Command {
+	o := &options.VerifyBlobOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "verify-string",
+		Short: "Verify a signature on the supplied string",
+		Long: `Verify a signature on the supplied string input using the specified key reference.
+You may specify either a key, a certificate or a kms reference to verify against.
+	If you use a key or a certificate, you must specify the path to them on disk.
+
+The signature may be specified as a path to a file or a base64 encoded string.
+The string may be specified as a path to a file or - for stdin.`,
+		Example: `  cosign verify-string (--key <key path>|<key url>|<kms uri>)|(--cert <cert>) --signature <sig> <string>
+
+  # Verify a simple string and message
+  cosign verify-string --key cosign.pub --signature sig msg
+
+  # Verify a simple string with remote signature URL, both http and https schemes are supported
+  cosign verify-string --key cosign.pub --signature http://host/my.sig
+
+  # Verify a signature from an environment variable
+  cosign verify-string --key cosign.pub --signature $sig msg
+
+  # verify a signature with public key provided by URL
+  cosign verify-string --key https://host.for/<FILE> --signature $sig msg
+
+  # Verify a signature against a payload from another process using process redirection
+  cosign verify-string --key cosign.pub --signature $sig <(git rev-parse HEAD)
+
+  # Verify a signature against Azure Key Vault
+  cosign verify-string --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --signature $sig <string>
+
+  # Verify a signature against AWS KMS
+  cosign verify-string --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] --signature $sig <string>
+
+  # Verify a signature against Google Cloud KMS
+  cosign verify-string --key gcpkms://projects/[PROJECT ID]/locations/[LOCATION]/keyRings/[KEYRING]/cryptoKeys/[KEY] --signature $sig <string>
+
+  # Verify a signature against Hashicorp Vault
+  cosign verify-string --key hashivault://[KEY] --signature $sig <string>
+
+  # Verify a signature against GitLab with project name
+  cosign verify-string --key gitlab://[OWNER]/[PROJECT_NAME]  --signature $sig <string>
+
+  # Verify a signature against GitLab with project id
+  cosign verify-string --key gitlab://[PROJECT_ID]  --signature $sig <string>
+
+  # Verify a signature against a certificate
+  cosign verify-string --cert <cert> --signature $sig <string>
+`,
+
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ko := sign.KeyOpts{
+				KeyRef:   o.Key,
+				Sk:       o.SecurityKey.Use,
+				Slot:     o.SecurityKey.Slot,
+				RekorURL: o.Rekor.URL,
+			}
+			if err := verify.VerifyStringCmd(cmd.Context(), ko, o.Cert, o.Signature, args[0]); err != nil {
+				return errors.Wrapf(err, "verifying blob %s", args)
+			}
+			return nil
+		},
+	}
+
+	o.AddFlags(cmd)
+	return cmd
+}

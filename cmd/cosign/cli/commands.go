@@ -85,10 +85,12 @@ func New() *cobra.Command {
 	cmd.AddCommand(Save())
 	cmd.AddCommand(Sign())
 	cmd.AddCommand(SignBlob())
+	cmd.AddCommand(SignString())
 	cmd.AddCommand(Upload())
 	cmd.AddCommand(Verify())
 	cmd.AddCommand(VerifyAttestation())
 	cmd.AddCommand(VerifyBlob())
+	cmd.AddCommand(VerifyString())
 	cmd.AddCommand(Triangulate())
 	cmd.AddCommand(Version())
 

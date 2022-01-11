@@ -46,3 +46,15 @@ The following checks were performed on each of these signatures:
   - Any certificates were verified against the Fulcio roots.
 {"critical":{"identity":{"docker-reference":"us.gcr.io/dlorenc-vmtest2/demo"},"image":{"docker-manifest-digest":"sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155"},"type":"cosign container image signature"},"optional":null}
 ```
+
+## Sign Strings
+
+```shell
+$ cosign sign-string --key cosign.key "hello world"
+Enter password for private key: MEUCIB2yVuhvuwKLH4AiodNzvxVOvsKVygyYXZpa8R7kUHQiAiEAuuBTC2rJF3DkbT+LH4sZUMkO17LWpvYC/7bhdOG1Hy4=
+```
+
+```shell
+$ cosign verify-string --key cosign.pub --signature MEUCIB2yVuhvuwKLH4AiodNzvxVOvsKVygyYXZpa8R7kUHQiAiEAuuBTC2rJF3DkbT+LH4sZUMkO17LWpvYC/7bhdOG1Hy4= "hello world"
+Verified OK
+```

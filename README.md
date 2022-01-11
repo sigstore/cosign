@@ -114,6 +114,7 @@ This core set includes:
   * WASM modules
   * (probably anything else, feel free to add things to this list)
 * Text files and other binary blobs, using `cosign sign-blob`
+* String literals, using `cosign sign-string`
 
 ### What ** is not ** production ready?
 
