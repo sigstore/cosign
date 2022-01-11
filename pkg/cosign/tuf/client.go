@@ -119,6 +119,9 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 	}
 
 	// We need to update our tufdb.
+	// Warning: If a local cache already exists, you may get a local/remote mismatch
+	// since the default remote may not match the remote repository configured during
+	// a cosign initialize.
 	trustedRoot, err := getRoot(trustedMeta)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting trusted root")
@@ -128,7 +131,7 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 		return nil, errors.Wrap(err, "bad trusted root")
 	}
 	if err := t.client.Init(rootKeys, rootThreshold); err != nil {
-		return nil, errors.Wrap(err, "unable to initialize client")
+		return nil, errors.Wrap(err, "unable to initialize client, local cache may be corrupt")
 	}
 	if err := t.updateMetadataAndDownloadTargets(); err != nil {
 		return nil, errors.Wrap(err, "updating local metadata and targets")
