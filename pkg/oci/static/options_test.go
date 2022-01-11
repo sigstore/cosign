@@ -22,13 +22,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
 func TestOptions(t *testing.T) {
 	bundle := &bundle.RekorBundle{}
-	timestamp := &oci.Timestamp{}
+	timestamp := &tuf.Timestamp{}
 
 	tests := []struct {
 		name string

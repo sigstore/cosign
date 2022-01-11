@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -37,7 +38,7 @@ type sigWrapper struct {
 	cert        *x509.Certificate
 	chain       []*x509.Certificate
 	mediaType   types.MediaType
-	timestamp   *oci.Timestamp
+	timestamp   *tuf.Timestamp
 }
 
 var _ v1.Layer = (*sigWrapper)(nil)
@@ -94,7 +95,7 @@ func (sw *sigWrapper) Bundle() (*bundle.RekorBundle, error) {
 }
 
 // Timestamp implements oci.Signature.
-func (sw *sigWrapper) Timestamp() (*oci.Timestamp, error) {
+func (sw *sigWrapper) Timestamp() (*tuf.Timestamp, error) {
 	if sw.timestamp != nil {
 		return sw.timestamp, nil
 	}

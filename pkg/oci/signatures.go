@@ -20,7 +20,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/theupdateframework/go-tuf/data"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 )
 
 // Signatures represents a set of signatures that are associated with a particular
@@ -64,10 +64,5 @@ type Signature interface {
 	// Timestamp fetches the optional TUF timestamp metadata that
 	// records when the signature was generated. This can be used
 	// to find the TUF targets used to generate the signature.
-	Timestamp() (*Timestamp, error)
-}
-
-type Timestamp struct {
-	Signatures []data.Signature `json:"signatures"`
-	Signed     data.Timestamp   `json:"signed"`
+	Timestamp() (*tuf.Timestamp, error)
 }

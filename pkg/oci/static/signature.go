@@ -23,6 +23,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -112,7 +113,7 @@ func (l *staticLayer) Bundle() (*bundle.RekorBundle, error) {
 }
 
 // Timestamp implements oci.Signature
-func (l *staticLayer) Timestamp() (*oci.Timestamp, error) {
+func (l *staticLayer) Timestamp() (*tuf.Timestamp, error) {
 	return l.opts.Timestamp, nil
 }
 

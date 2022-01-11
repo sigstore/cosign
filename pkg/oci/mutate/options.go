@@ -18,6 +18,7 @@ package mutate
 import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
@@ -65,7 +66,7 @@ type signatureOpts struct {
 	cert        []byte
 	chain       []byte
 	mediaType   types.MediaType
-	timestamp   *oci.Timestamp
+	timestamp   *tuf.Timestamp
 }
 
 type SignatureOption func(*signatureOpts)
@@ -100,7 +101,7 @@ func WithMediaType(mediaType types.MediaType) SignatureOption {
 }
 
 // WithTimestamp specifies the new Timestamp the Signature should have.
-func WithTimestamp(timestamp *oci.Timestamp) SignatureOption {
+func WithTimestamp(timestamp *tuf.Timestamp) SignatureOption {
 	return func(so *signatureOpts) {
 		so.timestamp = timestamp
 	}

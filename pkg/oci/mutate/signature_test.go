@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/theupdateframework/go-tuf/data"
@@ -315,7 +316,7 @@ func TestSignatureWithBundle(t *testing.T) {
 func TestSignatureWithTimestamp(t *testing.T) {
 	payload := "this is the TestSignatureWithTimestamp content!"
 	b64sig := "b64 content2="
-	timestamp := &oci.Timestamp{
+	timestamp := &tuf.Timestamp{
 		Signatures: []data.Signature{
 			{
 				KeyID: "b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d",
@@ -393,7 +394,7 @@ func TestSignatureWithEverything(t *testing.T) {
 			LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
 		},
 	}
-	timestamp := &oci.Timestamp{
+	timestamp := &tuf.Timestamp{
 		Signatures: []data.Signature{
 			{
 				KeyID: "b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d",

@@ -28,7 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/theupdateframework/go-tuf/data"
 )
 
@@ -63,7 +63,7 @@ func TestSignature(t *testing.T) {
 		wantChainErr     error
 		wantBundle       *bundle.RekorBundle
 		wantBundleErr    error
-		wantTimestamp    *oci.Timestamp
+		wantTimestamp    *tuf.Timestamp
 		wantTimestampErr error
 	}{{
 		name: "just payload and signature",
@@ -195,7 +195,7 @@ func TestSignature(t *testing.T) {
 			},
 		},
 		wantSig: "blah",
-		wantTimestamp: &oci.Timestamp{
+		wantTimestamp: &tuf.Timestamp{
 			Signatures: []data.Signature{
 				{
 					KeyID:     "b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d",

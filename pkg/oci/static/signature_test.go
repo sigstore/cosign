@@ -26,7 +26,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/theupdateframework/go-tuf/data"
 )
 
@@ -416,7 +416,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
 			},
 		}
-		timestamp = &oci.Timestamp{
+		timestamp = &tuf.Timestamp{
 			Signatures: []data.Signature{
 				{
 					KeyID:     "b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d",

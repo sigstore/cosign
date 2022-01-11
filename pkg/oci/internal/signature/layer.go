@@ -25,6 +25,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -119,12 +120,12 @@ func (s *sigLayer) Bundle() (*bundle.RekorBundle, error) {
 }
 
 // Timestamp implements oci.Signature
-func (s *sigLayer) Timestamp() (*oci.Timestamp, error) {
+func (s *sigLayer) Timestamp() (*tuf.Timestamp, error) {
 	timestamp := s.desc.Annotations[TimestampKey]
 	if timestamp == "" {
 		return nil, nil
 	}
-	var ts oci.Timestamp
+	var ts tuf.Timestamp
 	if err := json.Unmarshal([]byte(timestamp), &ts); err != nil {
 		return nil, errors.Wrap(err, "unmarshaling timestamp")
 	}
