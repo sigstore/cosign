@@ -256,7 +256,7 @@ func TestAttestVerify(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 }
 
-func TestBundle(t *testing.T) {
+func TestRekorBundle(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, options.ExperimentalEnv, "1")()
 
@@ -464,6 +464,54 @@ func TestSignBlob(t *testing.T) {
 	// Now verify should work with that one, but not the other
 	must(cliverify.VerifyBlobCmd(ctx, ko1, "", string(sig), bp), t)
 	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "", string(sig), bp), t)
+}
+
+func TestSignBlobBundle(t *testing.T) {
+	blob := "someblob"
+	td1 := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td1)
+	})
+	bp := filepath.Join(td1, blob)
+	bundlePath := filepath.Join(td1, "bundle.sig")
+
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+
+	ctx := context.Background()
+
+	ko1 := sign.KeyOpts{
+		KeyRef:     pubKeyPath1,
+		BundlePath: bundlePath,
+	}
+	// Verify should fail on a bad input
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "", "", blob), t)
+
+	// Now sign the blob with one key
+	ko := sign.KeyOpts{
+		KeyRef:     privKeyPath1,
+		PassFunc:   passFunc,
+		BundlePath: bundlePath,
+		RekorURL:   rekorURL,
+	}
+	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", time.Duration(30*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	// Now verify should work
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", bp), t)
+
+	// Now we turn on the tlog and sign again
+	defer setenv(t, options.ExperimentalEnv, "1")()
+	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", time.Duration(30*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Point to a fake rekor server to make sure offline verification of the tlog entry works
+	os.Setenv(serverEnv, "notreal")
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", bp), t)
 }
 
 func TestGenerate(t *testing.T) {

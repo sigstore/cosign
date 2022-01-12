@@ -58,11 +58,11 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	var pubKey signature.Verifier
 	var cert *x509.Certificate
 
-	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() {
+	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() && ko.BundlePath == "" {
 		return &options.PubKeyParseError{}
 	}
 
-	sig, b64sig, err := signatures(sigRef)
+	sig, b64sig, err := signatures(sigRef, ko.BundlePath)
 	if err != nil {
 		return err
 	}
@@ -101,6 +101,32 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
 			return err
+		}
+	case ko.BundlePath != "":
+		b, err := cosign.FetchLocalSignedPayloadFromPath(ko.BundlePath)
+		if err != nil {
+			return err
+		}
+		if b.Cert == "" {
+			return fmt.Errorf("bundle does not contain cert for verification, please provide public key")
+		}
+		// cert can either be a cert or public key
+		certBytes := []byte(b.Cert)
+		if isb64(certBytes) {
+			certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
+		}
+		cert, err = loadCertFromPEM(certBytes)
+		if err != nil {
+			// check if cert is actually a public key
+			pubKey, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
+			if err != nil {
+				return err
+			}
+		} else {
+			pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			if err != nil {
+				return err
+			}
 		}
 	case options.EnableExperimental():
 		rClient, err := rekor.NewClient(ko.RekorURL)
@@ -153,7 +179,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 }
 
 // signatures returns the raw signature and the base64 encoded signature
-func signatures(sigRef string) (string, string, error) {
+func signatures(sigRef string, bundlePath string) (string, string, error) {
 	var targetSig []byte
 	var err error
 	switch {
@@ -166,6 +192,12 @@ func signatures(sigRef string) (string, string, error) {
 			}
 			targetSig = []byte(sigRef)
 		}
+	case bundlePath != "":
+		b, err := cosign.FetchLocalSignedPayloadFromPath(bundlePath)
+		if err != nil {
+			return "", "", err
+		}
+		targetSig = []byte(b.Base64Signature)
 	default:
 		return "", "", fmt.Errorf("missing flag '--signature'")
 	}
@@ -213,9 +245,17 @@ func verifyCert(cert *x509.Certificate) error {
 }
 
 func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
+	// If we have a bundle with a rekor entry, let's first try to verify offline
+	if ko.BundlePath != "" {
+		if err := verifyRekorBundle(ctx, ko.BundlePath, cert); err == nil {
+			fmt.Fprintf(os.Stderr, "tlog entry verified offline\n")
+			return nil
+		}
+	}
 	if !options.EnableExperimental() {
 		return nil
 	}
+
 	rekorClient, err := rekor.NewClient(ko.RekorURL)
 	if err != nil {
 		return err
@@ -248,6 +288,34 @@ func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Ver
 		return err
 	}
 	return cosign.CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
+}
+
+func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certificate) error {
+	b, err := cosign.FetchLocalSignedPayloadFromPath(bundlePath)
+	if err != nil {
+		return err
+	}
+	if b.Bundle == nil {
+		return fmt.Errorf("rekor entry is not available")
+	}
+	pub, err := cosign.GetRekorPub(ctx)
+	if err != nil {
+		return errors.Wrap(err, "retrieving rekor public key")
+	}
+
+	rekorPubKey, err := cosign.PemToECDSAKey(pub)
+	if err != nil {
+		return errors.Wrap(err, "pem to ecdsa")
+	}
+
+	if err := cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, rekorPubKey); err != nil {
+		return err
+	}
+	if cert == nil {
+		return nil
+	}
+	it := time.Unix(b.Bundle.Payload.IntegratedTime, 0)
+	return cosign.CheckExpiry(cert, it)
 }
 
 func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {

@@ -231,10 +231,11 @@ The blob may be specified as a path to a file or - for stdin.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := sign.KeyOpts{
-				KeyRef:   o.Key,
-				Sk:       o.SecurityKey.Use,
-				Slot:     o.SecurityKey.Slot,
-				RekorURL: o.Rekor.URL,
+				KeyRef:     o.Key,
+				Sk:         o.SecurityKey.Use,
+				Slot:       o.SecurityKey.Slot,
+				RekorURL:   o.Rekor.URL,
+				BundlePath: o.BundlePath,
 			}
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.Cert, o.Signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)

@@ -35,6 +35,7 @@ type SignBlobOptions struct {
 	OIDC              OIDCOptions
 	Registry          RegistryOptions
 	Timeout           time.Duration
+	BundlePath        string
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -64,4 +65,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
 		"HTTP Timeout defaults to 30 seconds")
+
+	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
+		"write everything required to verify the blob to a FILE")
 }
