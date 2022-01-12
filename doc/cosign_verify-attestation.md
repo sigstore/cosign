@@ -55,11 +55,10 @@ cosign verify-attestation [flags]
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --cert string                                                                              path to the public certificate
+      --cert-email string                                                                        the email expected in a valid Fulcio certificate
       --check-claims                                                                             whether to check the claims found (default true)
-      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://v1.fulcio.sigstore.dev")
   -h, --help                                                                                     help for verify-attestation
-      --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
-      --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'

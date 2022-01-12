@@ -17,6 +17,8 @@ package verify
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -30,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
 	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -45,11 +48,12 @@ import (
 type VerifyAttestationCommand struct {
 	options.RegistryOptions
 	CheckClaims   bool
+	CertRef       string
+	CertEmail     string
 	KeyRef        string
 	Sk            bool
 	Slot          string
 	Output        string
-	FulcioURL     string
 	RekorURL      string
 	PredicateType string
 	Policies      []string
@@ -62,7 +66,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return flag.ErrHelp
 	}
 
-	if !options.OneOf(c.KeyRef, c.Sk) && !options.EnableExperimental() {
+	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && !options.EnableExperimental() {
 		return &options.KeyParseError{}
 	}
 
@@ -72,6 +76,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 	co := &cosign.CheckOpts{
 		RegistryClientOpts: ociremoteOpts,
+		CertEmail:          c.CertEmail,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
@@ -89,7 +94,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	keyRef := c.KeyRef
 
 	// Keys are optional!
-	if keyRef != "" {
+	switch {
+	case keyRef != "":
 		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
@@ -98,7 +104,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if ok {
 			defer pkcs11Key.Close()
 		}
-	} else if c.Sk {
+	case c.Sk:
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
 			return errors.Wrap(err, "opening piv token")
@@ -107,6 +113,15 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.SigVerifier, err = sk.Verifier()
 		if err != nil {
 			return errors.Wrap(err, "initializing piv token verifier")
+		}
+	case c.CertRef != "":
+		cert, err := loadCertFromFileOrURL(c.CertRef)
+		if err != nil {
+			return errors.Wrap(err, "loading certificate from reference")
+		}
+		co.SigVerifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		if err != nil {
+			return errors.Wrap(err, "creating certificate verifier")
 		}
 	}
 
