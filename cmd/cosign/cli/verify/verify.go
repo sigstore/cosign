@@ -48,19 +48,20 @@ import (
 // nolint
 type VerifyCommand struct {
 	options.RegistryOptions
-	CheckClaims   bool
-	KeyRef        string
-	CertRef       string
-	CertEmail     string
-	Sk            bool
-	Slot          string
-	Output        string
-	RekorURL      string
-	Attachment    string
-	Annotations   sigs.AnnotationsMap
-	SignatureRef  string
-	HashAlgorithm crypto.Hash
-	LocalImage    bool
+	CheckClaims    bool
+	KeyRef         string
+	CertRef        string
+	CertEmail      string
+	CertOidcIssuer string
+	Sk             bool
+	Slot           string
+	Output         string
+	RekorURL       string
+	Attachment     string
+	Annotations    sigs.AnnotationsMap
+	SignatureRef   string
+	HashAlgorithm  crypto.Hash
+	LocalImage     bool
 }
 
 // Exec runs the verification command
@@ -92,6 +93,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		Annotations:        c.Annotations.Annotations,
 		RegistryClientOpts: ociremoteOpts,
 		CertEmail:          c.CertEmail,
+		CertOidcIssuer:     c.CertOidcIssuer,
 		SignatureRef:       c.SignatureRef,
 	}
 	if c.CheckClaims {

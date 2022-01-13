@@ -20,8 +20,9 @@ import (
 
 // CertVerifyOptions is the wrapper for certificate verification.
 type CertVerifyOptions struct {
-	Cert      string
-	CertEmail string
+	Cert           string
+	CertEmail      string
+	CertOidcIssuer string
 }
 
 var _ Interface = (*RekorOptions)(nil)
@@ -33,4 +34,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.CertEmail, "cert-email", "",
 		"the email expected in a valid Fulcio certificate")
+
+	cmd.Flags().StringVar(&o.CertOidcIssuer, "cert-oidc-issuer", "",
+		"the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth")
 }

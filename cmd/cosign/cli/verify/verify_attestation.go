@@ -47,17 +47,18 @@ import (
 // nolint
 type VerifyAttestationCommand struct {
 	options.RegistryOptions
-	CheckClaims   bool
-	CertRef       string
-	CertEmail     string
-	KeyRef        string
-	Sk            bool
-	Slot          string
-	Output        string
-	RekorURL      string
-	PredicateType string
-	Policies      []string
-	LocalImage    bool
+	CheckClaims    bool
+	CertRef        string
+	CertEmail      string
+	CertOidcIssuer string
+	KeyRef         string
+	Sk             bool
+	Slot           string
+	Output         string
+	RekorURL       string
+	PredicateType  string
+	Policies       []string
+	LocalImage     bool
 }
 
 // Exec runs the verification command
@@ -77,6 +78,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	co := &cosign.CheckOpts{
 		RegistryClientOpts: ociremoteOpts,
 		CertEmail:          c.CertEmail,
+		CertOidcIssuer:     c.CertOidcIssuer,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier

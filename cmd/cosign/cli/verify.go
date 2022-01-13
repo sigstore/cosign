@@ -92,6 +92,7 @@ against the transparency log.`,
 				KeyRef:          o.Key,
 				CertRef:         o.CertVerify.Cert,
 				CertEmail:       o.CertVerify.CertEmail,
+				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
 				Sk:              o.SecurityKey.Use,
 				Slot:            o.SecurityKey.Slot,
 				Output:          o.Output,
@@ -161,6 +162,7 @@ against the transparency log.`,
 				CheckClaims:     o.CheckClaims,
 				CertRef:         o.CertVerify.Cert,
 				CertEmail:       o.CertVerify.CertEmail,
+				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
 				KeyRef:          o.Key,
 				Sk:              o.SecurityKey.Use,
 				Slot:            o.SecurityKey.Slot,
@@ -238,7 +240,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				RekorURL: o.Rekor.URL,
 			}
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
-				o.CertVerify.CertEmail, o.Signature, args[0]); err != nil {
+				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.Signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)
 			}
 			return nil

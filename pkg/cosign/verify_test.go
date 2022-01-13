@@ -17,6 +17,7 @@ package cosign
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -26,7 +27,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/types"
+	"github.com/sigstore/cosign/test"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/stretchr/testify/require"
 )
 
 type mockVerifier struct {
@@ -88,4 +91,108 @@ func Test_verifyOCIAttestation(t *testing.T) {
 	if err := verifyOCIAttestation(context.TODO(), &mockVerifier{shouldErr: true}, &mockAttestation{payload: valid}); err == nil {
 		t.Error("verifyOCIAttestation() expected invalid payload type error, got nil")
 	}
+}
+
+func TestValidateAndUnpackCertSuccess(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts: rootPool,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertInvalidRoot(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	otherRoot, _, _ := test.GenerateRootCa()
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(otherRoot)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "certificate signed by unknown authority")
+}
+
+func TestValidateAndUnpackCertInvalidOidcIssuer(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertEmail:      subject,
+		CertOidcIssuer: "other",
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertEmail:      "other",
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected email not found in certificate")
 }
