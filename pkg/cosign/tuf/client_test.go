@@ -51,12 +51,7 @@ func TestNewFromEnv(t *testing.T) {
 	tuf.Close()
 	checkTargetsAndMeta(t, tuf)
 
-	// Now let's explicitly make a root.
-	remote, err := GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Initialize(remote, nil); err != nil {
+	if err := Initialize(ctx, DefaultRemoteRoot, nil); err != nil {
 		t.Error()
 	}
 	if l := dirLen(t, td); l == 0 {

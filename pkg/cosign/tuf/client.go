@@ -21,6 +21,7 @@ import (
 	"embed"
 	"encoding/json"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -46,6 +47,7 @@ type TUF struct {
 	client  *client.Client
 	targets targetImpl
 	local   client.LocalStore
+	remote  client.RemoteStore
 }
 
 // Close closes the local TUF store. Should only be called once per client.
@@ -54,54 +56,13 @@ func (t *TUF) Close() error {
 }
 
 func NewFromEnv(ctx context.Context) (*TUF, error) {
-	remote, err := GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
+	// Initializes a new TUF object from the local cache or defaults.
+	t, err := newTuf(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return New(ctx, remote, rootCacheDir())
-}
 
-func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF, error) {
-	t := &TUF{}
-	// WE SHOULD:
-	// FIRST RESPECT THE FILES ON DISK (BYOTUF)
-	// IF THEY'RE OUT OF DATE:
-	//   UPDATE THEM IN MEMORY
-	//     MAYBE UPDATE THEM ON DISK
-	// IF THEY DONT EXIST:
-	//   THEN THE EMBEDDED ONES
-	//   IF THEY'RE OUT OF DATE:
-	//     UPDATE THEM IN MEMORY
-	//     MAYBE UPDATE THEM ON DISK
-
-	tufDB := filepath.Join(cacheRoot, "tuf.db")
-	var local client.LocalStore
-	var err error
-
-	_, statErr := os.Stat(tufDB)
-	switch {
-	case os.IsNotExist(statErr):
-		// There is no root at the location, try embedded
-		local, err = embeddedLocalStore()
-		if err != nil {
-			return nil, err
-		}
-		t.targets = newEmbeddedImpl()
-	case statErr != nil:
-		// Some other error, bail
-		return nil, statErr
-	default:
-		// There is a root! Happy path.
-		local, err = localStore(tufDB)
-		if err != nil {
-			return nil, err
-		}
-		t.targets = newFileImpl()
-	}
-
-	t.local = local
-	t.client = client.NewClient(local, remote)
-	trustedMeta, err := local.GetMeta()
+	trustedMeta, err := t.local.GetMeta()
 	if err != nil {
 		return nil, errors.Wrap(err, "getting trusted meta")
 	}
@@ -114,9 +75,6 @@ func New(ctx context.Context, remote client.RemoteStore, cacheRoot string) (*TUF
 	}
 
 	// We need to update our tufdb.
-	// Warning: If a local cache already exists, you may get a local/remote mismatch
-	// since the default remote may not match the remote repository configured during
-	// a cosign initialize.
 	trustedRoot, err := getRoot(trustedMeta)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting trusted root")
@@ -148,7 +106,14 @@ func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
 	return trustedRoot, nil
 }
 
-func Initialize(remote client.RemoteStore, root []byte) error {
+func Initialize(ctx context.Context, mirror string, root []byte) error {
+	// Initialize the remote repository.
+	remote, err := remoteFromMirror(ctx, mirror)
+	if err != nil {
+		return err
+	}
+
+	// Initialize the local.
 	tufDB := filepath.Join(rootCacheDir(), "tuf.db")
 	local, err := localStore(tufDB)
 	if err != nil {
@@ -156,6 +121,7 @@ func Initialize(remote client.RemoteStore, root []byte) error {
 	}
 	defer local.Close()
 
+	// Initialize the client.
 	if root == nil {
 		trustedMeta, err := local.GetMeta()
 		if err != nil {
@@ -177,6 +143,10 @@ func Initialize(remote client.RemoteStore, root []byte) error {
 	// Timestamp does not need to be saved in memory on Initialize
 	if err := updateMetadataAndDownloadTargets(c, newFileImpl()); err != nil {
 		return errors.Wrap(err, "updating local metadata and targets")
+	}
+	// Store the remote for later.
+	if err := os.WriteFile(cachedRemote(rootCacheDir()), []byte(mirror), 0600); err != nil {
+		return errors.Wrap(err, "storing remote")
 	}
 	return nil
 }
@@ -327,6 +297,10 @@ func rootCacheDir() string {
 	return rootDir
 }
 
+func cachedRemote(cacheRoot string) string {
+	return filepath.Join(cacheRoot, "remote.txt")
+}
+
 func cachedTargetsDir(cacheRoot string) string {
 	return filepath.Join(cacheRoot, "targets")
 }
@@ -419,4 +393,56 @@ func newFileImpl() targetImpl {
 		f.setImpl = &diskCache{base: base}
 	}
 	return f
+}
+
+func newTuf(ctx context.Context) (*TUF, error) {
+	t := &TUF{}
+	tufDB := filepath.Join(rootCacheDir(), "tuf.db")
+	var local client.LocalStore
+	var err error
+
+	_, statErr := os.Stat(tufDB)
+	switch {
+	case os.IsNotExist(statErr):
+		// There is no root at the location, try embedded
+		local, err = embeddedLocalStore()
+		if err != nil {
+			return nil, err
+		}
+		t.targets = newEmbeddedImpl()
+	case statErr != nil:
+		// Some other error, bail
+		return nil, statErr
+	default:
+		// There is a root! Happy path.
+		local, err = localStore(tufDB)
+		if err != nil {
+			return nil, err
+		}
+		t.targets = newFileImpl()
+	}
+	t.local = local
+
+	// If there's a remote defined in the cache, use it. Otherwise, use the
+	// default remote root.
+	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
+	mirror := string(b)
+	if err != nil {
+		mirror = DefaultRemoteRoot
+	}
+	remote, err := remoteFromMirror(ctx, mirror)
+	if err != nil {
+		return nil, err
+	}
+	t.remote = remote
+
+	t.client = client.NewClient(local, t.remote)
+	return t, nil
+}
+
+func remoteFromMirror(ctx context.Context, mirror string) (client.RemoteStore, error) {
+	if _, parseErr := url.ParseRequestURI(mirror); parseErr != nil {
+		return GcsRemoteStore(ctx, mirror, nil, nil)
+	}
+	return client.HTTPRemoteStore(mirror, nil, nil)
 }
