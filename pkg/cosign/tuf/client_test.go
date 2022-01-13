@@ -39,7 +39,7 @@ func TestNewFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkTargets(t, tuf)
+	checkTargetsAndMeta(t, tuf)
 	tuf.Close()
 
 	// Now try with expired targets
@@ -49,7 +49,7 @@ func TestNewFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	tuf.Close()
-	checkTargets(t, tuf)
+	checkTargetsAndMeta(t, tuf)
 
 	// Now let's explicitly make a root.
 	remote, err := GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
@@ -68,7 +68,7 @@ func TestNewFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkTargets(t, tuf)
+	checkTargetsAndMeta(t, tuf)
 	tuf.Close()
 }
 
@@ -86,7 +86,7 @@ func TestNoCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkTargets(t, tuf)
+	checkTargetsAndMeta(t, tuf)
 	tuf.Close()
 
 	if l := dirLen(t, td); l != 0 {
@@ -129,10 +129,10 @@ func TestCache(t *testing.T) {
 	if l := dirLen(t, td); l == 0 {
 		t.Errorf("expected filesystem writes, got %d entries", l)
 	}
-	checkTargets(t, tuf)
+	checkTargetsAndMeta(t, tuf)
 }
 
-func checkTargets(t *testing.T, tuf *TUF) {
+func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
 	// Check the targets
 	t.Helper()
 	for _, target := range targets {
@@ -144,6 +144,13 @@ func checkTargets(t *testing.T, tuf *TUF) {
 	// An invalid target
 	if _, err := tuf.GetTarget("invalid"); err == nil {
 		t.Error("expected error reading target, got nil")
+	}
+
+	// Check the TUF timestamp metadata
+	if ts, err := tuf.GetTimestamp(); err != nil {
+		t.Error("expected no error reading timestamp, got err")
+	} else if len(ts) == 0 {
+		t.Errorf("expected timestamp length of %d, got 0", len(ts))
 	}
 }
 
@@ -157,11 +164,11 @@ func dirLen(t *testing.T, td string) int {
 }
 
 func forceExpiration(t *testing.T, expire bool) {
-	oldIsExpiredMetadata := isExpiredMetadata
-	isExpiredMetadata = func(_ []byte) bool {
+	oldIsExpiredTimestamp := isExpiredTimestamp
+	isExpiredTimestamp = func(_ []byte) bool {
 		return expire
 	}
 	t.Cleanup(func() {
-		isExpiredMetadata = oldIsExpiredMetadata
+		isExpiredTimestamp = oldIsExpiredTimestamp
 	})
 }

@@ -23,6 +23,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -32,6 +33,7 @@ const (
 	CertificateAnnotationKey = "dev.sigstore.cosign/certificate"
 	ChainAnnotationKey       = "dev.sigstore.cosign/chain"
 	BundleAnnotationKey      = "dev.sigstore.cosign/bundle"
+	TimestampAnnotationKey   = "dev.sigstore.cosign/timestamp"
 )
 
 // NewSignature constructs a new oci.Signature from the provided options.
@@ -108,6 +110,11 @@ func (l *staticLayer) Chain() ([]*x509.Certificate, error) {
 // Bundle implements oci.Signature
 func (l *staticLayer) Bundle() (*bundle.RekorBundle, error) {
 	return l.opts.Bundle, nil
+}
+
+// Timestamp implements oci.Signature
+func (l *staticLayer) Timestamp() (*tuf.Timestamp, error) {
+	return l.opts.Timestamp, nil
 }
 
 // Digest implements v1.Layer

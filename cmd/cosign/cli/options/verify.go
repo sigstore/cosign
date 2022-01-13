@@ -22,17 +22,15 @@ import (
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {
 	Key          string
-	Cert         string
-	CertEmail    string // TODO: merge into fulcio option as read mode?
 	CheckClaims  bool
 	Attachment   string
 	Output       string
 	SignatureRef string
 	LocalImage   bool
 
-	SecurityKey SecurityKeyOptions
-	Rekor       RekorOptions
-	// TODO: this seems like it should have the Fulcio options.
+	SecurityKey     SecurityKeyOptions
+	CertVerify      CertVerifyOptions
+	Rekor           RekorOptions
 	Registry        RegistryOptions
 	SignatureDigest SignatureDigestOptions
 	AnnotationOptions
@@ -44,18 +42,13 @@ var _ Interface = (*VerifyOptions)(nil)
 func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
+	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
-
-	cmd.Flags().StringVar(&o.Cert, "cert", "",
-		"path to the public certificate")
-
-	cmd.Flags().StringVar(&o.CertEmail, "cert-email", "",
-		"the email expected in a valid fulcio cert")
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
@@ -81,7 +74,7 @@ type VerifyAttestationOptions struct {
 
 	SecurityKey SecurityKeyOptions
 	Rekor       RekorOptions
-	Fulcio      FulcioOptions // TODO: the original command did not use id token, mistake?
+	CertVerify  CertVerifyOptions
 	Registry    RegistryOptions
 	Predicate   PredicateRemoteOptions
 	Policies    []string
@@ -94,7 +87,7 @@ var _ Interface = (*VerifyAttestationOptions)(nil)
 func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
-	o.Fulcio.AddFlags(cmd)
+	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
 
@@ -117,11 +110,11 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 // VerifyBlobOptions is the top level wrapper for the `verify blob` command.
 type VerifyBlobOptions struct {
 	Key        string
-	Cert       string
 	Signature  string
 	BundlePath string
 
 	SecurityKey SecurityKeyOptions
+	CertVerify  CertVerifyOptions
 	Rekor       RekorOptions
 	Registry    RegistryOptions
 }
@@ -132,13 +125,11 @@ var _ Interface = (*VerifyBlobOptions)(nil)
 func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
+	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
-
-	cmd.Flags().StringVar(&o.Cert, "cert", "",
-		"path to the public certificate")
 
 	cmd.Flags().StringVar(&o.Signature, "signature", "",
 		"signature content or path or remote URL")

@@ -54,8 +54,8 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRef string) error {
-	var pubKey signature.Verifier
+func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, sigRef, blobRef string) error {
+	var verifier signature.Verifier
 	var cert *x509.Certificate
 
 	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() && ko.BundlePath == "" {
@@ -75,11 +75,11 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 	// Keys are optional!
 	switch {
 	case ko.KeyRef != "":
-		pubKey, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
+		verifier, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
-		pkcs11Key, ok := pubKey.(*pkcs11key.Key)
+		pkcs11Key, ok := verifier.(*pkcs11key.Key)
 		if ok {
 			defer pkcs11Key.Close()
 		}
@@ -89,7 +89,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return errors.Wrap(err, "opening piv token")
 		}
 		defer sk.Close()
-		pubKey, err = sk.Verifier()
+		verifier, err = sk.Verifier()
 		if err != nil {
 			return errors.Wrap(err, "loading public key from token")
 		}
@@ -98,7 +98,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		if err != nil {
 			return err
 		}
-		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
 			return err
 		}
@@ -118,15 +118,12 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		cert, err = loadCertFromPEM(certBytes)
 		if err != nil {
 			// check if cert is actually a public key
-			pubKey, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
-			if err != nil {
-				return err
-			}
+			verifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
 		} else {
-			pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-			if err != nil {
-				return err
-			}
+			verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		}
+		if err != nil {
+			return err
 		}
 	case options.EnableExperimental():
 		rClient, err := rekor.NewClient(ko.RekorURL)
@@ -152,25 +149,25 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		if err != nil {
 			return err
 		}
+
+		co := &cosign.CheckOpts{
+			RootCerts: fulcio.GetRoots(),
+			CertEmail: certEmail,
+		}
 		cert = certs[0]
-		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+		verifier, err = cosign.ValidateAndUnpackCert(cert, co)
 		if err != nil {
 			return err
 		}
 	}
 
 	// verify the signature
-	if err := pubKey.VerifySignature(bytes.NewReader([]byte(sig)), bytes.NewReader(blobBytes)); err != nil {
-		return err
-	}
-
-	// verify the cert
-	if err := verifyCert(cert); err != nil {
+	if err := verifier.VerifySignature(bytes.NewReader([]byte(sig)), bytes.NewReader(blobBytes)); err != nil {
 		return err
 	}
 
 	// verify the rekor entry
-	if err := verifyRekorEntry(ctx, ko, pubKey, cert, b64sig, blobBytes); err != nil {
+	if err := verifyRekorEntry(ctx, ko, verifier, cert, b64sig, blobBytes); err != nil {
 		return err
 	}
 
@@ -226,22 +223,6 @@ func payloadBytes(blobRef string) ([]byte, error) {
 		return nil, err
 	}
 	return blobBytes, nil
-}
-
-func verifyCert(cert *x509.Certificate) error {
-	if cert == nil {
-		return nil
-	}
-	if err := cosign.TrustedCert(cert, fulcio.GetRoots()); err != nil {
-		return err
-	}
-	fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
-	fmt.Fprintln(os.Stderr, "Email:", cert.EmailAddresses)
-	for _, uri := range cert.URIs {
-		fmt.Fprintf(os.Stderr, "URI: %s://%s%s\n", uri.Scheme, uri.Host, uri.Path)
-	}
-	fmt.Fprintln(os.Stderr, "Issuer: ", sigs.CertIssuerExtension(cert))
-	return nil
 }
 
 func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {

@@ -136,7 +136,9 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 	return err
 }
 
-func validateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+// ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
+// chains up to a trusted root. Optionally verifies the subject of the certificate.
+func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	verifier, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid certificate found on signature")
@@ -315,7 +317,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 				if cert == nil {
 					return errors.New("no certificate found on signature")
 				}
-				verifier, err = validateAndUnpackCert(cert, co)
+				verifier, err = ValidateAndUnpackCert(cert, co)
 				if err != nil {
 					return err
 				}
@@ -490,7 +492,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				if cert == nil {
 					return errors.New("no certificate found on attestation")
 				}
-				verifier, err = validateAndUnpackCert(cert, co)
+				verifier, err = ValidateAndUnpackCert(cert, co)
 				if err != nil {
 					return err
 				}

@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -37,6 +38,7 @@ type sigWrapper struct {
 	cert        *x509.Certificate
 	chain       []*x509.Certificate
 	mediaType   types.MediaType
+	timestamp   *tuf.Timestamp
 }
 
 var _ v1.Layer = (*sigWrapper)(nil)
@@ -90,6 +92,14 @@ func (sw *sigWrapper) Bundle() (*bundle.RekorBundle, error) {
 		return sw.bundle, nil
 	}
 	return sw.wrapped.Bundle()
+}
+
+// Timestamp implements oci.Signature.
+func (sw *sigWrapper) Timestamp() (*tuf.Timestamp, error) {
+	if sw.timestamp != nil {
+		return sw.timestamp, nil
+	}
+	return sw.wrapped.Timestamp()
 }
 
 // MediaType implements v1.Layer
@@ -157,6 +167,15 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 			return nil, err
 		}
 		newAnn[static.BundleAnnotationKey] = string(b)
+	}
+
+	if so.timestamp != nil {
+		newSig.timestamp = so.timestamp
+		t, err := json.Marshal(so.timestamp)
+		if err != nil {
+			return nil, err
+		}
+		newAnn[static.TimestampAnnotationKey] = string(t)
 	}
 
 	if so.cert != nil {
