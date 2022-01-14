@@ -76,6 +76,7 @@ func SignBlob() *cobra.Command {
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         o.OIDC.ClientSecret,
+				BundlePath:               o.BundlePath,
 			}
 			for _, blob := range args {
 				// TODO: remove when the output flag has been deprecated

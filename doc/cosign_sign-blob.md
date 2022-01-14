@@ -36,6 +36,7 @@ cosign sign-blob [flags]
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --b64                                                                                      whether to base64 encode the output (default true)
+      --bundle string                                                                            write everything required to verify the blob to a FILE
       --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://v1.fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign-blob
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio

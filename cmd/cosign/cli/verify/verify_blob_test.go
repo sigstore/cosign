@@ -15,10 +15,15 @@
 package verify
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
+
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
-func TestSignatures(t *testing.T) {
+func TestSignaturesRef(t *testing.T) {
 	sig := "a=="
 	b64sig := "YT09"
 	tests := []struct {
@@ -41,7 +46,7 @@ func TestSignatures(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			gotSig, gotb64Sig, err := signatures(test.sigRef)
+			gotSig, gotb64Sig, err := signatures(test.sigRef, "")
 			if test.shouldErr && err != nil {
 				return
 			}
@@ -55,5 +60,36 @@ func TestSignatures(t *testing.T) {
 				t.Fatalf("unexpected encoded signature, expected: %s got: %s", b64sig, gotb64Sig)
 			}
 		})
+	}
+}
+
+func TestSignaturesBundle(t *testing.T) {
+	td := t.TempDir()
+	fp := filepath.Join(td, "file")
+
+	sig := "a=="
+	b64sig := "YT09"
+
+	// save as a LocalSignedPayload to the file
+	lsp := cosign.LocalSignedPayload{
+		Base64Signature: b64sig,
+	}
+	contents, err := json.Marshal(lsp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(fp, contents, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	gotSig, gotb64Sig, err := signatures("", fp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotSig != sig {
+		t.Fatalf("unexpected signature, expected: %s got: %s", sig, gotSig)
+	}
+	if gotb64Sig != b64sig {
+		t.Fatalf("unexpected encoded signature, expected: %s got: %s", b64sig, gotb64Sig)
 	}
 }

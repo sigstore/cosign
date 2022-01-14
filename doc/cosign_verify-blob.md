@@ -63,6 +63,7 @@ cosign verify-blob [flags]
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --bundle string                                                                            path to bundle FILE
       --cert string                                                                              path to the public certificate
       --cert-email string                                                                        the email expected in a valid Fulcio certificate
       --cert-oidc-issuer string                                                                  the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth

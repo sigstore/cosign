@@ -115,6 +115,9 @@ if (./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob
 if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob); then false; fi
 ./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob2
 
+./cosign sign-blob --key ${signing_key} --bundle bundle.sig myblob
+./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob
+
 ## sign and verify multiple blobs
 ./cosign sign-blob --key ${signing_key} myblob myblob2 > sigs
 head -n 1 sigs > car.sig

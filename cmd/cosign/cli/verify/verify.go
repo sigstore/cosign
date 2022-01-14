@@ -267,9 +267,12 @@ func loadCertFromFileOrURL(path string) (*x509.Certificate, error) {
 	if err != nil {
 		return nil, err
 	}
+	return loadCertFromPEM(pems)
+}
 
+func loadCertFromPEM(pems []byte) (*x509.Certificate, error) {
 	var out []byte
-	out, err = base64.StdEncoding.DecodeString(string(pems))
+	out, err := base64.StdEncoding.DecodeString(string(pems))
 	if err != nil {
 		// not a base64
 		out = pems

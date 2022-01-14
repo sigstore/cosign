@@ -20,11 +20,13 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"knative.dev/pkg/pool"
 )
@@ -35,6 +37,13 @@ type SignedPayload struct {
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
 	Bundle          *bundle.RekorBundle
+}
+
+type LocalSignedPayload struct {
+	Base64Signature string              `json:"base64Signature"`
+	Cert            string              `json:"cert,omitempty"`
+	Bundle          *bundle.RekorBundle `json:"rekorBundle,omitempty"`
+	Timestamp       *tuf.Timestamp      `json:"timestamp,omitempty"`
 }
 
 type Signatures struct {
@@ -146,4 +155,17 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 	}
 
 	return attestations, nil
+}
+
+// FetchLocalSignedPayloadFromPath fetches a local signed payload from a path to a file
+func FetchLocalSignedPayloadFromPath(path string) (*LocalSignedPayload, error) {
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "reading %s", path)
+	}
+	var b *LocalSignedPayload
+	if err := json.Unmarshal(contents, &b); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
