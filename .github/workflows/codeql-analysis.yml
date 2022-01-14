@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "CodeQL"
+name: CodeQL
 
 on:
   push:
@@ -36,11 +36,11 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@300c8b6dcbaf905eb250b06113e2e62c340a2d20 #v1.0.27
       with:
         languages: ${{ matrix.language }}
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
@@ -48,7 +48,7 @@ jobs:
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
+      uses: github/codeql-action/autobuild@300c8b6dcbaf905eb250b06113e2e62c340a2d20 #v1.0.27
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl
@@ -61,4 +61,4 @@ jobs:
     #   make release
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@300c8b6dcbaf905eb250b06113e2e62c340a2d20 #v1.0.27
