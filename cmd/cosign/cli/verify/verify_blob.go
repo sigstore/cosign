@@ -54,7 +54,7 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, sigRef, blobRef string) error {
+func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, certOidcIssuer, sigRef, blobRef string) error {
 	var verifier signature.Verifier
 	var cert *x509.Certificate
 
@@ -128,8 +128,9 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, sig
 		}
 
 		co := &cosign.CheckOpts{
-			RootCerts: fulcio.GetRoots(),
-			CertEmail: certEmail,
+			RootCerts:      fulcio.GetRoots(),
+			CertEmail:      certEmail,
+			CertOidcIssuer: certOidcIssuer,
 		}
 		cert = certs[0]
 		verifier, err = cosign.ValidateAndUnpackCert(cert, co)

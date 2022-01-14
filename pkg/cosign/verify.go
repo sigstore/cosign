@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -75,6 +76,8 @@ type CheckOpts struct {
 	RootCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
+	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertOidcIssuer string
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
@@ -158,6 +161,18 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		}
 		if !emailVerified {
 			return nil, errors.New("expected email not found in certificate")
+		}
+	}
+	if co.CertOidcIssuer != "" {
+		issuer := ""
+		for _, ext := range cert.Extensions {
+			if ext.Id.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}) {
+				issuer = string(ext.Value)
+				break
+			}
+		}
+		if issuer != co.CertOidcIssuer {
+			return nil, errors.New("expected oidc issuer not found in certificate")
 		}
 	}
 	return verifier, nil
@@ -697,7 +712,6 @@ func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {
 		CurrentTime: cert.NotBefore,
 		Roots:       roots,
 		KeyUsages: []x509.ExtKeyUsage{
-			x509.ExtKeyUsage(x509.KeyUsageDigitalSignature),
 			x509.ExtKeyUsageCodeSigning,
 		},
 	}); err != nil {
