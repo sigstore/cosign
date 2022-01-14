@@ -89,7 +89,7 @@ jobs:
         # https://github.com/kubernetes-sigs/kind/issues/845
         sudo mkdir -p /tmp/etcd
         sudo mount -t tmpfs tmpfs /tmp/etcd
-        go install sigs.k8s.io/kind@v0.11.1 
+        go install sigs.k8s.io/kind@${{ matrix.kind-version }}
 
     - name: Configure KinD Cluster
       run: |
