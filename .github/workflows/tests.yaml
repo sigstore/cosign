@@ -31,9 +31,9 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@v2
+      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed #v2.1.7
         with:
           # In order:
           # * Module download cache
@@ -48,7 +48,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: '1.17.x'
       - name: Run Go tests
@@ -62,9 +62,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@v2
+      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed #v2.1.7
         with:
           # In order:
           # * Module download cache
@@ -79,10 +79,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: '1.17.x'
-      - uses: imjasonh/setup-ko@v0.4
+      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
       - name: setup kind cluster
         run: |
           # Used to test: cosign generate-key-pair k8s://...
@@ -96,13 +96,13 @@ jobs:
     name: Run PowerShell E2E tests
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: '1.17.x'
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@v2
+      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed #v2.1.7
         with:
           # In order:
           # * Module download cache
@@ -121,8 +121,8 @@ jobs:
     name: license boilerplate check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: '1.17.x'
       - name: Install addlicense
@@ -136,9 +136,9 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@5c56cd6c9dc07901af25baab6f2b0d9f3b7c3018 #v2.5.2
         timeout-minutes: 5
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
