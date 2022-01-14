@@ -77,16 +77,20 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 	// We need to update our tufdb.
 	trustedRoot, err := getRoot(trustedMeta)
 	if err != nil {
+		t.local.Close()
 		return nil, errors.Wrap(err, "getting trusted root")
 	}
 	rootKeys, rootThreshold, err := getRootKeys(trustedRoot)
 	if err != nil {
+		t.local.Close()
 		return nil, errors.Wrap(err, "bad trusted root")
 	}
 	if err := t.client.Init(rootKeys, rootThreshold); err != nil {
+		t.local.Close()
 		return nil, errors.Wrap(err, "unable to initialize client, local cache may be corrupt")
 	}
 	if err := t.updateMetadataAndDownloadTargets(); err != nil {
+		t.local.Close()
 		return nil, errors.Wrap(err, "updating local metadata and targets")
 	}
 
