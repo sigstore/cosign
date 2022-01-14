@@ -28,7 +28,14 @@ jobs:
           PATH="${TEMP_PATH}:$PATH"
 
           echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
-          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b "${TEMP_PATH}" 2>&1
+          reviewdog_sha='08a5a323939101195af1d420ab6be3a50ec12f58e3419e3fcd07b6871f0b9a7e'
+          curl -s -L https://github.com/reviewdog/reviewdog/releases/download/v0.13.1/reviewdog_0.13.1_Linux_x86_64.tar.gz --output "${TEMP_PATH}/reviewdog.tar.gz"
+          computed_sha=`sha256sum ${TEMP_PATH}/reviewdog.tar.gz|cut -d ' ' -f 1`
+          if [[ $reviewdog_sha != $computed_sha ]]; then
+            echo '::group::🐶 Failed to verify checksum, exiting!'
+            exit 1
+          fi
+          tar zxf "${TEMP_PATH}/reviewdog.tar.gz" reviewdog
           echo '::endgroup::'
 
           echo '::group:: Running DO NOT SUBMIT with reviewdog 🐶 ...'
