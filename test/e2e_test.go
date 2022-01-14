@@ -488,7 +488,7 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", blob), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", blob), t)
 
 	// Now sign the blob with one key
 	ko := sign.KeyOpts{
@@ -501,7 +501,7 @@ func TestSignBlobBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", bp), t)
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", bp), t)
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, options.ExperimentalEnv, "1")()
@@ -511,7 +511,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", bp), t)
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", bp), t)
 }
 
 func TestGenerate(t *testing.T) {
