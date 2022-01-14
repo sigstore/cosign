@@ -35,7 +35,7 @@ jobs:
             echo '::group::🐶 Failed to verify checksum, exiting!'
             exit 1
           fi
-          tar zxf "${TEMP_PATH}/reviewdog.tar.gz" reviewdog
+          tar zxf "${TEMP_PATH}/reviewdog.tar.gz" -C ${TEMP_PATH} reviewdog
           echo '::endgroup::'
 
           echo '::group:: Running DO NOT SUBMIT with reviewdog 🐶 ...'
