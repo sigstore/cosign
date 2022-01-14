@@ -33,7 +33,7 @@ require (
 	github.com/xanzy/go-gitlab v0.54.3
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
-	google.golang.org/api v0.64.0
+	google.golang.org/api v0.65.0
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
 	k8s.io/client-go v0.22.5
@@ -42,6 +42,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/iam v0.1.0 // indirect
 	github.com/bytecodealliance/wasmtime-go v0.32.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/go-logr/logr v1.2.2 // indirect
