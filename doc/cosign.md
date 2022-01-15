@@ -5,10 +5,9 @@
 ### Options
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-  -h, --help                                     help for cosign
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+  -h, --help                 help for cosign
+      --output-file string   log output to a file
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO

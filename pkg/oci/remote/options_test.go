@@ -139,7 +139,7 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			desc: "bad",
 
 			envVal:  "bad$repo",
-			wantErr: errors.New("parsing $COSIGN_REPOSITORY: repository can only contain the runes `abcdefghijklmnopqrstuvwxyz0123456789_-./`: bad$repo"),
+			wantErr: errors.New("parsing $COSIGN_REPOSITORY: repository can only contain the characters `abcdefghijklmnopqrstuvwxyz0123456789_-./`: bad$repo"),
 		},
 		{
 			desc: "empty",
