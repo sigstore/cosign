@@ -155,7 +155,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			if err != nil {
 				return errors.Wrap(err, "accessing image")
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, dd, sv, se)
 			if err != nil {
 				return errors.Wrap(err, "signing digest")
 			}
@@ -175,7 +175,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 			}
 			digest := ref.Context().Digest(d.String())
 
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, dd, sv, se)
 			if err != nil {
 				return errors.Wrap(err, "signing digest")
 			}
@@ -189,7 +189,7 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyOpts,
-	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool,
+	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool, recursive bool,
 	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
@@ -227,6 +227,10 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	}
 
 	if outputSignature != "" {
+		// Add digest to suffix to differentiate each image during recursive signing
+		if recursive {
+			outputSignature = fmt.Sprintf("%s-%s", outputSignature, strings.Replace(digest.DigestStr(), ":", "-", 1))
+		}
 		if err := os.WriteFile(outputSignature, []byte(b64sig), 0600); err != nil {
 			return errors.Wrap(err, "create signature file")
 		}
