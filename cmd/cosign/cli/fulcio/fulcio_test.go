@@ -44,14 +44,19 @@ func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDT
 }
 
 type testClient struct {
-	payload api.CertificateResponse
-	err     error
+	payload  api.CertificateResponse
+	rootResp api.RootResponse
+	err      error
 }
 
 var _ api.Client = (*testClient)(nil)
 
 func (p *testClient) SigningCert(cr api.CertificateRequest, token string) (*api.CertificateResponse, error) {
 	return &p.payload, p.err
+}
+
+func (p *testClient) RootCert() (*api.RootResponse, error) {
+	return &p.rootResp, p.err
 }
 
 func TestGetCertForOauthID(t *testing.T) {
