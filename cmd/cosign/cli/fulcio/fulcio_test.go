@@ -113,7 +113,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "")
+			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "", "")
 
 			if err != nil {
 				if !tc.expectErr {
