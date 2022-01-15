@@ -17,10 +17,9 @@ cosign piv-tool unblock [flags]
 ### Options inherited from parent commands
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-  -f, --no-input                                 skip warnings and confirmations
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+  -f, --no-input             skip warnings and confirmations
+      --output-file string   log output to a file
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO
