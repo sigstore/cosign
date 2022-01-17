@@ -47,7 +47,7 @@ require (
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.10
+	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.11
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v1.3.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
