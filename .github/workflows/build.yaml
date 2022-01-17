@@ -47,9 +47,6 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/auth@c6c22902f6af237edb96ede5f25a00e864589b2f #v0.4.4
         with:
-          project_id: projectsigstore
-          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          export_default_credentials: true
           workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
           service_account: 'github-actions@projectsigstore.iam.gserviceaccount.com'
 
