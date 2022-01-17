@@ -24,10 +24,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v39/github"
+	"github.com/google/go-github/v42/github"
 	"github.com/pkg/errors"
-	"github.com/sigstore/cosign/pkg/cosign"
 	"golang.org/x/oauth2"
+
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 const (
