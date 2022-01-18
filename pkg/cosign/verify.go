@@ -321,53 +321,9 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	validationErrs := []string{}
 
 	for _, sig := range sl {
-		if err := func(sig oci.Signature) error {
-			verifier := co.SigVerifier
-			if verifier == nil {
-				// If we don't have a public key to check against, we can try a root cert.
-				cert, err := sig.Cert()
-				if err != nil {
-					return err
-				}
-				if cert == nil {
-					return errors.New("no certificate found on signature")
-				}
-				verifier, err = ValidateAndUnpackCert(cert, co)
-				if err != nil {
-					return err
-				}
-			}
-
-			if err := verifyOCISignature(ctx, verifier, sig); err != nil {
-				return err
-			}
-
-			// We can't check annotations without claims, both require unmarshalling the payload.
-			if co.ClaimVerifier != nil {
-				if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
-					return err
-				}
-			}
-
-			verified, err := VerifyBundle(ctx, sig)
-			if err != nil && co.RekorClient == nil {
-				return errors.Wrap(err, "unable to verify bundle")
-			}
-			bundleVerified = bundleVerified || verified
-
-			if !verified && co.RekorClient != nil {
-				if co.SigVerifier != nil {
-					pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
-					if err != nil {
-						return err
-					}
-					return tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
-				}
-
-				return tlogValidateCertificate(ctx, co.RekorClient, sig)
-			}
-			return nil
-		}(sig); err != nil {
+		verified, err := VerifyImageSignature(ctx, sig, h, co)
+		bundleVerified = bundleVerified || verified
+		if err != nil {
 			validationErrs = append(validationErrs, err.Error())
 			continue
 		}
@@ -379,6 +335,55 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 		return nil, false, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n "))
 	}
 	return checkedSignatures, bundleVerified, nil
+}
+
+// VerifyImageSignature verifies a signature
+func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
+	verifier := co.SigVerifier
+	if verifier == nil {
+		// If we don't have a public key to check against, we can try a root cert.
+		cert, err := sig.Cert()
+		if err != nil {
+			return bundleVerified, err
+		}
+		if cert == nil {
+			return bundleVerified, errors.New("no certificate found on signature")
+		}
+		verifier, err = ValidateAndUnpackCert(cert, co)
+		if err != nil {
+			return bundleVerified, err
+		}
+	}
+
+	if err := verifyOCISignature(ctx, verifier, sig); err != nil {
+		return bundleVerified, err
+	}
+
+	// We can't check annotations without claims, both require unmarshalling the payload.
+	if co.ClaimVerifier != nil {
+		if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
+			return bundleVerified, err
+		}
+	}
+
+	bundleVerified, err = VerifyBundle(ctx, sig)
+	if err != nil && co.RekorClient == nil {
+		return false, errors.Wrap(err, "unable to verify bundle")
+	}
+
+	if !bundleVerified && co.RekorClient != nil {
+		if co.SigVerifier != nil {
+			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
+			if err != nil {
+				return bundleVerified, err
+			}
+			return bundleVerified, tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
+		}
+
+		return bundleVerified, tlogValidateCertificate(ctx, co.RekorClient, sig)
+	}
+
+	return bundleVerified, nil
 }
 
 func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
