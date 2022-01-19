@@ -50,6 +50,12 @@ type TUF struct {
 	remote  client.RemoteStore
 }
 
+// RemoteCache contains information to cache on the location of the remote
+// repository.
+type remoteCache struct {
+	Mirror string `json:"mirror"`
+}
+
 // Close closes the local TUF store. Should only be called once per client.
 func (t *TUF) Close() error {
 	return t.local.Close()
@@ -149,7 +155,12 @@ func Initialize(ctx context.Context, mirror string, root []byte) error {
 		return errors.Wrap(err, "updating local metadata and targets")
 	}
 	// Store the remote for later.
-	if err := os.WriteFile(cachedRemote(rootCacheDir()), []byte(mirror), 0600); err != nil {
+	remoteInfo := &remoteCache{Mirror: mirror}
+	b, err := json.Marshal(remoteInfo)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(cachedRemote(rootCacheDir()), b, 0600); err != nil {
 		return errors.Wrap(err, "storing remote")
 	}
 	return nil
@@ -302,7 +313,7 @@ func rootCacheDir() string {
 }
 
 func cachedRemote(cacheRoot string) string {
-	return filepath.Join(cacheRoot, "remote.txt")
+	return filepath.Join(cacheRoot, "remote.json")
 }
 
 func cachedTargetsDir(cacheRoot string) string {
@@ -429,10 +440,11 @@ func newTuf(ctx context.Context) (*TUF, error) {
 
 	// If there's a remote defined in the cache, use it. Otherwise, use the
 	// default remote root.
+	mirror := DefaultRemoteRoot
 	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
-	mirror := string(b)
-	if err != nil {
-		mirror = DefaultRemoteRoot
+	remoteInfo := remoteCache{}
+	if err := json.Unmarshal(b, &remoteInfo); err == nil {
+		mirror = remoteInfo.Mirror
 	}
 	remote, err := remoteFromMirror(ctx, mirror)
 	if err != nil {
