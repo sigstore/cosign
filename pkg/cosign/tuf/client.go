@@ -442,10 +442,13 @@ func newTuf(ctx context.Context) (*TUF, error) {
 	// default remote root.
 	mirror := DefaultRemoteRoot
 	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
-	remoteInfo := remoteCache{}
-	if err := json.Unmarshal(b, &remoteInfo); err == nil {
-		mirror = remoteInfo.Mirror
+	if err == nil {
+		remoteInfo := remoteCache{}
+		if err := json.Unmarshal(b, &remoteInfo); err == nil {
+			mirror = remoteInfo.Mirror
+		}
 	}
+
 	remote, err := remoteFromMirror(ctx, mirror)
 	if err != nil {
 		return nil, err
