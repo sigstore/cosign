@@ -12,7 +12,7 @@ require (
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-piv/piv-go v1.9.0
 	github.com/google/certificate-transparency-go v1.1.2
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.5.7
 	github.com/google/go-containerregistry v0.8.1-0.20220110151055-a61fd0a8e2bb
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220114205711-890d5b362eb8
 	github.com/google/go-github/v42 v42.0.0
