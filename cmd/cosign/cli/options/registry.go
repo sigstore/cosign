@@ -19,9 +19,12 @@ import (
 	"crypto/tls"
 	"net/http"
 
+	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
+	"github.com/awslabs/amazon-ecr-credential-helper/ecr-login/api"
+	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/spf13/cobra"
@@ -69,16 +72,18 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 	}
 
 	if o.KubernetesKeychain {
-		kc, err := k8schain.NewNoClient(ctx)
-		if err != nil {
-			panic(err.Error())
-		}
+		kc := authn.NewMultiKeychain(
+			authn.DefaultKeychain,
+			google.Keychain,
+			authn.NewKeychainFromHelper(ecr.ECRHelper{ClientFactory: api.DefaultClientFactory{}}),
+			authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
+		)
 		opts = append(opts, remote.WithAuthFromKeychain(kc))
 	} else {
 		opts = append(opts, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	}
 
-	if o != nil && o.AllowInsecure {
+	if o.AllowInsecure {
 		opts = append(opts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
 	}
 	return opts
