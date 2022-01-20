@@ -177,17 +177,21 @@ func TestCustomRoot(t *testing.T) {
 	tufObj.Close()
 
 	// Force expiration on the first timestamp and internal go-tuf verification.
-	expCleanup := forceExpirationVersion(1, true)
+	forceExpirationVersion(t, 1)
+	oldIsExpired := verify.IsExpired
+	verify.IsExpired = func(time time.Time) bool {
+		return true
+	}
+
 	if _, err = NewFromEnv(ctx); err == nil {
 		t.Errorf("expected expired timestamp from the remote")
 	}
-	expCleanup()
+	// Let internal TUF verification succeed normally now.
+	verify.IsExpired = oldIsExpired
 
 	// Update remote targets, issue a timestamp v2.
 	updateTufRepo(t, td, r, "foo1")
 
-	// Force expiration on the first timestamp.
-	expCleanup = forceExpirationVersion(1, false)
 	// Use newTuf and successfully get updated metadata using the cached remote location.
 	tufObj, err = NewFromEnv(ctx)
 	if err != nil {
@@ -196,7 +200,6 @@ func TestCustomRoot(t *testing.T) {
 	if b, err := tufObj.GetTarget("foo.txt"); err != nil || !bytes.Equal(b, []byte("foo1")) {
 		t.Fatal(err)
 	}
-	expCleanup()
 	tufObj.Close()
 }
 
@@ -241,9 +244,8 @@ func forceExpiration(t *testing.T, expire bool) {
 	})
 }
 
-func forceExpirationVersion(version int, all bool) func() {
+func forceExpirationVersion(t *testing.T, version int) {
 	oldIsExpiredTimestamp := isExpiredTimestamp
-	oldIsExpired := verify.IsExpired
 	isExpiredTimestamp = func(metadata []byte) bool {
 		s := &data.Signed{}
 		if err := json.Unmarshal(metadata, s); err != nil {
@@ -255,15 +257,9 @@ func forceExpirationVersion(version int, all bool) func() {
 		}
 		return sm.Version <= version
 	}
-	if all {
-		verify.IsExpired = func(time time.Time) bool {
-			return true
-		}
-	}
-	return func() {
+	t.Cleanup(func() {
 		isExpiredTimestamp = oldIsExpiredTimestamp
-		verify.IsExpired = oldIsExpired
-	}
+	})
 }
 
 func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tuf.Repo) {
