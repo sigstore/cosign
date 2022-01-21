@@ -15,11 +15,13 @@
 package verify
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
 
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
@@ -91,5 +93,51 @@ func TestSignaturesBundle(t *testing.T) {
 	}
 	if gotb64Sig != b64sig {
 		t.Fatalf("unexpected encoded signature, expected: %s got: %s", b64sig, gotb64Sig)
+	}
+}
+
+func TestIsIntotoDSSEWithEnvelopes(t *testing.T) {
+	tts := []struct {
+		envelope     dsse.Envelope
+		isIntotoDSSE bool
+	}{
+		{
+			envelope: dsse.Envelope{
+				PayloadType: "application/vnd.in-toto+json",
+				Payload:     base64.StdEncoding.EncodeToString([]byte("This is a test")),
+				Signatures:  []dsse.Signature{},
+			},
+			isIntotoDSSE: true,
+		},
+	}
+	for _, tt := range tts {
+		envlopeBytes, _ := json.Marshal(tt.envelope)
+		got := isIntotoDSSE(envlopeBytes)
+		if got != tt.isIntotoDSSE {
+			t.Fatalf("unexpected envelope content")
+		}
+	}
+}
+
+func TestIsIntotoDSSEWithBytes(t *testing.T) {
+	tts := []struct {
+		envelope     []byte
+		isIntotoDSSE bool
+	}{
+		{
+			envelope:     []byte("This is no valid"),
+			isIntotoDSSE: false,
+		},
+		{
+			envelope:     []byte("MEUCIQDBmE1ZRFjUVic1hzukesJlmMFG1JqWWhcthnhawTeBNQIga3J9/WKsNlSZaySnl8V360bc2S8dIln2/qo186EfjHA="),
+			isIntotoDSSE: false,
+		},
+	}
+	for _, tt := range tts {
+		envlopeBytes, _ := json.Marshal(tt.envelope)
+		got := isIntotoDSSE(envlopeBytes)
+		if got != tt.isIntotoDSSE {
+			t.Fatalf("unexpected envelope content")
+		}
 	}
 }
