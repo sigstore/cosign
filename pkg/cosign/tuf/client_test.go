@@ -16,9 +16,20 @@
 package tuf
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/theupdateframework/go-tuf"
+	"github.com/theupdateframework/go-tuf/data"
+	"github.com/theupdateframework/go-tuf/verify"
 )
 
 var targets = []string{
@@ -51,12 +62,7 @@ func TestNewFromEnv(t *testing.T) {
 	tuf.Close()
 	checkTargetsAndMeta(t, tuf)
 
-	// Now let's explicitly make a root.
-	remote, err := GcsRemoteStore(ctx, DefaultRemoteRoot, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Initialize(remote, nil); err != nil {
+	if err := Initialize(ctx, DefaultRemoteRoot, nil); err != nil {
 		t.Error()
 	}
 	if l := dirLen(t, td); l == 0 {
@@ -132,6 +138,71 @@ func TestCache(t *testing.T) {
 	checkTargetsAndMeta(t, tuf)
 }
 
+func TestCustomRoot(t *testing.T) {
+	ctx := context.Background()
+	// Create a remote repository.
+	td := t.TempDir()
+	remote, r := newTufRepo(t, td, "foo")
+
+	// Serve remote repository.
+	s := httptest.NewServer(http.FileServer(http.Dir(filepath.Join(td, "repository"))))
+	defer s.Close()
+
+	// Initialize with custom root.
+	tufRoot := t.TempDir()
+	t.Setenv("TUF_ROOT", tufRoot)
+	meta, err := remote.GetMeta()
+	if err != nil {
+		t.Error(err)
+	}
+	rootBytes, ok := meta["root.json"]
+	if !ok {
+		t.Error(err)
+	}
+	if err := Initialize(ctx, s.URL, rootBytes); err != nil {
+		t.Error(err)
+	}
+	if l := dirLen(t, tufRoot); l == 0 {
+		t.Errorf("expected filesystem writes, got %d entries", l)
+	}
+
+	// Successfully get target.
+	tufObj, err := NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, err := tufObj.GetTarget("foo.txt"); err != nil || !bytes.Equal(b, []byte("foo")) {
+		t.Fatal(err)
+	}
+	tufObj.Close()
+
+	// Force expiration on the first timestamp and internal go-tuf verification.
+	forceExpirationVersion(t, 1)
+	oldIsExpired := verify.IsExpired
+	verify.IsExpired = func(time time.Time) bool {
+		return true
+	}
+
+	if _, err = NewFromEnv(ctx); err == nil {
+		t.Errorf("expected expired timestamp from the remote")
+	}
+	// Let internal TUF verification succeed normally now.
+	verify.IsExpired = oldIsExpired
+
+	// Update remote targets, issue a timestamp v2.
+	updateTufRepo(t, td, r, "foo1")
+
+	// Use newTuf and successfully get updated metadata using the cached remote location.
+	tufObj, err = NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, err := tufObj.GetTarget("foo.txt"); err != nil || !bytes.Equal(b, []byte("foo1")) {
+		t.Fatal(err)
+	}
+	tufObj.Close()
+}
+
 func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
 	// Check the targets
 	t.Helper()
@@ -171,4 +242,80 @@ func forceExpiration(t *testing.T, expire bool) {
 	t.Cleanup(func() {
 		isExpiredTimestamp = oldIsExpiredTimestamp
 	})
+}
+
+func forceExpirationVersion(t *testing.T, version int) {
+	oldIsExpiredTimestamp := isExpiredTimestamp
+	isExpiredTimestamp = func(metadata []byte) bool {
+		s := &data.Signed{}
+		if err := json.Unmarshal(metadata, s); err != nil {
+			return true
+		}
+		sm := &data.Timestamp{}
+		if err := json.Unmarshal(s.Signed, sm); err != nil {
+			return true
+		}
+		return sm.Version <= version
+	}
+	t.Cleanup(func() {
+		isExpiredTimestamp = oldIsExpiredTimestamp
+	})
+}
+
+func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tuf.Repo) {
+	remote := tuf.FileSystemStore(td, nil)
+	r, err := tuf.NewRepo(remote)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := r.Init(false); err != nil {
+		t.Error(err)
+	}
+	for _, role := range []string{"root", "targets", "snapshot", "timestamp"} {
+		if _, err := r.GenKey(role); err != nil {
+			t.Error(err)
+		}
+	}
+	targetPath := filepath.Join(td, "staged", "targets", "foo.txt")
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		t.Error(err)
+	}
+	if err := ioutil.WriteFile(targetPath, []byte(targetData), 0600); err != nil {
+		t.Error(err)
+	}
+	if err := r.AddTarget("foo.txt", nil); err != nil {
+		t.Error(err)
+	}
+	if err := r.Snapshot(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Timestamp(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Commit(); err != nil {
+		t.Error(err)
+	}
+	return remote, r
+}
+
+func updateTufRepo(t *testing.T, td string, r *tuf.Repo, targetData string) {
+	targetPath := filepath.Join(td, "staged", "targets", "foo.txt")
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		t.Error(err)
+	}
+	if err := ioutil.WriteFile(targetPath, []byte(targetData), 0600); err != nil {
+		t.Error(err)
+	}
+	if err := r.AddTarget("foo.txt", nil); err != nil {
+		t.Error(err)
+	}
+	if err := r.Snapshot(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Timestamp(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Commit(); err != nil {
+		t.Error(err)
+	}
 }
