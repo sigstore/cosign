@@ -536,7 +536,7 @@ If you're aware of another system that does meet these, please let me know!
 ### Registry API Changes
 
 The naming convention and read-modify-write update patterns we use to store things in
-a registry a bit, well, "hacky".
+a registry are a bit, well, "hacky".
 I think they're the best (only) real option available today, but if the registry API
 changes we can improve these.
 
