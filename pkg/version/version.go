@@ -66,6 +66,15 @@ func (i *Info) String() string {
 	b := strings.Builder{}
 	w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
 
+	fmt.Fprint(w, `
+  ______   ______        _______. __    _______ .__   __.
+ /      | /  __  \      /       ||  |  /  _____||  \ |  |
+|  ,----'|  |  |  |    |   (---- |  | |  |  __  |   \|  |
+|  |     |  |  |  |     \   \    |  | |  | |_ | |  .    |
+|  '----.|  '--'  | .----)   |   |  | |  |__| | |  |\   |
+ \______| \______/  |_______/    |__|  \______| |__| \__|
+`)
+	fmt.Fprint(w, "cosign: A tool for Container Signing, Verification and Storage in an OCI registry.\n\n")
 	fmt.Fprintf(w, "GitVersion:\t%s\n", i.GitVersion)
 	fmt.Fprintf(w, "GitCommit:\t%s\n", i.GitCommit)
 	fmt.Fprintf(w, "GitTreeState:\t%s\n", i.GitTreeState)
