@@ -6,6 +6,8 @@ require (
 	cloud.google.com/go/storage v1.18.2
 	cuelang.org/go v0.4.1
 	github.com/ThalesIgnite/crypto11 v1.2.5
+	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6
+	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
 	github.com/go-openapi/runtime v0.21.1
 	github.com/go-openapi/strfmt v0.21.1
@@ -14,7 +16,7 @@ require (
 	github.com/google/certificate-transparency-go v1.1.2
 	github.com/google/go-cmp v0.5.7
 	github.com/google/go-containerregistry v0.8.1-0.20220125170349-50dfc2733d10
-	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220120151853-ac864e57b117
+	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220125170349-50dfc2733d10
 	github.com/google/go-github/v42 v42.0.0
 	github.com/google/trillian v1.4.0
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
@@ -28,8 +30,9 @@ require (
 	github.com/sigstore/sigstore v1.1.1-0.20220115165716-9f61ddc98390
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
+	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.11
 	github.com/stretchr/testify v1.7.0
-	github.com/theupdateframework/go-tuf v0.0.0-20220113233521-eac0a85ce281
+	github.com/theupdateframework/go-tuf v0.0.0-20220124194755-2c5d73bebc1c
 	github.com/xanzy/go-gitlab v0.54.3
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
@@ -38,30 +41,24 @@ require (
 	k8s.io/apimachinery v0.22.5
 	k8s.io/client-go v0.22.5
 	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704
-	knative.dev/pkg v0.0.0-20220114141842-0a429cba1c73
+	knative.dev/pkg v0.0.0-20220121092305-3ba5d72e310a
 )
 
 require (
 	cloud.google.com/go/compute v1.1.0 // indirect
+	cloud.google.com/go/iam v0.1.1 // indirect
 	github.com/Azure/azure-sdk-for-go v61.3.0+incompatible // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.11.0 // indirect
-	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6
-	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
-	github.com/google/go-containerregistry/pkg/authn/kubernetes v0.0.0-20220120151853-ac864e57b117 // indirect
-	golang.org/x/net v0.0.0-20220114011407-0dd24b26b47d // indirect
-	k8s.io/kube-openapi v0.0.0-20220114203427-a0453230fd26 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
-)
-
-require (
-	cloud.google.com/go/iam v0.1.0 // indirect
-	github.com/bytecodealliance/wasmtime-go v0.32.0 // indirect
+	github.com/bytecodealliance/wasmtime-go v0.33.1 // indirect
+	github.com/google/go-containerregistry/pkg/authn/kubernetes v0.0.0-20220125170349-50dfc2733d10 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.11
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v1.3.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
+	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
+	golang.org/x/net v0.0.0-20220121210141-e204ce36a2ba // indirect
+	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
