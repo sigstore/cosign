@@ -23,6 +23,7 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -30,6 +31,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/pkg/errors"
+	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
@@ -39,12 +41,15 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/pkg/signature"
+
+	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -160,6 +165,11 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		if err != nil {
 			return err
 		}
+	}
+
+	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
+	if isIntotoDSSE(blobBytes) {
+		verifier = dsse.WrapVerifier(verifier)
 	}
 
 	// verify the signature
@@ -347,4 +357,17 @@ func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {
 	}
 
 	return certs, err
+}
+
+// isIntotoDSSE checks whether a payload is a Dead Simple Signing Envelope with the In-Toto format.
+func isIntotoDSSE(blobBytes []byte) bool {
+	DSSEenvelope := ssldsse.Envelope{}
+	if err := json.Unmarshal(blobBytes, &DSSEenvelope); err != nil {
+		return false
+	}
+	if DSSEenvelope.PayloadType != ctypes.IntotoPayloadType {
+		return false
+	}
+
+	return true
 }
