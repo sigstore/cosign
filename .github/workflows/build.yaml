@@ -61,9 +61,7 @@ jobs:
 
       - name: creds
         run: gcloud auth configure-docker --quiet
-
-      - name: containers-cosign-sget
-        run: make sign-ci-containers
-        env:
-          KO_PREFIX: gcr.io/projectsigstore/cosign/ci
-          COSIGN_PASSWORD: "${{secrets.COSIGN_PASSWORD}}"
+      - name: container
+        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_PREFIX=gcr.io/projectsigstore/cosign/ci make sign-container
+      - name: cosigned
+        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_PREFIX=gcr.io/projectsigstore/cosign/ci make sign-cosigned

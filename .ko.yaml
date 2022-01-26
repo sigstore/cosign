@@ -32,9 +32,9 @@ builds:
   - -extldflags "-static"
   - "{{ .Env.LDFLAGS }}"
 
-- id: sget
+- id: cosigned
   dir: .
-  main: ./cmd/sget
+  main: ./cmd/cosign/webhook
   env:
   - CGO_ENABLED=0
   flags:
