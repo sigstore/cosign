@@ -1866,6 +1866,8 @@ github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17
 github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
 github.com/willf/bitset v1.1.11-0.20200630133818-d5bec3311243/go.mod h1:RjeCKbqT1RxIR/KWY6phxZiaY1IyutSBfGjNPySAYV4=
 github.com/willf/bitset v1.1.11/go.mod h1:83CECat5yLh5zVOf4P1ErAgKA5UDvKtgyUABdr3+MjI=
+github.com/withfig/autocomplete-tools/packages/cobra v0.0.0-20220122124547-31d3821a6898 h1:2Z+iziYPiyWk5hVJ3EYLn/i33Tj5ukytaJA0Th9tbgc=
+github.com/withfig/autocomplete-tools/packages/cobra v0.0.0-20220122124547-31d3821a6898/go.mod h1:cKObXQ6PVFO7bHUd5jpApXvMIt55Ewz7UdMiC05ONxI=
 github.com/xanzy/go-gitlab v0.31.0/go.mod h1:sPLojNBn68fMUWSxIJtdVVIP8uSBYqesTfDUseX11Ug=
 github.com/xanzy/go-gitlab v0.54.4 h1:3CFEdQ9O+bFx3BsyuOK0gqgLPwnT2rwnPOjudV07wTw=
 github.com/xanzy/go-gitlab v0.54.4/go.mod h1:F0QEXwmqiBUxCgJm8fE9S+1veX4XC9Z4cfaAbqwk4YM=
