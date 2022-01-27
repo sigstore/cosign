@@ -383,7 +383,7 @@ or garbage-collected when the image is deleted.
 Similarly, they **can** easily be copied from one environment to another, but this is not
 automatic.
 
-Multiple signatures are stored in a list which is unfortunately "racy" today.
+Multiple signatures are stored in a list which is unfortunately a race condition today.
 To add a signature, clients orchestrate a "read-append-write" operation, so the last write
 will win in the case of contention.
 
@@ -436,7 +436,7 @@ on the sha256 of what we're signing) for locating the signature index.
 
 Roughly (ignoring ports in the hostname): `s/:/-/g` and `s/@/:/g` to find the signature index.
 
-See [Race conditions](#race-conditions) for some caveats around this strategy.
+See [Race conditions](#registry-details) for some caveats around this strategy.
 
 Alternative implementations could use transparency logs, local filesystem, a separate repository
 registry, an explicit reference to a signature index, a new registry API, grafeas, etc.
