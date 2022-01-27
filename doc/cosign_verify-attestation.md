@@ -48,6 +48,12 @@ cosign verify-attestation [flags]
 
   # verify image with public key stored in GitLab with project id
   cosign verify-attestation --key gitlab://[PROJECT_ID] <IMAGE>
+
+  # verify image with public key and validate attestation based on Rego policy
+  cosign verify-attestation --key cosign.pub --type <PREDICATE_TYPE> --policy <REGO_POLICY> <IMAGE>
+
+  # verify image with public key and validate attestation based on CUE policy
+  cosign verify-attestation --key cosign.pub --type <PREDICATE_TYPE> --policy <CUE_POLICY> <IMAGE>
 ```
 
 ### Options
