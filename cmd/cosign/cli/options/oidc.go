@@ -19,6 +19,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const DefaultOIDCIssuerURL = "https://oauth2.sigstore.dev/auth"
+
 // OIDCOptions is the wrapper for OIDC related options.
 type OIDCOptions struct {
 	Issuer       string
@@ -30,7 +32,7 @@ var _ Interface = (*OIDCOptions)(nil)
 
 // AddFlags implements Interface
 func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.Issuer, "oidc-issuer", "https://oauth2.sigstore.dev/auth",
+	cmd.Flags().StringVar(&o.Issuer, "oidc-issuer", DefaultOIDCIssuerURL,
 		"[EXPERIMENTAL] OIDC provider to be used to issue ID token")
 
 	cmd.Flags().StringVar(&o.ClientID, "oidc-client-id", "sigstore",
