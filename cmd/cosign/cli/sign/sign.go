@@ -57,9 +57,9 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, url string) bool {
-	// Check whether experimental is on!
-	if !options.EnableExperimental() {
+func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, upload bool, url string) bool {
+	// Check whether experimental is on along with uploading!
+	if !options.EnableExperimental() || !upload {
 		return false
 	}
 	// We are forcing publishing to the Tlog.
@@ -208,7 +208,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 	if sv.Cert != nil {
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
-	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
+	if ShouldUploadToTlog(ctx, digest, force, upload, ko.RekorURL) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
