@@ -27,7 +27,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.3.0
 	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7
 	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3
-	github.com/sigstore/sigstore v1.1.1-0.20220115165716-9f61ddc98390
+	github.com/sigstore/sigstore v1.1.1-0.20220130134424-bae9b66b8442
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
 	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.11
@@ -46,7 +46,6 @@ require (
 
 require (
 	cloud.google.com/go/compute v1.1.0 // indirect
-	github.com/Azure/azure-sdk-for-go v61.3.0+incompatible // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.11.0 // indirect
