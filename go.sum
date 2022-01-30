@@ -291,8 +291,8 @@ github.com/aws/aws-sdk-go v1.37.0/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zK
 github.com/aws/aws-sdk-go v1.42.8/go.mod h1:585smgzpB/KqRA+K3y/NL/oYRqQvpNJYvLm+LY1U59Q=
 github.com/aws/aws-sdk-go v1.42.22/go.mod h1:585smgzpB/KqRA+K3y/NL/oYRqQvpNJYvLm+LY1U59Q=
 github.com/aws/aws-sdk-go v1.42.25/go.mod h1:gyRszuZ/icHmHAVE4gc/r+cfCmhA1AD+vqfWbgI+eHs=
-github.com/aws/aws-sdk-go v1.42.34 h1:fqGAiKmCSRY1rEa4G9VqgkKKbNmLKYq5dKmLtQkvYi8=
-github.com/aws/aws-sdk-go v1.42.34/go.mod h1:OGr6lGMAKGlG9CVrYnWYDKIyb829c6EVBRjxqjmPepc=
+github.com/aws/aws-sdk-go v1.42.43 h1:rLcxH9YgI3zN7TnjBn1Z6V62GPjOEW1IQd0m11Y/nXE=
+github.com/aws/aws-sdk-go v1.42.43/go.mod h1:OGr6lGMAKGlG9CVrYnWYDKIyb829c6EVBRjxqjmPepc=
 github.com/aws/aws-sdk-go-v2 v0.18.0/go.mod h1:JWVYvqSMppoMJC0x5wdwiImzgXTI9FuZwxzkQq9wy+g=
 github.com/aws/aws-sdk-go-v2 v1.7.1/go.mod h1:L5LuPC1ZgDr2xQS7AmIec/Jlc7O/Y1u2KxJyNVab250=
 github.com/aws/aws-sdk-go-v2 v1.11.0/go.mod h1:SQfA+m2ltnu1cA0soUkj4dRSsmITiVQUJvBIZjzfPyQ=
@@ -1219,6 +1219,7 @@ github.com/hashicorp/serf v0.9.6/go.mod h1:TXZNMjZQijwlDvp+r0b63xZ45H7JmCmgg4gpT
 github.com/hashicorp/vault/api v1.3.0/go.mod h1:EabNQLI0VWbWoGlA+oBLC8PXmR9D60aUVgQGvangFWQ=
 github.com/hashicorp/vault/api v1.3.1 h1:pkDkcgTh47PRjY1NEFeofqR4W/HkNUi9qIakESO2aRM=
 github.com/hashicorp/vault/api v1.3.1/go.mod h1:QeJoWxMFt+MsuWcYhmwRLwKEXrjwAFFywzhptMsTIUw=
+github.com/hashicorp/vault/api/auth/approle v0.1.1/go.mod h1:mHOLgh//xDx4dpqXoq6tS8Ob0FoCFWLU2ibJ26Lfmag=
 github.com/hashicorp/vault/sdk v0.3.0 h1:kR3dpxNkhh/wr6ycaJYqp6AFT/i2xaftbfnwZduTKEY=
 github.com/hashicorp/vault/sdk v0.3.0/go.mod h1:aZ3fNuL5VNydQk8GcLJ2TV8YCRVvyaakYkhZRoVuhj0=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
@@ -1713,8 +1714,8 @@ github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3 h1:mbqXrm8YZXN/cJ
 github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3/go.mod h1:u9clLqaVjqV9pExVL1XkM37dGyMCOX/LMocS9nsnWDY=
 github.com/sigstore/sigstore v1.0.2-0.20211210190220-04746d994282/go.mod h1:SuM+QIHtnnR9eGsURRLv5JfxM6KeaU0XKA1O7FmLs4Q=
 github.com/sigstore/sigstore v1.1.0/go.mod h1:gDpcHw4VwpoL5C6N1Ud1YtBsc+ikRDwDelDlWRyYoE8=
-github.com/sigstore/sigstore v1.1.1-0.20220115165716-9f61ddc98390 h1:7g8xu2UX/x+iF90cy4Iaqub+z942Jk03fGgcip3yY8U=
-github.com/sigstore/sigstore v1.1.1-0.20220115165716-9f61ddc98390/go.mod h1:qjUqjNcPcqZIeOcL0dDBUgqUkGu5mud4eWYqFliPuOg=
+github.com/sigstore/sigstore v1.1.1-0.20220130134424-bae9b66b8442 h1:l5HkjEbGAvLuTqfLcONPKrDUvNjm0+6IAOanW2XL9fQ=
+github.com/sigstore/sigstore v1.1.1-0.20220130134424-bae9b66b8442/go.mod h1:ts7PzQRea+/J5e/9DtQCkgmWvsQ7bPsinzjSPMx5+Lc=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.0.6/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
