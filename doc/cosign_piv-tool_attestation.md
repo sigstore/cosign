@@ -19,6 +19,7 @@ cosign piv-tool attestation [flags]
 ```
   -f, --no-input             skip warnings and confirmations
       --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
   -d, --verbose              log debug output
 ```
 

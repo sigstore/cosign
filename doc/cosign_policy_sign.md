@@ -28,13 +28,13 @@ cosign policy sign [flags]
       --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
       --out string                                                                               output policy locally (default "o")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --timeout duration                                                                         HTTP Timeout defaults to 30 seconds (default 30s)
 ```
 
 ### Options inherited from parent commands
 
 ```
       --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
   -d, --verbose              log debug output
 ```
 

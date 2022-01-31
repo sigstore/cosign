@@ -13,6 +13,7 @@ Provides utilities for retrieving information from a PKCS11 token.
 
 ```
       --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
   -d, --verbose              log debug output
 ```
 

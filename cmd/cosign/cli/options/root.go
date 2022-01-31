@@ -16,6 +16,8 @@
 package options
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +25,11 @@ import (
 type RootOptions struct {
 	OutputFile string
 	Verbose    bool
+	Timeout    time.Duration
 }
+
+// DefaultTimeout specifies the default timeout for commands.
+const DefaultTimeout = 3 * time.Minute
 
 var _ Interface = (*RootOptions)(nil)
 
@@ -34,4 +40,7 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.PersistentFlags().BoolVarP(&o.Verbose, "verbose", "d", false,
 		"log debug output")
+
+	cmd.PersistentFlags().DurationVarP(&o.Timeout, "timeout", "t", DefaultTimeout,
+		"timeout for commands")
 }

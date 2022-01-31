@@ -168,9 +168,9 @@ func signPolicy() *cobra.Command {
 		Long:  "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if o.Timeout != 0 {
+			if ro.Timeout != 0 {
 				var cancelFn context.CancelFunc
-				ctx, cancelFn = context.WithTimeout(ctx, o.Timeout)
+				ctx, cancelFn = context.WithTimeout(ctx, ro.Timeout)
 				defer cancelFn()
 			}
 
