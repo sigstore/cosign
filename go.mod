@@ -22,7 +22,7 @@ require (
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.1.1
-	github.com/open-policy-agent/opa v0.35.0
+	github.com/open-policy-agent/opa v0.37.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.3.0
 	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7
@@ -49,10 +49,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.11.0 // indirect
-	github.com/bytecodealliance/wasmtime-go v0.33.1 // indirect
 	github.com/google/go-containerregistry/pkg/authn/kubernetes v0.0.0-20220125170349-50dfc2733d10 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v1.3.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
