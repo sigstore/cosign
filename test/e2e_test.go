@@ -33,7 +33,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	ftime "time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -232,7 +231,7 @@ func TestAttestVerify(t *testing.T) {
 	// Now attest the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
-		"custom", false, ftime.Duration(30*time.Second)), t)
+		"custom", false, 30*time.Second), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -457,7 +456,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", time.Duration(30*time.Second))
+	sig, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", 30*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -497,7 +496,7 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 		RekorURL:   rekorURL,
 	}
-	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", time.Duration(30*time.Second)); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", 30*time.Second); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
@@ -505,7 +504,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, options.ExperimentalEnv, "1")()
-	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", time.Duration(30*time.Second)); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", 30*time.Second); err != nil {
 		t.Fatal(err)
 	}
 
@@ -844,7 +843,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Now attest the image
 	ko = sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
-		"custom", false, ftime.Duration(30*time.Second)), t)
+		"custom", false, 30*time.Second), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()
