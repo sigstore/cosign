@@ -56,7 +56,6 @@ cosign attest [flags]
       --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --timeout duration                                                                         HTTP Timeout defaults to 30 seconds (default 30s)
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|vuln|custom) or an URI (default "custom")
 ```
 
@@ -64,6 +63,7 @@ cosign attest [flags]
 
 ```
       --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
   -d, --verbose              log debug output
 ```
 

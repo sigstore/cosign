@@ -16,8 +16,6 @@
 package options
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +61,6 @@ type PolicySignOptions struct {
 	Registry RegistryOptions
 	Fulcio   FulcioOptions
 	Rekor    RekorOptions
-	Timeout  time.Duration
 
 	OIDC OIDCOptions
 }
@@ -77,9 +74,6 @@ func (o *PolicySignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.OutFile, "out", "o",
 		"output policy locally")
-
-	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
-		"HTTP Timeout defaults to 30 seconds")
 
 	o.Registry.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)

@@ -95,7 +95,7 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 }
 
 // nolint
-func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
+func SignCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
 	imgs []string, certPath string, upload bool, outputSignature, outputCertificate string, payloadPath string, force bool, recursive bool, attachment string) error {
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -107,12 +107,8 @@ func SignCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, a
 		}
 	}
 
-	// TODO: accept a timeout argument and uncomment the block below
-	// if timeout != 0 {
-	// 	var cancelFn context.CancelFunc
-	// 	ctx, cancelFn = context.WithTimeout(ctx, timeout)
-	// 	defer cancelFn()
-	// }
+	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
+	defer cancel()
 
 	sv, err := SignerFromKeyOpts(ctx, certPath, ko)
 	if err != nil {

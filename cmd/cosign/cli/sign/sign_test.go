@@ -16,7 +16,6 @@
 package sign
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -27,7 +26,7 @@ import (
 // TestSignCmdLocalKeyAndSk verifies the SignCmd returns an error
 // if both a local key path and a sk are specified
 func TestSignCmdLocalKeyAndSk(t *testing.T) {
-	ctx := context.Background()
+	ro := &options.RootOptions{Timeout: options.DefaultTimeout}
 
 	for _, ko := range []KeyOpts{
 		// local and sk keys
@@ -37,7 +36,7 @@ func TestSignCmdLocalKeyAndSk(t *testing.T) {
 			Sk:       true,
 		},
 	} {
-		err := SignCmd(ctx, ko, options.RegistryOptions{}, nil, nil, "", false, "", "", "", false, false, "")
+		err := SignCmd(ro, ko, options.RegistryOptions{}, nil, nil, "", false, "", "", "", false, false, "")
 		if (errors.Is(err, &options.KeyParseError{}) == false) {
 			t.Fatal("expected KeyParseError")
 		}

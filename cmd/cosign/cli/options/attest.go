@@ -16,8 +16,6 @@
 package options
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +27,6 @@ type AttestOptions struct {
 	Force     bool
 	Recursive bool
 	Replace   bool
-	Timeout   time.Duration
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -67,7 +64,4 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&o.Replace, "replace", "", false,
 		"")
-
-	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
-		"HTTP Timeout defaults to 30 seconds")
 }
