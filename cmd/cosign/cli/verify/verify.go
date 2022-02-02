@@ -219,8 +219,11 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 		}
 
 	default:
-		var outputKeys []payload.SimpleContainerImage
+		var output []map[string]interface{}
+
 		for _, sig := range verified {
+			out := map[string]interface{}{}
+
 			p, err := sig.Payload()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error fetching payload: %v", err)
@@ -232,27 +235,30 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 				fmt.Println("error decoding the payload:", err.Error())
 				return
 			}
+			out["payload"] = ss
 
 			if cert, err := sig.Cert(); err == nil && cert != nil {
-				if ss.Optional == nil {
-					ss.Optional = make(map[string]interface{})
+				c := map[string]string{
+					"sub": sigs.CertSubject(cert),
 				}
-				ss.Optional["Subject"] = sigs.CertSubject(cert)
 				if issuerURL := sigs.CertIssuerExtension(cert); issuerURL != "" {
-					ss.Optional["Issuer"] = issuerURL
+					c["iss"] = issuerURL
 				}
-			}
-			if bundle, err := sig.Bundle(); err == nil && bundle != nil {
-				if ss.Optional == nil {
-					ss.Optional = make(map[string]interface{})
-				}
-				ss.Optional["Bundle"] = bundle
+				out["cert"] = c
 			}
 
-			outputKeys = append(outputKeys, ss)
+			if bundle, err := sig.Bundle(); err == nil && bundle != nil {
+				out["bundle"] = bundle
+			}
+
+			if timestamp, err := sig.Timestamp(); err == nil && timestamp != nil {
+				out["timestamp"] = timestamp
+			}
+
+			output = append(output, out)
 		}
 
-		b, err := json.Marshal(outputKeys)
+		b, err := json.Marshal(output)
 		if err != nil {
 			fmt.Println("error when generating the output:", err.Error())
 			return
