@@ -11,7 +11,7 @@ require (
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
 	github.com/go-openapi/runtime v0.22.0
 	github.com/go-openapi/strfmt v0.21.1
-	github.com/go-openapi/swag v0.20.0
+	github.com/go-openapi/swag v0.21.1
 	github.com/go-piv/piv-go v1.9.0
 	github.com/google/certificate-transparency-go v1.1.2
 	github.com/google/go-cmp v0.5.7
