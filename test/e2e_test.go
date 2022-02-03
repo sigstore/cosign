@@ -224,7 +224,7 @@ func TestAttestVerify(t *testing.T) {
 	// Fail case when using without type and policy flag
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
-	slsaAttestation := `{ "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
 	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
 		t.Fatal(err)
@@ -233,7 +233,7 @@ func TestAttestVerify(t *testing.T) {
 	// Now attest the image
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
-		"custom", false, 30*time.Second), t)
+		"slsaprovenance", false, 30*time.Second), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -255,6 +255,29 @@ func TestAttestVerify(t *testing.T) {
 
 	// Look for a specific annotation
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
+
+	// Attest again with replace=true, replacing the previous attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
+		"slsaprovenance", true, 30*time.Second), t)
+	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", false, slsaAttestationPath, false,
+		"custom", true, 30*time.Second), t)
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 2 {
+		t.Fatal(fmt.Errorf("Expected len(attestations) == 2, got %d", len(attestations)))
+	}
 }
 
 func TestRekorBundle(t *testing.T) {
