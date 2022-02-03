@@ -1,3 +1,7 @@
+<p align="center">
+  <img style="max-width: 100%;width: 300px;" src="./images/logo.svg" alt="Cosign logo"/>
+</p>
+
 # cosign
 
 Container Signing, Verification and Storage in an OCI registry.
