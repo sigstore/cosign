@@ -275,8 +275,8 @@ func TestAttestVerify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(attestations) != 2 {
-		t.Fatal(fmt.Errorf("Expected len(attestations) == 2, got %d", len(attestations)))
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("Expected len(attestations) == 1, got %d", len(attestations)))
 	}
 }
 
