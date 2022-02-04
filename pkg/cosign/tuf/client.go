@@ -20,6 +20,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 	"os"
@@ -44,16 +45,73 @@ const (
 )
 
 type TUF struct {
-	client  *client.Client
-	targets targetImpl
-	local   client.LocalStore
-	remote  client.RemoteStore
+	client   *client.Client
+	targets  targetImpl
+	local    client.LocalStore
+	remote   client.RemoteStore
+	embedded bool   // local embedded or cache
+	mirror   string // location of mirror
+}
+
+// JSON output representing the configured root status
+type RootStatus struct {
+	Local      string            `json:"local"`
+	Remote     string            `json:"remote"`
+	Expiration map[string]string `json:"expiration"`
+	Targets    []string          `json:"targets"`
 }
 
 // RemoteCache contains information to cache on the location of the remote
 // repository.
 type remoteCache struct {
 	Mirror string `json:"mirror"`
+}
+
+// GetRootStatus gets the current root status for info logging
+func GetRootStatus(ctx context.Context) (*RootStatus, error) {
+	t, err := NewFromEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer t.Close()
+	return t.getRootStatus()
+}
+
+func (t *TUF) getRootStatus() (*RootStatus, error) {
+	local := "embedded"
+	if !t.embedded {
+		local = rootCacheDir()
+	}
+	status := &RootStatus{
+		Local:      local,
+		Remote:     t.mirror,
+		Expiration: map[string]string{},
+		Targets:    []string{},
+	}
+
+	// Get targets
+	targets, err := t.client.Targets()
+	if err != nil {
+		return nil, err
+	}
+	for t := range targets {
+		status.Targets = append(status.Targets, t)
+	}
+
+	// Get metadata expiration
+	trustedMeta, err := t.local.GetMeta()
+	if err != nil {
+		return nil, errors.Wrap(err, "getting trusted meta")
+	}
+	for role, md := range trustedMeta {
+		expires, err := getExpiration(md)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("getting expiration for %s", role))
+		}
+		status.Expiration[role] = expires.Format(time.RFC822)
+	}
+
+	return status, nil
 }
 
 // Close closes the local TUF store. Should only be called once per client.
@@ -226,16 +284,24 @@ func embeddedLocalStore() (client.LocalStore, error) {
 //go:embed repository
 var embeddedRootRepo embed.FS
 
-var isExpiredTimestamp = func(metadata []byte) bool {
+func getExpiration(metadata []byte) (*time.Time, error) {
 	s := &data.Signed{}
 	if err := json.Unmarshal(metadata, s); err != nil {
-		return true
+		return nil, err
 	}
 	sm := &data.Timestamp{}
 	if err := json.Unmarshal(s.Signed, sm); err != nil {
+		return nil, err
+	}
+	return &sm.Expires, nil
+}
+
+var isExpiredTimestamp = func(metadata []byte) bool {
+	expiration, err := getExpiration(metadata)
+	if err != nil {
 		return true
 	}
-	return time.Until(sm.Expires) <= 0
+	return time.Until(*expiration) <= 0
 }
 
 func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
@@ -425,6 +491,7 @@ func newTuf(ctx context.Context) (*TUF, error) {
 			return nil, err
 		}
 		t.targets = newEmbeddedImpl()
+		t.embedded = true
 	case statErr != nil:
 		// Some other error, bail
 		return nil, statErr
@@ -435,21 +502,22 @@ func newTuf(ctx context.Context) (*TUF, error) {
 			return nil, err
 		}
 		t.targets = newFileImpl()
+		t.embedded = false
 	}
 	t.local = local
 
 	// If there's a remote defined in the cache, use it. Otherwise, use the
 	// default remote root.
-	mirror := DefaultRemoteRoot
+	t.mirror = DefaultRemoteRoot
 	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
 	if err == nil {
 		remoteInfo := remoteCache{}
 		if err := json.Unmarshal(b, &remoteInfo); err == nil {
-			mirror = remoteInfo.Mirror
+			t.mirror = remoteInfo.Mirror
 		}
 	}
 
-	remote, err := remoteFromMirror(ctx, mirror)
+	remote, err := remoteFromMirror(ctx, t.mirror)
 	if err != nil {
 		return nil, err
 	}

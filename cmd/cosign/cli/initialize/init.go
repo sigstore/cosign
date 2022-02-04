@@ -18,6 +18,8 @@ package initialize
 import (
 	"context"
 	_ "embed" // To enable the `go:embed` directive.
+	"encoding/json"
+	"fmt"
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
@@ -34,5 +36,19 @@ func DoInitialize(ctx context.Context, root, mirror string) error {
 		}
 	}
 
-	return tuf.Initialize(ctx, mirror, rootFileBytes)
+	if err := tuf.Initialize(ctx, mirror, rootFileBytes); err != nil {
+		return err
+	}
+
+	status, err := tuf.GetRootStatus(ctx)
+	if err != nil {
+		return err
+	}
+	b, err := json.MarshalIndent(status, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Root status: \n", string(b))
+	return nil
 }
