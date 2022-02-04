@@ -98,8 +98,8 @@ contrib.go.opencensus.io/exporter/zipkin v0.1.2/go.mod h1:mP5xM3rrgOjpn79MM8fZbj
 contrib.go.opencensus.io/integrations/ocsql v0.1.4/go.mod h1:8DsSdjz3F+APR+0z0WkU1aRorQCFfRxvqjUUPMbF3fE=
 contrib.go.opencensus.io/integrations/ocsql v0.1.7/go.mod h1:8DsSdjz3F+APR+0z0WkU1aRorQCFfRxvqjUUPMbF3fE=
 contrib.go.opencensus.io/resource v0.1.1/go.mod h1:F361eGI91LCmW1I/Saf+rX0+OFcigGlFvXwEGEnkRLA=
-cuelang.org/go v0.4.1 h1:rxG2cyZzdAymrNICI0L/wagK2EitoR8Xsiiq2D7qkaQ=
-cuelang.org/go v0.4.1/go.mod h1:P09/R4UfAEzLkV9DXxwlxQnIZbkaT4uIhiEgs6Vsz2Q=
+cuelang.org/go v0.4.2 h1:l+ptgjryFJ/aikhEMSem36LoWkNi6YNFmsERW2hgww4=
+cuelang.org/go v0.4.2/go.mod h1:P09/R4UfAEzLkV9DXxwlxQnIZbkaT4uIhiEgs6Vsz2Q=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20201218220906-28db891af037/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 filippo.io/edwards25519 v1.0.0-rc.1/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5EwJns=
