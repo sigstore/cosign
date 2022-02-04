@@ -52,7 +52,7 @@ const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
 func verifySCT(certPEM, rawSCT []byte) error {
-	var pubKey crypto.PublicKey
+	var pubKeys []crypto.PublicKey
 	var err error
 	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
 	if rootEnv == "" {
@@ -67,20 +67,22 @@ func verifySCT(certPEM, rawSCT []byte) error {
 			return err
 		}
 		// Is there a reason why this must be ECDSA key?
-		pubKey, err = cosign.PemToECDSAKey(ctPub)
+		pubKey, err := cosign.PemToECDSAKey(ctPub)
 		if err != nil {
 			return errors.Wrap(err, "converting Public CT to ECDSAKey")
 		}
+		pubKeys = append(pubKeys, pubKey)
 	} else {
 		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
 		raw, err := os.ReadFile(rootEnv)
 		if err != nil {
 			return errors.Wrap(err, "error reading alternate public key file")
 		}
-		pubKey, err = getAlternatePublicKey(raw)
+		pubKey, err := getAlternatePublicKey(raw)
 		if err != nil {
 			return errors.Wrap(err, "error parsing alternate public key from the file")
 		}
+		pubKeys = append(pubKeys, pubKey)
 	}
 	cert, err := x509util.CertificateFromPEM(certPEM)
 	if err != nil {
@@ -90,7 +92,16 @@ func verifySCT(certPEM, rawSCT []byte) error {
 	if err := json.Unmarshal(rawSCT, &sct); err != nil {
 		return errors.Wrap(err, "unmarshal")
 	}
-	return ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
+	var verifySctErr error
+	for _, pubKey := range pubKeys {
+		verifySctErr = ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
+		// Exit after successful verification of the SCT
+		if err == nil {
+			return nil
+		}
+	}
+	// Return the last error that occurred during verification.
+	return verifySctErr
 }
 
 func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret string, fClient api.Client) (*fulcio.Signer, error) {

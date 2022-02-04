@@ -290,19 +290,23 @@ func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certif
 	if b.Bundle == nil {
 		return fmt.Errorf("rekor entry is not available")
 	}
-	pub, err := cosign.GetRekorPub(ctx)
+	publicKeys, err := cosign.GetRekorPubs(ctx)
 	if err != nil {
 		return errors.Wrap(err, "retrieving rekor public key")
 	}
 
-	rekorPubKey, err := cosign.PemToECDSAKey(pub)
-	if err != nil {
-		return errors.Wrap(err, "pem to ecdsa")
+	var entryVerError error
+	for _, pubKey := range publicKeys {
+		entryVerError = cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, pubKey)
+		// Exit early with successful verification
+		if entryVerError == nil {
+			break
+		}
+	}
+	if entryVerError != nil {
+		return entryVerError
 	}
 
-	if err := cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, rekorPubKey); err != nil {
-		return err
-	}
 	if cert == nil {
 		return nil
 	}

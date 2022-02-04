@@ -585,18 +585,21 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, nil
 	}
 
-	pub, err := GetRekorPub(ctx)
+	publicKeys, err := GetRekorPubs(ctx)
 	if err != nil {
 		return false, errors.Wrap(err, "retrieving rekor public key")
 	}
 
-	rekorPubKey, err := PemToECDSAKey(pub)
-	if err != nil {
-		return false, errors.Wrap(err, "pem to ecdsa")
+	var entryVerError error
+	for _, pubKey := range publicKeys {
+		entryVerError = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey)
+		// Exit early with successful verification
+		if entryVerError == nil {
+			break
+		}
 	}
-
-	if err := VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, rekorPubKey); err != nil {
-		return false, err
+	if entryVerError != nil {
+		return false, entryVerError
 	}
 
 	cert, err := sig.Cert()
