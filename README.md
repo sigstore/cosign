@@ -722,4 +722,4 @@ $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa2
 ## Security
 
 Should you discover any security issues, please refer to sigstore's [security
-process](https://github.com/sigstore/community/blob/main/SECURITY.md)
+process](https://github.com/sigstore/.github/blob/main/SECURITY.md)
