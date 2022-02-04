@@ -246,7 +246,7 @@ release:
     owner: sigstore
     name: cosign
   footer: |
-    ### Thanks for all contributors!
+    ### Thanks to all contributors!
 
   extra_files:
     - glob: "./release/release-cosign.pub"
