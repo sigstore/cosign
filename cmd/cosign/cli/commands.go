@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
@@ -92,5 +93,6 @@ func New() *cobra.Command {
 	cmd.AddCommand(Triangulate())
 	cmd.AddCommand(Version())
 
+	cmd.AddCommand(cranecmd.NewCmdAuthLogin("cosign"))
 	return cmd
 }
