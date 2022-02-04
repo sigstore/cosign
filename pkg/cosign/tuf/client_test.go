@@ -24,6 +24,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -206,6 +209,82 @@ func TestCustomRoot(t *testing.T) {
 	tufObj.Close()
 }
 
+func TestGetTargetsByMeta(t *testing.T) {
+	ctx := context.Background()
+	// Create a remote repository.
+	td := t.TempDir()
+	remote, _ := newTufCustomRepo(t, td, "foo")
+
+	// Serve remote repository.
+	s := httptest.NewServer(http.FileServer(http.Dir(filepath.Join(td, "repository"))))
+	defer s.Close()
+
+	// Initialize with custom root.
+	tufRoot := t.TempDir()
+	t.Setenv("TUF_ROOT", tufRoot)
+	meta, err := remote.GetMeta()
+	if err != nil {
+		t.Error(err)
+	}
+	rootBytes, ok := meta["root.json"]
+	if !ok {
+		t.Error(err)
+	}
+	if err := Initialize(ctx, s.URL, rootBytes); err != nil {
+		t.Error(err)
+	}
+	if l := dirLen(t, tufRoot); l == 0 {
+		t.Errorf("expected filesystem writes, got %d entries", l)
+	}
+
+	tufObj, err := NewFromEnv(ctx)
+	defer tufObj.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Fetch a target with no custom metadata.
+	targets, err := tufObj.GetTargetsByMeta(UnknownUsage, []string{"fooNoCustom.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(targets) != 1 {
+		t.Fatalf("expected one target without custom metadata, got %d targets", len(targets))
+	}
+	if !bytes.Equal(targets[0].Target, []byte("foo")) {
+		t.Fatalf("target metadata mismatched, expected: %s, got: %s", "foo", string(targets[0].Target))
+	}
+	if targets[0].Status != Active {
+		t.Fatalf("target without custom metadata not active, got: %v", targets[0].Status)
+	}
+	// Fetch targets with custom metadata.
+	targets, err = tufObj.GetTargetsByMeta(Fulcio, []string{"fooNoCustom.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(targets) != 2 {
+		t.Fatalf("expected two targets without custom metadata, got %d targets", len(targets))
+	}
+	targetBytes := []string{string(targets[0].Target), string(targets[1].Target)}
+	expectedTB := []string{"foo", "foo"}
+	if !reflect.DeepEqual(targetBytes, expectedTB) {
+		t.Fatalf("target metadata mismatched, expected: %v, got: %v", expectedTB, targetBytes)
+	}
+	targetStatuses := []StatusKind{targets[0].Status, targets[1].Status}
+	sort.Slice(targetStatuses, func(i, j int) bool {
+		return i < j
+	})
+	expectedTS := []StatusKind{Active, Expired}
+	if !reflect.DeepEqual(targetStatuses, expectedTS) {
+		t.Fatalf("unexpected target status with custom metadata, expected %v, got: %v", expectedTS, targetStatuses)
+	}
+	// Error when fetching target that does not exist.
+	_, err = tufObj.GetTargetsByMeta(UsageKind(UnknownStatus), []string{"unknown.txt"})
+	expectedErr := "file not found: unknown.txt"
+	if !strings.Contains(err.Error(), "file not found: unknown.txt") {
+		t.Fatalf("unexpected error fetching missing metadata, expected: %s, got: %s", expectedErr, err.Error())
+	}
+}
+
 func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
 	// Check the targets
 	t.Helper()
@@ -266,6 +345,53 @@ func forceExpirationVersion(t *testing.T, version int) {
 	t.Cleanup(func() {
 		isExpiredTimestamp = oldIsExpiredTimestamp
 	})
+}
+
+func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tuf.Repo) {
+	scmActive, err := json.Marshal(&sigstoreCustomMetadata{Sigstore: customMetadata{Usage: Fulcio, Status: Active}})
+	if err != nil {
+		t.Error(err)
+	}
+	scmExpired, err := json.Marshal(&sigstoreCustomMetadata{Sigstore: customMetadata{Usage: Fulcio, Status: Expired}})
+	if err != nil {
+		t.Error(err)
+	}
+
+	remote := tuf.FileSystemStore(td, nil)
+	r, err := tuf.NewRepo(remote)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := r.Init(false); err != nil {
+		t.Error(err)
+	}
+	for _, role := range []string{"root", "targets", "snapshot", "timestamp"} {
+		if _, err := r.GenKey(role); err != nil {
+			t.Error(err)
+		}
+	}
+	for name, scm := range map[string]json.RawMessage{"fooNoCustom.txt": nil, "fooActive.txt": scmActive, "fooExpired.txt": scmExpired} {
+		targetPath := filepath.Join(td, "staged", "targets", name)
+		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+			t.Error(err)
+		}
+		if err := ioutil.WriteFile(targetPath, []byte(targetData), 0600); err != nil {
+			t.Error(err)
+		}
+		if err := r.AddTarget(name, scm); err != nil {
+			t.Error(err)
+		}
+	}
+	if err := r.Snapshot(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Timestamp(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Commit(); err != nil {
+		t.Error(err)
+	}
+	return remote, r
 }
 
 func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tuf.Repo) {
