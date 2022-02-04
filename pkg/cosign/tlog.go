@@ -16,6 +16,7 @@ package cosign
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -42,15 +43,23 @@ import (
 // This is the rekor public key target name
 var rekorTargetStr = `rekor.pub`
 
-// GetRekorPub retrieves the rekor public key from the embedded or cached TUF root. If expired, makes a
-// network call to retrieve the updated target.
-func GetRekorPub(ctx context.Context) ([]byte, error) {
+// GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
+// TUF root. If expired, makes a network call to retrieve the updated targets.
+func GetRekorPubs(ctx context.Context) ([]*ecdsa.PublicKey, error) {
 	tuf, err := tuf.NewFromEnv(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tuf.Close()
-	return tuf.GetTarget(rekorTargetStr)
+	b, err := tuf.GetTarget(rekorTargetStr)
+	if err != nil {
+		return nil, err
+	}
+	rekorPubKey, err := PemToECDSAKey(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "pem to ecdsa")
+	}
+	return []*ecdsa.PublicKey{rekorPubKey}, nil
 }
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
