@@ -27,12 +27,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/theupdateframework/go-tuf"
 	"github.com/theupdateframework/go-tuf/data"
 	"github.com/theupdateframework/go-tuf/verify"
 )
 
 var targets = []string{
+	"artifact.pub",
 	"fulcio.crt.pem",
 	"fulcio_v1.crt.pem",
 	"ctfe.pub",
@@ -222,6 +225,16 @@ func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
 		t.Error("expected no error reading timestamp, got err")
 	} else if len(ts) == 0 {
 		t.Errorf("expected timestamp length of %d, got 0", len(ts))
+	}
+
+	// Check root status matches
+	status, err := tuf.getRootStatus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(targets, status.Targets,
+		cmpopts.SortSlices(func(a, b string) bool { return a < b })) {
+		t.Errorf("mismatched targets, expected %s, got %s", targets, status.Targets)
 	}
 }
 
