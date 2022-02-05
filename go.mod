@@ -3,7 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
-	cloud.google.com/go/storage v1.19.0
+	cloud.google.com/go/storage v1.20.0
 	cuelang.org/go v0.4.2
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20211215200129-69c85dc22db6
