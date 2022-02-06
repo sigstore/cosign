@@ -38,10 +38,10 @@ func GetPassFromTerm(confirm bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintln(os.Stderr)
 	if !confirm {
 		return pw1, nil
 	}
-	fmt.Fprintln(os.Stderr)
 	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
 	confirmpw, err := term.ReadPassword(0)
 	fmt.Fprintln(os.Stderr)
