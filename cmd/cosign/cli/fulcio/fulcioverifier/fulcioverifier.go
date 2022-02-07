@@ -53,7 +53,6 @@ const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 // some defined time period
 func verifySCT(certPEM, rawSCT []byte) error {
 	var pubKeys []crypto.PublicKey
-	var err error
 	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
 	if rootEnv == "" {
 		ctx := context.TODO()
@@ -96,7 +95,7 @@ func verifySCT(certPEM, rawSCT []byte) error {
 	for _, pubKey := range pubKeys {
 		verifySctErr = ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
 		// Exit after successful verification of the SCT
-		if err == nil {
+		if verifySctErr == nil {
 			return nil
 		}
 	}
