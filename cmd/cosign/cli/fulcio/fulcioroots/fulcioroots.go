@@ -63,25 +63,24 @@ func initRoots() (*x509.CertPool, error) {
 			return nil, errors.New("error creating root cert pool")
 		}
 	} else {
-		tuf, err := tuf.NewFromEnv(context.Background())
+		tufClient, err := tuf.NewFromEnv(context.Background())
 		if err != nil {
 			return nil, errors.Wrap(err, "initializing tuf")
 		}
-		defer tuf.Close()
+		defer tufClient.Close()
 		// Retrieve from the embedded or cached TUF root. If expired, a network
 		// call is made to update the root.
-		rootFound := false
-		for _, fulcioTarget := range []string{fulcioTargetStr, fulcioV1TargetStr} {
-			b, err := tuf.GetTarget(fulcioTarget)
-			if err == nil {
-				rootFound = true
-				if !cp.AppendCertsFromPEM(b) {
-					return nil, errors.New("error creating root cert pool")
-				}
-			}
+		targets, err := tufClient.GetTargetsByMeta(tuf.Fulcio, []string{fulcioTargetStr, fulcioV1TargetStr})
+		if err != nil {
+			return nil, errors.New("error getting targets")
 		}
-		if !rootFound {
+		if len(targets) == 0 {
 			return nil, errors.New("none of the Fulcio roots have been found")
+		}
+		for _, t := range targets {
+			if !cp.AppendCertsFromPEM(t.Target) {
+				return nil, errors.New("error creating root cert pool")
+			}
 		}
 	}
 	return cp, nil

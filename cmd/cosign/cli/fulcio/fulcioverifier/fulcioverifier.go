@@ -51,26 +51,27 @@ const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 // The SCT is a `Signed Certificate Timestamp`, which promises that
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
-func verifySCT(certPEM, rawSCT []byte) error {
+func verifySCT(certPEM, rawSCT []byte, ctx context.Context) error {
 	var pubKeys []crypto.PublicKey
 	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
 	if rootEnv == "" {
-		ctx := context.TODO()
-		tuf, err := tuf.NewFromEnv(ctx)
+		tufClient, err := tuf.NewFromEnv(ctx)
 		if err != nil {
 			return err
 		}
-		defer tuf.Close()
-		ctPub, err := tuf.GetTarget(ctPublicKeyStr)
+		defer tufClient.Close()
+
+		targets, err := tufClient.GetTargetsByMeta(tuf.CTFE, []string{ctPublicKeyStr})
 		if err != nil {
 			return err
 		}
-		// Is there a reason why this must be ECDSA key?
-		pubKey, err := cosign.PemToECDSAKey(ctPub)
-		if err != nil {
-			return errors.Wrap(err, "converting Public CT to ECDSAKey")
+		for _, t := range targets {
+			ctPub, err := cosign.PemToECDSAKey(t.Target)
+			if err != nil {
+				return errors.Wrap(err, "converting Public CT to ECDSAKey")
+			}
+			pubKeys = append(pubKeys, ctPub)
 		}
-		pubKeys = append(pubKeys, pubKey)
 	} else {
 		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
 		raw, err := os.ReadFile(rootEnv)
@@ -82,6 +83,9 @@ func verifySCT(certPEM, rawSCT []byte) error {
 			return errors.Wrap(err, "error parsing alternate public key from the file")
 		}
 		pubKeys = append(pubKeys, pubKey)
+	}
+	if len(pubKeys) == 0 {
+		return errors.New("none of the CTFE keys have been found")
 	}
 	cert, err := x509util.CertificateFromPEM(certPEM)
 	if err != nil {
@@ -110,7 +114,7 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClien
 	}
 
 	// verify the sct
-	if err := verifySCT(fs.Cert, fs.SCT); err != nil {
+	if err := verifySCT(fs.Cert, fs.SCT, ctx); err != nil {
 		return nil, errors.Wrap(err, "verifying SCT")
 	}
 	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")

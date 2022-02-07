@@ -46,20 +46,27 @@ var rekorTargetStr = `rekor.pub`
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
 func GetRekorPubs(ctx context.Context) ([]*ecdsa.PublicKey, error) {
-	tuf, err := tuf.NewFromEnv(ctx)
+	tufClient, err := tuf.NewFromEnv(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer tuf.Close()
-	b, err := tuf.GetTarget(rekorTargetStr)
+	defer tufClient.Close()
+	targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
 	if err != nil {
 		return nil, err
 	}
-	rekorPubKey, err := PemToECDSAKey(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "pem to ecdsa")
+	var publicKeys []*ecdsa.PublicKey
+	for _, t := range targets {
+		rekorPubKey, err := PemToECDSAKey(t.Target)
+		if err != nil {
+			return nil, errors.Wrap(err, "pem to ecdsa")
+		}
+		publicKeys = append(publicKeys, rekorPubKey)
 	}
-	return []*ecdsa.PublicKey{rekorPubKey}, nil
+	if len(publicKeys) == 0 {
+		return nil, errors.New("none of the Rekor public keys have been found")
+	}
+	return publicKeys, nil
 }
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
