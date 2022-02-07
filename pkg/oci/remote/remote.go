@@ -16,12 +16,15 @@
 package remote
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci"
 )
@@ -40,7 +43,10 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	o := makeOptions(ref.Context(), options...)
 
 	got, err := remoteGet(ref, o.ROpt...)
-	if err != nil {
+	var te *transport.Error
+	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
+		return nil, errors.New("entity not found in registry")
+	} else if err != nil {
 		return nil, err
 	}
 
