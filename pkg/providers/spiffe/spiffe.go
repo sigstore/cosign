@@ -34,24 +34,36 @@ type spiffe struct{}
 var _ providers.Interface = (*spiffe)(nil)
 
 const (
-	// socketPath is the path to where we read an OIDC
-	// token from the spiffe.
+	// defaultSocketPath is the path to where we read an OIDC
+	// token from the spiffe by default.
 	// nolint
-	socketPath = "/tmp/spire-agent/public/api.sock"
+	defaultSocketPath = "/tmp/spire-agent/public/api.sock"
+	// This allows you to specify non-default Spiffe socket to use.
+	socketEnv = "SPIFFE_ENDPOINT_SOCKET"
 )
+
+// getSocketPath gets which Spiffe socket to use. Either default
+// or the one specified by environment variable.
+func getSocketPath() string {
+	if env := os.Getenv(socketEnv); env != "" {
+		return env
+	}
+	return defaultSocketPath
+}
 
 // Enabled implements providers.Interface
 func (ga *spiffe) Enabled(ctx context.Context) bool {
 	// If we can stat the file without error then this is enabled.
-	_, err := os.Stat(socketPath)
+	_, err := os.Stat(getSocketPath())
 	return err == nil
 }
 
 // Provide implements providers.Interface
 func (ga *spiffe) Provide(ctx context.Context, audience string) (string, error) {
 	// Creates a new Workload API client, connecting to provided socket path
-	// Environment variable `SPIFFE_ENDPOINT_SOCKET` is used as default
-	client, err := workloadapi.New(ctx, workloadapi.WithAddr("unix://"+socketPath))
+	// Environment variable `SPIFFE_ENDPOINT_SOCKET` is used if given and
+	// defaultSocketPath if not.
+	client, err := workloadapi.New(ctx, workloadapi.WithAddr("unix://"+getSocketPath()))
 	if err != nil {
 		return "", err
 	}
