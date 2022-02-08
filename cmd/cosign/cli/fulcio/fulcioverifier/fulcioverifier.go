@@ -51,7 +51,7 @@ const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 // The SCT is a `Signed Certificate Timestamp`, which promises that
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
-func verifySCT(certPEM, rawSCT []byte, ctx context.Context) error {
+func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 	var pubKeys []crypto.PublicKey
 	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
 	if rootEnv == "" {
@@ -114,7 +114,7 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClien
 	}
 
 	// verify the sct
-	if err := verifySCT(fs.Cert, fs.SCT, ctx); err != nil {
+	if err := verifySCT(ctx, fs.Cert, fs.SCT); err != nil {
 		return nil, errors.Wrap(err, "verifying SCT")
 	}
 	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")

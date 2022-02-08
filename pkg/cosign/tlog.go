@@ -55,7 +55,7 @@ func GetRekorPubs(ctx context.Context) ([]*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	var publicKeys []*ecdsa.PublicKey
+	publicKeys := make([]*ecdsa.PublicKey, 0, len(targets))
 	for _, t := range targets {
 		rekorPubKey, err := PemToECDSAKey(t.Target)
 		if err != nil {

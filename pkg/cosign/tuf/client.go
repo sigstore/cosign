@@ -277,7 +277,8 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 		var scm sigstoreCustomMetadata
 		err := json.Unmarshal(*targetMeta.Custom, &scm)
 		if err != nil {
-			return nil, errors.Wrap(err, "error unmarshaling custom metadata")
+			fmt.Fprintf(os.Stderr, "**Warning** Custom metadata not configured properly for target %s, skipping target\n", name)
+			continue
 		}
 		if scm.Sigstore.Usage == usage {
 			target, err := t.GetTarget(name)

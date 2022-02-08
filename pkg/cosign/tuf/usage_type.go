@@ -17,8 +17,6 @@ package tuf
 import (
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type UsageKind int
@@ -44,7 +42,7 @@ func (u UsageKind) String() string {
 func (u UsageKind) MarshalText() ([]byte, error) {
 	str := u.String()
 	if len(str) == 0 {
-		return nil, errors.New(fmt.Sprintf("error while marshalling, int(UsageKind)=%d not valid", int(u)))
+		return nil, fmt.Errorf("error while marshalling, int(UsageKind)=%d not valid", int(u))
 	}
 	return []byte(u.String()), nil
 }
@@ -60,7 +58,7 @@ func (u *UsageKind) UnmarshalText(text []byte) error {
 	case "ctfe":
 		*u = CTFE
 	default:
-		return errors.New(fmt.Sprintf("error while unmarshalling, UsageKind=%v not valid", string(text)))
+		return fmt.Errorf("error while unmarshalling, UsageKind=%v not valid", string(text))
 	}
 	return nil
 }

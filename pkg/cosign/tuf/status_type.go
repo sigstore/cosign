@@ -17,8 +17,6 @@ package tuf
 import (
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type StatusKind int
@@ -42,7 +40,7 @@ func (s StatusKind) String() string {
 func (s StatusKind) MarshalText() ([]byte, error) {
 	str := s.String()
 	if len(str) == 0 {
-		return nil, errors.New(fmt.Sprintf("error while marshalling, int(StatusKind)=%d not valid", int(s)))
+		return nil, fmt.Errorf("error while marshalling, int(StatusKind)=%d not valid", int(s))
 	}
 	return []byte(s.String()), nil
 }
@@ -56,7 +54,7 @@ func (s *StatusKind) UnmarshalText(text []byte) error {
 	case "expired":
 		*s = Expired
 	default:
-		return errors.New(fmt.Sprintf("error while unmarshalling, StatusKind=%v not valid", string(text)))
+		return fmt.Errorf("error while unmarshalling, StatusKind=%v not valid", string(text))
 	}
 	return nil
 }

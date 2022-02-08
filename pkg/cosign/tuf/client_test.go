@@ -238,10 +238,10 @@ func TestGetTargetsByMeta(t *testing.T) {
 	}
 
 	tufObj, err := NewFromEnv(ctx)
-	defer tufObj.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer tufObj.Close()
 	// Fetch a target with no custom metadata.
 	targets, err := tufObj.GetTargetsByMeta(UnknownUsage, []string{"fooNoCustom.txt"})
 	if err != nil {
@@ -255,6 +255,17 @@ func TestGetTargetsByMeta(t *testing.T) {
 	}
 	if targets[0].Status != Active {
 		t.Fatalf("target without custom metadata not active, got: %v", targets[0].Status)
+	}
+	// Fetch multiple targets with no custom metadata.
+	targets, err = tufObj.GetTargetsByMeta(UnknownUsage, []string{"fooNoCustom.txt", "fooNoCustomOther.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(targets) != 2 {
+		t.Fatalf("expected two targets without custom metadata, got %d targets", len(targets))
+	}
+	if targets[0].Status != Active || targets[1].Status != Active {
+		t.Fatalf("target without custom metadata not active, got: %v and %v", targets[0].Status, targets[1].Status)
 	}
 	// Fetch targets with custom metadata.
 	targets, err = tufObj.GetTargetsByMeta(Fulcio, []string{"fooNoCustom.txt"})
@@ -271,7 +282,7 @@ func TestGetTargetsByMeta(t *testing.T) {
 	}
 	targetStatuses := []StatusKind{targets[0].Status, targets[1].Status}
 	sort.Slice(targetStatuses, func(i, j int) bool {
-		return i < j
+		return targetStatuses[i] < targetStatuses[j]
 	})
 	expectedTS := []StatusKind{Active, Expired}
 	if !reflect.DeepEqual(targetStatuses, expectedTS) {
@@ -347,6 +358,9 @@ func forceExpirationVersion(t *testing.T, version int) {
 	})
 }
 
+// newTufCustomRepo initializes a TUF repository with root, targets, snapshot, and timestamp roles
+// 4 targets are created to exercise various code paths, including two targets with no custom metadata,
+// one target with custom metadata marked as active, and another with custom metadata marked as expired.
 func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tuf.Repo) {
 	scmActive, err := json.Marshal(&sigstoreCustomMetadata{Sigstore: customMetadata{Usage: Fulcio, Status: Active}})
 	if err != nil {
@@ -370,7 +384,9 @@ func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStor
 			t.Error(err)
 		}
 	}
-	for name, scm := range map[string]json.RawMessage{"fooNoCustom.txt": nil, "fooActive.txt": scmActive, "fooExpired.txt": scmExpired} {
+	for name, scm := range map[string]json.RawMessage{
+		"fooNoCustom.txt": nil, "fooNoCustomOther.txt": nil,
+		"fooActive.txt": scmActive, "fooExpired.txt": scmExpired} {
 		targetPath := filepath.Join(td, "staged", "targets", name)
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 			t.Error(err)
