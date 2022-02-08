@@ -70,9 +70,12 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.SignerVerifier, erro
 	if err != nil {
 		return nil, err
 	}
-	pass, err := pf(false)
-	if err != nil {
-		return nil, err
+	pass := []byte{}
+	if pf != nil {
+		pass, err = pf(false)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return cosign.LoadPrivateKey(kb, pass)
 }

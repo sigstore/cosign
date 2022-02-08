@@ -48,6 +48,8 @@ const (
 	BundleKey         = static.BundleAnnotationKey
 )
 
+// PassFunc is the function to be called to retrieve the signer password. If
+// nil, then it assumes that no password is provided.
 type PassFunc func(bool) ([]byte, error)
 
 type Keys struct {
@@ -154,15 +156,18 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(Keys{pk, pk.Public()}, pf)
 }
 
-func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
+func marshalKeyPair(keypair Keys, pf PassFunc) (key *KeysBytes, err error) {
 	x509Encoded, err := x509.MarshalPKCS8PrivateKey(keypair.private)
 	if err != nil {
 		return nil, errors.Wrap(err, "x509 encoding private key")
 	}
 
-	password, err := pf(true)
-	if err != nil {
-		return nil, err
+	password := []byte{}
+	if pf != nil {
+		password, err = pf(true)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	encBytes, err := encrypted.Encrypt(x509Encoded, password)
