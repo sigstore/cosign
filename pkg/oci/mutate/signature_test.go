@@ -22,10 +22,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
-	"github.com/theupdateframework/go-tuf/data"
 )
 
 var (
@@ -313,40 +311,6 @@ func TestSignatureWithBundle(t *testing.T) {
 	assertSignaturesEqual(t, expectedSig, newSig)
 }
 
-func TestSignatureWithTimestamp(t *testing.T) {
-	payload := "this is the TestSignatureWithTimestamp content!"
-	b64sig := "b64 content2="
-	timestamp := &tuf.Timestamp{
-		Signatures: []data.Signature{
-			{
-				KeyID: "b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d",
-			},
-		},
-		Signed: data.Timestamp{
-			Type:        "timestamp",
-			SpecVersion: "1.0",
-			Version:     8,
-			Meta: map[string]data.TimestampFileMeta{
-				"snapshot.json": {
-					FileMeta: data.FileMeta{
-						Length: 1658,
-					},
-					Version: 8,
-				},
-			},
-		},
-	}
-	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
-	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithTimestamp(timestamp))
-
-	newSig, err := Signature(originalSig, WithTimestamp(timestamp))
-	if err != nil {
-		t.Fatalf("Signature(WithTimestamp()) returned error: %v", err)
-	}
-
-	assertSignaturesEqual(t, expectedSig, newSig)
-}
-
 func TestSignatureWithCertChain(t *testing.T) {
 	payload := "this is the TestSignatureWithCertChain content!"
 	b64sig := "b64 content3="
@@ -394,26 +358,6 @@ func TestSignatureWithEverything(t *testing.T) {
 			LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
 		},
 	}
-	timestamp := &tuf.Timestamp{
-		Signatures: []data.Signature{
-			{
-				KeyID: "b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d",
-			},
-		},
-		Signed: data.Timestamp{
-			Type:        "timestamp",
-			SpecVersion: "1.0",
-			Version:     8,
-			Meta: map[string]data.TimestampFileMeta{
-				"snapshot.json": {
-					FileMeta: data.FileMeta{
-						Length: 1658,
-					},
-					Version: 8,
-				},
-			},
-		},
-	}
 	mediaType := types.MediaType("test/media.type")
 
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
@@ -421,14 +365,12 @@ func TestSignatureWithEverything(t *testing.T) {
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig,
 		static.WithAnnotations(annotations),
 		static.WithBundle(b),
-		static.WithTimestamp(timestamp),
 		static.WithCertChain(testCertBytes, testChainBytes),
 		static.WithLayerMediaType(mediaType))
 
 	newSig, err := Signature(originalSig,
 		WithAnnotations(annotations),
 		WithBundle(b),
-		WithTimestamp(timestamp),
 		WithCertChain(testCertBytes, testChainBytes),
 		WithMediaType(mediaType))
 

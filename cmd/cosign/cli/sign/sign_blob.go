@@ -28,7 +28,6 @@ import (
 
 	"github.com/pkg/errors"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
@@ -103,11 +102,6 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
-		ts, err := tuf.GetTimestamp(ctx)
-		if err != nil {
-			return nil, err
-		}
-		signedPayload.Timestamp = ts
 	}
 
 	// if bundle is specified, just do that and ignore the rest

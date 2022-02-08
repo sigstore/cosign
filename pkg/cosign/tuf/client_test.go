@@ -220,13 +220,6 @@ func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
 		t.Error("expected error reading target, got nil")
 	}
 
-	// Check the TUF timestamp metadata
-	if ts, err := tuf.GetTimestamp(); err != nil {
-		t.Error("expected no error reading timestamp, got err")
-	} else if len(ts) == 0 {
-		t.Errorf("expected timestamp length of %d, got 0", len(ts))
-	}
-
 	// Check root status matches
 	status, err := tuf.getRootStatus()
 	if err != nil {

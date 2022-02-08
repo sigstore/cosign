@@ -25,7 +25,6 @@ import (
 	"github.com/sigstore/cosign/internal/pkg/cosign"
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 
@@ -97,12 +96,7 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	timestamp, err := tuf.GetTimestamp(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	newSig, err := mutate.Signature(sig, mutate.WithBundle(bundle), mutate.WithTimestamp(timestamp))
+	newSig, err := mutate.Signature(sig, mutate.WithBundle(bundle))
 	if err != nil {
 		return nil, nil, err
 	}
