@@ -36,7 +36,7 @@ require (
 	github.com/xanzy/go-gitlab v0.54.4
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
-	google.golang.org/api v0.67.0
+	google.golang.org/api v0.68.0
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
 	k8s.io/client-go v0.22.5
@@ -45,7 +45,6 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.11.0 // indirect
