@@ -167,7 +167,7 @@ func TestSignVerifyClean(t *testing.T) {
 	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
 	// Now clean signature from the given image
-	must(cli.CleanCmd(ctx, options.RegistryOptions{}, imgName), t)
+	must(cli.CleanCmd(ctx, options.RegistryOptions{}, "all", imgName), t)
 
 	// It doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -196,7 +196,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
 	// Now clean signature from the given image
-	must(cli.CleanCmd(ctx, options.RegistryOptions{}, imgName), t)
+	must(cli.CleanCmd(ctx, options.RegistryOptions{}, "all", imgName), t)
 
 	// It doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
