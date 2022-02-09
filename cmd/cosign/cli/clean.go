@@ -29,7 +29,7 @@ import (
 )
 
 func Clean() *cobra.Command {
-	o := &options.RegistryOptions{}
+	c := &options.CleanOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "clean",
@@ -37,32 +37,56 @@ func Clean() *cobra.Command {
 		Example: "  cosign clean <IMAGE>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return CleanCmd(cmd.Context(), *o, args[0])
+			return CleanCmd(cmd.Context(), c.Registry, c.CleanType, args[0])
 		},
 	}
 
-	o.AddFlags(cmd)
+	c.AddFlags(cmd)
 	return cmd
 }
 
-func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
+func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
+
 	sigRef, err := ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}
-	fmt.Println(sigRef)
 
-	fmt.Fprintln(os.Stderr, "Deleting signature metadata...")
-
-	err = remote.Delete(sigRef, remoteOpts...)
+	attRef, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
+	}
+
+	sbomRef, err := ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
+	if err != nil {
+		return err
+	}
+
+	var cleanTags []name.Tag
+	switch cleanType {
+	case "signature":
+		cleanTags = []name.Tag{sigRef}
+	case "sbom":
+		cleanTags = []name.Tag{sbomRef}
+	case "attestation":
+		cleanTags = []name.Tag{attRef}
+	case "all":
+		cleanTags = []name.Tag{sigRef, attRef, sbomRef}
+	}
+
+	for _, t := range cleanTags {
+		fmt.Fprintf(os.Stderr, "Removing %s from %s\n", t.String(), imageRef)
+
+		err = remote.Delete(t, remoteOpts...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not delete %s from %s\n: %v\n", t.String(), imageRef, err)
+		}
 	}
 
 	return nil

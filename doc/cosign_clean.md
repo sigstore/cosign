@@ -19,6 +19,7 @@ cosign clean [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
   -h, --help                                                                                     help for clean
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --type string                                                                              a type of clean: <signature|attestation|sbom|all> (default: all) (default "all")
 ```
 
 ### Options inherited from parent commands
