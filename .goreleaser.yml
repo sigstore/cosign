@@ -10,6 +10,8 @@ env:
 before:
   hooks:
   - go mod tidy
+  - git --no-pager diff --exit-code go.mod go.sum
+  - echo $?
   - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
 
 gomod:
