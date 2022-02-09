@@ -45,7 +45,7 @@ jobs:
     RELEASE_TAG: '${{ github.events.inputs.tag || github.ref }}'
 
   steps:
-  - name: 'Set release file name env'
+  - name: 'Set release file name env variable.'
     run: echo "RELEASE_YAML=cosign-${{ env.RELEASE_TAG }}.yaml" >> $GITHUB_ENV
 
   - id: 'auth'
