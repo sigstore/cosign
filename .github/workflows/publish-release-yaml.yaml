@@ -1,0 +1,80 @@
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Publish Release YAML'
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
+        description: 'Release tag to generate YAML for.'
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ./src/github.com/sigstore/cosign
+
+jobs:
+  publish_yaml:
+    name: 'Publish Release YAML'
+    runs-on: ['ubuntu-latest']
+    permissions:
+      # write permission needed for OIDC token exchange.
+      id-token: write
+      contents: read  
+
+  env:
+    KO_DOCKER_REPO: 'gcr.io/projectsigstore'
+    KOCACHE: '~/ko'
+    REPO: 'sigstore/cosign'
+    RELEASE_TAG: '${{ github.events.inputs.tag || github.ref }}'
+
+  steps:
+  - name: 'Set release file name env'
+    run: echo "RELEASE_YAML=cosign-${{ env.RELEASE_TAG }}.yaml" >> $GITHUB_ENV
+
+  - id: 'auth'
+    name: 'Authenticate to Google Cloud'
+    uses: 'google-github-actions/auth@v0.4.1'
+    with:
+      # Default is to generate a key file, which is automatically configured for use with gcloud.
+      workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
+      service_account: 'github-actions@projectsigstore.iam.gserviceaccount.com'
+
+  - name: 'Setup gcloud'
+    uses: 'google-github-actions/setup-gcloud@v0.5.0'
+    with:
+      project_id: projectsigstore
+
+  - name: 'Configure GCR auth'
+    run: gcloud auth configure-docker
+
+  - uses: 'imjasonh/setup-ko@v0.4'
+
+  - name: 'Check out sigstore/cosign'
+    uses: 'actions/checkout@v2'
+    with:
+      refs: ${{ env.RELEASE_TAG }}
+      repository: ${{ env.REPO }}
+      path: ./src/github.com/${{ env.REPO }}
+
+  - name: 'Create YAML'
+    run: ko resolve -f config/ > ${{ env.RELEASE_YAML }}
+
+  - name: 'Upload YAML'
+    run: gh release upload ${{ env.RELEASE_TAG }} ${{ env.RELEASE_YAML }} -R ${{ env.REPO }}
