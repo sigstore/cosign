@@ -106,13 +106,6 @@ func TestSigner(t *testing.T) {
 	if chain[0] == nil {
 		t.Fatal("ociSig.Chain()[0] missing certificate, got nil")
 	}
-	timestamp, err := ociSig.Timestamp()
-	if err != nil {
-		t.Fatalf("ociSig.Timestamp() returned error: %v", err)
-	}
-	if timestamp == nil {
-		t.Fatal("ociSig.Timestamp() missing TUF timestamp, got nil")
-	}
 
 	// Verify that the wrapped signer was called.
 	verifier, err := signature.LoadVerifier(pub, crypto.SHA256)

@@ -20,7 +20,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
@@ -34,7 +33,6 @@ type options struct {
 	Cert            []byte
 	Chain           []byte
 	Annotations     map[string]string
-	Timestamp       *tuf.Timestamp
 }
 
 func makeOptions(opts ...Option) (*options, error) {
@@ -59,14 +57,6 @@ func makeOptions(opts ...Option) (*options, error) {
 			return nil, err
 		}
 		o.Annotations[BundleAnnotationKey] = string(b)
-	}
-
-	if o.Timestamp != nil {
-		t, err := json.Marshal(o.Timestamp)
-		if err != nil {
-			return nil, err
-		}
-		o.Annotations[TimestampAnnotationKey] = string(t)
 	}
 
 	return o, nil
@@ -105,12 +95,5 @@ func WithCertChain(cert, chain []byte) Option {
 	return func(o *options) {
 		o.Cert = cert
 		o.Chain = chain
-	}
-}
-
-// WithTimestamp sets the TUF timestamp to attach to the signature
-func WithTimestamp(t *tuf.Timestamp) Option {
-	return func(o *options) {
-		o.Timestamp = t
 	}
 }

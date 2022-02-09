@@ -35,7 +35,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -160,11 +159,6 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
-		timestamp, err := tuf.GetTimestamp(ctx)
-		if err != nil {
-			return errors.Wrap(err, "reading tuf timestamp")
-		}
-		opts = append(opts, static.WithTimestamp(timestamp))
 	}
 
 	// Check whether we should be uploading to the transparency log
@@ -176,11 +170,6 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 			return err
 		}
 		opts = append(opts, static.WithBundle(bundle))
-		timestamp, err := tuf.GetTimestamp(ctx)
-		if err != nil {
-			return errors.Wrap(err, "reading tuf timestamp")
-		}
-		opts = append(opts, static.WithTimestamp(timestamp))
 	}
 
 	sig, err := static.NewAttestation(signedPayload, opts...)

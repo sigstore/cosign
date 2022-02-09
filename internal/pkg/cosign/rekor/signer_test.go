@@ -58,15 +58,6 @@ func TestSigner(t *testing.T) {
 		t.Fatalf("Sign() returned error: %v", err)
 	}
 
-	// Verify that the OCI signature contains a timestamp.
-	timestamp, err := ociSig.Timestamp()
-	if err != nil {
-		t.Fatalf("ociSig.Timestamp() returned error: %v", err)
-	}
-	if timestamp == nil {
-		t.Fatal("ociSig.Timestamp() missing TUF timestamp, got nil")
-	}
-
 	// Verify that the wrapped signer was called.
 	verifier, err := signature.LoadVerifier(pub, crypto.SHA256)
 	if err != nil {
