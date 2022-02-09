@@ -82,7 +82,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	passwordSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, passwordSecretEnv)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" environment variable")
+		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" github actions secret")
 	}
 
 	if passwordSecretEnvResp.StatusCode < 200 && passwordSecretEnvResp.StatusCode >= 300 {
@@ -90,7 +90,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PASSWORD environment variable")
+	fmt.Fprintln(os.Stderr, "Password written to COSIGN_PASSWORD github actions secret")
 
 	privateKeySecretEnv := &github.EncryptedSecret{
 		Name:           "COSIGN_PRIVATE_KEY",
@@ -100,7 +100,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	privateKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, privateKeySecretEnv)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" environment variable")
+		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" github actions secret")
 	}
 
 	if privateKeySecretEnvResp.StatusCode < 200 && privateKeySecretEnvResp.StatusCode >= 300 {
@@ -108,7 +108,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PRIVATE_KEY environment variable")
+	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PRIVATE_KEY github actions secret")
 
 	publicKeySecretEnv := &github.EncryptedSecret{
 		Name:           "COSIGN_PUBLIC_KEY",
@@ -118,7 +118,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	publicKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, publicKeySecretEnv)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PUBLIC_KEY\" environment variable")
+		return errors.Wrap(err, "could not create \"COSIGN_PUBLIC_KEY\" github actions secret")
 	}
 
 	if publicKeySecretEnvResp.StatusCode < 200 && publicKeySecretEnvResp.StatusCode >= 300 {
@@ -126,7 +126,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Public key written to COSIGN_PUBLIC_KEY environment variable")
+	fmt.Fprintln(os.Stderr, "Public key written to COSIGN_PUBLIC_KEY github actions secret")
 
 	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
 		return err
