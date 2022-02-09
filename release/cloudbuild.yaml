@@ -39,10 +39,10 @@ steps:
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.6-3@sha256:312ac8449408302e5fdde452578607cff075bc80052f4526254cd25fa96ce9e0'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.6-4@sha256:89f00467b26be2e27709007cf55090dbe11b24eb47d8285ad202c0a8f025ea06'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-3@sha256:312ac8449408302e5fdde452578607cff075bc80052f4526254cd25fa96ce9e0
+- name: ghcr.io/gythialy/golang-cross:v1.17.6-4@sha256:89f00467b26be2e27709007cf55090dbe11b24eb47d8285ad202c0a8f025ea06
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -63,7 +63,7 @@ steps:
     - |
       make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-3@sha256:312ac8449408302e5fdde452578607cff075bc80052f4526254cd25fa96ce9e0
+- name: ghcr.io/gythialy/golang-cross:v1.17.6-4@sha256:89f00467b26be2e27709007cf55090dbe11b24eb47d8285ad202c0a8f025ea06
   entrypoint: 'bash'
   dir: "go/src/sigstore/cosign"
   env:
