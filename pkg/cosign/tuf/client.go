@@ -247,6 +247,38 @@ func (t *TUF) GetTarget(name string) ([]byte, error) {
 	return targetBytes, nil
 }
 
+func (t *TUF) GetTimestamp() ([]byte, error) {
+	trustedMeta, err := t.local.GetMeta()
+	if err != nil {
+		return nil, errors.Wrap(err, "getting trusted meta")
+	}
+	timestamp, ok := trustedMeta["timestamp.json"]
+	if !ok || len(timestamp) == 0 {
+		return nil, errors.New("unable to get TUF timestamp")
+	}
+	return timestamp, nil
+}
+
+func (t *TUF) GetSnapshot() (*data.Snapshot, error) {
+	trustedMeta, err := t.local.GetMeta()
+	if err != nil {
+		return nil, errors.Wrap(err, "getting trusted meta")
+	}
+	snapshotBytes, ok := trustedMeta["snapshot.json"]
+	if !ok || len(snapshotBytes) == 0 {
+		return nil, errors.New("unable to get TUF timestamp")
+	}
+	snapshot := &data.Snapshot{}
+	s := &data.Signed{}
+	if err := json.Unmarshal(snapshotBytes, s); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(s.Signed, snapshot); err != nil {
+		return nil, err
+	}
+	return snapshot, nil
+}
+
 func localStore(cacheRoot string) (client.LocalStore, error) {
 	local, err := tuf_leveldbstore.FileLocalStore(cacheRoot)
 	if err != nil {

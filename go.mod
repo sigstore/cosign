@@ -32,8 +32,8 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.11
 	github.com/stretchr/testify v1.7.0
-	github.com/theupdateframework/go-tuf v0.0.0-20220124194755-2c5d73bebc1c
 	github.com/xanzy/go-gitlab v0.54.4
+	github.com/theupdateframework/go-tuf v0.0.0-20220127213825-87caa18db2a6
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/api v0.68.0
@@ -55,7 +55,10 @@ require (
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v1.3.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
+	golang.org/x/crypto v0.0.0-20220126234351-aa10faf2a1f8 // indirect
 	golang.org/x/net v0.0.0-20220121210141-e204ce36a2ba // indirect
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
+
+replace github.com/theupdateframework/go-tuf => /home/asraa/git/go-tuf
