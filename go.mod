@@ -15,7 +15,7 @@ require (
 	github.com/go-piv/piv-go v1.9.0
 	github.com/google/certificate-transparency-go v1.1.2
 	github.com/google/go-cmp v0.5.7
-	github.com/google/go-containerregistry v0.8.1-0.20220125170349-50dfc2733d10
+	github.com/google/go-containerregistry v0.8.1-0.20220209165246-a44adc326839
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220125170349-50dfc2733d10
 	github.com/google/go-github/v42 v42.0.0
 	github.com/google/trillian v1.4.0
@@ -56,7 +56,6 @@ require (
 	github.com/urfave/cli v1.22.5 // indirect
 	go.opentelemetry.io/contrib v1.3.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
-	golang.org/x/net v0.0.0-20220121210141-e204ce36a2ba // indirect
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
