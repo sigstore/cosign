@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/cosign/cmd/sget/cli/options"
 	"github.com/sigstore/cosign/pkg/sget"
@@ -54,7 +55,7 @@ func New() *cobra.Command {
 	ro.AddFlags(cmd)
 
 	// Add sub-commands.
-	cmd.AddCommand(Version())
+	cmd.AddCommand(version.Version())
 
 	return cmd
 }

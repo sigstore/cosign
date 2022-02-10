@@ -39,5 +39,5 @@
 * [cosign verify](cosign_verify.md)	 - Verify a signature on the supplied container image
 * [cosign verify-attestation](cosign_verify-attestation.md)	 - Verify an attestation on the supplied container image
 * [cosign verify-blob](cosign_verify-blob.md)	 - Verify a signature on the supplied blob
-* [cosign version](cosign_version.md)	 - Prints the cosign version
+* [cosign version](cosign_version.md)	 - Prints the version
 

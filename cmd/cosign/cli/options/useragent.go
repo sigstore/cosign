@@ -18,13 +18,13 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/sigstore/cosign/pkg/version"
+	"sigs.k8s.io/release-utils/version"
 )
 
 var (
 	// uaString is meant to resemble the User-Agent sent by browsers with requests.
 	// See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent
-	uaString = fmt.Sprintf("cosign/%s (%s; %s)", version.GitVersion, runtime.GOOS, runtime.GOARCH)
+	uaString = fmt.Sprintf("cosign/%s (%s; %s)", version.GetVersionInfo().GitVersion, runtime.GOOS, runtime.GOARCH)
 )
 
 // UserAgent returns the User-Agent string which `cosign` should send with HTTP requests.ß

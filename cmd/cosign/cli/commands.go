@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/release-utils/version"
 
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -91,7 +92,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(VerifyAttestation())
 	cmd.AddCommand(VerifyBlob())
 	cmd.AddCommand(Triangulate())
-	cmd.AddCommand(Version())
+	cmd.AddCommand(version.Version())
 
 	cmd.AddCommand(cranecmd.NewCmdAuthLogin("cosign"))
 	return cmd

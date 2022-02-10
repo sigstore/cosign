@@ -1,10 +1,6 @@
 ## cosign version
 
-Prints the cosign version
-
-### Synopsis
-
-Prints the cosign version
+Prints the version
 
 ```
 cosign version [flags]

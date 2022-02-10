@@ -42,6 +42,7 @@ require (
 	k8s.io/client-go v0.22.5
 	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704
 	knative.dev/pkg v0.0.0-20220121092305-3ba5d72e310a
+	sigs.k8s.io/release-utils v0.4.1-0.20220207182343-6dadf2228617
 )
 
 require (
