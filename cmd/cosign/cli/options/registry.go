@@ -23,6 +23,7 @@ import (
 	"github.com/awslabs/amazon-ecr-credential-helper/ecr-login/api"
 	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -77,6 +78,7 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 			google.Keychain,
 			authn.NewKeychainFromHelper(ecr.ECRHelper{ClientFactory: api.DefaultClientFactory{}}),
 			authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
+			github.Keychain,
 		)
 		opts = append(opts, remote.WithAuthFromKeychain(kc))
 	} else {
