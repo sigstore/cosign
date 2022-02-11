@@ -39,8 +39,8 @@ jobs:
       statuses: none
 
     env:
-      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.17.6-2@sha256:c03303287982360025dda196af6006fc5d1870955115efa8990d7278d8bfb7e9
-      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.4.1@sha256:502d5130431e45f28c51d2c24a05ef5ccd3fd916bcc91db0c8bee3a81e09a0bb
+      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.17.7-0@sha256:949325ffc52c16867d78412ce70f5ce531812c20e7528ae70dc9e718d72223e8
+      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.5.1@sha256:6247b2e693b0e6a62dcfa75eb46b698c1f4cd1aca36aaefafd4bbb2f2b2af717
 
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
