@@ -61,6 +61,20 @@ type RootStatus struct {
 	Targets    []string          `json:"targets"`
 }
 
+type TargetFile struct {
+	Target []byte
+	Status StatusKind
+}
+
+type customMetadata struct {
+	Usage  UsageKind  `json:"usage"`
+	Status StatusKind `json:"status"`
+}
+
+type sigstoreCustomMetadata struct {
+	Sigstore customMetadata `json:"sigstore"`
+}
+
 // RemoteCache contains information to cache on the location of the remote
 // repository.
 type remoteCache struct {
@@ -245,6 +259,45 @@ func (t *TUF) GetTarget(name string) ([]byte, error) {
 	}
 
 	return targetBytes, nil
+}
+
+// Get target files by a custom usage metadata tag. If there are no files found,
+// use the fallback target names to fetch the targets by name.
+func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFile, error) {
+	targets, err := t.client.Targets()
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting targets")
+	}
+	var matchedTargets []TargetFile
+	for name, targetMeta := range targets {
+		// Skip any targets that do not include custom metadata.
+		if targetMeta.Custom == nil {
+			continue
+		}
+		var scm sigstoreCustomMetadata
+		err := json.Unmarshal(*targetMeta.Custom, &scm)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "**Warning** Custom metadata not configured properly for target %s, skipping target\n", name)
+			continue
+		}
+		if scm.Sigstore.Usage == usage {
+			target, err := t.GetTarget(name)
+			if err != nil {
+				return nil, errors.Wrap(err, "error getting target")
+			}
+			matchedTargets = append(matchedTargets, TargetFile{Target: target, Status: scm.Sigstore.Status})
+		}
+	}
+	if len(matchedTargets) == 0 {
+		for _, fallback := range fallbacks {
+			target, err := t.GetTarget(fallback)
+			if err != nil {
+				return nil, errors.Wrap(err, "error getting target")
+			}
+			matchedTargets = append(matchedTargets, TargetFile{Target: target, Status: Active})
+		}
+	}
+	return matchedTargets, nil
 }
 
 func localStore(cacheRoot string) (client.LocalStore, error) {
