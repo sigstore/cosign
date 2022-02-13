@@ -55,6 +55,7 @@ GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
 
 KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
+COSIGNED_YAML ?= cosign-$(GIT_TAG).yaml
 
 .PHONY: all lint test clean cosign cross
 all: cosign
@@ -135,9 +136,9 @@ ko:
 
 	# cosigned
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=${KO_PREFIX}/cosigned ko publish --bare \
+	KO_DOCKER_REPO=${KO_PREFIX}/cosigned ko resolve --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		github.com/sigstore/cosign/cmd/cosign/webhook
+		--filename config/ > $(COSIGNED_YAML)
 
 	# sget
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
