@@ -24,7 +24,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/pkg/errors"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
@@ -54,7 +53,7 @@ type KeyOpts struct {
 }
 
 // nolint
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, timeout time.Duration) ([]byte, error) {
+func SignBlobCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string) ([]byte, error) {
 	var payload []byte
 	var err error
 	var rekorBytes []byte
@@ -68,11 +67,9 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	if err != nil {
 		return nil, err
 	}
-	if timeout != 0 {
-		var cancelFn context.CancelFunc
-		ctx, cancelFn = context.WithTimeout(ctx, timeout)
-		defer cancelFn()
-	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
+	defer cancel()
 
 	sv, err := SignerFromKeyOpts(ctx, "", ko)
 	if err != nil {
