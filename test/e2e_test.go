@@ -508,7 +508,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", 30*time.Second)
+	sig, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -548,7 +548,7 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 		RekorURL:   rekorURL,
 	}
-	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", 30*time.Second); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", ""); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
@@ -556,7 +556,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, options.ExperimentalEnv, "1")()
-	if _, err := sign.SignBlobCmd(ctx, ko, options.RegistryOptions{}, bp, true, "", "", 30*time.Second); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", ""); err != nil {
 		t.Fatal(err)
 	}
 
