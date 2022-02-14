@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	gtuf "github.com/theupdateframework/go-tuf"
 	"github.com/theupdateframework/go-tuf/client"
 	tuf_leveldbstore "github.com/theupdateframework/go-tuf/client/leveldbstore"
 	"github.com/theupdateframework/go-tuf/data"
@@ -133,46 +132,102 @@ func (t *TUF) Close() error {
 	return t.local.Close()
 }
 
-func NewFromEnv(ctx context.Context) (*TUF, error) {
-	// Initializes a new TUF object from the local cache or defaults.
-	t, err := newTuf(ctx)
+func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, forceUpdate bool) (*TUF, error) {
+	t := &TUF{
+		mirror:   mirror,
+		embedded: embed,
+	}
+
+	var err error
+	if t.embedded {
+		t.local, err = embeddedLocalStore()
+		if err != nil {
+			return nil, err
+		}
+		t.targets = newEmbeddedImpl()
+	} else {
+		tufDB := filepath.Join(rootCacheDir(), "tuf.db")
+		t.local, err = localStore(tufDB)
+		if err != nil {
+			return nil, err
+		}
+		t.targets = newFileImpl()
+	}
+
+	t.remote, err = remoteFromMirror(ctx, t.mirror)
 	if err != nil {
+		t.Close()
 		return nil, err
 	}
 
+	t.client = client.NewClient(t.local, t.remote)
+
 	trustedMeta, err := t.local.GetMeta()
 	if err != nil {
+		t.Close()
 		return nil, errors.Wrap(err, "getting trusted meta")
+	}
+
+	if root == nil {
+		root, err = getRoot(trustedMeta)
+		if err != nil {
+			t.Close()
+			return nil, errors.Wrap(err, "getting trusted root")
+		}
+	}
+
+	if err := t.client.InitLocal(root); err != nil {
+		t.Close()
+		return nil, errors.Wrap(err, "unable to initialize client, local cache may be corrupt")
 	}
 
 	// We have our local store, whether it was embedded or not!
 	// Now check to see if it needs to be updated.
 	trustedTimestamp, ok := trustedMeta["timestamp.json"]
-	if ok && !isExpiredTimestamp(trustedTimestamp) {
+	if ok && !isExpiredTimestamp(trustedTimestamp) && !forceUpdate {
 		return t, nil
 	}
 
-	// We need to update our tufdb.
-	trustedRoot, err := getRoot(trustedMeta)
-	if err != nil {
-		t.Close()
-		return nil, errors.Wrap(err, "getting trusted root")
-	}
-	rootKeys, rootThreshold, err := getRootKeys(trustedRoot)
-	if err != nil {
-		t.Close()
-		return nil, errors.Wrap(err, "bad trusted root")
-	}
-	if err := t.client.Init(rootKeys, rootThreshold); err != nil {
-		t.Close()
-		return nil, errors.Wrap(err, "unable to initialize client, local cache may be corrupt")
-	}
+	// Update when timestamp is out of date.
 	if err := t.updateMetadataAndDownloadTargets(); err != nil {
 		t.Close()
 		return nil, errors.Wrap(err, "updating local metadata and targets")
 	}
 
 	return t, err
+}
+
+func NewFromEnv(ctx context.Context) (*TUF, error) {
+	// Get local and mirror from env
+	tufDB := filepath.Join(rootCacheDir(), "tuf.db")
+	var embed bool
+
+	// Check for the current local.
+	_, statErr := os.Stat(tufDB)
+	switch {
+	case os.IsNotExist(statErr):
+		// There is no root at the location, use embedded.
+		embed = true
+	case statErr != nil:
+		// Some other error, bail
+		return nil, statErr
+	default:
+		// There is a root! Happy path.
+		embed = false
+	}
+
+	// Check for the current remote mirror.
+	mirror := DefaultRemoteRoot
+	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
+	if err == nil {
+		remoteInfo := remoteCache{}
+		if err := json.Unmarshal(b, &remoteInfo); err == nil {
+			mirror = remoteInfo.Mirror
+		}
+	}
+
+	// Initializes a new TUF object from the local cache or defaults.
+	return initializeTUF(ctx, embed, mirror, nil, false)
 }
 
 func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
@@ -189,43 +244,13 @@ func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
 }
 
 func Initialize(ctx context.Context, mirror string, root []byte) error {
-	// Initialize the remote repository.
-	remote, err := remoteFromMirror(ctx, mirror)
+	// Initialize the client. Force an update.
+	t, err := initializeTUF(ctx, false, mirror, root, true)
 	if err != nil {
 		return err
 	}
+	t.Close()
 
-	// Initialize the local.
-	tufDB := filepath.Join(rootCacheDir(), "tuf.db")
-	local, err := localStore(tufDB)
-	if err != nil {
-		return err
-	}
-	defer local.Close()
-
-	// Initialize the client.
-	if root == nil {
-		trustedMeta, err := local.GetMeta()
-		if err != nil {
-			return errors.Wrap(err, "getting trusted meta")
-		}
-		root, err = getRoot(trustedMeta)
-		if err != nil {
-			return errors.Wrap(err, "getting trusted root")
-		}
-	}
-	rootKeys, rootThreshold, err := getRootKeys(root)
-	if err != nil {
-		return errors.Wrap(err, "bad trusted root")
-	}
-	c := client.NewClient(local, remote)
-	if err := c.Init(rootKeys, rootThreshold); err != nil {
-		return errors.Wrap(err, "initializing root")
-	}
-	// Timestamp does not need to be saved in memory on Initialize
-	if err := updateMetadataAndDownloadTargets(c, newFileImpl()); err != nil {
-		return errors.Wrap(err, "updating local metadata and targets")
-	}
 	// Store the remote for later.
 	remoteInfo := &remoteCache{Mirror: mirror}
 	b, err := json.Marshal(remoteInfo)
@@ -345,27 +370,9 @@ var isExpiredTimestamp = func(metadata []byte) bool {
 	return time.Until(*expiration) <= 0
 }
 
-func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
-	store := gtuf.MemoryStore(map[string]json.RawMessage{"root.json": rootFileBytes}, nil)
-	repo, err := gtuf.NewRepo(store)
-	if err != nil {
-		return nil, 0, err
-	}
-	rootKeys, err := repo.RootKeys()
-	if err != nil {
-		return nil, 0, err
-	}
-	rootThreshold, err := repo.GetThreshold("root")
-	return rootKeys, rootThreshold, err
-}
-
 func (t *TUF) updateMetadataAndDownloadTargets() error {
-	return updateMetadataAndDownloadTargets(t.client, t.targets)
-}
-
-func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl) error {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
-	targetFiles, err := c.Update()
+	targetFiles, err := t.client.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
 		return errors.Wrap(err, "updating tuf metadata")
 	}
@@ -374,10 +381,10 @@ func updateMetadataAndDownloadTargets(c *client.Client, t targetImpl) error {
 	// If the cache directory is enabled, update that too.
 	for name := range targetFiles {
 		buf := bytes.Buffer{}
-		if err := downloadRemoteTarget(name, c, &buf); err != nil {
+		if err := downloadRemoteTarget(name, t.client, &buf); err != nil {
 			return err
 		}
-		if err := t.Set(name, buf.Bytes()); err != nil {
+		if err := t.targets.Set(name, buf.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -515,57 +522,6 @@ func newFileImpl() targetImpl {
 		f.setImpl = &diskCache{base: base}
 	}
 	return f
-}
-
-func newTuf(ctx context.Context) (*TUF, error) {
-	t := &TUF{}
-	tufDB := filepath.Join(rootCacheDir(), "tuf.db")
-	var local client.LocalStore
-	var err error
-
-	_, statErr := os.Stat(tufDB)
-	switch {
-	case os.IsNotExist(statErr):
-		// There is no root at the location, try embedded
-		local, err = embeddedLocalStore()
-		if err != nil {
-			return nil, err
-		}
-		t.targets = newEmbeddedImpl()
-		t.embedded = true
-	case statErr != nil:
-		// Some other error, bail
-		return nil, statErr
-	default:
-		// There is a root! Happy path.
-		local, err = localStore(tufDB)
-		if err != nil {
-			return nil, err
-		}
-		t.targets = newFileImpl()
-		t.embedded = false
-	}
-	t.local = local
-
-	// If there's a remote defined in the cache, use it. Otherwise, use the
-	// default remote root.
-	t.mirror = DefaultRemoteRoot
-	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
-	if err == nil {
-		remoteInfo := remoteCache{}
-		if err := json.Unmarshal(b, &remoteInfo); err == nil {
-			t.mirror = remoteInfo.Mirror
-		}
-	}
-
-	remote, err := remoteFromMirror(ctx, t.mirror)
-	if err != nil {
-		return nil, err
-	}
-	t.remote = remote
-
-	t.client = client.NewClient(local, t.remote)
-	return t, nil
 }
 
 func remoteFromMirror(ctx context.Context, mirror string) (client.RemoteStore, error) {
