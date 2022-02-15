@@ -145,7 +145,7 @@ func (g *Gl) GetSecret(ctx context.Context, ref string, key string) (string, err
 		}
 	}
 
-	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, key)
+	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, key, nil)
 	if err != nil {
 		return varPubKeyValue, errors.Wrap(err, "could not retrieve \"COSIGN_PUBLIC_KEY\" variable")
 	}
