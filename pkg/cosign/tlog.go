@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/go-openapi/strfmt"
@@ -42,9 +43,16 @@ import (
 // This is the rekor public key target name
 var rekorTargetStr = `rekor.pub`
 
+// RekorPubKey contains the ECDSA verification key and the current status
+// of the key according to TUF metadata, whether it's active or expired.
+type RekorPubKey struct {
+	PubKey *ecdsa.PublicKey
+	Status tuf.StatusKind
+}
+
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
-func GetRekorPubs(ctx context.Context) ([]*ecdsa.PublicKey, error) {
+func GetRekorPubs(ctx context.Context) ([]RekorPubKey, error) {
 	tufClient, err := tuf.NewFromEnv(ctx)
 	if err != nil {
 		return nil, err
@@ -54,13 +62,13 @@ func GetRekorPubs(ctx context.Context) ([]*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	publicKeys := make([]*ecdsa.PublicKey, 0, len(targets))
+	publicKeys := make([]RekorPubKey, 0, len(targets))
 	for _, t := range targets {
 		rekorPubKey, err := PemToECDSAKey(t.Target)
 		if err != nil {
 			return nil, errors.Wrap(err, "pem to ecdsa")
 		}
-		publicKeys = append(publicKeys, rekorPubKey)
+		publicKeys = append(publicKeys, RekorPubKey{PubKey: rekorPubKey, Status: t.Status})
 	}
 	if len(publicKeys) == 0 {
 		return nil, errors.New("none of the Rekor public keys have been found")
@@ -281,9 +289,12 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 	}
 	var entryVerError error
 	for _, pubKey := range rekorPubKeys {
-		entryVerError = VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), pubKey)
+		entryVerError = VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), pubKey.PubKey)
 		// Return once the SET is verified successfully.
 		if entryVerError == nil {
+			if pubKey.Status != tuf.Active {
+				fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
+			}
 			return &e, nil
 		}
 	}

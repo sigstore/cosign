@@ -31,6 +31,7 @@ import (
 	"time"
 
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -592,9 +593,12 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 
 	var entryVerError error
 	for _, pubKey := range publicKeys {
-		entryVerError = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey)
+		entryVerError = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
 		// Exit early with successful verification
 		if entryVerError == nil {
+			if pubKey.Status != tuf.Active {
+				fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
+			}
 			break
 		}
 	}
