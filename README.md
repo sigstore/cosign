@@ -223,7 +223,7 @@ The signature, claims and transparency log proofs are all verified automatically
 The specification is [here](https://tekton.dev/docs/pipelines/tekton-bundle-contracts/).
 This means they can also be signed and verified with `cosign`.
 
-Tekton Bundles can currently be uploaded with the [tkn cli](github.com/tekton/cli), but we may add this support to
+Tekton Bundles can currently be uploaded with the [tkn cli](https://github.com/tektoncd/cli), but we may add this support to
 `cosign` in the future.
 
 ```shell
