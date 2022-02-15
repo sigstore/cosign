@@ -31,6 +31,7 @@ webhooks:
       namespace: cosign-system
   failurePolicy: Fail
   sideEffects: None
+  timeoutSeconds: 25
 
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -52,6 +53,7 @@ webhooks:
       namespace: cosign-system
   failurePolicy: Fail
   sideEffects: None
+  timeoutSeconds: 25
 
 ---
 apiVersion: v1
