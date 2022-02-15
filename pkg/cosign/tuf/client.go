@@ -132,6 +132,14 @@ func (t *TUF) Close() error {
 	return t.local.Close()
 }
 
+// initializeTUF creates a TUF client using the following params:
+//   * embed: indicates using the embedded metadata and in-memory file updates.
+//       When this is false, this uses a filesystem cache.
+//   * mirror: provides a reference to a remote GCS or HTTP mirror.
+//   * root: provides an external initial root.json. When this is not provided, this
+//       defaults to the embedded root.json.
+//   * forceUpdate: indicates checking the remote for an update, even when the local
+//       timestamp.json is up to date.
 func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, forceUpdate bool) (*TUF, error) {
 	t := &TUF{
 		mirror:   mirror,
