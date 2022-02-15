@@ -98,6 +98,7 @@ artifacts:
     paths:
     - "go/src/sigstore/cosign/dist/*"
     - "go/src/sigstore/cosign/release/release-cosign.pub"
+    - "go/src/sigstore/cosign/cosign*.yaml
 
 options:
   machineType: E2_HIGHCPU_8
