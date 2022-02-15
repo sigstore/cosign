@@ -34,7 +34,6 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
-	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
@@ -269,24 +268,24 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 	}
 
 	// Verify rekor's signature over the SET.
-	resp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParamsWithContext(ctx))
-	if err != nil {
-		return nil, errors.Wrap(err, "rekor public key")
-	}
-	rekorPubKey, err := PemToECDSAKey([]byte(resp.Payload))
-	if err != nil {
-		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
-	}
-
 	payload := bundle.RekorPayload{
 		Body:           e.Body,
 		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       *e.LogIndex,
 		LogID:          *e.LogID,
 	}
-	if err := VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), rekorPubKey); err != nil {
-		return nil, errors.Wrap(err, "verifying signedEntryTimestamp")
-	}
 
-	return &e, nil
+	rekorPubKeys, err := GetRekorPubs(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to fetch Rekor public keys from TUF repository")
+	}
+	var entryVerError error
+	for _, pubKey := range rekorPubKeys {
+		entryVerError = VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), pubKey)
+		// Return once the SET is verified successfully.
+		if entryVerError == nil {
+			return &e, nil
+		}
+	}
+	return nil, errors.Wrap(entryVerError, "verifying signedEntryTimestamp")
 }
