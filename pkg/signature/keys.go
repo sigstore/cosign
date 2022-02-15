@@ -145,6 +145,8 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		return cosign.LoadPrivateKey([]byte(pk), []byte(pass))
+	case strings.Contains(keyRef, "://"):
+		return nil, fmt.Errorf("unsupported provider given")
 	}
 
 	sv, err := kms.Get(ctx, keyRef, crypto.SHA256)
@@ -152,7 +154,6 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		return sv, nil
 	}
 
-	fmt.Fprintf(os.Stderr, "an error occurred: %v, will try to load key from disk...\n", err)
 	return loadKey(keyRef, pf)
 }
 
