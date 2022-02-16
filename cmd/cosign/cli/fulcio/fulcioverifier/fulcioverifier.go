@@ -52,7 +52,7 @@ const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
 func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
-	var pubKeys []crypto.PublicKey
+	pubKeys := make(map[crypto.PublicKey]tuf.StatusKind)
 	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
 	if rootEnv == "" {
 		tufClient, err := tuf.NewFromEnv(ctx)
@@ -70,7 +70,7 @@ func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 			if err != nil {
 				return errors.Wrap(err, "converting Public CT to ECDSAKey")
 			}
-			pubKeys = append(pubKeys, ctPub)
+			pubKeys[ctPub] = t.Status
 		}
 	} else {
 		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
@@ -82,7 +82,7 @@ func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 		if err != nil {
 			return errors.Wrap(err, "error parsing alternate public key from the file")
 		}
-		pubKeys = append(pubKeys, pubKey)
+		pubKeys[pubKey] = tuf.Active
 	}
 	if len(pubKeys) == 0 {
 		return errors.New("none of the CTFE keys have been found")
@@ -96,10 +96,13 @@ func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 		return errors.Wrap(err, "unmarshal")
 	}
 	var verifySctErr error
-	for _, pubKey := range pubKeys {
+	for pubKey, status := range pubKeys {
 		verifySctErr = ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
 		// Exit after successful verification of the SCT
 		if verifySctErr == nil {
+			if status != tuf.Active {
+				fmt.Fprintf(os.Stderr, "**Info** Successfully verified SCT using an expired verification key\n")
+			}
 			return nil
 		}
 	}

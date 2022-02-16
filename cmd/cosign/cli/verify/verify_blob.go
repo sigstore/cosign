@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 
 	ctypes "github.com/sigstore/cosign/pkg/types"
@@ -297,9 +298,12 @@ func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certif
 
 	var entryVerError error
 	for _, pubKey := range publicKeys {
-		entryVerError = cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, pubKey)
+		entryVerError = cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, pubKey.PubKey)
 		// Exit early with successful verification
 		if entryVerError == nil {
+			if pubKey.Status != tuf.Active {
+				fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
+			}
 			break
 		}
 	}
