@@ -5,7 +5,7 @@
 # used when releasing together with GCP CloudBuild
 .PHONY: release
 release:
-	LDFLAGS="$(LDFLAGS)" goreleaser release
+	LDFLAGS="$(LDFLAGS)" goreleaser release --timeout 60m
 
 ###########################
 # sign with GCP KMS section
