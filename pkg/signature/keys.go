@@ -145,12 +145,13 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		return cosign.LoadPrivateKey([]byte(pk), []byte(pass))
-	case strings.Contains(keyRef, "://"):
-		return nil, fmt.Errorf("unsupported provider given")
 	}
 
-	sv, err := kms.Get(ctx, keyRef, crypto.SHA256)
-	if err == nil {
+	if strings.Contains(keyRef, "://") {
+		sv, err := kms.Get(ctx, keyRef, crypto.SHA256)
+		if err != nil {
+			return nil, fmt.Errorf("kms get: %w", err)
+		}
 		return sv, nil
 	}
 
