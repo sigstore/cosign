@@ -21,8 +21,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
+
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
@@ -59,6 +64,11 @@ type VerifyAttestationCommand struct {
 	Policies       []string
 	LocalImage     bool
 }
+
+const (
+	openPolicyAgentConfigMediaType      = "application/vnd.cncf.openpolicyagent.config.v1+json"
+	openPolicyAgentPolicyLayerMediaType = "application/vnd.cncf.openpolicyagent.policy.layer.v1+rego"
+)
 
 // Exec runs the verification command
 func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (err error) {
@@ -175,13 +185,82 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		var cuePolicies, regoPolicies []string
 
 		for _, policy := range c.Policies {
-			switch filepath.Ext(policy) {
-			case ".rego":
-				regoPolicies = append(regoPolicies, policy)
-			case ".cue":
-				cuePolicies = append(cuePolicies, policy)
-			default:
-				return errors.New("invalid policy format, expected .cue or .rego")
+			ext := filepath.Ext(policy)
+			if ext != "" {
+				if _, err := os.Stat(policy); errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("%s is not exists", policy)
+				}
+				switch ext {
+				case ".rego":
+					regoPolicies = append(regoPolicies, policy)
+				case ".cue":
+					cuePolicies = append(cuePolicies, policy)
+				default:
+
+					return fmt.Errorf("invalid policy format %s, expected formats: [.cue,.rego]", ext)
+				}
+			} else {
+				policyImageRef, err := name.ParseReference(policy)
+				if err == nil {
+					img, err := ociremote.SignedImage(policyImageRef, co.RegistryClientOpts...)
+					if err != nil {
+						return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+					}
+
+					s, err := img.Signatures()
+					if err != nil {
+						return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+					}
+
+					policyImageSigs, err := s.Get()
+					if err != nil {
+						return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+					}
+
+					if len(policyImageSigs) == 0 {
+						return fmt.Errorf("no signature found for policy image %q, you should sign it", policyImageRef)
+					}
+
+					m, err := img.Manifest()
+					if err != nil {
+						return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+					}
+
+					if !strings.EqualFold(string(m.Config.MediaType), openPolicyAgentConfigMediaType) {
+						return fmt.Errorf("we are only supporting images suitable with OPA image spec, "+
+							"given image %q is not compatible with that, "+
+							"please refer to the page for more information: https://www.conftest.dev/sharing/", policyImageRef)
+					}
+
+					layers, err := img.Layers()
+					if err != nil {
+						return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+					}
+
+					for _, layer := range layers {
+						layerMediaType, err := layer.MediaType()
+						if err != nil {
+							return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+						}
+						if strings.EqualFold(string(layerMediaType), openPolicyAgentPolicyLayerMediaType) {
+							rc, err := layer.Uncompressed()
+							if err != nil {
+								return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+							}
+
+							tmp, err := ioutil.TempFile("", "crane-append")
+							if err != nil {
+								return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+							}
+							defer os.Remove(tmp.Name())
+
+							if _, err := io.Copy(tmp, rc); err != nil {
+								return fmt.Errorf("reading image %q: %w", policyImageRef, err)
+							}
+							regoPolicies = append(regoPolicies, tmp.Name())
+						}
+					}
+				}
 			}
 		}
 
