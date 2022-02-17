@@ -11,6 +11,10 @@ before:
   hooks:
   - go mod tidy
   - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+# if running a release we will generate the images in this step
+# if running in the CI the CI env va is set and we dont run the ko steps
+# this is needed because we are generating files that goreleaser was not aware to push to GH project release
+  - /bin/bash -c 'if [ -z "$CI" ]; then make sign-container-release && make sign-keyless-release; fi'
 
 gomod:
   proxy: true
@@ -250,6 +254,7 @@ release:
 
   extra_files:
     - glob: "./release/release-cosign.pub"
+    - glob: "./cosign*.yaml"
 
 rigs:
   - rig:
