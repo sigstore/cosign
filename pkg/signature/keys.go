@@ -33,7 +33,14 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+
+	// Register the provider-specific plugins
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 // LoadPublicKey is a wrapper for VerifierForKeyRef, hardcoding SHA256 as the hash algorithm
