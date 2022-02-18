@@ -1,3 +1,63 @@
+# v1.5.2
+
+## Security Fixes
+
+* CVE-2022-23649 - Make sure signature in Rekor bundle matches signature being verified
+
+## Others
+
+* refactor release cloudbuild job (https://github.com/sigstore/cosign/pull/1476)
+* increase timeout for goreleaser snapshot (https://github.com/sigstore/cosign/pull/1473)
+* Double goreleaser timeout (https://github.com/sigstore/cosign/pull/1472)
+* Bump webhook timeout. (https://github.com/sigstore/cosign/pull/1465)
+* convert release cosigned to also generate yaml artifact. (https://github.com/sigstore/cosign/pull/1453)
+* feat: add -buildid= to ldflags (https://github.com/sigstore/cosign/pull/1451)
+* update cross-build to use go 1.17.7 (https://github.com/sigstore/cosign/pull/1446)
+
+## Contributors
+
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Kenny Leung (@k4leung4)
+* Matt Moore (@mattmoor)
+* Nathan Smith (@nsmith5)
+* Priya Wadhwa (@priyawadhwa)
+* Zack Newman (@znewman01)
+
+# v1.5.1
+
+## Bug Fixes
+
+* add check to make sure the go modules are in sync (https://github.com/sigstore/cosign/pull/1369)
+* Update verify-blob to support DSSEs (https://github.com/sigstore/cosign/pull/1355)
+
+## Documention
+
+* docs: verify-attestation cue and rego policy doc (https://github.com/sigstore/cosign/pull/1362)
+* README: fix link to race conditions (https://github.com/sigstore/cosign/pull/1367)
+
+## Others
+
+* Bump sigstore/sigstore to pick up oidc login for vault. (https://github.com/sigstore/cosign/pull/1377)
+* Bump google.golang.org/api from 0.65.0 to 0.66.0 (https://github.com/sigstore/cosign/pull/1371)
+* expose dafaults fulcio, rekor, oidc issuer urls (https://github.com/sigstore/cosign/pull/1368)
+* Bump cloud.google.com/go/storage from 1.18.2 to 1.19.0 (https://github.com/sigstore/cosign/pull/1365)
+* organize, update select deps (https://github.com/sigstore/cosign/pull/1358)
+* Bump go-containerregistry to pick up ACR keychain fix (https://github.com/sigstore/cosign/pull/1357)
+* Bump github.com/go-openapi/runtime from 0.21.0 to 0.21.1 (https://github.com/sigstore/cosign/pull/1352)
+* sync go modules (https://github.com/sigstore/cosign/pull/1353)
+
+## Contributors
+
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Jake Sanders (@dekkagaijin)
+* Jason Hall (@imjasonh)
+* Mark Lodato (@MarkLodato)
+* Rémy Greinhofer (@rgreinho)
+
 # v1.5.0
 
 ## Highlights
@@ -540,7 +600,7 @@ See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 * Dependabot!
 * Mark Bestavros
 * Jake Sanders
-* Carlos Tadeu Panato Junior 
+* Carlos Tadeu Panato Junior
 
 # v0.2.0
 
