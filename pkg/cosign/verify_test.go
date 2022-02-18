@@ -199,7 +199,7 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 }
 
 func TestCompareSigs(t *testing.T) {
-	//TODO(nsmith5): Add test cases for invalid signature, missing signature etc
+	// TODO(nsmith5): Add test cases for invalid signature, missing signature etc
 	tests := []struct {
 		description string
 		b64sig      string
