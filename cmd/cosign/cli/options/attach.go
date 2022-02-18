@@ -88,5 +88,5 @@ func (o *AttachAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Attestation, "attestation", "",
-		"path to the predicate")
+		"path to the attestation envelope")
 }
