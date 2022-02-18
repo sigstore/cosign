@@ -1135,7 +1135,7 @@ func TestInvalidBundle(t *testing.T) {
 	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	regOpts := options.RegistryOptions{}
 
-	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img1}, "", true, "", "", "", true, false, ""), t)
+	must(sign.SignCmd(ctx, ko, regOpts, nil, []string{img1}, "", true, "", "", "", true, false, ""), t)
 	// verify image1
 	must(verify(pubKeyPath, img1, true, nil, ""), t)
 	// extract the bundle from image1
@@ -1160,7 +1160,7 @@ func TestInvalidBundle(t *testing.T) {
 	img2 := path.Join(regName, "unrelated")
 	imgRef2, _, cleanup := mkimage(t, img2)
 	defer cleanup()
-	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img2}, "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ctx, ko, regOpts, nil, []string{img2}, "", true, "", "", "", false, false, ""), t)
 	must(verify(pubKeyPath, img2, true, nil, ""), t)
 
 	si2, err := ociremote.SignedEntity(imgRef2, remoteOpts)
