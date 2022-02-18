@@ -56,6 +56,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/sget"
 	sigs "github.com/sigstore/cosign/pkg/signature"
@@ -1105,4 +1106,95 @@ func registryClientOpts(ctx context.Context) []remote.Option {
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 		remote.WithContext(ctx),
 	}
+}
+
+// If a signature has a bundle, but *not for that signature*, cosign verification should fail
+// This test is pretty long, so here are the basic points:
+//    1. Sign image1 with a keypair, store entry in rekor
+//    2. Sign image2 with keypair, DO NOT store entry in rekor
+//    3. Take the bundle from image1 and store it on the signature in image2
+//    4. Verification of image2 should now fail, since the bundle is for a different signature
+func TestInvalidBundle(t *testing.T) {
+	regName, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	img1 := path.Join(regName, "cosign-e2e")
+
+	imgRef, _, cleanup := mkimage(t, img1)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image1 and store the entry in rekor
+	// (we're just using it for its bundle)
+	defer setenv(t, options.ExperimentalEnv, "1")()
+	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
+	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
+	regOpts := options.RegistryOptions{}
+
+	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img1}, "", true, "", "", "", true, false, ""), t)
+	// verify image1
+	must(verify(pubKeyPath, img1, true, nil, ""), t)
+	// extract the bundle from image1
+	si, err := ociremote.SignedImage(imgRef, remoteOpts)
+	must(err, t)
+	imgSigs, err := si.Signatures()
+	must(err, t)
+	sigs, err := imgSigs.Get()
+	must(err, t)
+	if l := len(sigs); l != 1 {
+		t.Error("expected one signature")
+	}
+	bund, err := sigs[0].Bundle()
+	must(err, t)
+	if bund == nil {
+		t.Fail()
+	}
+
+	// Now, we move on to image2
+	// Sign image2 and DO NOT store the entry in rekor
+	defer setenv(t, options.ExperimentalEnv, "0")()
+	img2 := path.Join(regName, "unrelated")
+	imgRef2, _, cleanup := mkimage(t, img2)
+	defer cleanup()
+	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img2}, "", true, "", "", "", false, false, ""), t)
+	must(verify(pubKeyPath, img2, true, nil, ""), t)
+
+	si2, err := ociremote.SignedEntity(imgRef2, remoteOpts)
+	must(err, t)
+	sigs2, err := si2.Signatures()
+	must(err, t)
+	gottenSigs2, err := sigs2.Get()
+	must(err, t)
+	if len(gottenSigs2) != 1 {
+		t.Fatal("there should be one signature")
+	}
+	sigsTag, err := ociremote.SignatureTag(imgRef2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// At this point, we would mutate the signature to add the bundle annotation
+	// since we don't have a function for it at the moment, mock this by deleting the signature
+	// and pushing a new signature with the additional bundle annotation
+	if err := remote.Delete(sigsTag); err != nil {
+		t.Fatal(err)
+	}
+	mustErr(verify(pubKeyPath, img2, true, nil, ""), t)
+
+	newSig, err := mutate.Signature(gottenSigs2[0], mutate.WithBundle(bund))
+	must(err, t)
+	si2, err = ociremote.SignedEntity(imgRef2, remoteOpts)
+	must(err, t)
+	newImage, err := mutate.AttachSignatureToEntity(si2, newSig)
+	must(err, t)
+	if err := ociremote.WriteSignatures(sigsTag.Repository, newImage); err != nil {
+		t.Fatal(err)
+	}
+
+	// veriyfing image2 now should fail
+	mustErr(verify(pubKeyPath, img2, true, nil, ""), t)
 }
