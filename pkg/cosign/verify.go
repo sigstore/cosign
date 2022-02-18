@@ -586,6 +586,10 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, nil
 	}
 
+	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
+		return false, err
+	}
+
 	publicKeys, err := GetRekorPubs(ctx)
 	if err != nil {
 		return false, errors.Wrap(err, "retrieving rekor public key")
@@ -635,6 +639,31 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, errors.Wrap(err, "matching bundle to payload")
 	}
 	return true, nil
+}
+
+// compare bundle signature to the signature we are verifying
+func compareSigs(bundleBody string, sig oci.Signature) error {
+	// TODO(nsmith5): modify function signature to make it more clear _why_
+	// we've returned nil (there are several reasons possible here).
+	actualSig, err := sig.Base64Signature()
+	if err != nil {
+		return errors.Wrap(err, "base64 signature")
+	}
+	if actualSig == "" {
+		// NB: empty sig means this is an attestation
+		return nil
+	}
+	bundleSignature, err := bundleSig(bundleBody)
+	if err != nil {
+		return errors.Wrap(err, "failed to extract signature from bundle")
+	}
+	if bundleSignature == "" {
+		return nil
+	}
+	if bundleSignature != actualSig {
+		return fmt.Errorf("signature in bundle does not match signature being verified")
+	}
+	return nil
 }
 
 func bundleHash(bundleBody, signature string) (string, string, error) {
@@ -696,6 +725,44 @@ func bundleHash(bundleBody, signature string) (string, string, error) {
 		return "", "", err
 	}
 	return *hrekordObj.Data.Hash.Algorithm, *hrekordObj.Data.Hash.Value, nil
+}
+
+// bundleSig extracts the signature from the rekor bundle body
+func bundleSig(bundleBody string) (string, error) {
+	var rekord models.Rekord
+	var hrekord models.Hashedrekord
+	var rekordObj models.RekordV001Schema
+	var hrekordObj models.HashedrekordV001Schema
+
+	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
+	if err != nil {
+		return "", errors.Wrap(err, "decoding bundleBody")
+	}
+
+	// Try Rekord
+	if err := json.Unmarshal(bodyDecoded, &rekord); err == nil {
+		specMarshal, err := json.Marshal(rekord.Spec)
+		if err != nil {
+			return "", err
+		}
+		if err := json.Unmarshal(specMarshal, &rekordObj); err != nil {
+			return "", err
+		}
+		return rekordObj.Signature.Content.String(), nil
+	}
+
+	// Try hashedRekordObj
+	if err := json.Unmarshal(bodyDecoded, &hrekord); err != nil {
+		return "", err
+	}
+	specMarshal, err := json.Marshal(hrekord.Spec)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(specMarshal, &hrekordObj); err != nil {
+		return "", err
+	}
+	return hrekordObj.Signature.Content.String(), nil
 }
 
 func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {

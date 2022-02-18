@@ -146,13 +146,20 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 	co.SigVerifier = pubKey
 
+	// NB: There are only 2 kinds of verification right now:
+	// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
+	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
+	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
+	// was performed so we don't need to use this fragile logic here.
+	fulcioVerified := (co.SigVerifier == nil)
+
 	for _, img := range images {
 		if c.LocalImage {
 			verified, bundleVerified, err := cosign.VerifyLocalImageSignatures(ctx, img, co)
 			if err != nil {
 				return err
 			}
-			PrintVerificationHeader(img, co, bundleVerified)
+			PrintVerificationHeader(img, co, bundleVerified, fulcioVerified)
 			PrintVerification(img, verified, c.Output)
 		} else {
 			ref, err := name.ParseReference(img)
@@ -169,7 +176,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return err
 			}
 
-			PrintVerificationHeader(ref.Name(), co, bundleVerified)
+			PrintVerificationHeader(ref.Name(), co, bundleVerified, fulcioVerified)
 			PrintVerification(ref.Name(), verified, c.Output)
 		}
 	}
@@ -177,7 +184,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	return nil
 }
 
-func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified bool) {
+func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified, fulcioVerified bool) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.ClaimVerifier != nil {
@@ -195,7 +202,9 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified
 	if co.SigVerifier != nil {
 		fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 	}
-	fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
+	if fulcioVerified {
+		fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
+	}
 }
 
 // PrintVerification logs details about the verification to stdout
