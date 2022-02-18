@@ -1,5 +1,9 @@
 # v1.5.2
 
+## Security Fixes
+
+* CVE-2022-23649 - Make sure signature in Rekor bundle matches signature being verified
+
 ## Others
 
 * refactor release cloudbuild job (https://github.com/sigstore/cosign/pull/1476)
@@ -14,7 +18,11 @@
 
 * Batuhan Apaydın (@developer-guy)
 * Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
 * Kenny Leung (@k4leung4)
+* Matt Moore (@mattmoor)
+* Nathan Smith (@nsmith5)
+* Priya Wadhwa (@priyawadhwa)
 * Zack Newman (@znewman01)
 
 # v1.5.1
