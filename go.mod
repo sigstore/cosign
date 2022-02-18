@@ -27,12 +27,12 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.3.0
 	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7
 	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3
-	github.com/sigstore/sigstore v1.1.1-0.20220130134424-bae9b66b8442
+	github.com/sigstore/sigstore v1.1.1-0.20220217212907-e48ca03a5ba7
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
 	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.11
 	github.com/stretchr/testify v1.7.0
-	github.com/theupdateframework/go-tuf v0.0.0-20220124194755-2c5d73bebc1c
+	github.com/theupdateframework/go-tuf v0.0.0-20220127213825-87caa18db2a6
 	github.com/xanzy/go-gitlab v0.55.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
