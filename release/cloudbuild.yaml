@@ -39,10 +39,10 @@ steps:
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.6-2@sha256:c03303287982360025dda196af6006fc5d1870955115efa8990d7278d8bfb7e9'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.7-0@sha256:949325ffc52c16867d78412ce70f5ce531812c20e7528ae70dc9e718d72223e8'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-2@sha256:c03303287982360025dda196af6006fc5d1870955115efa8990d7278d8bfb7e9
+- name: ghcr.io/gythialy/golang-cross:v1.17.7-0@sha256:949325ffc52c16867d78412ce70f5ce531812c20e7528ae70dc9e718d72223e8
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -56,36 +56,14 @@ steps:
   - GIT_TAG=${_GIT_TAG}
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
   - COSIGN_EXPERIMENTAL=true
+  - KO_PREFIX=gcr.io/${PROJECT_ID}
   secretEnv:
   - GITHUB_TOKEN
   args:
     - '-c'
     - |
-      make release
-
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-2@sha256:c03303287982360025dda196af6006fc5d1870955115efa8990d7278d8bfb7e9
-  entrypoint: 'bash'
-  dir: "go/src/sigstore/cosign"
-  env:
-  - "GOPATH=/workspace/go"
-  - "GOBIN=/workspace/bin"
-  - PROJECT_ID=${PROJECT_ID}
-  - KEY_LOCATION=${_KEY_LOCATION}
-  - KEY_RING=${_KEY_RING}
-  - KEY_NAME=${_KEY_NAME}
-  - KEY_VERSION=${_KEY_VERSION}
-  - GIT_TAG=${_GIT_TAG}
-  - KO_PREFIX=gcr.io/${PROJECT_ID}
-  - COSIGN_EXPERIMENTAL=true
-  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
-  secretEnv:
-  - GITHUB_TOKEN
-  args:
-  - '-c'
-  - |
-    gcloud auth configure-docker \
-    && make sign-container-release \
-    && make sign-keyless-release
+      gcloud auth configure-docker \
+      && make release
 
 availableSecrets:
   secretManager:
@@ -98,6 +76,7 @@ artifacts:
     paths:
     - "go/src/sigstore/cosign/dist/*"
     - "go/src/sigstore/cosign/release/release-cosign.pub"
+    - "go/src/sigstore/cosign/cosign*.yaml"
 
 options:
   machineType: E2_HIGHCPU_8

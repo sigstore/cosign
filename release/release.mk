@@ -5,7 +5,7 @@
 # used when releasing together with GCP CloudBuild
 .PHONY: release
 release:
-	LDFLAGS="$(LDFLAGS)" goreleaser release
+	LDFLAGS="$(LDFLAGS)" goreleaser release --timeout 120m
 
 ###########################
 # sign with GCP KMS section
@@ -48,4 +48,4 @@ sign-keyless-release: sign-keyless-cosign-release sign-keyless-cosigned-release 
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
+	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist --timeout 60m
