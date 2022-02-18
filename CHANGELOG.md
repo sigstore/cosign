@@ -1,3 +1,22 @@
+# v1.5.2
+
+## Others
+
+* refactor release cloudbuild job (https://github.com/sigstore/cosign/pull/1476)
+* increase timeout for goreleaser snapshot (https://github.com/sigstore/cosign/pull/1473)
+* Double goreleaser timeout (https://github.com/sigstore/cosign/pull/1472)
+* Bump webhook timeout. (https://github.com/sigstore/cosign/pull/1465)
+* convert release cosigned to also generate yaml artifact. (https://github.com/sigstore/cosign/pull/1453)
+* feat: add -buildid= to ldflags (https://github.com/sigstore/cosign/pull/1451)
+* update cross-build to use go 1.17.7 (https://github.com/sigstore/cosign/pull/1446)
+
+## Contributors
+
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Kenny Leung (@k4leung4)
+* Zack Newman (@znewman01)
+
 # v1.5.1
 
 ## Bug Fixes
