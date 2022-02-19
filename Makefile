@@ -124,13 +124,22 @@ clean:
 	rm -rf sget
 	rm -rf dist/
 
+
+KOCACHE_PATH=/tmp/ko
+
+define create_kocache_path
+  mkdir -p $(KOCACHE_PATH)
+endef
+
+
 ##########
 # ko build
 ##########
 .PHONY: ko
 ko:
+	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/cosign
 
@@ -142,14 +151,15 @@ ko:
 
 	# sget
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/cosign/cmd/sget
 
 .PHONY: ko-local
 ko-local:
+	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/cosign/cmd/cosign
 
