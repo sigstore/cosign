@@ -92,6 +92,10 @@ jobs:
       - name: Run end-to-end tests
         run: ./test/e2e_test.sh
 
+      - name: Collect diagnostics
+        if: ${{ failure() }}
+        uses: chainguard-dev/actions/kind-diag@main
+
   e2e-windows-powershell-tests:
     name: Run PowerShell E2E tests
     runs-on: windows-latest
