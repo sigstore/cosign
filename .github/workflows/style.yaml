@@ -7,51 +7,34 @@ on:
 permissions: read-all
 
 jobs:
-  autoformat:
-    name: Auto-format and Check
+  gofmt:
+    name: check gofmt
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false # Keep running if one leg fails.
-      matrix:
-        tool:
-          - goimports
-          - gofmt
-
-        include:
-        - tool: gofmt
-          options: -s
-        - tool: goimports
-          importpath: golang.org/x/tools/cmd/goimports
-
     steps:
-      - name: Set up Go 1.16.x
+      - name: Set up Go
         uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: 1.16.x
-        id: go
 
       - name: Check out code
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
 
-      - name: Install Dependencies
-        if: ${{ matrix.importpath != '' }}
-        run: |
-          cd $(mktemp -d)
-          GO111MODULE=on go get ${{ matrix.importpath }}
-
-      - name: ${{ matrix.tool }} ${{ matrix.options }}
-        shell: bash
-        run: >
-          ${{ matrix.tool }} ${{ matrix.options }} -w
-          $(find .
-          -path './vendor' -prune
-          -o -path './third_party' -prune
-          -o -name '*.pb.go' -prune
-          -o -name 'wire_gen.go' -prune
-          -o -type f -name '*.go' -print)
-
-      - name: Verify ${{ matrix.tool }}
-        uses: chainguard-dev/actions/nodiff@main
+      - uses: chainguard-dev/actions/gofmt@main
         with:
-          fixup-command: "${{ matrix.tool }} ${{ matrix.options }}"
+          args: -s
+
+  goimports:
+    name: check goimports
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+        with:
+          go-version: 1.16.x
+
+      - name: Check out code
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+
+      - uses: chainguard-dev/actions/goimports@main
