@@ -36,7 +36,7 @@ jobs:
         with:
           go-version: '1.17.x'
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@04141d8a7edfc8c679682f23e7bbbe05cbe32bb3 # v0.3.0
+        uses: google-github-actions/setup-gcloud@04141d8a7edfc8c679682f23e7bbbe05cbe32bb3 # v0.5.1
         with:
           project_id: projectsigstore
           service_account_key: ${{ secrets.GCP_CI_SERVICE_ACCOUNT }}
