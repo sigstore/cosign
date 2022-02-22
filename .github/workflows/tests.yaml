@@ -134,7 +134,7 @@ jobs:
       - name: Check license headers
         run: |
           set -e
-          addlicense --check -l apache -c 'The Sigstore Authors' -v *
+          addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -v *
 
   golangci:
     name: lint
