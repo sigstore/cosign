@@ -48,7 +48,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
         with:
           go-version: '1.17.x'
       - name: Run Go tests
@@ -79,7 +79,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
         with:
           go-version: '1.17.x'
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
@@ -101,7 +101,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
         with:
           go-version: '1.17.x'
 
@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
         with:
           go-version: '1.17.x'
       - name: Install addlicense
