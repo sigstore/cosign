@@ -17,6 +17,7 @@ package copy
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -28,10 +29,14 @@ import (
 // CopyCmd implements the logic to copy the supplied container image and signatures.
 // nolint
 func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool) error {
+	var refs []name.Reference // nolint: staticcheck
 	srcRef, err := name.ParseReference(srcImg)
 	if err != nil {
 		return err
 	}
+
+	refs = append(refs, srcRef)
+
 	dstRef, err := name.ParseReference(dstImg)
 	if err != nil {
 		return err
@@ -50,7 +55,23 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}
 
 	if !sigOnly {
-		return copyImage(srcRef, dstRef, force, remoteOpts...)
+		attSrcRef, err := ociremote.AttestationTag(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
+		if err != nil {
+			return err
+		}
+		refs = append(refs, attSrcRef)
+
+		sbomSrcRef, err := ociremote.SBOMTag(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
+		if err != nil {
+			return err
+		}
+		refs = append(refs, sbomSrcRef)
+
+		for _, ref := range refs {
+			if err := copyImage(ref, dstRepoRef.Tag(ref.Identifier()), force, remoteOpts...); err != nil {
+				fmt.Fprintf(os.Stderr, "WARNING: %s tag could not be found for an image %s, it might not exist, continuing anyway\n", ref.Identifier(), srcImg)
+			}
+		}
 	}
 
 	return nil
