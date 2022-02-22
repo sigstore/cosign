@@ -68,7 +68,8 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 	// each access.
 	ref = digest // nolint
 
-	att, err := static.NewAttestation(payload)
+	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
+	att, err := static.NewAttestation(payload, opts...)
 	if err != nil {
 		return err
 	}
