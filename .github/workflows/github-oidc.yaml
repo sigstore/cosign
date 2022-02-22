@@ -35,14 +35,14 @@ jobs:
       KO_PREFIX: ghcr.io/${{ github.repository }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.5
         with:
           go-version: '1.17.x'
 
       # Install tools.
-      - uses: sigstore/cosign-installer@116dc6872c0a067bcb78758f18955414cdbf918f #v1.4.1
-      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
+      - uses: sigstore/cosign-installer@179e0f15e70e22ca2e7254fc12d68a9fbab35614 # v2.0.1
+      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
 
       - name: Build and sign a container image
         run: |
