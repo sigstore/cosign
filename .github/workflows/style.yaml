@@ -20,7 +20,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
 
-      - uses: chainguard-dev/actions/gofmt@main
+      - uses: chainguard-dev/actions/gofmt@84c993eaf02da1c325854fb272a4df9184bd80fc # main
         with:
           args: -s
 
@@ -37,4 +37,4 @@ jobs:
       - name: Check out code
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
 
-      - uses: chainguard-dev/actions/goimports@main
+      - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
