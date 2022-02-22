@@ -33,22 +33,22 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
 
-      - uses: sigstore/cosign-installer@179e0f15e70e22ca2e7254fc12d68a9fbab35614 #v1.4.1
+      - uses: sigstore/cosign-installer@179e0f15e70e22ca2e7254fc12d68a9fbab35614 # v2.0.1
 
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.5
         with:
           go-version: '1.17.x'
 
       # will use the latest release available for ko
-      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
+      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
 
       - name: Install goimports
         run: go get golang.org/x/tools/cmd/goimports
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/auth@c6c22902f6af237edb96ede5f25a00e864589b2f #v0.4.4
+        uses: google-github-actions/auth@c6c22902f6af237edb96ede5f25a00e864589b2f # v0.4.4
         with:
           workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
           service_account: 'github-actions@projectsigstore.iam.gserviceaccount.com'
