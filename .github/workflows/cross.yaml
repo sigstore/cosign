@@ -13,8 +13,8 @@ jobs:
     name: build-1.16
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
+      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
         with:
           go-version: '1.16.x'
       - name: compile
@@ -42,11 +42,11 @@ jobs:
             COSIGN_PASSWORD: COSIGN_PASSWORD
     steps:
       - name: Install Go
-        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+        uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
         with:
           go-version: '1.17.x'
       - name: Checkout code
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
       - name: build cosign
         run: |
           make cosign && mv ./cosign ./${{matrix.COSIGN_TARGET}}

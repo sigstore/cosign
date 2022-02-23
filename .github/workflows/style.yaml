@@ -13,12 +13,12 @@ jobs:
 
     steps:
       - name: Set up Go
-        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+        uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
         with:
           go-version: 1.16.x
 
       - name: Check out code
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
 
       - uses: chainguard-dev/actions/gofmt@84c993eaf02da1c325854fb272a4df9184bd80fc # main
         with:
@@ -30,11 +30,11 @@ jobs:
 
     steps:
       - name: Set up Go
-        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+        uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
         with:
           go-version: 1.16.x
 
       - name: Check out code
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
 
       - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
