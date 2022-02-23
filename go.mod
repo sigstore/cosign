@@ -76,7 +76,7 @@ require (
 	go.opentelemetry.io/contrib v1.3.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
 	go.uber.org/atomic v1.9.0
-	go.uber.org/zap v1.20.0
+	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220213190939-1e6e3497d506
 	google.golang.org/protobuf v1.27.1
 	k8s.io/code-generator v0.22.5
