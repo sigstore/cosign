@@ -30,13 +30,11 @@ jobs:
               console.log('PR was not merged, skipping.');
               return;
             }
-
             if (!!context.payload.pull_request.milestone) {
               console.log('PR has existing milestone, skipping.');
               return;
             }
-
-            milestones = await github.issues.listMilestones({
+            milestones = await github.rest.issues.listMilestones({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
@@ -47,8 +45,7 @@ jobs:
               console.log('There are no milestones, skipping.');
               return;
             }
-
-            await github.issues.update({
+            await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
