@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/release-utils/version"
 
 	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
+	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
 )
 
 var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace that holds the public key for verification.")
@@ -66,6 +67,7 @@ func main() {
 		certificates.NewController,
 		NewValidatingAdmissionController,
 		NewMutatingAdmissionController,
+		clusterimagepolicy.NewController,
 	)
 }
 

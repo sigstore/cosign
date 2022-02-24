@@ -82,6 +82,7 @@ require (
 	k8s.io/code-generator v0.22.5
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
 	knative.dev/hack v0.0.0-20220118141833-9b2ed8471e30
+	knative.dev/hack/schema v0.0.0-20220224013837-e1785985d364
 )
 
 // This is temporary to address conflicting versions of Kubernetes libs in knative and GGCR.
