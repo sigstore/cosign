@@ -37,6 +37,22 @@ rules:
     # which requires we can Get the system namespace.
     resourceNames: ["cosign-system"]
 
+  # TODO: We will need this once we have conversion webhooks.
+  # # Allow the reconciliation of exactly our CRDs.
+  # # This is needed for us to patch in conversion webhook information.
+  # - apiGroups: ["apiextensions.k8s.io"]
+  #   resources: ["customresourcedefinitions"]
+  #   verbs: ["list", "watch"]
+  # - apiGroups: ["apiextensions.k8s.io"]
+  #   resources: ["customresourcedefinitions"]
+  #   verbs: ["get", "update"]
+  #   resourceNames: ["clusterimagepolicies.cosigned.sigstore.dev"]
+
+  # Allow reconciliation of the ClusterImagePolic CRDs.
+  - apiGroups: ["cosigned.sigstore.dev"]
+    resources: ["clusterimagepolicies"]
+    verbs: ["get", "list", "update", "watch"]
+
   # This is needed by k8schain to support fetching pull secrets attached to pod specs
   # or their service accounts.  If pull secrets aren't used, the "secrets" below can
   # be safely dropped, but the logic will fetch the service account to check for pull
