@@ -16,6 +16,9 @@ package signature
 
 import (
 	"context"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"os"
 	"testing"
 
@@ -108,5 +111,43 @@ func TestPublicKeyFromFileRef(t *testing.T) {
 func pass(s string) cosign.PassFunc {
 	return func(_ bool) ([]byte, error) {
 		return []byte(s), nil
+	}
+}
+
+func createCert(t *testing.T) *x509.Certificate {
+	t.Helper()
+	return &x509.Certificate{
+		Extensions: []pkix.Extension{
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}, Value: []byte("myIssuer")},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 4}, Value: []byte("myWorkflowName")},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 6}, Value: []byte("myWorkflowRef")},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 42}, Value: []byte("myCustomExtension")},
+		},
+	}
+}
+
+func TestCertExtensions(t *testing.T) {
+	t.Parallel()
+	cert := createCert(t)
+	exts := CertExtensions(cert)
+
+	if len(exts) != 4 {
+		t.Fatalf("Unexpected extension-count: %v", len(exts))
+	}
+
+	if val, ok := exts["issuer"]; !ok || val != "myIssuer" {
+		t.Fatal("CertExtension does not extract field 'issuer' correctly")
+	}
+
+	if val, ok := exts["githubWorkflowName"]; !ok || val != "myWorkflowName" {
+		t.Fatal("CertExtension does not extract field 'githubWorkflowName' correctly")
+	}
+
+	if val, ok := exts["githubWorkflowRef"]; !ok || val != "myWorkflowRef" {
+		t.Fatal("CertExtension does not extract field 'githubWorkflowRef' correctly")
+	}
+
+	if val, ok := exts["1.3.6.1.4.1.57264.1.42"]; !ok || val != "myCustomExtension" {
+		t.Fatal("CertExtension does not extract field '1.3.6.1.4.1.57264.1.42' correctly")
 	}
 }
