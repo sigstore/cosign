@@ -375,8 +375,11 @@ func TestImportPrivateKey(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = ImportKeyPair(f, pass("hello"))
+			keyBytes, err := ImportKeyPair(f, pass("hello"))
 			if err == nil || tc.expected == nil {
+				require.Equal(t, tc.expected, err)
+				// Loading the private key should also work.
+				_, err = LoadPrivateKey(keyBytes.PrivateBytes, []byte("hello"))
 				require.Equal(t, tc.expected, err)
 			} else {
 				require.Equal(t, tc.expected.Error(), err.Error())
