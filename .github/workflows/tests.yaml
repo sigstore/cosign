@@ -22,6 +22,9 @@ on:
 
 permissions: read-all
 
+env:
+  GO_VERSION: 1.17.x
+
 jobs:
   unit-tests:
     name: Run unit tests
@@ -50,7 +53,7 @@ jobs:
             ${{ runner.os }}-go-
       - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
         with:
-          go-version: '1.17.x'
+          go-version: ${{ env.GO_VERSION }}
       - name: Run Go tests
         run: go test ./...
       - name: Run Go tests w/ `-race`
@@ -81,7 +84,7 @@ jobs:
             ${{ runner.os }}-go-
       - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
         with:
-          go-version: '1.17.x'
+          go-version: ${{ env.GO_VERSION }}
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
       - name: setup kind cluster
         run: |
@@ -103,7 +106,7 @@ jobs:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
         with:
-          go-version: '1.17.x'
+          go-version: ${{ env.GO_VERSION }}
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
       - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed #v2.1.7
@@ -128,7 +131,7 @@ jobs:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
       - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
         with:
-          go-version: '1.17.x'
+          go-version: ${{ env.GO_VERSION }}
       - name: Install addlicense
         run: go install github.com/google/addlicense@latest
       - name: Check license headers
@@ -141,9 +144,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
+      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@c675eb70db3aa26b496bc4e64da320480338d41b # v2.5.2
+        uses: golangci/golangci-lint-action@c675eb70db3aa26b496bc4e64da320480338d41b # v3
         timeout-minutes: 5
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: latest
+          version: v1.44.2
