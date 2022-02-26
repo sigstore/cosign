@@ -45,7 +45,7 @@ import (
 
 var (
 	// Fulcio cert-extensions, documented here: https://github.com/sigstore/fulcio/blob/main/docs/oid-info.md
-	CertExtensionIssuer                   = "1.3.6.1.4.1.57264.1.1"
+	CertExtensionOIDCIssuer               = "1.3.6.1.4.1.57264.1.1"
 	CertExtensionGithubWorkflowTrigger    = "1.3.6.1.4.1.57264.1.2"
 	CertExtensionGithubWorkflowSha        = "1.3.6.1.4.1.57264.1.3"
 	CertExtensionGithubWorkflowName       = "1.3.6.1.4.1.57264.1.4"
@@ -53,7 +53,7 @@ var (
 	CertExtensionGithubWorkflowRef        = "1.3.6.1.4.1.57264.1.6"
 
 	CertExtensionMap = map[string]string{
-		CertExtensionIssuer:                   "issuer",
+		CertExtensionOIDCIssuer:               "oidcIssuer",
 		CertExtensionGithubWorkflowTrigger:    "githubWorkflowTrigger",
 		CertExtensionGithubWorkflowSha:        "githubWorkflowSha",
 		CertExtensionGithubWorkflowName:       "githubWorkflowName",
@@ -262,7 +262,7 @@ func CertSubject(c *x509.Certificate) string {
 
 func CertIssuerExtension(cert *x509.Certificate) string {
 	for _, ext := range cert.Extensions {
-		if ext.Id.String() == CertExtensionIssuer {
+		if ext.Id.String() == CertExtensionOIDCIssuer {
 			return string(ext.Value)
 		}
 	}

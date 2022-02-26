@@ -135,8 +135,8 @@ func TestCertExtensions(t *testing.T) {
 		t.Fatalf("Unexpected extension-count: %v", len(exts))
 	}
 
-	if val, ok := exts["issuer"]; !ok || val != "myIssuer" {
-		t.Fatal("CertExtension does not extract field 'issuer' correctly")
+	if val, ok := exts["oidcIssuer"]; !ok || val != "myIssuer" {
+		t.Fatal("CertExtension does not extract field 'oidcIssuer' correctly")
 	}
 
 	if val, ok := exts["githubWorkflowName"]; !ok || val != "myWorkflowName" {
