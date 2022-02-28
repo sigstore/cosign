@@ -51,7 +51,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab #v2.1.5
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run Go tests
@@ -82,7 +82,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab #v2.1.5
         with:
           go-version: ${{ env.GO_VERSION }}
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
@@ -104,7 +104,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.1.5
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab #v2.1.5
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Install addlicense
@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # v2.2.0
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: golangci-lint
