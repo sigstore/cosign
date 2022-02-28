@@ -126,6 +126,7 @@ clean:
 
 
 KOCACHE_PATH=/tmp/ko
+ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url=https://raw.githubusercontent.com/sigstore/cosign/main/README.md --image-label io.artifacthub.package.logo-url=https://raw.githubusercontent.com/sigstore/cosign/main/images/logo.svg --image-label io.artifacthub.package.license=Apache-2.0 --image-label io.artifacthub.package.vendor=sigstore --image-label io.artifacthub.package.version=0.1.0 --image-label io.artifacthub.package.name=cosign --image-label org.opencontainers.image.created=$(BUILD_DATE) --image-label org.opencontainers.image.description='Container signing verification and storage in an OCI registry'
 
 define create_kocache_path
   mkdir -p $(KOCACHE_PATH)
@@ -141,6 +142,7 @@ ko:
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
 
 	# cosigned
@@ -153,6 +155,7 @@ ko:
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/sget
 
 .PHONY: ko-local
@@ -161,6 +164,7 @@ ko-local:
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
 
 ##################
