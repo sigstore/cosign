@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const DefaultFulcioURL = "https://v1.fulcio.sigstore.dev"
+const DefaultFulcioURL = "https://fulcio.sigstore.dev"
 
 // FulcioOptions is the wrapper for Fulcio related options.
 type FulcioOptions struct {
