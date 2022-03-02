@@ -18,7 +18,7 @@ jobs:
           go-version: 1.16.x
 
       - name: Check out code
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
 
       - uses: chainguard-dev/actions/gofmt@84c993eaf02da1c325854fb272a4df9184bd80fc # main
         with:
@@ -35,6 +35,6 @@ jobs:
           go-version: 1.16.x
 
       - name: Check out code
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
 
       - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
