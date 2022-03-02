@@ -140,7 +140,7 @@ endef
 ko:
 	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
@@ -153,7 +153,7 @@ ko:
 
 	# sget
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/sget
@@ -162,7 +162,7 @@ ko:
 ko-local:
 	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths --bare \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
