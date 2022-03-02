@@ -147,7 +147,7 @@ ko:
 
 	# cosigned
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=${KO_PREFIX}/cosigned ko resolve --bare \
+	KO_DOCKER_REPO=$(KO_PREFIX)/cosigned ko resolve --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		--filename config/ > $(COSIGNED_YAML)
 
