@@ -44,7 +44,7 @@ echo "running tests"
 
 popd
 go build -o cosign ./cmd/cosign
-go test -tags=e2e -race ./...
+go test -tags=e2e -race $(go list ./... | grep -v third_party/)
 
 # Test `cosign dockerfile verify`
 export DISTROLESS_PUB_KEY=distroless.pub
