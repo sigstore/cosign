@@ -56,6 +56,12 @@ ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   "cosigned:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
+group "Update CRD Schema"
+
+go run $(dirname $0)/../cmd/schema/ dump ClusterImagePolicy \
+  | yq eval-all --inplace 'select(fileIndex == 0).spec.versions[0].schema.openAPIV3Schema = select(fileIndex == 1) | select(fileIndex == 0)' \
+  $(dirname $0)/../config/300-clusterimagepolicy.yaml -
+
 group "Update deps post-codegen"
 
 # Make sure our dependencies are up-to-date
