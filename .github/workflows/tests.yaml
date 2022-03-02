@@ -28,10 +28,14 @@ env:
 jobs:
   unit-tests:
     name: Run unit tests
+    permissions:
+      contents: read
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+    env:
+      OS: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
@@ -55,7 +59,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run Go tests
-        run: go test ./...
+        run: go test -covermode atomic -coverprofile coverage.txt ./...
+      - name: Upload Coverage Report
+        uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b # v2.1.0          
+        with:
+          env_vars: OS
       - name: Run Go tests w/ `-race`
         if: ${{ runner.os == 'Linux' }}
         run: go test -race ./...
