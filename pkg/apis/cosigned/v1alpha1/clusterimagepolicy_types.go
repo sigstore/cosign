@@ -59,20 +59,28 @@ type ImagePattern struct {
 // image.
 
 type Authority struct {
-	Key     KeyRef     `json:"key"`
-	Keyless KeylessRef `json:"keyless"`
-	Sources []Source   `json:"source"`
-	CTLog   TLog       `json:"ctlog"`
+	// +optional
+	Key *KeyRef `json:"key,omitempty"`
+	// +optional
+	Keyless *KeylessRef `json:"keyless,omitempty"`
+	// +optional
+	Sources *[]Source `json:"source,omitempty"`
+	// +optional
+	CTLog *TLog `json:"ctlog,omitempty"`
 }
 
 // This references a public verification key stored in
 // a secret in the cosign-system namespace.
+// A KeyRef must specify only one of SecretRef, Data or KMS
 type KeyRef struct {
-	SecretRef *v1.SecretReference `json:"secretref"`
+	// +optional
+	SecretRef *v1.SecretReference `json:"secretref,omitempty"`
 	// Data contains the inline public key
-	Data string `json:"data"`
+	// +optional
+	Data string `json:"data,omitempty"`
 	// KMS contains the KMS url of the public key
-	KMS string `json:"kms"`
+	// +optional
+	KMS string `json:"kms	,omitempty"`
 }
 
 // Source specifies the location of the signature
@@ -83,17 +91,19 @@ type Source struct {
 // TLog specifies the URL to a transparency log that holds
 // the signature and public key information
 type TLog struct {
-	URL string `json:"url"`
+	URL *apis.URL `json:"url,omitempty"`
 }
 
 // KeylessRef contains location of the validating certificate and the identities
 // against which to verify. KeylessRef will contain either the URL to the verifying
 // certificate, or it will contain the certificate data inline or in a secret.
 type KeylessRef struct {
-	URL        string             `json:"url"`
-	Identities []Identity         `json:"identities"`
-	CAKey      CAKey              `json:"ca-key"`
-	CAKeyRef   v1.SecretReference `json:"ca-keyref"`
+	// +optional
+	URL *apis.URL `json:"url,omitempty"`
+	// +optional
+	Identities *[]Identity `json:"identities,omitempty"`
+	// +optional
+	CAKey *KeyRef `json:"ca-key,omitempty"`
 }
 
 // Identity may contain the issue and/or the subject found in the transparency log.
@@ -101,14 +111,6 @@ type KeylessRef struct {
 type Identity struct {
 	Issuer  string `json:"issuer"`
 	Subject string `json:"subject"`
-}
-
-// CAKey contains inline public-key data
-type CAKey struct {
-	// Name is an arbitrary identifier for this key for human consumption
-	Name string `json:"name"`
-	// Data contains inline certificate data
-	Data string `json:"data"`
 }
 
 // ClusterImagePolicyList is a list of ClusterImagePolicy resources

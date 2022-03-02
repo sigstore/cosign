@@ -51,13 +51,13 @@ spec:
                           properties:
                             ctlog:
                               type: object
+                              required:
+                                - url
                               properties:
                                 url:
                                   type: string
                             key:
                               type: object
-                              required:
-                                - secretref
                               properties:
                                 data:
                                   description: Data contains the inline public key
@@ -81,20 +81,20 @@ spec:
                                   type: object
                                   properties:
                                     data:
-                                      description: Data contains inline certificate data
+                                      description: Data contains the inline public key
                                       type: string
-                                    name:
-                                      description: Name is an arbitrary identifier for this key for human consumption
+                                    kms:
+                                      description: KMS contains the KMS url of the public key
                                       type: string
-                                ca-keyref:
-                                  type: object
-                                  properties:
-                                    name:
-                                      description: Name is unique within a namespace to reference a secret resource.
-                                      type: string
-                                    namespace:
-                                      description: Namespace defines the space within which the secret name must be unique.
-                                      type: string
+                                    secretref:
+                                      type: object
+                                      properties:
+                                        name:
+                                          description: Name is unique within a namespace to reference a secret resource.
+                                          type: string
+                                        namespace:
+                                          description: Namespace defines the space within which the secret name must be unique.
+                                          type: string
                                 identities:
                                   type: array
                                   items:
