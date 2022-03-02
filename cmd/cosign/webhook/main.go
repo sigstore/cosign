@@ -37,6 +37,7 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
 )
@@ -67,6 +68,8 @@ func main() {
 		certificates.NewController,
 		NewValidatingAdmissionController,
 		NewMutatingAdmissionController,
+		NewPolicyValidatingAdmissionController,
+		NewPolicyMutatingAdmissionController,
 		clusterimagepolicy.NewController,
 	)
 }
@@ -138,5 +141,35 @@ func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 		// Whether to disallow unknown fields.
 		// We pass false because we're using partial schemas.
 		false,
+	)
+}
+
+func NewPolicyValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	return validation.NewAdmissionController(
+		ctx,
+		"validating.clusterimagepolicy.sigstore.dev",
+		"/validating",
+		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+			v1alpha1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1alpha1.ClusterImagePolicy{},
+		},
+		func(ctx context.Context) context.Context {
+			return ctx
+		},
+		true,
+	)
+}
+
+func NewPolicyMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	return defaulting.NewAdmissionController(
+		ctx,
+		"defaulting.clusterimagepolicy.sigstore.dev",
+		"/defaulting",
+		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+			v1alpha1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1alpha1.ClusterImagePolicy{},
+		},
+		func(ctx context.Context) context.Context {
+			return ctx
+		},
+		true,
 	)
 }
