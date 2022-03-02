@@ -303,8 +303,7 @@ Today, `cosign` has been tested and works against the following registries:
 * Digital Ocean Container Registry
 * Sonatype Nexus Container Registry
 * Alibaba Cloud Container Registry
-* Red Hat Quay Container Registry 3.6+
-  - Note: Cosign does not work with the Quay.io hosted service
+* Red Hat Quay Container Registry 3.6+ / Red Hat quay.io
 
 We aim for wide registry support. To `sign` images in registries which do not yet fully support [OCI media types](https://github.com/sigstore/cosign/blob/main/SPEC.md#object-types), one may need to use `COSIGN_DOCKER_MEDIA_TYPES` to fall back to legacy equivalents. For example:
 ```shell
