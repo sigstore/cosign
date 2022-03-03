@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -23,21 +22,98 @@ spec:
     plural: clusterimagepolicies
     singular: clusterimagepolicy
     categories:
-    - all
-    - sigstore
+      - all
+      - sigstore
     shortNames:
-    - cip
+      - cip
   scope: Cluster
   versions:
-  - name: v1alpha1
-    served: true
-    storage: true
-    schema:
-      openAPIV3Schema:
-        # This is the output of:
-        #   go run ./cmd/schema/ dump ClusterImagePolicy
-        type: object
-        properties:
-          spec:
-            description: Spec holds the desired state of the ClusterImagePolicy (from the client).
-            type: object
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              description: Spec holds the desired state of the ClusterImagePolicy (from the client).
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      authorities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            ctlog:
+                              type: object
+                              required:
+                                - url
+                              properties:
+                                url:
+                                  type: string
+                            key:
+                              type: object
+                              properties:
+                                data:
+                                  description: Data contains the inline public key
+                                  type: string
+                                kms:
+                                  description: KMS contains the KMS url of the public key
+                                  type: string
+                                secretRef:
+                                  type: object
+                                  properties:
+                                    name:
+                                      description: Name is unique within a namespace to reference a secret resource.
+                                      type: string
+                                    namespace:
+                                      description: Namespace defines the space within which the secret name must be unique.
+                                      type: string
+                            keyless:
+                              type: object
+                              properties:
+                                ca-key:
+                                  type: object
+                                  properties:
+                                    data:
+                                      description: Data contains the inline public key
+                                      type: string
+                                    kms:
+                                      description: KMS contains the KMS url of the public key
+                                      type: string
+                                    secretRef:
+                                      type: object
+                                      properties:
+                                        name:
+                                          description: Name is unique within a namespace to reference a secret resource.
+                                          type: string
+                                        namespace:
+                                          description: Namespace defines the space within which the secret name must be unique.
+                                          type: string
+                                identities:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      issuer:
+                                        type: string
+                                      subject:
+                                        type: string
+                                url:
+                                  type: string
+                            source:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  oci:
+                                    type: string
+                      glob:
+                        type: string
+                      regex:
+                        type: string
