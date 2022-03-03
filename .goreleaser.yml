@@ -232,6 +232,12 @@ signs:
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: checksum
+  - id: packages-keyless
+    signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    artifacts: package
 
 nfpms:
   - id: cosign
