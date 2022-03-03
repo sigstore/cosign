@@ -23,7 +23,6 @@ import (
 )
 
 func TestImagePatternValidation(t *testing.T) {
-
 	tests := []struct {
 		name        string
 		expectErr   bool
@@ -87,7 +86,7 @@ func TestKeyValidation(t *testing.T) {
 								{
 									Key: &KeyRef{
 										Data: "---some key data----",
-										KMS: "kms://key/path",
+										KMS:  "kms://key/path",
 									},
 								},
 							},
@@ -236,7 +235,7 @@ func TestKeylessValidation(t *testing.T) {
 	}
 }
 
-func TestAuthoritiesValidation(t *testing.T){
+func TestAuthoritiesValidation(t *testing.T) {
 	tests := []struct {
 		name        string
 		expectErr   bool
@@ -254,7 +253,7 @@ func TestAuthoritiesValidation(t *testing.T){
 							Regex: "//",
 							Authorities: []Authority{
 								{
-									Key: &KeyRef{},
+									Key:     &KeyRef{},
 									Keyless: &KeylessRef{},
 								},
 							},
@@ -263,7 +262,7 @@ func TestAuthoritiesValidation(t *testing.T){
 				},
 			},
 		},
-		
+
 		{
 			name:        "Should fail when keyless is empty: %v",
 			expectErr:   true,
@@ -272,14 +271,13 @@ func TestAuthoritiesValidation(t *testing.T){
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Regex:       "//",
 							Authorities: []Authority{},
 						},
 					},
 				},
 			},
 		},
-		
 	}
 	for _, test := range tests {
 		err := test.policy.Validate(context.TODO())
@@ -292,7 +290,7 @@ func TestAuthoritiesValidation(t *testing.T){
 	}
 }
 
-func TestIdentitiesValidation(t *testing.T){
+func TestIdentitiesValidation(t *testing.T) {
 	tests := []struct {
 		name        string
 		expectErr   bool

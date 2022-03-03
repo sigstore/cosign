@@ -48,11 +48,6 @@ func (in *Authority) DeepCopyInto(out *Authority) {
 		*out = new(TLog)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.CTLog != nil {
-		in, out := &in.CTLog, &out.CTLog
-		*out = new(TLog)
-		(*in).DeepCopyInto(*out)
-	}
 	return
 }
 
@@ -221,11 +216,6 @@ func (in *KeylessRef) DeepCopyInto(out *KeylessRef) {
 		in, out := &in.Identities, &out.Identities
 		*out = make([]Identity, len(*in))
 		copy(*out, *in)
-	}
-	if in.CAKey != nil {
-		in, out := &in.CAKey, &out.CAKey
-		*out = new(KeyRef)
-		(*in).DeepCopyInto(*out)
 	}
 	if in.CAKey != nil {
 		in, out := &in.CAKey, &out.CAKey

@@ -25,8 +25,8 @@ func (policy *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError
 	return policy.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.FieldError){
-	for i, image := range spec.Images{
+func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.FieldError) {
+	for i, image := range spec.Images {
 		errors = errors.Also(image.Validate(ctx)).ViaFieldIndex("images", i)
 	}
 	return
@@ -44,14 +44,14 @@ func (image *ImagePattern) Validate(ctx context.Context) (errors *apis.FieldErro
 	if len(image.Authorities) == 0 {
 		errors = errors.Also(apis.ErrGeneric("At least one authority should be defined")).ViaField("authorities")
 	}
-	for i, authority := range image.Authorities{
+	for i, authority := range image.Authorities {
 		errors = errors.Also(authority.Validate(ctx)).ViaFieldIndex("authorities", i)
 	}
 
 	return
 }
 
-func(authority *Authority) Validate(ctx context.Context)(errors *apis.FieldError){
+func (authority *Authority) Validate(ctx context.Context) (errors *apis.FieldError) {
 	if authority.Key == nil && authority.Keyless == nil {
 		return errors.Also(apis.ErrMissingOneOf("key", "keyless")).ViaField("authority")
 	}
@@ -69,7 +69,7 @@ func(authority *Authority) Validate(ctx context.Context)(errors *apis.FieldError
 	return
 }
 
-func (key *KeyRef)Validate(ctx context.Context) (errors *apis.FieldError) {
+func (key *KeyRef) Validate(ctx context.Context) (errors *apis.FieldError) {
 	if key.Data == "" && key.KMS == "" && key.SecretRef == nil {
 		return errors.Also(apis.ErrMissingOneOf("data", "kms", "secretref")).ViaField("key")
 	}
@@ -84,20 +84,20 @@ func (key *KeyRef)Validate(ctx context.Context) (errors *apis.FieldError) {
 	return
 }
 
-func (keyless *KeylessRef) Validate(ctx context.Context) (errors *apis.FieldError){
+func (keyless *KeylessRef) Validate(ctx context.Context) (errors *apis.FieldError) {
 	if keyless.URL == nil && keyless.Identities == nil && keyless.CAKey == nil {
 		return errors.Also(apis.ErrMissingOneOf("url", "identities", "ca-key")).ViaField("keyless")
 	}
 
-	if  keyless.URL != nil {
+	if keyless.URL != nil {
 		if keyless.CAKey != nil || keyless.Identities != nil {
 			return errors.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key")).ViaField("keyless")
 		}
-	}else if keyless.CAKey != nil && keyless.Identities != nil {
+	} else if keyless.CAKey != nil && keyless.Identities != nil {
 		return errors.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key")).ViaField("keyless")
 	}
 
-	if keyless.Identities != nil && len(keyless.Identities) == 0{
+	if keyless.Identities != nil && len(keyless.Identities) == 0 {
 		return errors.Also(apis.ErrGeneric("At least one identity must be provided")).ViaField("keyless")
 	}
 
@@ -107,7 +107,7 @@ func (keyless *KeylessRef) Validate(ctx context.Context) (errors *apis.FieldErro
 	return
 }
 
-func (identity *Identity) Validate(ctx context.Context) (errors *apis.FieldError){
+func (identity *Identity) Validate(ctx context.Context) (errors *apis.FieldError) {
 	if identity.Issuer == "" && identity.Subject == "" {
 		return apis.ErrMissingOneOf("issuer", "subject").ViaField("identity")
 	}

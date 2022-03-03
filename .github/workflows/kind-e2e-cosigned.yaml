@@ -190,6 +190,7 @@ jobs:
     - name: Run Cosigned Tests
       run: |
         ./test/e2e_test_cosigned.sh
+        ./test/e2e_test_policy_crd.sh
 
     - name: Collect diagnostics
       if: ${{ failure() }}

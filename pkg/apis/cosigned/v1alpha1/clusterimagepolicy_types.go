@@ -85,7 +85,6 @@ type Authority struct {
 
 // This references a public verification key stored in
 // a secret in the cosign-system namespace.
-
 // A KeyRef must specify only one of SecretRef, Data or KMS
 type KeyRef struct {
 	// +optional
