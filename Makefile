@@ -167,6 +167,12 @@ ko-local:
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
 
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		$(ARTIFACT_HUB_LABELS) \
+		github.com/sigstore/cosign/cmd/cosign/webhook
+
 ##################
 # help
 ##################

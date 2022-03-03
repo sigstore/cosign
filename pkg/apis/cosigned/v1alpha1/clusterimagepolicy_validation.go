@@ -45,7 +45,7 @@ func (image *ImagePattern) Validate(ctx context.Context) (errors *apis.FieldErro
 		errors = errors.Also(apis.ErrGeneric("At least one authority should be defined")).ViaField("authorities")
 	}
 	for i, authority := range image.Authorities{
-		errors = errors.Also(authority.Validate(ctx)).ViaFieldIndex("authoriries", i)
+		errors = errors.Also(authority.Validate(ctx)).ViaFieldIndex("authorities", i)
 	}
 
 	return

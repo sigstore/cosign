@@ -28,7 +28,7 @@ rules:
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
     verbs: ["get", "update"]
-    resourceNames: ["cosigned.sigstore.dev"]
+    resourceNames: ["cosigned.sigstore.dev", "validating.clusterimagepolicy.sigstore.dev", "defaulting.clusterimagepolicy.sigstore.dev"]
 
   - apiGroups: [""]
     resources: ["namespaces"]
