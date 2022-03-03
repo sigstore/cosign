@@ -1,3 +1,17 @@
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package v1alpha1
 
 import (
@@ -64,7 +78,7 @@ type Authority struct {
 	// +optional
 	Keyless *KeylessRef `json:"keyless,omitempty"`
 	// +optional
-	Sources *[]Source `json:"source,omitempty"`
+	Sources []Source `json:"source,omitempty"`
 	// +optional
 	CTLog *TLog `json:"ctlog,omitempty"`
 }
@@ -74,13 +88,13 @@ type Authority struct {
 // A KeyRef must specify only one of SecretRef, Data or KMS
 type KeyRef struct {
 	// +optional
-	SecretRef *v1.SecretReference `json:"secretref,omitempty"`
+	SecretRef *v1.SecretReference `json:"secretRef,omitempty"`
 	// Data contains the inline public key
 	// +optional
 	Data string `json:"data,omitempty"`
 	// KMS contains the KMS url of the public key
 	// +optional
-	KMS string `json:"kms	,omitempty"`
+	KMS string `json:"kms,omitempty"`
 }
 
 // Source specifies the location of the signature
@@ -101,7 +115,7 @@ type KeylessRef struct {
 	// +optional
 	URL *apis.URL `json:"url,omitempty"`
 	// +optional
-	Identities *[]Identity `json:"identities,omitempty"`
+	Identities []Identity `json:"identities,omitempty"`
 	// +optional
 	CAKey *KeyRef `json:"ca-key,omitempty"`
 }

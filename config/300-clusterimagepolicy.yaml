@@ -65,7 +65,7 @@ spec:
                                 kms:
                                   description: KMS contains the KMS url of the public key
                                   type: string
-                                secretref:
+                                secretRef:
                                   type: object
                                   properties:
                                     name:
@@ -86,7 +86,7 @@ spec:
                                     kms:
                                       description: KMS contains the KMS url of the public key
                                       type: string
-                                    secretref:
+                                    secretRef:
                                       type: object
                                       properties:
                                         name:

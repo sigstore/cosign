@@ -40,12 +40,8 @@ func (in *Authority) DeepCopyInto(out *Authority) {
 	}
 	if in.Sources != nil {
 		in, out := &in.Sources, &out.Sources
-		*out = new([]Source)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make([]Source, len(*in))
-			copy(*out, *in)
-		}
+		*out = make([]Source, len(*in))
+		copy(*out, *in)
 	}
 	if in.CTLog != nil {
 		in, out := &in.CTLog, &out.CTLog
@@ -218,12 +214,8 @@ func (in *KeylessRef) DeepCopyInto(out *KeylessRef) {
 	}
 	if in.Identities != nil {
 		in, out := &in.Identities, &out.Identities
-		*out = new([]Identity)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make([]Identity, len(*in))
-			copy(*out, *in)
-		}
+		*out = make([]Identity, len(*in))
+		copy(*out, *in)
 	}
 	if in.CAKey != nil {
 		in, out := &in.CAKey, &out.CAKey
