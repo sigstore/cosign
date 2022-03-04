@@ -32,7 +32,7 @@ $ git push origin ${RELEASE_TAG}
 
 ```shell
 $ gcloud builds submit --config <PATH_TO_CLOUDBUILD> \
-   --substitutions _GIT_TAG=${RELEASE_TAG},_TOOL_ORG=sigstore,_TOOL_REPO=cosign,_STORAGE_LOCATION=cosign-releases,_KEY_RING=<KEY_RING>,_KEY_NAME=<KEY_NAME> \
+   --substitutions _GIT_TAG=${RELEASE_TAG},_TOOL_ORG=sigstore,_TOOL_REPO=cosign,_STORAGE_LOCATION=cosign-releases,_KEY_RING=<KEY_RING>,_KEY_NAME=<KEY_NAME>,_GITHUB_USER=<GITHUB_USER> \
    --project <GCP_PROJECT>
 ```
 
@@ -48,6 +48,7 @@ Where:
 - `_KEY_NAME` key name of your  cosign key.
 - `_KEY_VERSION` version of the key stored in KMS. Default `1`.
 - `_KEY_LOCATION` location in GCP where the key is stored. Default `global`.
+- `_GITHUB_USER` GitHub user to authenticate for pushing to GHCR.
 
 
 3. When the job finish, without issues, you should be able to see in GitHub a draft release.

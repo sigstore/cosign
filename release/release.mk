@@ -49,3 +49,23 @@ sign-keyless-release: sign-keyless-cosign-release sign-keyless-cosigned-release 
 .PHONY: snapshot
 snapshot:
 	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist --timeout 60m
+
+####################
+# copy image to GHCR
+####################
+
+.PHONY: copy-cosign-signed-release-to-ghcr
+copy-cosign-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:$(GIT_VERSION)
+
+.PHONY: copy-cosigned-signed-release-to-ghcr
+copy-cosigned-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/cosigned:$(GIT_VERSION) $(GHCR_PREFIX)/cosigned:$(GIT_VERSION)
+
+.PHONY: copy-sget-signed-release-to-ghcr
+copy-sget-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/sget:$(GIT_VERSION) $(GHCR_PREFIX)/sget:$(GIT_VERSION)
+
+.PHONY: copy-signed-release-to-ghcr
+copy-signed-release-to-ghcr: copy-cosign-signed-release-to-ghcr copy-cosigned-signed-release-to-ghcr copy-sget-signed-release-to-ghcr
+	

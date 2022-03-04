@@ -65,6 +65,30 @@ steps:
       gcloud auth configure-docker \
       && make release
 
+- name: gcr.io/cloud-builders/docker
+  entrypoint: 'bash'
+  dir: "go/src/sigstore/fulcio"
+  env:
+  - "GOPATH=/workspace/go"
+  - "GOBIN=/workspace/bin"
+  - PROJECT_ID=${PROJECT_ID}
+  - KEY_LOCATION=${_KEY_LOCATION}
+  - KEY_RING=${_KEY_RING}
+  - KEY_NAME=${_KEY_NAME}
+  - KEY_VERSION=${_KEY_VERSION}
+  - GIT_TAG=${_GIT_TAG}
+  - KO_PREFIX=gcr.io/${PROJECT_ID}
+  - COSIGN_EXPERIMENTAL=true
+  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+  - GITHUB_USER=${_GITHUB_USER}
+  secretEnv:
+  - GITHUB_TOKEN
+  args:
+    - '-c'
+    - |
+      echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
+      && make copy-signed-release-to-ghcr
+
 availableSecrets:
   secretManager:
   - versionName: projects/${PROJECT_NUMBER}/secrets/GITHUB_TOKEN/versions/latest
@@ -96,3 +120,4 @@ substitutions:
   _KEY_NAME: 'honk-crypto'
   _KEY_VERSION: '1'
   _KEY_LOCATION: 'global'
+  _GITHUB_USER: 'placeholder'
