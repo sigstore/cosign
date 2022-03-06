@@ -50,6 +50,11 @@ func New(l v1.Layer, desc v1.Descriptor) oci.Signature {
 
 var _ oci.Signature = (*sigLayer)(nil)
 
+// Descriptor holds a reference from the manifest to one of its constituent elements.
+func (s *sigLayer) Descriptor() (v1.Descriptor, error) {
+	return s.desc, nil
+}
+
 // Annotations implements oci.Signature
 func (s *sigLayer) Annotations() (map[string]string, error) {
 	return s.desc.Annotations, nil

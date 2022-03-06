@@ -35,6 +35,9 @@ type Signatures interface {
 type Signature interface {
 	v1.Layer
 
+	// Descriptor holds a reference from the manifest to one of its constituent elements.
+	Descriptor() (v1.Descriptor, error)
+
 	// Annotations returns the annotations associated with this layer.
 	Annotations() (map[string]string, error)
 

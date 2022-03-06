@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 )
@@ -38,13 +37,21 @@ func mustDecode(s string) []byte {
 }
 
 func TestSignature(t *testing.T) {
-	layer, err := random.Layer(300 /* byteSize */, types.DockerLayer)
+	image, err := random.Image(300 /* byteSize */, 3)
+	if err != nil {
+		t.Fatalf("random.image() = %v", err)
+	}
+
+	layers, err := image.Layers()
 	if err != nil {
 		t.Fatalf("random.Layer() = %v", err)
 	}
+
+	layer := layers[0]
+
 	digest, err := layer.Digest()
 	if err != nil {
-		t.Fatalf("Digest() = %v", err)
+		t.Fatalf("layer.Digest() = %v", err)
 	}
 
 	tests := []struct {
@@ -59,6 +66,7 @@ func TestSignature(t *testing.T) {
 		wantChainErr   error
 		wantBundle     *bundle.RekorBundle
 		wantBundleErr  error
+		wantDescriptor v1.Descriptor
 	}{{
 		name: "just payload and signature",
 		l: &sigLayer{
@@ -222,6 +230,24 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 		},
 		wantSig:   "blah",
 		wantChain: 1,
+	}, {
+		name: "descriptor reference",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey: "foo",
+				},
+			},
+		},
+		wantSig: "foo",
+		wantDescriptor: v1.Descriptor{
+			Digest: digest,
+			Annotations: map[string]string{
+				sigkey: "foo",
+			},
+		},
 	}}
 
 	for _, test := range tests {
@@ -274,6 +300,11 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 				t.Errorf("Bundle() = %v, wanted %v", err, test.wantBundleErr)
 			case !cmp.Equal(got, test.wantBundle):
 				t.Errorf("Bundle() %s", cmp.Diff(got, test.wantBundle))
+			}
+
+			switch got, _ := test.l.Descriptor(); {
+			case !cmp.Equal(got, test.wantDescriptor) && (len(test.wantDescriptor.Annotations) > 0):
+				t.Errorf("Descriptor() %s", cmp.Diff(got, test.wantDescriptor))
 			}
 		})
 	}
