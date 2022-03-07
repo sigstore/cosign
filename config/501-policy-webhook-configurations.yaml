@@ -14,7 +14,6 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: defaulting.clusterimagepolicy.sigstore.dev
 webhooks:
   - admissionReviewVersions:
@@ -31,7 +30,6 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: validating.clusterimagepolicy.sigstore.dev
 webhooks:
   - admissionReviewVersions:
