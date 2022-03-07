@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/static"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
@@ -138,8 +138,8 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 	var newAnn map[string]string
 	if so.annotations != nil {
 		newAnn = copyAnnotations(so.annotations)
-		newAnn[static.SignatureAnnotationKey] = oldAnn[static.SignatureAnnotationKey]
-		for _, key := range []string{static.BundleAnnotationKey, static.CertificateAnnotationKey, static.ChainAnnotationKey} {
+		newAnn[ctypes.SignatureAnnotationKey] = oldAnn[ctypes.SignatureAnnotationKey]
+		for _, key := range []string{ctypes.BundleAnnotationKey, ctypes.CertificateAnnotationKey, ctypes.ChainAnnotationKey} {
 			if val, isSet := oldAnn[key]; isSet {
 				newAnn[key] = val
 			} else {
@@ -156,7 +156,7 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 		if err != nil {
 			return nil, err
 		}
-		newAnn[static.BundleAnnotationKey] = string(b)
+		newAnn[ctypes.BundleAnnotationKey] = string(b)
 	}
 
 	if so.cert != nil {
@@ -167,16 +167,16 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 		if err != nil {
 			return nil, err
 		}
-		newAnn[static.CertificateAnnotationKey] = string(so.cert)
+		newAnn[ctypes.CertificateAnnotationKey] = string(so.cert)
 		cert = certs[0]
 
-		delete(newAnn, static.ChainAnnotationKey)
+		delete(newAnn, ctypes.ChainAnnotationKey)
 		if so.chain != nil {
 			chain, err = cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(so.chain))
 			if err != nil {
 				return nil, err
 			}
-			newAnn[static.ChainAnnotationKey] = string(so.chain)
+			newAnn[ctypes.ChainAnnotationKey] = string(so.chain)
 		}
 
 		newSig.cert = cert

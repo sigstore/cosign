@@ -26,14 +26,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-)
-
-const (
-	sigkey    = "dev.cosignproject.cosign/signature"
-	certkey   = "dev.sigstore.cosign/certificate"
-	chainkey  = "dev.sigstore.cosign/chain"
-	BundleKey = "dev.sigstore.cosign/bundle"
 )
 
 type sigLayer struct {
@@ -71,16 +65,16 @@ func (s *sigLayer) Payload() ([]byte, error) {
 
 // Base64Signature implements oci.Signature
 func (s *sigLayer) Base64Signature() (string, error) {
-	b64sig, ok := s.desc.Annotations[sigkey]
+	b64sig, ok := s.desc.Annotations[ctypes.SignatureAnnotationKey]
 	if !ok {
-		return "", fmt.Errorf("signature layer %s is missing %q annotation", s.desc.Digest, sigkey)
+		return "", fmt.Errorf("signature layer %s is missing %q annotation", s.desc.Digest, ctypes.SignatureAnnotationKey)
 	}
 	return b64sig, nil
 }
 
 // Cert implements oci.Signature
 func (s *sigLayer) Cert() (*x509.Certificate, error) {
-	certPEM := s.desc.Annotations[certkey]
+	certPEM := s.desc.Annotations[ctypes.CertificateAnnotationKey]
 	if certPEM == "" {
 		return nil, nil
 	}
@@ -93,7 +87,7 @@ func (s *sigLayer) Cert() (*x509.Certificate, error) {
 
 // Chain implements oci.Signature
 func (s *sigLayer) Chain() ([]*x509.Certificate, error) {
-	chainPEM := s.desc.Annotations[chainkey]
+	chainPEM := s.desc.Annotations[ctypes.ChainAnnotationKey]
 	if chainPEM == "" {
 		return nil, nil
 	}
@@ -106,7 +100,7 @@ func (s *sigLayer) Chain() ([]*x509.Certificate, error) {
 
 // Bundle implements oci.Signature
 func (s *sigLayer) Bundle() (*bundle.RekorBundle, error) {
-	val := s.desc.Annotations[BundleKey]
+	val := s.desc.Annotations[ctypes.BundleAnnotationKey]
 	if val == "" {
 		return nil, nil
 	}

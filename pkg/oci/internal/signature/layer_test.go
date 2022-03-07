@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
 func mustDecode(s string) []byte {
@@ -66,7 +67,7 @@ func TestSignature(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey: "blah",
+					ctypes.SignatureAnnotationKey: "blah",
 				},
 			},
 		},
@@ -78,10 +79,10 @@ func TestSignature(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey:    "blah",
-					certkey:   "",
-					chainkey:  "",
-					BundleKey: "",
+					ctypes.SignatureAnnotationKey:    "blah",
+					ctypes.CertificateAnnotationKey:   "",
+					ctypes.ChainAnnotationKey:  "",
+					ctypes.BundleAnnotationKey: "",
 				},
 			},
 		},
@@ -94,7 +95,7 @@ func TestSignature(t *testing.T) {
 				Digest: digest,
 			},
 		},
-		wantSigErr: fmt.Errorf("signature layer %s is missing %q annotation", digest, sigkey),
+		wantSigErr: fmt.Errorf("signature layer %s is missing %q annotation", digest, ctypes.SignatureAnnotationKey),
 	}, {
 		name: "min plus bad bundle",
 		l: &sigLayer{
@@ -102,8 +103,8 @@ func TestSignature(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey:    "blah",
-					BundleKey: `}`,
+					ctypes.SignatureAnnotationKey:    "blah",
+					ctypes.BundleAnnotationKey: `}`,
 				},
 			},
 		},
@@ -116,8 +117,8 @@ func TestSignature(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey:  "blah",
-					certkey: `GARBAGE`,
+					ctypes.SignatureAnnotationKey:  "blah",
+					ctypes.CertificateAnnotationKey: `GARBAGE`,
 				},
 			},
 		},
@@ -130,8 +131,8 @@ func TestSignature(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey:   "blah",
-					chainkey: `GARBAGE`,
+					ctypes.SignatureAnnotationKey:   "blah",
+					ctypes.ChainAnnotationKey: `GARBAGE`,
 				},
 			},
 		},
@@ -144,10 +145,10 @@ func TestSignature(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey: "blah",
+					ctypes.SignatureAnnotationKey: "blah",
 					// This was extracted from gcr.io/distroless/static:nonroot on 2021/09/16.
 					// The Body has been removed for brevity
-					BundleKey: `{"SignedEntryTimestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE=","Payload":{"body":"REMOVED","integratedTime":1631646761,"logIndex":693591,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}}`,
+					ctypes.BundleAnnotationKey: `{"SignedEntryTimestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE=","Payload":{"body":"REMOVED","integratedTime":1631646761,"logIndex":693591,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}}`,
 				},
 			},
 		},
@@ -168,9 +169,9 @@ func TestSignature(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey: "blah",
+					ctypes.SignatureAnnotationKey: "blah",
 					// This was extracted from gcr.io/distroless/static:nonroot on 2021/09/16
-					certkey: `
+					ctypes.CertificateAnnotationKey: `
 -----BEGIN CERTIFICATE-----
 MIICjzCCAhSgAwIBAgITV2heiswW9YldtVEAu98QxDO8TTAKBggqhkjOPQQDAzAq
 MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx
@@ -200,9 +201,9 @@ uThR1Z6JuA21HwxtL3GyJ8UQZcEPOlTBV593HrSAwBhiCoY=
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey: "blah",
+					ctypes.SignatureAnnotationKey: "blah",
 					// This was extracted from gcr.io/distroless/static:nonroot on 2021/09/16
-					chainkey: `
+					ctypes.ChainAnnotationKey: `
 -----BEGIN CERTIFICATE-----
 MIIB+DCCAX6gAwIBAgITNVkDZoCiofPDsy7dfm6geLbuhzAKBggqhkjOPQQDAzAq
 MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx

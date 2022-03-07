@@ -24,7 +24,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
-	"github.com/sigstore/cosign/pkg/oci/static"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -77,7 +77,7 @@ LayerLoop:
 
 		// if there are any new annotations, then this isn't a duplicate
 		for a, value := range newAnnotations {
-			if a == static.SignatureAnnotationKey {
+			if a == ctypes.SignatureAnnotationKey {
 				continue // Ignore the signature key, we check it with custom logic below.
 			}
 			if val, ok := existingAnnotations[a]; !ok || val != value {

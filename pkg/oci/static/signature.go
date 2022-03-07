@@ -24,14 +24,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-)
-
-const (
-	SignatureAnnotationKey   = "dev.cosignproject.cosign/signature"
-	CertificateAnnotationKey = "dev.sigstore.cosign/certificate"
-	ChainAnnotationKey       = "dev.sigstore.cosign/chain"
-	BundleAnnotationKey      = "dev.sigstore.cosign/bundle"
 )
 
 // NewSignature constructs a new oci.Signature from the provided options.
@@ -70,7 +64,7 @@ func (l *staticLayer) Annotations() (map[string]string, error) {
 	for k, v := range l.opts.Annotations {
 		m[k] = v
 	}
-	m[SignatureAnnotationKey] = l.b64sig
+	m[ctypes.SignatureAnnotationKey] = l.b64sig
 	return m, nil
 }
 

@@ -47,8 +47,8 @@ func makeOptions(opts ...Option) (*options, error) {
 	}
 
 	if o.Cert != nil {
-		o.Annotations[CertificateAnnotationKey] = string(o.Cert)
-		o.Annotations[ChainAnnotationKey] = string(o.Chain)
+		o.Annotations[ctypes.CertificateAnnotationKey] = string(o.Cert)
+		o.Annotations[ctypes.ChainAnnotationKey] = string(o.Chain)
 	}
 
 	if o.Bundle != nil {
@@ -56,7 +56,7 @@ func makeOptions(opts ...Option) (*options, error) {
 		if err != nil {
 			return nil, err
 		}
-		o.Annotations[BundleAnnotationKey] = string(b)
+		o.Annotations[ctypes.BundleAnnotationKey] = string(b)
 	}
 
 	return o, nil

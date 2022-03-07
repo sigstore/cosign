@@ -32,7 +32,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 
-	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -45,7 +44,6 @@ const (
 	ECPrivateKeyPemType = "EC PRIVATE KEY"
 	// PEM-encoded PKCS #8 RSA, ECDSA or ED25519 private key
 	PrivateKeyPemType = "PRIVATE KEY"
-	BundleKey         = static.BundleAnnotationKey
 )
 
 // PassFunc is the function to be called to retrieve the signer password. If
