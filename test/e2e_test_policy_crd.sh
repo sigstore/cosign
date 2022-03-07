@@ -17,7 +17,7 @@
 set -ex
 
 echo '::group:: invalid policy: both glob and regex'
-if kubectl create -f ./testdata/cosigned/invalid/both-regex-and-pattern.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/both-regex-and-pattern.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -26,8 +26,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: invalid policy: key with multiple properties'
-EOF
-if kubectl create -f ./testdata/cosigned/invalid/keyref-with-multiple-properties.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/keyref-with-multiple-properties.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -37,7 +36,7 @@ echo '::endgroup::'
 
 
 echo '::group:: invalid policy: empty key'
-if kubectl create -f ./testdata/cosigned/invalid/empty-keyref.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/empty-keyref.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -46,7 +45,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: invalid policy: empty keyless ref'
-if kubectl create -f ./testdata/cosigned/invalid/empty-keyless-ref.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/empty-keyless-ref.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -55,7 +54,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: invalid policy: both valid key and keyless'
-if kubectl create -f ./testdata/cosigned/invalid/valid-keyref-and-keylessref.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/valid-keyref-and-keylessref.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -64,7 +63,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: invalid policy: empty key and keyless'
-if kubectl create -f ./testdata/cosigned/invalid/empty-keyref-and-keylessref.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/empty-keyref-and-keylessref.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -73,7 +72,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: invalid policy: empty identities'
-if kubectl create -f ./testdata/cosigned/invalid/keylessref-with-empty-identities.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/keylessref-with-empty-identities.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -82,7 +81,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: invalid policy: empty authorities'
-if kubectl create -f ./testdata/cosigned/invalid/keylessref-with-empty-authorities.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/keylessref-with-empty-authorities.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -91,7 +90,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: invalid policy: multiple valid properties in keyless ref'
-if kubectl create -f ./testdata/cosigned/invalid/keylessref-with-multiple-properties.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/invalid/keylessref-with-multiple-properties.yaml ; then
   echo Invalid policy should not be created!
   exit 1
 else
@@ -100,9 +99,9 @@ fi
 echo '::endgroup::'
 
 echo '::group:: Valid policy:'
-if kubectl create -f ./testdata/cosigned/valid/valid-policy.yaml ; then
+if kubectl create -f ./test/testdata/cosigned/valid/valid-policy.yaml ; then
   echo Valid prolicy was created
-  kubectl delete -f ./testdata/cosigned/valid/valid-policy.yaml
+  kubectl delete -f ./test/testdata/cosigned/valid/valid-policy.yaml
 else
   echo Valid policy should be created
   exit 1

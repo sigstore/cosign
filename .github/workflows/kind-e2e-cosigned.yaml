@@ -187,10 +187,13 @@ jobs:
         go install github.com/google/go-containerregistry/cmd/crane
         ./test/e2e_test_insecure_registry.sh
 
+    - name: Run Image Policy Tests
+      run: |
+        ./test/e2e_test_policy_crd.sh
+
     - name: Run Cosigned Tests
       run: |
         ./test/e2e_test_cosigned.sh
-        ./test/e2e_test_policy_crd.sh
 
     - name: Collect diagnostics
       if: ${{ failure() }}
