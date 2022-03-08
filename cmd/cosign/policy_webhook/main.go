@@ -61,7 +61,6 @@ func main() {
 	)
 }
 
-
 func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	return validation.NewAdmissionController(
 		ctx,

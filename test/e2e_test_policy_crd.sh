@@ -26,6 +26,7 @@ do
     echo "${i} rejected as expected"
   fi
 done
+echo '::endgroup:: Invalid policy test:'
 
 echo '::group:: Valid policy test:'
 for i in `ls ./test/testdata/cosigned/valid/`
@@ -38,4 +39,4 @@ do
   fi
 done
 
-echo '::endgroup::'
+echo '::endgroup:: Valid policy test:'
