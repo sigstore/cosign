@@ -55,12 +55,12 @@ func NewImagePoliciesConfigFromMap(data map[string]string) (*ImagePolicyConfig, 
 			continue
 		}
 		if v == "" {
-			return nil, fmt.Errorf("ConfigMap has an entry %q but no value", k)
+			return nil, fmt.Errorf("configmap has an entry %q but no value", k)
 		}
 		clusterImagePolicy := &v1alpha1.ClusterImagePolicySpec{}
 
 		if err := parseEntry(v, clusterImagePolicy); err != nil {
-			return nil, fmt.Errorf("Failed to parse the entry %q : %q : %s", k, v, err)
+			return nil, fmt.Errorf("failed to parse the entry %q : %q : %w", k, v, err)
 		}
 		ret.Policies[k] = *clusterImagePolicy
 	}
@@ -75,7 +75,7 @@ func NewImagePoliciesConfigFromConfigMap(config *corev1.ConfigMap) (*ImagePolicy
 func parseEntry(entry string, out interface{}) error {
 	j, err := yaml.YAMLToJSON([]byte(entry))
 	if err != nil {
-		return fmt.Errorf("ConfigMap's value could not be converted to JSON: %s : %v", err, entry)
+		return fmt.Errorf("config's value could not be converted to JSON: %w : %s", err, entry)
 	}
 	return json.Unmarshal(j, &out)
 }
@@ -84,7 +84,7 @@ func parseEntry(entry string, out interface{}) error {
 // the given Image.
 func (p *ImagePolicyConfig) GetAuthorities(image string) ([]v1alpha1.Authority, error) {
 	if p == nil {
-		return nil, errors.New("Config is nil")
+		return nil, errors.New("config is nil")
 	}
 
 	ret := []v1alpha1.Authority{}

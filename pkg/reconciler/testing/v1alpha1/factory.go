@@ -39,7 +39,7 @@ import (
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
 	"knative.dev/pkg/reconciler"
-	. "knative.dev/pkg/reconciler/testing"
+	reconcilertesting "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -52,8 +52,8 @@ const (
 type Ctor func(context.Context, *Listers, configmap.Watcher) controller.Reconciler
 
 // MakeFactory creates a reconciler factory with fake clients and controller created by `ctor`.
-func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factory {
-	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList) {
+func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) reconcilertesting.Factory {
+	return func(t *testing.T, r *reconcilertesting.TableRow) (controller.Reconciler, reconcilertesting.ActionRecorderList, reconcilertesting.EventList) {
 		ls := NewListers(r.Objects)
 
 		var ctx context.Context
@@ -94,7 +94,9 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 
 		// If the reconcilers is leader aware, then promote it.
 		if la, ok := c.(reconciler.LeaderAware); ok {
-			la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {})
+			if la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {}) != nil {
+				panic("failed to leader promote")
+			}
 		}
 
 		for _, reactor := range r.WithReactors {
@@ -105,14 +107,14 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 
 		// Validate all Create and Update operations
 		client.PrependReactor("create", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-			return ValidateCreates(ctx, action)
+			return reconcilertesting.ValidateCreates(ctx, action)
 		})
 		client.PrependReactor("update", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-			return ValidateUpdates(ctx, action)
+			return reconcilertesting.ValidateUpdates(ctx, action)
 		})
 
-		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}
-		eventList := EventList{Recorder: eventRecorder}
+		actionRecorderList := reconcilertesting.ActionRecorderList{dynamicClient, client, kubeClient}
+		eventList := reconcilertesting.EventList{Recorder: eventRecorder}
 
 		return c, actionRecorderList, eventList
 	}

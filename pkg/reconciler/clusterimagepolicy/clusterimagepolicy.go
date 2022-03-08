@@ -16,7 +16,7 @@ package clusterimagepolicy
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,9 +51,8 @@ var _ clusterimagepolicyreconciler.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
-
 	if !willItBlend(cip) {
-		return fmt.Errorf("I can't do that yet, only support keys inlined or KMS")
+		return errors.New("i can't do that yet, only support keys inlined or KMS")
 	}
 
 	// See if the CM holding configs exists

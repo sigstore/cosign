@@ -39,7 +39,9 @@ func NewScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 
 	for _, addTo := range clientSetSchemes {
-		addTo(scheme)
+		if addTo(scheme) != nil {
+			panic("Failed to add to scheme")
+		}
 	}
 	return scheme
 }
@@ -48,7 +50,9 @@ func NewListers(objs []runtime.Object) Listers {
 	scheme := runtime.NewScheme()
 
 	for _, addTo := range clientSetSchemes {
-		addTo(scheme)
+		if addTo(scheme) != nil {
+			panic("Failed to add to scheme")
+		}
 	}
 
 	ls := Listers{

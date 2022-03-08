@@ -36,7 +36,6 @@ import (
 )
 
 const (
-	testNS   = "test-namespace"
 	cipName  = "test-cip"
 	testKey  = "test-cip"
 	cipName2 = "test-cip-2"

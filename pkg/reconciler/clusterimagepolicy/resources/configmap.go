@@ -57,7 +57,7 @@ func CreatePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.ClusterIma
 	after.Data[cip.Name] = entry
 	jsonPatch, err := duck.CreatePatch(cm, after)
 	if err != nil {
-		return nil, fmt.Errorf("creating JSON patch: %v", err)
+		return nil, fmt.Errorf("creating JSON patch: %w", err)
 	}
 	if len(jsonPatch) == 0 {
 		return nil, nil

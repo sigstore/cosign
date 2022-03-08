@@ -107,5 +107,4 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
 	}
-
 }

@@ -20,5 +20,4 @@
 // This ConfigMap gets created by the Reconciler by combining all the
 // ClusterImagePolicy CR into a single ConfigMap so that the AdmissionController
 // only needs to deal with a single resource when validationg.
-
 package config
