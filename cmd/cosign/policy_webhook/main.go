@@ -36,8 +36,6 @@ import (
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
 )
 
-var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace that holds the public key for verification.")
-
 func main() {
 	opts := webhook.Options{
 		ServiceName: "webhook",
