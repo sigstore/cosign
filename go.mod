@@ -56,6 +56,7 @@ require (
 	k8s.io/utils v0.0.0-20220127004650-9b3446523e65
 	knative.dev/pkg v0.0.0-20220202132633-df430fa0dd96
 	sigs.k8s.io/release-utils v0.4.1-0.20220207182343-6dadf2228617
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -264,7 +265,6 @@ require (
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	k8s.io/klog/v2 v2.40.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
 require (

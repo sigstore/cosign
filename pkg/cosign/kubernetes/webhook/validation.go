@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
@@ -36,6 +37,20 @@ import (
 )
 
 func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) error {
+	// TODO(vaikas): No failures, just logging as to not interfere with the
+	// normal operation. Just starting to plumb things through here.
+	config := config.FromContext(ctx)
+	if config != nil {
+		authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
+		if err != nil {
+			logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
+		} else {
+			for _, authority := range authorities {
+				logging.FromContext(ctx).Infof("TODO: Check authority for image: %s : Authority: %+v ", ref.Name(), authority)
+			}
+		}
+	}
+
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
 		sps, err := validSignatures(ctx, ref, nil /* verifier */, opts...)

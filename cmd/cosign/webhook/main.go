@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
@@ -37,6 +38,7 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/cosign/pkg/apis/config"
 	cwebhook "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
 )
@@ -85,6 +87,9 @@ var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 }
 
 func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	// Decorate contexts with the current state of the config.
+	store := config.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
 	validator := cwebhook.NewValidator(ctx, *secretName)
 
 	return validation.NewAdmissionController(ctx,
@@ -99,6 +104,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
+			ctx = store.ToContext(ctx)
 			ctx = duckv1.WithPodValidator(ctx, validator.ValidatePod)
 			ctx = duckv1.WithPodSpecValidator(ctx, validator.ValidatePodSpecable)
 			ctx = duckv1.WithCronJobValidator(ctx, validator.ValidateCronJob)
@@ -115,6 +121,10 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 }
 
 func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	// Decorate contexts with the current state of the config.
+	store := config.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+
 	validator := cwebhook.NewValidator(ctx, *secretName)
 
 	return defaulting.NewAdmissionController(ctx,
@@ -129,6 +139,7 @@ func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
+			ctx = store.ToContext(ctx)
 			ctx = duckv1.WithPodDefaulter(ctx, validator.ResolvePod)
 			ctx = duckv1.WithPodSpecDefaulter(ctx, validator.ResolvePodSpecable)
 			ctx = duckv1.WithCronJobDefaulter(ctx, validator.ResolveCronJob)
