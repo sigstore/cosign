@@ -95,6 +95,19 @@ The following URIs are valid:
 - Alias ARN: `awskms:///arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias`
 - Alias ARN with endpoint: `awskms://localhost:4566/arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias`
 
+Example:
+
+```shell
+$ export AWS_REGION=us-east-1
+$ export AWS_CMK_ID=$(aws kms create-key --customer-master-key-spec RSA_4096 \
+                                         --key-usage SIGN_VERIFY \
+                                         --description "Cosign Signature Key Pair" \
+                                         --query KeyMetadata.KeyId --output text)
+
+$ cosign sign --key awskms:///${AWS_CMK_ID} docker.io/davivcgarcia/hello-world:latest
+$ cosign verify --key awskms:///${AWS_CMK_ID} docker.io/davivcgarcia/hello-world:latest | jq .
+```
+
 ### GCP
 
 GCP KMS keys can be used in `cosign` for signing and verification.
