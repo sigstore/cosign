@@ -28,7 +28,7 @@ import (
 const (
 	// ImagePoliciesConfigName is the name of ConfigMap created by the
 	// reconciler and consumed by the admission webhook.
-	ImagePoliciesConfigName = "image-policies"
+	ImagePoliciesConfigName = "config-image-policies"
 )
 
 type ImagePolicyConfig struct {
@@ -62,7 +62,6 @@ func NewImagePoliciesConfigFromMap(data map[string]string) (*ImagePolicyConfig, 
 		if err := parseEntry(v, clusterImagePolicy); err != nil {
 			return nil, fmt.Errorf("Failed to parse the entry %q : %q : %s", k, v, err)
 		}
-		fmt.Printf("GOT CIP: %+v\n", clusterImagePolicy)
 		ret.Policies[k] = *clusterImagePolicy
 	}
 	return ret, nil

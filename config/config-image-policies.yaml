@@ -15,10 +15,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: image-policies
+  name: config-image-policies
   namespace: cosign-system
-  labels:
-    cosigned.sigstore.dev/release: devel
 
 data:
   _example: |

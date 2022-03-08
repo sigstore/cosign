@@ -121,10 +121,6 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 }
 
 func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	// Decorate contexts with the current state of the config.
-	store := config.NewStore(logging.FromContext(ctx).Named("config-store"))
-	store.WatchConfigs(cmw)
-
 	validator := cwebhook.NewValidator(ctx, *secretName)
 
 	return defaulting.NewAdmissionController(ctx,
@@ -139,7 +135,6 @@ func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
-			ctx = store.ToContext(ctx)
 			ctx = duckv1.WithPodDefaulter(ctx, validator.ResolvePod)
 			ctx = duckv1.WithPodSpecDefaulter(ctx, validator.ResolvePodSpecable)
 			ctx = duckv1.WithCronJobDefaulter(ctx, validator.ResolveCronJob)
