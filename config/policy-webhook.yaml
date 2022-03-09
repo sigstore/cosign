@@ -84,7 +84,7 @@ spec:
             port: 8443
             httpHeaders:
             - name: k-kubelet-probe
-              value: "webhook"
+              value: "policy-webhook"
         livenessProbe: *probe
 
       # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently

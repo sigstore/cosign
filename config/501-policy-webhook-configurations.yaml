@@ -20,7 +20,7 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: webhook
+        name: policy-webhook
         namespace: cosign-system
     failurePolicy: Fail
     matchPolicy: Equivalent
@@ -36,9 +36,16 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: webhook
+        name: policy-webhook
         namespace: cosign-system
     failurePolicy: Fail
     matchPolicy: Equivalent
     name: validating.clusterimagepolicy.sigstore.dev
     sideEffects: None
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: policy-webhook-certs
+  namespace: cosign-system
+# The data is populated at install time.

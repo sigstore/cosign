@@ -38,9 +38,9 @@ import (
 
 func main() {
 	opts := webhook.Options{
-		ServiceName: "webhook",
+		ServiceName: "policy-webhook",
 		Port:        8443,
-		SecretName:  "webhook-certs",
+		SecretName:  "policy-webhook-certs",
 	}
 	ctx := webhook.WithOptions(signals.NewContext(), opts)
 
@@ -54,12 +54,12 @@ func main() {
 	sharedmain.MainWithContext(ctx, "clusterimagepolicy",
 		certificates.NewController,
 		clusterimagepolicy.NewController,
-		NewValidatingAdmissionController,
-		NewMutatingAdmissionController,
+		NewPolicyValidatingAdmissionController,
+		NewPolicyMutatingAdmissionController,
 	)
 }
 
-func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+func NewPolicyValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	return validation.NewAdmissionController(
 		ctx,
 		"validating.clusterimagepolicy.sigstore.dev",
@@ -74,7 +74,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	)
 }
 
-func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+func NewPolicyMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	return defaulting.NewAdmissionController(
 		ctx,
 		"defaulting.clusterimagepolicy.sigstore.dev",
