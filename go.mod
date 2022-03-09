@@ -275,7 +275,7 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220219142810-1571d7fdc46e
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/go-hclog v1.1.0
+	github.com/hashicorp/go-hclog v1.2.0
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.4.3
