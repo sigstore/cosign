@@ -45,7 +45,6 @@ func TestStoreLoadWithContext(t *testing.T) {
 		expected, _ := NewImagePoliciesConfigFromConfigMap(imagePolicies)
 		if diff := cmp.Diff(expected, config.ImagePolicyConfig, ignoreStuff...); diff != "" {
 			t.Error("Unexpected defaults config (-want, +got):", diff)
-			t.Fatal("Unexpected defaults config (-want, +got):", diff)
 		}
 	})
 }

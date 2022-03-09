@@ -30,9 +30,11 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/system"
 
 	. "github.com/sigstore/cosign/pkg/reconciler/testing/v1alpha1"
 	. "knative.dev/pkg/reconciler/testing"
+	_ "knative.dev/pkg/system/testing"
 )
 
 const (
@@ -55,110 +57,109 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 )
 
 func TestReconcile(t *testing.T) {
-	table := TableTest{
-		{
-			Name: "bad workqueue key",
-			// Make sure Reconcile handles bad keys.
-			Key: "too/many/parts",
-		}, {
-			Name: "key not found",
-			// Make sure Reconcile handles good keys that don't exist.
-			Key: "foo/not-found",
-		}, {
-			Name: "ClusterImagePolicy not found",
-			Key:  testKey,
-		}, {
-			Name: "ClusterImagePolicy is being deleted",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewClusterImagePolicy(cipName,
-					WithClusterImagePolicyDeletionTimestamp),
-			},
-		}, {
-			Name: "ClusterImagePolicy with glob and inline key data",
-			Key:  testKey,
+	table := TableTest{{
+		Name: "bad workqueue key",
+		// Make sure Reconcile handles bad keys.
+		Key: "too/many/parts",
+	}, {
+		Name: "key not found",
+		// Make sure Reconcile handles good keys that don't exist.
+		Key: "foo/not-found",
+	}, {
+		Name: "ClusterImagePolicy not found",
+		Key:  testKey,
+	}, {
+		Name: "ClusterImagePolicy is being deleted",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithClusterImagePolicyDeletionTimestamp),
+		},
+	}, {
+		Name: "ClusterImagePolicy with glob and inline key data",
+		Key:  testKey,
 
-			SkipNamespaceValidation: true, // Cluster scoped
-			Objects: []runtime.Object{
-				NewClusterImagePolicy(cipName,
-					WithImagePattern(v1alpha1.ImagePattern{
-						Glob: glob,
-						Authorities: []v1alpha1.Authority{
-							{
-								Key: &v1alpha1.KeyRef{
-									Data: inlineKeyData,
-								},
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+					Authorities: []v1alpha1.Authority{
+						{
+							Key: &v1alpha1.KeyRef{
+								Data: inlineKeyData,
 							},
 						},
-					})),
-			},
-			WantCreates: []runtime.Object{
-				makeConfigMap(cipName),
-			},
-		}, {
-			Name: "ClusterImagePolicy with glob and inline key data, already exists, no patch",
-			Key:  testKey,
+					},
+				})),
+		},
+		WantCreates: []runtime.Object{
+			makeConfigMap(cipName),
+		},
+	}, {
+		Name: "ClusterImagePolicy with glob and inline key data, already exists, no patch",
+		Key:  testKey,
 
-			SkipNamespaceValidation: true, // Cluster scoped
-			Objects: []runtime.Object{
-				NewClusterImagePolicy(cipName,
-					WithImagePattern(v1alpha1.ImagePattern{
-						Glob: glob,
-						Authorities: []v1alpha1.Authority{
-							{
-								Key: &v1alpha1.KeyRef{
-									Data: inlineKeyData,
-								},
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+					Authorities: []v1alpha1.Authority{
+						{
+							Key: &v1alpha1.KeyRef{
+								Data: inlineKeyData,
 							},
 						},
-					})),
-				makeConfigMap(cipName),
-			},
-		}, {
-			Name: "ClusterImagePolicy with glob and inline key data, needs a patch",
-			Key:  testKey,
+					},
+				})),
+			makeConfigMap(cipName),
+		},
+	}, {
+		Name: "ClusterImagePolicy with glob and inline key data, needs a patch",
+		Key:  testKey,
 
-			SkipNamespaceValidation: true, // Cluster scoped
-			Objects: []runtime.Object{
-				NewClusterImagePolicy(cipName,
-					WithImagePattern(v1alpha1.ImagePattern{
-						Glob: glob,
-						Authorities: []v1alpha1.Authority{
-							{
-								Key: &v1alpha1.KeyRef{
-									Data: inlineKeyData,
-								},
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+					Authorities: []v1alpha1.Authority{
+						{
+							Key: &v1alpha1.KeyRef{
+								Data: inlineKeyData,
 							},
 						},
-					})),
-				makeDifferentConfigMap(cipName),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				makePatch(SystemNamespace, config.ImagePoliciesConfigName, replaceCIPPatch),
-			},
-		}, {
-			Name: "ClusterImagePolicy with glob and KMS key data, added as a patch",
-			Key:  testKey2,
+					},
+				})),
+			makeDifferentConfigMap(cipName),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makePatch(system.Namespace(), config.ImagePoliciesConfigName, replaceCIPPatch),
+		},
+	}, {
+		Name: "ClusterImagePolicy with glob and KMS key data, added as a patch",
+		Key:  testKey2,
 
-			SkipNamespaceValidation: true, // Cluster scoped
-			Objects: []runtime.Object{
-				NewClusterImagePolicy(cipName2,
-					WithImagePattern(v1alpha1.ImagePattern{
-						Glob: glob,
-						Authorities: []v1alpha1.Authority{
-							{
-								Key: &v1alpha1.KeyRef{
-									Data: kms,
-								},
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName2,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+					Authorities: []v1alpha1.Authority{
+						{
+							Key: &v1alpha1.KeyRef{
+								Data: kms,
 							},
 						},
-					})),
-				makeConfigMap(cipName), // Make the existing configmap
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				makePatch(SystemNamespace, config.ImagePoliciesConfigName, addCIP2Patch),
-			},
-		}, {}}
+					},
+				})),
+			makeConfigMap(cipName), // Make the existing configmap
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makePatch(system.Namespace(), config.ImagePoliciesConfigName, addCIP2Patch),
+		},
+	}, {}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
@@ -180,7 +181,7 @@ func TestReconcile(t *testing.T) {
 func makeConfigMap(cipName string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: SystemNamespace,
+			Namespace: system.Namespace(),
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{
@@ -193,7 +194,7 @@ func makeConfigMap(cipName string) *corev1.ConfigMap {
 func makeDifferentConfigMap(cipName string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: SystemNamespace,
+			Namespace: system.Namespace(),
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{

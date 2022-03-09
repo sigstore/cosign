@@ -19,19 +19,22 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
-	secretinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/secret"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
+
+	// Use the informer factory that restricts only to our namespace. This way
+	// we won't have to grant too broad RBAC rights, nor have trouble starting
+	// up if we don't have them.
+	nsinformerfactory "knative.dev/pkg/injection/clients/namespacedkube/informers/factory"
+
 	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/system"
 
 	"github.com/sigstore/cosign/pkg/apis/config"
 	clusterimagepolicyinformer "github.com/sigstore/cosign/pkg/client/injection/informers/cosigned/v1alpha1/clusterimagepolicy"
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
 )
-
-const SystemNamespace = "cosign-system"
 
 // NewController creates a Reconciler and returns the result of NewImpl.
 func NewController(
@@ -39,12 +42,17 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	clusterimagepolicyInformer := clusterimagepolicyinformer.Get(ctx)
-	cmInformer := configmapinformer.Get(ctx)
-	secretInformer := secretinformer.Get(ctx)
+	nsSecretInformer := nsinformerfactory.Get(ctx).Core().V1().Secrets()
+	nsConfigMapInformer := nsinformerfactory.Get(ctx).Core().V1().ConfigMaps()
+
+	// Start the informers we got from the SharedInformerFactory above because
+	// injection doesn't do that for us since we're injecting the Factory and
+	// not the informers.
+	controller.StartInformers(ctx.Done(), nsSecretInformer.Informer(), nsConfigMapInformer.Informer())
 
 	r := &Reconciler{
-		secretlister:    secretInformer.Lister(),
-		configmaplister: cmInformer.Lister(),
+		secretlister:    nsSecretInformer.Lister(),
+		configmaplister: nsConfigMapInformer.Lister(),
 		kubeclient:      kubeclient.Get(ctx),
 	}
 	impl := clusterimagepolicyreconciler.NewImpl(ctx, r)
@@ -63,9 +71,12 @@ func NewController(
 		impl.GlobalResync(clusterimagepolicyInformer.Informer())
 	}
 	// Resync on only ConfigMap changes that pertain to the one I care about.
-	cmInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	// We could also fetch/construct the store and use CM watcher for it, but
+	// since we need a lister for it anyways in the reconciler, just set up
+	// the watch here.
+	nsConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
-			pkgreconciler.NamespaceFilterFunc(SystemNamespace),
+			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
 			pkgreconciler.NameFilterFunc(config.ImagePoliciesConfigName)),
 		Handler: controller.HandleAll(grCb),
 	})

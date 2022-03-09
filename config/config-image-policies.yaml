@@ -25,41 +25,5 @@ data:
     #    EXAMPLE CONFIGURATION     #
     #                              #
     ################################
-    cluster-image-policy-0: |
-      images:
-      - glob: rando
-        authorities:
-        - key:
-            data: inlinedata here
-        - key:
-            kms: whatevs
-        regex: stuff
-    cluster-image-policy-1: |
-      images:
-      - glob: rando*
-        authorities:
-        - key:
-            data: otherinline here
-    cluster-image-policy-2: |
-      images:
-      - glob: rando3
-        authorities:
-        - keyless:
-            ca-key:
-              data: cakey chilling here
-            url: http://keylessurl.here
-            identities:
-            - issuer: issuer
-              subject: subject
-    cluster-image-policy-3: |
-      images:
-      - glob: inlinecert
-        authorities:
-        - key:
-            data: |-
-              -----BEGIN PUBLIC KEY-----
-              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J
-              RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
-              -----END PUBLIC KEY-----
     cluster-image-policy-json: "{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\",\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}]}"
 

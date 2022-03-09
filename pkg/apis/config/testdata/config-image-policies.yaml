@@ -35,7 +35,6 @@ data:
             data: inlinedata here
         - key:
             kms: whatevs
-        regex: stuff
     cluster-image-policy-1: |
       images:
       - glob: rando*

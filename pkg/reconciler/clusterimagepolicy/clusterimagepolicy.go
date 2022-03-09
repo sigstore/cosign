@@ -30,6 +30,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
+	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 )
 
@@ -54,32 +55,31 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 	if !willItBlend(cip) {
 		return errors.New("i can't do that yet, only support keys inlined or KMS")
 	}
-
 	// See if the CM holding configs exists
-	existing, err := r.configmaplister.ConfigMaps(SystemNamespace).Get(config.ImagePoliciesConfigName)
+	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
 			logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
 			return err
 		}
 		// Does not exist, create it.
-		cm, err := resources.NewConfigMap(SystemNamespace, config.ImagePoliciesConfigName, cip)
+		cm, err := resources.NewConfigMap(system.Namespace(), config.ImagePoliciesConfigName, cip)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("Failed to construct configmap: %v", err)
 			return err
 		}
-		_, err = r.kubeclient.CoreV1().ConfigMaps(SystemNamespace).Create(ctx, cm, metav1.CreateOptions{})
+		_, err = r.kubeclient.CoreV1().ConfigMaps(system.Namespace()).Create(ctx, cm, metav1.CreateOptions{})
 		return err
 	}
 
 	// Check if we need to update the configmap or not.
-	patchBytes, err := resources.CreatePatch(SystemNamespace, config.ImagePoliciesConfigName, existing.DeepCopy(), cip)
+	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, existing.DeepCopy(), cip)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to create patch: %v", err)
 		return err
 	}
 	if len(patchBytes) > 0 {
-		_, err = r.kubeclient.CoreV1().ConfigMaps(SystemNamespace).Patch(ctx, config.ImagePoliciesConfigName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
+		_, err = r.kubeclient.CoreV1().ConfigMaps(system.Namespace()).Patch(ctx, config.ImagePoliciesConfigName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
 		return err
 	}
 	return nil
