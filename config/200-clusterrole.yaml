@@ -51,7 +51,7 @@ rules:
   # Allow reconciliation of the ClusterImagePolic CRDs.
   - apiGroups: ["cosigned.sigstore.dev", "validating.clusterimagepolicy.sigstore.dev", "defaulting.clusterimagepolicy.sigstore.dev"]
     resources: ["clusterimagepolicies"]
-    verbs: ["get", "list", "update", "watch"]
+    verbs: ["get", "list", "update", "watch", "patch"]
 
   # This is needed by k8schain to support fetching pull secrets attached to pod specs
   # or their service accounts.  If pull secrets aren't used, the "secrets" below can

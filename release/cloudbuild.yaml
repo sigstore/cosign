@@ -32,17 +32,17 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.5.2@sha256:d982455076bddb20064d619bc0f69556f37cdc88dc93735a6093d3552dc42228'
+- name: 'gcr.io/projectsigstore/cosign:v1.6.0@sha256:b667002156c4bf9fedd9273f689b800bb5c341660e710e3bbac981c9795423d9'
   dir: "go/src/sigstore/cosign"
   env:
   - COSIGN_EXPERIMENTAL=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.7-1@sha256:81edcadbc00ef2519943fac6a2f18a546bf85e4b2d87533e78abd3486f87f9f6'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.8-0@sha256:b5b14c6a61099af5a69864f242766a0dca978d2aea97e311d051ee4f4b7d19ba'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.7-1@sha256:81edcadbc00ef2519943fac6a2f18a546bf85e4b2d87533e78abd3486f87f9f6
+- name: ghcr.io/gythialy/golang-cross:v1.17.8-0@sha256:b5b14c6a61099af5a69864f242766a0dca978d2aea97e311d051ee4f4b7d19ba
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -64,6 +64,30 @@ steps:
     - |
       gcloud auth configure-docker \
       && make release
+
+- name: gcr.io/cloud-builders/docker
+  entrypoint: 'bash'
+  dir: "go/src/sigstore/fulcio"
+  env:
+  - "GOPATH=/workspace/go"
+  - "GOBIN=/workspace/bin"
+  - PROJECT_ID=${PROJECT_ID}
+  - KEY_LOCATION=${_KEY_LOCATION}
+  - KEY_RING=${_KEY_RING}
+  - KEY_NAME=${_KEY_NAME}
+  - KEY_VERSION=${_KEY_VERSION}
+  - GIT_TAG=${_GIT_TAG}
+  - KO_PREFIX=gcr.io/${PROJECT_ID}
+  - COSIGN_EXPERIMENTAL=true
+  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+  - GITHUB_USER=${_GITHUB_USER}
+  secretEnv:
+  - GITHUB_TOKEN
+  args:
+    - '-c'
+    - |
+      echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
+      && make copy-signed-release-to-ghcr
 
 availableSecrets:
   secretManager:
@@ -96,3 +120,4 @@ substitutions:
   _KEY_NAME: 'honk-crypto'
   _KEY_VERSION: '1'
   _KEY_LOCATION: 'global'
+  _GITHUB_USER: 'placeholder'

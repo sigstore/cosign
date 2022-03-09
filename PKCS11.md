@@ -1,7 +1,7 @@
 # PKCS11 Tokens
 
 The `cosign` command line tool optionally supports PKCS11 tokens for signing.
-This support is enabled through the [crypto11](https://github.com/ThalesIgnite/crypto11) and the [pkcs11](https://github.com/miekg/pkcs11) libraries, which are not included in the standard release. Use [`make cosign-pkcs11key`](https://github.com/sigstore/cosign/blob/a8d1cc1132d4a019a62ff515b9375c8c5b98a5c5/Makefile#L52), or `go build -tags=pkcs11key`, to build `cosign` with support for PKCS11 tokens.
+This support is enabled through the [crypto11](https://github.com/ThalesIgnite/crypto11) and the [pkcs11](https://github.com/miekg/pkcs11) libraries, which are not included in the standard release. Use [`make cosign-pivkey-pkcs11key`](https://github.com/sigstore/cosign/blob/a8d1cc1132d4a019a62ff515b9375c8c5b98a5c5/Makefile#L52), or `go build -tags=pkcs11key`, to build `cosign` with support for PKCS11 tokens.
 
 ## Quick Start
 

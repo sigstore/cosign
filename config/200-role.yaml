@@ -27,3 +27,10 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+
+  # This is needed to create / patch ConfigMap that is created by the reconciler
+  # to consolidate various CIP configuration into a policy ConfigMap.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["config-image-policies"]
+    verbs: ["get", "list", "create", "update", "patch", "watch"]
