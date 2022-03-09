@@ -153,7 +153,7 @@ func TestReconcile(t *testing.T) {
 			makeDifferentConfigMap(),
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
-			makePatch(system.Namespace(), config.ImagePoliciesConfigName, replaceCIPPatch),
+			makePatch(replaceCIPPatch),
 		},
 	}, {
 		Name: "ClusterImagePolicy with glob and KMS key data, added as a patch",
@@ -176,7 +176,7 @@ func TestReconcile(t *testing.T) {
 			makeConfigMap(), // Make the existing configmap
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
-			makePatch(system.Namespace(), config.ImagePoliciesConfigName, addCIP2Patch),
+			makePatch(addCIP2Patch),
 		},
 	}, {
 		Name: "ClusterImagePolicy with glob and inline key data, already exists, deleted",
@@ -201,7 +201,7 @@ func TestReconcile(t *testing.T) {
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
 			patchRemoveFinalizers(system.Namespace(), cipName),
-			makePatch(system.Namespace(), config.ImagePoliciesConfigName, removeDataPatch),
+			makePatch(removeDataPatch),
 		},
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-cip" finalizers`),
@@ -229,7 +229,7 @@ func TestReconcile(t *testing.T) {
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
 			patchRemoveFinalizers(system.Namespace(), cipName2),
-			makePatch(system.Namespace(), config.ImagePoliciesConfigName, removeSingleEntryPatch),
+			makePatch(removeSingleEntryPatch),
 		},
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-cip-2" finalizers`),
@@ -292,12 +292,12 @@ func makeConfigMapWithTwoEntries() *corev1.ConfigMap {
 	}
 }
 
-func makePatch(namespace, name, patch string) clientgotesting.PatchActionImpl {
+func makePatch(patch string) clientgotesting.PatchActionImpl {
 	return clientgotesting.PatchActionImpl{
 		ActionImpl: clientgotesting.ActionImpl{
-			Namespace: namespace,
+			Namespace: system.Namespace(),
 		},
-		Name:  name,
+		Name:  config.ImagePoliciesConfigName,
 		Patch: []byte(patch),
 	}
 }
