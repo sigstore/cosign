@@ -50,10 +50,20 @@ const (
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J
 RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 -----END PUBLIC KEY-----`
+
 	// This is the patch for replacing a single entry in the ConfigMap
 	replaceCIPPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\",\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}]}"}]`
+
 	// This is the patch for adding an entry for non-existing KMS for cipName2
 	addCIP2Patch = `[{"op":"add","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\",\"authorities\":[{\"key\":{\"data\":\"azure-kms://foo/bar\"}}]}]}"}]`
+
+	// This is the patch for removing the last entry, leaving just the
+	// configmap objectmeta, no data.
+	removeDataPatch = `[{"op":"remove","path":"/data"}]`
+
+	// THis is the patch for removing only a single entry from a map that has
+	// two entries but only one is being removed.
+	removeSingleEntryPatch = `[{"op":"remove","path":"/data/test-cip-2"}]`
 )
 
 func TestReconcile(t *testing.T) {
@@ -69,14 +79,14 @@ func TestReconcile(t *testing.T) {
 		Name: "ClusterImagePolicy not found",
 		Key:  testKey,
 	}, {
-		Name: "ClusterImagePolicy is being deleted",
+		Name: "ClusterImagePolicy is being deleted, doesn't exist, no changes",
 		Key:  testKey,
 		Objects: []runtime.Object{
 			NewClusterImagePolicy(cipName,
 				WithClusterImagePolicyDeletionTimestamp),
 		},
 	}, {
-		Name: "ClusterImagePolicy with glob and inline key data",
+		Name: "ClusterImagePolicy with glob and inline key data, added to cm and finalizer",
 		Key:  testKey,
 
 		SkipNamespaceValidation: true, // Cluster scoped
@@ -94,7 +104,13 @@ func TestReconcile(t *testing.T) {
 				})),
 		},
 		WantCreates: []runtime.Object{
-			makeConfigMap(cipName),
+			makeConfigMap(),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchFinalizers(system.Namespace(), cipName),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-cip" finalizers`),
 		},
 	}, {
 		Name: "ClusterImagePolicy with glob and inline key data, already exists, no patch",
@@ -103,6 +119,7 @@ func TestReconcile(t *testing.T) {
 		SkipNamespaceValidation: true, // Cluster scoped
 		Objects: []runtime.Object{
 			NewClusterImagePolicy(cipName,
+				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
 					Authorities: []v1alpha1.Authority{
@@ -113,7 +130,7 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				})),
-			makeConfigMap(cipName),
+			makeConfigMap(),
 		},
 	}, {
 		Name: "ClusterImagePolicy with glob and inline key data, needs a patch",
@@ -122,6 +139,7 @@ func TestReconcile(t *testing.T) {
 		SkipNamespaceValidation: true, // Cluster scoped
 		Objects: []runtime.Object{
 			NewClusterImagePolicy(cipName,
+				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
 					Authorities: []v1alpha1.Authority{
@@ -132,7 +150,7 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				})),
-			makeDifferentConfigMap(cipName),
+			makeDifferentConfigMap(),
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
 			makePatch(system.Namespace(), config.ImagePoliciesConfigName, replaceCIPPatch),
@@ -144,6 +162,7 @@ func TestReconcile(t *testing.T) {
 		SkipNamespaceValidation: true, // Cluster scoped
 		Objects: []runtime.Object{
 			NewClusterImagePolicy(cipName2,
+				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
 					Authorities: []v1alpha1.Authority{
@@ -154,10 +173,66 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 				})),
-			makeConfigMap(cipName), // Make the existing configmap
+			makeConfigMap(), // Make the existing configmap
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
 			makePatch(system.Namespace(), config.ImagePoliciesConfigName, addCIP2Patch),
+		},
+	}, {
+		Name: "ClusterImagePolicy with glob and inline key data, already exists, deleted",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+					Authorities: []v1alpha1.Authority{
+						{
+							Key: &v1alpha1.KeyRef{
+								Data: inlineKeyData,
+							},
+						},
+					},
+				}),
+				WithClusterImagePolicyDeletionTimestamp),
+			makeConfigMap(),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchRemoveFinalizers(system.Namespace(), cipName),
+			makePatch(system.Namespace(), config.ImagePoliciesConfigName, removeDataPatch),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-cip" finalizers`),
+		},
+	}, {
+		Name: "Two entries, remove only one",
+		Key:  testKey2,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName2,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+					Authorities: []v1alpha1.Authority{
+						{
+							Key: &v1alpha1.KeyRef{
+								Data: inlineKeyData,
+							},
+						},
+					},
+				}),
+				WithClusterImagePolicyDeletionTimestamp),
+			makeConfigMapWithTwoEntries(),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchRemoveFinalizers(system.Namespace(), cipName2),
+			makePatch(system.Namespace(), config.ImagePoliciesConfigName, removeSingleEntryPatch),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-cip-2" finalizers`),
 		},
 	}, {}}
 
@@ -178,7 +253,7 @@ func TestReconcile(t *testing.T) {
 	))
 }
 
-func makeConfigMap(cipName string) *corev1.ConfigMap {
+func makeConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
@@ -191,7 +266,7 @@ func makeConfigMap(cipName string) *corev1.ConfigMap {
 }
 
 // Same as above, just forcing an update by changing PUBLIC => NOTPUBLIC
-func makeDifferentConfigMap(cipName string) *corev1.ConfigMap {
+func makeDifferentConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: system.Namespace(),
@@ -199,6 +274,20 @@ func makeDifferentConfigMap(cipName string) *corev1.ConfigMap {
 		},
 		Data: map[string]string{
 			cipName: `{"images":[{"glob":"ghcr.io/example/*","regex":"","authorities":[{"key":{"data":"-----BEGIN NOTPUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END NOTPUBLIC KEY-----"}}]}]}`,
+		},
+	}
+}
+
+// Same as MakeConfigMap but a placeholder for secont entry so we can remove it.
+func makeConfigMapWithTwoEntries() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      config.ImagePoliciesConfigName,
+		},
+		Data: map[string]string{
+			cipName:  `{"images":[{"glob":"ghcr.io/example/*","regex":"","authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}]}`,
+			cipName2: "remove me please",
 		},
 	}
 }
@@ -211,4 +300,22 @@ func makePatch(namespace, name, patch string) clientgotesting.PatchActionImpl {
 		Name:  name,
 		Patch: []byte(patch),
 	}
+}
+
+func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":["` + finalizerName + `"],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
+}
+
+func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
 }

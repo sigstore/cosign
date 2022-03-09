@@ -22,6 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const finalizerName = "clusterimagepolicies.cosigned.sigstore.dev"
+
 // ClusterImagePolicyOption enables further configuration of a ClusterImagePolicy.
 type ClusterImagePolicyOption func(*v1alpha1.ClusterImagePolicy)
 
@@ -48,4 +50,8 @@ func WithImagePattern(ip v1alpha1.ImagePattern) ClusterImagePolicyOption {
 	return func(cip *v1alpha1.ClusterImagePolicy) {
 		cip.Spec.Images = append(cip.Spec.Images, ip)
 	}
+}
+
+func WithFinalizer(cip *v1alpha1.ClusterImagePolicy) {
+	cip.Finalizers = []string{finalizerName}
 }
