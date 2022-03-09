@@ -47,8 +47,9 @@ type Reconciler struct {
 	kubeclient      kubernetes.Interface
 }
 
-// Check that our Reconciler implements Interface
+// Check that our Reconciler implements Interface as well as finalizer
 var _ clusterimagepolicyreconciler.Interface = (*Reconciler)(nil)
+var _ clusterimagepolicyreconciler.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
@@ -76,6 +77,36 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, existing.DeepCopy(), cip)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to create patch: %v", err)
+		return err
+	}
+	if len(patchBytes) > 0 {
+		_, err = r.kubeclient.CoreV1().ConfigMaps(system.Namespace()).Patch(ctx, config.ImagePoliciesConfigName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
+		return err
+	}
+	return nil
+}
+
+// FinalizeKind implements Interface.ReconcileKind.
+func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
+	// See if the CM holding configs even exists
+	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
+	if err != nil {
+		if !apierrs.IsNotFound(err) {
+			// There's very little we can do here. This could happen if it's
+			// intermittent error, which is fine when we retry. But if something
+			// goofy happens like we lost access to it, then it's a bit of a
+			// pickle since the entry will exist there and we can't remove it.
+			// So keep trying. Other option would be just to bail.
+			logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
+			return err
+		}
+		// Since the CM doesn't exist, there's nothing for us to clean up.
+		return nil
+	}
+	// CM exists, so remove our entry from it.
+	patchBytes, err := resources.CreateRemovePatch(system.Namespace(), config.ImagePoliciesConfigName, existing.DeepCopy(), cip)
+	if err != nil {
+		logging.FromContext(ctx).Errorf("Failed to create remove patch: %v", err)
 		return err
 	}
 	if len(patchBytes) > 0 {

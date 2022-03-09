@@ -36,6 +36,10 @@ import (
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
 )
 
+// This is what the default finalizer name is, but make it explicit so we can
+// use it in tests as well.
+const finalizerName = "clusterimagepolicies.cosigned.sigstore.dev"
+
 // NewController creates a Reconciler and returns the result of NewImpl.
 func NewController(
 	ctx context.Context,
@@ -57,7 +61,9 @@ func NewController(
 		configmaplister: nsConfigMapInformer.Lister(),
 		kubeclient:      kubeclient.Get(ctx),
 	}
-	impl := clusterimagepolicyreconciler.NewImpl(ctx, r)
+	impl := clusterimagepolicyreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
+		return controller.Options{FinalizerName: finalizerName}
+	})
 	r.tracker = impl.Tracker
 
 	clusterimagepolicyInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

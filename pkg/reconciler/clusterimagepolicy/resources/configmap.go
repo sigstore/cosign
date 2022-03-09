@@ -54,7 +54,27 @@ func CreatePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.ClusterIma
 		return nil, err
 	}
 	after := cm.DeepCopy()
+	if after.Data == nil {
+		after.Data = make(map[string]string)
+	}
 	after.Data[cip.Name] = entry
+	jsonPatch, err := duck.CreatePatch(cm, after)
+	if err != nil {
+		return nil, fmt.Errorf("creating JSON patch: %w", err)
+	}
+	if len(jsonPatch) == 0 {
+		return nil, nil
+	}
+	return jsonPatch.MarshalJSON()
+}
+
+// CreateRemovePatch removes an entry from the ConfigMap and returns the patch
+// bytes for it that's suitable for calling ConfigMap.Patch with.
+func CreateRemovePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.ClusterImagePolicy) ([]byte, error) {
+	after := cm.DeepCopy()
+	// Just remove it without checking if it exists. If it doesn't, then no
+	// patch bytes are created.
+	delete(after.Data, cip.Name)
 	jsonPatch, err := duck.CreatePatch(cm, after)
 	if err != nil {
 		return nil, fmt.Errorf("creating JSON patch: %w", err)
