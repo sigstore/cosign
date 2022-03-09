@@ -48,7 +48,9 @@ func NewController(
 	// Start the informers we got from the SharedInformerFactory above because
 	// injection doesn't do that for us since we're injecting the Factory and
 	// not the informers.
-	controller.StartInformers(ctx.Done(), nsSecretInformer.Informer(), nsConfigMapInformer.Informer())
+	if err := controller.StartInformers(ctx.Done(), nsSecretInformer.Informer(), nsConfigMapInformer.Informer()); err != nil {
+		logging.FromContext(ctx).Fatalf("Failed to start informers: %w", err)
+	}
 
 	r := &Reconciler{
 		secretlister:    nsSecretInformer.Lister(),
