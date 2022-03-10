@@ -93,6 +93,10 @@ cosign-pivkey-pkcs11key: $(SRCS)
 cosigned: ## Build cosigned binary
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/webhook
 
+.PHONY: policy-webhook
+policy-webhook: ## Build the policy webhook binary
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/policy-webhook
+
 .PHONY: sget
 sget: ## Build sget binary
 	go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/sget
@@ -167,6 +171,18 @@ ko-local:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
+
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		$(ARTIFACT_HUB_LABELS) \
+		github.com/sigstore/cosign/cmd/cosign/webhook
+
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		$(ARTIFACT_HUB_LABELS) \
+		github.com/sigstore/cosign/cmd/cosign/policy_webhook
 
 ##################
 # help

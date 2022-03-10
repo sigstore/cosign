@@ -28,7 +28,7 @@ rules:
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
     verbs: ["get", "update"]
-    resourceNames: ["cosigned.sigstore.dev"]
+    resourceNames: ["cosigned.sigstore.dev", "validating.clusterimagepolicy.sigstore.dev", "defaulting.clusterimagepolicy.sigstore.dev"]
 
   - apiGroups: [""]
     resources: ["namespaces"]
@@ -49,8 +49,7 @@ rules:
   #   resourceNames: ["clusterimagepolicies.cosigned.sigstore.dev"]
 
   # Allow reconciliation of the ClusterImagePolic CRDs.
-  # We need patch to update finalizers
-  - apiGroups: ["cosigned.sigstore.dev"]
+  - apiGroups: ["cosigned.sigstore.dev", "validating.clusterimagepolicy.sigstore.dev", "defaulting.clusterimagepolicy.sigstore.dev"]
     resources: ["clusterimagepolicies"]
     verbs: ["get", "list", "update", "watch", "patch"]
 

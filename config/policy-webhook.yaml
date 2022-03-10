@@ -1,0 +1,96 @@
+# Copyright 2021 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-webhook
+  namespace: cosign-system
+spec:
+  selector:
+    matchLabels:
+      role: policy-webhook
+  template:
+    metadata:
+      labels:
+        role: policy-webhook
+    spec:
+      # To avoid node becoming SPOF, spread our replicas to different nodes.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: policy-webhook
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+
+      serviceAccountName: webhook
+      containers:
+      - name: policy-webhook
+        # This is the Go import path for the binary that is containerized
+        # and substituted here.
+        image: ko://github.com/sigstore/cosign/cmd/cosign/policy_webhook
+        resources:
+          requests:
+            cpu: 20m
+            memory: 20Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIG_LOGGING_NAME
+          value: config-logging
+        - name: METRICS_DOMAIN
+          value: sigstore.dev/cosigned
+        - name: WEBHOOK_NAME
+          value: policy-webhook
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all
+
+        volumeMounts:
+        # Failing to provide a writable $HOME can cause TUF client initialization to panic
+        - mountPath: /home/nonroot
+          name: writable-home-dir
+
+        readinessProbe: &probe
+          failureThreshold: 6
+          initialDelaySeconds: 20
+          periodSeconds: 1
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            httpHeaders:
+            - name: k-kubelet-probe
+              value: "policy-webhook"
+        livenessProbe: *probe
+
+      # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently
+      # high value that we respect whatever value it has configured for the lame duck grace period.
+      terminationGracePeriodSeconds: 300
+
+      volumes:
+      - emptyDir: {}
+        name: writable-home-dir
