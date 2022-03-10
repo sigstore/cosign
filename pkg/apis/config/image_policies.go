@@ -94,8 +94,7 @@ func (p *ImagePolicyConfig) GetAuthorities(image string) ([]v1alpha1.Authority, 
 	// workable so fine for now.
 	for _, v := range p.Policies {
 		for _, pattern := range v.Images {
-			// TODO(vaikas): do the actual glob match.
-			if image == pattern.Glob {
+			if GlobMatch(image, pattern.Glob) {
 				ret = append(ret, pattern.Authorities...)
 			}
 		}

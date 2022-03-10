@@ -53,7 +53,8 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
 	}
-	c, err = defaults.GetAuthorities("rando*")
+	// Make sure glob matches 'randomstuff*'
+	c, err = defaults.GetAuthorities("randomstuffhere")
 	if err != nil {
 		t.Error("GetMatches Failed =", err)
 	}

@@ -32,7 +32,7 @@ func TestImagePatternValidation(t *testing.T) {
 		{
 			name:        "Should fail when both regex and glob are present: %v",
 			expectErr:   true,
-			errorString: "expected exactly one, got both",
+			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -47,11 +47,39 @@ func TestImagePatternValidation(t *testing.T) {
 		{
 			name:        "Should fail when neither regex nor glob are present: %v",
 			expectErr:   true,
-			errorString: "expected exactly one, got neither",
+			errorString: "expected exactly one, got neither: spec.images[0].glob, spec.images[0].regex",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{},
+					},
+				},
+			},
+		},
+		{
+			name:        "Glob should fail with multiple *: %v",
+			expectErr:   true,
+			errorString: "glob match supports only a single * as a trailing character",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Glob: "**",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Glob should fail with non-trailing *: %v",
+			expectErr:   true,
+			errorString: "glob match supports only * as a trailing character",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Glob: "foo*bar",
+						},
 					},
 				},
 			},
@@ -81,7 +109,7 @@ func TestKeyValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "myglob",
 							Authorities: []Authority{
 								{
 									Key: &KeyRef{
@@ -103,7 +131,7 @@ func TestKeyValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "myglob*",
 							Authorities: []Authority{
 								{
 									Key: &KeyRef{},
@@ -115,14 +143,34 @@ func TestKeyValidation(t *testing.T) {
 			},
 		},
 		{
+			name:        "Should fail when regex is given: %v",
+			expectErr:   true,
+			errorString: "must not set the field(s): spec.images[0].regex",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Regex: "myg**lob*",
+							Authorities: []Authority{
+								{
+									Key: &KeyRef{
+										KMS: "kms://key/path",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:        "Should pass when key has only one property: %v",
-			expectErr:   false,
 			errorString: "",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "yepanotherglob",
 							Authorities: []Authority{
 								{
 									Key: &KeyRef{
@@ -163,7 +211,7 @@ func TestKeylessValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "globbityglob",
 							Authorities: []Authority{
 								{
 									Keyless: &KeylessRef{},
@@ -182,7 +230,7 @@ func TestKeylessValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "globbityglob",
 							Authorities: []Authority{
 								{
 									Keyless: &KeylessRef{
@@ -202,13 +250,12 @@ func TestKeylessValidation(t *testing.T) {
 		},
 		{
 			name:        "Should pass when a valid keyless ref is specified: %v",
-			expectErr:   false,
 			errorString: "",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "globbityglob",
 							Authorities: []Authority{
 								{
 									Keyless: &KeylessRef{
@@ -250,7 +297,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "globbityglob",
 							Authorities: []Authority{
 								{
 									Key:     &KeyRef{},
@@ -271,7 +318,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex:       "//",
+							Glob:        "globbityglob",
 							Authorities: []Authority{},
 						},
 					},
@@ -305,7 +352,7 @@ func TestIdentitiesValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "globbityglob",
 							Authorities: []Authority{
 								{
 									Keyless: &KeylessRef{
@@ -320,13 +367,12 @@ func TestIdentitiesValidation(t *testing.T) {
 		},
 		{
 			name:        "Should pass when identities is valid: %v",
-			expectErr:   false,
 			errorString: "",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "//",
+							Glob: "globbityglob",
 							Authorities: []Authority{
 								{
 									Keyless: &KeylessRef{
