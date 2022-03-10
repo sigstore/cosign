@@ -133,7 +133,7 @@ func SignCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOption
 	}
 
 	for _, inputImg := range imgs {
-		ref, err := name.ParseReference(strings.ToLower(inputImg))
+		ref, err := name.ParseReference(inputImg)
 		if err != nil {
 			return errors.Wrap(err, "parsing reference")
 		}
