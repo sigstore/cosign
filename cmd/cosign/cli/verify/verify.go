@@ -213,9 +213,9 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	case "text":
 		for _, sig := range verified {
 			if cert, err := sig.Cert(); err == nil && cert != nil {
-				fmt.Println("Certificate subject: ", sigs.CertSubject(cert))
+				fmt.Fprintln(os.Stderr, "Certificate subject: ", sigs.CertSubject(cert))
 				if issuerURL := sigs.CertIssuerExtension(cert); issuerURL != "" {
-					fmt.Println("Certificate issuer URL: ", issuerURL)
+					fmt.Fprintln(os.Stderr, "Certificate issuer URL: ", issuerURL)
 				}
 			}
 
