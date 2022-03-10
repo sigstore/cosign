@@ -37,7 +37,7 @@ data:
             kms: whatevs
     cluster-image-policy-1: |
       images:
-      - glob: rando*
+      - glob: randomstuff*
         authorities:
         - key:
             data: otherinline here

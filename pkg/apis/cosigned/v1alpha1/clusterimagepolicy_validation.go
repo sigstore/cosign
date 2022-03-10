@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"context"
+	"strings"
 
 	"knative.dev/pkg/apis"
 )
@@ -32,84 +33,115 @@ func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.
 	return
 }
 
-func (image *ImagePattern) Validate(ctx context.Context) (errors *apis.FieldError) {
+func (image *ImagePattern) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
 	if image.Regex != "" && image.Glob != "" {
-		errors = errors.Also(apis.ErrMultipleOneOf("regex", "glob")).ViaField("images")
+		errs = errs.Also(apis.ErrMultipleOneOf("regex", "glob"))
 	}
 
 	if image.Regex == "" && image.Glob == "" {
-		errors = errors.Also(apis.ErrMissingOneOf("regex", "glob")).ViaField("images")
+		errs = errs.Also(apis.ErrMissingOneOf("regex", "glob"))
+	}
+
+	if image.Glob != "" {
+		errs = errs.Also(ValidateGlob(image.Glob).ViaField("glob"))
+	}
+
+	if image.Regex != "" {
+		errs = errs.Also(apis.ErrDisallowedFields("regex"))
 	}
 
 	if len(image.Authorities) == 0 {
-		errors = errors.Also(apis.ErrGeneric("At least one authority should be defined")).ViaField("authorities")
+		errs = errs.Also(apis.ErrGeneric("At least one authority should be defined").ViaField("authorities"))
 	}
-	for i, authority := range image.Authorities {
-		errors = errors.Also(authority.Validate(ctx)).ViaFieldIndex("authorities", i)
+	for i := range image.Authorities {
+		errs = errs.Also(image.Authorities[i].Validate(ctx).ViaFieldIndex("authorities", i))
 	}
 
-	return
+	return errs
 }
 
-func (authority *Authority) Validate(ctx context.Context) (errors *apis.FieldError) {
+func (authority *Authority) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
 	if authority.Key == nil && authority.Keyless == nil {
-		return errors.Also(apis.ErrMissingOneOf("key", "keyless")).ViaField("authority")
+		errs = errs.Also(apis.ErrMissingOneOf("key", "keyless"))
 	}
 	if authority.Key != nil && authority.Keyless != nil {
-		return errors.Also(apis.ErrMultipleOneOf("key", "keyless")).ViaField("authority")
+		errs = errs.Also(apis.ErrMultipleOneOf("key", "keyless"))
 	}
 
 	if authority.Key != nil {
-		errors = errors.Also(authority.Key.Validate(ctx)).ViaField("authority")
+		errs = errs.Also(authority.Key.Validate(ctx).ViaField("key"))
 	}
 	if authority.Keyless != nil {
-		errors = errors.Also(authority.Keyless.Validate(ctx)).ViaField("authority")
+		errs = errs.Also(authority.Keyless.Validate(ctx).ViaField("keyless"))
 	}
 
-	return
+	return errs
 }
 
-func (key *KeyRef) Validate(ctx context.Context) (errors *apis.FieldError) {
+func (key *KeyRef) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
+
 	if key.Data == "" && key.KMS == "" && key.SecretRef == nil {
-		return errors.Also(apis.ErrMissingOneOf("data", "kms", "secretref")).ViaField("key")
+		errs = errs.Also(apis.ErrMissingOneOf("data", "kms", "secretref"))
 	}
 
 	if key.Data != "" {
 		if key.KMS != "" || key.SecretRef != nil {
-			return errors.Also(apis.ErrMultipleOneOf("data", "kms", "secretref")).ViaField("key")
+			errs = errs.Also(apis.ErrMultipleOneOf("data", "kms", "secretref"))
 		}
 	} else if key.KMS != "" && key.SecretRef != nil {
-		return errors.Also(apis.ErrMultipleOneOf("data", "kms", "secretref")).ViaField("key")
+		errs = errs.Also(apis.ErrMultipleOneOf("data", "kms", "secretref"))
 	}
-	return
+	return errs
 }
 
-func (keyless *KeylessRef) Validate(ctx context.Context) (errors *apis.FieldError) {
+func (keyless *KeylessRef) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
 	if keyless.URL == nil && keyless.Identities == nil && keyless.CAKey == nil {
-		return errors.Also(apis.ErrMissingOneOf("url", "identities", "ca-key")).ViaField("keyless")
+		errs = errs.Also(apis.ErrMissingOneOf("url", "identities", "ca-key"))
 	}
 
 	if keyless.URL != nil {
 		if keyless.CAKey != nil || keyless.Identities != nil {
-			return errors.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key")).ViaField("keyless")
+			errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key"))
 		}
 	} else if keyless.CAKey != nil && keyless.Identities != nil {
-		return errors.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key")).ViaField("keyless")
+		errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key"))
 	}
 
 	if keyless.Identities != nil && len(keyless.Identities) == 0 {
-		return errors.Also(apis.ErrGeneric("At least one identity must be provided")).ViaField("keyless")
+		errs = errs.Also(apis.ErrGeneric("At least one identity must be provided"))
 	}
 
 	for i, identity := range keyless.Identities {
-		errors = errors.Also(identity.Validate(ctx)).ViaFieldIndex("identities", i)
+		errs = errs.Also(identity.Validate(ctx).ViaFieldIndex("identities", i))
 	}
-	return
+	return errs
 }
 
-func (identity *Identity) Validate(ctx context.Context) (errors *apis.FieldError) {
+func (identity *Identity) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
 	if identity.Issuer == "" && identity.Subject == "" {
-		return apis.ErrMissingOneOf("issuer", "subject").ViaField("identity")
+		errs = errs.Also(apis.ErrMissingOneOf("issuer", "subject"))
 	}
-	return
+	return errs
+}
+
+// ValidateGlob makes sure that if there's "*" specified it's the trailing
+// character.
+func ValidateGlob(glob string) *apis.FieldError {
+	c := strings.Count(glob, "*")
+	switch c {
+	case 0:
+		return nil
+	case 1:
+		if !strings.HasSuffix(glob, "*") {
+			return apis.ErrInvalidValue(glob, apis.CurrentField, "glob match supports only * as a trailing character")
+		}
+	default:
+		return apis.ErrInvalidValue(glob, apis.CurrentField, "glob match supports only a single * as a trailing character")
+	}
+	return nil
 }

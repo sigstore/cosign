@@ -18,11 +18,11 @@ metadata:
   name: image-policy
 spec:
   images:
-  - regex: images.*
+  - glob: images.*
     authorities:
     - key:
         data: "---another-public-key---"
-  - glob: image**
+  - glob: image*
     authorities:
     - keyless:
         ca-key:

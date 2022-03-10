@@ -18,5 +18,5 @@ metadata:
   name: image-policy
 spec:
   images:
-  - glob: image**
+  - glob: image*
     authorities: []
