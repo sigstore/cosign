@@ -19,9 +19,9 @@ metadata:
 spec:
   images:
   - glob: image*
-    authorities:
-    - keyless:
-        identities:
-        - issuer: "issue-details"
-      key:
-        data: "---somekey---"
+  authorities:
+  - keyless:
+      identities:
+      - issuer: "issue-details"
+    key:
+      data: "---somekey---"

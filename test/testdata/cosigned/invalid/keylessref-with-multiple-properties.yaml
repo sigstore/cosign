@@ -19,12 +19,12 @@ metadata:
 spec:
   images:
   - glob: image*
-    authorities:
-    - keyless:
-        ca-key:
-          secretRef:
-            name: ca-key-secret
-            namespace: some-namespace
-        identities:
-        - issuer: "issue-details"
-          subject: "subject-details"
+  authorities:
+  - keyless:
+      ca-key:
+        secretRef:
+          name: ca-key-secret
+          namespace: some-namespace
+      identities:
+      - issuer: "issue-details"
+        subject: "subject-details"

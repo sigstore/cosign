@@ -19,6 +19,6 @@ metadata:
 spec:
   images:
   - glob: image*
-    authorities:
-    - keyless: {}
-      key: {}
+  authorities:
+  - keyless: {}
+    key: {}

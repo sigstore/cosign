@@ -52,16 +52,16 @@ func (*ClusterImagePolicy) GetGroupVersionKind() schema.GroupVersionKind {
 
 // ClusterImagePolicySpec defines a list of images that should be verified
 type ClusterImagePolicySpec struct {
-	Images []ImagePattern `json:"images"`
+	Images      []ImagePattern `json:"images"`
+	Authorities []Authority    `json:"authorities"`
 }
 
 // ImagePattern defines a pattern and its associated authorties
 // If multiple patterns match a particular image, then ALL of
 // those authorities must be satisfied for the image to be admitted.
 type ImagePattern struct {
-	Glob        string      `json:"glob"`
-	Regex       string      `json:"regex"`
-	Authorities []Authority `json:"authorities"`
+	Glob  string `json:"glob"`
+	Regex string `json:"regex"`
 }
 
 // The authorities block defines the rules for discovering and

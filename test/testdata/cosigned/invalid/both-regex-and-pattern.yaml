@@ -20,6 +20,6 @@ spec:
   images:
   - glob: image*
     regex: image.*
-    authorities:
-    - key:
-        data: "---somedata---"
+  authorities:
+  - key:
+      data: "---somedata---"

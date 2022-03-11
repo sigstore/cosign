@@ -27,8 +27,17 @@ func (policy *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError
 }
 
 func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.FieldError) {
+	if len(spec.Images) == 0 {
+		errors = errors.Also(apis.ErrGeneric("At least one image should be defined").ViaField("images"))
+	}
 	for i, image := range spec.Images {
-		errors = errors.Also(image.Validate(ctx)).ViaFieldIndex("images", i)
+		errors = errors.Also(image.Validate(ctx).ViaFieldIndex("images", i))
+	}
+	if len(spec.Authorities) == 0 {
+		errors = errors.Also(apis.ErrGeneric("At least one authority should be defined").ViaField("authorities"))
+	}
+	for i, authority := range spec.Authorities {
+		errors = errors.Also(authority.Validate(ctx).ViaFieldIndex("authorities", i))
 	}
 	return
 }
@@ -49,13 +58,6 @@ func (image *ImagePattern) Validate(ctx context.Context) *apis.FieldError {
 
 	if image.Regex != "" {
 		errs = errs.Also(apis.ErrDisallowedFields("regex"))
-	}
-
-	if len(image.Authorities) == 0 {
-		errs = errs.Also(apis.ErrGeneric("At least one authority should be defined").ViaField("authorities"))
-	}
-	for i := range image.Authorities {
-		errs = errs.Also(image.Authorities[i].Validate(ctx).ViaFieldIndex("authorities", i))
 	}
 
 	return errs

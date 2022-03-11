@@ -120,15 +120,13 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImag
 // for things like Secret resolution, so we can't do those yet. As more things
 // are supported, remove them from here.
 func willItBlend(cip *v1alpha1.ClusterImagePolicy) bool {
-	for _, image := range cip.Spec.Images {
-		for _, authority := range image.Authorities {
-			if authority.Key != nil && authority.Key.SecretRef != nil {
-				return false
-			}
-			if authority.Keyless != nil && authority.Keyless.CAKey != nil &&
-				authority.Keyless.CAKey.SecretRef != nil {
-				return false
-			}
+	for _, authority := range cip.Spec.Authorities {
+		if authority.Key != nil && authority.Key.SecretRef != nil {
+			return false
+		}
+		if authority.Keyless != nil && authority.Keyless.CAKey != nil &&
+			authority.Keyless.CAKey.SecretRef != nil {
+			return false
 		}
 	}
 	return true

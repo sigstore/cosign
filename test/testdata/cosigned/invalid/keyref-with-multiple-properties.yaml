@@ -19,7 +19,7 @@ metadata:
 spec:
   images:
   - glob: image*
-    authorities:
-    - key:
-        data: "---somedata---"
-        kms: "kms://url"
+  authorities:
+  - key:
+      data: "---somedata---"
+      kms: "kms://url"

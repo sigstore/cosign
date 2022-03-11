@@ -19,4 +19,4 @@ metadata:
 spec:
   images:
   - glob: image*
-    authorities: []
+  authorities: []
