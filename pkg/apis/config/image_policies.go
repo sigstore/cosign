@@ -95,7 +95,7 @@ func (p *ImagePolicyConfig) GetAuthorities(image string) ([]v1alpha1.Authority, 
 	for _, v := range p.Policies {
 		for _, pattern := range v.Images {
 			if GlobMatch(image, pattern.Glob) {
-				ret = append(ret, pattern.Authorities...)
+				ret = append(ret, v.Authorities...)
 			}
 		}
 	}

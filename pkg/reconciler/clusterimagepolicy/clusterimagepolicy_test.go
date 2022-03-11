@@ -52,10 +52,10 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 -----END PUBLIC KEY-----`
 
 	// This is the patch for replacing a single entry in the ConfigMap
-	replaceCIPPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\",\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}]}"}]`
+	replaceCIPPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\"}],\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}"}]`
 
 	// This is the patch for adding an entry for non-existing KMS for cipName2
-	addCIP2Patch = `[{"op":"add","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\",\"authorities\":[{\"key\":{\"data\":\"azure-kms://foo/bar\"}}]}]}"}]`
+	addCIP2Patch = `[{"op":"add","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\"}],\"authorities\":[{\"key\":{\"data\":\"azure-kms://foo/bar\"}}]}"}]`
 
 	// This is the patch for removing the last entry, leaving just the
 	// configmap objectmeta, no data.
@@ -94,15 +94,11 @@ func TestReconcile(t *testing.T) {
 			NewClusterImagePolicy(cipName,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
-					Authorities: []v1alpha1.Authority{
-						{
-							Key: &v1alpha1.KeyRef{
-								Data: inlineKeyData,
-							},
-						},
-					},
-				})),
-		},
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						Data: inlineKeyData,
+					}}))},
 		WantCreates: []runtime.Object{
 			makeConfigMap(),
 		},
@@ -122,14 +118,11 @@ func TestReconcile(t *testing.T) {
 				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
-					Authorities: []v1alpha1.Authority{
-						{
-							Key: &v1alpha1.KeyRef{
-								Data: inlineKeyData,
-							},
-						},
-					},
-				})),
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						Data: inlineKeyData,
+					}})),
 			makeConfigMap(),
 		},
 	}, {
@@ -142,14 +135,11 @@ func TestReconcile(t *testing.T) {
 				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
-					Authorities: []v1alpha1.Authority{
-						{
-							Key: &v1alpha1.KeyRef{
-								Data: inlineKeyData,
-							},
-						},
-					},
-				})),
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						Data: inlineKeyData,
+					}})),
 			makeDifferentConfigMap(),
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
@@ -165,14 +155,11 @@ func TestReconcile(t *testing.T) {
 				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
-					Authorities: []v1alpha1.Authority{
-						{
-							Key: &v1alpha1.KeyRef{
-								Data: kms,
-							},
-						},
-					},
-				})),
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						Data: kms,
+					}})),
 			makeConfigMap(), // Make the existing configmap
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
@@ -188,14 +175,11 @@ func TestReconcile(t *testing.T) {
 				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
-					Authorities: []v1alpha1.Authority{
-						{
-							Key: &v1alpha1.KeyRef{
-								Data: inlineKeyData,
-							},
-						},
-					},
 				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						Data: inlineKeyData,
+					}}),
 				WithClusterImagePolicyDeletionTimestamp),
 			makeConfigMap(),
 		},
@@ -216,14 +200,11 @@ func TestReconcile(t *testing.T) {
 				WithFinalizer,
 				WithImagePattern(v1alpha1.ImagePattern{
 					Glob: glob,
-					Authorities: []v1alpha1.Authority{
-						{
-							Key: &v1alpha1.KeyRef{
-								Data: inlineKeyData,
-							},
-						},
-					},
 				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						Data: inlineKeyData,
+					}}),
 				WithClusterImagePolicyDeletionTimestamp),
 			makeConfigMapWithTwoEntries(),
 		},
@@ -260,7 +241,7 @@ func makeConfigMap() *corev1.ConfigMap {
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{
-			cipName: `{"images":[{"glob":"ghcr.io/example/*","regex":"","authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}]}`,
+			cipName: `{"images":[{"glob":"ghcr.io/example/*","regex":""}],"authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}`,
 		},
 	}
 }
@@ -273,7 +254,7 @@ func makeDifferentConfigMap() *corev1.ConfigMap {
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{
-			cipName: `{"images":[{"glob":"ghcr.io/example/*","regex":"","authorities":[{"key":{"data":"-----BEGIN NOTPUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END NOTPUBLIC KEY-----"}}]}]}`,
+			cipName: `{"images":[{"glob":"ghcr.io/example/*","regex":""}],"authorities":[{"key":{"data":"-----BEGIN NOTPUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END NOTPUBLIC KEY-----"}}]}`,
 		},
 	}
 }
@@ -286,7 +267,7 @@ func makeConfigMapWithTwoEntries() *corev1.ConfigMap {
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{
-			cipName:  `{"images":[{"glob":"ghcr.io/example/*","regex":"","authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}]}`,
+			cipName:  `{"images":[{"glob":"ghcr.io/example/*","regex":""}],"authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}`,
 			cipName2: "remove me please",
 		},
 	}

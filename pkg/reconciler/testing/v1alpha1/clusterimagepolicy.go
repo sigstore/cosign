@@ -52,6 +52,12 @@ func WithImagePattern(ip v1alpha1.ImagePattern) ClusterImagePolicyOption {
 	}
 }
 
+func WithAuthority(a v1alpha1.Authority) ClusterImagePolicyOption {
+	return func(cip *v1alpha1.ClusterImagePolicy) {
+		cip.Spec.Authorities = append(cip.Spec.Authorities, a)
+	}
+}
+
 func WithFinalizer(cip *v1alpha1.ClusterImagePolicy) {
 	cip.Finalizers = []string{finalizerName}
 }

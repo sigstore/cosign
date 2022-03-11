@@ -39,80 +39,80 @@ spec:
               description: Spec holds the desired state of the ClusterImagePolicy (from the client).
               type: object
               properties:
+                authorities:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      ctlog:
+                        type: object
+                        required:
+                          - url
+                        properties:
+                          url:
+                            type: string
+                      key:
+                        type: object
+                        properties:
+                          data:
+                            description: Data contains the inline public key
+                            type: string
+                          kms:
+                            description: KMS contains the KMS url of the public key
+                            type: string
+                          secretRef:
+                            type: object
+                            properties:
+                              name:
+                                description: Name is unique within a namespace to reference a secret resource.
+                                type: string
+                              namespace:
+                                description: Namespace defines the space within which the secret name must be unique.
+                                type: string
+                      keyless:
+                        type: object
+                        properties:
+                          ca-key:
+                            type: object
+                            properties:
+                              data:
+                                description: Data contains the inline public key
+                                type: string
+                              kms:
+                                description: KMS contains the KMS url of the public key
+                                type: string
+                              secretRef:
+                                type: object
+                                properties:
+                                  name:
+                                    description: Name is unique within a namespace to reference a secret resource.
+                                    type: string
+                                  namespace:
+                                    description: Namespace defines the space within which the secret name must be unique.
+                                    type: string
+                          identities:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                issuer:
+                                  type: string
+                                subject:
+                                  type: string
+                          url:
+                            type: string
+                      source:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            oci:
+                              type: string
                 images:
                   type: array
                   items:
                     type: object
                     properties:
-                      authorities:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            ctlog:
-                              type: object
-                              required:
-                                - url
-                              properties:
-                                url:
-                                  type: string
-                            key:
-                              type: object
-                              properties:
-                                data:
-                                  description: Data contains the inline public key
-                                  type: string
-                                kms:
-                                  description: KMS contains the KMS url of the public key
-                                  type: string
-                                secretRef:
-                                  type: object
-                                  properties:
-                                    name:
-                                      description: Name is unique within a namespace to reference a secret resource.
-                                      type: string
-                                    namespace:
-                                      description: Namespace defines the space within which the secret name must be unique.
-                                      type: string
-                            keyless:
-                              type: object
-                              properties:
-                                ca-key:
-                                  type: object
-                                  properties:
-                                    data:
-                                      description: Data contains the inline public key
-                                      type: string
-                                    kms:
-                                      description: KMS contains the KMS url of the public key
-                                      type: string
-                                    secretRef:
-                                      type: object
-                                      properties:
-                                        name:
-                                          description: Name is unique within a namespace to reference a secret resource.
-                                          type: string
-                                        namespace:
-                                          description: Namespace defines the space within which the secret name must be unique.
-                                          type: string
-                                identities:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      issuer:
-                                        type: string
-                                      subject:
-                                        type: string
-                                url:
-                                  type: string
-                            source:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  oci:
-                                    type: string
                       glob:
                         type: string
                       regex:

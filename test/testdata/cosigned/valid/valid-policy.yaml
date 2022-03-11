@@ -19,28 +19,27 @@ metadata:
 spec:
   images:
   - glob: images.*
-    authorities:
-    - key:
-        data: "---another-public-key---"
   - glob: image*
-    authorities:
-    - keyless:
-        ca-key:
-          secretRef:
-            name: ca-key-secret
-            namespace: some-namespacemak
-    - keyless:
-        identities:
-        - issuer: "issue-details"
-          subject: "subject-details"
-    - keyless:
-        identities:
-        - issuer: "issue-details1"
-    - key:
-        data: "---some-key---"
-    - key:
-        kms: "kms://key/path"
-    - key:
+  authorities:
+  - key:
+      data: "---another-public-key---"
+  - keyless:
+      ca-key:
         secretRef:
-          name: secret-name
-          namespace: secret-namespce
+          name: ca-key-secret
+          namespace: some-namespacemak
+  - keyless:
+      identities:
+      - issuer: "issue-details"
+        subject: "subject-details"
+  - keyless:
+      identities:
+      - issuer: "issue-details1"
+  - key:
+      data: "---some-key---"
+  - key:
+      kms: "kms://key/path"
+  - key:
+      secretRef:
+        name: secret-name
+        namespace: secret-namespce

@@ -110,13 +110,13 @@ func TestKeyValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "myglob",
-							Authorities: []Authority{
-								{
-									Key: &KeyRef{
-										Data: "---some key data----",
-										KMS:  "kms://key/path",
-									},
-								},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{
+								Data: "---some key data----",
+								KMS:  "kms://key/path",
 							},
 						},
 					},
@@ -132,11 +132,11 @@ func TestKeyValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "myglob*",
-							Authorities: []Authority{
-								{
-									Key: &KeyRef{},
-								},
-							},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{},
 						},
 					},
 				},
@@ -151,12 +151,12 @@ func TestKeyValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Regex: "myg**lob*",
-							Authorities: []Authority{
-								{
-									Key: &KeyRef{
-										KMS: "kms://key/path",
-									},
-								},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{
+								KMS: "kms://key/path",
 							},
 						},
 					},
@@ -171,12 +171,12 @@ func TestKeyValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "yepanotherglob",
-							Authorities: []Authority{
-								{
-									Key: &KeyRef{
-										KMS: "kms://key/path",
-									},
-								},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{
+								KMS: "kms://key/path",
 							},
 						},
 					},
@@ -212,11 +212,11 @@ func TestKeylessValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "globbityglob",
-							Authorities: []Authority{
-								{
-									Keyless: &KeylessRef{},
-								},
-							},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{},
 						},
 					},
 				},
@@ -231,16 +231,16 @@ func TestKeylessValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "globbityglob",
-							Authorities: []Authority{
-								{
-									Keyless: &KeylessRef{
-										URL: &apis.URL{
-											Host: "myhost",
-										},
-										CAKey: &KeyRef{
-											Data: "---certificate---",
-										},
-									},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{
+								URL: &apis.URL{
+									Host: "myhost",
+								},
+								CAKey: &KeyRef{
+									Data: "---certificate---",
 								},
 							},
 						},
@@ -256,13 +256,13 @@ func TestKeylessValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "globbityglob",
-							Authorities: []Authority{
-								{
-									Keyless: &KeylessRef{
-										URL: &apis.URL{
-											Host: "myhost",
-										},
-									},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{
+								URL: &apis.URL{
+									Host: "myhost",
 								},
 							},
 						},
@@ -298,12 +298,12 @@ func TestAuthoritiesValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "globbityglob",
-							Authorities: []Authority{
-								{
-									Key:     &KeyRef{},
-									Keyless: &KeylessRef{},
-								},
-							},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key:     &KeyRef{},
+							Keyless: &KeylessRef{},
 						},
 					},
 				},
@@ -318,10 +318,10 @@ func TestAuthoritiesValidation(t *testing.T) {
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Glob:        "globbityglob",
-							Authorities: []Authority{},
+							Glob: "globbityglob",
 						},
 					},
+					Authorities: []Authority{},
 				},
 			},
 		},
@@ -353,12 +353,12 @@ func TestIdentitiesValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "globbityglob",
-							Authorities: []Authority{
-								{
-									Keyless: &KeylessRef{
-										Identities: []Identity{},
-									},
-								},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{
+								Identities: []Identity{},
 							},
 						},
 					},
@@ -373,14 +373,14 @@ func TestIdentitiesValidation(t *testing.T) {
 					Images: []ImagePattern{
 						{
 							Glob: "globbityglob",
-							Authorities: []Authority{
-								{
-									Keyless: &KeylessRef{
-										Identities: []Identity{
-											{
-												Issuer: "some issuer",
-											},
-										},
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{
+								Identities: []Identity{
+									{
+										Issuer: "some issuer",
 									},
 								},
 							},
