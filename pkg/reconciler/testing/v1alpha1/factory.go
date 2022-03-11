@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/client-go/tools/record"
@@ -68,6 +69,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) reconc
 		ctx, client := fakecosignclient.With(ctx, ls.GetCosignObjects()...)
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
+		ctx = context.WithValue(ctx, TrackerKey, &reconcilertesting.FakeTracker{})
 
 		// The dynamic client's support for patching is BS.  Implement it
 		// here via PrependReactor (this can be overridden below by the
@@ -91,7 +93,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) reconc
 
 		// Set up our Controller from the fakes.
 		c := ctor(ctx, &ls, configMapWatcher)
-
+		r.Ctx = ctx
 		// If the reconcilers is leader aware, then promote it.
 		if la, ok := c.(reconciler.LeaderAware); ok {
 			if la.Promote(reconciler.UniversalBucket(), func(reconciler.Bucket, types.NamespacedName) {}) != nil {
@@ -152,4 +154,36 @@ func ToUnstructured(t *testing.T, objs []runtime.Object) (us []runtime.Object) {
 		us = append(us, u)
 	}
 	return
+}
+
+type key struct{}
+
+// TrackerKey is used to looking a FakeTracker in a context.Context
+var TrackerKey key = struct{}{}
+
+// AssertTrackingSecret will ensure the provided Secret is being tracked
+func AssertTrackingSecret(namespace, name string) func(*testing.T, *reconcilertesting.TableRow) {
+	gvk := corev1.SchemeGroupVersion.WithKind("Secret")
+	return AssertTrackingObject(gvk, namespace, name)
+}
+
+// AssertTrackingObject will ensure the following objects are being tracked
+func AssertTrackingObject(gvk schema.GroupVersionKind, namespace, name string) func(*testing.T, *reconcilertesting.TableRow) {
+	apiVersion, kind := gvk.ToAPIVersionAndKind()
+
+	return func(t *testing.T, r *reconcilertesting.TableRow) {
+		tracker := r.Ctx.Value(TrackerKey).(*reconcilertesting.FakeTracker)
+		refs := tracker.References()
+
+		for _, ref := range refs {
+			if ref.APIVersion == apiVersion &&
+				ref.Name == name &&
+				ref.Namespace == namespace &&
+				ref.Kind == kind {
+				return
+			}
+		}
+
+		t.Errorf("Object was not tracked - %s, Name=%s, Namespace=%s", gvk.String(), name, namespace)
+	}
 }

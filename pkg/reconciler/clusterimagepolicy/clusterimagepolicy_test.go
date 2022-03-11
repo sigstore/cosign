@@ -31,6 +31,7 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 
 	. "github.com/sigstore/cosign/pkg/reconciler/testing/v1alpha1"
 	. "knative.dev/pkg/reconciler/testing"
@@ -38,12 +39,16 @@ import (
 )
 
 const (
-	cipName  = "test-cip"
-	testKey  = "test-cip"
-	cipName2 = "test-cip-2"
-	testKey2 = "test-cip-2"
-	glob     = "ghcr.io/example/*"
-	kms      = "azure-kms://foo/bar"
+	cipName            = "test-cip"
+	testKey            = "test-cip"
+	cipName2           = "test-cip-2"
+	testKey2           = "test-cip-2"
+	keySecretName      = "publickey-key"
+	keySecretValue     = "keyref secret here"
+	keylessSecretName  = "publickey-keyless"
+	keylessSecretValue = "keyless cakeyref secret here"
+	glob               = "ghcr.io/example/*"
+	kms                = "azure-kms://foo/bar"
 
 	// Just some public key that was laying around, only format matters.
 	inlineKeyData = `-----BEGIN PUBLIC KEY-----
@@ -61,9 +66,15 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 	// configmap objectmeta, no data.
 	removeDataPatch = `[{"op":"remove","path":"/data"}]`
 
-	// THis is the patch for removing only a single entry from a map that has
+	// This is the patch for removing only a single entry from a map that has
 	// two entries but only one is being removed.
 	removeSingleEntryPatch = `[{"op":"remove","path":"/data/test-cip-2"}]`
+
+	// This is the patch for inlined secret for key ref data
+	inlinedSecretKeyPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\"}],\"authorities\":[{\"key\":{\"data\":\"keyref secret here\"}}]}"}]`
+
+	// This is the patch for inlined secret for keyless cakey ref data
+	inlinedSecretKeylessPatch = `[{"op":"replace","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\"}],\"authorities\":[{\"keyless\":{\"ca-key\":{\"data\":\"keyless cakeyref secret here\"}}}]}"}]`
 )
 
 func TestReconcile(t *testing.T) {
@@ -215,6 +226,187 @@ func TestReconcile(t *testing.T) {
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-cip-2" finalizers`),
 		},
+	}, {
+		Name: "Key with secret, secret does not exist.",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						SecretRef: &corev1.SecretReference{
+							Name: keySecretName,
+						},
+					}}),
+			),
+			makeConfigMapWithTwoEntries(),
+		},
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `secret "publickey-key" not found`),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keySecretName),
+		},
+	}, {
+		Name: "Keyless with secret, secret does not exist.",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Keyless: &v1alpha1.KeylessRef{
+						CAKey: &v1alpha1.KeyRef{
+							SecretRef: &corev1.SecretReference{
+								Name: keylessSecretName,
+							},
+						},
+					}}),
+			),
+			makeConfigMapWithTwoEntries(),
+		},
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `secret "publickey-keyless" not found`),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keylessSecretName),
+		},
+	}, {
+		Name: "Key with secret, no data.",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						SecretRef: &corev1.SecretReference{
+							Name: keySecretName,
+						},
+					}}),
+			),
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: system.Namespace(),
+					Name:      keySecretName,
+				},
+			},
+			makeConfigMapWithTwoEntries(),
+		},
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `secret "publickey-key" contains no data`),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keySecretName),
+		},
+	}, {
+		Name: "Key with secret, multiple data entries.",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						SecretRef: &corev1.SecretReference{
+							Name: keySecretName,
+						},
+					}}),
+			),
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: system.Namespace(),
+					Name:      keySecretName,
+				},
+				Data: map[string][]byte{
+					"first":  []byte("first data"),
+					"second": []byte("second data"),
+				},
+			},
+			makeConfigMapWithTwoEntries(),
+		},
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `secret "publickey-key" contains multiple data entries, only one is supported`),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keySecretName),
+		},
+	}, {
+		Name: "Key with secret, secret exists, inlined",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						SecretRef: &corev1.SecretReference{
+							Name: keySecretName,
+						},
+					}}),
+			),
+			makeConfigMapWithTwoEntries(),
+			makeSecret(keySecretName, keySecretValue),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makePatch(inlinedSecretKeyPatch),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keySecretName),
+		},
+	}, {
+		Name: "Keyless with secret, secret exists, inlined",
+		Key:  testKey2,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName2,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Keyless: &v1alpha1.KeylessRef{
+						CAKey: &v1alpha1.KeyRef{
+							SecretRef: &corev1.SecretReference{
+								Name: keylessSecretName,
+							}},
+					}}),
+			),
+			makeConfigMapWithTwoEntries(),
+			makeSecret(keylessSecretName, keylessSecretValue),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makePatch(inlinedSecretKeylessPatch),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keylessSecretName),
+		},
 	}, {}}
 
 	logger := logtesting.TestLogger(t)
@@ -223,6 +415,7 @@ func TestReconcile(t *testing.T) {
 			secretlister:    listers.GetSecretLister(),
 			configmaplister: listers.GetConfigMapLister(),
 			kubeclient:      fakekubeclient.Get(ctx),
+			tracker:         ctx.Value(TrackerKey).(tracker.Interface),
 		}
 		return clusterimagepolicy.NewReconciler(ctx, logger,
 			fakecosignclient.Get(ctx), listers.GetClusterImagePolicyLister(),
@@ -232,6 +425,18 @@ func TestReconcile(t *testing.T) {
 		false,
 		logger,
 	))
+}
+
+func makeSecret(name, secret string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      name,
+		},
+		Data: map[string][]byte{
+			"publicKey": []byte(secret),
+		},
+	}
 }
 
 func makeConfigMap() *corev1.ConfigMap {
