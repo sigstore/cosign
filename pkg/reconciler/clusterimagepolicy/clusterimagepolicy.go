@@ -16,16 +16,15 @@ package clusterimagepolicy
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/sigstore/cosign/pkg/apis/config"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy/resources"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/logging"
@@ -53,8 +52,9 @@ var _ clusterimagepolicyreconciler.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
-	if !willItBlend(cip) {
-		return errors.New("i can't do that yet, only support keys inlined or KMS")
+	cipCopy, err := r.inlineSecrets(ctx, cip)
+	if err != nil {
+		return err
 	}
 	// See if the CM holding configs exists
 	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
@@ -64,7 +64,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 			return err
 		}
 		// Does not exist, create it.
-		cm, err := resources.NewConfigMap(system.Namespace(), config.ImagePoliciesConfigName, cip)
+		cm, err := resources.NewConfigMap(system.Namespace(), config.ImagePoliciesConfigName, cipCopy)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("Failed to construct configmap: %v", err)
 			return err
@@ -74,7 +74,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 	}
 
 	// Check if we need to update the configmap or not.
-	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, existing.DeepCopy(), cip)
+	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, existing.DeepCopy(), cipCopy)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to create patch: %v", err)
 		return err
@@ -116,18 +116,60 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImag
 	return nil
 }
 
-// Checks to see if we can deal with format yet. This is missing support
-// for things like Secret resolution, so we can't do those yet. As more things
-// are supported, remove them from here.
-func willItBlend(cip *v1alpha1.ClusterImagePolicy) bool {
-	for _, authority := range cip.Spec.Authorities {
+// inlineSecrets will go through the CIP and try to read the referenced
+// secrets and convert them into inlined data. Makes a copy of the CIP
+// before modifying it and returns the copy.
+func (r *Reconciler) inlineSecrets(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) (*v1alpha1.ClusterImagePolicy, error) {
+	ret := cip.DeepCopy()
+	for _, authority := range ret.Spec.Authorities {
 		if authority.Key != nil && authority.Key.SecretRef != nil {
-			return false
+			if err := r.inlineAndTrackSecret(ctx, ret, authority.Key); err != nil {
+				logging.FromContext(ctx).Errorf("Failed to read secret %q: %w", authority.Key.SecretRef.Name)
+				return nil, err
+			}
 		}
 		if authority.Keyless != nil && authority.Keyless.CAKey != nil &&
 			authority.Keyless.CAKey.SecretRef != nil {
-			return false
+			if err := r.inlineAndTrackSecret(ctx, ret, authority.Keyless.CAKey); err != nil {
+				logging.FromContext(ctx).Errorf("Failed to read secret %q: %w", authority.Keyless.CAKey.SecretRef.Name)
+				return nil, err
+			}
 		}
 	}
-	return true
+	return ret, nil
+}
+
+// inlineSecret will take in a KeyRef and tries to read the Secret, finding the
+// first key from it and will inline it in place of Data and then clear out
+// the SecretRef and return it.
+// Additionally, we set up a tracker so we will be notified if the secret
+// is modified.
+// There's still some discussion about how to handle multiple keys in a secret
+// for now, just grab one from it. For reference, the discussion is here:
+// TODO(vaikas): https://github.com/sigstore/cosign/issues/1573
+func (r *Reconciler) inlineAndTrackSecret(ctx context.Context, cip *v1alpha1.ClusterImagePolicy, keyref *v1alpha1.KeyRef) error {
+	if err := r.tracker.TrackReference(tracker.Reference{
+		APIVersion: "v1",
+		Kind:       "Secret",
+		Namespace:  system.Namespace(),
+		Name:       keyref.SecretRef.Name,
+	}, cip); err != nil {
+		return fmt.Errorf("failed to track changes to secret %q : %w", keyref.SecretRef.Name, err)
+	}
+	secret, err := r.secretlister.Secrets(system.Namespace()).Get(keyref.SecretRef.Name)
+	if err != nil {
+		return err
+	}
+	if len(secret.Data) == 0 {
+		return fmt.Errorf("secret %q contains no data", keyref.SecretRef.Name)
+	}
+	if len(secret.Data) > 1 {
+		return fmt.Errorf("secret %q contains multiple data entries, only one is supported", keyref.SecretRef.Name)
+	}
+	for k, v := range secret.Data {
+		logging.FromContext(ctx).Infof("inlining secret %q key %q", keyref.SecretRef.Name, k)
+		keyref.Data = string(v)
+		keyref.SecretRef = nil
+	}
+	return nil
 }

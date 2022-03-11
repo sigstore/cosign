@@ -17,6 +17,7 @@ package clusterimagepolicy
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
@@ -67,6 +68,16 @@ func NewController(
 	r.tracker = impl.Tracker
 
 	clusterimagepolicyInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+
+	nsSecretInformer.Informer().AddEventHandler(controller.HandleAll(
+		// Call the tracker's OnChanged method, but we've seen the objects
+		// coming through this path missing TypeMeta, so ensure it is properly
+		// populated.
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			corev1.SchemeGroupVersion.WithKind("Secret"),
+		),
+	))
 
 	// When the underlying ConfigMap changes,perform a global resync on
 	// ClusterImagePolicies to make sure their state is correctly reflected
