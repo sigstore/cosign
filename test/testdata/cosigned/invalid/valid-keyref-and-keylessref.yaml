@@ -24,4 +24,4 @@ spec:
       identities:
       - issuer: "issue-details"
     key:
-      data: "---somekey---"
+      kms: "kms://url"

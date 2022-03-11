@@ -21,9 +21,4 @@ spec:
   - glob: image*
   authorities:
   - key:
-      data: |
-        -----BEGIN PUBLIC KEY-----
-        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZxAfzrQG1EbWyCI8LiSB7YgSFXoI
-        FNGTyQGKHFc6/H8TQumT9VLS78pUwtv3w7EfKoyFZoP32KrO7nzUy2q6Cw==
-        -----END PUBLIC KEY-----
-      kms: "kms://url"
+      data: "---somedata---"
