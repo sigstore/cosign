@@ -67,7 +67,7 @@ steps:
 
 - name: gcr.io/cloud-builders/docker
   entrypoint: 'bash'
-  dir: "go/src/sigstore/fulcio"
+  dir: "go/src/sigstore/cosign"
   env:
   - "GOPATH=/workspace/go"
   - "GOBIN=/workspace/bin"
