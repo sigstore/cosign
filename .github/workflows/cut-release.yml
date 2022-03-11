@@ -1,0 +1,35 @@
+name: Cut Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+        description: 'Release tag'
+      key_ring:
+        required: true
+        type: string
+        description: 'Key ring for cosign key'
+      key_name:
+        required: true
+        type: string
+        description: 'Key name for cosign key'
+
+concurrency: cut-release
+
+jobs:
+  cut-release:
+    name: Cut release
+    uses: sigstore/sigstore/.github/workflows/reusable-release.yml@main
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      release_tag: ${{ github.event.inputs.release_tag }}
+      key_ring: ${{ github.event.inputs.key_ring }}
+      key_name: ${{ github.event.inputs.key_name }}
+      workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
+      service_account: 'github-actions-cosign@projectsigstore.iam.gserviceaccount.com'
+      repo: 'cosign'
+
