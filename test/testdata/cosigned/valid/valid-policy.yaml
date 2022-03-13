@@ -21,8 +21,6 @@ spec:
   - glob: images.*
   - glob: image*
   authorities:
-  - key:
-      data: "---another-public-key---"
   - keyless:
       ca-key:
         secretRef:
@@ -38,8 +36,8 @@ spec:
   - key:
       data: |
         -----BEGIN PUBLIC KEY-----
-        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZxAfzrQG1EbWyCI8LiSB7YgSFXoI
-        FNGTyQGKHFc6/H8TQumT9VLS78pUwtv3w7EfKoyFZoP32KrO7nzUy2q6Cw==
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s
+        TBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==
         -----END PUBLIC KEY-----
   - key:
       kms: "kms://key/path"

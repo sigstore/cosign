@@ -21,8 +21,8 @@ import (
 
 func IsValidKey(b []byte) bool {
 	valid := true
-	pems := parsePEMKey(b)
-	if pems == nil {
+	pems, validPEM := parsePEMKey(b)
+	if !validPEM {
 		return false
 	}
 
@@ -36,15 +36,17 @@ func IsValidKey(b []byte) bool {
 	return valid
 }
 
-func parsePEMKey(b []byte) []*pem.Block {
+func parsePEMKey(b []byte) ([]*pem.Block, bool) {
 	pemKey, rest := pem.Decode(b)
+	valid := true
 	if pemKey == nil {
-		return nil
+		return nil, false
 	}
 	pemBlocks := []*pem.Block{pemKey}
 
-	if rest != nil {
-		return append(pemBlocks, parsePEMKey(rest)...)
+	if len(rest) > 0 {
+		list, check := parsePEMKey(rest)
+		return append(pemBlocks, list...), check
 	}
-	return pemBlocks
+	return pemBlocks, valid
 }
