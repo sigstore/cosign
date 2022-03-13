@@ -15,18 +15,36 @@
 package utils
 
 import (
+	"crypto/x509"
 	"encoding/pem"
 )
 
 func IsValidKey(b []byte) bool {
 	valid := true
-	p, rest := pem.Decode(b)
-	if p == nil {
+	pems := parsePEMKey(b)
+	if pems == nil {
 		return false
 	}
 
-	if rest != nil {
-		return valid && IsValidKey(rest)
+	for _, p := range pems {
+		_, err := x509.ParsePKIXPublicKey(p.Bytes)
+		if err != nil {
+			return false
+		}
 	}
+
 	return valid
+}
+
+func parsePEMKey(b []byte) []*pem.Block {
+	pemKey, rest := pem.Decode(b)
+	if pemKey == nil {
+		return nil
+	}
+	pemBlocks := []*pem.Block{pemKey}
+
+	if rest != nil {
+		return append(pemBlocks, parsePEMKey(rest)...)
+	}
+	return pemBlocks
 }
