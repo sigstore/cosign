@@ -18,6 +18,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/sigstore/cosign/pkg/apis/utils"
 	"knative.dev/pkg/apis"
 )
 
@@ -92,6 +93,12 @@ func (key *KeyRef) Validate(ctx context.Context) *apis.FieldError {
 	if key.Data != "" {
 		if key.KMS != "" || key.SecretRef != nil {
 			errs = errs.Also(apis.ErrMultipleOneOf("data", "kms", "secretref"))
+		}
+		validPubkey := utils.IsValidKey([]byte(key.Data))
+		if !validPubkey {
+			errs = errs.Also(
+				apis.ErrInvalidValue(key.Data, "data"),
+			)
 		}
 	} else if key.KMS != "" && key.SecretRef != nil {
 		errs = errs.Also(apis.ErrMultipleOneOf("data", "kms", "secretref"))

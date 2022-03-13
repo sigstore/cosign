@@ -115,8 +115,50 @@ func TestKeyValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Key: &KeyRef{
-								Data: "---some key data----",
+								Data: "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s\nTBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==\n-----END PUBLIC KEY-----",
 								KMS:  "kms://key/path",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail when key has mixed valid and invalid data: %v",
+			expectErr:   true,
+			errorString: "invalid value: -----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s\nTBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==\n-----END PUBLIC KEY-----\n---somedata---",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Glob: "myglob",
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{
+								Data: "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s\nTBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==\n-----END PUBLIC KEY-----\n---somedata---",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail when key has malformed pubkey data: %v",
+			expectErr:   true,
+			errorString: "invalid value: ---some key data----",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Glob: "myglob",
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{
+								Data: "---some key data----",
 							},
 						},
 					},

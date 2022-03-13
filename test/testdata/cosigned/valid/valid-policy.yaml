@@ -21,8 +21,6 @@ spec:
   - glob: images.*
   - glob: image*
   authorities:
-  - key:
-      data: "---another-public-key---"
   - keyless:
       ca-key:
         secretRef:
@@ -36,7 +34,11 @@ spec:
       identities:
       - issuer: "issue-details1"
   - key:
-      data: "---some-key---"
+      data: |
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s
+        TBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==
+        -----END PUBLIC KEY-----
   - key:
       kms: "kms://key/path"
   - key:
