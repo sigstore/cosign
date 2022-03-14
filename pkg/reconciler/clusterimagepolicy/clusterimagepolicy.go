@@ -23,6 +23,7 @@ import (
 	"github.com/sigstore/cosign/pkg/apis/utils"
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy/resources"
+	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,9 +54,22 @@ var _ clusterimagepolicyreconciler.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
-	cipCopy, err := r.inlineSecrets(ctx, cip)
-	if err != nil {
-		return err
+	cipCopy, cipErr := r.inlineSecrets(ctx, cip)
+	if cipErr != nil {
+		// The CIP is invalid, try to remove it from the configmap.
+		existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
+		if err != nil {
+			if !apierrs.IsNotFound(err) {
+				logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
+			}
+			// Note that we return the error about the Invalid cip here to make
+			// sure that it's surfaced.
+			return cipErr
+		}
+		if err := r.removeCIPEntry(ctx, existing, cip); err != nil {
+			logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
+		}
+		return cipErr
 	}
 	// See if the CM holding configs exists
 	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
@@ -105,16 +119,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImag
 		return nil
 	}
 	// CM exists, so remove our entry from it.
-	patchBytes, err := resources.CreateRemovePatch(system.Namespace(), config.ImagePoliciesConfigName, existing.DeepCopy(), cip)
-	if err != nil {
-		logging.FromContext(ctx).Errorf("Failed to create remove patch: %v", err)
-		return err
-	}
-	if len(patchBytes) > 0 {
-		_, err = r.kubeclient.CoreV1().ConfigMaps(system.Namespace()).Patch(ctx, config.ImagePoliciesConfigName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
-		return err
-	}
-	return nil
+	return r.removeCIPEntry(ctx, existing, cip)
 }
 
 // inlineSecrets will go through the CIP and try to read the referenced
@@ -175,6 +180,20 @@ func (r *Reconciler) inlineAndTrackSecret(ctx context.Context, cip *v1alpha1.Clu
 
 		keyref.Data = string(v)
 		keyref.SecretRef = nil
+	}
+	return nil
+}
+
+// removeCIPEntry removes an entry from a CM. If no entry exists, it's a nop.
+func (r *Reconciler) removeCIPEntry(ctx context.Context, cm *corev1.ConfigMap, cip *v1alpha1.ClusterImagePolicy) error {
+	patchBytes, err := resources.CreateRemovePatch(system.Namespace(), config.ImagePoliciesConfigName, cm.DeepCopy(), cip)
+	if err != nil {
+		logging.FromContext(ctx).Errorf("Failed to create remove patch: %v", err)
+		return err
+	}
+	if len(patchBytes) > 0 {
+		_, err = r.kubeclient.CoreV1().ConfigMaps(system.Namespace()).Patch(ctx, config.ImagePoliciesConfigName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
+		return err
 	}
 	return nil
 }

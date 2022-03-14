@@ -65,8 +65,12 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 	removeDataPatch = `[{"op":"remove","path":"/data"}]`
 
 	// This is the patch for removing only a single entry from a map that has
-	// two entries but only one is being removed.
-	removeSingleEntryPatch = `[{"op":"remove","path":"/data/test-cip-2"}]`
+	// two entries but only one is being removed. For key entry
+	removeSingleEntryKeyPatch = `[{"op":"remove","path":"/data/test-cip"}]`
+
+	// This is the patch for removing only a single entry from a map that has
+	// two entries but only one is being removed. For keyless entry.
+	removeSingleEntryKeylessPatch = `[{"op":"remove","path":"/data/test-cip-2"}]`
 
 	// This is the patch for inlined secret for key ref data
 	inlinedSecretKeyPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\"}],\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}"}]`
@@ -219,13 +223,40 @@ func TestReconcile(t *testing.T) {
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
 			patchRemoveFinalizers(system.Namespace(), cipName2),
-			makePatch(removeSingleEntryPatch),
+			makePatch(removeSingleEntryKeylessPatch),
 		},
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-cip-2" finalizers`),
 		},
 	}, {
-		Name: "Key with secret, secret does not exist.",
+		Name: "Key with secret, secret does not exist, no entry in configmap",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						SecretRef: &corev1.SecretReference{
+							Name: keySecretName,
+						},
+					}}),
+			),
+			makeEmptyConfigMap(),
+		},
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `secret "publickey-key" not found`),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keySecretName),
+		},
+	}, {
+		Name: "Key with secret, secret does not exist, entry removed from configmap",
 		Key:  testKey,
 
 		SkipNamespaceValidation: true, // Cluster scoped
@@ -243,6 +274,35 @@ func TestReconcile(t *testing.T) {
 					}}),
 			),
 			makeConfigMapWithTwoEntries(),
+		},
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `secret "publickey-key" not found`),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makePatch(removeSingleEntryKeyPatch),
+		},
+		PostConditions: []func(*testing.T, *TableRow){
+			AssertTrackingSecret(system.Namespace(), keySecretName),
+		},
+	}, {
+		Name: "Key with secret, secret does not exist, cm does not exist",
+		Key:  testKey,
+
+		SkipNamespaceValidation: true, // Cluster scoped
+		Objects: []runtime.Object{
+			NewClusterImagePolicy(cipName,
+				WithFinalizer,
+				WithImagePattern(v1alpha1.ImagePattern{
+					Glob: glob,
+				}),
+				WithAuthority(v1alpha1.Authority{
+					Key: &v1alpha1.KeyRef{
+						SecretRef: &corev1.SecretReference{
+							Name: keySecretName,
+						},
+					}}),
+			),
 		},
 		WantErr: true,
 		WantEvents: []string{
@@ -277,6 +337,9 @@ func TestReconcile(t *testing.T) {
 		WantEvents: []string{
 			Eventf(corev1.EventTypeWarning, "InternalError", `secret "publickey-keyless" not found`),
 		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			makePatch(removeSingleEntryKeyPatch),
+		},
 		PostConditions: []func(*testing.T, *TableRow){
 			AssertTrackingSecret(system.Namespace(), keylessSecretName),
 		},
@@ -304,7 +367,7 @@ func TestReconcile(t *testing.T) {
 					Name:      keySecretName,
 				},
 			},
-			makeConfigMapWithTwoEntries(),
+			makeEmptyConfigMap(),
 		},
 		WantErr: true,
 		WantEvents: []string{
@@ -341,7 +404,7 @@ func TestReconcile(t *testing.T) {
 					"second": []byte("second data"),
 				},
 			},
-			makeConfigMapWithTwoEntries(),
+			makeEmptyConfigMap(),
 		},
 		WantErr: true,
 		WantEvents: []string{
@@ -368,7 +431,7 @@ func TestReconcile(t *testing.T) {
 						},
 					}}),
 			),
-			makeConfigMapWithTwoEntries(),
+			makeEmptyConfigMap(),
 			makeSecret(keySecretName, "garbage secret value, not a public key"),
 		},
 		WantErr: true,
@@ -461,6 +524,15 @@ func makeSecret(name, secret string) *corev1.Secret {
 		},
 		Data: map[string][]byte{
 			"publicKey": []byte(secret),
+		},
+	}
+}
+
+func makeEmptyConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      config.ImagePoliciesConfigName,
 		},
 	}
 }
