@@ -39,15 +39,14 @@ import (
 )
 
 const (
-	cipName            = "test-cip"
-	testKey            = "test-cip"
-	cipName2           = "test-cip-2"
-	testKey2           = "test-cip-2"
-	keySecretName      = "publickey-key"
-	keylessSecretName  = "publickey-keyless"
-	keylessSecretValue = "keyless cakeyref secret here"
-	glob               = "ghcr.io/example/*"
-	kms                = "azure-kms://foo/bar"
+	cipName           = "test-cip"
+	testKey           = "test-cip"
+	cipName2          = "test-cip-2"
+	testKey2          = "test-cip-2"
+	keySecretName     = "publickey-key"
+	keylessSecretName = "publickey-keyless"
+	glob              = "ghcr.io/example/*"
+	kms               = "azure-kms://foo/bar"
 
 	// Just some public key that was laying around, only format matters.
 	validPublicKeyData = `-----BEGIN PUBLIC KEY-----
