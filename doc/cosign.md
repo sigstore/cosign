@@ -34,6 +34,7 @@
 * [cosign save](cosign_save.md)	 - Save the container image and associated signatures to disk at the specified directory.
 * [cosign sign](cosign_sign.md)	 - Sign the supplied container image.
 * [cosign sign-blob](cosign_sign-blob.md)	 - Sign the supplied blob, outputting the base64-encoded signature to stdout.
+* [cosign tree](cosign_tree.md)	 - Display supply chain security related artifacts for an image such as signatures, SBOMs and attestations
 * [cosign triangulate](cosign_triangulate.md)	 - Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.
 * [cosign upload](cosign_upload.md)	 - Provides utilities for uploading artifacts to a registry
 * [cosign verify](cosign_verify.md)	 - Verify a signature on the supplied container image
