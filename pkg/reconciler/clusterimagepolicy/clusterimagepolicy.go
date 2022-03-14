@@ -20,6 +20,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/utils"
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy/resources"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -124,14 +125,14 @@ func (r *Reconciler) inlineSecrets(ctx context.Context, cip *v1alpha1.ClusterIma
 	for _, authority := range ret.Spec.Authorities {
 		if authority.Key != nil && authority.Key.SecretRef != nil {
 			if err := r.inlineAndTrackSecret(ctx, ret, authority.Key); err != nil {
-				logging.FromContext(ctx).Errorf("Failed to read secret %q: %w", authority.Key.SecretRef.Name)
+				logging.FromContext(ctx).Errorf("Failed to read secret %q: %v", authority.Key.SecretRef.Name, err)
 				return nil, err
 			}
 		}
 		if authority.Keyless != nil && authority.Keyless.CAKey != nil &&
 			authority.Keyless.CAKey.SecretRef != nil {
 			if err := r.inlineAndTrackSecret(ctx, ret, authority.Keyless.CAKey); err != nil {
-				logging.FromContext(ctx).Errorf("Failed to read secret %q: %w", authority.Keyless.CAKey.SecretRef.Name)
+				logging.FromContext(ctx).Errorf("Failed to read secret %q: %v", authority.Keyless.CAKey.SecretRef.Name, err)
 				return nil, err
 			}
 		}
@@ -168,6 +169,10 @@ func (r *Reconciler) inlineAndTrackSecret(ctx context.Context, cip *v1alpha1.Clu
 	}
 	for k, v := range secret.Data {
 		logging.FromContext(ctx).Infof("inlining secret %q key %q", keyref.SecretRef.Name, k)
+		if !utils.IsValidKey(v) {
+			return fmt.Errorf("secret %q contains an invalid public key", keyref.SecretRef.Name)
+		}
+
 		keyref.Data = string(v)
 		keyref.SecretRef = nil
 	}
