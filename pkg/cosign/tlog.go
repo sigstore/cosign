@@ -50,6 +50,18 @@ type RekorPubKey struct {
 	Status tuf.StatusKind
 }
 
+const (
+	// If specified, you can specify an oob Public Key that Rekor uses using
+	// this ENV variable.
+	altRekorPublicKey = "SIGSTORE_REKOR_PUBLIC_KEY"
+	// Add Rekor API Public Key
+	// If specified, will fetch the Rekor Public Key from the specified Rekor
+	// server and add it to RekorPubKeys.
+	// TODO(vaikas): Implement storing state like Rekor does so that if tree
+	// state ever changes, it will make lots of noise.
+	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
+)
+
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
 func GetRekorPubs(ctx context.Context) ([]RekorPubKey, error) {
@@ -63,16 +75,31 @@ func GetRekorPubs(ctx context.Context) ([]RekorPubKey, error) {
 		return nil, err
 	}
 	publicKeys := make([]RekorPubKey, 0, len(targets))
-	for _, t := range targets {
-		rekorPubKey, err := PemToECDSAKey(t.Target)
+	altRekorPub := os.Getenv(altRekorPublicKey)
+	if altRekorPub != "" {
+		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for Rekor: %s\n", altRekorPub)
+		raw, err := os.ReadFile(altRekorPub)
 		if err != nil {
-			return nil, errors.Wrap(err, "pem to ecdsa")
+			return nil, errors.Wrap(err, "error reading alternate Rekor public key file")
 		}
-		publicKeys = append(publicKeys, RekorPubKey{PubKey: rekorPubKey, Status: t.Status})
+		extra, err := PemToECDSAKey(raw)
+		if err != nil {
+			return nil, errors.Wrap(err, "error converting PEM to ECDSAKey")
+		}
+		publicKeys = append(publicKeys, RekorPubKey{PubKey: extra, Status: tuf.Active})
+	} else {
+		for _, t := range targets {
+			rekorPubKey, err := PemToECDSAKey(t.Target)
+			if err != nil {
+				return nil, errors.Wrap(err, "pem to ecdsa")
+			}
+			publicKeys = append(publicKeys, RekorPubKey{PubKey: rekorPubKey, Status: t.Status})
+		}
 	}
 	if len(publicKeys) == 0 {
 		return nil, errors.New("none of the Rekor public keys have been found")
 	}
+
 	return publicKeys, nil
 }
 
@@ -287,6 +314,20 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to fetch Rekor public keys from TUF repository")
 	}
+
+	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor)
+	if addRekorPublic != "" {
+		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to fetch rekor public key from rekor")
+		}
+		pubFromAPI, err := PemToECDSAKey([]byte(pubOK.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "error converting rekor PEM public key from rekor to ECDSAKey")
+		}
+		rekorPubKeys = append(rekorPubKeys, RekorPubKey{PubKey: pubFromAPI, Status: tuf.Active})
+	}
+
 	var entryVerError error
 	for _, pubKey := range rekorPubKeys {
 		entryVerError = VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), pubKey.PubKey)
