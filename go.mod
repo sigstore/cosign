@@ -54,9 +54,51 @@ require (
 	k8s.io/apimachinery v0.23.3
 	k8s.io/client-go v0.23.3
 	k8s.io/utils v0.0.0-20220127004650-9b3446523e65
-	knative.dev/pkg v0.0.0-20220202132633-df430fa0dd96
+	knative.dev/pkg v0.0.0-20220314165618-a637a96a1bd9
 	sigs.k8s.io/release-utils v0.4.1-0.20220207182343-6dadf2228617
 	sigs.k8s.io/yaml v1.3.0
+)
+
+require (
+	github.com/armon/go-metrics v0.3.10
+	github.com/armon/go-radix v1.0.0
+	github.com/bytecodealliance/wasmtime-go v0.33.1 // indirect
+	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
+	github.com/golang/snappy v0.0.4
+	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220219142810-1571d7fdc46e
+	github.com/hashicorp/errwrap v1.1.0
+	github.com/hashicorp/go-hclog v1.2.0
+	github.com/hashicorp/go-immutable-radix v1.3.1
+	github.com/hashicorp/go-multierror v1.1.1
+	github.com/hashicorp/go-plugin v1.4.3
+	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
+	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
+	github.com/hashicorp/go-sockaddr v1.0.2
+	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/go-version v1.4.0
+	github.com/hashicorp/golang-lru v0.5.4
+	github.com/hashicorp/hcl v1.0.0
+	github.com/hashicorp/vault/sdk v0.4.1
+	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mitchellh/copystructure v1.2.0
+	github.com/mitchellh/go-testing-interface v1.14.1
+	github.com/mitchellh/mapstructure v1.4.3
+	github.com/pierrec/lz4 v2.6.1+incompatible
+	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/spf13/afero v1.8.0 // indirect
+	github.com/urfave/cli v1.22.5 // indirect
+	github.com/withfig/autocomplete-tools/packages/cobra v0.0.0-20220122124547-31d3821a6898
+	go.opentelemetry.io/contrib v1.3.0 // indirect
+	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
+	go.uber.org/atomic v1.9.0
+	go.uber.org/zap v1.21.0
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
+	google.golang.org/grpc v1.45.0
+	google.golang.org/protobuf v1.27.1
+	k8s.io/code-generator v0.22.5
+	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
+	knative.dev/hack v0.0.0-20220224013837-e1785985d364
+	knative.dev/hack/schema v0.0.0-20220224013837-e1785985d364
 )
 
 require (
@@ -190,6 +232,7 @@ require (
 	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
@@ -265,48 +308,6 @@ require (
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	k8s.io/klog/v2 v2.40.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
-)
-
-require (
-	github.com/armon/go-metrics v0.3.10
-	github.com/armon/go-radix v1.0.0
-	github.com/bytecodealliance/wasmtime-go v0.33.1 // indirect
-	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/golang/snappy v0.0.4
-	github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220219142810-1571d7fdc46e
-	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/go-hclog v1.2.0
-	github.com/hashicorp/go-immutable-radix v1.3.1
-	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.4.3
-	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
-	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
-	github.com/hashicorp/go-sockaddr v1.0.2
-	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hashicorp/go-version v1.4.0
-	github.com/hashicorp/golang-lru v0.5.4
-	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/vault/sdk v0.4.1
-	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/mitchellh/copystructure v1.2.0
-	github.com/mitchellh/go-testing-interface v1.14.1
-	github.com/mitchellh/mapstructure v1.4.3
-	github.com/pierrec/lz4 v2.6.1+incompatible
-	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/spf13/afero v1.8.0 // indirect
-	github.com/urfave/cli v1.22.5 // indirect
-	github.com/withfig/autocomplete-tools/packages/cobra v0.0.0-20220122124547-31d3821a6898
-	go.opentelemetry.io/contrib v1.3.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
-	go.uber.org/atomic v1.9.0
-	go.uber.org/zap v1.21.0
-	golang.org/x/crypto v0.0.0-20220213190939-1e6e3497d506
-	google.golang.org/grpc v1.45.0
-	google.golang.org/protobuf v1.27.1
-	k8s.io/code-generator v0.22.5
-	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
-	knative.dev/hack v0.0.0-20220118141833-9b2ed8471e30
-	knative.dev/hack/schema v0.0.0-20220224013837-e1785985d364
 )
 
 // This is temporary to address conflicting versions of Kubernetes libs in knative and GGCR.
