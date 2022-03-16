@@ -76,7 +76,7 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 		kc := authn.NewMultiKeychain(
 			authn.DefaultKeychain,
 			google.Keychain,
-			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogOutput(ioutil.Discard))),
+			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(ioutil.Discard))),
 			authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
 			github.Keychain,
 		)
