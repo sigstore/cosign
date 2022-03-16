@@ -27,7 +27,6 @@ import (
 	// Use the informer factory that restricts only to our namespace. This way
 	// we won't have to grant too broad RBAC rights, nor have trouble starting
 	// up if we don't have them.
-	nsinformerfactory "knative.dev/pkg/injection/clients/namespacedkube/informers/factory"
 
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
@@ -35,6 +34,8 @@ import (
 	"github.com/sigstore/cosign/pkg/apis/config"
 	clusterimagepolicyinformer "github.com/sigstore/cosign/pkg/client/injection/informers/cosigned/v1alpha1/clusterimagepolicy"
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
+	cminformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/configmap"
+	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
 // This is what the default finalizer name is, but make it explicit so we can
@@ -47,19 +48,12 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	clusterimagepolicyInformer := clusterimagepolicyinformer.Get(ctx)
-	nsSecretInformer := nsinformerfactory.Get(ctx).Core().V1().Secrets()
-	nsConfigMapInformer := nsinformerfactory.Get(ctx).Core().V1().ConfigMaps()
-
-	// Start the informers we got from the SharedInformerFactory above because
-	// injection doesn't do that for us since we're injecting the Factory and
-	// not the informers.
-	if err := controller.StartInformers(ctx.Done(), nsSecretInformer.Informer(), nsConfigMapInformer.Informer()); err != nil {
-		logging.FromContext(ctx).Fatalf("Failed to start informers: %w", err)
-	}
+	secretInformer := secretinformer.Get(ctx)
+	configMapInformer := cminformer.Get(ctx)
 
 	r := &Reconciler{
-		secretlister:    nsSecretInformer.Lister(),
-		configmaplister: nsConfigMapInformer.Lister(),
+		secretlister:    secretInformer.Lister(),
+		configmaplister: configMapInformer.Lister(),
 		kubeclient:      kubeclient.Get(ctx),
 	}
 	impl := clusterimagepolicyreconciler.NewImpl(ctx, r, func(impl *controller.Impl) controller.Options {
@@ -69,7 +63,7 @@ func NewController(
 
 	clusterimagepolicyInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	nsSecretInformer.Informer().AddEventHandler(controller.HandleAll(
+	secretInformer.Informer().AddEventHandler(controller.HandleAll(
 		// Call the tracker's OnChanged method, but we've seen the objects
 		// coming through this path missing TypeMeta, so ensure it is properly
 		// populated.
@@ -93,7 +87,7 @@ func NewController(
 	// We could also fetch/construct the store and use CM watcher for it, but
 	// since we need a lister for it anyways in the reconciler, just set up
 	// the watch here.
-	nsConfigMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	configMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
 			pkgreconciler.NameFilterFunc(config.ImagePoliciesConfigName)),

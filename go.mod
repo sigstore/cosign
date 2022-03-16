@@ -54,7 +54,7 @@ require (
 	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.4
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
-	knative.dev/pkg v0.0.0-20220314165618-a637a96a1bd9
+	knative.dev/pkg v0.0.0-20220316002959-3a4cc56708b9
 	sigs.k8s.io/release-utils v0.4.1-0.20220207182343-6dadf2228617
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -238,7 +238,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.0 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/statsd_exporter v0.21.0 // indirect
