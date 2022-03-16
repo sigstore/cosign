@@ -146,12 +146,15 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				if err != nil {
 					logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
 				} else {
+					logging.FromContext(ctx).Infof("Successfully fetch authorities for %s", ref.Name())
+
 					for _, authority := range authorities {
 						if authority.Key != nil {
 							// Get the key from authority data
 							if authorityKeys, err := getAuthorityKeys(ctx, authority.Key.Data); err != nil {
 								logging.FromContext(ctx).Errorf("Failed to fetch keys from the authorities for %s : %v", ref.Name(), err)
 							} else {
+								logging.FromContext(ctx).Infof("Successfully added authority keys %s", ref.Name())
 								tempKeys = append(keys, authorityKeys...)
 							}
 						}
