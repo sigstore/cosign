@@ -51,13 +51,6 @@ func NewController(
 	secretInformer := secretinformer.Get(ctx)
 	configMapInformer := cminformer.Get(ctx)
 
-	// Start the informers we got from the SharedInformerFactory above because
-	// injection doesn't do that for us since we're injecting the Factory and
-	// not the informers.
-	if err := controller.StartInformers(ctx.Done(), secretInformer.Informer(), configMapInformer.Informer()); err != nil {
-		logging.FromContext(ctx).Fatalf("Failed to start informers: %w", err)
-	}
-
 	r := &Reconciler{
 		secretlister:    secretInformer.Lister(),
 		configmaplister: configMapInformer.Lister(),
