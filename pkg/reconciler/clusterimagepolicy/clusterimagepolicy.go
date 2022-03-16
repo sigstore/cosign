@@ -134,10 +134,10 @@ func (r *Reconciler) inlineSecrets(ctx context.Context, cip *v1alpha1.ClusterIma
 				return nil, err
 			}
 		}
-		if authority.Keyless != nil && authority.Keyless.CAKey != nil &&
-			authority.Keyless.CAKey.SecretRef != nil {
-			if err := r.inlineAndTrackSecret(ctx, ret, authority.Keyless.CAKey); err != nil {
-				logging.FromContext(ctx).Errorf("Failed to read secret %q: %v", authority.Keyless.CAKey.SecretRef.Name, err)
+		if authority.Keyless != nil && authority.Keyless.CACert != nil &&
+			authority.Keyless.CACert.SecretRef != nil {
+			if err := r.inlineAndTrackSecret(ctx, ret, authority.Keyless.CACert); err != nil {
+				logging.FromContext(ctx).Errorf("Failed to read secret %q: %v", authority.Keyless.CACert.SecretRef.Name, err)
 				return nil, err
 			}
 		}

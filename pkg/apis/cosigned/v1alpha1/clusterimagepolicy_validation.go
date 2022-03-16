@@ -108,16 +108,16 @@ func (key *KeyRef) Validate(ctx context.Context) *apis.FieldError {
 
 func (keyless *KeylessRef) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-	if keyless.URL == nil && keyless.Identities == nil && keyless.CAKey == nil {
-		errs = errs.Also(apis.ErrMissingOneOf("url", "identities", "ca-key"))
+	if keyless.URL == nil && keyless.Identities == nil && keyless.CACert == nil {
+		errs = errs.Also(apis.ErrMissingOneOf("url", "identities", "ca-cert"))
 	}
 
 	if keyless.URL != nil {
-		if keyless.CAKey != nil || keyless.Identities != nil {
-			errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key"))
+		if keyless.CACert != nil || keyless.Identities != nil {
+			errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-cert"))
 		}
-	} else if keyless.CAKey != nil && keyless.Identities != nil {
-		errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-key"))
+	} else if keyless.CACert != nil && keyless.Identities != nil {
+		errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-cert"))
 	}
 
 	if keyless.Identities != nil && len(keyless.Identities) == 0 {

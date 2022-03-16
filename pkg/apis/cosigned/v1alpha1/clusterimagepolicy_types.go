@@ -60,8 +60,10 @@ type ClusterImagePolicySpec struct {
 // If multiple patterns match a particular image, then ALL of
 // those authorities must be satisfied for the image to be admitted.
 type ImagePattern struct {
-	Glob  string `json:"glob"`
-	Regex string `json:"regex"`
+	// +optional
+	Glob string `json:"glob,omitempty"`
+	// +optional
+	Regex string `json:"regex,omitempty"`
 }
 
 // The authorities block defines the rules for discovering and
@@ -99,12 +101,14 @@ type KeyRef struct {
 
 // Source specifies the location of the signature
 type Source struct {
-	OCI string `json:"oci"`
+	// +optional
+	OCI string `json:"oci,omitempty"`
 }
 
 // TLog specifies the URL to a transparency log that holds
 // the signature and public key information
 type TLog struct {
+	// +optional
 	URL *apis.URL `json:"url,omitempty"`
 }
 
@@ -117,14 +121,16 @@ type KeylessRef struct {
 	// +optional
 	Identities []Identity `json:"identities,omitempty"`
 	// +optional
-	CAKey *KeyRef `json:"ca-key,omitempty"`
+	CACert *KeyRef `json:"ca-cert,omitempty"`
 }
 
-// Identity may contain the issue and/or the subject found in the transparency log.
+// Identity may contain the issuer and/or the subject found in the transparency log.
 // Either field supports a pattern glob.
 type Identity struct {
-	Issuer  string `json:"issuer"`
-	Subject string `json:"subject"`
+	// +optional
+	Issuer string `json:"issuer,omitempty"`
+	// +optional
+	Subject string `json:"subject,omitempty"`
 }
 
 // ClusterImagePolicyList is a list of ClusterImagePolicy resources

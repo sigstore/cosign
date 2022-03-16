@@ -22,9 +22,9 @@ spec:
   - glob: image*
   authorities:
   - keyless:
-      ca-key:
+      ca-cert:
         secretRef:
-          name: ca-key-secret
+          name: ca-cert-secret
           namespace: some-namespacemak
   - keyless:
       identities:
