@@ -16,9 +16,9 @@ package v1alpha1
 
 import (
 	"context"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"knative.dev/pkg/apis"
 )
 
@@ -30,9 +30,9 @@ func TestImagePatternValidation(t *testing.T) {
 		policy      ClusterImagePolicy
 	}{
 		{
-			name:        "Should fail when both regex and glob are present: %v",
+			name:        "Should fail when both regex and glob are present",
 			expectErr:   true,
-			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex",
+			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex\ninvalid value: **: spec.images[0].glob\nglob match supports only a single * as a trailing character\nmissing field(s): spec.authorities\nmust not set the field(s): spec.images[0].regex",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -45,9 +45,9 @@ func TestImagePatternValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when neither regex nor glob are present: %v",
+			name:        "Should fail when neither regex nor glob are present",
 			expectErr:   true,
-			errorString: "expected exactly one, got neither: spec.images[0].glob, spec.images[0].regex",
+			errorString: "expected exactly one, got neither: spec.images[0].glob, spec.images[0].regex\nmissing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -57,9 +57,9 @@ func TestImagePatternValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Glob should fail with multiple *: %v",
+			name:        "Glob should fail with multiple *",
 			expectErr:   true,
-			errorString: "glob match supports only a single * as a trailing character",
+			errorString: "invalid value: **: spec.images[0].glob\nglob match supports only a single * as a trailing character\nmissing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -71,9 +71,9 @@ func TestImagePatternValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Glob should fail with non-trailing *: %v",
+			name:        "Glob should fail with non-trailing *",
 			expectErr:   true,
-			errorString: "glob match supports only * as a trailing character",
+			errorString: "invalid value: foo*bar: spec.images[0].glob\nglob match supports only * as a trailing character\nmissing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -84,13 +84,26 @@ func TestImagePatternValidation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "missing image and authorities in the spec",
+			expectErr:   true,
+			errorString: "missing field(s): spec.authorities, spec.images",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{},
+			},
+		},
 	}
 
 	for _, test := range tests {
-		err := test.policy.Validate(context.TODO())
-		if test.expectErr && !strings.Contains(err.Error(), test.errorString) {
-			t.Errorf(test.name, err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			err := test.policy.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				require.EqualError(t, err, test.errorString)
+			} else {
+				require.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -102,9 +115,9 @@ func TestKeyValidation(t *testing.T) {
 		policy      ClusterImagePolicy
 	}{
 		{
-			name:        "Should fail when key has multiple properties: %v",
+			name:        "Should fail when key has multiple properties",
 			expectErr:   true,
-			errorString: "expected exactly one, got both",
+			errorString: "expected exactly one, got both: spec.authorities[0].key.data, spec.authorities[0].key.kms, spec.authorities[0].key.secretref",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -124,9 +137,9 @@ func TestKeyValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when key has mixed valid and invalid data: %v",
+			name:        "Should fail when key has mixed valid and invalid data",
 			expectErr:   true,
-			errorString: "invalid value: -----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s\nTBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==\n-----END PUBLIC KEY-----\n---somedata---",
+			errorString: "invalid value: -----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s\nTBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==\n-----END PUBLIC KEY-----\n---somedata---: spec.authorities[0].key.data",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -145,9 +158,9 @@ func TestKeyValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when key has malformed pubkey data: %v",
+			name:        "Should fail when key has malformed pubkey data",
 			expectErr:   true,
-			errorString: "invalid value: ---some key data----",
+			errorString: "invalid value: ---some key data----: spec.authorities[0].key.data",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -166,9 +179,9 @@ func TestKeyValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when key is empty: %v",
+			name:        "Should fail when key is empty",
 			expectErr:   true,
-			errorString: "expected exactly one, got neither",
+			errorString: "expected exactly one, got neither: spec.authorities[0].key.data, spec.authorities[0].key.kms, spec.authorities[0].key.secretref",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -185,7 +198,7 @@ func TestKeyValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when regex is given: %v",
+			name:        "Should fail when regex is given",
 			expectErr:   true,
 			errorString: "must not set the field(s): spec.images[0].regex",
 			policy: ClusterImagePolicy{
@@ -206,8 +219,8 @@ func TestKeyValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should pass when key has only one property: %v",
-			errorString: "",
+			name:      "Should pass when key has only one property",
+			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -228,13 +241,15 @@ func TestKeyValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := test.policy.Validate(context.TODO())
-		if test.expectErr && !strings.Contains(err.Error(), test.errorString) {
-			t.Errorf(test.name, err)
-		}
-		if !test.expectErr && err != nil {
-			t.Errorf(test.name, err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			err := test.policy.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				require.EqualError(t, err, test.errorString)
+			} else {
+				require.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -246,9 +261,9 @@ func TestKeylessValidation(t *testing.T) {
 		policy      ClusterImagePolicy
 	}{
 		{
-			name:        "Should fail when keyless is empty: %v",
+			name:        "Should fail when keyless is empty",
 			expectErr:   true,
-			errorString: "expected exactly one, got neither",
+			errorString: "expected exactly one, got neither: spec.authorities[0].keyless.ca-cert, spec.authorities[0].keyless.identities, spec.authorities[0].keyless.url",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -265,9 +280,9 @@ func TestKeylessValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when keyless has multiple properties: %v",
+			name:        "Should fail when keyless has multiple properties",
 			expectErr:   true,
-			errorString: "expected exactly one, got both",
+			errorString: "expected exactly one, got both: spec.authorities[0].keyless.ca-cert, spec.authorities[0].keyless.identities, spec.authorities[0].keyless.url",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -291,8 +306,8 @@ func TestKeylessValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should pass when a valid keyless ref is specified: %v",
-			errorString: "",
+			name:      "Should pass when a valid keyless ref is specified",
+			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -313,14 +328,17 @@ func TestKeylessValidation(t *testing.T) {
 			},
 		},
 	}
+
 	for _, test := range tests {
-		err := test.policy.Validate(context.TODO())
-		if test.expectErr && !strings.Contains(err.Error(), test.errorString) {
-			t.Errorf(test.name, err)
-		}
-		if !test.expectErr && err != nil {
-			t.Errorf(test.name, err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			err := test.policy.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				require.EqualError(t, err, test.errorString)
+			} else {
+				require.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -332,9 +350,9 @@ func TestAuthoritiesValidation(t *testing.T) {
 		policy      ClusterImagePolicy
 	}{
 		{
-			name:        "Should fail when keyless is empty: %v",
+			name:        "Should fail when keyless is empty",
 			expectErr:   true,
-			errorString: "expected exactly one, got both",
+			errorString: "expected exactly one, got both: spec.authorities[0].key, spec.authorities[0].keyless\nexpected exactly one, got neither: spec.authorities[0].key.data, spec.authorities[0].key.kms, spec.authorities[0].key.secretref, spec.authorities[0].keyless.ca-cert, spec.authorities[0].keyless.identities, spec.authorities[0].keyless.url",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -351,11 +369,10 @@ func TestAuthoritiesValidation(t *testing.T) {
 				},
 			},
 		},
-
 		{
-			name:        "Should fail when keyless is empty: %v",
+			name:        "Should fail when keyless is empty",
 			expectErr:   true,
-			errorString: "At least one authority should be defined",
+			errorString: "missing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -369,13 +386,15 @@ func TestAuthoritiesValidation(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		err := test.policy.Validate(context.TODO())
-		if test.expectErr && !strings.Contains(err.Error(), test.errorString) {
-			t.Errorf(test.name, err)
-		}
-		if !test.expectErr && err != nil {
-			t.Errorf(test.name, err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			err := test.policy.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				require.EqualError(t, err, test.errorString)
+			} else {
+				require.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -387,9 +406,9 @@ func TestIdentitiesValidation(t *testing.T) {
 		policy      ClusterImagePolicy
 	}{
 		{
-			name:        "Should fail when identities is empty: %v",
+			name:        "Should fail when identities is empty",
 			expectErr:   true,
-			errorString: "At least one identity must be provided",
+			errorString: "missing field(s): spec.authorities[0].keyless.identities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -408,8 +427,8 @@ func TestIdentitiesValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should pass when identities is valid: %v",
-			errorString: "",
+			name:      "Should pass when identities is valid",
+			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -433,12 +452,14 @@ func TestIdentitiesValidation(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		err := test.policy.Validate(context.TODO())
-		if test.expectErr && !strings.Contains(err.Error(), test.errorString) {
-			t.Errorf(test.name, err)
-		}
-		if !test.expectErr && err != nil {
-			t.Errorf(test.name, err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			err := test.policy.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				require.EqualError(t, err, test.errorString)
+			} else {
+				require.Nil(t, err)
+			}
+		})
 	}
 }
