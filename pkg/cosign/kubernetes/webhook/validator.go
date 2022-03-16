@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/sigstore/cosign/pkg/apis/config"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -138,7 +139,28 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				continue
 			}
 
-			if err := valid(ctx, ref, keys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
+			tempKeys := keys
+			config := config.FromContext(ctx)
+			if config != nil {
+				authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
+				if err != nil {
+					logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
+				} else {
+					for _, authority := range authorities {
+						logging.FromContext(ctx).Infof("TODO: Check authority for image: %s : Authority: %+v ", ref.Name(), authority)
+						if authority.Key != nil {
+							// Get the key from authority data
+							if authorityKeys, err := getAuthorityKeys(ctx, authority.Key.Data); err != nil {
+								logging.FromContext(ctx).Errorf("Failed to fetch keys from the authorities for %s : %v", ref.Name(), err)
+							} else {
+								tempKeys = append(keys, authorityKeys...)
+							}
+						}
+					}
+				}
+			}
+
+			if err := valid(ctx, ref, tempKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
 				errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)
 				errorField.Details = c.Image
 				errs = errs.Also(errorField)
