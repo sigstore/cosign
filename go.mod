@@ -48,7 +48,7 @@ require (
 	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
-	google.golang.org/api v0.72.0
+	google.golang.org/api v0.73.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	k8s.io/api v0.23.4
 	k8s.io/apimachinery v0.23.4
