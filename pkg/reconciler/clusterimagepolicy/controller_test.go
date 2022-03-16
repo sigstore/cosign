@@ -18,16 +18,21 @@ import (
 	"testing"
 
 	"knative.dev/pkg/configmap"
-	. "knative.dev/pkg/reconciler/testing"
+	rtesting "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "github.com/sigstore/cosign/pkg/client/injection/informers/cosigned/v1alpha1/clusterimagepolicy/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
+	fakecm "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/configmap/fake"
+	fakesecret "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"
 	_ "knative.dev/pkg/injection/clients/namespacedkube/informers/factory/fake"
 )
 
 func TestNew(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
+	ctx, _ := rtesting.SetupFakeContext(t)
+
+	fakesecret.Get(ctx)
+	fakecm.Get(ctx)
 
 	c := NewController(ctx, &configmap.ManualWatcher{})
 
