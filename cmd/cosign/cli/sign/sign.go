@@ -45,7 +45,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/oci"
-	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/walk"
@@ -147,7 +146,7 @@ func SignCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOption
 		}
 
 		if digest, ok := ref.(name.Digest); ok && !recursive {
-			se, err := ociempty.SignedImage(ref)
+			se, err := ociremote.SignedEntity(ref, opts...)
 			if err != nil {
 				return errors.Wrap(err, "accessing image")
 			}
