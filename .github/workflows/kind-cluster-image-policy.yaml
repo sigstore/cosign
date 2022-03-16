@@ -1,0 +1,125 @@
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Test cosigned with ClusterImagePolicy
+
+on:
+  pull_request:
+    # TODO(vaikas): DO NOT SUBMIT
+    #branches: [ main ]
+    branches: [ '*' ]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  chains-test:
+    name: Chains e2e tests
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # undocumented OIDC support.
+      packages: write
+      contents: read
+
+    steps:
+    - name: Configure DockerHub mirror
+      run: |
+        tmp=$(mktemp)
+        jq '."registry-mirrors" = ["https://mirror.gcr.io"]' /etc/docker/daemon.json > "$tmp"
+        sudo mv "$tmp" /etc/docker/daemon.json
+        sudo service docker restart
+
+    - name: Setup Cluster
+      run: |
+        curl -Lo ./setup-kind.sh https://github.com/sigstore/scaffolding/releases/download/${{ env.RELEASE_VERSION }}/setup-kind.sh
+        chmod u+x ./setup-kind.sh
+        ./setup-kind.sh \
+          --registry-url $(echo ${KO_DOCKER_REPO} | cut -d'/' -f 1) \
+          --cluster-suffix cluster.local \
+          --k8s-version ${{ matrix.k8s-version }} \
+          --knative-version ${KNATIVE_VERSION}
+
+    - name: Install all the everythings
+      timeout-minutes: 10
+      run: |
+        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.RELEASE_VERSION }}/release.yaml | kubectl apply -f -
+
+        # Wait for all the ksvc to be up.
+        kubectl wait --timeout 10m -A --for=condition=Ready ksvc --all
+
+    - name: Run Tests
+      run: |
+        # Grab the secret from the ctlog-system namespace and make a copy
+        # in our namespace so we can get access to the CT Log public key
+        # so we can verify the SCT coming from there.
+        kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+
+        # Also grab the secret from the fulcio-system namespace and make a copy
+        # in our namespace so we can get access to the Fulcio public key
+        # so we can verify against it.
+        kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+
+        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.RELEASE_VERSION }}/testrelease.yaml | kubectl create -f -
+
+        kubectl wait --for=condition=Complete --timeout=180s job/sign-job
+        kubectl wait --for=condition=Complete --timeout=180s job/checktree
+        kubectl wait --for=condition=Complete --timeout=180s job/verify-job
+
+    - name: Set the endpoints on the cluster
+      run: |
+        REKOR_URL=`kubectl -n rekor-system get --no-headers ksvc rekor | cut -d ' ' -f 4`
+
+    - name: Run curl against rekor
+      run: |
+        curl ${{ env.REKOR_URL }}/api/v1/log
+
+    - name: Check out our repo
+      uses: actions/checkout@v2
+
+    - name: Collect node diagnostics
+      if: ${{ failure() }}
+      run: |
+        for x in $(kubectl get nodes -oname); do
+          echo "::group:: describe $x"
+          kubectl describe $x
+          echo '::endgroup::'
+        done
+
+    - name: Collect pod diagnostics
+      if: ${{ failure() }}
+      run: |
+        for ns in default fulcio-system rekor-system trillian-system ctlog-system; do
+          kubectl get pods -n${ns}
+
+          for x in $(kubectl get pods -n${ns} -oname); do
+            echo "::group:: describe $x"
+            kubectl describe -n${ns} $x
+            echo '::endgroup::'
+          done
+        done
+
+    - name: Collect logs
+      if: ${{ failure() }}
+      run: |
+        mkdir -p /tmp/logs
+        kind export logs /tmp/logs --name sigstore
+
+    - name: Upload artifacts
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: logs
+        path: /tmp/logs
