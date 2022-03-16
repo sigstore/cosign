@@ -29,17 +29,18 @@ func (policy *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError
 
 func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.FieldError) {
 	if len(spec.Images) == 0 {
-		errors = errors.Also(apis.ErrGeneric("At least one image should be defined").ViaField("images"))
+		errors = errors.Also(apis.ErrMissingField("images"))
 	}
 	for i, image := range spec.Images {
 		errors = errors.Also(image.Validate(ctx).ViaFieldIndex("images", i))
 	}
 	if len(spec.Authorities) == 0 {
-		errors = errors.Also(apis.ErrGeneric("At least one authority should be defined").ViaField("authorities"))
+		errors = errors.Also(apis.ErrMissingField("authorities"))
 	}
 	for i, authority := range spec.Authorities {
 		errors = errors.Also(authority.Validate(ctx).ViaFieldIndex("authorities", i))
 	}
+
 	return
 }
 
@@ -121,7 +122,7 @@ func (keyless *KeylessRef) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if keyless.Identities != nil && len(keyless.Identities) == 0 {
-		errs = errs.Also(apis.ErrGeneric("At least one identity must be provided"))
+		errs = errs.Also(apis.ErrMissingField("identities"))
 	}
 
 	for i, identity := range keyless.Identities {
