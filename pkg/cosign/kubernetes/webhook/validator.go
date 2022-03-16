@@ -147,7 +147,6 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 					logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
 				} else {
 					for _, authority := range authorities {
-						logging.FromContext(ctx).Infof("TODO: Check authority for image: %s : Authority: %+v ", ref.Name(), authority)
 						if authority.Key != nil {
 							// Get the key from authority data
 							if authorityKeys, err := getAuthorityKeys(ctx, authority.Key.Data); err != nil {
