@@ -72,9 +72,9 @@ func TestGetAuthorities(t *testing.T) {
 	if len(c) == 0 {
 		t.Error("Wanted a config, got none.")
 	}
-	want = "cakey chilling here"
-	if got := c[0].Keyless.CAKey.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Keyless.CAKey.Data)
+	want = "cacert chilling here"
+	if got := c[0].Keyless.CACert.Data; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Keyless.CACert.Data)
 	}
 	want = "issuer"
 	if got := c[0].Keyless.Identities[0].Issuer; got != want {

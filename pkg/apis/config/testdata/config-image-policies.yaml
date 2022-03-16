@@ -46,8 +46,8 @@ data:
       - glob: rando3
       authorities:
       - keyless:
-          ca-key:
-            data: cakey chilling here
+          ca-cert:
+            data: cacert chilling here
           url: http://keylessurl.here
           identities:
           - issuer: issuer

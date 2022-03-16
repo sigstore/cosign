@@ -46,8 +46,6 @@ spec:
                     properties:
                       ctlog:
                         type: object
-                        required:
-                          - url
                         properties:
                           url:
                             type: string
@@ -72,7 +70,7 @@ spec:
                       keyless:
                         type: object
                         properties:
-                          ca-key:
+                          ca-cert:
                             type: object
                             properties:
                               data:

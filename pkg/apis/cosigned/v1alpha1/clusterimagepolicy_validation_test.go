@@ -281,7 +281,7 @@ func TestKeylessValidation(t *testing.T) {
 								URL: &apis.URL{
 									Host: "myhost",
 								},
-								CAKey: &KeyRef{
+								CACert: &KeyRef{
 									Data: "---certificate---",
 								},
 							},

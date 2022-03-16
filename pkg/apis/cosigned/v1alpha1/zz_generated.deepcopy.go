@@ -215,8 +215,8 @@ func (in *KeylessRef) DeepCopyInto(out *KeylessRef) {
 		*out = make([]Identity, len(*in))
 		copy(*out, *in)
 	}
-	if in.CAKey != nil {
-		in, out := &in.CAKey, &out.CAKey
+	if in.CACert != nil {
+		in, out := &in.CACert, &out.CACert
 		*out = new(KeyRef)
 		(*in).DeepCopyInto(*out)
 	}
