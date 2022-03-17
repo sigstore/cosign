@@ -61,7 +61,10 @@ func isb64(data []byte) bool {
 
 // nolint
 func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
-	certOidcIssuer, certChain, sigRef, blobRef string, enforceSCT bool) error {
+	certOidcIssuer, certChain, sigRef, blobRef, certGithubWorkflowTrigger, certGithubWorkflowSha,
+	certGithubWorkflowName,
+	certGithubWorkflowRepository,
+	certGithubWorkflowRef string, enforceSCT bool) error {
 	var verifier signature.Verifier
 	var cert *x509.Certificate
 
@@ -106,9 +109,14 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			return err
 		}
 		co := &cosign.CheckOpts{
-			CertEmail:      certEmail,
-			CertOidcIssuer: certOidcIssuer,
-			EnforceSCT:     enforceSCT,
+			CertEmail:                    certEmail,
+			CertOidcIssuer:               certOidcIssuer,
+			CertGithubWorkflowTrigger:    certGithubWorkflowTrigger,
+			CertGithubWorkflowSha:        certGithubWorkflowSha,
+			CertGithubWorkflowName:       certGithubWorkflowName,
+			CertGithubWorkflowRepository: certGithubWorkflowRepository,
+			CertGithubWorkflowRef:        certGithubWorkflowRef,
+			EnforceSCT:                   enforceSCT,
 		}
 		if certChain == "" {
 			err = cosign.CheckCertificatePolicy(cert, co)

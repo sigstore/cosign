@@ -552,6 +552,126 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 	require.Contains(t, err.Error(), "expected email not found in certificate")
 }
 
+func TestValidateAndUnpackCertInvalidGithubWorkflowTrigger(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowTrigger := "myTrigger"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, githubWorkFlowTrigger, "", "", "", "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:                 rootPool,
+		CertEmail:                 subject,
+		CertGithubWorkflowTrigger: "otherTrigger",
+		CertOidcIssuer:            oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Trigger not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Trigger not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowSHA(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowSha := "mySHA"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", githubWorkFlowSha, "", "", "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:             rootPool,
+		CertEmail:             subject,
+		CertGithubWorkflowSha: "otherSHA",
+		CertOidcIssuer:        oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow SHA not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow SHA not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowName(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowName := "myName"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", "", githubWorkFlowName, "", "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:              rootPool,
+		CertEmail:              subject,
+		CertGithubWorkflowName: "otherName",
+		CertOidcIssuer:         oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Name not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Name not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowRepository(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowRepository := "myRepository"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", "", "", githubWorkFlowRepository, "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:                    rootPool,
+		CertEmail:                    subject,
+		CertGithubWorkflowRepository: "otherRepository",
+		CertOidcIssuer:               oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Repository not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Repository not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowRef(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowRef := "myRef"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", "", "", "", githubWorkFlowRef, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:             rootPool,
+		CertEmail:             subject,
+		CertGithubWorkflowRef: "otherRef",
+		CertOidcIssuer:        oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Ref not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Ref not found in certificate")
+}
+
 func TestValidateAndUnpackCertWithChainSuccess(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"
