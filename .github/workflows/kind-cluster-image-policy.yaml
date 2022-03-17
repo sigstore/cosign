@@ -24,15 +24,21 @@ defaults:
   run:
     shell: bash
 
+permissions: read-all
+
 jobs:
-  chains-test:
-    name: Chains e2e tests
+  cip-test:
+    name: ClusterImagePolicy e2e tests
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write  # undocumented OIDC support.
-      packages: write
-      contents: read
+    matrix:
+      k8s-version:
+      - v1.21.x
+
+    env:
+      KNATIVE_VERSION: "1.1.0"
+      KO_DOCKER_REPO: "registry.local:5000/knative"
+      SCAFFOLDING_RELEASE_VERSION: "v0.2.2"
 
     steps:
     - name: Configure DockerHub mirror
@@ -44,7 +50,7 @@ jobs:
 
     - name: Setup Cluster
       run: |
-        curl -Lo ./setup-kind.sh https://github.com/sigstore/scaffolding/releases/download/${{ env.RELEASE_VERSION }}/setup-kind.sh
+        curl -Lo ./setup-kind.sh https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/setup-kind.sh
         chmod u+x ./setup-kind.sh
         ./setup-kind.sh \
           --registry-url $(echo ${KO_DOCKER_REPO} | cut -d'/' -f 1) \
@@ -55,12 +61,12 @@ jobs:
     - name: Install all the everythings
       timeout-minutes: 10
       run: |
-        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.RELEASE_VERSION }}/release.yaml | kubectl apply -f -
+        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/release.yaml | kubectl apply -f -
 
         # Wait for all the ksvc to be up.
         kubectl wait --timeout 10m -A --for=condition=Ready ksvc --all
 
-    - name: Run Tests
+    - name: Run Scaffolding Tests
       run: |
         # Grab the secret from the ctlog-system namespace and make a copy
         # in our namespace so we can get access to the CT Log public key
@@ -72,22 +78,61 @@ jobs:
         # so we can verify against it.
         kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
 
-        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.RELEASE_VERSION }}/testrelease.yaml | kubectl create -f -
+        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/testrelease.yaml | kubectl create -f -
 
-        kubectl wait --for=condition=Complete --timeout=180s job/sign-job
-        kubectl wait --for=condition=Complete --timeout=180s job/checktree
-        kubectl wait --for=condition=Complete --timeout=180s job/verify-job
+        kubectl wait --for=condition=Complete --timeout=180s job/sign-job job/checktree job/verify-job
 
-    - name: Set the endpoints on the cluster
+    - name: Set the endpoints on the cluster and grab secrets
       run: |
         REKOR_URL=`kubectl -n rekor-system get --no-headers ksvc rekor | cut -d ' ' -f 4`
+        echo "REKOR_URL=$REKOR_URL" >> $GITHUB_ENV
+        FULCIO_URL=`kubectl -n fulcio-system get --no-headers ksvc fulcio | cut -d ' ' -f 4`
+        echo "FULCIO_URL=$FULCIO_URL" >> $GITHUB_ENV
+        CTLOG_URL=`kubectl -n ctlog-system get --no-headers ksvc ctlog | cut -d ' ' -f 4`
+        echo "CTLOG_URL=$CTLOG_URL" >> $GITHUB_ENV
 
-    - name: Run curl against rekor
-      run: |
-        curl ${{ env.REKOR_URL }}/api/v1/log
+        kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
+        echo "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem" >> $GITHUB_ENV
 
-    - name: Check out our repo
-      uses: actions/checkout@v2
+        kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
+        echo "SIGSTORE_ROOT_FILE=./fulcio-root.pem" >> $GITHUB_ENV
+
+      - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
+        with:
+          go-version: '1.17.x'
+
+      # will use the latest release available for ko
+      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+
+      - name: build cosign
+        run: |
+          make cosign
+
+      - name: Create sample image
+        run: |
+          pushd $(mktemp -d)
+          go mod init example.com/demo
+          cat <<EOF > main.go
+          package main
+          import "fmt"
+          func main() {
+            fmt.Println("hello world")
+          }
+          EOF
+          demoimage=`ko publish -B example.com/demo`
+          echo "demoimage=$demoimage" >> $GITHUB_ENV
+          echo Created image $demoimage
+          popd
+
+
+      - name: Sign with cosign
+        run: |
+        COSIGN_EXPERIMENTAL=1 ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --force --allow-insecure-registry ${{ env.demoimage }}
+
+      - name: Verify with cosign
+        run: |
+        SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1 COSIGN_EXPERIMENTAL=1 ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }}
 
     - name: Collect node diagnostics
       if: ${{ failure() }}
