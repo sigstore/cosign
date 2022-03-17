@@ -47,14 +47,14 @@ func TestGetAuthorities(t *testing.T) {
 	checkGetMatches(t, c, err)
 	want := "inlinedata here"
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Make sure glob matches 'randomstuff*'
 	c, err = defaults.GetAuthorities("randomstuffhere")
 	checkGetMatches(t, c, err)
 	want = "otherinline here"
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	c, err = defaults.GetAuthorities("rando3")
 	checkGetMatches(t, c, err)
@@ -75,7 +75,7 @@ func TestGetAuthorities(t *testing.T) {
 	checkGetMatches(t, c, err)
 	want = inlineKeyData
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 
 	// Test multiline yaml cert
@@ -83,14 +83,14 @@ func TestGetAuthorities(t *testing.T) {
 	checkGetMatches(t, c, err)
 	want = inlineKeyData
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Test multiline cert but json encoded
 	c, err = defaults.GetAuthorities("ghcr.io/example/*")
 	checkGetMatches(t, c, err)
 	want = inlineKeyData
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 }
 

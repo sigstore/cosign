@@ -140,13 +140,13 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				continue
 			}
 
-			tempKeys := keys
+			containerKeys := keys
 			config := config.FromContext(ctx)
 			if config != nil {
-				tempKeys = append(tempKeys, getAuthorityKeys(ctx, ref, config)...)
+				containerKeys = append(containerKeys, getAuthorityKeys(ctx, ref, config)...)
 			}
 
-			if err := valid(ctx, ref, tempKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
+			if err := valid(ctx, ref, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
 				errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)
 				errorField.Details = c.Image
 				errs = errs.Also(errorField)
