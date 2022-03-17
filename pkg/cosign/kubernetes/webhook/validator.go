@@ -17,6 +17,7 @@ package webhook
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
@@ -142,24 +143,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 			tempKeys := keys
 			config := config.FromContext(ctx)
 			if config != nil {
-				authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
-				if err != nil {
-					logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
-				} else {
-					logging.FromContext(ctx).Infof("Successfully fetch authorities for %s", ref.Name())
-
-					for _, authority := range authorities {
-						if authority.Key != nil {
-							// Get the key from authority data
-							if authorityKeys, err := getAuthorityKeys(ctx, authority.Key.Data); err != nil {
-								logging.FromContext(ctx).Errorf("Failed to fetch keys from the authorities for %s : %v", ref.Name(), err)
-							} else {
-								logging.FromContext(ctx).Infof("Successfully added authority keys %s", ref.Name())
-								tempKeys = append(keys, authorityKeys...)
-							}
-						}
-					}
-				}
+				tempKeys = append(tempKeys, getAuthorityKeys(ctx, ref, config)...)
 			}
 
 			if err := valid(ctx, ref, tempKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
@@ -175,6 +159,29 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 	checkContainers(ps.Containers, "containers")
 
 	return errs
+}
+
+func getAuthorityKeys(ctx context.Context, ref name.Reference, config *config.Config) []*ecdsa.PublicKey {
+	keys := make([]*ecdsa.PublicKey, 0)
+	authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
+	if err != nil {
+		logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
+	} else {
+		logging.FromContext(ctx).Infof("Successfully fetch authorities for %s", ref.Name())
+		for _, authority := range authorities {
+			if authority.Key != nil {
+				// Get the key from authority data
+				if authorityKeys, err := parseAuthorityKeys(ctx, authority.Key.Data); err != nil {
+					logging.FromContext(ctx).Errorf("Failed to fetch keys from the authorities for %s : %v", ref.Name(), err)
+				} else {
+					logging.FromContext(ctx).Infof("Successfully added authority keys %s", ref.Name())
+					keys = append(keys, authorityKeys...)
+				}
+			}
+		}
+	}
+
+	return keys
 }
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator

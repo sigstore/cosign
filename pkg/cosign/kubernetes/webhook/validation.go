@@ -106,7 +106,7 @@ func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *a
 	return keys, nil
 }
 
-func getAuthorityKeys(ctx context.Context, pubKey string) ([]*ecdsa.PublicKey, *apis.FieldError) {
+func parseAuthorityKeys(ctx context.Context, pubKey string) ([]*ecdsa.PublicKey, *apis.FieldError) {
 	keys := []*ecdsa.PublicKey{}
 	errs := []error{}
 
