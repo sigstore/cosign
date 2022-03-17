@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -87,6 +88,7 @@ func (p *ImagePolicyConfig) GetAuthorities(image string) ([]v1alpha1.Authority, 
 		return nil, errors.New("config is nil")
 	}
 
+	var lastError error
 	ret := []v1alpha1.Authority{}
 
 	// TODO(vaikas): this is very inefficient, we should have a better
@@ -94,10 +96,18 @@ func (p *ImagePolicyConfig) GetAuthorities(image string) ([]v1alpha1.Authority, 
 	// workable so fine for now.
 	for _, v := range p.Policies {
 		for _, pattern := range v.Images {
-			if GlobMatch(image, pattern.Glob) {
-				ret = append(ret, v.Authorities...)
+			if pattern.Glob != "" {
+				if GlobMatch(image, pattern.Glob) {
+					ret = append(ret, v.Authorities...)
+				}
+			} else if pattern.Regex != "" {
+				if matched, err := regexp.MatchString(pattern.Regex, image); err != nil {
+					lastError = err
+				} else if matched {
+					ret = append(ret, v.Authorities...)
+				}
 			}
 		}
 	}
-	return ret, nil
+	return ret, lastError
 }
