@@ -234,3 +234,50 @@ func TestCompareSigs(t *testing.T) {
 		})
 	}
 }
+
+func TestTrustedCertSuccess(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+	subPool := x509.NewCertPool()
+	subPool.AddCert(subCert)
+
+	err := TrustedCert(leafCert, rootPool, subPool)
+	if err != nil {
+		t.Fatalf("expected no error verifying certificate, got %v", err)
+	}
+}
+
+func TestTrustedCertSuccessNoIntermediates(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	err := TrustedCert(leafCert, rootPool, nil)
+	if err != nil {
+		t.Fatalf("expected no error verifying certificate, got %v", err)
+	}
+}
+
+// Tests that verification succeeds if both a root and subordinate pool are
+// present, but a chain is built with only the leaf and root certificates.
+func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	subCert, _, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+	subPool := x509.NewCertPool()
+	subPool.AddCert(subCert)
+
+	err := TrustedCert(leafCert, rootPool, subPool)
+	if err != nil {
+		t.Fatalf("expected no error verifying certificate, got %v", err)
+	}
+}

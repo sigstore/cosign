@@ -75,6 +75,8 @@ type CheckOpts struct {
 
 	// RootCerts are the root CA certs used to verify a signature's chained certificate.
 	RootCerts *x509.CertPool
+	// IntermediateCerts are the optional intermediate CA certs used to verify a certificate chain.
+	IntermediateCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
@@ -149,7 +151,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	}
 
 	// Now verify the cert, then the signature.
-	if err := TrustedCert(cert, co.RootCerts); err != nil {
+	if err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts); err != nil {
 		return nil, err
 	}
 	if co.CertEmail != "" {
@@ -783,13 +785,14 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	return nil
 }
 
-func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {
+func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x509.CertPool) error {
 	if _, err := cert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
 		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
-		CurrentTime: cert.NotBefore,
-		Roots:       roots,
+		CurrentTime:   cert.NotBefore,
+		Roots:         roots,
+		Intermediates: intermediates,
 		KeyUsages: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageCodeSigning,
 		},
