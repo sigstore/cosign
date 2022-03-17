@@ -30,7 +30,6 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
-	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,56 +41,6 @@ import (
 	rtesting "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/system"
 )
-
-func TestGetAuthorityKeys(t *testing.T) {
-	refName := name.MustParseReference("gcr.io/distroless/static:nonroot")
-
-	validPublicKey := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox\nUoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==\n-----END PUBLIC KEY-----"
-
-	tests := []struct {
-		name          string
-		imagePatterns []v1alpha1.ImagePattern
-		authorities   []v1alpha1.Authority
-		wantKeyLength int
-	}{
-		{
-			name:          "no authorities",
-			wantKeyLength: 0,
-		}, {
-			name: "wildcard glob and one key",
-			imagePatterns: []v1alpha1.ImagePattern{{
-				Glob: "*",
-			}},
-			authorities: []v1alpha1.Authority{
-				{
-					Key: &v1alpha1.KeyRef{
-						Data: validPublicKey,
-					},
-				},
-			},
-			wantKeyLength: 1,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			config := config.Config{
-				ImagePolicyConfig: &config.ImagePolicyConfig{
-					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
-						"cluster-image-policy": {
-							Images:      test.imagePatterns,
-							Authorities: test.authorities,
-						},
-					},
-				},
-			}
-
-			keys := getAuthorityKeys(context.Background(), refName, &config)
-			assert.Equal(t, len(keys), test.wantKeyLength)
-		})
-	}
-}
 
 func TestValidatePodSpec(t *testing.T) {
 	tag := name.MustParseReference("gcr.io/distroless/static:nonroot")
@@ -914,6 +863,90 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			v.ResolveCronJob(ctx, cronJob)
 			if !cmp.Equal(cronJob, want) {
 				t.Errorf("ResolveCronJob = %s", cmp.Diff(cronJob, want))
+			}
+		})
+	}
+}
+
+func TestGetAuthorityKeys(t *testing.T) {
+	refName := name.MustParseReference("gcr.io/distroless/static:nonroot")
+
+	validPublicKey := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox\nUoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==\n-----END PUBLIC KEY-----"
+
+	validKeyData := v1alpha1.Authority{
+		Key: &v1alpha1.KeyRef{
+			Data: validPublicKey,
+		},
+	}
+
+	tests := []struct {
+		name          string
+		imagePatterns []v1alpha1.ImagePattern
+		authorities   []v1alpha1.Authority
+		wantKeyLength int
+	}{
+		{
+			name:          "no authorities",
+			wantKeyLength: 0,
+		}, {
+			name: "invalid regex and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Regex: "*",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 0,
+		}, {
+			name: "unmatching glob and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Glob: "-",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 0,
+		}, {
+			name: "wildcard glob and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Glob: "*",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 1,
+		}, {
+			name: "wildcard regex and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Regex: ".*",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 1,
+		},
+		// TODO: Test against authority[].key.kms and authority[].key.secretRef
+		// TODO: Test against authority[].keyless
+		// TODO: Test with multiple imagePatterns
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			config := config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
+						"cluster-image-policy": {
+							Images:      test.imagePatterns,
+							Authorities: test.authorities,
+						},
+					},
+				},
+			}
+
+			keys := getAuthorityKeys(context.Background(), refName, &config)
+			if got := len(keys); got != test.wantKeyLength {
+				t.Errorf("Did not get what I wanted %d, got %d", test.wantKeyLength, got)
 			}
 		})
 	}
