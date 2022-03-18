@@ -42,7 +42,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.0.0
 	github.com/stretchr/testify v1.7.1
 	github.com/theupdateframework/go-tuf v0.0.0-20220211205608-f0c3294f63b9
-	github.com/xanzy/go-gitlab v0.59.0
+	github.com/xanzy/go-gitlab v0.60.0
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5
