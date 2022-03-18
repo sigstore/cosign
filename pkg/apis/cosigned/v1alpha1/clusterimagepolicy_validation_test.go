@@ -32,7 +32,7 @@ func TestImagePatternValidation(t *testing.T) {
 		{
 			name:        "Should fail when both regex and glob are present",
 			expectErr:   true,
-			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex\ninvalid value: **: spec.images[0].glob\nglob match supports only a single * as a trailing character\nmissing field(s): spec.authorities\nmust not set the field(s): spec.images[0].regex",
+			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex\ninvalid value: **: spec.images[0].glob\nglob match supports only a single * as a trailing character\nmissing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -90,6 +90,40 @@ func TestImagePatternValidation(t *testing.T) {
 			errorString: "missing field(s): spec.authorities, spec.images",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{},
+			},
+		},
+		{
+			name:        "Should fail when regex is invalid: %v",
+			expectErr:   true,
+			errorString: "invalid value: *: spec.images[0].regex\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`\nmissing field(s): spec.authorities",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Regex: "*",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:      "Should pass when regex is valid: %v",
+			expectErr: false,
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Regex: ".*",
+						},
+					},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{
+								KMS: "kms://key/path",
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -198,29 +232,8 @@ func TestKeyValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when regex is given",
-			expectErr:   true,
-			errorString: "must not set the field(s): spec.images[0].regex",
-			policy: ClusterImagePolicy{
-				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{
-						{
-							Regex: "myg**lob*",
-						},
-					},
-					Authorities: []Authority{
-						{
-							Key: &KeyRef{
-								KMS: "kms://key/path",
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:      "Should pass when key has only one property",
-			expectErr: false,
+			name:        "Should pass when key has only one property: %v",
+			errorString: "",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{

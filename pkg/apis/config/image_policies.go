@@ -101,9 +101,9 @@ func (p *ImagePolicyConfig) GetAuthorities(image string) ([]v1alpha1.Authority, 
 					ret = append(ret, v.Authorities...)
 				}
 			} else if pattern.Regex != "" {
-				if matched, err := regexp.MatchString(pattern.Regex, image); err != nil {
+				if regex, err := regexp.Compile(pattern.Regex); err != nil {
 					lastError = err
-				} else if matched {
+				} else if regex.MatchString(image) {
 					ret = append(ret, v.Authorities...)
 				}
 			}
