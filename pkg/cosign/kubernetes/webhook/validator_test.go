@@ -932,7 +932,6 @@ func TestGetAuthorityKeys(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-
 			config := config.Config{
 				ImagePolicyConfig: &config.ImagePolicyConfig{
 					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
