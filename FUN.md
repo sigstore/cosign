@@ -102,8 +102,8 @@ Now find it from the log:
 
 ```
 $ uuid=$(rekor-cli search --artifact <(git rev-parse HEAD) | tail -n 1)
-$ sig=$(rekor-cli get --uuid=$uuid --format=json | jq -r .Body.RekordObj.signature.content)
-$ cert=$(rekor-cli get --uuid=$uuid --format=json | jq -r .Body.RekordObj.signature.publicKey.content)
+$ sig=$(rekor-cli get --uuid=$uuid --format=json | jq -r .Body.HashedRecordObj.signature.content)
+$ cert=$(rekor-cli get --uuid=$uuid --format=json | jq -r .Body.HashedRecordObj.signature.publicKey.content)
 
 $ cosign verify-blob --cert <(echo $cert | base64 --decode) --signature <(echo $sig) <(git rev-parse HEAD)
 Certificate is trusted by Fulcio Root CA
