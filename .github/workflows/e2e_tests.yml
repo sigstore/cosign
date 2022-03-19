@@ -42,7 +42,7 @@ jobs:
           service_account_key: ${{ secrets.GCP_CI_SERVICE_ACCOUNT }}
           export_default_credentials: true
       - name: Set up `crane`
-        run: go install github.com/google/go-containerregistry/cmd/crane@v0.7.0
+        run: go install github.com/google/go-containerregistry/cmd/crane@v0.8.0
       - name: gcloud auth configure-docker
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
       - name: Run e2e_test_secrets.sh
