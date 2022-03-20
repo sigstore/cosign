@@ -5,6 +5,7 @@ env:
   - CGO_ENABLED=1
   - DOCKER_CLI_EXPERIMENTAL=enabled
   - COSIGN_EXPERIMENTAL=true
+  - LATEST_TAG="--tags latest"
 
 # Prevents parallel builds from stepping on each others toes downloading modules
 before:

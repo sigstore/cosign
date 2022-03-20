@@ -68,4 +68,3 @@ copy-sget-signed-release-to-ghcr:
 
 .PHONY: copy-signed-release-to-ghcr
 copy-signed-release-to-ghcr: copy-cosign-signed-release-to-ghcr copy-cosigned-signed-release-to-ghcr copy-sget-signed-release-to-ghcr
-	
