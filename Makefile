@@ -57,6 +57,7 @@ KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
 GHCR_PREFIX ?= ghcr.io/sigstore/cosign
 COSIGNED_YAML ?= cosign-$(GIT_TAG).yaml
+LATEST_TAG ?=
 
 .PHONY: all lint test clean cosign cross
 all: cosign
@@ -146,20 +147,20 @@ ko:
 	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) $(LATEST_TAG)\
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
 
 	# cosigned
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KO_DOCKER_REPO=$(KO_PREFIX)/cosigned ko resolve --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) $(LATEST_TAG) \
 		--filename config/ > $(COSIGNED_YAML)
 
 	# sget
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) $(LATEST_TAG)\
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/sget
 
