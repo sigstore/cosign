@@ -143,7 +143,12 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 			containerKeys := keys
 			config := config.FromContext(ctx)
 			if config != nil {
-				containerKeys = append(containerKeys, getAuthorityKeys(ctx, ref, config)...)
+				authorityKeys, fieldErrors := getAuthorityKeys(ctx, ref, config)
+				if fieldErrors != nil {
+					// TODO:(dennyhoang) Enforce currently non-breaking errors https://github.com/sigstore/cosign/issues/1642
+					logging.FromContext(ctx).Warnf("Failed to fetch authorities for %s : %v", ref.Name(), fieldErrors)
+				}
+				containerKeys = append(containerKeys, authorityKeys...)
 			}
 
 			if err := valid(ctx, ref, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
@@ -161,27 +166,24 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 	return errs
 }
 
-func getAuthorityKeys(ctx context.Context, ref name.Reference, config *config.Config) []*ecdsa.PublicKey {
-	keys := make([]*ecdsa.PublicKey, 0)
+func getAuthorityKeys(ctx context.Context, ref name.Reference, config *config.Config) (keys []*ecdsa.PublicKey, errs *apis.FieldError) {
 	authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
 	if err != nil {
-		logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
+		return keys, apis.ErrGeneric(fmt.Sprintf("failed to fetch authorities for %s : %v", ref.Name(), err), apis.CurrentField)
 	} else {
-		logging.FromContext(ctx).Infof("Successfully fetch authorities for %s", ref.Name())
 		for _, authority := range authorities {
 			if authority.Key != nil {
 				// Get the key from authority data
-				if authorityKeys, err := parseAuthorityKeys(ctx, authority.Key.Data); err != nil {
-					logging.FromContext(ctx).Errorf("Failed to fetch keys from the authorities for %s : %v", ref.Name(), err)
+				if authorityKeys, fieldErr := parseAuthorityKeys(ctx, authority.Key.Data); fieldErr != nil {
+					errs = errs.Also(fieldErr)
 				} else {
-					logging.FromContext(ctx).Infof("Successfully added authority keys %s", ref.Name())
 					keys = append(keys, authorityKeys...)
 				}
 			}
 		}
 	}
 
-	return keys
+	return keys, errs
 }
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator

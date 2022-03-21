@@ -960,10 +960,12 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		imagePatterns []v1alpha1.ImagePattern
 		authorities   []v1alpha1.Authority
 		wantKeyLength int
+		expectErr     bool
 	}{
 		{
 			name:          "no authorities",
 			wantKeyLength: 0,
+			expectErr:     false,
 		}, {
 			name: "invalid regex and one key data",
 			imagePatterns: []v1alpha1.ImagePattern{{
@@ -973,6 +975,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 				validKeyData,
 			},
 			wantKeyLength: 0,
+			expectErr:     true,
 		}, {
 			name: "unmatching glob and one key data",
 			imagePatterns: []v1alpha1.ImagePattern{{
@@ -982,6 +985,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 				validKeyData,
 			},
 			wantKeyLength: 0,
+			expectErr:     false,
 		}, {
 			name: "wildcard glob and one key data",
 			imagePatterns: []v1alpha1.ImagePattern{{
@@ -991,6 +995,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 				validKeyData,
 			},
 			wantKeyLength: 1,
+			expectErr:     false,
 		}, {
 			name: "wildcard regex and one key data",
 			imagePatterns: []v1alpha1.ImagePattern{{
@@ -1000,9 +1005,8 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 				validKeyData,
 			},
 			wantKeyLength: 1,
+			expectErr:     false,
 		},
-		// TODO(dennyhoang): Test against authority[].keyless
-		// TODO(dennyhoang): Test with more imagePatterns
 	}
 
 	for _, test := range tests {
@@ -1018,7 +1022,14 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 				},
 			}
 
-			keys := getAuthorityKeys(context.Background(), refName, &config)
+			keys, err := getAuthorityKeys(context.Background(), refName, &config)
+			if test.expectErr && err == nil {
+				t.Error("Did not get wanted error")
+			}
+			if !test.expectErr && err != nil {
+				t.Error("Did get unwanted error")
+			}
+
 			if got := len(keys); got != test.wantKeyLength {
 				t.Errorf("Did not get what I wanted %d, got %d", test.wantKeyLength, got)
 			}

@@ -121,7 +121,7 @@ func parseAuthorityKeys(ctx context.Context, pubKey string) ([]*ecdsa.PublicKey,
 			keys = append(keys, key.(*ecdsa.PublicKey))
 		}
 	}
-	if keys == nil {
+	if len(keys) == 0 {
 		return nil, apis.ErrGeneric(fmt.Sprintf("malformed authority key data: %v", errs), apis.CurrentField)
 	}
 	return keys, nil
