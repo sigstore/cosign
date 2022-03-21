@@ -132,7 +132,7 @@ clean:
 
 
 KOCACHE_PATH=/tmp/ko
-ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url=https://raw.githubusercontent.com/sigstore/cosign/main/README.md --image-label io.artifacthub.package.logo-url=https://raw.githubusercontent.com/sigstore/cosign/main/images/logo.svg --image-label io.artifacthub.package.license=Apache-2.0 --image-label io.artifacthub.package.vendor=sigstore --image-label io.artifacthub.package.version=0.1.0 --image-label io.artifacthub.package.name=cosign --image-label org.opencontainers.image.created=$(BUILD_DATE) --image-label org.opencontainers.image.description='Container signing verification and storage in an OCI registry'
+ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url=https://raw.githubusercontent.com/sigstore/cosign/main/README.md --image-label io.artifacthub.package.logo-url=https://raw.githubusercontent.com/sigstore/cosign/main/images/logo.svg --image-label io.artifacthub.package.license=Apache-2.0 --image-label io.artifacthub.package.vendor=sigstore --image-label io.artifacthub.package.version=0.1.0 --image-label io.artifacthub.package.name=cosign --image-label org.opencontainers.image.created=$(BUILD_DATE) --image-label org.opencontainers.image.description='Container signing verification and storage in an OCI registry' --image-label io.artifacthub.package.alternative-locations="oci://ghcr.io/sigstore/cosign/cosign"
 
 define create_kocache_path
   mkdir -p $(KOCACHE_PATH)
