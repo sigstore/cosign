@@ -352,6 +352,21 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 		if cert == nil {
 			return bundleVerified, errors.New("no certificate found on signature")
 		}
+		// Create a certificate pool for intermediate CA certificates, excluding the root
+		chain, err := sig.Chain()
+		if err != nil {
+			return bundleVerified, err
+		}
+		// If the chain annotation is not present or there is only a root
+		if chain == nil || len(chain) <= 1 {
+			co.IntermediateCerts = nil
+		} else {
+			pool := x509.NewCertPool()
+			for _, cert := range chain[:len(chain)-1] {
+				pool.AddCert(cert)
+			}
+			co.IntermediateCerts = pool
+		}
 		verifier, err = ValidateAndUnpackCert(cert, co)
 		if err != nil {
 			return bundleVerified, err
@@ -514,6 +529,21 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				}
 				if cert == nil {
 					return errors.New("no certificate found on attestation")
+				}
+				// Create a certificate pool for intermediate CA certificates, excluding the root
+				chain, err := att.Chain()
+				if err != nil {
+					return err
+				}
+				// If the chain annotation is not present or there is only a root
+				if chain == nil || len(chain) <= 1 {
+					co.IntermediateCerts = nil
+				} else {
+					pool := x509.NewCertPool()
+					for _, cert := range chain[:len(chain)-1] {
+						pool.AddCert(cert)
+					}
+					co.IntermediateCerts = pool
 				}
 				verifier, err = ValidateAndUnpackCert(cert, co)
 				if err != nil {
