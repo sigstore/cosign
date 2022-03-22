@@ -170,15 +170,15 @@ func getAuthorityKeys(ctx context.Context, ref name.Reference, config *config.Co
 	authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
 	if err != nil {
 		return keys, apis.ErrGeneric(fmt.Sprintf("failed to fetch authorities for %s : %v", ref.Name(), err), apis.CurrentField)
-	} else {
-		for _, authority := range authorities {
-			if authority.Key != nil {
-				// Get the key from authority data
-				if authorityKeys, fieldErr := parseAuthorityKeys(ctx, authority.Key.Data); fieldErr != nil {
-					errs = errs.Also(fieldErr)
-				} else {
-					keys = append(keys, authorityKeys...)
-				}
+	}
+
+	for _, authority := range authorities {
+		if authority.Key != nil {
+			// Get the key from authority data
+			if authorityKeys, fieldErr := parseAuthorityKeys(ctx, authority.Key.Data); fieldErr != nil {
+				errs = errs.Also(fieldErr)
+			} else {
+				keys = append(keys, authorityKeys...)
 			}
 		}
 	}
