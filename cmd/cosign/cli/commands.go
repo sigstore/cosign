@@ -70,6 +70,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Attach())
 	cmd.AddCommand(Attest())
 	cmd.AddCommand(Clean())
+	cmd.AddCommand(Tree())
 	cmd.AddCommand(Completion())
 	cmd.AddCommand(Copy())
 	cmd.AddCommand(Dockerfile())

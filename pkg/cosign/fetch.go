@@ -56,12 +56,6 @@ type AttestationPayload struct {
 }
 
 const (
-	SignatureTagSuffix   = ".sig"
-	SBOMTagSuffix        = ".sbom"
-	AttestationTagSuffix = ".att"
-)
-
-const (
 	Signature   = "signature"
 	SBOM        = "sbom"
 	Attestation = "attestation"
