@@ -29,7 +29,6 @@ import (
 	"knative.dev/pkg/logging"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
-	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
@@ -37,20 +36,6 @@ import (
 )
 
 func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) error {
-	// TODO(vaikas): No failures, just logging as to not interfere with the
-	// normal operation. Just starting to plumb things through here.
-	config := config.FromContext(ctx)
-	if config != nil {
-		authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
-		if err != nil {
-			logging.FromContext(ctx).Errorf("Failed to fetch authorities for %s : %v", ref.Name(), err)
-		} else {
-			for _, authority := range authorities {
-				logging.FromContext(ctx).Infof("TODO: Check authority for image: %s : Authority: %+v ", ref.Name(), authority)
-			}
-		}
-	}
-
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
 		sps, err := validSignatures(ctx, ref, nil /* verifier */, opts...)
@@ -117,6 +102,27 @@ func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *a
 	}
 	if keys == nil {
 		return nil, apis.ErrGeneric(fmt.Sprintf("malformed cosign.pub: %v", errs), apis.CurrentField)
+	}
+	return keys, nil
+}
+
+func parseAuthorityKeys(ctx context.Context, pubKey string) ([]*ecdsa.PublicKey, *apis.FieldError) {
+	keys := []*ecdsa.PublicKey{}
+	errs := []error{}
+
+	logging.FromContext(ctx).Debugf("Got public key: %v", pubKey)
+
+	pems := parsePems([]byte(pubKey))
+	for _, p := range pems {
+		key, err := x509.ParsePKIXPublicKey(p.Bytes)
+		if err != nil {
+			errs = append(errs, err)
+		} else {
+			keys = append(keys, key.(*ecdsa.PublicKey))
+		}
+	}
+	if len(keys) == 0 {
+		return nil, apis.ErrGeneric(fmt.Sprintf("malformed authority key data: %v", errs), apis.CurrentField)
 	}
 	return keys, nil
 }

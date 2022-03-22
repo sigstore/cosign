@@ -16,7 +16,11 @@
 package webhook
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/x509"
 	"errors"
 	"testing"
 	"time"
@@ -24,6 +28,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/cosign/pkg/apis/config"
+	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/remote"
@@ -49,6 +55,21 @@ func TestValidatePodSpec(t *testing.T) {
 	si := fakesecret.Get(ctx)
 
 	secretName := "blah"
+
+	var authorityKeyCosignPub *ecdsa.PublicKey
+	// Random public key (cosign generate-key-pair) 2022-03-18
+	authorityKeyCosignPubString := `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENAyijLvRu5QpCPp2uOj8C79ZW1VJ
+SID/4H61ZiRzN4nqONzp+ZF22qQTk3MFO3D0/ZKmWHAosIf2pf2GHH7myA==
+-----END PUBLIC KEY-----`
+
+	pems := parsePems([]byte(authorityKeyCosignPubString))
+	if len(pems) > 0 {
+		key, _ := x509.ParsePKIXPublicKey(pems[0].Bytes)
+		authorityKeyCosignPub = key.(*ecdsa.PublicKey)
+	} else {
+		t.Errorf("Error parsing authority key from string")
+	}
 
 	si.Informer().GetIndexer().Add(&corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -79,7 +100,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		cosignVerifySignatures = cvs
 	}()
 	// Let's just say that everything is verified.
-	pass := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	pass := func(_ context.Context, _ name.Reference, _ *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 		sig, err := static.NewSignature(nil, "")
 		if err != nil {
 			return nil, false, err
@@ -87,15 +108,31 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		return []oci.Signature{sig}, true, nil
 	}
 	// Let's just say that everything is not verified.
-	fail := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	fail := func(_ context.Context, _ name.Reference, _ *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 		return nil, false, errors.New("bad signature")
 	}
 
+	// Let's say it is verified if it is the expected Public Key
+	authorityPublicKeyCVS := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		actualPublicKey, _ := co.SigVerifier.PublicKey()
+		actualECDSAPubkey := actualPublicKey.(*ecdsa.PublicKey)
+		actualKeyData := elliptic.Marshal(actualECDSAPubkey, actualECDSAPubkey.X, actualECDSAPubkey.Y)
+
+		expectedKeyData := elliptic.Marshal(authorityKeyCosignPub, authorityKeyCosignPub.X, authorityKeyCosignPub.Y)
+
+		if bytes.Equal(actualKeyData, expectedKeyData) {
+			return pass(ctx, signedImgRef, co)
+		}
+
+		return fail(ctx, signedImgRef, co)
+	}
+
 	tests := []struct {
-		name string
-		ps   *corev1.PodSpec
-		want *apis.FieldError
-		cvs  func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
+		name          string
+		ps            *corev1.PodSpec
+		want          *apis.FieldError
+		cvs           func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
+		customContext context.Context
 	}{{
 		name: "simple, no error",
 		ps: &corev1.PodSpec{
@@ -149,14 +186,52 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			Details: digest.String(),
 		},
 		cvs: fail,
+	}, {
+		name: "simple, no error, authority key",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(context.Background(),
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
+						"cluster-image-policy": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []v1alpha1.Authority{
+								{
+									Key: &v1alpha1.KeyRef{
+										Data: authorityKeyCosignPubString,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		cvs: authorityPublicKeyCVS,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cosignVerifySignatures = test.cvs
+			testContext := context.Background()
+
+			if test.customContext != nil {
+				testContext = test.customContext
+			}
 
 			// Check the core mechanics
-			got := v.validatePodSpec(context.Background(), test.ps, k8schain.Options{})
+			got := v.validatePodSpec(testContext, test.ps, k8schain.Options{})
 			if (got != nil) != (test.want != nil) {
 				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
 			} else if got != nil && got.Error() != test.want.Error() {
@@ -167,7 +242,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			pod := &duckv1.Pod{
 				Spec: *test.ps,
 			}
-			got = v.ValidatePod(context.Background(), pod)
+			got = v.ValidatePod(testContext, pod)
 			want := test.want.ViaField("spec")
 			if (got != nil) != (want != nil) {
 				t.Errorf("ValidatePod() = %v, wanted %v", got, want)
@@ -176,7 +251,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			}
 			// Check that we don't block things being deleted.
 			pod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-			if got := v.ValidatePod(context.Background(), pod); got != nil {
+			if got := v.ValidatePod(testContext, pod); got != nil {
 				t.Errorf("ValidatePod() = %v, wanted nil", got)
 			}
 
@@ -188,7 +263,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					},
 				},
 			}
-			got = v.ValidatePodSpecable(context.Background(), withPod)
+			got = v.ValidatePodSpecable(testContext, withPod)
 			want = test.want.ViaField("spec.template.spec")
 			if (got != nil) != (want != nil) {
 				t.Errorf("ValidatePodSpecable() = %v, wanted %v", got, want)
@@ -197,7 +272,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			}
 			// Check that we don't block things being deleted.
 			withPod.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-			if got := v.ValidatePodSpecable(context.Background(), withPod); got != nil {
+			if got := v.ValidatePodSpecable(testContext, withPod); got != nil {
 				t.Errorf("ValidatePodSpecable() = %v, wanted nil", got)
 			}
 		})
@@ -861,6 +936,102 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			v.ResolveCronJob(ctx, cronJob)
 			if !cmp.Equal(cronJob, want) {
 				t.Errorf("ResolveCronJob = %s", cmp.Diff(cronJob, want))
+			}
+		})
+	}
+}
+
+func TestGetAuthorityKeys(t *testing.T) {
+	refName := name.MustParseReference("gcr.io/distroless/static:nonroot")
+	// Random public key (cosign generate-key-pair) 2021-09-25
+	validPublicKey := `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
+UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
+-----END PUBLIC KEY-----`
+
+	validKeyData := v1alpha1.Authority{
+		Key: &v1alpha1.KeyRef{
+			Data: validPublicKey,
+		},
+	}
+
+	tests := []struct {
+		name          string
+		imagePatterns []v1alpha1.ImagePattern
+		authorities   []v1alpha1.Authority
+		wantKeyLength int
+		expectErr     bool
+	}{
+		{
+			name:          "no authorities",
+			wantKeyLength: 0,
+			expectErr:     false,
+		}, {
+			name: "invalid regex and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Regex: "*",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 0,
+			expectErr:     true,
+		}, {
+			name: "unmatching glob and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Glob: "-",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 0,
+			expectErr:     false,
+		}, {
+			name: "wildcard glob and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Glob: "*",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 1,
+			expectErr:     false,
+		}, {
+			name: "wildcard regex and one key data",
+			imagePatterns: []v1alpha1.ImagePattern{{
+				Regex: ".*",
+			}},
+			authorities: []v1alpha1.Authority{
+				validKeyData,
+			},
+			wantKeyLength: 1,
+			expectErr:     false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			config := config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
+						"cluster-image-policy": {
+							Images:      test.imagePatterns,
+							Authorities: test.authorities,
+						},
+					},
+				},
+			}
+
+			keys, err := getAuthorityKeys(context.Background(), refName, &config)
+			if test.expectErr && err == nil {
+				t.Error("Did not get wanted error")
+			}
+			if !test.expectErr && err != nil {
+				t.Error("Did get unwanted error")
+			}
+
+			if got := len(keys); got != test.wantKeyLength {
+				t.Errorf("Did not get what I wanted %d, got %d", test.wantKeyLength, got)
 			}
 		})
 	}

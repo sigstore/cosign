@@ -17,11 +17,13 @@ package webhook
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/sigstore/cosign/pkg/apis/config"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -138,7 +140,18 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				continue
 			}
 
-			if err := valid(ctx, ref, keys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
+			containerKeys := keys
+			config := config.FromContext(ctx)
+			if config != nil {
+				authorityKeys, fieldErrors := getAuthorityKeys(ctx, ref, config)
+				if fieldErrors != nil {
+					// TODO:(dennyhoang) Enforce currently non-breaking errors https://github.com/sigstore/cosign/issues/1642
+					logging.FromContext(ctx).Warnf("Failed to fetch authorities for %s : %v", ref.Name(), fieldErrors)
+				}
+				containerKeys = append(containerKeys, authorityKeys...)
+			}
+
+			if err := valid(ctx, ref, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
 				errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)
 				errorField.Details = c.Image
 				errs = errs.Also(errorField)
@@ -151,6 +164,26 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 	checkContainers(ps.Containers, "containers")
 
 	return errs
+}
+
+func getAuthorityKeys(ctx context.Context, ref name.Reference, config *config.Config) (keys []*ecdsa.PublicKey, errs *apis.FieldError) {
+	authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
+	if err != nil {
+		return keys, apis.ErrGeneric(fmt.Sprintf("failed to fetch authorities for %s : %v", ref.Name(), err), apis.CurrentField)
+	}
+
+	for _, authority := range authorities {
+		if authority.Key != nil {
+			// Get the key from authority data
+			if authorityKeys, fieldErr := parseAuthorityKeys(ctx, authority.Key.Data); fieldErr != nil {
+				errs = errs.Also(fieldErr)
+			} else {
+				keys = append(keys, authorityKeys...)
+			}
+		}
+	}
+
+	return keys, errs
 }
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator

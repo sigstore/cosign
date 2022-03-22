@@ -17,6 +17,7 @@ package config
 import (
 	"testing"
 
+	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	. "knative.dev/pkg/configmap/testing"
 	_ "knative.dev/pkg/system/testing"
 )
@@ -43,35 +44,20 @@ func TestGetAuthorities(t *testing.T) {
 		t.Error("NewImagePoliciesConfigFromConfigMap(example) =", err)
 	}
 	c, err := defaults.GetAuthorities("rando")
-	if err != nil {
-		t.Error("GetMatches Failed =", err)
-	}
-	if len(c) == 0 {
-		t.Error("Wanted a config, got none.")
-	}
+	checkGetMatches(t, c, err)
 	want := "inlinedata here"
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Make sure glob matches 'randomstuff*'
 	c, err = defaults.GetAuthorities("randomstuffhere")
-	if err != nil {
-		t.Error("GetMatches Failed =", err)
-	}
-	if len(c) == 0 {
-		t.Error("Wanted a config, got none.")
-	}
+	checkGetMatches(t, c, err)
 	want = "otherinline here"
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	c, err = defaults.GetAuthorities("rando3")
-	if err != nil {
-		t.Error("GetMatches Failed =", err)
-	}
-	if len(c) == 0 {
-		t.Error("Wanted a config, got none.")
-	}
+	checkGetMatches(t, c, err)
 	want = "cacert chilling here"
 	if got := c[0].Keyless.CACert.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Keyless.CACert.Data)
@@ -84,28 +70,35 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[0].Keyless.Identities[0].Subject; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Keyless.Identities[0].Subject)
 	}
-	// Test multiline yaml cert
-	c, err = defaults.GetAuthorities("inlinecert")
-	if err != nil {
-		t.Error("GetMatches Failed =", err)
-	}
-	if len(c) == 0 {
-		t.Error("Wanted a config, got none.")
-	}
+	// Make sure regex matches ".*regexstring.*"
+	c, err = defaults.GetAuthorities("randomregexstringstuff")
+	checkGetMatches(t, c, err)
 	want = inlineKeyData
 	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
+	}
+
+	// Test multiline yaml cert
+	c, err = defaults.GetAuthorities("inlinecert")
+	checkGetMatches(t, c, err)
+	want = inlineKeyData
+	if got := c[0].Key.Data; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Test multiline cert but json encoded
 	c, err = defaults.GetAuthorities("ghcr.io/example/*")
+	checkGetMatches(t, c, err)
+	want = inlineKeyData
+	if got := c[0].Key.Data; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
+	}
+}
+
+func checkGetMatches(t *testing.T, c []v1alpha1.Authority, err error) {
 	if err != nil {
 		t.Error("GetMatches Failed =", err)
 	}
 	if len(c) == 0 {
 		t.Error("Wanted a config, got none.")
-	}
-	want = inlineKeyData
-	if got := c[0].Key.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Key.Data)
 	}
 }

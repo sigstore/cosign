@@ -185,6 +185,10 @@ ko-local:
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign/policy_webhook
 
+.PHONY: ko-apply
+ko-apply:
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -Bf config/
+
 ##################
 # help
 ##################

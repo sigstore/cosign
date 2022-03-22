@@ -16,6 +16,8 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/sigstore/cosign/pkg/apis/utils"
@@ -59,7 +61,7 @@ func (image *ImagePattern) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if image.Regex != "" {
-		errs = errs.Also(apis.ErrDisallowedFields("regex"))
+		errs = errs.Also(ValidateRegex(image.Regex).ViaField("regex"))
 	}
 
 	return errs
@@ -153,5 +155,14 @@ func ValidateGlob(glob string) *apis.FieldError {
 	default:
 		return apis.ErrInvalidValue(glob, apis.CurrentField, "glob match supports only a single * as a trailing character")
 	}
+	return nil
+}
+
+func ValidateRegex(regex string) *apis.FieldError {
+	_, err := regexp.Compile(regex)
+	if err != nil {
+		return apis.ErrInvalidValue(regex, apis.CurrentField, fmt.Sprintf("regex is invalid: %v", err))
+	}
+
 	return nil
 }
