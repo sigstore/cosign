@@ -37,6 +37,8 @@ do
     echo "${i} failed when it should not have"
     exit 1
   fi
+
+  kubectl delete -f ./test/testdata/cosigned/valid/$i --ignore-not-found=true
 done
 
 echo '::endgroup:: Valid policy test:'
