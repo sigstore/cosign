@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
@@ -46,6 +47,14 @@ func Clean() *cobra.Command {
 }
 
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string) error {
+	ok, err := cosign.ConfirmPrompt("WARNING: this will remove all signatures from the image")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err

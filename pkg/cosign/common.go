@@ -16,8 +16,10 @@
 package cosign
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"golang.org/x/term"
@@ -30,6 +32,16 @@ func FileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func ConfirmPrompt(msg string) (bool, error) {
+	fmt.Fprintf(os.Stderr, "%s\n\nAre you sure you want to continue? [Y/n]: ", msg)
+	reader := bufio.NewReader(os.Stdin)
+	r, err := reader.ReadString('\n')
+	if err != nil {
+		return false, err
+	}
+	return strings.Trim(r, "\n") == "Y", nil
 }
 
 func GetPassFromTerm(confirm bool) ([]byte, error) {
