@@ -189,11 +189,26 @@ jobs:
       run: |
         kubectl create namespace demo
         kubectl label namespace demo cosigned.sigstore.dev/include=true
-        # We signed this above, this should work
-        kubectl create -n demo job demo --image=${{ env.demoimage }}
 
+        echo '::group:: test job success'
+        # We signed this above, this should work
+        if ! kubectl create -n demo job demo --image=${{ env.demoimage }} ; then
+          echo Failed to create Job in namespace without label!
+          exit 1
+        else
+          echo Succcessfully created Job with signed image
+        fi
+        echo '::endgroup:: test job success'
+
+        echo '::group:: test job rejection'
         # We did not sign this, should fail
-        kubectl create -n demo job demo2 --image=${{ env.demoimage2 }}
+        if kubectl create -n demo job demo2 --image=${{ env.demoimage2 }} ; then
+          echo Failed to block unsigned Job creation!
+          exit 1
+        else
+          echo Successfully blocked Job creation with unsigned image
+        fi
+        echo '::endgroup::'
 
     - name: Collect diagnostics
       if: ${{ failure() }}
