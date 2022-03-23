@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -79,6 +80,18 @@ func validSignatures(ctx context.Context, ref name.Reference, verifier signature
 		RegistryClientOpts: opts,
 		RootCerts:          fulcioroots.Get(),
 		SigVerifier:        verifier,
+		ClaimVerifier:      cosign.SimpleClaimVerifier,
+	})
+	return sigs, err
+}
+
+// validSignaturesWithFulcio expects a Fulcio Cert to verify against. An
+// optional rekorClient can also be given, if nil passed, default is assumed.
+func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, opts ...ociremote.Option) ([]oci.Signature, error) {
+	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
+		RegistryClientOpts: opts,
+		RootCerts:          fulcioRoots,
+		RekorClient:        rekorClient,
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
 	})
 	return sigs, err

@@ -17,14 +17,20 @@ package webhook
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto/x509"
 	"fmt"
+	"io"
+	"net/http"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/apis/config"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	rekor "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	listersv1 "k8s.io/client-go/listers/core/v1"
@@ -143,12 +149,14 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 			containerKeys := keys
 			config := config.FromContext(ctx)
 			if config != nil {
-				authorityKeys, fieldErrors := getAuthorityKeys(ctx, ref, config)
-				if fieldErrors != nil {
+				fieldErrors := validateAuthorities(ctx, ref, kc, config)
+				if fieldErrors != nil && len(fieldErrors) > 0 {
 					// TODO:(dennyhoang) Enforce currently non-breaking errors https://github.com/sigstore/cosign/issues/1642
-					logging.FromContext(ctx).Warnf("Failed to fetch authorities for %s : %v", ref.Name(), fieldErrors)
+					logging.FromContext(ctx).Warnf("Failed to validate authorities for %s : %v", ref.Name(), fieldErrors)
+				} else {
+					logging.FromContext(ctx).Warnf("Validated authorities for %s", ref.Name())
 				}
-				containerKeys = append(containerKeys, authorityKeys...)
+				continue
 			}
 
 			if err := valid(ctx, ref, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
@@ -166,24 +174,66 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 	return errs
 }
 
-func getAuthorityKeys(ctx context.Context, ref name.Reference, config *config.Config) (keys []*ecdsa.PublicKey, errs *apis.FieldError) {
+//
+func validateAuthorities(ctx context.Context, ref name.Reference, defaultKC authn.Keychain, config *config.Config, opts ...ociremote.Option) []error {
+	ret := []error{}
 	authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
 	if err != nil {
-		return keys, apis.ErrGeneric(fmt.Sprintf("failed to fetch authorities for %s : %v", ref.Name(), err), apis.CurrentField)
+		return append(ret, errors.Wrap(err, "failed to GetAuthorities"))
 	}
 
 	for _, authority := range authorities {
+		logging.FromContext(ctx).Infof("Checking Authority: %+v", authority)
+		// TODO(vaikas): We currently only use the defaultKC, we have to look
+		// at authority.Sources to determine additional information for the
+		// WithRemoteOptions below, at least the 'TargetRepository'
+		opts := ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(defaultKC))
+
 		if authority.Key != nil {
 			// Get the key from authority data
 			if authorityKeys, fieldErr := parseAuthorityKeys(ctx, authority.Key.Data); fieldErr != nil {
-				errs = errs.Also(fieldErr)
+				ret = append(ret, errors.Wrap(fieldErr, "failed to parse Key values"))
 			} else {
-				keys = append(keys, authorityKeys...)
+				// TODO(vaikas): I don't think this is right because the API doc
+				// says it has to match all the policies, and I think we may
+				// have to ensure _all_ the keys match, but valid (well, and
+				// things it calls) succeed if any key matches.
+				if err := valid(ctx, ref, authorityKeys, opts); err != nil {
+					ret = append(ret, errors.Wrap(err, "failed to validate keys"))
+					continue
+				}
+			}
+		}
+		if authority.Keyless != nil && authority.Keyless.URL != nil {
+			logging.FromContext(ctx).Infof("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
+			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
+			if err != nil {
+				ret = append(ret, errors.Wrap(err, "failed to fetch FulcioRoot"))
+				continue
+			}
+			var rekorClient *client.Rekor
+			if authority.CTLog != nil && authority.CTLog.URL != nil {
+				rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
+				if err != nil {
+					logging.FromContext(ctx).Errorf("vaikas failed creating rekor client: +v", err)
+					ret = append(ret, errors.Wrap(err, "failed creating Rekor client"))
+					continue
+				}
+			}
+			sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, opts)
+			if err != nil {
+				logging.FromContext(ctx).Errorf("vaikas FAILED validSignatures: %v", err)
+				ret = append(ret, errors.Wrap(err, "failed to validate signatures"))
+			} else {
+				if len(sps) > 0 {
+					logging.FromContext(ctx).Infof("vaikas zomg validated signature, got %d signatures", len(sps))
+				} else {
+					logging.FromContext(ctx).Errorf("vaikas No validSignatures found ")
+				}
 			}
 		}
 	}
-
-	return keys, errs
+	return ret
 }
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator
@@ -274,4 +324,21 @@ func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec, opt 
 
 	resolveContainers(ps.InitContainers)
 	resolveContainers(ps.Containers)
+}
+
+func getFulcioCert(u *apis.URL) (*x509.CertPool, error) {
+	resp, err := http.Get(u.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "doing http get")
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading http body")
+	}
+	cp := x509.NewCertPool()
+	if !cp.AppendCertsFromPEM(body) {
+		return nil, errors.New("error appending to root cert pool")
+	}
+	return cp, nil
 }

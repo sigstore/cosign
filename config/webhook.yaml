@@ -62,6 +62,10 @@ spec:
           value: sigstore.dev/cosigned
         - name: WEBHOOK_NAME
           value: webhook
+        # Since we need to validate against different Rekor clients based on
+        # differing policies, we fetch the Rekor public key during validation.
+        - name: SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY
+          value: "true"
 
         securityContext:
           allowPrivilegeEscalation: false
