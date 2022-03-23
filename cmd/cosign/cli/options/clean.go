@@ -19,6 +19,7 @@ import "github.com/spf13/cobra"
 type CleanOptions struct {
 	Registry  RegistryOptions
 	CleanType string
+	Force     bool
 }
 
 var _ Interface = (*CleanOptions)(nil)
@@ -26,4 +27,5 @@ var _ Interface = (*CleanOptions)(nil)
 func (c *CleanOptions) AddFlags(cmd *cobra.Command) {
 	c.Registry.AddFlags(cmd)
 	cmd.Flags().StringVarP(&c.CleanType, "type", "", "all", "a type of clean: <signature|attestation|sbom|all> (default: all)")
+	cmd.Flags().BoolVarP(&c.Force, "force", "f", false, "do not prompt for confirmation")
 }
