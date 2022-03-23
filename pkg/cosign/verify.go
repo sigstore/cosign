@@ -75,6 +75,8 @@ type CheckOpts struct {
 
 	// RootCerts are the root CA certs used to verify a signature's chained certificate.
 	RootCerts *x509.CertPool
+	// IntermediateCerts are the optional intermediate CA certs used to verify a certificate chain.
+	IntermediateCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
@@ -149,7 +151,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	}
 
 	// Now verify the cert, then the signature.
-	if err := TrustedCert(cert, co.RootCerts); err != nil {
+	if err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts); err != nil {
 		return nil, err
 	}
 	if co.CertEmail != "" {
@@ -350,6 +352,21 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 		if cert == nil {
 			return bundleVerified, errors.New("no certificate found on signature")
 		}
+		// Create a certificate pool for intermediate CA certificates, excluding the root
+		chain, err := sig.Chain()
+		if err != nil {
+			return bundleVerified, err
+		}
+		// If the chain annotation is not present or there is only a root
+		if chain == nil || len(chain) <= 1 {
+			co.IntermediateCerts = nil
+		} else {
+			pool := x509.NewCertPool()
+			for _, cert := range chain[:len(chain)-1] {
+				pool.AddCert(cert)
+			}
+			co.IntermediateCerts = pool
+		}
 		verifier, err = ValidateAndUnpackCert(cert, co)
 		if err != nil {
 			return bundleVerified, err
@@ -512,6 +529,21 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				}
 				if cert == nil {
 					return errors.New("no certificate found on attestation")
+				}
+				// Create a certificate pool for intermediate CA certificates, excluding the root
+				chain, err := att.Chain()
+				if err != nil {
+					return err
+				}
+				// If the chain annotation is not present or there is only a root
+				if chain == nil || len(chain) <= 1 {
+					co.IntermediateCerts = nil
+				} else {
+					pool := x509.NewCertPool()
+					for _, cert := range chain[:len(chain)-1] {
+						pool.AddCert(cert)
+					}
+					co.IntermediateCerts = pool
 				}
 				verifier, err = ValidateAndUnpackCert(cert, co)
 				if err != nil {
@@ -783,13 +815,14 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	return nil
 }
 
-func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {
+func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x509.CertPool) error {
 	if _, err := cert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
 		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
-		CurrentTime: cert.NotBefore,
-		Roots:       roots,
+		CurrentTime:   cert.NotBefore,
+		Roots:         roots,
+		Intermediates: intermediates,
 		KeyUsages: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageCodeSigning,
 		},
