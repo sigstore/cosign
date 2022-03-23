@@ -148,14 +148,36 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 
 			containerKeys := keys
 			config := config.FromContext(ctx)
+
+			// During the migration from the secret only validation into policy
+			// based ones. If there's a policy (or rather authorities) that
+			// successfully validated the image, keep tally of it and if Policy
+			// validated, skip the traditional one since they are not
+			// necessarily going to play nicely together.
+			passedAuthorityCheck := false
 			if config != nil {
-				fieldErrors := validateAuthorities(ctx, ref, kc, config)
+				av, fieldErrors := validateAuthorities(ctx, ref, kc, config)
 				if fieldErrors != nil && len(fieldErrors) > 0 {
 					// TODO:(dennyhoang) Enforce currently non-breaking errors https://github.com/sigstore/cosign/issues/1642
-					logging.FromContext(ctx).Warnf("Failed to validate authorities for %s : %v", ref.Name(), fieldErrors)
+					logging.FromContext(ctx).Warnf("Failed to validate 	authorities for %s : %v", ref.Name(), fieldErrors)
+					for _, fe := range fieldErrors {
+						errorField := apis.ErrGeneric(fe.Error(), "image").ViaFieldIndex(field, i)
+						errorField.Details = c.Image
+						errs = errs.Also(errorField)
+					}
 				} else {
 					logging.FromContext(ctx).Warnf("Validated authorities for %s", ref.Name())
+					// Only say we passed (aka, we skip the traditidional check
+					// below) if more than one authority was validated, which
+					// means that there was a matching ClusterImagePolicy.
+					if av > 0 {
+						passedAuthorityCheck = true
+					}
 				}
+			}
+
+			if passedAuthorityCheck {
+				logging.FromContext(ctx).Debugf("Found at least one matching policy and it was validated for %s", ref.Name())
 				continue
 			}
 
@@ -174,19 +196,26 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 	return errs
 }
 
-//
-func validateAuthorities(ctx context.Context, ref name.Reference, defaultKC authn.Keychain, config *config.Config, opts ...ociremote.Option) []error {
+// validateAuthorities will go through all the matching authorities for a given
+// image. Returns the number of Authority that it was successfully validated
+// against as well as any errors. Note that if an image does not match
+// any policies, it's perfectly reasonable that the return value is 0, nil since
+// there were no errors, but the image was not validated against any matching
+// authority.
+func validateAuthorities(ctx context.Context, ref name.Reference, defaultKC authn.Keychain, config *config.Config, opts ...ociremote.Option) (int, []error) {
 	ret := []error{}
 	authorities, err := config.ImagePolicyConfig.GetAuthorities(ref.Name())
 	if err != nil {
-		return append(ret, errors.Wrap(err, "failed to GetAuthorities"))
+		return 0, append(ret, errors.Wrap(err, "failed to GetAuthorities"))
 	}
 
+	authoritiesValidated := 0
 	for _, authority := range authorities {
-		logging.FromContext(ctx).Infof("Checking Authority: %+v", authority)
+		logging.FromContext(ctx).Debugf("Checking Authority: %+v", authority)
 		// TODO(vaikas): We currently only use the defaultKC, we have to look
 		// at authority.Sources to determine additional information for the
 		// WithRemoteOptions below, at least the 'TargetRepository'
+		// https://github.com/sigstore/cosign/issues/1651
 		opts := ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(defaultKC))
 
 		if authority.Key != nil {
@@ -198,14 +227,19 @@ func validateAuthorities(ctx context.Context, ref name.Reference, defaultKC auth
 				// says it has to match all the policies, and I think we may
 				// have to ensure _all_ the keys match, but valid (well, and
 				// things it calls) succeed if any key matches.
+				// https://github.com/sigstore/cosign/issues/1652
 				if err := valid(ctx, ref, authorityKeys, opts); err != nil {
 					ret = append(ret, errors.Wrap(err, "failed to validate keys"))
 					continue
 				}
+				// Since there can be only one Key per authority, if we found
+				// multiple, then add them all since that many authorities
+				// matched.
+				authoritiesValidated += len(authorityKeys)
 			}
 		}
 		if authority.Keyless != nil && authority.Keyless.URL != nil {
-			logging.FromContext(ctx).Infof("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
+			logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
 			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
 			if err != nil {
 				ret = append(ret, errors.Wrap(err, "failed to fetch FulcioRoot"))
@@ -213,27 +247,30 @@ func validateAuthorities(ctx context.Context, ref name.Reference, defaultKC auth
 			}
 			var rekorClient *client.Rekor
 			if authority.CTLog != nil && authority.CTLog.URL != nil {
+				logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
 				rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
 				if err != nil {
-					logging.FromContext(ctx).Errorf("vaikas failed creating rekor client: +v", err)
-					ret = append(ret, errors.Wrap(err, "failed creating Rekor client"))
+					logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
+					ret = append(ret, errors.Wrap(err, "creating Rekor client"))
 					continue
 				}
 			}
 			sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, opts)
 			if err != nil {
-				logging.FromContext(ctx).Errorf("vaikas FAILED validSignatures: %v", err)
-				ret = append(ret, errors.Wrap(err, "failed to validate signatures"))
+				logging.FromContext(ctx).Errorf("failed validSignatures for %s: %v", ref.Name(), err)
+				ret = append(ret, errors.Wrap(err, "validate signatures"))
 			} else {
 				if len(sps) > 0 {
-					logging.FromContext(ctx).Infof("vaikas zomg validated signature, got %d signatures", len(sps))
+					logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", len(sps))
+					authoritiesValidated++
 				} else {
-					logging.FromContext(ctx).Errorf("vaikas No validSignatures found ")
+					logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
+					ret = append(ret, fmt.Errorf("No valid signatures found for %s", ref.Name()))
 				}
 			}
 		}
 	}
-	return ret
+	return authoritiesValidated, ret
 }
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator
@@ -327,6 +364,15 @@ func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec, opt 
 }
 
 func getFulcioCert(u *apis.URL) (*x509.CertPool, error) {
+	// TODO(vaikas): Check the URL and if it's not containing the fully path
+	// to rootCert, aka something like:
+	// http://fulcio.fulcio-system.svc/api/v1/rootCert
+	// but is instead just the
+	// http://fulcio.fulcio-system.svc
+	// or
+	// http://fulcio.fulcio-system.svc/
+	// Construct the full URL above.
+	// Right now it must be the first, as in fully specified.
 	resp, err := http.Get(u.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "doing http get")

@@ -16,9 +16,7 @@ name: Test cosigned with ClusterImagePolicy
 
 on:
   pull_request:
-    # TODO(vaikas): DO NOT SUBMIT
-    #branches: [ main ]
-    branches: [ '*' ]
+    branches: [ 'main', 'release-*' ]
 
 defaults:
   run:
@@ -31,14 +29,19 @@ jobs:
     name: ClusterImagePolicy e2e tests
     runs-on: ubuntu-latest
 
-    matrix:
-      k8s-version:
-      - v1.21.x
+    strategy:
+      matrix:
+        k8s-version:
+        - v1.21.x
 
     env:
       KNATIVE_VERSION: "1.1.0"
       KO_DOCKER_REPO: "registry.local:5000/knative"
       SCAFFOLDING_RELEASE_VERSION: "v0.2.2"
+      GO111MODULE: on
+      GOFLAGS: -ldflags=-s -ldflags=-w
+      KOCACHE: ~/ko
+      COSIGN_EXPERIMENTAL: true
 
     steps:
     - name: Configure DockerHub mirror
@@ -47,6 +50,14 @@ jobs:
         jq '."registry-mirrors" = ["https://mirror.gcr.io"]' /etc/docker/daemon.json > "$tmp"
         sudo mv "$tmp" /etc/docker/daemon.json
         sudo service docker restart
+
+    - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
+    - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
+      with:
+        go-version: '1.17.x'
+
+    # will use the latest release available for ko
+    - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
 
     - name: Setup Cluster
       run: |
@@ -82,14 +93,75 @@ jobs:
 
         kubectl wait --for=condition=Complete --timeout=180s job/sign-job job/checktree job/verify-job
 
+    - name: Install cosigned
+      env:
+        GIT_HASH: $GITHUB_SHA
+        GIT_VERSION: ci
+        LDFLAGS: ""
+      run: |
+        ko apply -Bf config/
+
+        # Wait for the webhook to come up and become Ready
+        kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
+
+    - name: Create sample image - demoimage
+      run: |
+        pushd $(mktemp -d)
+        go mod init example.com/demo
+        cat <<EOF > main.go
+        package main
+        import "fmt"
+        func main() {
+          fmt.Println("hello world")
+        }
+        EOF
+        demoimage=`ko publish -B example.com/demo`
+        echo "demoimage=$demoimage" >> $GITHUB_ENV
+        echo Created image $demoimage
+        popd
+
+    - name: Create sample image2 - demoimage2
+      run: |
+        pushd $(mktemp -d)
+        go mod init example.com/demo2
+        cat <<EOF > main.go
+        package main
+        import "fmt"
+        func main() {
+          fmt.Println("hello world 2")
+        }
+        EOF
+        demoimage2=`ko publish -B example.com/demo2`
+        echo "demoimage2=$demoimage2" >> $GITHUB_ENV
+        echo Created image $demoimage2
+        popd
+
+    # TODO(vaikas): There should be a fake issuer on the cluster. This one
+    # fetches a k8s auth token from the kind cluster that we spin up above. We
+    # do not want to use the Github OIDC token, but do want PRs to run this
+    # flow.
+    - name: Install a Knative service for fetch tokens off the cluster
+      run: |
+        ko apply -f ./test/config/gettoken
+        sleep 2
+        kubectl wait --for=condition=Ready --timeout=15s ksvc gettoken
+
+    # These set up the env variables so that
     - name: Set the endpoints on the cluster and grab secrets
       run: |
         REKOR_URL=`kubectl -n rekor-system get --no-headers ksvc rekor | cut -d ' ' -f 4`
         echo "REKOR_URL=$REKOR_URL" >> $GITHUB_ENV
+        curl -s $REKOR_URL/api/v1/log/publicKey > ./rekor-public.pem
+
         FULCIO_URL=`kubectl -n fulcio-system get --no-headers ksvc fulcio | cut -d ' ' -f 4`
         echo "FULCIO_URL=$FULCIO_URL" >> $GITHUB_ENV
         CTLOG_URL=`kubectl -n ctlog-system get --no-headers ksvc ctlog | cut -d ' ' -f 4`
         echo "CTLOG_URL=$CTLOG_URL" >> $GITHUB_ENV
+
+        ISSUER_URL=`kubectl get --no-headers ksvc gettoken | cut -d ' ' -f 4`
+        echo "ISSUER_URL=$ISSUER_URL" >> $GITHUB_ENV
+        OIDC_TOKEN=`curl -s $ISSUER_URL`
+        echo "OIDC_TOKEN=$OIDC_TOKEN" >> $GITHUB_ENV
 
         kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
         echo "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem" >> $GITHUB_ENV
@@ -97,74 +169,32 @@ jobs:
         kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
         echo "SIGSTORE_ROOT_FILE=./fulcio-root.pem" >> $GITHUB_ENV
 
-      - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
-      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
-        with:
-          go-version: '1.17.x'
+    - name: Deploy ClusterImagePolicy
+      run: |
+        kubectl apply -f ./test/testdata/cosigned/e2e/cip.yaml
 
-      # will use the latest release available for ko
-      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+    - name: build cosign
+      run: |
+        make cosign
 
-      - name: build cosign
-        run: |
-          make cosign
+    - name: Sign demoimage with cosign
+      run: |
+        ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --force --allow-insecure-registry ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
 
-      - name: Create sample image
-        run: |
-          pushd $(mktemp -d)
-          go mod init example.com/demo
-          cat <<EOF > main.go
-          package main
-          import "fmt"
-          func main() {
-            fmt.Println("hello world")
-          }
-          EOF
-          demoimage=`ko publish -B example.com/demo`
-          echo "demoimage=$demoimage" >> $GITHUB_ENV
-          echo Created image $demoimage
-          popd
-
-
-      - name: Sign with cosign
-        run: |
-        COSIGN_EXPERIMENTAL=1 ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --force --allow-insecure-registry ${{ env.demoimage }}
-
-      - name: Verify with cosign
-        run: |
+    - name: Verify with cosign
+      run: |
         SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1 COSIGN_EXPERIMENTAL=1 ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }}
 
-    - name: Collect node diagnostics
-      if: ${{ failure() }}
+    - name: Deploy jobs and verify signed works, unsigned fails
       run: |
-        for x in $(kubectl get nodes -oname); do
-          echo "::group:: describe $x"
-          kubectl describe $x
-          echo '::endgroup::'
-        done
+        kubectl create namespace demo
+        kubectl label namespace demo cosigned.sigstore.dev/include=true
+        # We signed this above, this should work
+        kubectl create -n demo job demo --image=${{ env.demoimage }}
 
-    - name: Collect pod diagnostics
+        # We did not sign this, should fail
+        kubectl create -n demo job demo2 --image=${{ env.demoimage2 }}
+
+    - name: Collect diagnostics
       if: ${{ failure() }}
-      run: |
-        for ns in default fulcio-system rekor-system trillian-system ctlog-system; do
-          kubectl get pods -n${ns}
-
-          for x in $(kubectl get pods -n${ns} -oname); do
-            echo "::group:: describe $x"
-            kubectl describe -n${ns} $x
-            echo '::endgroup::'
-          done
-        done
-
-    - name: Collect logs
-      if: ${{ failure() }}
-      run: |
-        mkdir -p /tmp/logs
-        kind export logs /tmp/logs --name sigstore
-
-    - name: Upload artifacts
-      if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
-      with:
-        name: logs
-        path: /tmp/logs
+      uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main
