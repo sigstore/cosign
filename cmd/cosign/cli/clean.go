@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
@@ -37,7 +38,7 @@ func Clean() *cobra.Command {
 		Example: "  cosign clean <IMAGE>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return CleanCmd(cmd.Context(), c.Registry, c.CleanType, args[0])
+			return CleanCmd(cmd.Context(), c.Registry, c.CleanType, args[0], c.Force)
 		},
 	}
 
@@ -45,7 +46,17 @@ func Clean() *cobra.Command {
 	return cmd
 }
 
-func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string) error {
+func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string, force bool) error {
+	if !force {
+		ok, err := cosign.ConfirmPrompt(prompt(cleanType))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+	}
+
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
@@ -90,4 +101,18 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, i
 	}
 
 	return nil
+}
+
+func prompt(cleanType string) string {
+	switch cleanType {
+	case "signature":
+		return "WARNING: this will remove all signatures from the image"
+	case "sbom":
+		return "WARNING: this will remove all SBOMs from the image"
+	case "attestation":
+		return "WARNING: this will remove all attestations from the image"
+	case "all":
+		return "WARNING: this will remove all signatures, SBOMs and attestations from the image"
+	}
+	return ""
 }
