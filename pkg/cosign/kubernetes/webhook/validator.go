@@ -161,6 +161,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 					errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)
 					errorField.Details = c.Image
 					errs = errs.Also(errorField)
+					continue
 				}
 
 				// If there is at least one policy that matches, that means it

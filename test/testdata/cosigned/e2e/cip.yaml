@@ -21,6 +21,6 @@ spec:
   - glob: registry.local:5000/knative/demo*
   authorities:
   - keyless:
-      url: http://fulcio.fulcio-system.svc/api/v1/rootCert
+      url: http://fulcio.fulcio-system.svc
     ctlog:
       url: http://rekor.rekor-system.svc
