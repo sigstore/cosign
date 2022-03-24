@@ -43,62 +43,90 @@ func TestGetAuthorities(t *testing.T) {
 	if err != nil {
 		t.Error("NewImagePoliciesConfigFromConfigMap(example) =", err)
 	}
-	c, err := defaults.GetAuthorities("rando")
+	c, err := defaults.GetMatchingPolicies("rando")
 	checkGetMatches(t, c, err)
+	matchedPolicy := "cluster-image-policy-0"
 	want := "inlinedata here"
-	if got := c[0].Key.Data; got != want {
+	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Make sure glob matches 'randomstuff*'
-	c, err = defaults.GetAuthorities("randomstuffhere")
+	c, err = defaults.GetMatchingPolicies("randomstuffhere")
 	checkGetMatches(t, c, err)
+	matchedPolicy = "cluster-image-policy-1"
 	want = "otherinline here"
-	if got := c[0].Key.Data; got != want {
+	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
-	c, err = defaults.GetAuthorities("rando3")
+	c, err = defaults.GetMatchingPolicies("rando3")
 	checkGetMatches(t, c, err)
+	matchedPolicy = "cluster-image-policy-2"
 	want = "cacert chilling here"
-	if got := c[0].Keyless.CACert.Data; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Keyless.CACert.Data)
+	if got := c[matchedPolicy][0].Keyless.CACert.Data; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	want = "issuer"
-	if got := c[0].Keyless.Identities[0].Issuer; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Keyless.Identities[0].Issuer)
+	if got := c[matchedPolicy][0].Keyless.Identities[0].Issuer; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	want = "subject"
-	if got := c[0].Keyless.Identities[0].Subject; got != want {
-		t.Errorf("Did not get what I wanted %q, got %+v", want, c[0].Keyless.Identities[0].Subject)
+	if got := c[matchedPolicy][0].Keyless.Identities[0].Subject; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Make sure regex matches ".*regexstring.*"
-	c, err = defaults.GetAuthorities("randomregexstringstuff")
+	c, err = defaults.GetMatchingPolicies("randomregexstringstuff")
 	checkGetMatches(t, c, err)
+	matchedPolicy = "cluster-image-policy-4"
 	want = inlineKeyData
-	if got := c[0].Key.Data; got != want {
+	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 
 	// Test multiline yaml cert
-	c, err = defaults.GetAuthorities("inlinecert")
+	c, err = defaults.GetMatchingPolicies("inlinecert")
 	checkGetMatches(t, c, err)
+	matchedPolicy = "cluster-image-policy-3"
 	want = inlineKeyData
-	if got := c[0].Key.Data; got != want {
+	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Test multiline cert but json encoded
-	c, err = defaults.GetAuthorities("ghcr.io/example/*")
+	c, err = defaults.GetMatchingPolicies("ghcr.io/example/*")
 	checkGetMatches(t, c, err)
+	matchedPolicy = "cluster-image-policy-json"
 	want = inlineKeyData
-	if got := c[0].Key.Data; got != want {
+	if got := c[matchedPolicy][0].Key.Data; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
+	}
+	// Test multiple matches
+	c, err = defaults.GetMatchingPolicies("regexstringtoo")
+	checkGetMatches(t, c, err)
+	if len(c) != 2 {
+		t.Errorf("Wanted two matches, got %d", len(c))
+	}
+	matchedPolicy = "cluster-image-policy-4"
+	want = inlineKeyData
+	if got := c[matchedPolicy][0].Key.Data; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
+	}
+	matchedPolicy = "cluster-image-policy-5"
+	want = "inlinedata here"
+	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 }
 
-func checkGetMatches(t *testing.T, c []v1alpha1.Authority, err error) {
+func checkGetMatches(t *testing.T, c map[string][]v1alpha1.Authority, err error) {
 	if err != nil {
 		t.Error("GetMatches Failed =", err)
 	}
 	if len(c) == 0 {
 		t.Error("Wanted a config, got none.")
 	}
+	for _, v := range c {
+		if v != nil || len(v) > 0 {
+			return
+		}
+	}
+	t.Error("Wanted a config and non-zero authorities, got no authorities")
 }
