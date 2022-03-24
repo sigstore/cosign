@@ -19,8 +19,6 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"io"
-	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
@@ -30,6 +28,7 @@ import (
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/fulcio/pkg/api"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	corev1 "k8s.io/api/core/v1"
@@ -164,24 +163,35 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 					errs = errs.Also(errorField)
 				}
 
-				av, fieldErrors := validatePolicies(ctx, ref, kc, policies)
-				if av != len(policies) {
-					logging.FromContext(ctx).Warnf("Failed to validate at least one policy for %s")
-					// Do we really want to add all the error details here?
-					// Seems like we can just say which policy failed, so
-					// doing that for now.
-					for failingPolicy := range fieldErrors {
-						errorField := apis.ErrGeneric(fmt.Sprintf("failed policy: %s", failingPolicy), "image").ViaFieldIndex(field, i)
-						errorField.Details = c.Image
-						errs = errs.Also(errorField)
-					}
-				} else {
-					logging.FromContext(ctx).Warnf("Validated authorities for %s", ref.Name())
-					// Only say we passed (aka, we skip the traditidional check
-					// below) if more than one authority was validated, which
-					// means that there was a matching ClusterImagePolicy.
-					if av > 0 {
-						passedPolicyChecks = true
+				// If there is at least one policy that matches, that means it
+				// has to be satisfied.
+				if len(policies) > 0 {
+					av, fieldErrors := validatePolicies(ctx, ref, kc, policies)
+					if av != len(policies) {
+						logging.FromContext(ctx).Warnf("Failed to validate at least one policy for %s", ref.Name())
+						// Do we really want to add all the error details here?
+						// Seems like we can just say which policy failed, so
+						// doing that for now.
+						for failingPolicy := range fieldErrors {
+							errorField := apis.ErrGeneric(fmt.Sprintf("failed policy: %s", failingPolicy), "image").ViaFieldIndex(field, i)
+							errorField.Details = c.Image
+							errs = errs.Also(errorField)
+						}
+						// Because there was at least one policy that was
+						// supposed to be validated, but it failed, then fail
+						// this image. It should not fall through to the
+						// traditional secret checking so it does not slip
+						// through the policy cracks, and also to reduce noise
+						// in the errors returned to the user.
+						continue
+					} else {
+						logging.FromContext(ctx).Warnf("Validated authorities for %s", ref.Name())
+						// Only say we passed (aka, we skip the traditidional check
+						// below) if more than one authority was validated, which
+						// means that there was a matching ClusterImagePolicy.
+						if av > 0 {
+							passedPolicyChecks = true
+						}
 					}
 				}
 			}
@@ -214,7 +224,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.Keychain, policies map[string][]v1alpha1.Authority, opts ...ociremote.Option) (int, map[string][]error) {
+func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.Keychain, policies map[string][]v1alpha1.Authority, _ ...ociremote.Option) (int, map[string][]error) {
 	// For a policy that does not pass at least one authority, gather errors
 	// here so that we can give meaningful errors to the user.
 	ret := map[string][]error{}
@@ -294,7 +304,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.K
 						break
 					} else {
 						logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
-						authorityErrors = append(authorityErrors, fmt.Errorf("No valid signatures found for %s", ref.Name()))
+						authorityErrors = append(authorityErrors, fmt.Errorf("no valid signatures found for %s", ref.Name()))
 					}
 				}
 			}
@@ -399,26 +409,14 @@ func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec, opt 
 }
 
 func getFulcioCert(u *apis.URL) (*x509.CertPool, error) {
-	// TODO(vaikas): Check the URL and if it's not containing the fully path
-	// to rootCert, aka something like:
-	// http://fulcio.fulcio-system.svc/api/v1/rootCert
-	// but is instead just the
-	// http://fulcio.fulcio-system.svc
-	// or
-	// http://fulcio.fulcio-system.svc/
-	// Construct the full URL above.
-	// Right now it must be the first, as in fully specified.
-	resp, err := http.Get(u.String())
+	fClient := api.NewClient(u.URL())
+	rootCertResponse, err := fClient.RootCert()
 	if err != nil {
-		return nil, errors.Wrap(err, "doing http get")
+		return nil, errors.Wrap(err, "getting root cert")
 	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading http body")
-	}
+
 	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(body) {
+	if !cp.AppendCertsFromPEM(rootCertResponse.ChainPEM) {
 		return nil, errors.New("error appending to root cert pool")
 	}
 	return cp, nil

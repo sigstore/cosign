@@ -32,7 +32,7 @@ func tokenWriter(filename string) func(http.ResponseWriter, *http.Request) {
 		getToken(filename, w, req)
 	}
 }
-func getToken(tokenFile string, w http.ResponseWriter, req *http.Request) {
+func getToken(tokenFile string, w http.ResponseWriter, _ *http.Request) {
 	content, err := ioutil.ReadFile(tokenFile)
 	if err != nil {
 		log.Print("failed to read token file", err)

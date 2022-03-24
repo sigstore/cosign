@@ -74,7 +74,7 @@ data:
             -----END PUBLIC KEY-----
     cluster-image-policy-5: |
       images:
-      - regex: .*regex.*
+      - regex: .*regexstringtoo.*
       authorities:
       - key:
           data: inlinedata here
