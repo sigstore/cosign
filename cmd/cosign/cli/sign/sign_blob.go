@@ -71,7 +71,7 @@ func SignBlobCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOp
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, err := SignerFromKeyOpts(ctx, "", ko)
+	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
 		return nil, err
 	}

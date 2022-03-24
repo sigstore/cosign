@@ -18,8 +18,6 @@ package sign
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -95,7 +93,8 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 
 // nolint
 func SignCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
-	imgs []string, certPath string, upload bool, outputSignature, outputCertificate string, payloadPath string, force bool, recursive bool, attachment string) error {
+	imgs []string, certPath string, certChainPath string, upload bool, outputSignature, outputCertificate string,
+	payloadPath string, force bool, recursive bool, attachment string) error {
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
 			return &options.KeyParseError{}
@@ -109,7 +108,7 @@ func SignCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOption
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, err := SignerFromKeyOpts(ctx, certPath, ko)
+	sv, err := SignerFromKeyOpts(ctx, certPath, certChainPath, ko)
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
@@ -310,29 +309,40 @@ func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {
 	}, nil
 }
 
-func signerFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc cosign.PassFunc) (*SignerVerifier, error) {
+func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc) (*SignerVerifier, error) {
 	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading key")
 	}
 
-	// Handle the -cert flag
+	// Attempt to extract certificate from PKCS11 token
 	// With PKCS11, we assume the certificate is in the same slot on the PKCS11
 	// token as the private key. If it's not there, show a warning to the
 	// user.
 	if pkcs11Key, ok := k.(*pkcs11key.Key); ok {
 		certFromPKCS11, _ := pkcs11Key.Certificate()
-		var pemBytes []byte
 		if certFromPKCS11 == nil {
 			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
-		} else {
-			pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
-			if err != nil {
-				pkcs11Key.Close()
-				return nil, err
-			}
+			return &SignerVerifier{
+				SignerVerifier: k,
+				close:          pkcs11Key.Close,
+			}, nil
 		}
-
+		pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
+		if err != nil {
+			pkcs11Key.Close()
+			return nil, err
+		}
+		// Check that provided public key and certificate key match
+		pubKey, err := k.PublicKey()
+		if err != nil {
+			pkcs11Key.Close()
+			return nil, err
+		}
+		if cryptoutils.EqualKeys(pubKey, certFromPKCS11.PublicKey) != nil {
+			pkcs11Key.Close()
+			return nil, errors.New("pkcs11 key and certificate do not match")
+		}
 		return &SignerVerifier{
 			Cert:           pemBytes,
 			SignerVerifier: k,
@@ -342,15 +352,18 @@ func signerFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc cos
 	certSigner := &SignerVerifier{
 		SignerVerifier: k,
 	}
+
 	if certPath == "" {
 		return certSigner, nil
 	}
 
+	// Handle --cert flag
+	// Allow both DER and PEM encoding
 	certBytes, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "read certificate")
 	}
-	// Handle PEM.
+	// Handle PEM
 	if bytes.HasPrefix(certBytes, []byte("-----")) {
 		decoded, _ := pem.Decode(certBytes)
 		if decoded.Type != "CERTIFICATE" {
@@ -366,23 +379,41 @@ func signerFromKeyRef(ctx context.Context, certPath, keyRef string, passFunc cos
 	if err != nil {
 		return nil, errors.Wrap(err, "get public key")
 	}
-	switch kt := parsedCert.PublicKey.(type) {
-	case *ecdsa.PublicKey:
-		if !kt.Equal(pk) {
-			return nil, errors.New("public key in certificate does not match that in the signing key")
-		}
-	case *rsa.PublicKey:
-		if !kt.Equal(pk) {
-			return nil, errors.New("public key in certificate does not match that in the signing key")
-		}
-	default:
-		return nil, fmt.Errorf("unsupported key type: %T", parsedCert.PublicKey)
+	if cryptoutils.EqualKeys(pk, parsedCert.PublicKey) != nil {
+		return nil, errors.New("public key in certificate does not match the provided public key")
 	}
 	pemBytes, err := cryptoutils.MarshalCertificateToPEM(parsedCert)
 	if err != nil {
 		return nil, errors.Wrap(err, "marshaling certificate to PEM")
 	}
 	certSigner.Cert = pemBytes
+
+	if certChainPath == "" {
+		return certSigner, nil
+	}
+
+	// Handle --cert-chain flag
+	// Accept only PEM encoded certificate chain
+	certChainBytes, err := os.ReadFile(certChainPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading certificate chain from path")
+	}
+	certChain, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(certChainBytes))
+	if err != nil {
+		return nil, errors.Wrap(err, "loading certificate chain")
+	}
+	// Verify certificate chain is valid
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(certChain[len(certChain)-1])
+	subPool := x509.NewCertPool()
+	for _, c := range certChain[:len(certChain)-1] {
+		subPool.AddCert(c)
+	}
+	if err := cosign.TrustedCert(parsedCert, rootPool, subPool); err != nil {
+		return nil, errors.Wrap(err, "unable to validate certificate chain")
+	}
+	certSigner.Chain = certChainBytes
+
 	return certSigner, nil
 }
 
@@ -418,13 +449,13 @@ func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
 	}, nil
 }
 
-func SignerFromKeyOpts(ctx context.Context, certPath string, ko KeyOpts) (*SignerVerifier, error) {
+func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko KeyOpts) (*SignerVerifier, error) {
 	if ko.Sk {
 		return signerFromSecurityKey(ko.Slot)
 	}
 
 	if ko.KeyRef != "" {
-		return signerFromKeyRef(ctx, certPath, ko.KeyRef, ko.PassFunc)
+		return signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
 	}
 
 	// Default Keyless!
