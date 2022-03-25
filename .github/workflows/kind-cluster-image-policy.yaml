@@ -34,7 +34,9 @@ jobs:
         k8s-version:
         - v1.21.x
         - v1.22.x
-        - v1.23.x
+        # Try without this one now, might have problems with job restartings
+        # may require upstream changes.
+        #- v1.23.x
 
     env:
       KNATIVE_VERSION: "1.1.0"
