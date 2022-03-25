@@ -22,6 +22,8 @@ import (
 	"crypto/elliptic"
 	"crypto/x509"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -46,6 +48,11 @@ import (
 	"knative.dev/pkg/system"
 )
 
+const (
+	fulcioRootCert = "-----BEGIN CERTIFICATE-----\nMIICNzCCAd2gAwIBAgITPLBoBQhl1hqFND9S+SGWbfzaRTAKBggqhkjOPQQDAjBo\nMQswCQYDVQQGEwJVSzESMBAGA1UECBMJV2lsdHNoaXJlMRMwEQYDVQQHEwpDaGlw\ncGVuaGFtMQ8wDQYDVQQKEwZSZWRIYXQxDDAKBgNVBAsTA0NUTzERMA8GA1UEAxMI\ndGVzdGNlcnQwHhcNMjEwMzEyMjMyNDQ5WhcNMzEwMjI4MjMyNDQ5WjBoMQswCQYD\nVQQGEwJVSzESMBAGA1UECBMJV2lsdHNoaXJlMRMwEQYDVQQHEwpDaGlwcGVuaGFt\nMQ8wDQYDVQQKEwZSZWRIYXQxDDAKBgNVBAsTA0NUTzERMA8GA1UEAxMIdGVzdGNl\ncnQwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQRn+Alyof6xP3GQClSwgV0NFuY\nYEwmKP/WLWr/LwB6LUYzt5v49RlqG83KuaJSpeOj7G7MVABdpIZYWwqAiZV3o2Yw\nZDAOBgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBATAdBgNVHQ4EFgQU\nT8Jwm6JuVb0dsiuHUROiHOOVHVkwHwYDVR0jBBgwFoAUT8Jwm6JuVb0dsiuHUROi\nHOOVHVkwCgYIKoZIzj0EAwIDSAAwRQIhAJkNZmP6sKA+8EebRXFkBa9DPjacBpTc\nOljJotvKidRhAiAuNrIazKEw2G4dw8x1z6EYk9G+7fJP5m93bjm/JfMBtA==\n-----END CERTIFICATE-----"
+	rekorResponse  = "bad response"
+)
+
 func TestValidatePodSpec(t *testing.T) {
 	tag := name.MustParseReference("gcr.io/distroless/static:nonroot")
 	// Resolved via crane digest on 2021/09/25
@@ -55,6 +62,28 @@ func TestValidatePodSpec(t *testing.T) {
 	si := fakesecret.Get(ctx)
 
 	secretName := "blah"
+
+	// Non-existent URL for testing complete failure
+	badURL := apis.HTTP("http://example.com/")
+
+	// Spin up a Fulcio that responds with a Root Cert
+	fulcioServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte(fulcioRootCert))
+	}))
+	t.Cleanup(fulcioServer.Close)
+	fulcioURL, err := apis.ParseURL(fulcioServer.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse fake Fulcio URL")
+	}
+
+	rekorServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte(rekorResponse))
+	}))
+	t.Cleanup(rekorServer.Close)
+	rekorURL, err := apis.ParseURL(rekorServer.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse fake Rekor URL")
+	}
 
 	var authorityKeyCosignPub *ecdsa.PublicKey
 	// Random public key (cosign generate-key-pair) 2022-03-18
@@ -219,6 +248,138 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			},
 		),
 		cvs: authorityPublicKeyCVS,
+	}, {
+		name: "simple, error, authority keyless, bad fulcio",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(context.Background(),
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
+						"cluster-image-policy-keyless": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []v1alpha1.Authority{
+								{
+									Keyless: &v1alpha1.KeylessRef{
+										URL: badURL,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
+			fe.Details = digest.String()
+			errs = errs.Also(fe)
+			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
+			fe2.Details = digest.String()
+			errs = errs.Also(fe2)
+			return errs
+		}(),
+		cvs: fail,
+	}, {
+		name: "simple, error, authority keyless, good fulcio, no rekor",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(context.Background(),
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
+						"cluster-image-policy-keyless": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []v1alpha1.Authority{
+								{
+									Keyless: &v1alpha1.KeylessRef{
+										URL: fulcioURL,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
+			fe.Details = digest.String()
+			errs = errs.Also(fe)
+			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
+			fe2.Details = digest.String()
+			errs = errs.Also(fe2)
+			return errs
+		}(),
+		cvs: fail,
+	}, {
+		name: "simple, error, authority keyless, good fulcio, bad rekor",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(context.Background(),
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
+						"cluster-image-policy-keyless": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []v1alpha1.Authority{
+								{
+									Keyless: &v1alpha1.KeylessRef{
+										URL: fulcioURL,
+									},
+									CTLog: &v1alpha1.TLog{
+										URL: rekorURL,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
+			fe.Details = digest.String()
+			errs = errs.Also(fe)
+			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
+			fe2.Details = digest.String()
+			errs = errs.Also(fe2)
+			return errs
+		}(),
+		cvs: fail,
 	}}
 
 	for _, test := range tests {
@@ -936,102 +1097,6 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			v.ResolveCronJob(ctx, cronJob)
 			if !cmp.Equal(cronJob, want) {
 				t.Errorf("ResolveCronJob = %s", cmp.Diff(cronJob, want))
-			}
-		})
-	}
-}
-
-func TestGetAuthorityKeys(t *testing.T) {
-	refName := name.MustParseReference("gcr.io/distroless/static:nonroot")
-	// Random public key (cosign generate-key-pair) 2021-09-25
-	validPublicKey := `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
-UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
------END PUBLIC KEY-----`
-
-	validKeyData := v1alpha1.Authority{
-		Key: &v1alpha1.KeyRef{
-			Data: validPublicKey,
-		},
-	}
-
-	tests := []struct {
-		name          string
-		imagePatterns []v1alpha1.ImagePattern
-		authorities   []v1alpha1.Authority
-		wantKeyLength int
-		expectErr     bool
-	}{
-		{
-			name:          "no authorities",
-			wantKeyLength: 0,
-			expectErr:     false,
-		}, {
-			name: "invalid regex and one key data",
-			imagePatterns: []v1alpha1.ImagePattern{{
-				Regex: "*",
-			}},
-			authorities: []v1alpha1.Authority{
-				validKeyData,
-			},
-			wantKeyLength: 0,
-			expectErr:     true,
-		}, {
-			name: "unmatching glob and one key data",
-			imagePatterns: []v1alpha1.ImagePattern{{
-				Glob: "-",
-			}},
-			authorities: []v1alpha1.Authority{
-				validKeyData,
-			},
-			wantKeyLength: 0,
-			expectErr:     false,
-		}, {
-			name: "wildcard glob and one key data",
-			imagePatterns: []v1alpha1.ImagePattern{{
-				Glob: "*",
-			}},
-			authorities: []v1alpha1.Authority{
-				validKeyData,
-			},
-			wantKeyLength: 1,
-			expectErr:     false,
-		}, {
-			name: "wildcard regex and one key data",
-			imagePatterns: []v1alpha1.ImagePattern{{
-				Regex: ".*",
-			}},
-			authorities: []v1alpha1.Authority{
-				validKeyData,
-			},
-			wantKeyLength: 1,
-			expectErr:     false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			config := config.Config{
-				ImagePolicyConfig: &config.ImagePolicyConfig{
-					Policies: map[string]v1alpha1.ClusterImagePolicySpec{
-						"cluster-image-policy": {
-							Images:      test.imagePatterns,
-							Authorities: test.authorities,
-						},
-					},
-				},
-			}
-
-			keys, err := getAuthorityKeys(context.Background(), refName, &config)
-			if test.expectErr && err == nil {
-				t.Error("Did not get wanted error")
-			}
-			if !test.expectErr && err != nil {
-				t.Error("Did get unwanted error")
-			}
-
-			if got := len(keys); got != test.wantKeyLength {
-				t.Errorf("Did not get what I wanted %d, got %d", test.wantKeyLength, got)
 			}
 		})
 	}
