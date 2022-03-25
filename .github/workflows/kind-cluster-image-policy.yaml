@@ -70,17 +70,8 @@ jobs:
     - name: Install knative
       uses: chainguard-dev/actions/setup-knative@main
       with:
-        version: 1.2.0
-        serving-features: >
-          {
-            "kubernetes.podspec-fieldref": "enabled",
-            "kubernetes.podspec-securitycontext": "enabled"
-          }
-        serving-autoscaler: >
-          {
-            "min-scale": "1",
-            "max-scale": "1"
-          }
+        serving-features: '{"kubernetes.podspec-fieldref":"enabled", "kubernetes.podspec-volumes-emptydir":"enabled", "kubernetes.podspec-init-containers": "enabled", "kubernetes.podspec-securitycontext":"enabled"}'
+        serving-autoscaler: '{"min-scale":"1","max-scale":"1"}'
 
     - name: Setup mirror
       uses: chainguard-dev/actions/setup-mirror@main
