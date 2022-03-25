@@ -402,6 +402,9 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	if err != nil {
 		return nil, errors.Wrap(err, "loading certificate chain")
 	}
+	if len(certChain) == 0 {
+		return nil, errors.New("no certificates in certificate chain")
+	}
 	// Verify certificate chain is valid
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(certChain[len(certChain)-1])

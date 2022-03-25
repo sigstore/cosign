@@ -179,3 +179,23 @@ func Test_signerFromKeyRefFailure(t *testing.T) {
 		t.Fatalf("expected chain verification error, got %v", err)
 	}
 }
+
+func Test_signerFromKeyRefFailureEmptyChainFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	ctx := context.Background()
+	keyFile, certFile, _, _, _, _ := generateCertificateFiles(t, tmpDir, pass("foo"))
+
+	tmpChainFile, err := os.CreateTemp(tmpDir, "cosign_chain_empty.crt")
+	if err != nil {
+		t.Fatalf("failed to create temp chain file: %v", err)
+	}
+	defer tmpChainFile.Close()
+	if _, err := tmpChainFile.Write([]byte{}); err != nil {
+		t.Fatalf("failed to write chain file: %v", err)
+	}
+
+	_, err = signerFromKeyRef(ctx, certFile, tmpChainFile.Name(), keyFile, pass("foo"))
+	if err == nil || err.Error() != "no certificates in certificate chain" {
+		t.Fatalf("expected empty chain error, got %v", err)
+	}
+}
