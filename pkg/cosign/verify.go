@@ -181,6 +181,26 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	return verifier, nil
 }
 
+// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Veries that the certificate
+// chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
+// Optionally verifies the subject of the certificate.
+func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+	if len(chain) == 0 {
+		return nil, errors.New("no chain provided to validate certificate")
+	}
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(chain[len(chain)-1])
+	co.RootCerts = rootPool
+
+	subPool := x509.NewCertPool()
+	for _, c := range chain[:len(chain)-1] {
+		subPool.AddCert(c)
+	}
+	co.IntermediateCerts = subPool
+
+	return ValidateAndUnpackCert(cert, co)
+}
+
 func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub crypto.PublicKey, sig oci.Signature) error {
 	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pub)
 	if err != nil {

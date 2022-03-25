@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -123,27 +122,21 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if err != nil {
 			return errors.Wrap(err, "loading certificate from reference")
 		}
-		// Verify certificate with chain
-		// First intermediate at chain[0], root at chain[n-1]
-		if c.CertChain != "" {
-			certs, err := loadCertChainFromFileOrURL(c.CertChain)
+		if c.CertChain == "" {
+			co.SigVerifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			if err != nil {
+				return errors.Wrap(err, "creating certificate verifier")
+			}
+		} else {
+			// Verify certificate with chain
+			chain, err := loadCertChainFromFileOrURL(c.CertChain)
 			if err != nil {
 				return err
 			}
-			rootPool := x509.NewCertPool()
-			rootPool.AddCert(certs[len(certs)-1])
-			subPool := x509.NewCertPool()
-			for _, c := range certs[:len(certs)-1] {
-				subPool.AddCert(c)
-			}
-			err = cosign.TrustedCert(cert, rootPool, subPool)
+			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "creating certificate verifier")
 			}
-		}
-		co.SigVerifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-		if err != nil {
-			return errors.Wrap(err, "creating certificate verifier")
 		}
 	}
 

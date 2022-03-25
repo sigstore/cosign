@@ -104,27 +104,25 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		if err != nil {
 			return err
 		}
-		// Verify certificate with chain
-		// First intermediate at chain[0], root at chain[n-1]
-		if certChain != "" {
-			certs, err := loadCertChainFromFileOrURL(certChain)
+		if certChain == "" {
+			verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 			if err != nil {
 				return err
 			}
-			rootPool := x509.NewCertPool()
-			rootPool.AddCert(certs[len(certs)-1])
-			subPool := x509.NewCertPool()
-			for _, c := range certs[:len(certs)-1] {
-				subPool.AddCert(c)
-			}
-			err = cosign.TrustedCert(cert, rootPool, subPool)
+		} else {
+			// Verify certificate with chain
+			chain, err := loadCertChainFromFileOrURL(certChain)
 			if err != nil {
 				return err
 			}
-		}
-		verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-		if err != nil {
-			return err
+			co := &cosign.CheckOpts{
+				CertEmail:      certEmail,
+				CertOidcIssuer: certOidcIssuer,
+			}
+			verifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			if err != nil {
+				return err
+			}
 		}
 	case ko.BundlePath != "":
 		b, err := cosign.FetchLocalSignedPayloadFromPath(ko.BundlePath)

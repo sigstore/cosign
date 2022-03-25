@@ -141,27 +141,21 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return err
 		}
-		// Verify certificate with chain
-		// First intermediate at chain[0], root at chain[n-1]
-		if c.CertChain != "" {
-			certs, err := loadCertChainFromFileOrURL(c.CertChain)
+		if c.CertChain == "" {
+			pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 			if err != nil {
 				return err
 			}
-			rootPool := x509.NewCertPool()
-			rootPool.AddCert(certs[len(certs)-1])
-			subPool := x509.NewCertPool()
-			for _, c := range certs[:len(certs)-1] {
-				subPool.AddCert(c)
-			}
-			err = cosign.TrustedCert(cert, rootPool, subPool)
+		} else {
+			// Verify certificate with chain
+			chain, err := loadCertChainFromFileOrURL(c.CertChain)
 			if err != nil {
 				return err
 			}
-		}
-		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-		if err != nil {
-			return err
+			pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	co.SigVerifier = pubKey
