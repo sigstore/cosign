@@ -18,7 +18,7 @@ metadata:
   name: image-policy
 spec:
   images:
-  - glob: registry.local:5000/knative/demo*
+  - glob: registry.local:5000/cosigned/demo*
   authorities:
   - keyless:
       url: http://fulcio.fulcio-system.svc
