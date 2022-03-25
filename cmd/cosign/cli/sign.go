@@ -84,6 +84,7 @@ func Sign() *cobra.Command {
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCCallbackPort:         o.OIDC.CallbackPort,
 			}
 			annotationsMap, err := o.AnnotationsMap()
 			if err != nil {

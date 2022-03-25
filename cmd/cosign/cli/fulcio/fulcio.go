@@ -85,14 +85,18 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConn
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret string, fClient api.Client) (*api.CertificateResponse, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret string, oidcCallbackPort int, fClient api.Client) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
 	case FlowDevice:
 		c.flow = oauthflow.NewDeviceFlowTokenGetter(
 			oidcIssuer, oauthflow.SigstoreDeviceURL, oauthflow.SigstoreTokenURL)
 	case FlowNormal:
-		c.flow = oauthflow.DefaultIDTokenGetter
+		c.flow = &oauthflow.InteractiveIDTokenGetter{
+			MessagePrinter:   oauthflow.DefaultIDTokenGetter.MessagePrinter,
+			HTMLPage:         oauthflow.DefaultIDTokenGetter.HTMLPage,
+			OIDCCallbackPort: oidcCallbackPort,
+		}
 	case FlowToken:
 		c.flow = &oauthflow.StaticTokenGetter{RawToken: idToken}
 	default:
@@ -110,7 +114,7 @@ type Signer struct {
 	*signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret string, fClient api.Client) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret string, oidcCallbackPort int, fClient api.Client) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
@@ -131,7 +135,7 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClien
 	default:
 		flow = FlowNormal
 	}
-	Resp, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, fClient) // TODO, use the chain.
+	Resp, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcCallbackPort, fClient) // TODO, use the chain.
 	if err != nil {
 		return nil, errors.Wrap(err, "retrieving cert")
 	}

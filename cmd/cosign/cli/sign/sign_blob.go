@@ -45,6 +45,7 @@ type KeyOpts struct {
 	OIDCIssuer       string
 	OIDCClientID     string
 	OIDCClientSecret string
+	OIDCCallbackPort int
 	BundlePath       string
 
 	// Modeled after InsecureSkipVerify in tls.Config, this disables

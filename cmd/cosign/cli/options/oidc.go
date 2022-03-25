@@ -26,6 +26,7 @@ type OIDCOptions struct {
 	Issuer       string
 	ClientID     string
 	ClientSecret string
+	CallbackPort int
 }
 
 var _ Interface = (*OIDCOptions)(nil)
@@ -40,4 +41,7 @@ func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.ClientSecret, "oidc-client-secret", "",
 		"[EXPERIMENTAL] OIDC client secret for application")
+
+	cmd.Flags().IntVar(&o.CallbackPort, "oidc-callback-port", 0,
+		"[EXPERIMENTAL] OIDC callback port. Default 0 (random port)")
 }
