@@ -16,6 +16,7 @@
 package verify
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -53,6 +54,7 @@ type VerifyCommand struct {
 	CertRef        string
 	CertEmail      string
 	CertOidcIssuer string
+	CertChain      string
 	Sk             bool
 	Slot           string
 	Output         string
@@ -138,6 +140,24 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
+		}
+		// Verify certificate with chain
+		// First intermediate at chain[0], root at chain[n-1]
+		if c.CertChain != "" {
+			certs, err := loadCertChainFromFileOrURL(c.CertChain)
+			if err != nil {
+				return err
+			}
+			rootPool := x509.NewCertPool()
+			rootPool.AddCert(certs[len(certs)-1])
+			subPool := x509.NewCertPool()
+			for _, c := range certs[:len(certs)-1] {
+				subPool.AddCert(c)
+			}
+			err = cosign.TrustedCert(cert, rootPool, subPool)
+			if err != nil {
+				return err
+			}
 		}
 		pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
@@ -295,4 +315,16 @@ func loadCertFromPEM(pems []byte) (*x509.Certificate, error) {
 		return nil, errors.New("no certs found in pem file")
 	}
 	return certs[0], nil
+}
+
+func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
+	pems, err := blob.LoadFileOrURL(path)
+	if err != nil {
+		return nil, err
+	}
+	certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(pems))
+	if err != nil {
+		return nil, err
+	}
+	return certs, nil
 }

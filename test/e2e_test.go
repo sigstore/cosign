@@ -501,8 +501,8 @@ func TestSignBlob(t *testing.T) {
 		KeyRef: pubKeyPath2,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "badsig", blob), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "badsig", blob), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob), t)
 
 	// Now sign the blob with one key
 	ko := sign.KeyOpts{
@@ -514,8 +514,8 @@ func TestSignBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, string(sig), bp), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, string(sig), bp), t)
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp), t)
 }
 
 func TestSignBlobBundle(t *testing.T) {

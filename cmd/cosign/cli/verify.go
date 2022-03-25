@@ -56,6 +56,9 @@ against the transparency log.`,
   # verify image with an on-disk signed image from 'cosign save'
   cosign verify --key cosign.pub --local-image <PATH>
 
+  # verify image with local certificate and certificate chain
+  cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
+
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
 
@@ -93,6 +96,7 @@ against the transparency log.`,
 				CertRef:         o.CertVerify.Cert,
 				CertEmail:       o.CertVerify.CertEmail,
 				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
+				CertChain:       o.CertVerify.CertChain,
 				Sk:              o.SecurityKey.Use,
 				Slot:            o.SecurityKey.Slot,
 				Output:          o.Output,
@@ -169,6 +173,7 @@ against the transparency log.`,
 				CertRef:         o.CertVerify.Cert,
 				CertEmail:       o.CertVerify.CertEmail,
 				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
+				CertChain:       o.CertVerify.CertChain,
 				KeyRef:          o.Key,
 				Sk:              o.SecurityKey.Use,
 				Slot:            o.SecurityKey.Slot,
@@ -247,7 +252,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				BundlePath: o.BundlePath,
 			}
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
-				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.Signature, args[0]); err != nil {
+				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain, o.Signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)
 			}
 			return nil

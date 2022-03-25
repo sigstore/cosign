@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -51,6 +52,7 @@ type VerifyAttestationCommand struct {
 	CertRef        string
 	CertEmail      string
 	CertOidcIssuer string
+	CertChain      string
 	KeyRef         string
 	Sk             bool
 	Slot           string
@@ -120,6 +122,24 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return errors.Wrap(err, "loading certificate from reference")
+		}
+		// Verify certificate with chain
+		// First intermediate at chain[0], root at chain[n-1]
+		if c.CertChain != "" {
+			certs, err := loadCertChainFromFileOrURL(c.CertChain)
+			if err != nil {
+				return err
+			}
+			rootPool := x509.NewCertPool()
+			rootPool.AddCert(certs[len(certs)-1])
+			subPool := x509.NewCertPool()
+			for _, c := range certs[:len(certs)-1] {
+				subPool.AddCert(c)
+			}
+			err = cosign.TrustedCert(cert, rootPool, subPool)
+			if err != nil {
+				return err
+			}
 		}
 		co.SigVerifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
 		if err != nil {
