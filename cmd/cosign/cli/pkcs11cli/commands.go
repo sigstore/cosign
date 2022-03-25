@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/miekg/pkcs11"
 	"github.com/pkg/errors"
@@ -112,7 +113,9 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 		if pin == "" {
 			if tokenInfo.Flags&pkcs11.CKF_LOGIN_REQUIRED == pkcs11.CKF_LOGIN_REQUIRED {
 				fmt.Fprintf(os.Stderr, "Enter PIN for PKCS11 token '%s': ", tokenInfo.Label)
-				b, err := term.ReadPassword(0)
+				// Unnecessary convert of syscall.Stdin on *nix, but Windows is a uintptr
+				// nolint:unconvert
+				b, err := term.ReadPassword(int(syscall.Stdin))
 				if err != nil {
 					return nil, errors.Wrap(err, "get pin")
 				}
