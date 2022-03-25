@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 
 	"github.com/go-piv/piv-go/piv"
 	"github.com/pkg/errors"
@@ -194,7 +195,9 @@ func (k *Key) VerifySignature(signature, message io.Reader, opts ...signature.Ve
 
 func getPin() (string, error) {
 	fmt.Fprint(os.Stderr, "Enter PIN for security key: ")
-	b, err := term.ReadPassword(0)
+	// Unnecessary convert of syscall.Stdin on *nix, but Windows is a uintptr
+	// nolint:unconvert
+	b, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return "", err
 	}
