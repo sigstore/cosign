@@ -15,6 +15,7 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
@@ -135,7 +136,11 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			fmt.Println("Signature already exists. Displaying proof")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
 			uuid := uriSplit[len(uriSplit)-1]
-			return verifyTLogEntry(ctx, rekorClient, uuid)
+			e, err := GetTlogEntry(ctx, rekorClient, uuid)
+			if err != nil {
+				return nil, err
+			}
+			return VerifyTLogEntry(ctx, rekorClient, e, uuid)
 		}
 		return nil, err
 	}
@@ -221,12 +226,12 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 	return proposedEntry, nil
 }
 
-func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (uuid string, index int64, err error) {
+func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (uuid string, tlogEntry *models.LogEntryAnon, index int64, err error) {
 	searchParams := entries.NewSearchLogQueryParamsWithContext(ctx)
 	searchLogQuery := models.SearchLogQuery{}
 	proposedEntry, err := proposedEntry(b64Sig, payload, pubKey)
 	if err != nil {
-		return "", 0, err
+		return "", nil, 0, err
 	}
 
 	searchLogQuery.SetEntries(proposedEntry)
@@ -234,26 +239,23 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor, b64Sig string
 	searchParams.SetEntry(&searchLogQuery)
 	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
 	if err != nil {
-		return "", 0, errors.Wrap(err, "searching log query")
+		return "", nil, 0, errors.Wrap(err, "searching log query")
 	}
 	if len(resp.Payload) == 0 {
-		return "", 0, errors.New("signature not found in transparency log")
+		return "", nil, 0, errors.New("signature not found in transparency log")
 	} else if len(resp.Payload) > 1 {
-		return "", 0, errors.New("multiple entries returned; this should not happen")
+		return "", nil, 0, errors.New("multiple entries returned; this should not happen")
 	}
 	logEntry := resp.Payload[0]
 	if len(logEntry) != 1 {
-		return "", 0, errors.New("UUID value can not be extracted")
+		return "", nil, 0, errors.New("UUID value can not be extracted")
 	}
 
-	for k := range logEntry {
+	for k, e := range logEntry {
 		uuid = k
+		tlogEntry = &e
 	}
-	verifiedEntry, err := verifyTLogEntry(ctx, rekorClient, uuid)
-	if err != nil {
-		return "", 0, err
-	}
-	return uuid, *verifiedEntry.Verification.InclusionProof.LogIndex, nil
+	return uuid, tlogEntry, *tlogEntry.Verification.InclusionProof.LogIndex, nil
 }
 
 func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, payload []byte) (uuids []string, err error) {
@@ -271,19 +273,7 @@ func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, pa
 	return searchIndex.GetPayload(), nil
 }
 
-func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
-	params := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
-	params.EntryUUID = uuid
-
-	lep, err := rekorClient.Entries.GetLogEntryByUUID(params)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(lep.Payload) != 1 {
-		return nil, errors.New("UUID value can not be extracted")
-	}
-	e := lep.Payload[params.EntryUUID]
+func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.LogEntryAnon, uuid string) (*models.LogEntryAnon, error) {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return nil, errors.New("inclusion proof not provided")
 	}
@@ -295,7 +285,16 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 	}
 
 	rootHash, _ := hex.DecodeString(*e.Verification.InclusionProof.RootHash)
-	leafHash, _ := hex.DecodeString(params.EntryUUID)
+	leafHash, _ := hex.DecodeString(uuid)
+
+	// Verify leaf hash matches hash of the entry body.
+	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(rfc6962.DefaultHasher.HashLeaf(entryBytes), leafHash) {
+		return nil, fmt.Errorf("computed leaf hash did not match entry UUID")
+	}
 
 	v := logverifier.New(rfc6962.DefaultHasher)
 	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
@@ -336,7 +335,7 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 			if pubKey.Status != tuf.Active {
 				fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 			}
-			return &e, nil
+			return e, nil
 		}
 	}
 	return nil, errors.Wrap(entryVerError, "verifying signedEntryTimestamp")

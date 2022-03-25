@@ -63,6 +63,9 @@ func isb64(data []byte) bool {
 func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, certOidcIssuer, sigRef, blobRef string) error {
 	var verifier signature.Verifier
 	var cert *x509.Certificate
+	// optional
+	var tlogEntry *models.LogEntryAnon
+	var uuid string
 
 	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() && ko.BundlePath == "" {
 		return &options.PubKeyParseError{}
@@ -108,6 +111,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		if err != nil {
 			return err
 		}
+		// TODO should this be checked against cert options?
 	case ko.BundlePath != "":
 		b, err := cosign.FetchLocalSignedPayloadFromPath(ko.BundlePath)
 		if err != nil {
@@ -132,6 +136,8 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 			return err
 		}
 	case options.EnableExperimental():
+		// We attempt to use rekor's search index for a tlog entry by payload.
+		// A successful look up is not guaranteed.
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
@@ -146,11 +152,16 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 			return errors.New("could not find a tlog entry for provided blob")
 		}
 
-		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, uuids[0])
+		// TODO(asraa): Loop over each tlog entry to find a successful match.
+		uuid = uuids[0]
+		tlogEntry, err = cosign.GetTlogEntry(ctx, rClient, uuids[0])
 		if err != nil {
 			return err
 		}
 
+		// TODO: We assume that if you are using experimental search index, then the entries are signed
+		// using the keyless flow. If they were signed with raw public keys (not PEM-encoded x509 certs), then
+		// this will fail, to no fault of the verifier.
 		certs, err := extractCerts(tlogEntry)
 		if err != nil {
 			return err
@@ -179,7 +190,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 	}
 
 	// verify the rekor entry
-	if err := verifyRekorEntry(ctx, ko, verifier, cert, b64sig, blobBytes); err != nil {
+	if err := verifyRekorEntry(ctx, ko, tlogEntry, uuid, verifier, cert, b64sig, blobBytes); err != nil {
 		return err
 	}
 
@@ -237,7 +248,7 @@ func payloadBytes(blobRef string) ([]byte, error) {
 	return blobBytes, nil
 }
 
-func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
+func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, e *models.LogEntryAnon, uuid string, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
 	// If we have a bundle with a rekor entry, let's first try to verify offline
 	if ko.BundlePath != "" {
 		if err := verifyRekorBundle(ctx, ko.BundlePath, cert); err == nil {
@@ -253,33 +264,38 @@ func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Ver
 	if err != nil {
 		return err
 	}
-	var pubBytes []byte
-	if pubKey != nil {
-		pubBytes, err = sigs.PublicKeyPem(pubKey, signatureoptions.WithContext(ctx))
+	// We may already have the entry from search lookup if a key was not provided.
+	// If not, find the tlog entry by the proposed entry and retrieve the UUID and entry to verify.
+	if e == nil {
+		var pubBytes []byte
+		if pubKey != nil {
+			pubBytes, err = sigs.PublicKeyPem(pubKey, signatureoptions.WithContext(ctx))
+			if err != nil {
+				return err
+			}
+		}
+		if cert != nil {
+			pubBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
+			if err != nil {
+				return err
+			}
+		}
+		uuid, e, _, err = cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
 		if err != nil {
 			return err
 		}
 	}
-	if cert != nil {
-		pubBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
-		if err != nil {
-			return err
-		}
-	}
-	uuid, index, err := cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
+	verifiedEntry, err := cosign.VerifyTLogEntry(ctx, rekorClient, e, uuid)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, index)
+	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, *verifiedEntry.Verification.InclusionProof.LogIndex)
 	if cert == nil {
 		return nil
 	}
+
 	// if we have a cert, we should check expiry
-	// The IntegratedTime verified in VerifyTlog
-	e, err := cosign.GetTlogEntry(ctx, rekorClient, uuid)
-	if err != nil {
-		return err
-	}
+	// The IntegratedTime verified in VerifyTlog (in FindTlogEntry)
 	return cosign.CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
