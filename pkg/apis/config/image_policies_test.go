@@ -117,6 +117,7 @@ func TestGetAuthorities(t *testing.T) {
 }
 
 func checkGetMatches(t *testing.T, c map[string][]v1alpha1.Authority, err error) {
+	t.Helper()
 	if err != nil {
 		t.Error("GetMatches Failed =", err)
 	}

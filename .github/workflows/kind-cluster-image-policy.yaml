@@ -44,13 +44,6 @@ jobs:
       COSIGN_EXPERIMENTAL: true
 
     steps:
-    - name: Configure DockerHub mirror
-      run: |
-        tmp=$(mktemp)
-        jq '."registry-mirrors" = ["https://mirror.gcr.io"]' /etc/docker/daemon.json > "$tmp"
-        sudo mv "$tmp" /etc/docker/daemon.json
-        sudo service docker restart
-
     - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
     - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
       with:
@@ -59,20 +52,44 @@ jobs:
     # will use the latest release available for ko
     - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
 
-    - name: Setup Cluster
-      run: |
-        curl -Lo ./setup-kind.sh https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/setup-kind.sh
-        chmod u+x ./setup-kind.sh
-        ./setup-kind.sh \
-          --registry-url $(echo ${KO_DOCKER_REPO} | cut -d'/' -f 1) \
-          --cluster-suffix cluster.local \
-          --k8s-version ${{ matrix.k8s-version }} \
-          --knative-version ${KNATIVE_VERSION}
+    - name: Install yq
+      uses: mikefarah/yq@03f57b7034d0330d54663881def67523347dfc9c # v4.16.2
 
-    - name: Install all the everythings
+    - name: build cosign
+      run: |
+        make cosign
+
+    - name: Setup kind cluster
+      uses: chainguard-dev/actions/setup-kind@main
+      with:
+        k8s-version: ${{ matrix.kind-version}}
+        cluster-suffix: ${{ matrix.cluster-suffix }}
+        kind-version: ${{ matrix.kind-version }}
+
+    - name: Install knative
+      uses: chainguard-dev/actions/setup-knative@main
+      with:
+        version: 1.2.0
+        serving-features: >
+          {
+            "kubernetes.podspec-fieldref": "enabled",
+            "kubernetes.podspec-securitycontext": "enabled"
+          }
+        serving-autoscaler: >
+          {
+            "min-scale": "1",
+            "max-scale": "1"
+          }
+
+    - name: Setup mirror
+      uses: chainguard-dev/actions/setup-mirror@main
+      with:
+        mirror: mirror.gcr.io
+
+    - name: Install all the everythings, fulcio, rekor, ctlog...
       timeout-minutes: 10
       run: |
-        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/release.yaml | kubectl apply -f -
+        kubectl create -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/release.yaml
 
         # Wait for all the ksvc to be up.
         kubectl wait --timeout 10m -A --for=condition=Ready ksvc --all
@@ -89,7 +106,7 @@ jobs:
         # so we can verify against it.
         kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
 
-        curl -L https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/testrelease.yaml | kubectl create -f -
+        kubectl create -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/testrelease.yaml
 
         kubectl wait --for=condition=Complete --timeout=180s job/sign-job job/checktree job/verify-job
 
@@ -146,7 +163,8 @@ jobs:
         sleep 2
         kubectl wait --for=condition=Ready --timeout=15s ksvc gettoken
 
-    # These set up the env variables so that
+    # These set up the env variables so that we can invoke cosign against the
+    # cluster sigstore services (fulcio, rekor, etc.)
     - name: Set the endpoints on the cluster and grab secrets
       run: |
         REKOR_URL=`kubectl -n rekor-system get --no-headers ksvc rekor | cut -d ' ' -f 4`
@@ -172,10 +190,6 @@ jobs:
     - name: Deploy ClusterImagePolicy
       run: |
         kubectl apply -f ./test/testdata/cosigned/e2e/cip.yaml
-
-    - name: build cosign
-      run: |
-        make cosign
 
     - name: Sign demoimage with cosign
       run: |

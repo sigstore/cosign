@@ -278,7 +278,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.K
 				logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
 				fulcioroot, err := getFulcioCert(authority.Keyless.URL)
 				if err != nil {
-					authorityErrors = append(authorityErrors, errors.Wrap(err, "failed to fetch FulcioRoot"))
+					authorityErrors = append(authorityErrors, errors.Wrap(err, "fetching FulcioRoot"))
 					continue
 				}
 				var rekorClient *client.Rekor
@@ -293,8 +293,8 @@ func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.K
 				}
 				sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, opts)
 				if err != nil {
-					logging.FromContext(ctx).Errorf("failed validSignatures for %s: %v", ref.Name(), err)
-					authorityErrors = append(authorityErrors, errors.Wrap(err, "validate signatures"))
+					logging.FromContext(ctx).Errorf("failed validSignatures with fulcio for %s: %v", ref.Name(), err)
+					authorityErrors = append(authorityErrors, errors.Wrap(err, "validate signatures with fulcio"))
 				} else {
 					if len(sps) > 0 {
 						logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", len(sps))
