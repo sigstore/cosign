@@ -295,7 +295,7 @@ func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, e *models.LogEntryAn
 	}
 
 	// if we have a cert, we should check expiry
-	// The IntegratedTime verified in VerifyTlog (in FindTlogEntry)
+	// The IntegratedTime verified in VerifyTlog
 	return cosign.CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
