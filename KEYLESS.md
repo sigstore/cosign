@@ -18,7 +18,7 @@ $ COSIGN_EXPERIMENTAL=1 cosign sign gcr.io/dlorenc-vmtest2/demo
 Generating ephemeral keys...
 Retrieving signed certificate...
 Your browser will now be opened to:
-https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&client_id=237800849078-rmntmr1b2tcu20kpid66q5dbh1vdt7aj.apps.googleusercontent.com&redirect_uri=http%3A%2F%2F127.0.0.1%3A5556%2Fauth%2Fgoogle%2Fcallback&response_type=code&scope=openid+email&state=8slZXeZhwKQofg%3D%3D
+https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&client_id=&redirect_uri=http%3A%2F%2F127.0.0.1%3A5556%2Fauth%2Fgoogle%2Fcallback&response_type=code
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.sig
 ```
 
