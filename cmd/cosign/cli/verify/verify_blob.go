@@ -60,7 +60,7 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, certOidcIssuer, sigRef, blobRef string) error {
+func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, certOidcIssuer, certChain, sigRef, blobRef string) error {
 	var verifier signature.Verifier
 	var cert *x509.Certificate
 
@@ -104,9 +104,25 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		if err != nil {
 			return err
 		}
-		verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-		if err != nil {
-			return err
+		if certChain == "" {
+			verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Verify certificate with chain
+			chain, err := loadCertChainFromFileOrURL(certChain)
+			if err != nil {
+				return err
+			}
+			co := &cosign.CheckOpts{
+				CertEmail:      certEmail,
+				CertOidcIssuer: certOidcIssuer,
+			}
+			verifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			if err != nil {
+				return err
+			}
 		}
 	case ko.BundlePath != "":
 		b, err := cosign.FetchLocalSignedPayloadFromPath(ko.BundlePath)

@@ -51,6 +51,7 @@ type VerifyAttestationCommand struct {
 	CertRef        string
 	CertEmail      string
 	CertOidcIssuer string
+	CertChain      string
 	KeyRef         string
 	Sk             bool
 	Slot           string
@@ -121,9 +122,21 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if err != nil {
 			return errors.Wrap(err, "loading certificate from reference")
 		}
-		co.SigVerifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
-		if err != nil {
-			return errors.Wrap(err, "creating certificate verifier")
+		if c.CertChain == "" {
+			co.SigVerifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			if err != nil {
+				return errors.Wrap(err, "creating certificate verifier")
+			}
+		} else {
+			// Verify certificate with chain
+			chain, err := loadCertChainFromFileOrURL(c.CertChain)
+			if err != nil {
+				return err
+			}
+			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			if err != nil {
+				return errors.Wrap(err, "creating certificate verifier")
+			}
 		}
 	}
 

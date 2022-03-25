@@ -346,6 +346,80 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 	require.Contains(t, err.Error(), "expected email not found in certificate")
 }
 
+func TestValidateAndUnpackCertWithChainSuccess(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, subCert, subKey)
+
+	co := &CheckOpts{
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{subCert, leafCert}, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertWithChainSuccessWithRoot(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	co := &CheckOpts{
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{rootCert}, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertWithChainFailsWithoutChain(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	co := &CheckOpts{
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{}, co)
+	if err == nil || err.Error() != "no chain provided to validate certificate" {
+		t.Errorf("expected error without chain, got %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertWithChainFailsWithInvalidChain(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+	rootCertOther, _, _ := test.GenerateRootCa()
+
+	co := &CheckOpts{
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{rootCertOther}, co)
+	if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
+		t.Errorf("expected error without valid chain, got %v", err)
+	}
+}
+
 func TestCompareSigs(t *testing.T) {
 	// TODO(nsmith5): Add test cases for invalid signature, missing signature etc
 	tests := []struct {
