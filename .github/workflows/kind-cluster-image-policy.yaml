@@ -32,26 +32,9 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.21.2
-        - v1.22.4
-        - v1.23.0
-
-        include:
-          # Map between K8s and KinD versions.
-          # This is attempting to make it a bit clearer what's being tested.
-          # See: https://github.com/kubernetes-sigs/kind/releases
-        - k8s-version: v1.21.2
-          kind-version: 0.11.1
-          kind-image-sha: sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6
-          cluster-suffix: c${{ github.run_id }}.local
-        - k8s-version: v1.22.4
-          kind-version: 0.11.1
-          kind-image-sha: sha256:ca3587e6e545a96c07bf82e2c46503d9ef86fc704f44c17577fca7bcabf5f978
-          cluster-suffix: c${{ github.run_id }}.local
-        - k8s-version: v1.23.0
-          kind-version: 0.11.1
-          kind-image-sha: sha256:2f93d3c7b12a3e93e6c1f34f331415e105979961fcddbe69a4e3ab5a93ccbb35
-          cluster-suffix: c${{ github.run_id }}.local
+        - v1.21.x
+        - v1.22.x
+        - v1.23.x
 
     env:
       KNATIVE_VERSION: "1.1.0"
@@ -81,9 +64,8 @@ jobs:
     - name: Setup kind cluster
       uses: chainguard-dev/actions/setup-kind@main
       with:
-        k8s-version: ${{ matrix.k8s-version}}
-        cluster-suffix: ${{ matrix.cluster-suffix }}
-        kind-version: ${{ matrix.kind-version }}
+        k8s-version: "${{ matrix.k8s-version }}"
+        cluster-suffix: "${{ matrix.cluster-suffix }}"
 
     - name: Install knative
       uses: chainguard-dev/actions/setup-knative@main
