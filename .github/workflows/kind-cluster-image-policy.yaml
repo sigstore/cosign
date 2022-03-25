@@ -57,6 +57,11 @@ jobs:
     - name: Install yq
       uses: mikefarah/yq@03f57b7034d0330d54663881def67523347dfc9c # v4.16.2
 
+    - name: Setup mirror
+      uses: chainguard-dev/actions/setup-mirror@main
+      with:
+        mirror: mirror.gcr.io
+
     - name: build cosign
       run: |
         make cosign
@@ -72,11 +77,6 @@ jobs:
       with:
         serving-features: '{"kubernetes.podspec-fieldref":"enabled", "kubernetes.podspec-volumes-emptydir":"enabled", "kubernetes.podspec-init-containers": "enabled", "kubernetes.podspec-securitycontext":"enabled"}'
         serving-autoscaler: '{"min-scale":"1","max-scale":"1"}'
-
-    - name: Setup mirror
-      uses: chainguard-dev/actions/setup-mirror@main
-      with:
-        mirror: mirror.gcr.io
 
     - name: Install all the everythings, fulcio, rekor, ctlog...
       timeout-minutes: 10
