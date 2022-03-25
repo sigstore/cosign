@@ -90,7 +90,7 @@ jobs:
     - name: Install all the everythings, fulcio, rekor, ctlog...
       timeout-minutes: 10
       run: |
-        kubectl create -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/release.yaml
+        kubectl apply -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/release.yaml
 
         # Wait for all the ksvc to be up.
         kubectl wait --timeout 10m -A --for=condition=Ready ksvc --all
@@ -107,7 +107,7 @@ jobs:
         # so we can verify against it.
         kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
 
-        kubectl create -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/testrelease.yaml
+        kubectl apply -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/testrelease.yaml
 
         kubectl wait --for=condition=Complete --timeout=180s job/sign-job job/checktree job/verify-job
 
