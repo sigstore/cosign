@@ -18,6 +18,7 @@ cosign attach sbom [flags]
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
   -h, --help                                                                                     help for sbom
+      --input-format string                                                                      type of sbom input format (json|xml|text)
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --sbom string                                                                              path to the sbom, or {-} for stdin
       --type string                                                                              type of sbom (spdx|cyclonedx|syft) (default "spdx")

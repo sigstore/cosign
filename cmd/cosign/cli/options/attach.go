@@ -46,9 +46,10 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 
 // AttachSBOMOptions is the top level wrapper for the attach sbom command.
 type AttachSBOMOptions struct {
-	SBOM     string
-	SBOMType string
-	Registry RegistryOptions
+	SBOM            string
+	SBOMType        string
+	SBOMInputFormat string
+	Registry        RegistryOptions
 }
 
 var _ Interface = (*AttachSBOMOptions)(nil)
@@ -62,15 +63,34 @@ func (o *AttachSBOMOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SBOMType, "type", "spdx",
 		"type of sbom (spdx|cyclonedx|syft)")
+
+	cmd.Flags().StringVar(&o.SBOMInputFormat, "input-format", "",
+		"type of sbom input format (json|xml|text)")
 }
 
 func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
 	switch o.SBOMType {
 	case "cyclonedx":
-		return ctypes.CycloneDXMediaType, nil
+		if o.SBOMInputFormat != "" && o.SBOMInputFormat != ctypes.XMLInputFormat && o.SBOMInputFormat != ctypes.JSONInputFormat {
+			return "invalid", fmt.Errorf("invalid SBOM input format: %q, expected (json|xml)", o.SBOMInputFormat)
+		}
+		if o.SBOMInputFormat == ctypes.JSONInputFormat {
+			return ctypes.CycloneDXJSONMediaType, nil
+		}
+		return ctypes.CycloneDXXMLMediaType, nil
+
 	case "spdx":
+		if o.SBOMInputFormat != "" && o.SBOMInputFormat != ctypes.TextInputFormat && o.SBOMInputFormat != ctypes.JSONInputFormat {
+			return "invalid", fmt.Errorf("invalid SBOM input format: %q, expected (json|text)", o.SBOMInputFormat)
+		}
+		if o.SBOMInputFormat == ctypes.JSONInputFormat {
+			return ctypes.SPDXJSONMediaType, nil
+		}
 		return ctypes.SPDXMediaType, nil
 	case "syft":
+		if o.SBOMInputFormat != "" && o.SBOMInputFormat != ctypes.JSONInputFormat {
+			return "invalid", fmt.Errorf("invalid SBOM input format: %q, expected (json)", o.SBOMInputFormat)
+		}
 		return ctypes.SyftMediaType, nil
 	default:
 		return "unknown", fmt.Errorf("unknown SBOM type: %q, expected (spdx|cyclonedx|syft)", o.SBOMType)
