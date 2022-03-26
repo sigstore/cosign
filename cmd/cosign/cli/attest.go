@@ -51,6 +51,9 @@ func Attest() *cobra.Command {
   # attach an attestation to a container image with a key pair stored in Hashicorp Vault
   cosign attest --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <IMAGE>
 
+  # attach an attestation to a container image with a local key pair file, including a certificate and certificate chain
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
+
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image`,
 
@@ -70,7 +73,7 @@ func Attest() *cobra.Command {
 				OIDCClientSecret:         o.OIDC.ClientSecret,
 			}
 			for _, img := range args {
-				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.NoUpload,
+				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
 					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout); err != nil {
 					return errors.Wrapf(err, "signing %s", img)
 				}

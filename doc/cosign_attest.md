@@ -29,6 +29,9 @@ cosign attest [flags]
   # attach an attestation to a container image with a key pair stored in Hashicorp Vault
   cosign attest --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <IMAGE>
 
+  # attach an attestation to a container image with a local key pair file, including a certificate and certificate chain
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
+
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image
 ```
@@ -38,7 +41,8 @@ cosign attest [flags]
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
-      --cert string                                                                              path to the x509 certificate to include in the Signature
+      --cert string                                                                              path to the X.509 certificate in PEM format to include in the OCI Signature
+      --cert-chain string                                                                        path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
   -f, --force                                                                                    skip warnings and confirmations
       --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for attest

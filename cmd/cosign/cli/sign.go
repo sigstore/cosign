@@ -62,6 +62,9 @@ func Sign() *cobra.Command {
   # sign a container image with a key pair stored in a Kubernetes secret
   cosign sign --key k8s://[NAMESPACE]/[KEY] <IMAGE>
 
+  # sign a container image with a key, attaching a certificate and certificate chain
+  cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
+
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image`,
 		Args: cobra.MinimumNArgs(1),
@@ -89,7 +92,8 @@ func Sign() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := sign.SignCmd(ro, ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.Upload, o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
+			if err := sign.SignCmd(ro, ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.CertChain, o.Upload,
+				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
 				if o.Attachment == "" {
 					return errors.Wrapf(err, "signing %v", args)
 				}

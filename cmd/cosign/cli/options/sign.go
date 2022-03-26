@@ -23,6 +23,7 @@ import (
 type SignOptions struct {
 	Key               string
 	Cert              string
+	CertChain         string
 	Upload            bool
 	Output            string // deprecated: TODO remove when the output flag is fully deprecated
 	OutputSignature   string // TODO: this should be the root output file arg.
@@ -55,7 +56,13 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 		"path to the private key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().StringVar(&o.Cert, "cert", "",
-		"path to the x509 certificate to include in the Signature")
+		"path to the X.509 certificate in PEM format to include in the OCI Signature")
+
+	cmd.Flags().StringVar(&o.CertChain, "cert-chain", "",
+		"path to a list of CA X.509 certificates in PEM format which will be needed "+
+			"when building the certificate chain for the signing certificate. "+
+			"Must start with the parent intermediate CA certificate of the "+
+			"signing certificate and end with the root certificate. Included in the OCI Signature")
 
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")

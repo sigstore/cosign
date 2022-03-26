@@ -175,7 +175,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Get Fulcio signer
-			sv, err := sign.SignerFromKeyOpts(ctx, "", sign.KeyOpts{
+			sv, err := sign.SignerFromKeyOpts(ctx, "", "", sign.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
