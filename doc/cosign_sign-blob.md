@@ -46,6 +46,7 @@ cosign sign-blob [flags]
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
       --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
+      --oidc-redirect-uri string                                                                 [EXPERIMENTAL] OIDC redirect URI
       --output string                                                                            write the signature to FILE
       --output-certificate string                                                                write the certificate to FILE
       --output-signature string                                                                  write the signature to FILE
