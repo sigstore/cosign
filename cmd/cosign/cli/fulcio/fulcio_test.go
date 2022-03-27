@@ -36,7 +36,7 @@ type testFlow struct {
 	err   error
 }
 
-func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, error) {
+func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURI string) (*oauthflow.OIDCIDToken, error) {
 	if tf.err != nil {
 		return nil, tf.err
 	}
@@ -118,7 +118,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "", "")
+			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "", "", "")
 
 			if err != nil {
 				if !tc.expectErr {
