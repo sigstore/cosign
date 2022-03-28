@@ -31,11 +31,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Keychain is an alias of authn.Keychain to expose this configuration option to consumers of this lib
+type Keychain = authn.Keychain
+
 // RegistryOptions is the wrapper for the registry options.
 type RegistryOptions struct {
 	AllowInsecure      bool
 	KubernetesKeychain bool
 	RefOpts            ReferenceOptions
+	Keychain           Keychain
 }
 
 var _ Interface = (*RegistryOptions)(nil)
@@ -72,7 +76,10 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 		remote.WithUserAgent(UserAgent()),
 	}
 
-	if o.KubernetesKeychain {
+	switch {
+	case o.Keychain != nil:
+		opts = append(opts, remote.WithAuthFromKeychain(o.Keychain))
+	case o.KubernetesKeychain:
 		kc := authn.NewMultiKeychain(
 			authn.DefaultKeychain,
 			google.Keychain,
@@ -81,7 +88,7 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 			github.Keychain,
 		)
 		opts = append(opts, remote.WithAuthFromKeychain(kc))
-	} else {
+	default:
 		opts = append(opts, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	}
 
