@@ -1363,8 +1363,8 @@ github.com/hashicorp/vault/sdk v0.4.1/go.mod h1:aZ3fNuL5VNydQk8GcLJ2TV8YCRVvyaak
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 h1:xixZ2bWeofWV68J+x6AzmKuVM/JWCQwkWm6GW/MUR6I=
 github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87/go.mod h1:CtWFDAQgb7dxtzFs4tWbplKIe2jSi3+5vKbgIO0SLnQ=
-github.com/hectorj2f/sigstore v1.1.1-0.20220327185948-0897f92f144e h1:eO6o/SQ29I+JGNhJBgm1aGrIjIkvqUvvmMG/unwKbNY=
-github.com/hectorj2f/sigstore v1.1.1-0.20220327185948-0897f92f144e/go.mod h1:xStpn6YKjRehCrfPiBQPWlI1oIhYtl7omc0kS/Ldpic=
+github.com/hectorj2f/sigstore v1.1.1-0.20220328195805-4ade568cebda h1:7TcxMiwbWEWTqnNlX03trmvPaatE4yvLOK3LI23NJTY=
+github.com/hectorj2f/sigstore v1.1.1-0.20220328195805-4ade568cebda/go.mod h1:xStpn6YKjRehCrfPiBQPWlI1oIhYtl7omc0kS/Ldpic=
 github.com/honeycombio/beeline-go v1.1.1 h1:sU8r4ae34uEL3/CguSl8Mr+Asz9DL1nfH9Wwk85Pc7U=
 github.com/honeycombio/beeline-go v1.1.1/go.mod h1:kN0cfUGBMfA87DyCYbiiLoSzWsnw3bluZvNEWtatHxk=
 github.com/honeycombio/libhoney-go v1.15.2 h1:5NGcjOxZZma13dmzNcl3OtGbF1hECA0XHJNHEb2t2ck=

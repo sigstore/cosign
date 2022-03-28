@@ -183,6 +183,7 @@ func signPolicy() *cobra.Command {
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCRedirectURI:          o.OIDC.RedirectURI,
 			})
 			if err != nil {
 				return err

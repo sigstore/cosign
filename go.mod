@@ -316,4 +316,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
 
-replace github.com/sigstore/sigstore => github.com/hectorj2f/sigstore v1.1.1-0.20220327185948-0897f92f144e
+replace github.com/sigstore/sigstore => github.com/hectorj2f/sigstore v1.1.1-0.20220328195805-4ade568cebda
