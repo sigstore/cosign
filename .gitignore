@@ -27,3 +27,5 @@
 
 bin*
 dist/
+
+test/verify-experimental*

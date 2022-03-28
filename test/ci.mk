@@ -31,3 +31,7 @@ sign-keyless-sget:
 
 .PHONY: sign-keyless-container
 sign-keyless-container: ko sign-keyless-cosign sign-keyless-cosigned sign-keyless-sget
+
+.PHONY: sign-blob-experimental
+sign-blob-experimental:
+	./sign_blob_test.sh
