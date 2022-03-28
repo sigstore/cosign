@@ -38,6 +38,7 @@ func New() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:               "cosign",
+		Short:             "A tool for Container Signing, Verification and Storage in an OCI registry.",
 		DisableAutoGenTag: true,
 		SilenceUsage:      true, // Don't show usage on errors
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -93,7 +94,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(VerifyAttestation())
 	cmd.AddCommand(VerifyBlob())
 	cmd.AddCommand(Triangulate())
-	cmd.AddCommand(version.Version())
+	cmd.AddCommand(version.WithFont("starwars"))
 
 	cmd.AddCommand(cranecmd.NewCmdAuthLogin("cosign"))
 	return cmd
