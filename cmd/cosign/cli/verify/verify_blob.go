@@ -44,6 +44,7 @@ import (
 	sigs "github.com/sigstore/cosign/pkg/signature"
 
 	ctypes "github.com/sigstore/cosign/pkg/types"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
@@ -161,27 +162,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		if len(uuids) == 0 {
 			return errors.New("could not find a tlog entry for provided blob")
 		}
-
-		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, uuids[0])
-		if err != nil {
-			return err
-		}
-
-		certs, err := extractCerts(tlogEntry)
-		if err != nil {
-			return err
-		}
-
-		co := &cosign.CheckOpts{
-			RootCerts:      fulcio.GetRoots(),
-			CertEmail:      certEmail,
-			CertOidcIssuer: certOidcIssuer,
-		}
-		cert = certs[0]
-		verifier, err = cosign.ValidateAndUnpackCert(cert, co)
-		if err != nil {
-			return err
-		}
+		return verifyUUIDs(ctx, ko, rClient, certEmail, certOidcIssuer, sig, b64sig, uuids, blobBytes)
 	}
 
 	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
@@ -199,6 +180,51 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		return err
 	}
 
+	fmt.Fprintln(os.Stderr, "Verified OK")
+	return nil
+}
+
+func verifyUUIDs(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string, uuids []string, blobBytes []byte) error {
+	var validUUID bool
+	for _, u := range uuids {
+		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, u)
+		if err != nil {
+			continue
+		}
+
+		certs, err := extractCerts(tlogEntry)
+		if err != nil {
+			continue
+		}
+
+		co := &cosign.CheckOpts{
+			RootCerts:      fulcio.GetRoots(),
+			CertEmail:      certEmail,
+			CertOidcIssuer: certOidcIssuer,
+		}
+		cert := certs[0]
+		verifier, err := cosign.ValidateAndUnpackCert(cert, co)
+		if err != nil {
+			continue
+		}
+		// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
+		if isIntotoDSSE(blobBytes) {
+			verifier = dsse.WrapVerifier(verifier)
+		}
+		// verify the signature
+		if err := verifier.VerifySignature(bytes.NewReader([]byte(sig)), bytes.NewReader(blobBytes)); err != nil {
+			continue
+		}
+
+		// verify the rekor entry
+		if err := verifyRekorEntry(ctx, ko, verifier, cert, b64sig, blobBytes); err != nil {
+			continue
+		}
+		validUUID = true
+	}
+	if !validUUID {
+		return errors.New("could not find a valid tlog entry for provided blob")
+	}
 	fmt.Fprintln(os.Stderr, "Verified OK")
 	return nil
 }
