@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/fulcio/pkg/api"
 	rekor "github.com/sigstore/rekor/pkg/client"
@@ -167,7 +168,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				// If there is at least one policy that matches, that means it
 				// has to be satisfied.
 				if len(policies) > 0 {
-					av, fieldErrors := validatePolicies(ctx, ref, kc, policies)
+					av, _, fieldErrors := validatePolicies(ctx, ref, kc, policies)
 					if av != len(policies) {
 						logging.FromContext(ctx).Warnf("Failed to validate at least one policy for %s", ref.Name())
 						// Do we really want to add all the error details here?
@@ -202,7 +203,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				continue
 			}
 
-			if err := valid(ctx, ref, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
+			if _, err := valid(ctx, ref, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
 				errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)
 				errorField.Details = c.Image
 				errs = errs.Also(errorField)
@@ -219,13 +220,16 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 
 // validatePolicies will go through all the matching Policies and their
 // Authorities for a given image. Returns the number of Policies that
-// had at least one successful validation against it.
-// If there's a policy that did not match, it will be returned in the map
+// had at least one successful validation against it as well as a map of
+// policy=>Validated signatures.
+// If there's a policy that did not match, it will be returned in the errors map
 // along with all the errors that caused it to fail.
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.Keychain, policies map[string][]v1alpha1.Authority, _ ...ociremote.Option) (int, map[string][]error) {
+func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]v1alpha1.Authority, remoteOpts ...ociremote.Option) (int, map[string][]oci.Signature, map[string][]error) {
+	// Gather all validated signatures here.
+	signatures := map[string][]oci.Signature{}
 	// For a policy that does not pass at least one authority, gather errors
 	// here so that we can give meaningful errors to the user.
 	ret := map[string][]error{}
@@ -241,39 +245,56 @@ func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.K
 	authorityErrors := []error{}
 	for p, authorities := range policies {
 		logging.FromContext(ctx).Debugf("Checking Policy: %s", p)
-		// Now the part about having multiple Authority sections within a
-		// policy, any single match will do:
-		// "When multiple authorities are specified, any of them may be used
-		// to source the valid signature we are looking for to admit an image.""
-		authoritiesValidated := 0
-		for _, authority := range authorities {
-			logging.FromContext(ctx).Debugf("Checking Authority: %+v", authority)
-			// TODO(vaikas): We currently only use the defaultKC, we have to look
-			// at authority.Sources to determine additional information for the
-			// WithRemoteOptions below, at least the 'TargetRepository'
-			// https://github.com/sigstore/cosign/issues/1651
-			opts := ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(defaultKC))
+		sigs, errs := ValidatePolicy(ctx, ref, kc, authorities, remoteOpts...)
+		if len(errs) > 0 {
+			ret[p] = append(ret[p], authorityErrors...)
+		} else {
+			policiesValidated++
+			signatures[p] = append(signatures[p], sigs...)
+		}
+	}
+	return policiesValidated, signatures, ret
+}
 
-			if authority.Key != nil {
-				// Get the key from authority data
-				if authorityKeys, fieldErr := parseAuthorityKeys(ctx, authority.Key.Data); fieldErr != nil {
-					authorityErrors = append(authorityErrors, errors.Wrap(fieldErr, "failed to parse Key values"))
+// ValidatePolicy will go through all the Authorities for a given image and
+// return a success if at least one of the Authorities validated the signatures.
+// Returns the validated signatures, or the errors encountered.
+func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, authorities []v1alpha1.Authority, _ ...ociremote.Option) ([]oci.Signature, []error) {
+	// If none of the Authorities for a given policy pass the checks, gather
+	// the errors here. If one passes, do not return the errors.
+	authorityErrors := []error{}
+	for _, authority := range authorities {
+		logging.FromContext(ctx).Debugf("Checking Authority: %+v", authority)
+		// TODO(vaikas): We currently only use the defaultKC, we have to look
+		// at authority.Sources to determine additional information for the
+		// WithRemoteOptions below, at least the 'TargetRepository'
+		// https://github.com/sigstore/cosign/issues/1651
+		opts := ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))
+
+		switch {
+		case authority.Key != nil:
+			// Get the key from authority data
+			if authorityKeys, fieldErr := parseAuthorityKeys(ctx, authority.Key.Data); fieldErr != nil {
+				authorityErrors = append(authorityErrors, errors.Wrap(fieldErr, "failed to parse Key values"))
+			} else {
+				// TODO(vaikas): What should happen if there are multiple keys
+				// Is it even allowed? 'valid' returns success if any key
+				// matches.
+				// https://github.com/sigstore/cosign/issues/1652
+				sps, err := valid(ctx, ref, authorityKeys, opts)
+				if err != nil {
+					authorityErrors = append(authorityErrors, errors.Wrap(err, "failed to validate keys"))
+					continue
 				} else {
-					// TODO(vaikas): What should happen if there are multiple keys
-					// Is it even allowed? 'valid' returns success if any key
-					// matches.
-					// https://github.com/sigstore/cosign/issues/1652
-					if err := valid(ctx, ref, authorityKeys, opts); err != nil {
-						authorityErrors = append(authorityErrors, errors.Wrap(err, "failed to validate keys"))
-						continue
+					if len(sps) > 0 {
+						logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", len(sps))
+						return sps, nil
 					}
-					// This authority matched, so mark it as validated and
-					// continue through other policies, no need to look at more
-					// of the Authorities.
-					authoritiesValidated++
-					break
+					logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
+					authorityErrors = append(authorityErrors, fmt.Errorf("no valid signatures found for %s", ref.Name()))
 				}
 			}
+		case authority.Keyless != nil:
 			if authority.Keyless != nil && authority.Keyless.URL != nil {
 				logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
 				fulcioroot, err := getFulcioCert(authority.Keyless.URL)
@@ -298,25 +319,15 @@ func validatePolicies(ctx context.Context, ref name.Reference, defaultKC authn.K
 				} else {
 					if len(sps) > 0 {
 						logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", len(sps))
-						// This authority matched, so mark it as validated and
-						// continue through other policies, no need to look at
-						// more of the Authorities.
-						authoritiesValidated++
-						break
-					} else {
-						logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
-						authorityErrors = append(authorityErrors, fmt.Errorf("no valid signatures found for %s", ref.Name()))
+						return sps, nil
 					}
+					logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
+					authorityErrors = append(authorityErrors, fmt.Errorf("no valid signatures found for %s", ref.Name()))
 				}
 			}
 		}
-		if authoritiesValidated > 0 {
-			policiesValidated++
-		} else {
-			ret[p] = append(ret[p], authorityErrors...)
-		}
 	}
-	return policiesValidated, ret
+	return nil, authorityErrors
 }
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator

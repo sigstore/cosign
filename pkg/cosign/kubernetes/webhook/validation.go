@@ -36,17 +36,17 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) error {
+func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
 		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroots.Get(), nil /* rekor */, opts...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if len(sps) > 0 {
-			return nil
+			return sps, nil
 		}
-		return errors.New("no valid signatures were found")
+		return nil, errors.New("no valid signatures were found")
 	}
 	// We return nil if ANY key matches
 	var lastErr error
@@ -65,11 +65,11 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opt
 			continue
 		}
 		if len(sps) > 0 {
-			return nil
+			return sps, nil
 		}
 	}
 	logging.FromContext(ctx).Debug("No valid signatures were found.")
-	return lastErr
+	return nil, lastErr
 }
 
 // For testing
