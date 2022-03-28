@@ -162,7 +162,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		if len(uuids) == 0 {
 			return errors.New("could not find a tlog entry for provided blob")
 		}
-		return verifyUUIDs(ctx, ko, rClient, certEmail, certOidcIssuer, sig, b64sig, uuids, blobBytes)
+		return verifySigByUUID(ctx, ko, rClient, certEmail, certOidcIssuer, sig, b64sig, uuids, blobBytes)
 	}
 
 	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
@@ -184,8 +184,8 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 	return nil
 }
 
-func verifyUUIDs(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string, uuids []string, blobBytes []byte) error {
-	var validUUID bool
+func verifySigByUUID(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string, uuids []string, blobBytes []byte) error {
+	var validSigExists bool
 	for _, u := range uuids {
 		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, u)
 		if err != nil {
@@ -220,10 +220,15 @@ func verifyUUIDs(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, ce
 		if err := verifyRekorEntry(ctx, ko, verifier, cert, b64sig, blobBytes); err != nil {
 			continue
 		}
-		validUUID = true
+		validSigExists = true
 	}
-	if !validUUID {
-		return errors.New("could not find a valid tlog entry for provided blob")
+	if !validSigExists {
+		fmt.Fprintln(os.Stderr, `WARNING: No valid entries were found in rekor to verify this blob.
+
+Transparency log support for blobs is experimental, and occasionally an entry isn't found even if one exists.
+
+We recommend requesting the certificate/signature from the original signer of this blob and manually verifying with cosign verify-blob --cert [cert] --signature [signature].`)
+		return fmt.Errorf("could not find a valid tlog entry for provided blob, found %d invalid entries", len(uuids))
 	}
 	fmt.Fprintln(os.Stderr, "Verified OK")
 	return nil

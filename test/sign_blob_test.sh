@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This test checks that verify-blob will iterate over all entries and check for at least one valid entry before erroring out
+# This is to prevent verify-blob from only checking the most recent entry, which could result
+# in a "denial of service" type attack if someone signs a piece of software
+# with their own certificate which doesn't chain up to Sigstore
+
 set -ex
 
 export COSIGN_EXPERIMENTAL=1
