@@ -314,6 +314,11 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	if err != nil {
 		return nil, errors.Wrap(err, "reading key")
 	}
+	certSigner := &SignerVerifier{
+		SignerVerifier: k,
+	}
+
+	var leafCert *x509.Certificate
 
 	// Attempt to extract certificate from PKCS11 token
 	// With PKCS11, we assume the certificate is in the same slot on the PKCS11
@@ -321,75 +326,72 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	// user.
 	if pkcs11Key, ok := k.(*pkcs11key.Key); ok {
 		certFromPKCS11, _ := pkcs11Key.Certificate()
+		certSigner.close = pkcs11Key.Close
+
 		if certFromPKCS11 == nil {
 			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
-			return &SignerVerifier{
-				SignerVerifier: k,
-				close:          pkcs11Key.Close,
-			}, nil
+		} else {
+			pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
+			if err != nil {
+				pkcs11Key.Close()
+				return nil, err
+			}
+			// Check that the provided public key and certificate key match
+			pubKey, err := k.PublicKey()
+			if err != nil {
+				pkcs11Key.Close()
+				return nil, err
+			}
+			if cryptoutils.EqualKeys(pubKey, certFromPKCS11.PublicKey) != nil {
+				pkcs11Key.Close()
+				return nil, errors.New("pkcs11 key and certificate do not match")
+			}
+			leafCert = certFromPKCS11
+			certSigner.Cert = pemBytes
 		}
-		pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
-		if err != nil {
-			pkcs11Key.Close()
-			return nil, err
-		}
-		// Check that provided public key and certificate key match
-		pubKey, err := k.PublicKey()
-		if err != nil {
-			pkcs11Key.Close()
-			return nil, err
-		}
-		if cryptoutils.EqualKeys(pubKey, certFromPKCS11.PublicKey) != nil {
-			pkcs11Key.Close()
-			return nil, errors.New("pkcs11 key and certificate do not match")
-		}
-		return &SignerVerifier{
-			Cert:           pemBytes,
-			SignerVerifier: k,
-			close:          pkcs11Key.Close,
-		}, nil
-	}
-	certSigner := &SignerVerifier{
-		SignerVerifier: k,
-	}
-
-	if certPath == "" {
-		return certSigner, nil
 	}
 
 	// Handle --cert flag
-	// Allow both DER and PEM encoding
-	certBytes, err := os.ReadFile(certPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "read certificate")
-	}
-	// Handle PEM
-	if bytes.HasPrefix(certBytes, []byte("-----")) {
-		decoded, _ := pem.Decode(certBytes)
-		if decoded.Type != "CERTIFICATE" {
-			return nil, fmt.Errorf("supplied PEM file is not a certificate: %s", certPath)
+	if certPath != "" {
+		// Allow both DER and PEM encoding
+		certBytes, err := os.ReadFile(certPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "read certificate")
 		}
-		certBytes = decoded.Bytes
+		// Handle PEM
+		if bytes.HasPrefix(certBytes, []byte("-----")) {
+			decoded, _ := pem.Decode(certBytes)
+			if decoded.Type != "CERTIFICATE" {
+				return nil, fmt.Errorf("supplied PEM file is not a certificate: %s", certPath)
+			}
+			certBytes = decoded.Bytes
+		}
+		parsedCert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse x509 certificate")
+		}
+		pk, err := k.PublicKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "get public key")
+		}
+		if cryptoutils.EqualKeys(pk, parsedCert.PublicKey) != nil {
+			return nil, errors.New("public key in certificate does not match the provided public key")
+		}
+		pemBytes, err := cryptoutils.MarshalCertificateToPEM(parsedCert)
+		if err != nil {
+			return nil, errors.Wrap(err, "marshaling certificate to PEM")
+		}
+		if certSigner.Cert != nil {
+			fmt.Fprintln(os.Stderr, "warning: overriding x509 certificate retrieved from the PKCS11 token")
+		}
+		leafCert = parsedCert
+		certSigner.Cert = pemBytes
 	}
-	parsedCert, err := x509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse x509 certificate")
-	}
-	pk, err := k.PublicKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "get public key")
-	}
-	if cryptoutils.EqualKeys(pk, parsedCert.PublicKey) != nil {
-		return nil, errors.New("public key in certificate does not match the provided public key")
-	}
-	pemBytes, err := cryptoutils.MarshalCertificateToPEM(parsedCert)
-	if err != nil {
-		return nil, errors.Wrap(err, "marshaling certificate to PEM")
-	}
-	certSigner.Cert = pemBytes
 
 	if certChainPath == "" {
 		return certSigner, nil
+	} else if certSigner.Cert == nil {
+		return nil, errors.New("no leaf certificate found or provided while specifying chain")
 	}
 
 	// Handle --cert-chain flag
@@ -412,7 +414,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	for _, c := range certChain[:len(certChain)-1] {
 		subPool.AddCert(c)
 	}
-	if err := cosign.TrustedCert(parsedCert, rootPool, subPool); err != nil {
+	if err := cosign.TrustedCert(leafCert, rootPool, subPool); err != nil {
 		return nil, errors.Wrap(err, "unable to validate certificate chain")
 	}
 	certSigner.Chain = certChainBytes
