@@ -17,7 +17,7 @@ package config
 import (
 	"testing"
 
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
 	. "knative.dev/pkg/configmap/testing"
 	_ "knative.dev/pkg/system/testing"
 )
@@ -116,7 +116,7 @@ func TestGetAuthorities(t *testing.T) {
 	}
 }
 
-func checkGetMatches(t *testing.T, c map[string][]v1alpha1.Authority, err error) {
+func checkGetMatches(t *testing.T, c map[string][]internalcip.Authority, err error) {
 	t.Helper()
 	if err != nil {
 		t.Error("GetMatches Failed =", err)

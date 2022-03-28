@@ -118,27 +118,6 @@ func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *a
 	return keys, nil
 }
 
-func parseAuthorityKeys(ctx context.Context, pubKey string) ([]*ecdsa.PublicKey, *apis.FieldError) {
-	keys := []*ecdsa.PublicKey{}
-	errs := []error{}
-
-	logging.FromContext(ctx).Debugf("Got public key: %v", pubKey)
-
-	pems := parsePems([]byte(pubKey))
-	for _, p := range pems {
-		key, err := x509.ParsePKIXPublicKey(p.Bytes)
-		if err != nil {
-			errs = append(errs, err)
-		} else {
-			keys = append(keys, key.(*ecdsa.PublicKey))
-		}
-	}
-	if len(keys) == 0 {
-		return nil, apis.ErrGeneric(fmt.Sprintf("malformed authority key data: %v", errs), apis.CurrentField)
-	}
-	return keys, nil
-}
-
 func parsePems(b []byte) []*pem.Block {
 	p, rest := pem.Decode(b)
 	if p == nil {
