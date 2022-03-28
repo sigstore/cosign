@@ -51,11 +51,11 @@ require (
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
 	google.golang.org/api v0.73.0
 	gopkg.in/square/go-jose.v2 v2.6.0
-	k8s.io/api v0.23.4
-	k8s.io/apimachinery v0.23.4
-	k8s.io/client-go v0.23.4
+	k8s.io/api v0.23.5
+	k8s.io/apimachinery v0.23.5
+	k8s.io/client-go v0.23.5
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
-	knative.dev/pkg v0.0.0-20220316002959-3a4cc56708b9
+	knative.dev/pkg v0.0.0-20220325200448-1f7514acd0c2
 	sigs.k8s.io/release-utils v0.6.0
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -96,7 +96,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.28.0
-	k8s.io/code-generator v0.22.5
+	k8s.io/code-generator v0.23.5
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
 	knative.dev/hack v0.0.0-20220224013837-e1785985d364
 	knative.dev/hack/schema v0.0.0-20220224013837-e1785985d364
@@ -304,15 +304,9 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/apiextensions-apiserver v0.22.5 // indirect
-	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
-	k8s.io/klog/v2 v2.40.1 // indirect
+	k8s.io/apiextensions-apiserver v0.23.4 // indirect
+	k8s.io/gengo v0.0.0-20220307231824-4627b89bbf1b // indirect
+	k8s.io/klog/v2 v2.60.1-0.20220317184644-43cc75f9ae89 // indirect
+	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
-)
-
-// This is temporary to address conflicting versions of Kubernetes libs in knative and GGCR.
-replace (
-	k8s.io/api => k8s.io/api v0.22.5
-	k8s.io/apimachinery => k8s.io/apimachinery v0.22.5
-	k8s.io/client-go => k8s.io/client-go v0.22.5
 )

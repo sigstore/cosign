@@ -97,7 +97,7 @@ func (c *FakeClusterImagePolicies) Update(ctx context.Context, clusterImagePolic
 // Delete takes name of the clusterImagePolicy and deletes it. Returns an error if one occurs.
 func (c *FakeClusterImagePolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(clusterimagepoliciesResource, name), &v1alpha1.ClusterImagePolicy{})
+		Invokes(testing.NewRootDeleteActionWithOptions(clusterimagepoliciesResource, name, opts), &v1alpha1.ClusterImagePolicy{})
 	return err
 }
 
