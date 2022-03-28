@@ -258,17 +258,16 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 // ValidatePolicy will go through all the Authorities for a given image and
 // return a success if at least one of the Authorities validated the signatures.
 // Returns the validated signatures, or the errors encountered.
-func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, authorities []v1alpha1.Authority, _ ...ociremote.Option) ([]oci.Signature, []error) {
+func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, authorities []v1alpha1.Authority, remoteOpts ...ociremote.Option) ([]oci.Signature, []error) {
 	// If none of the Authorities for a given policy pass the checks, gather
 	// the errors here. If one passes, do not return the errors.
 	authorityErrors := []error{}
 	for _, authority := range authorities {
 		logging.FromContext(ctx).Debugf("Checking Authority: %+v", authority)
-		// TODO(vaikas): We currently only use the defaultKC, we have to look
+		// TODO(vaikas): We currently only use the kc, we have to look
 		// at authority.Sources to determine additional information for the
 		// WithRemoteOptions below, at least the 'TargetRepository'
 		// https://github.com/sigstore/cosign/issues/1651
-		opts := ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))
 
 		switch {
 		case authority.Key != nil:
@@ -280,7 +279,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 				// Is it even allowed? 'valid' returns success if any key
 				// matches.
 				// https://github.com/sigstore/cosign/issues/1652
-				sps, err := valid(ctx, ref, authorityKeys, opts)
+				sps, err := valid(ctx, ref, authorityKeys, remoteOpts...)
 				if err != nil {
 					authorityErrors = append(authorityErrors, errors.Wrap(err, "failed to validate keys"))
 					continue
@@ -311,7 +310,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 						continue
 					}
 				}
-				sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, opts)
+				sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, remoteOpts...)
 				if err != nil {
 					logging.FromContext(ctx).Errorf("failed validSignatures with fulcio for %s: %v", ref.Name(), err)
 					authorityErrors = append(authorityErrors, errors.Wrap(err, "validate signatures with fulcio"))
