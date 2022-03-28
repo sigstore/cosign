@@ -18,6 +18,6 @@ Provides utilities for discovering images in and performing operations on Kubern
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign manifest verify](cosign_manifest_verify.md)	 - Verify all signatures of images specified in the manifest
 

@@ -28,7 +28,7 @@ cosign policy [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign policy init](cosign_policy_init.md)	 - generate a new keyless policy.
 * [cosign policy sign](cosign_policy_sign.md)	 - sign a keyless policy.
 

@@ -33,5 +33,5 @@ cosign save [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 

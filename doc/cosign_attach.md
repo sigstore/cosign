@@ -18,7 +18,7 @@ Provides utilities for attaching artifacts to other artifacts in a registry
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign attach attestation](cosign_attach_attestation.md)	 - Attach attestation to the supplied container image
 * [cosign attach sbom](cosign_attach_sbom.md)	 - Attach sbom to the supplied container image
 * [cosign attach signature](cosign_attach_signature.md)	 - Attach signatures to the supplied container image
