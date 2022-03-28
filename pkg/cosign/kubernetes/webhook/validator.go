@@ -220,7 +220,8 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 
 // validatePolicies will go through all the matching Policies and their
 // Authorities for a given image. Returns the map of policy=>Validated
-// signatures.
+// signatures. From the map you can see the number of matched policies along
+// with the signatures that were verified.
 // If there's a policy that did not match, it will be returned in the errors map
 // along with all the errors that caused it to fail.
 // Note that if an image does not match any policies, it's perfectly
@@ -237,8 +238,6 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 	// From the Design document, the part about multiple Policies matching:
 	// "If multiple policies match a particular image, then ALL of those
 	// policies must be satisfied for the image to be admitted."
-	// So we keep a tally to make sure that all the policies matched.
-	policiesValidated := 0
 	// If none of the Authorities for a given policy pass the checks, gather
 	// the errors here. If one passes, do not return the errors.
 	authorityErrors := []error{}
@@ -248,7 +247,6 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 		if len(errs) > 0 {
 			ret[p] = append(ret[p], authorityErrors...)
 		} else {
-			policiesValidated++
 			signatures[p] = append(signatures[p], sigs...)
 		}
 	}
