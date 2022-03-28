@@ -168,8 +168,8 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				// If there is at least one policy that matches, that means it
 				// has to be satisfied.
 				if len(policies) > 0 {
-					av, _, fieldErrors := validatePolicies(ctx, ref, kc, policies)
-					if av != len(policies) {
+					signatures, fieldErrors := validatePolicies(ctx, ref, kc, policies)
+					if len(signatures) != len(policies) {
 						logging.FromContext(ctx).Warnf("Failed to validate at least one policy for %s", ref.Name())
 						// Do we really want to add all the error details here?
 						// Seems like we can just say which policy failed, so
@@ -191,7 +191,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 						// Only say we passed (aka, we skip the traditidional check
 						// below) if more than one authority was validated, which
 						// means that there was a matching ClusterImagePolicy.
-						if av > 0 {
+						if len(signatures) > 0 {
 							passedPolicyChecks = true
 						}
 					}
@@ -219,15 +219,14 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 }
 
 // validatePolicies will go through all the matching Policies and their
-// Authorities for a given image. Returns the number of Policies that
-// had at least one successful validation against it as well as a map of
-// policy=>Validated signatures.
+// Authorities for a given image. Returns the map of policy=>Validated
+// signatures.
 // If there's a policy that did not match, it will be returned in the errors map
 // along with all the errors that caused it to fail.
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]v1alpha1.Authority, remoteOpts ...ociremote.Option) (int, map[string][]oci.Signature, map[string][]error) {
+func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]v1alpha1.Authority, remoteOpts ...ociremote.Option) (map[string][]oci.Signature, map[string][]error) {
 	// Gather all validated signatures here.
 	signatures := map[string][]oci.Signature{}
 	// For a policy that does not pass at least one authority, gather errors
@@ -253,7 +252,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 			signatures[p] = append(signatures[p], sigs...)
 		}
 	}
-	return policiesValidated, signatures, ret
+	return signatures, ret
 }
 
 // ValidatePolicy will go through all the Authorities for a given image and
