@@ -51,17 +51,17 @@ type realConnector struct {
 	flow oauthflow.TokenGetter
 }
 
-func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURI string) (*oauthflow.OIDCIDToken, error) {
-	return oauthflow.OIDConnect(url, clientID, secret, redirectURI, rf.flow)
+func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
+	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURI string) (*api.CertificateResponse, error) {
+func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*api.CertificateResponse, error) {
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
 		return nil, err
 	}
 
-	tok, err := connector.OIDConnect(oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURI)
+	tok, err := connector.OIDConnect(oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConn
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURI string, fClient api.Client) (*api.CertificateResponse, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
 	case FlowDevice:
@@ -99,7 +99,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 		return nil, fmt.Errorf("unsupported oauth flow: %s", flow)
 	}
 
-	return getCertForOauthID(priv, fClient, c, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURI)
+	return getCertForOauthID(priv, fClient, c, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
 }
 
 type Signer struct {
@@ -110,7 +110,7 @@ type Signer struct {
 	*signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURI string, fClient api.Client) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
@@ -131,7 +131,7 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClien
 	default:
 		flow = FlowNormal
 	}
-	Resp, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURI, fClient) // TODO, use the chain.
+	Resp, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL, fClient) // TODO, use the chain.
 	if err != nil {
 		return nil, errors.Wrap(err, "retrieving cert")
 	}

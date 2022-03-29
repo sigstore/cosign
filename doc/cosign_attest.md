@@ -54,7 +54,7 @@ cosign attest [flags]
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
       --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
-      --oidc-redirect-uri string                                                                 [EXPERIMENTAL] OIDC redirect URI
+      --oidc-redirect-url string                                                                 [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --predicate string                                                                         path to the predicate file.
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")

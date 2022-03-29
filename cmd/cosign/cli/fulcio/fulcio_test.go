@@ -36,7 +36,7 @@ type testFlow struct {
 	err   error
 }
 
-func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURI string) (*oauthflow.OIDCIDToken, error) {
+func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
 	if tf.err != nil {
 		return nil, tf.err
 	}
