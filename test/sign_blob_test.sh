@@ -22,16 +22,18 @@
 set -ex
 
 export COSIGN_EXPERIMENTAL=1
+COSIGN_CLI=./cosign
 
 echo "Creating a unique blob"
 BLOB=verify-experimental-blob
 date > $BLOB
+cat $BLOB
 
 echo "Sign the blob with cosign first and upload to rekor"
-SIG=$(cosign sign-blob $BLOB)
+SIG=$($COSIGN_CLI sign-blob $BLOB)
 
 echo "Verifying ..."
-cosign verify-blob -signature $SIG $BLOB
+$COSIGN_CLI verify-blob -signature $SIG $BLOB
 
 # Now, sign the blob with a self-signed certificate and upload to rekor
 SIG_FILE=verify-experimental-signature
@@ -76,4 +78,4 @@ curl -X POST https://rekor.sigstore.dev/api/v1/log/entries -H 'Content-Type: app
 
 # Verifying should still work
 echo "Verifying ..."
-cosign verify-blob --signature $SIG $BLOB
+$COSIGN_CLI verify-blob --signature $SIG $BLOB
