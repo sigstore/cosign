@@ -34,4 +34,4 @@ sign-keyless-container: ko sign-keyless-cosign sign-keyless-cosigned sign-keyles
 
 .PHONY: sign-blob-experimental
 sign-blob-experimental:
-	./sign_blob_test.sh
+	./test/sign_blob_test.sh

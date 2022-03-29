@@ -28,4 +28,4 @@
 bin*
 dist/
 
-test/verify-experimental*
+**verify-experimental*
