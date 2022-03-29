@@ -259,6 +259,15 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				if err != nil {
 					return fmt.Errorf("error when generating SPDXStatement: %w", err)
 				}
+			case options.PredicateInToto:
+				var statement in_toto.Statement
+				if err := json.Unmarshal(decodedPayload, &statement); err != nil {
+					return fmt.Errorf("unmarshal in_toto.Statement: %w", err)
+				}
+				payload, err = json.Marshal(statement)
+				if err != nil {
+					return fmt.Errorf("error when generating in_toto.Statement: %w", err)
+				}
 			}
 
 			if len(cuePolicies) > 0 {

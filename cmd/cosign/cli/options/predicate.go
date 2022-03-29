@@ -33,6 +33,7 @@ const (
 	PredicateSPDX   = "spdx"
 	PredicateLink   = "link"
 	PredicateVuln   = "vuln"
+	PredicateInToto = "intoto"
 )
 
 // PredicateTypeMap is the mapping between the predicate `type` option to predicate URI.
@@ -42,6 +43,7 @@ var PredicateTypeMap = map[string]string{
 	PredicateSPDX:   in_toto.PredicateSPDX,
 	PredicateLink:   in_toto.PredicateLinkV1,
 	PredicateVuln:   attestation.CosignVulnProvenanceV01,
+	PredicateInToto: in_toto.PayloadType,
 }
 
 // PredicateOptions is the wrapper for predicate related options.
