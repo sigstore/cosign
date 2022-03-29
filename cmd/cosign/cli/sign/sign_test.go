@@ -178,6 +178,11 @@ func Test_signerFromKeyRefFailure(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "unable to validate certificate chain") {
 		t.Fatalf("expected chain verification error, got %v", err)
 	}
+	// Certificate chain specified without certificate
+	_, err = signerFromKeyRef(ctx, "", chainFile2, keyFile, pass("foo"))
+	if err == nil || !strings.Contains(err.Error(), "no leaf certificate found or provided while specifying chain") {
+		t.Fatalf("expected no leaf error, got %v", err)
+	}
 }
 
 func Test_signerFromKeyRefFailureEmptyChainFile(t *testing.T) {
