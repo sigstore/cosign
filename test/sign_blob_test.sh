@@ -35,15 +35,19 @@ cosign verify-blob -signature $SIG $BLOB
 
 # Now, sign the blob with a self-signed certificate and upload to rekor
 SIG_FILE=verify-experimental-signature
-openssl dgst -sha256 -sign testdata/test_blob_private_key -out $SIG_FILE $BLOB
-openssl dgst -sha256 -verify testdata/test_blob_public_key -signature $SIG_FILE $BLOB
+PRIV_KEY=./test/testdata/test_blob_private_key
+PUB_KEY=./test/testdata/test_blob_public_key
+CERT_FILE=./test/testdata/test_blob_cert.pem
+
+openssl dgst -sha256 -sign $PRIV_KEY -out $SIG_FILE $BLOB
+openssl dgst -sha256 -verify $PUB_KEY -signature $SIG_FILE $BLOB
 
 SHA256HASH=$(sha256sum $BLOB |  cut -f1 -d' ')
 
 SIGNATURE=$(cat $SIG_FILE | base64)
 echo "Signature: $SIGNATURE"
 
-CERT=$(cat testdata/test_blob_cert.pem | base64)
+CERT=$(cat $CERT_FILE | base64)
 echo "Cert: $CERT"
 
 JSON_BODY_FILE=verify-experimental-blob-http-body.json
