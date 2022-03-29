@@ -16,65 +16,87 @@ package copy
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/walk"
 )
 
 // CopyCmd implements the logic to copy the supplied container image and signatures.
 // nolint
 func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool) error {
-	var refs []name.Reference // nolint: staticcheck
 	srcRef, err := name.ParseReference(srcImg)
 	if err != nil {
 		return err
 	}
-
-	refs = append(refs, srcRef)
+	srcRepoRef := srcRef.Context()
 
 	dstRef, err := name.ParseReference(dstImg)
 	if err != nil {
 		return err
 	}
+	dstRepoRef := dstRef.Context()
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	sigSrcRef, err := ociremote.SignatureTag(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
+	root, err := ociremote.SignedEntity(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}
 
-	dstRepoRef := dstRef.Context()
-	sigDstRef := dstRepoRef.Tag(sigSrcRef.Identifier())
-	if err := copyImage(sigSrcRef, sigDstRef, force, remoteOpts...); err != nil {
+	if err := walk.SignedEntity(ctx, root, func(ctx context.Context, se oci.SignedEntity) error {
+		// Both of the SignedEntity types implement Digest()
+		h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
+		if err != nil {
+			return err
+		}
+		srcDigest := srcRepoRef.Digest(h.String())
+
+		// Copy signatures.
+		if err := copyTagImage(ociremote.SignatureTag, srcDigest, dstRepoRef, force, remoteOpts...); err != nil {
+			return err
+		}
+		if sigOnly {
+			return nil
+		}
+
+		// Copy attestations
+		if err := copyTagImage(ociremote.AttestationTag, srcDigest, dstRepoRef, force, remoteOpts...); err != nil {
+			return err
+		}
+
+		// Copy SBOMs
+		if err := copyTagImage(ociremote.SBOMTag, srcDigest, dstRepoRef, force, remoteOpts...); err != nil {
+			return err
+		}
+
+		// Copy the entity itself.
+		if err := copyImage(srcDigest, dstRepoRef.Tag(srcDigest.Identifier()), force, remoteOpts...); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		return err
 	}
-
-	if !sigOnly {
-		attSrcRef, err := ociremote.AttestationTag(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
-		if err != nil {
-			return err
-		}
-		refs = append(refs, attSrcRef)
-
-		sbomSrcRef, err := ociremote.SBOMTag(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
-		if err != nil {
-			return err
-		}
-		refs = append(refs, sbomSrcRef)
-
-		for _, ref := range refs {
-			if err := copyImage(ref, dstRepoRef.Tag(ref.Identifier()), force, remoteOpts...); err != nil {
-				fmt.Fprintf(os.Stderr, "WARNING: %s tag could not be found for an image %s, it might not exist, continuing anyway\n", ref.Identifier(), srcImg)
-			}
-		}
+	if sigOnly {
+		return nil
 	}
 
-	return nil
+	// Now that everything has been copied over, update the tag.
+	h, err := root.(interface{ Digest() (v1.Hash, error) }).Digest()
+	if err != nil {
+		return err
+	}
+	return copyImage(srcRepoRef.Digest(h.String()), dstRef, force, remoteOpts...)
 }
 
 func descriptorsEqual(a, b *v1.Descriptor) bool {
@@ -84,9 +106,27 @@ func descriptorsEqual(a, b *v1.Descriptor) bool {
 	return a.Digest == b.Digest
 }
 
+type tagMap func(name.Reference, ...ociremote.Option) (name.Tag, error)
+
+func copyTagImage(tm tagMap, srcDigest name.Digest, dstRepo name.Repository, overwrite bool, opts ...remote.Option) error {
+	src, err := tm(srcDigest, ociremote.WithRemoteOptions(opts...))
+	if err != nil {
+		return err
+	}
+	return copyImage(src, dstRepo.Tag(src.Identifier()), overwrite, opts...)
+}
+
 func copyImage(src, dest name.Reference, overwrite bool, opts ...remote.Option) error {
 	got, err := remote.Get(src, opts...)
 	if err != nil {
+		var te *transport.Error
+		if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
+			// We do not treat 404s on the source image as errors because we are
+			// trying many flavors of tag (sig, sbom, att) and only a subset of
+			// these are likely to exist, especially when we're talking about a
+			// multi-arch image.
+			return nil
+		}
 		return err
 	}
 
@@ -99,6 +139,7 @@ func copyImage(src, dest name.Reference, overwrite bool, opts ...remote.Option) 
 		}
 	}
 
+	fmt.Fprintf(os.Stderr, "Copying %s to %s...\n", src, dest)
 	if got.MediaType.IsIndex() {
 		imgIdx, err := got.ImageIndex()
 		if err != nil {
