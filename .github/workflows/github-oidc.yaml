@@ -53,4 +53,5 @@ jobs:
       - name: Build and sign a blob
         run: |
           set -e
+          make cosign
           make sign-blob-experimental
