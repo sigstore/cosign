@@ -1,0 +1,194 @@
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Test attest / verify-attestation
+
+on:
+  pull_request:
+    branches: [ 'main', 'release-*' ]
+
+defaults:
+  run:
+    shell: bash
+
+permissions: read-all
+
+jobs:
+  cip-test:
+    name: attest / verify-attestation test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        k8s-version:
+        - v1.21.x
+        - v1.22.x
+        # Try without this one now, might have problems with job restartings
+        # may require upstream changes.
+        #- v1.23.x
+
+    env:
+      KNATIVE_VERSION: "1.1.0"
+      KO_DOCKER_REPO: "registry.local:5000/cosigned"
+      SCAFFOLDING_RELEASE_VERSION: "v0.2.2"
+      GO111MODULE: on
+      GOFLAGS: -ldflags=-s -ldflags=-w
+      KOCACHE: ~/ko
+      COSIGN_EXPERIMENTAL: true
+
+    steps:
+    - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
+    - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
+      with:
+        go-version: '1.17.x'
+
+    # will use the latest release available for ko
+    - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+
+    - name: Install yq
+      uses: mikefarah/yq@bc2118736bca883de2e2c345bb7f7ef52c994920 # v4.16.2
+
+    - name: Setup mirror
+      uses: chainguard-dev/actions/setup-mirror@main
+      with:
+        mirror: mirror.gcr.io
+
+    - name: build cosign
+      run: |
+        make cosign
+
+    - name: Setup kind cluster
+      uses: chainguard-dev/actions/setup-kind@main
+      with:
+        k8s-version: "${{ matrix.k8s-version }}"
+        cluster-suffix: "${{ matrix.cluster-suffix }}"
+
+    - name: Install knative
+      uses: chainguard-dev/actions/setup-knative@main
+      with:
+        serving-features: '{"kubernetes.podspec-fieldref":"enabled", "kubernetes.podspec-volumes-emptydir":"enabled", "kubernetes.podspec-init-containers": "enabled", "kubernetes.podspec-securitycontext":"enabled"}'
+        serving-autoscaler: '{"min-scale":"1","max-scale":"1"}'
+
+    - name: Install all the everythings, fulcio, rekor, ctlog...
+      timeout-minutes: 10
+      run: |
+        kubectl apply -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/release.yaml
+
+        # Wait for all the ksvc to be up.
+        kubectl wait --timeout 10m -A --for=condition=Ready ksvc --all
+
+    - name: Run Scaffolding Tests
+      run: |
+        # Grab the secret from the ctlog-system namespace and make a copy
+        # in our namespace so we can get access to the CT Log public key
+        # so we can verify the SCT coming from there.
+        kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+
+        # Also grab the secret from the fulcio-system namespace and make a copy
+        # in our namespace so we can get access to the Fulcio public key
+        # so we can verify against it.
+        kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+
+        kubectl apply -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/testrelease.yaml
+
+        kubectl wait --for=condition=Complete --timeout=180s job/sign-job job/checktree job/verify-job
+
+    - name: Create sample image - demoimage
+      run: |
+        pushd $(mktemp -d)
+        go mod init example.com/demo
+        cat <<EOF > main.go
+        package main
+        import "fmt"
+        func main() {
+          fmt.Println("hello world")
+        }
+        EOF
+        demoimage=`ko publish -B example.com/demo`
+        echo "demoimage=$demoimage" >> $GITHUB_ENV
+        echo Created image $demoimage
+        popd
+
+    # TODO(vaikas): There should be a fake issuer on the cluster. This one
+    # fetches a k8s auth token from the kind cluster that we spin up above. We
+    # do not want to use the Github OIDC token, but do want PRs to run this
+    # flow.
+    - name: Install a Knative service for fetch tokens off the cluster
+      run: |
+        ko apply -f ./test/config/gettoken
+        sleep 2
+        kubectl wait --for=condition=Ready --timeout=15s ksvc gettoken
+
+    # These set up the env variables so that we can invoke cosign against the
+    # cluster sigstore services (fulcio, rekor, etc.)
+    - name: Set the endpoints on the cluster and grab secrets
+      run: |
+        REKOR_URL=`kubectl -n rekor-system get --no-headers ksvc rekor | cut -d ' ' -f 4`
+        echo "REKOR_URL=$REKOR_URL" >> $GITHUB_ENV
+        curl -s $REKOR_URL/api/v1/log/publicKey > ./rekor-public.pem
+
+        FULCIO_URL=`kubectl -n fulcio-system get --no-headers ksvc fulcio | cut -d ' ' -f 4`
+        echo "FULCIO_URL=$FULCIO_URL" >> $GITHUB_ENV
+        CTLOG_URL=`kubectl -n ctlog-system get --no-headers ksvc ctlog | cut -d ' ' -f 4`
+        echo "CTLOG_URL=$CTLOG_URL" >> $GITHUB_ENV
+
+        ISSUER_URL=`kubectl get --no-headers ksvc gettoken | cut -d ' ' -f 4`
+        echo "ISSUER_URL=$ISSUER_URL" >> $GITHUB_ENV
+        OIDC_TOKEN=`curl -s $ISSUER_URL`
+        echo "OIDC_TOKEN=$OIDC_TOKEN" >> $GITHUB_ENV
+
+        kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
+        echo "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem" >> $GITHUB_ENV
+
+        kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
+        echo "SIGSTORE_ROOT_FILE=./fulcio-root.pem" >> $GITHUB_ENV
+
+    - name: Sign demoimage with cosign
+      run: |
+        ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --force --allow-insecure-registry ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+
+    - name: Create attestation for it
+      run: |
+        echo -n 'foobar e2e test' > ./predicate-file
+        SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1  COSIGN_EXPERIMENTAL=1 ./cosign attest --predicate ./predicate-file --fulcio-url=http://fulcio.fulcio-system.svc:8080 --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry --force ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+
+    - name: Verify with cosign
+      run: |
+        SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1 COSIGN_EXPERIMENTAL=1 ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }}
+
+    - name: Verify attestation with cosign, works
+      run: |
+        echo '::group:: test verify-attestation success'
+        if ! SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1  COSIGN_EXPERIMENTAL=1 ./cosign verify-attestation --policy ./test/testdata/policies/cue-works.cue --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry  ${{ env.demoimage }} ; then
+          echo Failed to verify attestation with a valid policy
+          exit 1
+        else
+          echo Successfully validated attestation with a valid policy
+        fi
+        echo '::endgroup::'
+
+    - name: Verify attestation with cosign, fails
+      run: |
+        echo '::group:: test verify-attestation success'
+        if SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1  COSIGN_EXPERIMENTAL=1 ./cosign verify-attestation --policy ./test/testdata/policies/cue-fails.cue --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry  ${{ env.demoimage }} ; then
+          echo verify-attestation succeeded with cue policy that should not work
+          exit 1
+        else
+          echo Successfully failed a policy that should not work
+        fi
+        echo '::endgroup::'
+
+    - name: Collect diagnostics
+      if: ${{ failure() }}
+      uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main
