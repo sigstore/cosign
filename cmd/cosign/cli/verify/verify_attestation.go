@@ -195,22 +195,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return errors.Wrap(err, "unmarshal payload data")
 			}
 
-			predicateURI, ok := options.PredicateTypeMap[c.PredicateType]
-			if !ok {
-				return fmt.Errorf("invalid predicate type: %s", c.PredicateType)
-			}
-
-			// sanity checks
-			if val, ok := payloadData["payloadType"]; ok {
-				// we need to check only given type from the cli flag
-				// so we are skipping other types
-				if predicateURI != val {
-					continue
-				}
-			} else {
-				return fmt.Errorf("could not find 'payloadType' in payload data")
-			}
-
 			var decodedPayload []byte
 			if val, ok := payloadData["payload"]; ok {
 				decodedPayload, err = base64.StdEncoding.DecodeString(val.(string))
@@ -221,14 +205,24 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return fmt.Errorf("could not find 'payload' in payload data")
 			}
 
+			predicateURI, ok := options.PredicateTypeMap[c.PredicateType]
+			if !ok {
+				return fmt.Errorf("invalid predicate type: %s", c.PredicateType)
+			}
+
+			// Only apply the policy against the requested predicate type
+			var statement in_toto.Statement
+			if err := json.Unmarshal(decodedPayload, &statement); err != nil {
+				return fmt.Errorf("unmarshal in-toto statement: %w", err)
+			}
+			if statement.PredicateType != predicateURI {
+				continue
+			}
+
 			var payload []byte
 			switch c.PredicateType {
 			case options.PredicateCustom:
-				var cosignStatement in_toto.Statement
-				if err := json.Unmarshal(decodedPayload, &cosignStatement); err != nil {
-					return fmt.Errorf("unmarshal CosignStatement: %w", err)
-				}
-				payload, err = json.Marshal(cosignStatement)
+				payload, err = json.Marshal(statement)
 				if err != nil {
 					return fmt.Errorf("error when generating CosignStatement: %w", err)
 				}
@@ -259,6 +253,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				if err != nil {
 					return fmt.Errorf("error when generating SPDXStatement: %w", err)
 				}
+			default:
+				return fmt.Errorf("unsupported predicate type: %s", c.PredicateType)
 			}
 
 			if len(cuePolicies) > 0 {
