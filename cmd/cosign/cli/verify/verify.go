@@ -85,7 +85,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	if !options.OneOf(c.KeyRef, c.CertRef, c.Sk) && !options.EnableExperimental() {
-		return &options.KeyParseError{}
+		return &options.PubKeyParseError{}
 	}
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
