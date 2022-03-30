@@ -18,10 +18,12 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -92,11 +94,16 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, i
 	}
 
 	for _, t := range cleanTags {
-		fmt.Fprintf(os.Stderr, "Removing %s from %s\n", t.String(), imageRef)
-
-		err = remote.Delete(t, remoteOpts...)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not delete %s from %s\n: %v\n", t.String(), imageRef, err)
+		if err := remote.Delete(t, remoteOpts...); err != nil {
+			if terr, ok := err.(*transport.Error); ok && terr.StatusCode == http.StatusNotFound {
+				// If the tag doesn't exist, some registries may
+				// respond with a 404, which shouldn't be considered an
+				// error.
+			} else {
+				fmt.Fprintf(os.Stderr, "could not delete %s from %s\n: %v\n", t, imageRef, err)
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "Removed %s from %s\n", t, imageRef)
 		}
 	}
 
