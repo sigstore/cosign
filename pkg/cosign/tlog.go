@@ -15,6 +15,7 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
@@ -297,6 +298,16 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 	rootHash, _ := hex.DecodeString(*e.Verification.InclusionProof.RootHash)
 	leafHash, _ := hex.DecodeString(params.EntryUUID)
 
+	// Verify leaf hash matches hash of the entry body.
+	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(rfc6962.DefaultHasher.HashLeaf(entryBytes), leafHash) {
+		return nil, fmt.Errorf("computed leaf hash did not match entry UUID")
+	}
+
+	// Verify the inclusion proof.
 	v := logverifier.New(rfc6962.DefaultHasher)
 	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
 		return nil, errors.Wrap(err, "verifying inclusion proof")
