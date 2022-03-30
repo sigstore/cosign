@@ -194,7 +194,7 @@ func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub c
 	if err != nil {
 		return err
 	}
-	_, _, err = FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
+	_, _, _, err = FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
 	return err
 }
 
@@ -215,7 +215,7 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	uuid, _, err := FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
+	uuid, _, _, err := FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
 	if err != nil {
 		return err
 	}
