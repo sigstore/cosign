@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"log/syslog"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 	"sync"
 
-	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/jmhodges/clock"
 )
 
@@ -56,7 +56,7 @@ var _Singleton singleton
 const auditTag = "[AUDIT]"
 
 // New returns a new Logger that uses the given syslog.Writer as a backend.
-func New(log gsyslog.Syslogger, stdoutLogLevel int, syslogLogLevel int) (Logger, error) {
+func New(log *syslog.Writer, stdoutLogLevel int, syslogLogLevel int) (Logger, error) {
 	if log == nil {
 		return nil, errors.New("Attempted to use a nil System Logger.")
 	}
@@ -69,12 +69,12 @@ func New(log gsyslog.Syslogger, stdoutLogLevel int, syslogLogLevel int) (Logger,
 func initialize() {
 	// defaultPriority is never used because we always use specific priority-based
 	// logging methods.
-	const defaultPriority = gsyslog.LOG_INFO
-	syslogger, err := gsyslog.DialLogger("", "", defaultPriority, "LOCAL0", "test")
+	const defaultPriority = syslog.LOG_INFO | syslog.LOG_LOCAL0
+	syslogger, err := syslog.Dial("", "", defaultPriority, "test")
 	if err != nil {
 		panic(err)
 	}
-	logger, err := New(syslogger, int(gsyslog.LOG_DEBUG), int(gsyslog.LOG_DEBUG))
+	logger, err := New(syslogger, int(syslog.LOG_DEBUG), int(syslog.LOG_DEBUG))
 	if err != nil {
 		panic(err)
 	}
@@ -110,12 +110,12 @@ func Get() Logger {
 }
 
 type writer interface {
-	logAtLevel(gsyslog.Priority, string)
+	logAtLevel(syslog.Priority, string)
 }
 
 // bothWriter implements writer and writes to both syslog and stdout.
 type bothWriter struct {
-	gsyslog.Syslogger
+	*syslog.Writer
 	stdoutLevel int
 	syslogLevel int
 	clk         clock.Clock
@@ -133,7 +133,7 @@ func LogLineChecksum(line string) string {
 
 // Log the provided message at the appropriate level, writing to
 // both stdout and the Logger
-func (w *bothWriter) logAtLevel(level gsyslog.Priority, msg string) {
+func (w *bothWriter) logAtLevel(level syslog.Priority, msg string) {
 	var prefix string
 	var err error
 
@@ -146,28 +146,28 @@ func (w *bothWriter) logAtLevel(level gsyslog.Priority, msg string) {
 	msg = fmt.Sprintf("%s %s", LogLineChecksum(msg), msg)
 
 	switch syslogAllowed := int(level) <= w.syslogLevel; level {
-	case gsyslog.LOG_ERR:
+	case syslog.LOG_ERR:
 		if syslogAllowed {
-			err = w.WriteLevel(gsyslog.LOG_ERR, []byte(msg))
+			err = w.Err(msg)
 		}
 		prefix = red + "E"
-	case gsyslog.LOG_WARNING:
+	case syslog.LOG_WARNING:
 		if syslogAllowed {
-			err = w.WriteLevel(gsyslog.LOG_WARNING, []byte(msg))
+			err = w.Warning(msg)
 		}
 		prefix = yellow + "W"
-	case gsyslog.LOG_INFO:
+	case syslog.LOG_INFO:
 		if syslogAllowed {
-			err = w.WriteLevel(gsyslog.LOG_INFO, []byte(msg))
+			err = w.Info(msg)
 		}
 		prefix = "I"
-	case gsyslog.LOG_DEBUG:
+	case syslog.LOG_DEBUG:
 		if syslogAllowed {
-			err = w.WriteLevel(gsyslog.LOG_DEBUG, []byte(msg))
+			err = w.Debug(msg)
 		}
 		prefix = "D"
 	default:
-		_, err = w.Write([]byte(fmt.Sprintf("%s (unknown logging level: %d)", msg, int(level))))
+		err = w.Err(fmt.Sprintf("%s (unknown logging level: %d)", msg, int(level)))
 	}
 
 	if err != nil {
@@ -191,7 +191,7 @@ func (w *bothWriter) logAtLevel(level gsyslog.Priority, msg string) {
 	}
 }
 
-func (log *impl) auditAtLevel(level gsyslog.Priority, msg string) {
+func (log *impl) auditAtLevel(level syslog.Priority, msg string) {
 	text := fmt.Sprintf("%s %s", auditTag, msg)
 	log.w.logAtLevel(level, text)
 }
@@ -215,7 +215,7 @@ func (log *impl) AuditPanic() {
 // Err level messages are always marked with the audit tag, for special handling
 // at the upstream system logger.
 func (log *impl) Err(msg string) {
-	log.auditAtLevel(gsyslog.LOG_ERR, msg)
+	log.auditAtLevel(syslog.LOG_ERR, msg)
 }
 
 // Errf level messages are always marked with the audit tag, for special handling
@@ -226,7 +226,7 @@ func (log *impl) Errf(format string, a ...interface{}) {
 
 // Warning level messages pass through normally.
 func (log *impl) Warning(msg string) {
-	log.w.logAtLevel(gsyslog.LOG_WARNING, msg)
+	log.w.logAtLevel(syslog.LOG_WARNING, msg)
 }
 
 // Warningf level messages pass through normally.
@@ -236,7 +236,7 @@ func (log *impl) Warningf(format string, a ...interface{}) {
 
 // Info level messages pass through normally.
 func (log *impl) Info(msg string) {
-	log.w.logAtLevel(gsyslog.LOG_INFO, msg)
+	log.w.logAtLevel(syslog.LOG_INFO, msg)
 }
 
 // Infof level messages pass through normally.
@@ -246,7 +246,7 @@ func (log *impl) Infof(format string, a ...interface{}) {
 
 // Debug level messages pass through normally.
 func (log *impl) Debug(msg string) {
-	log.w.logAtLevel(gsyslog.LOG_DEBUG, msg)
+	log.w.logAtLevel(syslog.LOG_DEBUG, msg)
 }
 
 // Debugf level messages pass through normally.
@@ -257,7 +257,7 @@ func (log *impl) Debugf(format string, a ...interface{}) {
 // AuditInfo sends an INFO-severity message that is prefixed with the
 // audit tag, for special handling at the upstream system logger.
 func (log *impl) AuditInfo(msg string) {
-	log.auditAtLevel(gsyslog.LOG_INFO, msg)
+	log.auditAtLevel(syslog.LOG_INFO, msg)
 }
 
 // AuditInfof sends an INFO-severity message that is prefixed with the
@@ -271,16 +271,16 @@ func (log *impl) AuditInfof(format string, a ...interface{}) {
 func (log *impl) AuditObject(msg string, obj interface{}) {
 	jsonObj, err := json.Marshal(obj)
 	if err != nil {
-		log.auditAtLevel(gsyslog.LOG_ERR, fmt.Sprintf("Object could not be serialized to JSON. Raw: %+v", obj))
+		log.auditAtLevel(syslog.LOG_ERR, fmt.Sprintf("Object could not be serialized to JSON. Raw: %+v", obj))
 		return
 	}
 
-	log.auditAtLevel(gsyslog.LOG_INFO, fmt.Sprintf("%s JSON=%s", msg, jsonObj))
+	log.auditAtLevel(syslog.LOG_INFO, fmt.Sprintf("%s JSON=%s", msg, jsonObj))
 }
 
 // AuditErr can format an error for auditing; it does so at ERR level.
 func (log *impl) AuditErr(msg string) {
-	log.auditAtLevel(gsyslog.LOG_ERR, msg)
+	log.auditAtLevel(syslog.LOG_ERR, msg)
 }
 
 // AuditErrf can format an error for auditing; it does so at ERR level.

@@ -24,8 +24,6 @@ import (
 	"unicode"
 
 	jose "gopkg.in/square/go-jose.v2"
-
-	blog "github.com/letsencrypt/boulder/log"
 )
 
 // Package Variables Variables
@@ -104,8 +102,6 @@ func KeyDigest(key crypto.PublicKey) (Sha256Digest, error) {
 	default:
 		keyDER, err := x509.MarshalPKIXPublicKey(key)
 		if err != nil {
-			logger := blog.Get()
-			logger.Debugf("Problem marshaling public key: %s", err)
 			return Sha256Digest{}, err
 		}
 		return sha256.Sum256(keyDER), nil

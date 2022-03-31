@@ -24,7 +24,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.0
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.3
-	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
 	github.com/jmhodges/clock v0.0.0-20160418191101-880ee4c33548
@@ -115,7 +114,7 @@ require (
 	cloud.google.com/go/kms v1.4.0 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
-	github.com/Azure/azure-sdk-for-go v62.3.0+incompatible // indirect
+	github.com/Azure/azure-sdk-for-go v63.0.0+incompatible // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.11.24 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.9.18 // indirect
@@ -133,7 +132,7 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
-	github.com/aws/aws-sdk-go v1.43.27 // indirect
+	github.com/aws/aws-sdk-go v1.43.28 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.9.0 // indirect
@@ -243,7 +242,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.1 // indirect
+	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/statsd_exporter v0.21.0 // indirect
@@ -315,4 +314,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
 
-replace github.com/letsencrypt/boulder v0.0.0-20220322173223-dd8be8d7b02c => github.com/cpanato/boulder v0.0.0-20220330104659-1d6951d8899d
+replace github.com/letsencrypt/boulder v0.0.0-20220322173223-dd8be8d7b02c => github.com/cpanato/boulder v0.0.0-20220331081745-acec5537255b
+
+replace github.com/sigstore/sigstore v1.2.1-0.20220328200116-ef48ee800626 => github.com/cpanato/sigstore v1.2.1-0.20220331082237-1b26261f645e

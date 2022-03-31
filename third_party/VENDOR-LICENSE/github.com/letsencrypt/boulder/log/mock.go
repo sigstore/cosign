@@ -2,10 +2,9 @@ package log
 
 import (
 	"fmt"
+	"log/syslog"
 	"regexp"
 	"time"
-
-	gsyslog "github.com/hashicorp/go-syslog"
 )
 
 // UseMock sets a mock logger as the default logger, and returns it.
@@ -49,14 +48,14 @@ type mockWriter struct {
 	closeChan chan<- struct{}
 }
 
-var levelName = map[gsyslog.Priority]string{
-	gsyslog.LOG_ERR:     "ERR",
-	gsyslog.LOG_WARNING: "WARNING",
-	gsyslog.LOG_INFO:    "INFO",
-	gsyslog.LOG_DEBUG:   "DEBUG",
+var levelName = map[syslog.Priority]string{
+	syslog.LOG_ERR:     "ERR",
+	syslog.LOG_WARNING: "WARNING",
+	syslog.LOG_INFO:    "INFO",
+	syslog.LOG_DEBUG:   "DEBUG",
 }
 
-func (w *mockWriter) logAtLevel(p gsyslog.Priority, msg string) {
+func (w *mockWriter) logAtLevel(p syslog.Priority, msg string) {
 	w.msgChan <- fmt.Sprintf("%s: %s", levelName[p&7], msg)
 }
 
@@ -135,7 +134,7 @@ func newWaitingMockWriter() *waitingMockWriter {
 	}
 }
 
-func (m *waitingMockWriter) logAtLevel(p gsyslog.Priority, msg string) {
+func (m *waitingMockWriter) logAtLevel(p syslog.Priority, msg string) {
 	m.logChan <- fmt.Sprintf("%s: %s", levelName[p&7], msg)
 }
 
