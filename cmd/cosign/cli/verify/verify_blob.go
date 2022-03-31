@@ -23,6 +23,7 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -176,7 +177,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 	}
 
 	// verify the rekor entry
-	if err := verifyRekorEntry(ctx, ko, verifier, cert, b64sig, blobBytes); err != nil {
+	if err := verifyRekorEntry(ctx, ko, nil, verifier, cert, b64sig, blobBytes); err != nil {
 		return err
 	}
 
@@ -217,7 +218,7 @@ func verifySigByUUID(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor
 		}
 
 		// verify the rekor entry
-		if err := verifyRekorEntry(ctx, ko, verifier, cert, b64sig, blobBytes); err != nil {
+		if err := verifyRekorEntry(ctx, ko, tlogEntry, verifier, cert, b64sig, blobBytes); err != nil {
 			continue
 		}
 		validSigExists = true
@@ -284,7 +285,7 @@ func payloadBytes(blobRef string) ([]byte, error) {
 	return blobBytes, nil
 }
 
-func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
+func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, e *models.LogEntryAnon, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
 	// If we have a bundle with a rekor entry, let's first try to verify offline
 	if ko.BundlePath != "" {
 		if err := verifyRekorBundle(ctx, ko.BundlePath, cert); err == nil {
@@ -300,33 +301,41 @@ func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, pubKey signature.Ver
 	if err != nil {
 		return err
 	}
-	var pubBytes []byte
-	if pubKey != nil {
-		pubBytes, err = sigs.PublicKeyPem(pubKey, signatureoptions.WithContext(ctx))
+	// Only fetch from rekor tlog if we don't already have the entry.
+	if e == nil {
+		var pubBytes []byte
+		if pubKey != nil {
+			pubBytes, err = sigs.PublicKeyPem(pubKey, signatureoptions.WithContext(ctx))
+			if err != nil {
+				return err
+			}
+		}
+		if cert != nil {
+			pubBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
+			if err != nil {
+				return err
+			}
+		}
+		e, err = cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
 		if err != nil {
 			return err
 		}
 	}
-	if cert != nil {
-		pubBytes, err = cryptoutils.MarshalCertificateToPEM(cert)
-		if err != nil {
-			return err
-		}
+
+	if err := cosign.VerifyTLogEntry(ctx, rekorClient, e); err != nil {
+		return nil
 	}
-	uuid, index, err := cosign.FindTlogEntry(ctx, rekorClient, b64sig, blobBytes, pubBytes)
+
+	uuid, err := cosign.ComputeLeafHash(e)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, index)
+
+	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %s index: %d\n", hex.EncodeToString(uuid), *e.Verification.InclusionProof.LogIndex)
 	if cert == nil {
 		return nil
 	}
 	// if we have a cert, we should check expiry
-	// The IntegratedTime verified in VerifyTlog
-	e, err := cosign.GetTlogEntry(ctx, rekorClient, uuid)
-	if err != nil {
-		return err
-	}
 	return cosign.CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
