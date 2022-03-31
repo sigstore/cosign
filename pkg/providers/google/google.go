@@ -83,7 +83,7 @@ func (gi *googleImpersonate) Enabled(ctx context.Context) bool {
 func (gi *googleImpersonate) Provide(ctx context.Context, audience string) (string, error) {
 	target := os.Getenv("GOOGLE_SERVICE_ACCOUNT_NAME")
 	ts, err := impersonate.IDTokenSource(ctx, impersonate.IDTokenConfig{
-		Audience:        "sigstore",
+		Audience:        audience,
 		TargetPrincipal: target,
 		IncludeEmail:    true,
 	})
