@@ -23,6 +23,7 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -330,7 +331,7 @@ func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, e *models.LogEntryAn
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, *e.Verification.InclusionProof.LogIndex)
+	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %s index: %d\n", hex.EncodeToString(uuid), *e.Verification.InclusionProof.LogIndex)
 	if cert == nil {
 		return nil
 	}
