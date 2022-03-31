@@ -63,35 +63,6 @@ type KeysBytes struct {
 	password     []byte
 }
 
-// Enforce a minimum and maximum RSA key size.
-func validateRsaKey(pk *rsa.PrivateKey) error {
-	// Key size is the bit length of modulus
-	keySize := pk.N.BitLen()
-	if keySize < 2048 {
-		return fmt.Errorf("rsa key size too small, expected >= 2048")
-	}
-	if keySize > 4096 {
-		return fmt.Errorf("rsa key size too large, expected <= 4096")
-	}
-	return nil
-}
-
-// Enforce that the ECDSA key curve is one of:
-// * NIST P-256 (secp256r1, prime256v1)
-// * NIST P-384
-// * NIST P-521.
-// Other EC curves, like secp256k1, are not supported by Go.
-func validateEcdsaKey(pk *ecdsa.PrivateKey) error {
-	switch pk.Curve {
-	case elliptic.P224():
-		return fmt.Errorf("unsupported ec curve, expected NIST P-256, P-384, or P-521")
-	case elliptic.P256(), elliptic.P384(), elliptic.P521():
-		return nil
-	default:
-		return fmt.Errorf("unexpected ec curve")
-	}
-}
-
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
@@ -115,7 +86,7 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing rsa private key")
 		}
-		if err = validateRsaKey(rsaPk); err != nil {
+		if err = cryptoutils.ValidatePubKey(rsaPk.Public()); err != nil {
 			return nil, errors.Wrap(err, "error validating rsa key")
 		}
 		pk = rsaPk
@@ -124,7 +95,7 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing ecdsa private key")
 		}
-		if err = validateEcdsaKey(ecdsaPk); err != nil {
+		if err = cryptoutils.ValidatePubKey(ecdsaPk.Public()); err != nil {
 			return nil, errors.Wrap(err, "error validating ecdsa key")
 		}
 		pk = ecdsaPk
@@ -135,17 +106,19 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		}
 		switch k := pkcs8Pk.(type) {
 		case *rsa.PrivateKey:
-			if err = validateRsaKey(k); err != nil {
+			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
 				return nil, errors.Wrap(err, "error validating rsa key")
 			}
 			pk = k
 		case *ecdsa.PrivateKey:
-			if err = validateEcdsaKey(k); err != nil {
+			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
 				return nil, errors.Wrap(err, "error validating ecdsa key")
 			}
 			pk = k
 		case ed25519.PrivateKey:
-			// Nothing to validate, since ED25519 supports only one key size.
+			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
+				return nil, errors.Wrap(err, "error validating ed25519 key")
+			}
 			pk = k
 		default:
 			return nil, fmt.Errorf("unexpected private key")
