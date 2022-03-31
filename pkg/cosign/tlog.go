@@ -194,11 +194,11 @@ func ComputeLeafHash(e *models.LogEntryAnon) ([]byte, error) {
 	return rfc6962.DefaultHasher.HashLeaf(entryBytes), nil
 }
 
-func verifyUUID(uuid string, e *models.LogEntryAnon) error {
+func verifyUUID(uuid string, e models.LogEntryAnon) error {
 	entryUUID, _ := hex.DecodeString(uuid)
 
 	// Verify leaf hash matches hash of the entry body.
-	computedLeafHash, err := ComputeLeafHash(e)
+	computedLeafHash, err := ComputeLeafHash(&e)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string) (
 		if k != uuid {
 			return nil, fmt.Errorf("unexpected entry returned from rekor server")
 		}
-		if err := verifyUUID(k, &e); err != nil {
+		if err := verifyUUID(k, e); err != nil {
 			return nil, err
 		}
 		return &e, nil
@@ -280,14 +280,15 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor, b64Sig string
 		return nil, errors.New("UUID value can not be extracted")
 	}
 
+	var tlogEntry models.LogEntryAnon
 	for k, e := range logEntry {
 		// Check body hash matches uuid
-		if err := verifyUUID(k, &e); err != nil {
+		if err := verifyUUID(k, e); err != nil {
 			return nil, err
 		}
-		entry = &e
+		tlogEntry = e
 	}
-	return entry, nil
+	return &tlogEntry, nil
 }
 
 func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, payload []byte) (uuids []string, err error) {
