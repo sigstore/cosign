@@ -214,7 +214,7 @@ func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub c
 	if err != nil {
 		return err
 	}
-	_, _, err = FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
+	_, err = FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
 	return err
 }
 
@@ -235,16 +235,14 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	uuid, _, err := FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
+	e, err := FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
 	if err != nil {
+		return err
+	}
+	if err := VerifyTLogEntry(ctx, rekorClient, e); err != nil {
 		return err
 	}
 	// if we have a cert, we should check expiry
-	// The IntegratedTime verified in VerifyTlog
-	e, err := GetTlogEntry(ctx, rekorClient, uuid)
-	if err != nil {
-		return err
-	}
 	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
