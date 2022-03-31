@@ -68,41 +68,8 @@ jobs:
       run: |
         make cosign
 
-    - name: Setup kind cluster
-      uses: chainguard-dev/actions/setup-kind@main
-      with:
-        k8s-version: "${{ matrix.k8s-version }}"
-        cluster-suffix: "${{ matrix.cluster-suffix }}"
-
-    - name: Install knative
-      uses: chainguard-dev/actions/setup-knative@main
-      with:
-        serving-features: '{"kubernetes.podspec-fieldref":"enabled", "kubernetes.podspec-volumes-emptydir":"enabled", "kubernetes.podspec-init-containers": "enabled", "kubernetes.podspec-securitycontext":"enabled"}'
-        serving-autoscaler: '{"min-scale":"1","max-scale":"1"}'
-
-    - name: Install all the everythings, fulcio, rekor, ctlog...
-      timeout-minutes: 10
-      run: |
-        kubectl apply -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/release.yaml
-
-        # Wait for all the ksvc to be up.
-        kubectl wait --timeout 10m -A --for=condition=Ready ksvc --all
-
-    - name: Run Scaffolding Tests
-      run: |
-        # Grab the secret from the ctlog-system namespace and make a copy
-        # in our namespace so we can get access to the CT Log public key
-        # so we can verify the SCT coming from there.
-        kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
-
-        # Also grab the secret from the fulcio-system namespace and make a copy
-        # in our namespace so we can get access to the Fulcio public key
-        # so we can verify against it.
-        kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
-
-        kubectl apply -f https://github.com/sigstore/scaffolding/releases/download/${{ env.SCAFFOLDING_RELEASE_VERSION }}/testrelease.yaml
-
-        kubectl wait --for=condition=Complete --timeout=180s job/sign-job job/checktree job/verify-job
+    - name: Install cluster + cosign
+      uses: sigstore/scaffolding/actions/setup@main
 
     - name: Install cosigned
       env:
@@ -146,40 +113,6 @@ jobs:
         echo "demoimage2=$demoimage2" >> $GITHUB_ENV
         echo Created image $demoimage2
         popd
-
-    # TODO(vaikas): There should be a fake issuer on the cluster. This one
-    # fetches a k8s auth token from the kind cluster that we spin up above. We
-    # do not want to use the Github OIDC token, but do want PRs to run this
-    # flow.
-    - name: Install a Knative service for fetch tokens off the cluster
-      run: |
-        ko apply -f ./test/config/gettoken
-        sleep 2
-        kubectl wait --for=condition=Ready --timeout=15s ksvc gettoken
-
-    # These set up the env variables so that we can invoke cosign against the
-    # cluster sigstore services (fulcio, rekor, etc.)
-    - name: Set the endpoints on the cluster and grab secrets
-      run: |
-        REKOR_URL=`kubectl -n rekor-system get --no-headers ksvc rekor | cut -d ' ' -f 4`
-        echo "REKOR_URL=$REKOR_URL" >> $GITHUB_ENV
-        curl -s $REKOR_URL/api/v1/log/publicKey > ./rekor-public.pem
-
-        FULCIO_URL=`kubectl -n fulcio-system get --no-headers ksvc fulcio | cut -d ' ' -f 4`
-        echo "FULCIO_URL=$FULCIO_URL" >> $GITHUB_ENV
-        CTLOG_URL=`kubectl -n ctlog-system get --no-headers ksvc ctlog | cut -d ' ' -f 4`
-        echo "CTLOG_URL=$CTLOG_URL" >> $GITHUB_ENV
-
-        ISSUER_URL=`kubectl get --no-headers ksvc gettoken | cut -d ' ' -f 4`
-        echo "ISSUER_URL=$ISSUER_URL" >> $GITHUB_ENV
-        OIDC_TOKEN=`curl -s $ISSUER_URL`
-        echo "OIDC_TOKEN=$OIDC_TOKEN" >> $GITHUB_ENV
-
-        kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
-        echo "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem" >> $GITHUB_ENV
-
-        kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
-        echo "SIGSTORE_ROOT_FILE=./fulcio-root.pem" >> $GITHUB_ENV
 
     - name: Deploy ClusterImagePolicy
       run: |
