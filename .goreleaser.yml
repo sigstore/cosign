@@ -17,9 +17,8 @@ before:
 # this is needed because we are generating files that goreleaser was not aware to push to GH project release
   - /bin/bash -c 'if [ -z "$CI" ]; then make sign-container-release && make sign-keyless-release; fi'
 
-# Disable for now due some issues when downloading the knative module, maybe due to the replace in the go.mod
-# gomod:
-#   proxy: true
+gomod:
+  proxy: true
 
 sboms:
 - artifacts: binary
