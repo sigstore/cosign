@@ -91,13 +91,17 @@ func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 	if err != nil {
 		return err
 	}
-	var sct ct.SignedCertificateTimestamp
-	if err := json.Unmarshal(rawSCT, &sct); err != nil {
+	var addChainResp ct.AddChainResponse
+	if err := json.Unmarshal(rawSCT, &addChainResp); err != nil {
 		return errors.Wrap(err, "unmarshal")
+	}
+	sct, err := addChainResp.ToSignedCertificateTimestamp()
+	if err != nil {
+		return err
 	}
 	var verifySctErr error
 	for pubKey, status := range pubKeys {
-		verifySctErr = ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, &sct, false)
+		verifySctErr = ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, sct, false)
 		// Exit after successful verification of the SCT
 		if verifySctErr == nil {
 			if status != tuf.Active {
