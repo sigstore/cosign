@@ -59,6 +59,10 @@ func Attest() *cobra.Command {
 
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			oidcClientSecret, err := o.OIDC.ClientSecret()
+			if err != nil {
+				return err
+			}
 			ko := sign.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
@@ -70,7 +74,7 @@ func Attest() *cobra.Command {
 				RekorURL:                 o.Rekor.URL,
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 			}
 			for _, img := range args {

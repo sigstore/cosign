@@ -44,7 +44,7 @@ cosign sign-blob [flags]
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
-      --oidc-client-secret string                                                                [EXPERIMENTAL] OIDC client secret for application
+      --oidc-client-secret-file string                                                           [EXPERIMENTAL] Path to file containing OIDC client secret for application
       --oidc-issuer string                                                                       [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
       --oidc-redirect-url string                                                                 [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --output string                                                                            write the signature to FILE
