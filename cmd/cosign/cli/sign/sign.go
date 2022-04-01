@@ -438,11 +438,11 @@ func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
 	var k *fulcio.Signer
 
 	if ko.InsecureSkipFulcioVerify {
-		if k, err = fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, fClient); err != nil {
+		if k, err = fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient); err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
 	} else {
-		if k, err = fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, fClient); err != nil {
+		if k, err = fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient); err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
 	}

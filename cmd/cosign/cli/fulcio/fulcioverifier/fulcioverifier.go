@@ -110,8 +110,8 @@ func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 	return verifySctErr
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret string, fClient api.Client) (*fulcio.Signer, error) {
-	fs, err := fulcio.NewSigner(ctx, idToken, oidcIssuer, oidcClientID, oidcClientSecret, fClient)
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*fulcio.Signer, error) {
+	fs, err := fulcio.NewSigner(ctx, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL, fClient)
 	if err != nil {
 		return nil, err
 	}

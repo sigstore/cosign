@@ -26,6 +26,7 @@ type OIDCOptions struct {
 	Issuer       string
 	ClientID     string
 	ClientSecret string
+	RedirectURL  string
 }
 
 var _ Interface = (*OIDCOptions)(nil)
@@ -40,4 +41,7 @@ func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.ClientSecret, "oidc-client-secret", "",
 		"[EXPERIMENTAL] OIDC client secret for application")
+
+	cmd.Flags().StringVar(&o.RedirectURL, "oidc-redirect-url", "",
+		"[EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.")
 }
