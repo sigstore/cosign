@@ -175,6 +175,10 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Get Fulcio signer
+			oidcClientSecret, err := o.OIDC.ClientSecret()
+			if err != nil {
+				return err
+			}
 			sv, err := sign.SignerFromKeyOpts(ctx, "", "", sign.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
@@ -182,7 +186,7 @@ func signPolicy() *cobra.Command {
 				RekorURL:                 o.Rekor.URL,
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 			})
 			if err != nil {

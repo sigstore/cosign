@@ -75,6 +75,10 @@ func Sign() *cobra.Command {
 			default:
 				return flag.ErrHelp
 			}
+			oidcClientSecret, err := o.OIDC.ClientSecret()
+			if err != nil {
+				return err
+			}
 			ko := sign.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
@@ -86,7 +90,7 @@ func Sign() *cobra.Command {
 				RekorURL:                 o.Rekor.URL,
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 			}
 			annotationsMap, err := o.AnnotationsMap()

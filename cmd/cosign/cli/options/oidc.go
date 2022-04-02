@@ -16,6 +16,12 @@
 package options
 
 import (
+	"fmt"
+	"os"
+	"strings"
+	"unicode/utf8"
+
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -23,10 +29,26 @@ const DefaultOIDCIssuerURL = "https://oauth2.sigstore.dev/auth"
 
 // OIDCOptions is the wrapper for OIDC related options.
 type OIDCOptions struct {
-	Issuer       string
-	ClientID     string
-	ClientSecret string
-	RedirectURL  string
+	Issuer           string
+	ClientID         string
+	clientSecretFile string
+	RedirectURL      string
+}
+
+func (o *OIDCOptions) ClientSecret() (string, error) {
+	if o.clientSecretFile != "" {
+		clientSecretBytes, err := os.ReadFile(o.clientSecretFile)
+		if err != nil {
+			return "", errors.Wrap(err, "reading OIDC client secret")
+		}
+		if !utf8.Valid(clientSecretBytes) {
+			return "", fmt.Errorf("OIDC client secret in file %s not valid utf8", o.clientSecretFile)
+		}
+		clientSecretString := string(clientSecretBytes)
+		clientSecretString = strings.TrimSpace(clientSecretString)
+		return clientSecretString, nil
+	}
+	return "", nil
 }
 
 var _ Interface = (*OIDCOptions)(nil)
@@ -39,8 +61,8 @@ func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.ClientID, "oidc-client-id", "sigstore",
 		"[EXPERIMENTAL] OIDC client ID for application")
 
-	cmd.Flags().StringVar(&o.ClientSecret, "oidc-client-secret", "",
-		"[EXPERIMENTAL] OIDC client secret for application")
+	cmd.Flags().StringVar(&o.clientSecretFile, "oidc-client-secret-file", "",
+		"[EXPERIMENTAL] Path to file containing OIDC client secret for application")
 
 	cmd.Flags().StringVar(&o.RedirectURL, "oidc-redirect-url", "",
 		"[EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.")
