@@ -16,7 +16,9 @@ package clusterimagepolicy
 
 import (
 	"context"
+	"crypto"
 	"fmt"
+	"strings"
 
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
@@ -33,6 +35,18 @@ import (
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
+
+	sigs "github.com/sigstore/cosign/pkg/signature"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+
+	"github.com/sigstore/sigstore/pkg/signature/kms"
+
+	// Register the provider-specific plugins
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/fake"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 // Reconciler implements clusterimagepolicyreconciler.Interface for
@@ -54,7 +68,7 @@ var _ clusterimagepolicyreconciler.Finalizer = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
 func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
-	cipCopy, cipErr := r.inlineSecrets(ctx, cip)
+	cipCopy, cipErr := r.inlinePublicKeys(ctx, cip)
 	if cipErr != nil {
 		// The CIP is invalid, try to remove it from the configmap.
 		existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
@@ -122,10 +136,10 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImag
 	return r.removeCIPEntry(ctx, existing, cip)
 }
 
-// inlineSecrets will go through the CIP and try to read the referenced
-// secrets and convert them into inlined data. Makes a copy of the CIP
+// inlinePublicKeys will go through the CIP and try to read the referenced
+// secrets, KMS keys and convert them into inlined data. Makes a copy of the CIP
 // before modifying it and returns the copy.
-func (r *Reconciler) inlineSecrets(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) (*v1alpha1.ClusterImagePolicy, error) {
+func (r *Reconciler) inlinePublicKeys(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) (*v1alpha1.ClusterImagePolicy, error) {
 	ret := cip.DeepCopy()
 	for _, authority := range ret.Spec.Authorities {
 		if authority.Key != nil && authority.Key.SecretRef != nil {
@@ -141,8 +155,32 @@ func (r *Reconciler) inlineSecrets(ctx context.Context, cip *v1alpha1.ClusterIma
 				return nil, err
 			}
 		}
+		if authority.Key != nil && authority.Key.KMS != "" {
+			if strings.Contains(authority.Key.KMS, "://") {
+				pubKeyString, err := getKMSPublicKey(ctx, authority.Key.KMS)
+				if err != nil {
+					return nil, err
+				}
+
+				authority.Key.Data = pubKeyString
+				authority.Key.KMS = ""
+			}
+		}
 	}
 	return ret, nil
+}
+
+func getKMSPublicKey(ctx context.Context, keyID string) (string, error) {
+	kmsSigner, err := kms.Get(ctx, keyID, crypto.SHA256)
+	if err != nil {
+		logging.FromContext(ctx).Errorf("Failed to read KMS key ID %q: %v", keyID, err)
+		return "", err
+	}
+	pemBytes, err := sigs.PublicKeyPem(kmsSigner, signatureoptions.WithContext(ctx))
+	if err != nil {
+		return "", err
+	}
+	return string(pemBytes), nil
 }
 
 // inlineSecret will take in a KeyRef and tries to read the Secret, finding the

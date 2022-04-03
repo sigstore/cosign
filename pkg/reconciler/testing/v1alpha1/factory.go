@@ -16,6 +16,7 @@ package testing
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"testing"
 
@@ -41,6 +42,8 @@ import (
 
 	"knative.dev/pkg/reconciler"
 	reconcilertesting "knative.dev/pkg/reconciler/testing"
+
+	fakekms "github.com/sigstore/sigstore/pkg/signature/kms/fake"
 )
 
 const (
@@ -53,7 +56,7 @@ const (
 type Ctor func(context.Context, *Listers, configmap.Watcher) controller.Reconciler
 
 // MakeFactory creates a reconciler factory with fake clients and controller created by `ctor`.
-func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) reconcilertesting.Factory {
+func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger, privKMSKey *ecdsa.PrivateKey) reconcilertesting.Factory {
 	return func(t *testing.T, r *reconcilertesting.TableRow) (controller.Reconciler, reconcilertesting.ActionRecorderList, reconcilertesting.EventList) {
 		ls := NewListers(r.Objects)
 
@@ -64,6 +67,9 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) reconc
 			ctx = context.Background()
 		}
 		ctx = logging.WithLogger(ctx, logger)
+
+		// Add private key for KMS testing
+		ctx = context.WithValue(ctx, fakekms.KmsCtxKey{}, privKMSKey)
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
 		ctx, client := fakecosignclient.With(ctx, ls.GetCosignObjects()...)
