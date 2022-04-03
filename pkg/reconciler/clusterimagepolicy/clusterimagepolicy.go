@@ -37,9 +37,8 @@ import (
 	"knative.dev/pkg/tracker"
 
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
-
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
@@ -170,6 +169,7 @@ func (r *Reconciler) inlinePublicKeys(ctx context.Context, cip *v1alpha1.Cluster
 	return ret, nil
 }
 
+// getKMSPublicKey returns the public key as a string from the configured KMS service using the key ID
 func getKMSPublicKey(ctx context.Context, keyID string) (string, error) {
 	kmsSigner, err := kms.Get(ctx, keyID, crypto.SHA256)
 	if err != nil {
