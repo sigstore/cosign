@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -35,19 +35,13 @@ const (
 type ImagePolicyConfig struct {
 	// This is the list of ImagePolicies that a admission controller uses
 	// to make policy decisions.
-	// TODO(vaikas): Revisit the datastructure. For now seems fine to use the
-	// same definitions from the API definition. The _only_ difference is that
-	// we do not use SecretReference fields, they get resolved and inlined
-	// in the Secret. So it seemed unnecessary to mirror those all over.
-	// Key in the map is the name of the ClusterImagePolicy where the Policy
-	// was received from.
-	Policies map[string]v1alpha1.ClusterImagePolicySpec
+	Policies map[string]internalcip.ClusterImagePolicy
 }
 
 // NewImagePoliciesConfigFromMap creates an ImagePolicyConfig from the supplied
 // Map
 func NewImagePoliciesConfigFromMap(data map[string]string) (*ImagePolicyConfig, error) {
-	ret := &ImagePolicyConfig{Policies: make(map[string]v1alpha1.ClusterImagePolicySpec, len(data))}
+	ret := &ImagePolicyConfig{Policies: make(map[string]internalcip.ClusterImagePolicy, len(data))}
 	// Spin through the ConfigMap. Each key will point to resolved
 	// ImagePatterns.
 	for k, v := range data {
@@ -58,7 +52,7 @@ func NewImagePoliciesConfigFromMap(data map[string]string) (*ImagePolicyConfig, 
 		if v == "" {
 			return nil, fmt.Errorf("configmap has an entry %q but no value", k)
 		}
-		clusterImagePolicy := &v1alpha1.ClusterImagePolicySpec{}
+		clusterImagePolicy := &internalcip.ClusterImagePolicy{}
 
 		if err := parseEntry(v, clusterImagePolicy); err != nil {
 			return nil, fmt.Errorf("failed to parse the entry %q : %q : %w", k, v, err)
@@ -85,13 +79,13 @@ func parseEntry(entry string, out interface{}) error {
 // need to be matched for the given Image.
 // Returned map contains the name of the CIP as the key, and an array of
 // authorities from that Policy that must be validated against.
-func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string][]v1alpha1.Authority, error) {
+func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string][]internalcip.Authority, error) {
 	if p == nil {
 		return nil, errors.New("config is nil")
 	}
 
 	var lastError error
-	ret := map[string][]v1alpha1.Authority{}
+	ret := map[string][]internalcip.Authority{}
 
 	// TODO(vaikas): this is very inefficient, we should have a better
 	// way to go from image to Authorities, but just seeing if this is even

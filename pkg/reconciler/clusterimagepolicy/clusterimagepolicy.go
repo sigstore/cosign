@@ -17,9 +17,14 @@ package clusterimagepolicy
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"strings"
 
+	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/apis/utils"
@@ -69,21 +74,30 @@ var _ clusterimagepolicyreconciler.Finalizer = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
 	cipCopy, cipErr := r.inlinePublicKeys(ctx, cip)
 	if cipErr != nil {
-		// The CIP is invalid, try to remove it from the configmap.
-		existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
-		if err != nil {
-			if !apierrs.IsNotFound(err) {
-				logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
-			}
-			// Note that we return the error about the Invalid cip here to make
-			// sure that it's surfaced.
-			return cipErr
-		}
-		if err := r.removeCIPEntry(ctx, existing, cip); err != nil {
-			logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
-		}
+		// Handle error here
+		r.handleCIPError(ctx, cip.Name)
 		return cipErr
 	}
+
+	// Converting external CIP to internal CIP
+	bytes, err := json.Marshal(&cipCopy.Spec)
+	if err != nil {
+		return err
+	}
+
+	var internalCIP *internalcip.ClusterImagePolicy
+	if err := json.Unmarshal(bytes, &internalCIP); err != nil {
+		return err
+	}
+
+	internalCIP, cipErr = r.convertKeyData(ctx, internalCIP)
+	if cipErr != nil {
+		r.handleCIPError(ctx, cip.Name)
+		// Note that we return the error about the Invalid cip here to make
+		// sure that it's surfaced.
+		return cipErr
+	}
+
 	// See if the CM holding configs exists
 	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
 	if err != nil {
@@ -92,7 +106,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 			return err
 		}
 		// Does not exist, create it.
-		cm, err := resources.NewConfigMap(system.Namespace(), config.ImagePoliciesConfigName, cipCopy)
+		cm, err := resources.NewConfigMap(system.Namespace(), config.ImagePoliciesConfigName, cip.Name, internalCIP)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("Failed to construct configmap: %v", err)
 			return err
@@ -102,7 +116,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 	}
 
 	// Check if we need to update the configmap or not.
-	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, existing.DeepCopy(), cipCopy)
+	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, cip.Name, existing.DeepCopy(), internalCIP)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to create patch: %v", err)
 		return err
@@ -132,7 +146,67 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImag
 		return nil
 	}
 	// CM exists, so remove our entry from it.
-	return r.removeCIPEntry(ctx, existing, cip)
+	return r.removeCIPEntry(ctx, existing, cip.Name)
+}
+
+// convertKeyData will go through the CIP and try to convert key data
+// to ecdsa.PublicKey and store it in the returned CIP
+// When PublicKeys are successfully set, the authority key's data will be
+// cleared out
+func (r *Reconciler) convertKeyData(ctx context.Context, cip *internalcip.ClusterImagePolicy) (*internalcip.ClusterImagePolicy, error) {
+	for _, authority := range cip.Authorities {
+		if authority.Key != nil && authority.Key.Data != "" {
+			keys, err := convertAuthorityKeys(ctx, authority.Key.Data)
+			if err != nil {
+				return nil, err
+			}
+			// When publicKeys are successfully converted, clear out Data
+			authority.Key.PublicKeys = keys
+			authority.Key.Data = ""
+		}
+	}
+	return cip, nil
+}
+
+func (r *Reconciler) handleCIPError(ctx context.Context, cipName string) {
+	// The CIP is invalid, try to remove CIP from the configmap
+	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
+	if err != nil {
+		if !apierrs.IsNotFound(err) {
+			logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
+		}
+	} else if err := r.removeCIPEntry(ctx, existing, cipName); err != nil {
+		logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
+	}
+}
+
+func convertAuthorityKeys(ctx context.Context, pubKey string) ([]*ecdsa.PublicKey, error) {
+	keys := []*ecdsa.PublicKey{}
+
+	logging.FromContext(ctx).Debugf("Got public key: %v", pubKey)
+
+	pems := parsePems([]byte(pubKey))
+	for _, p := range pems {
+		key, err := x509.ParsePKIXPublicKey(p.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, key.(*ecdsa.PublicKey))
+	}
+	return keys, nil
+}
+
+func parsePems(b []byte) []*pem.Block {
+	p, rest := pem.Decode(b)
+	if p == nil {
+		return nil
+	}
+	pems := []*pem.Block{p}
+
+	if rest != nil {
+		return append(pems, parsePems(rest)...)
+	}
+	return pems
 }
 
 // inlinePublicKeys will go through the CIP and try to read the referenced
@@ -223,8 +297,8 @@ func (r *Reconciler) inlineAndTrackSecret(ctx context.Context, cip *v1alpha1.Clu
 }
 
 // removeCIPEntry removes an entry from a CM. If no entry exists, it's a nop.
-func (r *Reconciler) removeCIPEntry(ctx context.Context, cm *corev1.ConfigMap, cip *v1alpha1.ClusterImagePolicy) error {
-	patchBytes, err := resources.CreateRemovePatch(system.Namespace(), config.ImagePoliciesConfigName, cm.DeepCopy(), cip)
+func (r *Reconciler) removeCIPEntry(ctx context.Context, cm *corev1.ConfigMap, cipName string) error {
+	patchBytes, err := resources.CreateRemovePatch(system.Namespace(), config.ImagePoliciesConfigName, cm.DeepCopy(), cipName)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to create remove patch: %v", err)
 		return err

@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis/duck"
@@ -26,8 +26,8 @@ import (
 
 // NewConfigMap returns a new ConfigMap with an entry for the given
 // ClusterImagePolicy
-func NewConfigMap(ns, name string, cip *v1alpha1.ClusterImagePolicy) (*corev1.ConfigMap, error) {
-	entry, err := marshal(cip.Spec)
+func NewConfigMap(ns, name, cipName string, cip *internalcip.ClusterImagePolicy) (*corev1.ConfigMap, error) {
+	entry, err := marshal(cip)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func NewConfigMap(ns, name string, cip *v1alpha1.ClusterImagePolicy) (*corev1.Co
 			// for each CIP.
 		},
 		Data: map[string]string{
-			cip.Name: entry,
+			cipName: entry,
 		},
 	}
 	return cm, nil
@@ -48,8 +48,8 @@ func NewConfigMap(ns, name string, cip *v1alpha1.ClusterImagePolicy) (*corev1.Co
 // CreatePatch updates a particular entry to see if they are differing and
 // returning the patch bytes for it that's suitable for calling
 // ConfigMap.Patch with.
-func CreatePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.ClusterImagePolicy) ([]byte, error) {
-	entry, err := marshal(cip.Spec)
+func CreatePatch(ns, name, cipName string, cm *corev1.ConfigMap, cip *internalcip.ClusterImagePolicy) ([]byte, error) {
+	entry, err := marshal(cip)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func CreatePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.ClusterIma
 	if after.Data == nil {
 		after.Data = make(map[string]string)
 	}
-	after.Data[cip.Name] = entry
+	after.Data[cipName] = entry
 	jsonPatch, err := duck.CreatePatch(cm, after)
 	if err != nil {
 		return nil, fmt.Errorf("creating JSON patch: %w", err)
@@ -70,11 +70,11 @@ func CreatePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.ClusterIma
 
 // CreateRemovePatch removes an entry from the ConfigMap and returns the patch
 // bytes for it that's suitable for calling ConfigMap.Patch with.
-func CreateRemovePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.ClusterImagePolicy) ([]byte, error) {
+func CreateRemovePatch(ns, name string, cm *corev1.ConfigMap, cipName string) ([]byte, error) {
 	after := cm.DeepCopy()
 	// Just remove it without checking if it exists. If it doesn't, then no
 	// patch bytes are created.
-	delete(after.Data, cip.Name)
+	delete(after.Data, cipName)
 	jsonPatch, err := duck.CreatePatch(cm, after)
 	if err != nil {
 		return nil, fmt.Errorf("creating JSON patch: %w", err)
@@ -85,8 +85,8 @@ func CreateRemovePatch(ns, name string, cm *corev1.ConfigMap, cip *v1alpha1.Clus
 	return jsonPatch.MarshalJSON()
 }
 
-func marshal(spec v1alpha1.ClusterImagePolicySpec) (string, error) {
-	bytes, err := json.Marshal(&spec)
+func marshal(spec *internalcip.ClusterImagePolicy) (string, error) {
+	bytes, err := json.Marshal(spec)
 	if err != nil {
 		return "", err
 	}
