@@ -427,8 +427,10 @@ func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "creating Fulcio client")
 	}
+
 	tok := ko.IDToken
-	if providers.Enabled(ctx) {
+	// If token is not set in the options, get one from the provders
+	if tok == "" && providers.Enabled(ctx) {
 		tok, err = providers.Provide(ctx, "sigstore")
 		if err != nil {
 			return nil, errors.Wrap(err, "fetching ambient OIDC credentials")
