@@ -27,5 +27,9 @@
 
 bin*
 dist/
+cosignImagerefs
+cosignedImagerefs
+sgetImagerefs
+policyImagerefs
 
 **verify-experimental*

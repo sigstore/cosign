@@ -132,37 +132,57 @@ clean:
 
 
 KOCACHE_PATH=/tmp/ko
-ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url=https://raw.githubusercontent.com/sigstore/cosign/main/README.md --image-label io.artifacthub.package.logo-url=https://raw.githubusercontent.com/sigstore/cosign/main/images/logo.svg --image-label io.artifacthub.package.license=Apache-2.0 --image-label io.artifacthub.package.vendor=sigstore --image-label io.artifacthub.package.version=0.1.0 --image-label io.artifacthub.package.name=cosign --image-label org.opencontainers.image.created=$(BUILD_DATE) --image-label org.opencontainers.image.description='Container signing verification and storage in an OCI registry' --image-label io.artifacthub.package.alternative-locations="oci://ghcr.io/sigstore/cosign/cosign"
+ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url="https://raw.githubusercontent.com/sigstore/cosign/main/README.md" \
+                    --image-label io.artifacthub.package.logo-url=https://raw.githubusercontent.com/sigstore/cosign/main/images/logo.svg \
+                    --image-label io.artifacthub.package.license=Apache-2.0 --image-label io.artifacthub.package.vendor=sigstore \
+                    --image-label io.artifacthub.package.version=0.1.0 \
+                    --image-label io.artifacthub.package.name=cosign \
+                    --image-label org.opencontainers.image.created=$(BUILD_DATE) \
+                    --image-label org.opencontainers.image.description="Container signing verification and storage in an OCI registry" \
+                    --image-label io.artifacthub.package.alternative-locations="oci://ghcr.io/sigstore/cosign/cosign"
 
 define create_kocache_path
   mkdir -p $(KOCACHE_PATH)
 endef
 
-
 ##########
 # ko build
 ##########
 .PHONY: ko
-ko:
+ko: ko-cosign ko-sget ko-cosigned
+
+.PHONY: ko-cosign
+ko-cosign:
 	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
-		$(ARTIFACT_HUB_LABELS) \
+		$(ARTIFACT_HUB_LABELS) --image-refs cosignImagerefs \
 		github.com/sigstore/cosign/cmd/cosign
 
-	# cosigned
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/cosigned ko resolve --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
-		--filename config/ > $(COSIGNED_YAML)
-
+.PHONY: ko-sget
+ko-sget:
 	# sget
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
-		$(ARTIFACT_HUB_LABELS) \
+		--image-refs sgetImagerefs \
 		github.com/sigstore/cosign/cmd/sget
+
+.PHONY: ko-cosigned
+ko-cosigned: kustomize-cosigned ko-policy-webhook
+	# cosigned
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/cosigned ko resolve --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
+		--image-refs cosignedImagerefs --filename config/webhook.yaml >> $(COSIGNED_YAML)
+
+ko-policy-webhook:
+	# policy_webhook
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/policy-webhook ko resolve --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
+		--image-refs policyImagerefs --filename config/policy-webhook.yaml >> $(COSIGNED_YAML)
 
 .PHONY: ko-local
 ko-local:
@@ -188,6 +208,11 @@ ko-local:
 .PHONY: ko-apply
 ko-apply:
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -Bf config/
+
+
+.PHONY: kustomize-cosigned
+kustomize-cosigned:
+	kustomize build config/ > $(COSIGNED_YAML)
 
 ##################
 # help
