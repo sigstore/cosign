@@ -158,7 +158,6 @@ func checkPublicKey(t *testing.T, gotKey *ecdsa.PublicKey) {
 
 	// pem.EncodeToMemory has an extra newline at the end
 	got := strings.TrimSuffix(string(pemBytes), "\n")
-
 	if got != inlineKeyData {
 		t.Errorf("Did not get what I wanted %s, got %s", inlineKeyData, string(pemBytes))
 	}

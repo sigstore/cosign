@@ -21,6 +21,8 @@ import (
 	"encoding/pem"
 
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+
+	"knative.dev/pkg/apis"
 )
 
 // ClusterImagePolicy defines the images that go through verification
@@ -37,7 +39,7 @@ type Authority struct {
 	// +optional
 	Key *KeyRef `json:"key,omitempty"`
 	// +optional
-	Keyless *v1alpha1.KeylessRef `json:"keyless,omitempty"`
+	Keyless *KeylessRef `json:"keyless,omitempty"`
 	// +optional
 	Sources []v1alpha1.Source `json:"source,omitempty"`
 	// +optional
@@ -50,13 +52,19 @@ type KeyRef struct {
 	// Data contains the inline public key
 	// +optional
 	Data string `json:"data,omitempty"`
-	// KMS contains the KMS url of the public key
-	// +optional
-	KMS string `json:"kms,omitempty"`
 	// PublicKeys are not marshalled because JSON unmarshalling
 	// errors for *big.Int
 	// +optional
 	PublicKeys []*ecdsa.PublicKey `json:"-"`
+}
+
+type KeylessRef struct {
+	// +optional
+	URL *apis.URL `json:"url,omitempty"`
+	// +optional
+	Identities []v1alpha1.Identity `json:"identities,omitempty"`
+	// +optional
+	CACert *KeyRef `json:"ca-cert,omitempty"`
 }
 
 // UnmarshalJSON populates the PublicKeys using Data because
@@ -73,7 +81,7 @@ func (k *KeyRef) UnmarshalJSON(data []byte) error {
 	k.Data = ret["data"]
 
 	if ret["data"] != "" {
-		publicKeys, err = convertKeyDataToPublicKeys(ret["data"])
+		publicKeys, err = ConvertKeyDataToPublicKeys(ret["data"])
 		if err != nil {
 			return err
 		}
@@ -84,9 +92,59 @@ func (k *KeyRef) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func convertKeyDataToPublicKeys(pubKey string) ([]*ecdsa.PublicKey, error) {
-	keys := []*ecdsa.PublicKey{}
+func ConvertClusterImagePolicyV1alpha1ToWebhook(in *v1alpha1.ClusterImagePolicy) *ClusterImagePolicy {
+	copyIn := in.DeepCopy()
 
+	outAuthorities := make([]Authority, 0)
+	for _, authority := range copyIn.Spec.Authorities {
+		outAuthority := convertAuthorityV1Alpha1ToWebhook(authority)
+		outAuthorities = append(outAuthorities, *outAuthority)
+	}
+
+	return &ClusterImagePolicy{
+		Images:      copyIn.Spec.Images,
+		Authorities: outAuthorities,
+	}
+}
+
+func convertAuthorityV1Alpha1ToWebhook(in v1alpha1.Authority) *Authority {
+	keyRef := convertKeyRefV1Alpha1ToWebhook(in.Key)
+	keylessRef := convertKeylessRefV1Alpha1ToWebhook(in.Keyless)
+
+	return &Authority{
+		Key:     keyRef,
+		Keyless: keylessRef,
+		Sources: in.Sources,
+		CTLog:   in.CTLog,
+	}
+}
+
+func convertKeyRefV1Alpha1ToWebhook(in *v1alpha1.KeyRef) *KeyRef {
+	if in == nil {
+		return nil
+	}
+
+	return &KeyRef{
+		Data: in.Data,
+	}
+}
+
+func convertKeylessRefV1Alpha1ToWebhook(in *v1alpha1.KeylessRef) *KeylessRef {
+	if in == nil {
+		return nil
+	}
+
+	CACertRef := convertKeyRefV1Alpha1ToWebhook(in.CACert)
+
+	return &KeylessRef{
+		URL:        in.URL,
+		Identities: in.Identities,
+		CACert:     CACertRef,
+	}
+}
+
+func ConvertKeyDataToPublicKeys(pubKey string) ([]*ecdsa.PublicKey, error) {
+	keys := []*ecdsa.PublicKey{}
 	pems := parsePems([]byte(pubKey))
 	for _, p := range pems {
 		key, err := x509.ParsePKIXPublicKey(p.Bytes)

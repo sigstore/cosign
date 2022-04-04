@@ -272,7 +272,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 							}},
 							Authorities: []webhookcip.Authority{
 								{
-									Keyless: &v1alpha1.KeylessRef{
+									Keyless: &webhookcip.KeylessRef{
 										URL: badURL,
 									},
 								},
@@ -315,7 +315,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 							}},
 							Authorities: []webhookcip.Authority{
 								{
-									Keyless: &v1alpha1.KeylessRef{
+									Keyless: &webhookcip.KeylessRef{
 										URL: fulcioURL,
 									},
 								},
@@ -358,7 +358,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 							}},
 							Authorities: []webhookcip.Authority{
 								{
-									Keyless: &v1alpha1.KeylessRef{
+									Keyless: &webhookcip.KeylessRef{
 										URL: fulcioURL,
 									},
 									CTLog: &v1alpha1.TLog{
