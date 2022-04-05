@@ -236,6 +236,7 @@ snapshot:
   name_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
+  disable: true ## not pushing to GitHub release due issues (context https://sigstore.slack.com/archives/C01PZKDL4DP/p1649162659703169?thread_ts=1649089777.081249&cid=C01PZKDL4DP)
   prerelease: allow # remove this when we start publishing non-prerelease or set to auto
   draft: true # allow for manual edits
   github:
