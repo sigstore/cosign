@@ -61,7 +61,7 @@ jobs:
       - name: Run Go tests
         run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b # v2.1.0
+        uses: codecov/codecov-action@e3c560433a6cc60aec8812599b7844a7b4fa0d71 # v2.1.0
         with:
           env_vars: OS
       - name: Run Go tests w/ `-race`
