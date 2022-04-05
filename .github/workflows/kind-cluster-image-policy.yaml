@@ -75,7 +75,7 @@ jobs:
 
     - name: Install cosigned
       env:
-        GIT_HASH: $GITHUB_SHA
+        GIT_HASH: ${{ env.GITHUB_SHA }}
         GIT_VERSION: ci
         LDFLAGS: ""
         COSIGNED_YAML: cosigned-e2e.yaml
