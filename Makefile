@@ -42,6 +42,7 @@ ifeq ($(DIFF), 1)
 endif
 PLATFORMS=darwin linux windows
 ARCHITECTURES=amd64
+COSIGNED_ARCHS?=all
 
 LDFLAGS=-buildid= -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
         -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
@@ -174,14 +175,14 @@ ko-cosigned: kustomize-cosigned ko-policy-webhook
 	# cosigned
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/cosigned ko resolve --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
+		--platform=$(COSIGNED_ARCHS) --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
 		--image-refs cosignedImagerefs --filename config/webhook.yaml >> $(COSIGNED_YAML)
 
 ko-policy-webhook:
 	# policy_webhook
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/policy-webhook ko resolve --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
+		--platform=$(COSIGNED_ARCHS) --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
 		--image-refs policyImagerefs --filename config/policy-webhook.yaml >> $(COSIGNED_YAML)
 
 .PHONY: ko-local

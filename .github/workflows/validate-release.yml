@@ -70,5 +70,4 @@ jobs:
       - name: check binaries
         run: |
           ./dist/cosign-linux-amd64 version
-          ./dist/cosigned-linux-amd64 --help
           ./dist/sget-linux-amd64 version

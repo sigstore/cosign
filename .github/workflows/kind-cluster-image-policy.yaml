@@ -56,6 +56,8 @@ jobs:
     # will use the latest release available for ko
     - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
 
+    - uses: imranismail/setup-kustomize@8fa954828ed3cfa7a487a2ba9f7104899bb48b2f # v1.6.1
+
     - name: Install yq
       uses: mikefarah/yq@bc2118736bca883de2e2c345bb7f7ef52c994920 # v4.16.2
 
@@ -76,8 +78,12 @@ jobs:
         GIT_HASH: $GITHUB_SHA
         GIT_VERSION: ci
         LDFLAGS: ""
+        COSIGNED_YAML: cosigned-e2e.yaml
+        KO_PREFIX: registry.local:5000/cosigned
+        COSIGNED_ARCHS: linux/amd64
       run: |
-        ko apply -Bf config/
+        make ko-cosigned
+        kubectl apply -f cosigned-e2e.yaml
 
         # Wait for the webhook to come up and become Ready
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
