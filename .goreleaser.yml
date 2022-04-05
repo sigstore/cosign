@@ -15,7 +15,7 @@ before:
 # if running a release we will generate the images in this step
 # if running in the CI the CI env va is set and we dont run the ko steps
 # this is needed because we are generating files that goreleaser was not aware to push to GH project release
-  - /bin/bash -c 'if [ -z "$CI" ]; then make sign-container-release && make sign-keyless-release; fi'
+  - /bin/bash -c 'if [ -z "$CI" ]; then make sign-release-images; fi'
 
 gomod:
   proxy: true
@@ -128,28 +128,6 @@ builds:
     - pivkey
     - pkcs11key
 
-- id: linux-cosigned
-  binary: cosigned-linux-{{ .Arch }}
-  no_unique_dist_dir: true
-  main: ./cmd/cosign/webhook
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  flags:
-    - -trimpath
-  goos:
-    - linux
-  goarch:
-    - amd64
-    - arm64
-    - arm
-    - s390x
-    - ppc64le
-  goarm:
-    - 7
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  env:
-    - CGO_ENABLED=0
-
 - id: sget
   binary: sget-{{ .Os }}-{{ .Arch }}
   no_unique_dist_dir: true
@@ -189,13 +167,6 @@ signs:
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
-  - id: cosigned
-    signature: "${artifact}.sig"
-    cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
-    artifacts: binary
-    ids:
-      - linux-cosigned
   - id: sget
     signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
@@ -210,14 +181,6 @@ signs:
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: binary
-  - id: cosigned-keyless
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
-    cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
-    artifacts: binary
-    ids:
-      - linux-cosigned
   - id: sget-keyless
     signature: "${artifact}-keyless.sig"
     certificate: "${artifact}-keyless.pem"
@@ -273,6 +236,7 @@ snapshot:
   name_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
+  disable: true ## not pushing to GitHub release due issues (context https://sigstore.slack.com/archives/C01PZKDL4DP/p1649162659703169?thread_ts=1649089777.081249&cid=C01PZKDL4DP)
   prerelease: allow # remove this when we start publishing non-prerelease or set to auto
   draft: true # allow for manual edits
   github:

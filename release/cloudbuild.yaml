@@ -39,10 +39,10 @@ steps:
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.8-0@sha256:b5b14c6a61099af5a69864f242766a0dca978d2aea97e311d051ee4f4b7d19ba'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.8-0@sha256:b5b14c6a61099af5a69864f242766a0dca978d2aea97e311d051ee4f4b7d19ba
+- name: ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -65,7 +65,7 @@ steps:
       gcloud auth configure-docker \
       && make release
 
-- name: gcr.io/cloud-builders/docker
+- name: ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3
   entrypoint: 'bash'
   dir: "go/src/sigstore/cosign"
   env:
@@ -103,7 +103,7 @@ artifacts:
     - "go/src/sigstore/cosign/cosign*.yaml"
 
 options:
-  machineType: E2_HIGHCPU_8
+  machineType: E2_HIGHCPU_32
 
 tags:
 - cosign-release
