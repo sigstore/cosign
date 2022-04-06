@@ -162,7 +162,6 @@ func (r *Reconciler) convertKeyData(ctx context.Context, cip *internalcip.Cluste
 			}
 			// When publicKeys are successfully converted, clear out Data
 			authority.Key.PublicKeys = keys
-			authority.Key.Data = ""
 		}
 	}
 	return cip, nil

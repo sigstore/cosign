@@ -16,6 +16,9 @@ package clusterimagepolicy
 
 import (
 	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 )
@@ -50,6 +53,60 @@ type KeyRef struct {
 	// KMS contains the KMS url of the public key
 	// +optional
 	KMS string `json:"kms,omitempty"`
+	// PublicKeys are not marshalled because JSON unmarshalling
+	// errors for *big.Int
 	// +optional
-	PublicKeys []*ecdsa.PublicKey `json:"publicKeys,omitempty"`
+	PublicKeys []*ecdsa.PublicKey `json:"-"`
+}
+
+// UnmarshalJSON populates the PublicKeys using Data because
+// JSON unmashalling errors for *big.Int
+func (k *KeyRef) UnmarshalJSON(data []byte) error {
+	var publicKeys []*ecdsa.PublicKey
+	var err error
+
+	ret := make(map[string]string)
+	if err = json.Unmarshal(data, &ret); err != nil {
+		return err
+	}
+
+	k.Data = ret["data"]
+
+	if ret["data"] != "" {
+		publicKeys, err = convertKeyDataToPublicKeys(ret["data"])
+		if err != nil {
+			return err
+		}
+	}
+
+	k.PublicKeys = publicKeys
+
+	return nil
+}
+
+func convertKeyDataToPublicKeys(pubKey string) ([]*ecdsa.PublicKey, error) {
+	keys := []*ecdsa.PublicKey{}
+
+	pems := parsePems([]byte(pubKey))
+	for _, p := range pems {
+		key, err := x509.ParsePKIXPublicKey(p.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, key.(*ecdsa.PublicKey))
+	}
+	return keys, nil
+}
+
+func parsePems(b []byte) []*pem.Block {
+	p, rest := pem.Decode(b)
+	if p == nil {
+		return nil
+	}
+	pems := []*pem.Block{p}
+
+	if rest != nil {
+		return append(pems, parsePems(rest)...)
+	}
+	return pems
 }

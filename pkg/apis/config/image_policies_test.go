@@ -15,6 +15,10 @@
 package config
 
 import (
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/pem"
+	"strings"
 	"testing"
 
 	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
@@ -81,6 +85,7 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
+	checkPublicKey(t, c[matchedPolicy][0].Key.PublicKeys[0])
 
 	// Test multiline yaml cert
 	c, err = defaults.GetMatchingPolicies("inlinecert")
@@ -90,6 +95,8 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
+	checkPublicKey(t, c[matchedPolicy][0].Key.PublicKeys[0])
+
 	// Test multiline cert but json encoded
 	c, err = defaults.GetMatchingPolicies("ghcr.io/example/*")
 	checkGetMatches(t, c, err)
@@ -98,6 +105,8 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
+	checkPublicKey(t, c[matchedPolicy][0].Key.PublicKeys[0])
+
 	// Test multiple matches
 	c, err = defaults.GetMatchingPolicies("regexstringtoo")
 	checkGetMatches(t, c, err)
@@ -109,6 +118,8 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[matchedPolicy][0].Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
+	checkPublicKey(t, c[matchedPolicy][0].Key.PublicKeys[0])
+
 	matchedPolicy = "cluster-image-policy-5"
 	want = "inlinedata here"
 	if got := c[matchedPolicy][0].Key.Data; got != want {
@@ -130,4 +141,25 @@ func checkGetMatches(t *testing.T, c map[string][]internalcip.Authority, err err
 		}
 	}
 	t.Error("Wanted a config and non-zero authorities, got no authorities")
+}
+
+func checkPublicKey(t *testing.T, gotKey *ecdsa.PublicKey) {
+	t.Helper()
+
+	derBytes, err := x509.MarshalPKIXPublicKey(gotKey)
+	if err != nil {
+		t.Error("Failed to Marshal Key =", err)
+	}
+
+	pemBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: derBytes,
+	})
+
+	// pem.EncodeToMemory has an extra newline at the end
+	got := strings.TrimSuffix(string(pemBytes), "\n")
+
+	if got != inlineKeyData {
+		t.Errorf("Did not get what I wanted %s, got %s", inlineKeyData, string(pemBytes))
+	}
 }

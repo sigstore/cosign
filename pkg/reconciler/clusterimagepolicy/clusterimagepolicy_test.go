@@ -19,7 +19,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"fmt"
+	"strings"
 	"testing"
 
 	logtesting "knative.dev/pkg/logging/testing"
@@ -64,10 +64,10 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 -----END PUBLIC KEY-----`
 
 	// This is the patch for replacing a single entry in the ConfigMap
-	replaceCIPPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"publicKeys\":[{\"Curve\":{\"P\":115792089210356248762697446949407573530086143415290314195533631308867097853951,\"N\":115792089210356248762697446949407573529996955224135760342422259061068512044369,\"B\":41058363725152142129326129780047268409114441015993725554835256314039467401291,\"Gx\":48439561293906451759052585252797914202762949526041747995844080717082404635286,\"Gy\":36134250956749795798585127919587881956611106672985015071877198253568414405109,\"BitSize\":256,\"Name\":\"P-256\"},\"X\":88707635920070641755721733257804385133633538985728333477702186279848359565508,\"Y\":60084629679813308197062610650536235858799576629081565335301707208097929287373}]}}]}"}]`
+	replaceCIPPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}"}]`
 
 	// This is the patch for adding an entry for non-existing KMS for cipName2
-	addCIP2Patch = `[{"op":"add","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{}}]}"}]`
+	addCIP2Patch = `[{"op":"add","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"data\":\"azure-kms://foo/bar\"}}]}"}]`
 
 	// This is the patch for removing the last entry, leaving just the
 	// configmap objectmeta, no data.
@@ -82,7 +82,7 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 	removeSingleEntryKeylessPatch = `[{"op":"remove","path":"/data/test-cip-2"}]`
 
 	// This is the patch for inlined secret for key ref data
-	inlinedSecretKeyPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"publicKeys\":[{\"Curve\":{\"P\":115792089210356248762697446949407573530086143415290314195533631308867097853951,\"N\":115792089210356248762697446949407573529996955224135760342422259061068512044369,\"B\":41058363725152142129326129780047268409114441015993725554835256314039467401291,\"Gx\":48439561293906451759052585252797914202762949526041747995844080717082404635286,\"Gy\":36134250956749795798585127919587881956611106672985015071877198253568414405109,\"BitSize\":256,\"Name\":\"P-256\"},\"X\":88707635920070641755721733257804385133633538985728333477702186279848359565508,\"Y\":60084629679813308197062610650536235858799576629081565335301707208097929287373}]}}]}"}]`
+	inlinedSecretKeyPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}"}]`
 
 	// This is the patch for inlined secret for keyless cakey ref data
 	inlinedSecretKeylessPatch = `[{"op":"replace","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"keyless\":{\"ca-cert\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}}]}"}]`
@@ -580,7 +580,7 @@ func makeConfigMap() *corev1.ConfigMap {
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{
-			cipName: `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{"publicKeys":[{"Curve":{"P":115792089210356248762697446949407573530086143415290314195533631308867097853951,"N":115792089210356248762697446949407573529996955224135760342422259061068512044369,"B":41058363725152142129326129780047268409114441015993725554835256314039467401291,"Gx":48439561293906451759052585252797914202762949526041747995844080717082404635286,"Gy":36134250956749795798585127919587881956611106672985015071877198253568414405109,"BitSize":256,"Name":"P-256"},"X":88707635920070641755721733257804385133633538985728333477702186279848359565508,"Y":60084629679813308197062610650536235858799576629081565335301707208097929287373}]}}]}`,
+			cipName: `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}`,
 		},
 	}
 }
@@ -591,13 +591,7 @@ func patchKMS(ctx context.Context, t *testing.T, kmsKey string) clientgotesting.
 		t.Fatalf("Failed to read KMS key ID %q: %v", kmsKey, err)
 	}
 
-	authorityKeys, err := convertAuthorityKeys(ctx, pubKey)
-	if err != nil || len(authorityKeys) == 0 {
-		t.Fatalf("Failed to convert KMS public key ID %q: %v", kmsKey, err)
-	}
-
-	pubKeyString := fmt.Sprintf(`{\"Curve\":{\"P\":115792089210356248762697446949407573530086143415290314195533631308867097853951,\"N\":115792089210356248762697446949407573529996955224135760342422259061068512044369,\"B\":41058363725152142129326129780047268409114441015993725554835256314039467401291,\"Gx\":48439561293906451759052585252797914202762949526041747995844080717082404635286,\"Gy\":36134250956749795798585127919587881956611106672985015071877198253568414405109,\"BitSize\":256,\"Name\":\"P-256\"},\"X\":%d,\"Y\":%d}`, authorityKeys[0].X, authorityKeys[0].Y)
-	patch := `[{"op":"add","path":"/data","value":{"test-kms-cip":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"publicKeys\":[` + pubKeyString + `]}}]}"}}]`
+	patch := `[{"op":"add","path":"/data","value":{"test-kms-cip":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"data\":\"` + strings.ReplaceAll(pubKey, "\n", "\\\\n") + `\"}}]}"}}]`
 
 	return clientgotesting.PatchActionImpl{
 		ActionImpl: clientgotesting.ActionImpl{
@@ -616,7 +610,7 @@ func makeDifferentConfigMap() *corev1.ConfigMap {
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{
-			cipName: `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{"data":"-----BEGIN NOTPUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END NOTPUBLIC KEY-----","publicKeys":[{"Curve":{"P":115792089210356248762697446949407573530086143415290314195533631308867097853951,"N":115792089210356248762697446949407573529996955224135760342422259061068512044369,"B":41058363725152142129326129780047268409114441015993725554835256314039467401291,"Gx":48439561293906451759052585252797914202762949526041747995844080717082404635286,"Gy":36134250956749795798585127919587881956611106672985015071877198253568414405109,"BitSize":256,"Name":"P-256"},"X":88707635920070641755721733257804385133633538985728333477702186279848359565508,"Y":60084629679813308197062610650536235858799576629081565335301707208097929287373}]}}]}`,
+			cipName: `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{"data":"-----BEGIN NOTPUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END NOTPUBLIC KEY-----"}}]}`,
 		},
 	}
 }
@@ -629,7 +623,7 @@ func makeConfigMapWithTwoEntries() *corev1.ConfigMap {
 			Name:      config.ImagePoliciesConfigName,
 		},
 		Data: map[string]string{
-			cipName:  `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{\"publicKeys\":[{\"Curve\":{\"P\":115792089210356248762697446949407573530086143415290314195533631308867097853951,\"N\":115792089210356248762697446949407573529996955224135760342422259061068512044369,\"B\":41058363725152142129326129780047268409114441015993725554835256314039467401291,\"Gx\":48439561293906451759052585252797914202762949526041747995844080717082404635286,\"Gy\":36134250956749795798585127919587881956611106672985015071877198253568414405109,\"BitSize\":256,\"Name\":\"P-256\"},\"X\":88707635920070641755721733257804385133633538985728333477702186279848359565508,\"Y\":60084629679813308197062610650536235858799576629081565335301707208097929287373}]}}]}`,
+			cipName:  `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}`,
 			cipName2: "remove me please",
 		},
 	}

@@ -15,7 +15,7 @@
 apiVersion: cosigned.sigstore.dev/v1alpha1
 kind: ClusterImagePolicy
 metadata:
-  name: image-policy
+  name: image-policy-keyless
 spec:
   images:
   - glob: registry.local:5000/cosigned/demo*
