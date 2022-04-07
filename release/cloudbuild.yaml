@@ -32,7 +32,7 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.6.0@sha256:b667002156c4bf9fedd9273f689b800bb5c341660e710e3bbac981c9795423d9'
+- name: 'gcr.io/projectsigstore/cosign:v1.7.1@sha256:7d735456ae0c6489d088981a228b944e8a729c2aa979d824a74e44ab843d6ad2'
   dir: "go/src/sigstore/cosign"
   env:
   - COSIGN_EXPERIMENTAL=true
@@ -65,29 +65,29 @@ steps:
       gcloud auth configure-docker \
       && make release
 
-# - name: ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3
-#   entrypoint: 'bash'
-#   dir: "go/src/sigstore/cosign"
-#   env:
-#   - "GOPATH=/workspace/go"
-#   - "GOBIN=/workspace/bin"
-#   - PROJECT_ID=${PROJECT_ID}
-#   - KEY_LOCATION=${_KEY_LOCATION}
-#   - KEY_RING=${_KEY_RING}
-#   - KEY_NAME=${_KEY_NAME}
-#   - KEY_VERSION=${_KEY_VERSION}
-#   - GIT_TAG=${_GIT_TAG}
-#   - KO_PREFIX=gcr.io/${PROJECT_ID}
-#   - COSIGN_EXPERIMENTAL=true
-#   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
-#   - GITHUB_USER=${_GITHUB_USER}
-#   secretEnv:
-#   - GITHUB_TOKEN
-#   args:
-#     - '-c'
-#     - |
-#       echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
-#       && make copy-signed-release-to-ghcr
+- name: ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3
+  entrypoint: 'bash'
+  dir: "go/src/sigstore/cosign"
+  env:
+  - "GOPATH=/workspace/go"
+  - "GOBIN=/workspace/bin"
+  - PROJECT_ID=${PROJECT_ID}
+  - KEY_LOCATION=${_KEY_LOCATION}
+  - KEY_RING=${_KEY_RING}
+  - KEY_NAME=${_KEY_NAME}
+  - KEY_VERSION=${_KEY_VERSION}
+  - GIT_TAG=${_GIT_TAG}
+  - KO_PREFIX=gcr.io/${PROJECT_ID}
+  - COSIGN_EXPERIMENTAL=true
+  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+  - GITHUB_USER=${_GITHUB_USER}
+  secretEnv:
+  - GITHUB_TOKEN
+  args:
+    - '-c'
+    - |
+      echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
+      && make copy-signed-release-to-ghcr || true
 
 availableSecrets:
   secretManager:
