@@ -19,7 +19,7 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["events"]
-    verbs: ["create"]
+    verbs: ["create","patch"]
 
   # Allow the reconciliation of exactly our validating and mutating webhooks.
   - apiGroups: ["admissionregistration.k8s.io"]
