@@ -32,7 +32,7 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.6.0@sha256:b667002156c4bf9fedd9273f689b800bb5c341660e710e3bbac981c9795423d9'
+- name: 'gcr.io/projectsigstore/cosign:v1.7.1@sha256:7d735456ae0c6489d088981a228b944e8a729c2aa979d824a74e44ab843d6ad2'
   dir: "go/src/sigstore/cosign"
   env:
   - COSIGN_EXPERIMENTAL=true
