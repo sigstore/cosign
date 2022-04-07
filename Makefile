@@ -91,13 +91,14 @@ cosign: $(SRCS)
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 go build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
+## Build cosigned binary
 .PHONY: cosigned
-cosigned: ## Build cosigned binary
+cosigned: policy-webhook
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/webhook
 
 .PHONY: policy-webhook
 policy-webhook: ## Build the policy webhook binary
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/policy-webhook
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/policy_webhook
 
 .PHONY: sget
 sget: ## Build sget binary
