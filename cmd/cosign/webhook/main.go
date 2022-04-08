@@ -47,7 +47,7 @@ var secretName = flag.String("secret-name", "", "The name of the secret in the w
 // webhookName holds the name of the validating webhook to set up with the
 // types we are watching.  If this changes, you must also change:
 //    ./config/500-webhook-configuration.yaml
-const webhookName = "cosigned.sigstore.dev"
+var webhookName = flag.String("webhook-name", "cosigned.sigstore.dev", "The name of the webhook.")
 
 func main() {
 	opts := webhook.Options{
@@ -92,7 +92,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 	return validation.NewAdmissionController(ctx,
 		// Name of the resource webhook.
-		webhookName,
+		*webhookName,
 
 		// The path on which to serve the webhook.
 		"/validations",
@@ -123,7 +123,7 @@ func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 
 	return defaulting.NewAdmissionController(ctx,
 		// Name of the resource webhook.
-		webhookName,
+		*webhookName,
 
 		// The path on which to serve the webhook.
 		"/mutations",
