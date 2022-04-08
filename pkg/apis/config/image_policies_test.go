@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
+	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	. "knative.dev/pkg/configmap/testing"
 	_ "knative.dev/pkg/system/testing"
 )
@@ -127,7 +127,7 @@ func TestGetAuthorities(t *testing.T) {
 	}
 }
 
-func checkGetMatches(t *testing.T, c map[string][]internalcip.Authority, err error) {
+func checkGetMatches(t *testing.T, c map[string][]webhookcip.Authority, err error) {
 	t.Helper()
 	if err != nil {
 		t.Error("GetMatches Failed =", err)

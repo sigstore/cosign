@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"regexp"
 
-	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
+	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -35,13 +35,13 @@ const (
 type ImagePolicyConfig struct {
 	// This is the list of ImagePolicies that a admission controller uses
 	// to make policy decisions.
-	Policies map[string]internalcip.ClusterImagePolicy
+	Policies map[string]webhookcip.ClusterImagePolicy
 }
 
 // NewImagePoliciesConfigFromMap creates an ImagePolicyConfig from the supplied
 // Map
 func NewImagePoliciesConfigFromMap(data map[string]string) (*ImagePolicyConfig, error) {
-	ret := &ImagePolicyConfig{Policies: make(map[string]internalcip.ClusterImagePolicy, len(data))}
+	ret := &ImagePolicyConfig{Policies: make(map[string]webhookcip.ClusterImagePolicy, len(data))}
 	// Spin through the ConfigMap. Each key will point to resolved
 	// ImagePatterns.
 	for k, v := range data {
@@ -52,7 +52,7 @@ func NewImagePoliciesConfigFromMap(data map[string]string) (*ImagePolicyConfig, 
 		if v == "" {
 			return nil, fmt.Errorf("configmap has an entry %q but no value", k)
 		}
-		clusterImagePolicy := &internalcip.ClusterImagePolicy{}
+		clusterImagePolicy := &webhookcip.ClusterImagePolicy{}
 
 		if err := parseEntry(v, clusterImagePolicy); err != nil {
 			return nil, fmt.Errorf("failed to parse the entry %q : %q : %w", k, v, err)
@@ -79,13 +79,13 @@ func parseEntry(entry string, out interface{}) error {
 // need to be matched for the given Image.
 // Returned map contains the name of the CIP as the key, and an array of
 // authorities from that Policy that must be validated against.
-func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string][]internalcip.Authority, error) {
+func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string][]webhookcip.Authority, error) {
 	if p == nil {
 		return nil, errors.New("config is nil")
 	}
 
 	var lastError error
-	ret := map[string][]internalcip.Authority{}
+	ret := map[string][]webhookcip.Authority{}
 
 	// TODO(vaikas): this is very inefficient, we should have a better
 	// way to go from image to Authorities, but just seeing if this is even

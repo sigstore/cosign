@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
+	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis/duck"
@@ -26,7 +26,7 @@ import (
 
 // NewConfigMap returns a new ConfigMap with an entry for the given
 // ClusterImagePolicy
-func NewConfigMap(ns, name, cipName string, cip *internalcip.ClusterImagePolicy) (*corev1.ConfigMap, error) {
+func NewConfigMap(ns, name, cipName string, cip *webhookcip.ClusterImagePolicy) (*corev1.ConfigMap, error) {
 	entry, err := marshal(cip)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func NewConfigMap(ns, name, cipName string, cip *internalcip.ClusterImagePolicy)
 // CreatePatch updates a particular entry to see if they are differing and
 // returning the patch bytes for it that's suitable for calling
 // ConfigMap.Patch with.
-func CreatePatch(ns, name, cipName string, cm *corev1.ConfigMap, cip *internalcip.ClusterImagePolicy) ([]byte, error) {
+func CreatePatch(ns, name, cipName string, cm *corev1.ConfigMap, cip *webhookcip.ClusterImagePolicy) ([]byte, error) {
 	entry, err := marshal(cip)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func CreateRemovePatch(ns, name string, cm *corev1.ConfigMap, cipName string) ([
 	return jsonPatch.MarshalJSON()
 }
 
-func marshal(spec *internalcip.ClusterImagePolicy) (string, error) {
+func marshal(spec *webhookcip.ClusterImagePolicy) (string, error) {
 	bytes, err := json.Marshal(spec)
 	if err != nil {
 		return "", err
