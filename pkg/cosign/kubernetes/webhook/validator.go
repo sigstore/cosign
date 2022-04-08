@@ -25,8 +25,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
 	"github.com/sigstore/cosign/pkg/apis/config"
+	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/fulcio/pkg/api"
@@ -227,7 +227,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]internalcip.Authority, remoteOpts ...ociremote.Option) (map[string][]oci.Signature, map[string][]error) {
+func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string][]oci.Signature, map[string][]error) {
 	// Gather all validated signatures here.
 	signatures := map[string][]oci.Signature{}
 	// For a policy that does not pass at least one authority, gather errors
@@ -256,7 +256,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 // ValidatePolicy will go through all the Authorities for a given image and
 // return a success if at least one of the Authorities validated the signatures.
 // Returns the validated signatures, or the errors encountered.
-func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, authorities []internalcip.Authority, remoteOpts ...ociremote.Option) ([]oci.Signature, []error) {
+func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, authorities []webhookcip.Authority, remoteOpts ...ociremote.Option) ([]oci.Signature, []error) {
 	// If none of the Authorities for a given policy pass the checks, gather
 	// the errors here. If one passes, do not return the errors.
 	authorityErrors := []error{}

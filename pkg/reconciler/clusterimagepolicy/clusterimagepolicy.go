@@ -24,11 +24,11 @@ import (
 	"fmt"
 	"strings"
 
-	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/apis/utils"
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
+	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy/resources"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -79,18 +79,18 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 		return cipErr
 	}
 
-	// Converting external CIP to internal CIP
+	// Converting external CIP to webhook CIP
 	bytes, err := json.Marshal(&cipCopy.Spec)
 	if err != nil {
 		return err
 	}
 
-	var internalCIP *internalcip.ClusterImagePolicy
-	if err := json.Unmarshal(bytes, &internalCIP); err != nil {
+	var webhookCIP *webhookcip.ClusterImagePolicy
+	if err := json.Unmarshal(bytes, &webhookCIP); err != nil {
 		return err
 	}
 
-	internalCIP, cipErr = r.convertKeyData(ctx, internalCIP)
+	webhookCIP, cipErr = r.convertKeyData(ctx, webhookCIP)
 	if cipErr != nil {
 		r.handleCIPError(ctx, cip.Name)
 		// Note that we return the error about the Invalid cip here to make
@@ -106,7 +106,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 			return err
 		}
 		// Does not exist, create it.
-		cm, err := resources.NewConfigMap(system.Namespace(), config.ImagePoliciesConfigName, cip.Name, internalCIP)
+		cm, err := resources.NewConfigMap(system.Namespace(), config.ImagePoliciesConfigName, cip.Name, webhookCIP)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("Failed to construct configmap: %v", err)
 			return err
@@ -116,7 +116,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterIma
 	}
 
 	// Check if we need to update the configmap or not.
-	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, cip.Name, existing.DeepCopy(), internalCIP)
+	patchBytes, err := resources.CreatePatch(system.Namespace(), config.ImagePoliciesConfigName, cip.Name, existing.DeepCopy(), webhookCIP)
 	if err != nil {
 		logging.FromContext(ctx).Errorf("Failed to create patch: %v", err)
 		return err
@@ -153,7 +153,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImag
 // to ecdsa.PublicKey and store it in the returned CIP
 // When PublicKeys are successfully set, the authority key's data will be
 // cleared out
-func (r *Reconciler) convertKeyData(ctx context.Context, cip *internalcip.ClusterImagePolicy) (*internalcip.ClusterImagePolicy, error) {
+func (r *Reconciler) convertKeyData(ctx context.Context, cip *webhookcip.ClusterImagePolicy) (*webhookcip.ClusterImagePolicy, error) {
 	for _, authority := range cip.Authorities {
 		if authority.Key != nil && authority.Key.Data != "" {
 			keys, err := convertAuthorityKeys(ctx, authority.Key.Data)

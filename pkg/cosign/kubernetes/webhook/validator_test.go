@@ -30,10 +30,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
-	internalcip "github.com/sigstore/cosign/internal/pkg/apis/cosigned"
 	"github.com/sigstore/cosign/pkg/apis/config"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/cosign"
+	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -231,14 +231,14 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		customContext: config.ToContext(context.Background(),
 			&config.Config{
 				ImagePolicyConfig: &config.ImagePolicyConfig{
-					Policies: map[string]internalcip.ClusterImagePolicy{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy": {
 							Images: []v1alpha1.ImagePattern{{
 								Regex: ".*",
 							}},
-							Authorities: []internalcip.Authority{
+							Authorities: []webhookcip.Authority{
 								{
-									Key: &internalcip.KeyRef{
+									Key: &webhookcip.KeyRef{
 										Data:       authorityKeyCosignPubString,
 										PublicKeys: []*ecdsa.PublicKey{authorityKeyCosignPub},
 									},
@@ -265,12 +265,12 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		customContext: config.ToContext(context.Background(),
 			&config.Config{
 				ImagePolicyConfig: &config.ImagePolicyConfig{
-					Policies: map[string]internalcip.ClusterImagePolicy{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
 								Regex: ".*",
 							}},
-							Authorities: []internalcip.Authority{
+							Authorities: []webhookcip.Authority{
 								{
 									Keyless: &v1alpha1.KeylessRef{
 										URL: badURL,
@@ -308,12 +308,12 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		customContext: config.ToContext(context.Background(),
 			&config.Config{
 				ImagePolicyConfig: &config.ImagePolicyConfig{
-					Policies: map[string]internalcip.ClusterImagePolicy{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
 								Regex: ".*",
 							}},
-							Authorities: []internalcip.Authority{
+							Authorities: []webhookcip.Authority{
 								{
 									Keyless: &v1alpha1.KeylessRef{
 										URL: fulcioURL,
@@ -351,12 +351,12 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		customContext: config.ToContext(context.Background(),
 			&config.Config{
 				ImagePolicyConfig: &config.ImagePolicyConfig{
-					Policies: map[string]internalcip.ClusterImagePolicy{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
 								Regex: ".*",
 							}},
-							Authorities: []internalcip.Authority{
+							Authorities: []webhookcip.Authority{
 								{
 									Keyless: &v1alpha1.KeylessRef{
 										URL: fulcioURL,
