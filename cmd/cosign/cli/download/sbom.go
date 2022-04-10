@@ -62,7 +62,7 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 	}
 
 	sboms = append(sboms, string(sbom))
-	fmt.Fprintln(out, string(sbom))
+	fmt.Fprint(out, string(sbom))
 
 	return sboms, nil
 }
