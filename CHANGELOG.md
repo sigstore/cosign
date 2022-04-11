@@ -1,3 +1,41 @@
+# v1.7.2
+
+## Bug Fixes
+
+* Make public all types required to use ValidatePolicy (https://github.com/sigstore/cosign/pull/1727)
+* fix: add permissions to patch events (https://github.com/sigstore/cosign/pull/1722)
+* Fix publicKey unmarshal (https://github.com/sigstore/cosign/pull/1719)
+* Update release job (https://github.com/sigstore/cosign/pull/1720)
+* Makefile: fix directory not found error (https://github.com/sigstore/cosign/pull/1718)
+
+## Others
+
+* Remove newline from download sbom output (https://github.com/sigstore/cosign/pull/1732)
+* Bump github.com/hashicorp/go-uuid from 1.0.2 to 1.0.3 (https://github.com/sigstore/cosign/pull/1724)
+* Add unit tests for IntotoAttestation verifier. (https://github.com/sigstore/cosign/pull/1728)
+* Bump github/codeql-action from 2.1.7 to 2.1.8 (https://github.com/sigstore/cosign/pull/1725)
+* Bump cloud.google.com/go/storage from 1.21.0 to 1.22.0 (https://github.com/sigstore/cosign/pull/1721)
+* Bump sigstore/cosign-installer from 2.1.0 to 2.2.0 (https://github.com/sigstore/cosign/pull/1723)
+* Bump github.com/xanzy/go-gitlab from 0.61.0 to 0.62.0 (https://github.com/sigstore/cosign/pull/1711)
+* Bump google-github-actions/auth from 0.6.0 to 0.7.0 (https://github.com/sigstore/cosign/pull/1712)
+* Bump github/codeql-action from 2.1.6 to 2.1.7 (https://github.com/sigstore/cosign/pull/1713)
+* Bump codecov/codecov-action from 2.1.0 to 3 (https://github.com/sigstore/cosign/pull/1714)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior (@cpanato)
+* Denny (@DennyHoang)
+* Hector Fernandez (@hectorj2f)
+* Josh Dolitsky (@jdolitsky)
+* Rob Best (@ribbybibby)
+* Ville Aikas (@vaikas)
+
+# v1.7.1
+
+## Bug Fixes
+
+* commenting out the copy from gcr to ghcr due issues on github side (https://github.com/sigstore/cosign/pull/1715)
+
 # v1.7.0
 
 ## Enhancements
