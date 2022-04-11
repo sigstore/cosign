@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -316,7 +317,7 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 		if scm.Sigstore.Usage == usage {
 			target, err := t.GetTarget(name)
 			if err != nil {
-				return nil, errors.Wrap(err, "error getting target")
+				return nil, errors.Wrap(err, "error getting target by usage")
 			}
 			matchedTargets = append(matchedTargets, TargetFile{Target: target, Status: scm.Sigstore.Status})
 		}
@@ -325,10 +326,14 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 		for _, fallback := range fallbacks {
 			target, err := t.GetTarget(fallback)
 			if err != nil {
-				return nil, errors.Wrap(err, "error getting target")
+				fmt.Fprintf(os.Stderr, "**Warning** Missing fallback target %s, skipping\n", fallback)
+				continue
 			}
 			matchedTargets = append(matchedTargets, TargetFile{Target: target, Status: Active})
 		}
+	}
+	if len(matchedTargets) == 0 {
+		return matchedTargets, fmt.Errorf("no matching targets by custom metadata, fallbacks not found: %s", strings.Join(fallbacks, ", "))
 	}
 	return matchedTargets, nil
 }

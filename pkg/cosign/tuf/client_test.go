@@ -267,6 +267,17 @@ func TestGetTargetsByMeta(t *testing.T) {
 	if targets[0].Status != Active || targets[1].Status != Active {
 		t.Fatalf("target without custom metadata not active, got: %v and %v", targets[0].Status, targets[1].Status)
 	}
+	// Specify multiple fallbacks with no custom metadata.
+	targets, err = tufObj.GetTargetsByMeta(UnknownUsage, []string{"fooNoCustom.txt", "fooNoCustomOtherMissingTarget.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(targets) != 1 {
+		t.Fatalf("expected one targets without custom metadata, got %d targets", len(targets))
+	}
+	if targets[0].Status != Active {
+		t.Fatalf("target without custom metadata not active, got: %v and %v", targets[0].Status, targets[1].Status)
+	}
 	// Fetch targets with custom metadata.
 	targets, err = tufObj.GetTargetsByMeta(Fulcio, []string{"fooNoCustom.txt"})
 	if err != nil {
@@ -291,7 +302,7 @@ func TestGetTargetsByMeta(t *testing.T) {
 	// Error when fetching target that does not exist.
 	_, err = tufObj.GetTargetsByMeta(UsageKind(UnknownStatus), []string{"unknown.txt"})
 	expectedErr := "file not found: unknown.txt"
-	if !strings.Contains(err.Error(), "file not found: unknown.txt") {
+	if !strings.Contains(err.Error(), "not found: unknown.txt") {
 		t.Fatalf("unexpected error fetching missing metadata, expected: %s, got: %s", expectedErr, err.Error())
 	}
 }
