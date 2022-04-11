@@ -212,18 +212,16 @@ nfpms:
     maintainer: Sigstore Authors 86837369+sigstore-bot@users.noreply.github.com
     builds:
       - linux
-      - linux-pivkey-pkcs11key-amd64
     description: Container Signing, Verification and Storage in an OCI registry.
-    replacements:
-      amd64: 64-bit
-      386: 32-bit
-      darwin: macOS
-      linux: Tux
     license: "Apache License 2.0"
     formats:
       - apk
       - deb
       - rpm
+    contents:
+      - src: /usr/bin/cosign-linux-{{ .Arch }}
+        dst: /usr/bin/cosign
+        type: "symlink"
 
 archives:
 - format: binary
