@@ -14,11 +14,32 @@
 
 package fulcioroots
 
-import "testing"
+import (
+	"os"
+	"testing"
+
+	"github.com/sigstore/cosign/test"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+)
 
 func TestGetFulcioRoots(t *testing.T) {
+	rootCert, _, _ := test.GenerateRootCa()
+	pemCert, _ := cryptoutils.MarshalCertificateToPEM(rootCert)
+
+	tmpCertFile, err := os.CreateTemp(t.TempDir(), "cosign_fulcio_root_*.cert")
+	if err != nil {
+		t.Fatalf("failed to create temp cert file: %v", err)
+	}
+	defer tmpCertFile.Close()
+	if _, err := tmpCertFile.Write(pemCert); err != nil {
+		t.Fatalf("failed to write cert file: %v", err)
+	}
+	os.Setenv("SIGSTORE_ROOT_FILE", tmpCertFile.Name())
+	defer os.Unsetenv("SIGSTORE_ROOT_FILE")
+
 	certPool := Get()
-	if len(certPool.Subjects()) == 0 {
+	// ignore deprecation error because certificates do not contain from SystemCertPool
+	if len(certPool.Subjects()) == 0 { // nolint:staticcheck
 		t.Errorf("expected 1 or more certificates, got 0")
 	}
 }
