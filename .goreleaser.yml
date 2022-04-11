@@ -206,7 +206,7 @@ signs:
 nfpms:
   - id: cosign
     package_name: cosign
-    file_name_template: "{{ .PackageName }}"
+    file_name_template: "{{ .ConventionalFileName }}"
     vendor: Sigstore
     homepage: https://sigstore.dev
     maintainer: Sigstore Authors 86837369+sigstore-bot@users.noreply.github.com
