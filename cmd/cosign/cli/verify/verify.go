@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -142,7 +141,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return err
 		}
 		if c.CertChain == "" {
-			pubKey, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			pubKey, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 			if err != nil {
 				return err
 			}

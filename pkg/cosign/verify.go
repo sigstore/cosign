@@ -145,7 +145,7 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
 // chains up to a trusted root. Optionally verifies the subject of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	verifier, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid certificate found on signature")
 	}

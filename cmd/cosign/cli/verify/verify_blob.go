@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/base64"
@@ -107,7 +106,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 			return err
 		}
 		if certChain == "" {
-			verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			verifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 			if err != nil {
 				return err
 			}
@@ -144,7 +143,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 			// check if cert is actually a public key
 			verifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
 		} else {
-			verifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			verifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 		}
 		if err != nil {
 			return err
