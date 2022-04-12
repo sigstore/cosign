@@ -27,4 +27,14 @@ func TestGetRekorPubKeys(t *testing.T) {
 	if len(keys) == 0 {
 		t.Errorf("expected 1 or more keys, got 0")
 	}
+	// check that the mapping of key digest to key is correct
+	for logID, key := range keys {
+		expectedLogID, err := getLogID(key.PubKey)
+		if err != nil {
+			t.Fatalf("unexpected error generated log ID: %v", err)
+		}
+		if logID != expectedLogID {
+			t.Fatalf("key digests are not equal")
+		}
+	}
 }

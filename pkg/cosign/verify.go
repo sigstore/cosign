@@ -645,19 +645,16 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, errors.Wrap(err, "retrieving rekor public key")
 	}
 
-	var entryVerError error
-	for _, pubKey := range publicKeys {
-		entryVerError = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
-		// Exit early with successful verification
-		if entryVerError == nil {
-			if pubKey.Status != tuf.Active {
-				fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
-			}
-			break
-		}
+	pubKey, ok := publicKeys[bundle.Payload.LogID]
+	if !ok {
+		return false, errors.New("rekor log public key not found for payload")
 	}
-	if entryVerError != nil {
-		return false, entryVerError
+	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
+	if err != nil {
+		return false, err
+	}
+	if pubKey.Status != tuf.Active {
+		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
 	cert, err := sig.Cert()

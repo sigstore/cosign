@@ -351,19 +351,16 @@ func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certif
 		return errors.Wrap(err, "retrieving rekor public key")
 	}
 
-	var entryVerError error
-	for _, pubKey := range publicKeys {
-		entryVerError = cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, pubKey.PubKey)
-		// Exit early with successful verification
-		if entryVerError == nil {
-			if pubKey.Status != tuf.Active {
-				fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
-			}
-			break
-		}
+	pubKey, ok := publicKeys[b.Bundle.Payload.LogID]
+	if !ok {
+		return errors.New("rekor log public key not found for payload")
 	}
-	if entryVerError != nil {
-		return entryVerError
+	err = cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, pubKey.PubKey)
+	if err != nil {
+		return err
+	}
+	if pubKey.Status != tuf.Active {
+		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
 	if cert == nil {
