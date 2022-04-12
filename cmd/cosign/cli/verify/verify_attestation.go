@@ -18,7 +18,6 @@ package verify
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"os"
@@ -121,7 +120,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return errors.Wrap(err, "loading certificate from reference")
 		}
 		if c.CertChain == "" {
-			co.SigVerifier, err = signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+			co.SigVerifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 			if err != nil {
 				return errors.Wrap(err, "creating certificate verifier")
 			}
