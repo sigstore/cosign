@@ -34,6 +34,14 @@ import (
 
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
+
+	// Register the provider-specific plugins
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
+	// TODO(mattmoor): Not sure why this is in the final binary...
+	// _ "github.com/sigstore/sigstore/pkg/signature/kms/fake"
 )
 
 func main() {
