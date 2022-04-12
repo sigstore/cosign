@@ -115,12 +115,9 @@ func (keyless *KeylessRef) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingOneOf("url", "identities", "ca-cert"))
 	}
 
-	if keyless.URL != nil {
-		if keyless.CACert != nil || keyless.Identities != nil {
-			errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-cert"))
-		}
-	} else if keyless.CACert != nil && keyless.Identities != nil {
-		errs = errs.Also(apis.ErrMultipleOneOf("url", "identities", "ca-cert"))
+	// TODO: Are these really mutually exclusive?
+	if keyless.URL != nil && keyless.CACert != nil {
+		errs = errs.Also(apis.ErrMultipleOneOf("url", "ca-cert"))
 	}
 
 	if keyless.Identities != nil && len(keyless.Identities) == 0 {
