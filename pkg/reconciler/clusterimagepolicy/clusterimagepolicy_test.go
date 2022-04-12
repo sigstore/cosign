@@ -81,9 +81,6 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 	// two entries but only one is being removed. For keyless entry.
 	removeSingleEntryKeylessPatch = `[{"op":"remove","path":"/data/test-cip-2"}]`
 
-	// This is the patch for inlined secret for key ref data
-	inlinedSecretKeyPatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}"}]`
-
 	// This is the patch for inlined secret for keyless cakey ref data
 	inlinedSecretKeylessPatch = `[{"op":"replace","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"keyless\":{\"ca-cert\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}}]}"}]`
 )
@@ -475,11 +472,10 @@ func TestReconcile(t *testing.T) {
 							},
 						}}),
 				),
-				makeConfigMapWithTwoEntriesNotPublicKeyFromSecret(),
 				makeSecret(keySecretName, validPublicKeyData),
 			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				makePatch(inlinedSecretKeyPatch),
+			WantCreates: []runtime.Object{
+				makeConfigMap(),
 			},
 			PostConditions: []func(*testing.T, *TableRow){
 				AssertTrackingSecret(system.Namespace(), keySecretName),
@@ -624,21 +620,6 @@ func makeConfigMapWithTwoEntries() *corev1.ConfigMap {
 		},
 		Data: map[string]string{
 			cipName:  `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{"data":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\n-----END PUBLIC KEY-----"}}]}`,
-			cipName2: "remove me please",
-		},
-	}
-}
-
-// Same as MakeConfigMapWithTwoEntries but the inline data is not the secret
-// so we will replace it with the secret data
-func makeConfigMapWithTwoEntriesNotPublicKeyFromSecret() *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: system.Namespace(),
-			Name:      config.ImagePoliciesConfigName,
-		},
-		Data: map[string]string{
-			cipName:  `{"images":[{"glob":"ghcr.io/example/*"}],"authorities":[{"key":{"data":"NOT A REAL PUBLIC KEY"}}]}`,
 			cipName2: "remove me please",
 		},
 	}

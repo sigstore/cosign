@@ -17,10 +17,6 @@ package clusterimagepolicy
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"strings"
 
@@ -30,12 +26,14 @@ import (
 	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
 	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy/resources"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
@@ -67,29 +65,13 @@ var _ clusterimagepolicyreconciler.Finalizer = (*Reconciler)(nil)
 func (r *Reconciler) ReconcileKind(ctx context.Context, cip *v1alpha1.ClusterImagePolicy) reconciler.Event {
 	cipCopy, cipErr := r.inlinePublicKeys(ctx, cip)
 	if cipErr != nil {
-		// Handle error here
-		r.handleCIPError(ctx, cip.Name)
-		return cipErr
-	}
-
-	// Converting external CIP to webhook CIP
-	bytes, err := json.Marshal(&cipCopy.Spec)
-	if err != nil {
-		return err
-	}
-
-	var webhookCIP *webhookcip.ClusterImagePolicy
-	if err := json.Unmarshal(bytes, &webhookCIP); err != nil {
-		return err
-	}
-
-	webhookCIP, cipErr = r.convertKeyData(ctx, webhookCIP)
-	if cipErr != nil {
 		r.handleCIPError(ctx, cip.Name)
 		// Note that we return the error about the Invalid cip here to make
 		// sure that it's surfaced.
 		return cipErr
 	}
+
+	webhookCIP := webhookcip.ConvertClusterImagePolicyV1alpha1ToWebhook(cipCopy)
 
 	// See if the CM holding configs exists
 	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
@@ -142,24 +124,6 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, cip *v1alpha1.ClusterImag
 	return r.removeCIPEntry(ctx, existing, cip.Name)
 }
 
-// convertKeyData will go through the CIP and try to convert key data
-// to ecdsa.PublicKey and store it in the returned CIP
-// When PublicKeys are successfully set, the authority key's data will be
-// cleared out
-func (r *Reconciler) convertKeyData(ctx context.Context, cip *webhookcip.ClusterImagePolicy) (*webhookcip.ClusterImagePolicy, error) {
-	for _, authority := range cip.Authorities {
-		if authority.Key != nil && authority.Key.Data != "" {
-			keys, err := convertAuthorityKeys(ctx, authority.Key.Data)
-			if err != nil {
-				return nil, err
-			}
-			// When publicKeys are successfully converted, clear out Data
-			authority.Key.PublicKeys = keys
-		}
-	}
-	return cip, nil
-}
-
 func (r *Reconciler) handleCIPError(ctx context.Context, cipName string) {
 	// The CIP is invalid, try to remove CIP from the configmap
 	existing, err := r.configmaplister.ConfigMaps(system.Namespace()).Get(config.ImagePoliciesConfigName)
@@ -170,35 +134,6 @@ func (r *Reconciler) handleCIPError(ctx context.Context, cipName string) {
 	} else if err := r.removeCIPEntry(ctx, existing, cipName); err != nil {
 		logging.FromContext(ctx).Errorf("Failed to get configmap: %v", err)
 	}
-}
-
-func convertAuthorityKeys(ctx context.Context, pubKey string) ([]*ecdsa.PublicKey, error) {
-	keys := []*ecdsa.PublicKey{}
-
-	logging.FromContext(ctx).Debugf("Got public key: %v", pubKey)
-
-	pems := parsePems([]byte(pubKey))
-	for _, p := range pems {
-		key, err := x509.ParsePKIXPublicKey(p.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, key.(*ecdsa.PublicKey))
-	}
-	return keys, nil
-}
-
-func parsePems(b []byte) []*pem.Block {
-	p, rest := pem.Decode(b)
-	if p == nil {
-		return nil
-	}
-	pems := []*pem.Block{p}
-
-	if rest != nil {
-		return append(pems, parsePems(rest)...)
-	}
-	return pems
 }
 
 // inlinePublicKeys will go through the CIP and try to read the referenced
