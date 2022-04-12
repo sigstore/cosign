@@ -40,8 +40,6 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
-	// TODO(mattmoor): Not sure why this is in the final binary...
-	// _ "github.com/sigstore/sigstore/pkg/signature/kms/fake"
 )
 
 func main() {
