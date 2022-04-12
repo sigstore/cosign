@@ -18,15 +18,12 @@ package verify
 import (
 	"context"
 	"crypto"
-	"encoding/base64"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
@@ -39,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/cue"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/pkg/policy"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 )
 
@@ -47,11 +45,11 @@ import (
 type VerifyAttestationCommand struct {
 	options.RegistryOptions
 	CheckClaims    bool
+	KeyRef         string
 	CertRef        string
 	CertEmail      string
 	CertOidcIssuer string
 	CertChain      string
-	KeyRef         string
 	Sk             bool
 	Slot           string
 	Output         string
@@ -182,78 +180,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 		var validationErrors []error
 		for _, vp := range verified {
-			var payloadData map[string]interface{}
-
-			p, err := vp.Payload()
+			payload, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, vp)
 			if err != nil {
-				return errors.Wrap(err, "could not get payload")
+				return errors.Wrap(err, "converting to consumable policy validation")
 			}
-
-			err = json.Unmarshal(p, &payloadData)
-			if err != nil {
-				return errors.Wrap(err, "unmarshal payload data")
-			}
-
-			var decodedPayload []byte
-			if val, ok := payloadData["payload"]; ok {
-				decodedPayload, err = base64.StdEncoding.DecodeString(val.(string))
-				if err != nil {
-					return fmt.Errorf("could not decode 'payload': %w", err)
-				}
-			} else {
-				return fmt.Errorf("could not find 'payload' in payload data")
-			}
-
-			predicateURI, ok := options.PredicateTypeMap[c.PredicateType]
-			if !ok {
-				return fmt.Errorf("invalid predicate type: %s", c.PredicateType)
-			}
-
-			// Only apply the policy against the requested predicate type
-			var statement in_toto.Statement
-			if err := json.Unmarshal(decodedPayload, &statement); err != nil {
-				return fmt.Errorf("unmarshal in-toto statement: %w", err)
-			}
-			if statement.PredicateType != predicateURI {
+			if len(payload) == 0 {
+				// This is not the predicate type we're looking for.
 				continue
-			}
-
-			var payload []byte
-			switch c.PredicateType {
-			case options.PredicateCustom:
-				payload, err = json.Marshal(statement)
-				if err != nil {
-					return fmt.Errorf("error when generating CosignStatement: %w", err)
-				}
-			case options.PredicateLink:
-				var linkStatement in_toto.LinkStatement
-				if err := json.Unmarshal(decodedPayload, &linkStatement); err != nil {
-					return fmt.Errorf("unmarshal LinkStatement: %w", err)
-				}
-				payload, err = json.Marshal(linkStatement)
-				if err != nil {
-					return fmt.Errorf("error when generating LinkStatement: %w", err)
-				}
-			case options.PredicateSLSA:
-				var slsaProvenanceStatement in_toto.ProvenanceStatement
-				if err := json.Unmarshal(decodedPayload, &slsaProvenanceStatement); err != nil {
-					return fmt.Errorf("unmarshal ProvenanceStatement: %w", err)
-				}
-				payload, err = json.Marshal(slsaProvenanceStatement)
-				if err != nil {
-					return fmt.Errorf("error when generating ProvenanceStatement: %w", err)
-				}
-			case options.PredicateSPDX:
-				var spdxStatement in_toto.SPDXStatement
-				if err := json.Unmarshal(decodedPayload, &spdxStatement); err != nil {
-					return fmt.Errorf("unmarshal SPDXStatement: %w", err)
-				}
-				payload, err = json.Marshal(spdxStatement)
-				if err != nil {
-					return fmt.Errorf("error when generating SPDXStatement: %w", err)
-				}
-			default:
-				return fmt.Errorf("unsupported predicate type: %s", c.PredicateType)
 			}
 
 			if len(cuePolicies) > 0 {

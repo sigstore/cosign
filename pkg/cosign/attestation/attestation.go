@@ -50,6 +50,15 @@ type CosignVulnPredicate struct {
 	Metadata   Metadata   `json:"metadata"`
 }
 
+// I think this will be moving to upstream in-toto in the fullness of time
+// but creating it here for now so that we have a way to deserialize it
+// as a InToto Statement
+// https://github.com/in-toto/attestation/issues/58
+type CosignVulnStatement struct {
+	in_toto.StatementHeader
+	Predicate CosignVulnPredicate `json:"predicate"`
+}
+
 type Invocation struct {
 	Parameters interface{} `json:"parameters"`
 	URI        string      `json:"uri"`
