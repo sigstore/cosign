@@ -44,13 +44,6 @@ import (
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
-
-	// Register the provider-specific plugins
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/fake"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 // Reconciler implements clusterimagepolicyreconciler.Interface for
