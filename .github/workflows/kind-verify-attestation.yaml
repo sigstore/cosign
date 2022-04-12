@@ -139,7 +139,7 @@ jobs:
         fi
         echo '::endgroup::'
 
-    - name: Verify custom attestation with cosign, fails
+    - name: Verify vuln attestation with cosign, fails
       run: |
         echo '::group:: test vuln verify-attestation success'
         if ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-fails.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} ; then
