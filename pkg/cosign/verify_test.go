@@ -380,6 +380,34 @@ func TestValidateAndUnpackCertWithSCT(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
+
+	// validate again, explicitly setting enforce SCT
+	co.EnforceSCT = true
+	_, err = ValidateAndUnpackCert(chain[0], co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertWithoutRequiredSCT(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+		EnforceSCT:     true,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "certificate does not include required embedded SCT")
 }
 
 func TestValidateAndUnpackCertInvalidRoot(t *testing.T) {

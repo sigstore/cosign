@@ -24,6 +24,7 @@ type CertVerifyOptions struct {
 	CertEmail      string
 	CertOidcIssuer string
 	CertChain      string
+	EnforceSCT     bool
 }
 
 var _ Interface = (*RekorOptions)(nil)
@@ -44,4 +45,8 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate")
+
+	cmd.Flags().BoolVar(&o.EnforceSCT, "enforce-sct", false,
+		"whether to enforce that a certificate contain an embedded SCT, a proof of "+
+			"inclusion in a certificate transparency log")
 }

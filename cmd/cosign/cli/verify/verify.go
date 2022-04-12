@@ -54,6 +54,7 @@ type VerifyCommand struct {
 	CertEmail      string
 	CertOidcIssuer string
 	CertChain      string
+	EnforceSCT     bool
 	Sk             bool
 	Slot           string
 	Output         string
@@ -95,6 +96,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		RegistryClientOpts: ociremoteOpts,
 		CertEmail:          c.CertEmail,
 		CertOidcIssuer:     c.CertOidcIssuer,
+		EnforceSCT:         c.EnforceSCT,
 		SignatureRef:       c.SignatureRef,
 	}
 	if c.CheckClaims {

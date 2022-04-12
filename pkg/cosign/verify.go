@@ -84,6 +84,9 @@ type CheckOpts struct {
 	CertEmail string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertOidcIssuer string
+	// EnforceSCT requires that a certificate contain an embedded SCT during verification. An SCT is proof of inclusion in a
+	// certificate transparency log.
+	EnforceSCT bool
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
@@ -223,10 +226,12 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		}
 		return nil, errors.New("none of the expected identities matched what was in the certificate")
 	}
-	// TODO: Add flag in CheckOpts to enforce embedded SCT
 	contains, err := ctl.ContainsSCT(cert.Raw)
 	if err != nil {
 		return nil, err
+	}
+	if co.EnforceSCT && !contains {
+		return nil, errors.New("certificate does not include required embedded SCT")
 	}
 	if contains {
 		// handle if chains has more than one chain - grab first and print message
