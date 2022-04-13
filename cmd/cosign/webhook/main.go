@@ -44,10 +44,15 @@ import (
 
 var secretName = flag.String("secret-name", "", "The name of the secret in the webhook's namespace that holds the public key for verification.")
 
-// webhookName holds the name of the validating webhook to set up with the
-// types we are watching.  If this changes, you must also change:
+// webhookName holds the name of the validating and mutating webhook
+// configuration resources dispatching admission requests to cosigned.
+// It is also the name of the webhook which is injected by the controller
+// with the resource types, namespace selectors, CABindle and service path.
+// If this changes, you must also change:
 //    ./config/500-webhook-configuration.yaml
-const webhookName = "cosigned.sigstore.dev"
+//    https://github.com/sigstore/helm-charts/blob/main/charts/cosigned/templates/webhook/webhook_mutating.yaml
+//    https://github.com/sigstore/helm-charts/blob/main/charts/cosigned/templates/webhook/webhook_validating.yaml
+var webhookName = flag.String("webhook-name", "cosigned.sigstore.dev", "The name of the validating and mutating webhook configurations as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to cosigned.")
 
 func main() {
 	opts := webhook.Options{
@@ -92,7 +97,7 @@ func NewValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher
 
 	return validation.NewAdmissionController(ctx,
 		// Name of the resource webhook.
-		webhookName,
+		*webhookName,
 
 		// The path on which to serve the webhook.
 		"/validations",
@@ -123,7 +128,7 @@ func NewMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 
 	return defaulting.NewAdmissionController(ctx,
 		// Name of the resource webhook.
-		webhookName,
+		*webhookName,
 
 		// The path on which to serve the webhook.
 		"/mutations",
