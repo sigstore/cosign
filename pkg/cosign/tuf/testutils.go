@@ -33,7 +33,7 @@ import (
 )
 
 type TestSigstoreRoot struct {
-	Rekor             signature.SignerVerifier
+	Rekor             signature.Verifier
 	FulcioCertificate *x509.Certificate
 	// TODO: Include a CTFE key if/when cosign verifies SCT.
 }

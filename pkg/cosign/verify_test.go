@@ -192,9 +192,9 @@ func signEntry(ctx context.Context, t *testing.T, signer signature.Signer, entry
 	return signature
 }
 
-func CreateTestBundle(ctx context.Context, t *testing.T, root ctuf.TestSigstoreRoot, leaf []byte) *bundle.RekorBundle {
+func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer, leaf []byte) *bundle.RekorBundle {
 	// generate log ID according to rekor public key
-	pk, _ := root.Rekor.PublicKey(nil)
+	pk, _ := rekor.PublicKey(nil)
 	keyID, _ := getLogID(pk)
 	pyld := bundle.RekorPayload{
 		Body:           base64.StdEncoding.EncodeToString(leaf),
@@ -203,7 +203,7 @@ func CreateTestBundle(ctx context.Context, t *testing.T, root ctuf.TestSigstoreR
 		LogID:          keyID,
 	}
 	// Sign with root.
-	signature := signEntry(ctx, t, root.Rekor, pyld)
+	signature := signEntry(ctx, t, rekor, pyld)
 	b := &bundle.RekorBundle{
 		SignedEntryTimestamp: strfmt.Base64(signature),
 		Payload:              pyld,
@@ -238,7 +238,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
 	entry, _ := rtypes.NewEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
-	rekorBundle := CreateTestBundle(ctx, t, testSigstoreRoot, leaf)
+	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
 
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
