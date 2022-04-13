@@ -15,8 +15,10 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -26,15 +28,22 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/go-openapi/strfmt"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
+	rtypes "github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/stretchr/testify/require"
 )
 
@@ -167,8 +176,54 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 	}
 }
 
+func signEntry(ctx context.Context, t *testing.T, signer signature.Signer, entry bundle.RekorPayload) []byte {
+	payload, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatalf("marshalling error: %v", err)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		t.Fatalf("canonicalizing error: %v", err)
+	}
+	signature, err := signer.SignMessage(bytes.NewReader(canonicalized), options.WithContext(ctx))
+	if err != nil {
+		t.Fatalf("signing error: %v", err)
+	}
+	return signature
+}
+
+func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer, leaf []byte) *bundle.RekorBundle {
+	// generate log ID according to rekor public key
+	pk, _ := rekor.PublicKey(nil)
+	keyID, _ := getLogID(pk)
+	pyld := bundle.RekorPayload{
+		Body:           base64.StdEncoding.EncodeToString(leaf),
+		IntegratedTime: time.Now().Unix(),
+		LogIndex:       693591,
+		LogID:          keyID,
+	}
+	// Sign with root.
+	signature := signEntry(ctx, t, rekor, pyld)
+	b := &bundle.RekorBundle{
+		SignedEntryTimestamp: strfmt.Base64(signature),
+		Payload:              pyld,
+	}
+	return b
+}
+
 func TestVerifyImageSignatureWithNoChain(t *testing.T) {
+	ctx := context.Background()
 	rootCert, rootKey, _ := test.GenerateRootCa()
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+	testSigstoreRoot := ctuf.TestSigstoreRoot{
+		Rekor:             sv,
+		FulcioCertificate: rootCert,
+	}
+	_, _ = ctuf.NewSigstoreTufRepo(t, testSigstoreRoot)
+
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
 
@@ -179,14 +234,21 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	h := sha256.Sum256(payload)
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
-	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, []byte{}))
+	// Create a fake bundle
+	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
+	entry, _ := rtypes.NewEntry(pe[0])
+	leaf, _ := entry.Canonicalize(ctx)
+	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+
+	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
+
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
-	// TODO: Create fake bundle and test verification
-	if verified == true {
-		t.Fatalf("expected verified=false, got verified=true")
+	if verified == false {
+		t.Fatalf("expected verified=true, got verified=false")
 	}
 }
 
