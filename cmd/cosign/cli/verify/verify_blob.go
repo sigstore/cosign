@@ -198,9 +198,10 @@ func verifySigByUUID(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor
 		}
 
 		co := &cosign.CheckOpts{
-			RootCerts:      fulcio.GetRoots(),
-			CertEmail:      certEmail,
-			CertOidcIssuer: certOidcIssuer,
+			RootCerts:         fulcio.GetRoots(),
+			IntermediateCerts: fulcio.GetIntermediates(),
+			CertEmail:         certEmail,
+			CertOidcIssuer:    certOidcIssuer,
 		}
 		cert := certs[0]
 		verifier, err := cosign.ValidateAndUnpackCert(cert, co)
