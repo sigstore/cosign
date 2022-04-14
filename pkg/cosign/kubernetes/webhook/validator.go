@@ -303,7 +303,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 						continue
 					}
 				}
-				sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, remoteOpts...)
+				sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
 				if err != nil {
 					logging.FromContext(ctx).Errorf("failed validSignatures with fulcio for %s: %v", ref.Name(), err)
 					authorityErrors = append(authorityErrors, errors.Wrap(err, "validate signatures with fulcio"))

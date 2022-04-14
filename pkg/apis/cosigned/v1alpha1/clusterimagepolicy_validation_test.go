@@ -295,7 +295,7 @@ func TestKeylessValidation(t *testing.T) {
 		{
 			name:        "Should fail when keyless has multiple properties",
 			expectErr:   true,
-			errorString: "expected exactly one, got both: spec.authorities[0].keyless.ca-cert, spec.authorities[0].keyless.identities, spec.authorities[0].keyless.url",
+			errorString: "expected exactly one, got both: spec.authorities[0].keyless.ca-cert, spec.authorities[0].keyless.url",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{

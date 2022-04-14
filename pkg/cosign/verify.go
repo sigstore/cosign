@@ -27,9 +27,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 
@@ -84,6 +86,11 @@ type CheckOpts struct {
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
+
+	// Identities is an array of Identity (Subject, Issuer) matchers that have
+	// to be met for the signature to ve valid.
+	// Supercedes CertEmail / CertOidcIssuer
+	Identities []v1alpha1.Identity
 }
 
 func getSignedEntity(signedImgRef name.Reference, regClientOpts []ociremote.Option) (oci.SignedEntity, v1.Hash, error) {
@@ -143,7 +150,7 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 }
 
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
-// chains up to a trusted root. Optionally verifies the subject of the certificate.
+// chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
@@ -167,23 +174,87 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		}
 	}
 	if co.CertOidcIssuer != "" {
-		issuer := ""
-		for _, ext := range cert.Extensions {
-			if ext.Id.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}) {
-				issuer = string(ext.Value)
-				break
-			}
-		}
-		if issuer != co.CertOidcIssuer {
+		if getIssuer(cert) != co.CertOidcIssuer {
 			return nil, errors.New("expected oidc issuer not found in certificate")
 		}
+	}
+	// If there are identities given, go through them and if one of them
+	// matches, call that good, otherwise, return an error.
+	if len(co.Identities) > 0 {
+		for _, identity := range co.Identities {
+			issuerMatches := false
+			// Check the issuer first
+			fmt.Fprintf(os.Stderr, "Checking identity: %+v", identity)
+			if identity.Issuer != "" {
+				issuer := getIssuer(cert)
+				if regex, err := regexp.Compile(identity.Issuer); err != nil {
+					return nil, fmt.Errorf("malformed issuer in identity: %s : %w", identity.Issuer, err)
+				} else if regex.MatchString(issuer) {
+					issuerMatches = true
+				}
+			} else {
+				// No issuer constraint on this identity, so checks out
+				issuerMatches = true
+			}
+
+			// Then the subject
+			subjectMatches := false
+			if identity.Subject != "" {
+				regex, err := regexp.Compile(identity.Subject)
+				if err != nil {
+					return nil, fmt.Errorf("malformed subject in identity: %s : %w", identity.Subject, err)
+				}
+				for _, san := range getSubjectAlternateNames(cert) {
+					if regex.MatchString(san) {
+						subjectMatches = true
+						break
+					}
+				}
+			} else {
+				// No subject constraint on this identity, so checks out
+				subjectMatches = true
+			}
+			if subjectMatches && issuerMatches {
+				// If both issuer / subject match, return verifier
+				return verifier, nil
+			}
+		}
+		return nil, errors.New("none of the expected identities matched what was in the certificate")
 	}
 	return verifier, nil
 }
 
-// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Veries that the certificate
+// getSubjectAlternateNames returns all of the following for a Certificate.
+// DNSNames
+// EmailAddresses
+// IPAddresses
+// URIs
+func getSubjectAlternateNames(cert *x509.Certificate) []string {
+	sans := []string{}
+	sans = append(sans, cert.DNSNames...)
+	sans = append(sans, cert.EmailAddresses...)
+	for _, ip := range cert.IPAddresses {
+		sans = append(sans, ip.String())
+	}
+	for _, uri := range cert.URIs {
+		sans = append(sans, uri.String())
+	}
+	return sans
+}
+
+// getIssuer returns the issuer for a Certificate
+func getIssuer(cert *x509.Certificate) string {
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}) {
+			return string(ext.Value)
+		}
+	}
+	return ""
+}
+
+// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
 // chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
-// Optionally verifies the subject of the certificate.
+// Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	if len(chain) == 0 {
 		return nil, errors.New("no chain provided to validate certificate")

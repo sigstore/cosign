@@ -26,6 +26,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"io"
+	"net"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +38,7 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -482,6 +485,95 @@ func TestValidateAndUnpackCertWithChainFailsWithInvalidChain(t *testing.T) {
 	}
 }
 
+func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
+	u, err := url.Parse("http://url.example.com")
+	if err != nil {
+		t.Fatal("failed to parse url", err)
+	}
+	emailSubject := "email@example.com"
+	dnsSubjects := []string{"dnssubject.example.com"}
+	ipSubjects := []net.IP{net.ParseIP("1.2.3.4")}
+	uriSubjects := []*url.URL{u}
+	oidcIssuer := "https://accounts.google.com"
+
+	tests := []struct {
+		identities       []v1alpha1.Identity
+		wantErrSubstring string
+		dnsNames         []string
+		emailAddresses   []string
+		ipAddresses      []net.IP
+		uris             []*url.URL
+	}{
+		{identities: nil /* No matches required, checks out */},
+		{identities: []v1alpha1.Identity{ // Strict match on both
+			{Subject: emailSubject, Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // just issuer
+			{Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // just subject
+			{Subject: emailSubject}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // mis-match
+			{Subject: "wrongsubject", Issuer: oidcIssuer},
+			{Subject: emailSubject, Issuer: "wrongissuer"}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: "none of the expected identities matched"},
+		{identities: []v1alpha1.Identity{ // one good identity, other does not match
+			{Subject: "wrongsubject", Issuer: "wrongissuer"},
+			{Subject: emailSubject, Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // illegal regex for subject
+			{Subject: "****", Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: "malformed subject in identity"},
+		{identities: []v1alpha1.Identity{ // illegal regex for issuer
+			{Subject: emailSubject, Issuer: "****"}},
+			wantErrSubstring: "malformed issuer in identity"},
+		{identities: []v1alpha1.Identity{ // regex matches
+			{Subject: ".*example.com", Issuer: ".*accounts.google.*"}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // regex matches dnsNames
+			{Subject: ".*ubject.example.com", Issuer: ".*accounts.google.*"}},
+			dnsNames:         dnsSubjects,
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // regex matches ip
+			{Subject: "1.2.3.*", Issuer: ".*accounts.google.*"}},
+			ipAddresses:      ipSubjects,
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // regex matches urls
+			{Subject: ".*url.examp.*", Issuer: ".*accounts.google.*"}},
+			uris:             uriSubjects,
+			wantErrSubstring: ""},
+	}
+	for _, tc := range tests {
+		rootCert, rootKey, _ := test.GenerateRootCa()
+		leafCert, _, _ := test.GenerateLeafCertWithSubjectAlternateNames(tc.dnsNames, tc.emailAddresses, tc.ipAddresses, tc.uris, oidcIssuer, rootCert, rootKey)
+
+		rootPool := x509.NewCertPool()
+		rootPool.AddCert(rootCert)
+
+		co := &CheckOpts{
+			RootCerts:  rootPool,
+			Identities: tc.identities,
+		}
+		_, err := ValidateAndUnpackCert(leafCert, co)
+		if err == nil && tc.wantErrSubstring != "" {
+			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
+		} else if err != nil {
+			if tc.wantErrSubstring == "" {
+				t.Errorf("Did not expect an error, got err = %v", err)
+			} else if !strings.Contains(err.Error(), tc.wantErrSubstring) {
+				t.Errorf("Did not get the expected error %s, got err = %v", tc.wantErrSubstring, err)
+			}
+		}
+	}
+}
 func TestCompareSigs(t *testing.T) {
 	// TODO(nsmith5): Add test cases for invalid signature, missing signature etc
 	tests := []struct {
