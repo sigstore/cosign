@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
@@ -29,9 +30,10 @@ import (
 	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"github.com/sigstore/fulcio/pkg/api"
+	fulciopb "github.com/sigstore/fulcio/pkg/generated/protobuf"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	listersv1 "k8s.io/client-go/listers/core/v1"
@@ -411,15 +413,20 @@ func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec, opt 
 	resolveContainers(ps.Containers)
 }
 
-func getFulcioCert(u *apis.URL) (*x509.CertPool, error) {
-	fClient := api.NewClient(u.URL())
-	rootCertResponse, err := fClient.RootCert()
+func getFulcioCert(fulcioURL *apis.URL) (*x509.CertPool, error) {
+	conn, err := grpc.Dial(fulcioURL.Host)
 	if err != nil {
-		return nil, errors.Wrap(err, "getting root cert")
+		return nil, err
+	}
+	defer conn.Close()
+	client := fulciopb.NewCAClient(conn)
+	tb, err := client.GetTrustBundle(context.Background(), &fulciopb.GetTrustBundleRequest{})
+	if err != nil {
+		return nil, err
 	}
 
 	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(rootCertResponse.ChainPEM) {
+	if !cp.AppendCertsFromPEM([]byte(strings.Join(tb.Chains[0].Certificates, "\n"))) {
 		return nil, errors.New("error appending to root cert pool")
 	}
 	return cp, nil

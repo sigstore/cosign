@@ -16,6 +16,7 @@
 package fulcio
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -25,9 +26,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/fulcio/pkg/api"
+	fulciopb "github.com/sigstore/fulcio/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
+	"google.golang.org/grpc"
 )
 
 type testFlow struct {
@@ -44,18 +45,18 @@ func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oaut
 }
 
 type testClient struct {
-	payload  api.CertificateResponse
-	rootResp api.RootResponse
+	payload  fulciopb.SigningCertificate
+	rootResp fulciopb.TrustBundle
 	err      error
 }
 
-var _ api.Client = (*testClient)(nil)
+var _ fulciopb.CAClient = (*testClient)(nil)
 
-func (p *testClient) SigningCert(cr api.CertificateRequest, token string) (*api.CertificateResponse, error) {
+func (p *testClient) CreateSigningCertificate(_ context.Context, _ *fulciopb.CreateSigningCertificateRequest, _ ...grpc.CallOption) (*fulciopb.SigningCertificate, error) {
 	return &p.payload, p.err
 }
 
-func (p *testClient) RootCert() (*api.RootResponse, error) {
+func (p *testClient) GetTrustBundle(_ context.Context, _ *fulciopb.GetTrustBundleRequest, _ ...grpc.CallOption) (*fulciopb.TrustBundle, error) {
 	return &p.rootResp, p.err
 }
 
@@ -103,9 +104,14 @@ func TestGetCertForOauthID(t *testing.T) {
 			expectedCertBytes := pem.EncodeToMemory(expectedCertPem)
 			expectedExtraBytes := []byte("0123456789abcdef")
 			tscp := &testClient{
-				payload: api.CertificateResponse{
-					CertPEM:  expectedCertBytes,
-					ChainPEM: expectedExtraBytes,
+				payload: fulciopb.SigningCertificate{
+					Certificate: &fulciopb.SigningCertificate_SignedCertificateDetachedSct{
+						SignedCertificateDetachedSct: &fulciopb.SigningCertificateDetachedSCT{
+							Chain: &fulciopb.CertificateChain{
+								Certificates: []string{string(expectedCertBytes), string(expectedExtraBytes)},
+							},
+						},
+					},
 				},
 				err: tc.signingCertErr,
 			}
@@ -118,25 +124,27 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "", "", "")
-
+			resp, err := getCertForOauthID(context.Background(), testKey, tscp, &tf, "", "", "", "")
 			if err != nil {
 				if !tc.expectErr {
 					t.Fatalf("getCertForOauthID returned error: %v", err)
 				}
 				return
 			}
+
+			leaf := resp.GetSignedCertificateDetachedSct().Chain.Certificates[0]
+			extra := resp.GetSignedCertificateDetachedSct().Chain.Certificates[1]
 			if tc.expectErr {
-				t.Fatalf("getCertForOauthID got: %q, %q wanted error", resp.CertPEM, resp.ChainPEM)
+				t.Fatalf("getCertForOauthID got: %q, %q wanted error", leaf, extra)
 			}
 
 			expectedCert := string(expectedCertBytes)
-			actualCert := string(resp.CertPEM)
+			actualCert := leaf
 			if actualCert != expectedCert {
 				t.Errorf("getCertForOauthID returned cert %q, wanted %q", actualCert, expectedCert)
 			}
 			expectedChain := string(expectedExtraBytes)
-			actualChain := string(resp.ChainPEM)
+			actualChain := extra
 			if actualChain != expectedChain {
 				t.Errorf("getCertForOauthID returned chain %q, wanted %q", actualChain, expectedChain)
 			}
@@ -146,17 +154,12 @@ func TestGetCertForOauthID(t *testing.T) {
 
 func TestNewClient(t *testing.T) {
 	t.Parallel()
-	expectedUserAgent := options.UserAgent()
 	requestReceived := false
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			requestReceived = true
 			file := []byte{}
 
-			got := r.UserAgent()
-			if got != expectedUserAgent {
-				t.Errorf("wanted User-Agent %q, got %q", expectedUserAgent, got)
-			}
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(file)
 		}))
@@ -167,7 +170,7 @@ func TestNewClient(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, _ = client.SigningCert(api.CertificateRequest{}, "")
+	_, _ = client.CreateSigningCertificate(context.Background(), &fulciopb.CreateSigningCertificateRequest{})
 
 	if !requestReceived {
 		t.Fatal("no requests were received")

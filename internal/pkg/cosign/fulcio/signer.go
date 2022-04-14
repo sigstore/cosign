@@ -29,7 +29,8 @@ import (
 type signerWrapper struct {
 	inner cosign.Signer
 
-	cert, chain []byte
+	cert  string
+	chain []string
 }
 
 var _ cosign.Signer = (*signerWrapper)(nil)
@@ -51,7 +52,7 @@ func (fs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 }
 
 // NewSigner returns a `cosign.Signer` which leverages Fulcio to create a Cert and Chain for the signature
-func NewSigner(inner cosign.Signer, cert, chain []byte) cosign.Signer {
+func NewSigner(inner cosign.Signer, cert string, chain []string) cosign.Signer {
 	return &signerWrapper{
 		inner: inner,
 		cert:  cert,

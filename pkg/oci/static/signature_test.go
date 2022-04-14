@@ -387,7 +387,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	)
 
 	l, err := NewSignature([]byte(payload), b64sig,
-		WithCertChain(cert, chain), WithBundle(b))
+		WithCertChain(string(cert), []string{string(chain)}), WithBundle(b))
 	if err != nil {
 		t.Fatalf("NewSignature() = %v", err)
 	}
@@ -466,7 +466,7 @@ garbage out
 	)
 
 	l, err := NewSignature([]byte(payload), b64sig,
-		WithCertChain(cert, chain))
+		WithCertChain(string(cert), []string{string(chain)}))
 	if err != nil {
 		t.Fatalf("NewSignature() = %v", err)
 	}

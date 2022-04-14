@@ -62,8 +62,8 @@ func WithReplaceOp(ro ReplaceOp) SignOption {
 type signatureOpts struct {
 	annotations map[string]string
 	bundle      *bundle.RekorBundle
-	cert        []byte
-	chain       []byte
+	cert        string
+	chain       []string
 	mediaType   types.MediaType
 }
 
@@ -84,7 +84,7 @@ func WithBundle(b *bundle.RekorBundle) SignatureOption {
 }
 
 // WithCertChain specifies the new cert and chain the Signature should have.
-func WithCertChain(cert, chain []byte) SignatureOption {
+func WithCertChain(cert string, chain []string) SignatureOption {
 	return func(so *signatureOpts) {
 		so.cert = cert
 		so.chain = chain

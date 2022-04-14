@@ -69,7 +69,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with cert chain",
-		opts: []Option{WithCertChain([]byte("a"), []byte("b"))},
+		opts: []Option{WithCertChain("a", []string{"b"})},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
@@ -77,8 +77,8 @@ func TestOptions(t *testing.T) {
 				CertificateAnnotationKey: "a",
 				ChainAnnotationKey:       "b",
 			},
-			Cert:  []byte("a"),
-			Chain: []byte("b"),
+			Cert:  "a",
+			Chain: []string{"b"},
 		},
 	}, {
 		name: "with bundle",

@@ -147,7 +147,7 @@ func Test_signerFromKeyRefSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error marshalling certificate: %v", err)
 	}
-	if !reflect.DeepEqual(signer.Cert, expectedPemBytes) {
+	if !reflect.DeepEqual([]byte(signer.Cert), expectedPemBytes) {
 		t.Fatalf("certificates must match")
 	}
 	// Expect certificate chain matches
@@ -155,7 +155,7 @@ func Test_signerFromKeyRefSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error marshalling certificate chain: %v", err)
 	}
-	if !reflect.DeepEqual(signer.Chain, expectedPemBytesChain) {
+	if !reflect.DeepEqual([]byte(strings.Join(signer.Chain, "\n")), expectedPemBytesChain) {
 		t.Fatalf("certificate chains must match")
 	}
 }

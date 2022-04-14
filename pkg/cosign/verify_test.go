@@ -69,14 +69,6 @@ func (m *mockAttestation) Payload() ([]byte, error) {
 	return json.Marshal(m.payload)
 }
 
-func appendSlices(slices [][]byte) []byte {
-	var tmp []byte
-	for _, s := range slices {
-		tmp = append(tmp, s...)
-	}
-	return tmp
-}
-
 func Test_verifyOCIAttestation(t *testing.T) {
 	stmt, err := json.Marshal(in_toto.ProvenanceStatement{})
 	if err != nil {
@@ -112,9 +104,9 @@ func TestVerifyImageSignature(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	pemRoot := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw}))
+	pemSub := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw}))
+	pemLeaf := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw}))
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
@@ -125,7 +117,7 @@ func TestVerifyImageSignature(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+		static.WithCertChain(pemLeaf, []string{pemSub, pemRoot}))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
@@ -142,11 +134,11 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 	subCert2, subKey2, _ := test.GenerateSubordinateCa(subCert1, subKey1)
 	subCert3, subKey3, _ := test.GenerateSubordinateCa(subCert2, subKey2)
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert3, subKey3)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemSub1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert1.Raw})
-	pemSub2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert2.Raw})
-	pemSub3 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert3.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	pemRoot := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw}))
+	pemSub1 := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert1.Raw}))
+	pemSub2 := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert2.Raw}))
+	pemSub3 := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert3.Raw}))
+	pemLeaf := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw}))
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
@@ -156,7 +148,7 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	ociSig, _ := static.NewSignature(payload,
-		base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub3, pemSub2, pemSub1, pemRoot})))
+		base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, []string{pemSub3, pemSub2, pemSub1, pemRoot}))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
@@ -170,7 +162,7 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	pemLeaf := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw}))
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
@@ -179,7 +171,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	h := sha256.Sum256(payload)
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
-	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, []byte{}))
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, []string{}))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
@@ -193,8 +185,8 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	pemRoot := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw}))
+	pemLeaf := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw}))
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
@@ -203,7 +195,7 @@ func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	h := sha256.Sum256(payload)
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
-	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, []string{pemRoot}))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
@@ -218,8 +210,8 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	pemRoot := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw}))
+	pemLeaf := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw}))
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
@@ -228,7 +220,7 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	h := sha256.Sum256(payload)
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
-	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, []string{pemRoot}))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")

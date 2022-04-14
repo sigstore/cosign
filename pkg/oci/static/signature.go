@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto/x509"
 	"io"
+	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -86,7 +87,7 @@ func (l *staticLayer) Base64Signature() (string, error) {
 
 // Cert implements oci.Signature
 func (l *staticLayer) Cert() (*x509.Certificate, error) {
-	certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(l.opts.Cert))
+	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(l.opts.Cert))
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func (l *staticLayer) Cert() (*x509.Certificate, error) {
 
 // Chain implements oci.Signature
 func (l *staticLayer) Chain() ([]*x509.Certificate, error) {
-	certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(l.opts.Chain))
+	certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(strings.Join(l.opts.Chain, "\n")))
 	if err != nil {
 		return nil, err
 	}

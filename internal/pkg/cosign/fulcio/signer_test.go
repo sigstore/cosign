@@ -79,7 +79,7 @@ func mustGetNewSigner(t *testing.T) signature.Signer {
 func TestSigner(t *testing.T) {
 	// Need real cert and chain
 	payloadSigner := payload.NewSigner(mustGetNewSigner(t))
-	testSigner := NewSigner(payloadSigner, testCertBytes, testChainBytes)
+	testSigner := NewSigner(payloadSigner, string(testCertBytes), []string{string(testChainBytes)})
 
 	testPayload := "test payload"
 

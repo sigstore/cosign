@@ -194,7 +194,7 @@ func signPolicy() *cobra.Command {
 			}
 			defer sv.Close()
 
-			certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(sv.Cert))
+			certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(sv.Cert))
 			if err != nil {
 				return err
 			}
@@ -247,7 +247,7 @@ func signPolicy() *cobra.Command {
 			}
 			signature := tuf.Signature{
 				Signature: base64.StdEncoding.EncodeToString(sig),
-				Cert:      base64.StdEncoding.EncodeToString(sv.Cert),
+				Cert:      base64.StdEncoding.EncodeToString([]byte(sv.Cert)),
 			}
 			if err := signed.AddOrUpdateSignature(key, signature); err != nil {
 				return err
@@ -261,7 +261,7 @@ func signPolicy() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, signed.Signed, rekorBytes)
+				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, signed.Signed, []byte(rekorBytes))
 				if err != nil {
 					return err
 				}

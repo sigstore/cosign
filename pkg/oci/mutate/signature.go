@@ -15,10 +15,10 @@
 package mutate
 
 import (
-	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"io"
+	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -159,24 +159,25 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 		newAnn[static.BundleAnnotationKey] = string(b)
 	}
 
-	if so.cert != nil {
+	if so.cert != "" {
 		var cert *x509.Certificate
 		var chain []*x509.Certificate
 
-		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(so.cert))
+		certs, err := cryptoutils.LoadCertificatesFromPEM(strings.NewReader(so.cert))
 		if err != nil {
 			return nil, err
 		}
-		newAnn[static.CertificateAnnotationKey] = string(so.cert)
+		newAnn[static.CertificateAnnotationKey] = so.cert
 		cert = certs[0]
 
 		delete(newAnn, static.ChainAnnotationKey)
-		if so.chain != nil {
-			chain, err = cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(so.chain))
+		if len(so.chain) > 0 {
+			concatChain := strings.Join(so.chain, "\n")
+			chain, err = cryptoutils.LoadCertificatesFromPEM(strings.NewReader(concatChain))
 			if err != nil {
 				return nil, err
 			}
-			newAnn[static.ChainAnnotationKey] = string(so.chain)
+			newAnn[static.ChainAnnotationKey] = concatChain
 		}
 
 		newSig.cert = cert

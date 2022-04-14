@@ -316,9 +316,9 @@ func TestSignatureWithCertChain(t *testing.T) {
 	b64sig := "b64 content3="
 
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
-	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithCertChain(testCertBytes, testChainBytes))
+	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithCertChain(string(testCertBytes), []string{string(testChainBytes)}))
 
-	newSig, err := Signature(originalSig, WithCertChain(testCertBytes, testChainBytes))
+	newSig, err := Signature(originalSig, WithCertChain(string(testCertBytes), []string{string(testChainBytes)}))
 	if err != nil {
 		t.Fatalf("Signature(WithCertChain()) returned error: %v", err)
 	}
@@ -365,13 +365,13 @@ func TestSignatureWithEverything(t *testing.T) {
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig,
 		static.WithAnnotations(annotations),
 		static.WithBundle(b),
-		static.WithCertChain(testCertBytes, testChainBytes),
+		static.WithCertChain(string(testCertBytes), []string{string(testChainBytes)}),
 		static.WithLayerMediaType(mediaType))
 
 	newSig, err := Signature(originalSig,
 		WithAnnotations(annotations),
 		WithBundle(b),
-		WithCertChain(testCertBytes, testChainBytes),
+		WithCertChain(string(testCertBytes), []string{string(testChainBytes)}),
 		WithMediaType(mediaType))
 
 	if err != nil {

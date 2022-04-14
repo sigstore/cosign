@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"net/url"
@@ -28,11 +29,14 @@ import (
 
 	"github.com/pkg/errors"
 	"golang.org/x/term"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
-	clioptions "github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/fulcio/pkg/api"
+	fulciopb "github.com/sigstore/fulcio/pkg/generated/protobuf"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -55,8 +59,8 @@ func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURL string) (
 	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*api.CertificateResponse, error) {
-	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
+func getCertForOauthID(ctx context.Context, priv *ecdsa.PrivateKey, fc fulciopb.CAClient, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*fulciopb.SigningCertificate, error) {
+	pubPEM, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -73,19 +77,24 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConn
 		return nil, err
 	}
 
-	cr := api.CertificateRequest{
-		PublicKey: api.Key{
-			Algorithm: "ecdsa",
-			Content:   pubBytes,
+	cscr := &fulciopb.CreateSigningCertificateRequest{
+		PublicKey: &fulciopb.PublicKey{
+			Algorithm: fulciopb.PublicKeyAlgorithm_ECDSA,
+			Content:   string(pubPEM),
 		},
-		SignedEmailAddress: proof,
+		Credentials: &fulciopb.Credentials{
+			Credentials: &fulciopb.Credentials_OidcIdentityToken{
+				OidcIdentityToken: tok.RawString,
+			},
+		},
+		ProofOfPossession: proof,
 	}
 
-	return fc.SigningCert(cr, tok.RawString)
+	return fc.CreateSigningCertificate(ctx, cscr)
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*api.CertificateResponse, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient fulciopb.CAClient) (*fulciopb.SigningCertificate, error) {
 	c := &realConnector{}
 	switch flow {
 	case FlowDevice:
@@ -99,18 +108,18 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 		return nil, fmt.Errorf("unsupported oauth flow: %s", flow)
 	}
 
-	return getCertForOauthID(priv, fClient, c, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
+	return getCertForOauthID(ctx, priv, fClient, c, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
 }
 
 type Signer struct {
-	Cert  []byte
-	Chain []byte
+	Cert  string
+	Chain []string
 	SCT   []byte
 	pub   *ecdsa.PublicKey
 	*signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient fulciopb.CAClient) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
@@ -131,7 +140,7 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClien
 	default:
 		flow = FlowNormal
 	}
-	Resp, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL, fClient) // TODO, use the chain.
+	resp, err := GetCert(ctx, priv, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL, fClient) // TODO, use the chain.
 	if err != nil {
 		return nil, errors.Wrap(err, "retrieving cert")
 	}
@@ -139,9 +148,15 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClien
 	f := &Signer{
 		pub:                 &priv.PublicKey,
 		ECDSASignerVerifier: signer,
-		Cert:                Resp.CertPEM,
-		Chain:               Resp.ChainPEM,
-		SCT:                 Resp.SCT,
+	}
+	switch csc := resp.Certificate.(type) {
+	case *fulciopb.SigningCertificate_SignedCertificateDetachedSct:
+		f.SCT = csc.SignedCertificateDetachedSct.SignedCertificateTimestamp
+		f.Cert = csc.SignedCertificateDetachedSct.Chain.Certificates[0]
+		f.Chain = csc.SignedCertificateDetachedSct.Chain.Certificates[1:]
+	case *fulciopb.SigningCertificate_SignedCertificateEmbeddedSct:
+		f.Cert = csc.SignedCertificateEmbeddedSct.Chain.Certificates[0]
+		f.Chain = csc.SignedCertificateEmbeddedSct.Chain.Certificates[1:]
 	}
 
 	return f, nil
@@ -157,11 +172,18 @@ func GetRoots() *x509.CertPool {
 	return fulcioroots.Get()
 }
 
-func NewClient(fulcioURL string) (api.Client, error) {
+func NewClient(fulcioURL string) (fulciopb.CAClient, error) {
 	fulcioServer, err := url.Parse(fulcioURL)
 	if err != nil {
 		return nil, err
 	}
-	fClient := api.NewClient(fulcioServer, api.WithUserAgent(clioptions.UserAgent()))
-	return fClient, nil
+	dialOpt := grpc.WithTransportCredentials(insecure.NewCredentials())
+	if fulcioServer.Scheme == "https" {
+		dialOpt = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13}))
+	}
+	conn, err := grpc.Dial(fulcioServer.Host, dialOpt)
+	if err != nil {
+		return nil, err
+	}
+	return fulciopb.NewCAClient(conn), nil
 }

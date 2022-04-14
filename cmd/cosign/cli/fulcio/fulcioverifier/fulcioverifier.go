@@ -33,7 +33,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
-	"github.com/sigstore/fulcio/pkg/api"
+	fulciopb "github.com/sigstore/fulcio/pkg/generated/protobuf"
 )
 
 // This is the CT log public key target name
@@ -51,7 +51,7 @@ const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 // The SCT is a `Signed Certificate Timestamp`, which promises that
 // the certificate issued by Fulcio was also added to the public CT log within
 // some defined time period
-func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
+func verifySCT(ctx context.Context, certPEM string, rawSCT []byte) error {
 	pubKeys := make(map[crypto.PublicKey]tuf.StatusKind)
 	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
 	if rootEnv == "" {
@@ -87,7 +87,7 @@ func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 	if len(pubKeys) == 0 {
 		return errors.New("none of the CTFE keys have been found")
 	}
-	cert, err := x509util.CertificateFromPEM(certPEM)
+	cert, err := x509util.CertificateFromPEM([]byte(certPEM))
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func verifySCT(ctx context.Context, certPEM, rawSCT []byte) error {
 	return verifySctErr
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*fulcio.Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient fulciopb.CAClient) (*fulcio.Signer, error) {
 	fs, err := fulcio.NewSigner(ctx, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL, fClient)
 	if err != nil {
 		return nil, err

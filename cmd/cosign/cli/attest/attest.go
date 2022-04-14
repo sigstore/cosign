@@ -51,8 +51,8 @@ type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
 	var rekorBytes []byte
 	// Upload the cert or the public key, depending on what we have
-	if sv.Cert != nil {
-		rekorBytes = sv.Cert
+	if sv.Cert != "" {
+		rekorBytes = []byte(sv.Cert)
 	} else {
 		pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
 		if err != nil {
@@ -157,7 +157,7 @@ func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOpt
 	}
 
 	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-	if sv.Cert != nil {
+	if sv.Cert != "" {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
 

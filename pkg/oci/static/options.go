@@ -17,6 +17,7 @@ package static
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
@@ -30,8 +31,8 @@ type options struct {
 	LayerMediaType  types.MediaType
 	ConfigMediaType types.MediaType
 	Bundle          *bundle.RekorBundle
-	Cert            []byte
-	Chain           []byte
+	Cert            string
+	Chain           []string
 	Annotations     map[string]string
 }
 
@@ -46,9 +47,9 @@ func makeOptions(opts ...Option) (*options, error) {
 		opt(o)
 	}
 
-	if o.Cert != nil {
-		o.Annotations[CertificateAnnotationKey] = string(o.Cert)
-		o.Annotations[ChainAnnotationKey] = string(o.Chain)
+	if o.Cert != "" {
+		o.Annotations[CertificateAnnotationKey] = o.Cert
+		o.Annotations[ChainAnnotationKey] = strings.Join(o.Chain, "\n")
 	}
 
 	if o.Bundle != nil {
@@ -91,7 +92,7 @@ func WithBundle(b *bundle.RekorBundle) Option {
 }
 
 // WithCertChain sets the certificate chain for this signature.
-func WithCertChain(cert, chain []byte) Option {
+func WithCertChain(cert string, chain []string) Option {
 	return func(o *options) {
 		o.Cert = cert
 		o.Chain = chain

@@ -199,7 +199,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyO
 
 	var s icos.Signer
 	s = ipayload.NewSigner(sv)
-	if sv.Cert != nil {
+	if sv.Cert != "" {
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
 	if ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
@@ -303,7 +303,7 @@ func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {
 	}
 
 	return &SignerVerifier{
-		Cert:           pemBytes,
+		Cert:           string(pemBytes),
 		SignerVerifier: sv,
 		close:          sk.Close,
 	}, nil
@@ -347,7 +347,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 				return nil, errors.New("pkcs11 key and certificate do not match")
 			}
 			leafCert = certFromPKCS11
-			certSigner.Cert = pemBytes
+			certSigner.Cert = string(pemBytes)
 		}
 	}
 
@@ -381,16 +381,16 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 		if err != nil {
 			return nil, errors.Wrap(err, "marshaling certificate to PEM")
 		}
-		if certSigner.Cert != nil {
+		if certSigner.Cert != "" {
 			fmt.Fprintln(os.Stderr, "warning: overriding x509 certificate retrieved from the PKCS11 token")
 		}
 		leafCert = parsedCert
-		certSigner.Cert = pemBytes
+		certSigner.Cert = string(pemBytes)
 	}
 
 	if certChainPath == "" {
 		return certSigner, nil
-	} else if certSigner.Cert == nil {
+	} else if certSigner.Cert == "" {
 		return nil, errors.New("no leaf certificate found or provided while specifying chain")
 	}
 
@@ -417,7 +417,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	if err := cosign.TrustedCert(leafCert, rootPool, subPool); err != nil {
 		return nil, errors.Wrap(err, "unable to validate certificate chain")
 	}
-	certSigner.Chain = certChainBytes
+	certSigner.Chain = []string{string(certChainBytes)}
 
 	return certSigner, nil
 }
@@ -471,8 +471,8 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 }
 
 type SignerVerifier struct {
-	Cert  []byte
-	Chain []byte
+	Cert  string
+	Chain []string
 	signature.SignerVerifier
 	close func()
 }
@@ -484,9 +484,9 @@ func (c *SignerVerifier) Close() {
 }
 
 func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
-	if c.Cert != nil {
-		fmt.Fprintf(os.Stderr, "using ephemeral certificate:\n%s\n", string(c.Cert))
-		return c.Cert, nil
+	if c.Cert != "" {
+		fmt.Fprintf(os.Stderr, "using ephemeral certificate:\n%s\n", c.Cert)
+		return []byte(c.Cert), nil
 	}
 
 	pemBytes, err := sigs.PublicKeyPem(c, signatureoptions.WithContext(ctx))
