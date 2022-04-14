@@ -18,34 +18,8 @@ metadata:
   name: image-policy
 spec:
   images:
-  - regex: images\..*
-  - regex: image.*
+  - glob: image*
   authorities:
   - keyless:
-      ca-cert:
-        secretRef:
-          name: ca-cert-secret
-          namespace: some-namespacemak
-  - keyless:
       identities:
-      - issuer: "issue-details"
-        subject: "subject-details"
-  - keyless:
-      identities:
-      - issuer: "issue-details1"
-        subject: ".*subject.*"
-  - keyless:
-      identities:
-      - issuer: "issue.*"
-  - key:
-      data: |
-        -----BEGIN PUBLIC KEY-----
-        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s
-        TBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==
-        -----END PUBLIC KEY-----
-  - key:
-      kms: "kms://key/path"
-  - key:
-      secretRef:
-        name: secret-name
-        namespace: secret-namespce
+      - issuer: ****
