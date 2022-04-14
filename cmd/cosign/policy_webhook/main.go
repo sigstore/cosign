@@ -42,6 +42,25 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
+var (
+	// mutatingWebhookName holds the name of the mutating webhook configuration
+	// resource dispatching admission requests to policy-webhook.
+	// It is also the name of the webhook which is injected by the controller
+	// with the resource types, namespace selectors, CABindle and service path.
+	// If this changes, you must also change:
+	//    ./config/501-policy-webhook-configurations.yaml
+	//    https://github.com/sigstore/helm-charts/blob/main/charts/cosigned/templates/policy-webhook/policy_webhook_configurations.yaml
+	mutatingWebhookName = flag.String("mutating-webhook-name", "defaulting.clusterimagepolicy.sigstore.dev", "The name of the mutating webhook configuration as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to policy-webhook.")
+	// validatingWebhookName holds the name of the validating webhook configuration
+	// resource dispatching admission requests to policy-webhook.
+	// It is also the name of the webhook which is injected by the controller
+	// with the resource types, namespace selectors, CABindle and service path.
+	// If this changes, you must also change:
+	//    ./config/501-policy-webhook-configurations.yaml
+	//    https://github.com/sigstore/helm-charts/blob/main/charts/cosigned/templates/policy-webhook/policy_webhook_configurations.yaml
+	validatingWebhookName = flag.String("validating-webhook-name", "validating.clusterimagepolicy.sigstore.dev", "The name of the validating webhook configuration as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to policy-webhook.")
+)
+
 func main() {
 	opts := webhook.Options{
 		ServiceName: "policy-webhook",
@@ -68,7 +87,7 @@ func main() {
 func NewPolicyValidatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	return validation.NewAdmissionController(
 		ctx,
-		"validating.clusterimagepolicy.sigstore.dev",
+		*validatingWebhookName,
 		"/validating",
 		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 			v1alpha1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1alpha1.ClusterImagePolicy{},
@@ -83,7 +102,7 @@ func NewPolicyValidatingAdmissionController(ctx context.Context, cmw configmap.W
 func NewPolicyMutatingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	return defaulting.NewAdmissionController(
 		ctx,
-		"defaulting.clusterimagepolicy.sigstore.dev",
+		*mutatingWebhookName,
 		"/defaulting",
 		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 			v1alpha1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1alpha1.ClusterImagePolicy{},
