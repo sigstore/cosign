@@ -17,6 +17,7 @@ package webhook
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"strings"
@@ -34,6 +35,8 @@ import (
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	listersv1 "k8s.io/client-go/listers/core/v1"
@@ -414,7 +417,13 @@ func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec, opt 
 }
 
 func getFulcioCert(fulcioURL *apis.URL) (*x509.CertPool, error) {
-	conn, err := grpc.Dial(fulcioURL.Host)
+	var opts []grpc.DialOption
+	if fulcioURL.Scheme == "https" {
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13})))
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+	conn, err := grpc.Dial(fulcioURL.Host, opts...)
 	if err != nil {
 		return nil, err
 	}
