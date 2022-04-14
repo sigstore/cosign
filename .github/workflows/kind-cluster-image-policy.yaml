@@ -164,6 +164,7 @@ jobs:
         sleep 5
 
     - name: Verify the job still works with additional constraints
+      run: |
         echo '::group:: test job success'
         # This has correct issuer/subject, so should work
         if ! kubectl create -n demo-keyless-signing job demo-identities-works --image=${{ env.demoimage }} ; then
@@ -181,6 +182,7 @@ jobs:
         sleep 5
 
     - name: Verify the job now fails because subject and issuer do not match
+      run: |
         echo '::group:: test job block'
         if kubectl create -n demo-keyless-signing job demo-identities-works --image=${{ env.demoimage }} ; then
           echo Failed to block Job in namespace with non matching issuer and subject!

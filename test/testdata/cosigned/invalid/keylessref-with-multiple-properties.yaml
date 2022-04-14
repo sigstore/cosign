@@ -25,6 +25,4 @@ spec:
         secretRef:
           name: ca-cert-secret
           namespace: some-namespace
-      identities:
-      - issuer: "issue-details"
-        subject: "subject-details"
+      url: http://example.com
