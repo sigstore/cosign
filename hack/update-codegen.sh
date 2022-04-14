@@ -58,9 +58,10 @@ ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
 
 group "Update CRD Schema"
 
-go run $(dirname $0)/../cmd/schema/ dump ClusterImagePolicy \
+# Install yq v4.24.4 here https://github.com/mikefarah/yq/releases/tag/v4.24.4
+go run ${REPO_ROOT_DIR}/cmd/schema/* dump ClusterImagePolicy \
   | yq eval-all --inplace 'select(fileIndex == 0).spec.versions[0].schema.openAPIV3Schema = select(fileIndex == 1) | select(fileIndex == 0)' \
-  $(dirname $0)/../config/300-clusterimagepolicy.yaml -
+  ${REPO_ROOT_DIR}/config/300-clusterimagepolicy.yaml -
 
 group "Update deps post-codegen"
 

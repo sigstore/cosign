@@ -55,7 +55,7 @@ func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURL string) (
 	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*api.CertificateResponse, error) {
+func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.LegacyClient, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*api.CertificateResponse, error) {
 	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.Client, connector oidcConn
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*api.CertificateResponse, error) {
+func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
 	case FlowDevice:
@@ -110,7 +110,7 @@ type Signer struct {
 	*signature.ECDSASignerVerifier
 }
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*Signer, error) {
+func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*Signer, error) {
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "generating cert")
@@ -161,7 +161,7 @@ func GetIntermediates() *x509.CertPool {
 	return fulcioroots.GetIntermediates()
 }
 
-func NewClient(fulcioURL string) (api.Client, error) {
+func NewClient(fulcioURL string) (api.LegacyClient, error) {
 	fulcioServer, err := url.Parse(fulcioURL)
 	if err != nil {
 		return nil, err

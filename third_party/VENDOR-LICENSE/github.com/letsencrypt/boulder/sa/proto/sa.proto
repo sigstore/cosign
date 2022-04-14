@@ -247,6 +247,7 @@ message RevokeCertificateRequest {
   int64 date = 3; // Unix timestamp (nanoseconds)
   int64 backdate = 5; // Unix timestamp (nanoseconds)
   bytes response = 4;
+  int64 issuerID = 6;
 }
 
 message FinalizeAuthorizationRequest {
@@ -269,4 +270,12 @@ message AddBlockedKeyRequest {
 
 message KeyBlockedRequest {
   bytes keyHash = 1;
+}
+
+message Incident {
+  int64 id = 1;
+  string serialTable = 2;
+  string url = 3;
+  int64 renewBy = 4; // Unix timestamp (nanoseconds)
+  bool enabled = 5;
 }
