@@ -231,12 +231,8 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 // URIs
 func getSubjectAlternateNames(cert *x509.Certificate) []string {
 	sans := []string{}
-	for _, dnsName := range cert.DNSNames {
-		sans = append(sans, dnsName)
-	}
-	for _, email := range cert.EmailAddresses {
-		sans = append(sans, email)
-	}
+	sans = append(sans, cert.DNSNames...)
+	sans = append(sans, cert.EmailAddresses...)
 	for _, ip := range cert.IPAddresses {
 		sans = append(sans, ip.String())
 	}
