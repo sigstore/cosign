@@ -140,7 +140,7 @@ jobs:
         echo '::group:: test job success'
         # We signed this above, this should work
         if ! kubectl create -n demo-keyless-signing job demo --image=${{ env.demoimage }} ; then
-          echo Failed to create Job in namespace without label!
+          echo Failed to create Job in namespace with matching signature!
           exit 1
         else
           echo Succcessfully created Job with signed image
@@ -156,6 +156,46 @@ jobs:
           echo Successfully blocked Job creation with unsigned image
         fi
         echo '::endgroup::'
+
+    - name: Add ClusterImagePolicy with identities that match issuer and subject
+      run: |
+        kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-identities.yaml
+        # make sure the reconciler has enough time to update the configmap
+        sleep 5
+
+    - name: Verify the job still works with additional constraints
+      run: |
+        echo '::group:: test job success'
+        # This has correct issuer/subject, so should work
+        if ! kubectl create -n demo-keyless-signing job demo-identities-works --image=${{ env.demoimage }} ; then
+          echo Failed to create Job in namespace without label!
+          exit 1
+        else
+          echo Succcessfully created Job with signed image
+        fi
+        echo '::endgroup:: test job success'
+
+    - name: Add ClusterImagePolicy with identities that do not match issuer and subject
+      run: |
+        kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-identities-mismatch.yaml
+        # make sure the reconciler has enough time to update the configmap
+        sleep 5
+
+    - name: Verify the job now fails because subject and issuer do not match
+      run: |
+        echo '::group:: test job block'
+        if kubectl create -n demo-keyless-signing job demo-identities-works --image=${{ env.demoimage }} ; then
+          echo Failed to block Job in namespace with non matching issuer and subject!
+          exit 1
+        else
+          echo Succcessfully blocked Job with mismatching issuer and subject
+        fi
+        echo '::endgroup:: test job block'
+
+    - name: Remove the mismatching cip
+      run: |
+        kubectl delete cip image-policy-keyless-with-identities-mismatch
+        sleep 5
 
     - name: Generate New Signing Key
       run: |

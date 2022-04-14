@@ -172,6 +172,10 @@ func GetRoots() *x509.CertPool {
 	return fulcioroots.Get()
 }
 
+func GetIntermediates() *x509.CertPool {
+	return fulcioroots.GetIntermediates()
+}
+
 func NewClient(fulcioURL string) (fulciopb.CAClient, error) {
 	fulcioServer, err := url.Parse(fulcioURL)
 	if err != nil {

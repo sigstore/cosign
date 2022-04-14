@@ -15,8 +15,10 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -24,17 +26,27 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"io"
+	"net"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/go-openapi/strfmt"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
+	rtypes "github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/stretchr/testify/require"
 )
 
@@ -159,8 +171,54 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 	}
 }
 
+func signEntry(ctx context.Context, t *testing.T, signer signature.Signer, entry bundle.RekorPayload) []byte {
+	payload, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatalf("marshalling error: %v", err)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		t.Fatalf("canonicalizing error: %v", err)
+	}
+	signature, err := signer.SignMessage(bytes.NewReader(canonicalized), options.WithContext(ctx))
+	if err != nil {
+		t.Fatalf("signing error: %v", err)
+	}
+	return signature
+}
+
+func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer, leaf []byte) *bundle.RekorBundle {
+	// generate log ID according to rekor public key
+	pk, _ := rekor.PublicKey(nil)
+	keyID, _ := getLogID(pk)
+	pyld := bundle.RekorPayload{
+		Body:           base64.StdEncoding.EncodeToString(leaf),
+		IntegratedTime: time.Now().Unix(),
+		LogIndex:       693591,
+		LogID:          keyID,
+	}
+	// Sign with root.
+	signature := signEntry(ctx, t, rekor, pyld)
+	b := &bundle.RekorBundle{
+		SignedEntryTimestamp: strfmt.Base64(signature),
+		Payload:              pyld,
+	}
+	return b
+}
+
 func TestVerifyImageSignatureWithNoChain(t *testing.T) {
+	ctx := context.Background()
 	rootCert, rootKey, _ := test.GenerateRootCa()
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+	testSigstoreRoot := ctuf.TestSigstoreRoot{
+		Rekor:             sv,
+		FulcioCertificate: rootCert,
+	}
+	_, _ = ctuf.NewSigstoreTufRepo(t, testSigstoreRoot)
+
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
 	pemLeaf := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw}))
 
@@ -171,14 +229,21 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	h := sha256.Sum256(payload)
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
-	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, []string{}))
+	// Create a fake bundle
+	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, []byte(pemLeaf))
+	entry, _ := rtypes.NewEntry(pe[0])
+	leaf, _ := entry.Canonicalize(ctx)
+	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+
+	opts := []static.Option{static.WithCertChain(pemLeaf, []string{}), static.WithBundle(rekorBundle)}
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
+
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
-	// TODO: Create fake bundle and test verification
-	if verified == true {
-		t.Fatalf("expected verified=false, got verified=true")
+	if verified == false {
+		t.Fatalf("expected verified=true, got verified=false")
 	}
 }
 
@@ -412,6 +477,95 @@ func TestValidateAndUnpackCertWithChainFailsWithInvalidChain(t *testing.T) {
 	}
 }
 
+func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
+	u, err := url.Parse("http://url.example.com")
+	if err != nil {
+		t.Fatal("failed to parse url", err)
+	}
+	emailSubject := "email@example.com"
+	dnsSubjects := []string{"dnssubject.example.com"}
+	ipSubjects := []net.IP{net.ParseIP("1.2.3.4")}
+	uriSubjects := []*url.URL{u}
+	oidcIssuer := "https://accounts.google.com"
+
+	tests := []struct {
+		identities       []v1alpha1.Identity
+		wantErrSubstring string
+		dnsNames         []string
+		emailAddresses   []string
+		ipAddresses      []net.IP
+		uris             []*url.URL
+	}{
+		{identities: nil /* No matches required, checks out */},
+		{identities: []v1alpha1.Identity{ // Strict match on both
+			{Subject: emailSubject, Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // just issuer
+			{Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // just subject
+			{Subject: emailSubject}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // mis-match
+			{Subject: "wrongsubject", Issuer: oidcIssuer},
+			{Subject: emailSubject, Issuer: "wrongissuer"}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: "none of the expected identities matched"},
+		{identities: []v1alpha1.Identity{ // one good identity, other does not match
+			{Subject: "wrongsubject", Issuer: "wrongissuer"},
+			{Subject: emailSubject, Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // illegal regex for subject
+			{Subject: "****", Issuer: oidcIssuer}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: "malformed subject in identity"},
+		{identities: []v1alpha1.Identity{ // illegal regex for issuer
+			{Subject: emailSubject, Issuer: "****"}},
+			wantErrSubstring: "malformed issuer in identity"},
+		{identities: []v1alpha1.Identity{ // regex matches
+			{Subject: ".*example.com", Issuer: ".*accounts.google.*"}},
+			emailAddresses:   []string{emailSubject},
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // regex matches dnsNames
+			{Subject: ".*ubject.example.com", Issuer: ".*accounts.google.*"}},
+			dnsNames:         dnsSubjects,
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // regex matches ip
+			{Subject: "1.2.3.*", Issuer: ".*accounts.google.*"}},
+			ipAddresses:      ipSubjects,
+			wantErrSubstring: ""},
+		{identities: []v1alpha1.Identity{ // regex matches urls
+			{Subject: ".*url.examp.*", Issuer: ".*accounts.google.*"}},
+			uris:             uriSubjects,
+			wantErrSubstring: ""},
+	}
+	for _, tc := range tests {
+		rootCert, rootKey, _ := test.GenerateRootCa()
+		leafCert, _, _ := test.GenerateLeafCertWithSubjectAlternateNames(tc.dnsNames, tc.emailAddresses, tc.ipAddresses, tc.uris, oidcIssuer, rootCert, rootKey)
+
+		rootPool := x509.NewCertPool()
+		rootPool.AddCert(rootCert)
+
+		co := &CheckOpts{
+			RootCerts:  rootPool,
+			Identities: tc.identities,
+		}
+		_, err := ValidateAndUnpackCert(leafCert, co)
+		if err == nil && tc.wantErrSubstring != "" {
+			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
+		} else if err != nil {
+			if tc.wantErrSubstring == "" {
+				t.Errorf("Did not expect an error, got err = %v", err)
+			} else if !strings.Contains(err.Error(), tc.wantErrSubstring) {
+				t.Errorf("Did not get the expected error %s, got err = %v", tc.wantErrSubstring, err)
+			}
+		}
+	}
+}
 func TestCompareSigs(t *testing.T) {
 	// TODO(nsmith5): Add test cases for invalid signature, missing signature etc
 	tests := []struct {

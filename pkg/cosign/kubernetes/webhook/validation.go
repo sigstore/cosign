@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
+	v1alpha1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
@@ -39,7 +40,7 @@ import (
 func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
-		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroots.Get(), nil /* rekor */, opts...)
+		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroots.Get(), nil /* rekor */, nil /* no identities */, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -86,12 +87,13 @@ func validSignatures(ctx context.Context, ref name.Reference, verifier signature
 
 // validSignaturesWithFulcio expects a Fulcio Cert to verify against. An
 // optional rekorClient can also be given, if nil passed, default is assumed.
-func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, opts ...ociremote.Option) ([]oci.Signature, error) {
+func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, identities []v1alpha1.Identity, opts ...ociremote.Option) ([]oci.Signature, error) {
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
 		RootCerts:          fulcioRoots,
 		RekorClient:        rekorClient,
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
+		Identities:         identities,
 	})
 	return sigs, err
 }
