@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package copied from
+// https://github.com/google/certificate-transparency-go/blob/master/ctutil/ctutil.go
+
 // Package ctutil contains utilities for Certificate Transparency.
 package ctutil
 
