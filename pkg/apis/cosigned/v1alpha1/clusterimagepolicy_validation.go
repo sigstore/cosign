@@ -135,6 +135,12 @@ func (identity *Identity) Validate(ctx context.Context) *apis.FieldError {
 	if identity.Issuer == "" && identity.Subject == "" {
 		errs = errs.Also(apis.ErrMissingOneOf("issuer", "subject"))
 	}
+	if identity.Issuer != "" {
+		errs = errs.Also(ValidateRegex(identity.Issuer).ViaField("issuer"))
+	}
+	if identity.Subject != "" {
+		errs = errs.Also(ValidateRegex(identity.Subject).ViaField("subject"))
+	}
 	return errs
 }
 
