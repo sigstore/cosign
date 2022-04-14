@@ -44,6 +44,35 @@ spec:
                   items:
                     type: object
                     properties:
+                      attestations:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - policy
+                          properties:
+                            policy:
+                              type: object
+                              properties:
+                                configMapRef:
+                                  type: object
+                                  properties:
+                                    name:
+                                      description: Name is unique within a namespace to reference a configmap resource.
+                                      type: string
+                                    namespace:
+                                      description: Namespace defines the space within which the configmap name must be unique.
+                                      type: string
+                                data:
+                                  type: string
+                                type:
+                                  description: Which kind of policy this is, currently only rego or cue are supported. Furthermore, only cue is tested :)
+                                  type: string
+                                url:
+                                  type: string
+                            predicateType:
+                              description: Which predicate type to verify. Matches cosign verify-attestation options.
+                              type: string
                       ctlog:
                         type: object
                         properties:
@@ -99,6 +128,9 @@ spec:
                                   type: string
                           url:
                             type: string
+                      name:
+                        description: Name is the name for this authority. Used by the CIP Policy validator to be able to reference matching signature or attestation verifications. If not specified, the name will be attestation-<index in array>
+                        type: string
                       source:
                         type: array
                         items:
