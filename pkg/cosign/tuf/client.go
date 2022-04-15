@@ -66,6 +66,7 @@ type MetadataStatus struct {
 	Version    int    `json:"version"`
 	Size       int    `json:"len"`
 	Expiration string `json:"expiration"`
+	Error      string `json:"error"`
 }
 
 type TargetFile struct {
@@ -82,20 +83,48 @@ type sigstoreCustomMetadata struct {
 	Sigstore customMetadata `json:"sigstore"`
 }
 
+type signedMeta struct {
+	Type    string    `json:"_type"`
+	Expires time.Time `json:"expires"`
+	Version int64     `json:"version"`
+}
+
 // RemoteCache contains information to cache on the location of the remote
 // repository.
 type remoteCache struct {
 	Mirror string `json:"mirror"`
 }
 
-// GetRootStatus gets the current root status for info logging
-func GetRootStatus(ctx context.Context) (*RootStatus, error) {
-	t, err := NewFromEnv(ctx)
-	if err != nil {
+func getExpiration(metadata []byte) (*time.Time, error) {
+	s := &data.Signed{}
+	if err := json.Unmarshal(metadata, s); err != nil {
 		return nil, err
 	}
-	defer t.Close()
-	return t.getRootStatus()
+	sm := &signedMeta{}
+	if err := json.Unmarshal(s.Signed, sm); err != nil {
+		return nil, err
+	}
+	return &sm.Expires, nil
+}
+
+func getVersion(metadata []byte) (int64, error) {
+	s := &data.Signed{}
+	if err := json.Unmarshal(metadata, s); err != nil {
+		return 0, err
+	}
+	sm := &signedMeta{}
+	if err := json.Unmarshal(s.Signed, sm); err != nil {
+		return 0, err
+	}
+	return sm.Version, nil
+}
+
+var isExpiredTimestamp = func(metadata []byte) bool {
+	expiration, err := getExpiration(metadata)
+	if err != nil {
+		return true
+	}
+	return time.Until(*expiration) <= 0
 }
 
 func getMetadataStatus(b []byte) (*MetadataStatus, error) {
@@ -143,12 +172,36 @@ func (t *TUF) getRootStatus() (*RootStatus, error) {
 	for role, md := range trustedMeta {
 		mdStatus, err := getMetadataStatus(md)
 		if err != nil {
+			status.Metadata[role] = MetadataStatus{Error: err.Error()}
 			continue
 		}
 		status.Metadata[role] = *mdStatus
 	}
 
 	return status, nil
+}
+
+func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
+	trustedRoot, ok := meta["root.json"]
+	if ok {
+		return trustedRoot, nil
+	}
+	// On first initialize, there will be no root in the TUF DB, so read from embedded.
+	trustedRoot, err := embeddedRootRepo.ReadFile(path.Join("repository", "root.json"))
+	if err != nil {
+		return nil, err
+	}
+	return trustedRoot, nil
+}
+
+// GetRootStatus gets the current root status for info logging
+func GetRootStatus(ctx context.Context) (*RootStatus, error) {
+	t, err := NewFromEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer t.Close()
+	return t.getRootStatus()
 }
 
 // Close closes the local TUF store. Should only be called once per client.
@@ -262,19 +315,6 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 	return initializeTUF(ctx, embed, mirror, nil, false)
 }
 
-func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
-	trustedRoot, ok := meta["root.json"]
-	if ok {
-		return trustedRoot, nil
-	}
-	// On first initialize, there will be no root in the TUF DB, so read from embedded.
-	trustedRoot, err := embeddedRootRepo.ReadFile(path.Join("repository", "root.json"))
-	if err != nil {
-		return nil, err
-	}
-	return trustedRoot, nil
-}
-
 func Initialize(ctx context.Context, mirror string, root []byte) error {
 	// Initialize the client. Force an update.
 	t, err := initializeTUF(ctx, false, mirror, root, true)
@@ -383,47 +423,6 @@ func embeddedLocalStore() (client.LocalStore, error) {
 	return local, nil
 }
 
-type signedMeta struct {
-	Type    string    `json:"_type"`
-	Expires time.Time `json:"expires"`
-	Version int64     `json:"version"`
-}
-
-//go:embed repository
-var embeddedRootRepo embed.FS
-
-func getExpiration(metadata []byte) (*time.Time, error) {
-	s := &data.Signed{}
-	if err := json.Unmarshal(metadata, s); err != nil {
-		return nil, err
-	}
-	sm := &signedMeta{}
-	if err := json.Unmarshal(s.Signed, sm); err != nil {
-		return nil, err
-	}
-	return &sm.Expires, nil
-}
-
-func getVersion(metadata []byte) (int64, error) {
-	s := &data.Signed{}
-	if err := json.Unmarshal(metadata, s); err != nil {
-		return 0, err
-	}
-	sm := &signedMeta{}
-	if err := json.Unmarshal(s.Signed, sm); err != nil {
-		return 0, err
-	}
-	return sm.Version, nil
-}
-
-var isExpiredTimestamp = func(metadata []byte) bool {
-	expiration, err := getExpiration(metadata)
-	if err != nil {
-		return true
-	}
-	return time.Until(*expiration) <= 0
-}
-
 func (t *TUF) updateMetadataAndDownloadTargets() error {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
 	targetFiles, err := t.client.Update()
@@ -476,15 +475,6 @@ func (t *TUF) updateMetadataAndDownloadTargets() error {
 	return nil
 }
 
-func downloadRemoteTarget(name string, c *client.Client, w io.Writer) error {
-	dest := targetDestination{}
-	if err := c.Download(name, &dest); err != nil {
-		return errors.Wrap(err, "downloading target")
-	}
-	_, err := io.Copy(w, &dest.buf)
-	return err
-}
-
 type targetDestination struct {
 	buf bytes.Buffer
 }
@@ -496,6 +486,15 @@ func (t *targetDestination) Write(b []byte) (int, error) {
 func (t *targetDestination) Delete() error {
 	t.buf = bytes.Buffer{}
 	return nil
+}
+
+func downloadRemoteTarget(name string, c *client.Client, w io.Writer) error {
+	dest := targetDestination{}
+	if err := c.Download(name, &dest); err != nil {
+		return errors.Wrap(err, "downloading target")
+	}
+	_, err := io.Copy(w, &dest.buf)
+	return err
 }
 
 func rootCacheDir() string {
@@ -538,6 +537,9 @@ func (m *memoryCache) Set(p string, b []byte) error {
 	m.targets[p] = b
 	return nil
 }
+
+//go:embed repository
+var embeddedRootRepo embed.FS
 
 type embedded struct {
 	setImpl
