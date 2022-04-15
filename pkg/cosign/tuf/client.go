@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -55,10 +56,16 @@ type TUF struct {
 
 // JSON output representing the configured root status
 type RootStatus struct {
-	Local      string            `json:"local"`
-	Remote     string            `json:"remote"`
-	Expiration map[string]string `json:"expiration"`
-	Targets    []string          `json:"targets"`
+	Local    string                    `json:"local"`
+	Remote   string                    `json:"remote"`
+	Metadata map[string]MetadataStatus `json:"metadata"`
+	Targets  []string                  `json:"targets"`
+}
+
+type MetadataStatus struct {
+	Version    int    `json:"version"`
+	Size       int    `json:"len"`
+	Expiration string `json:"expiration"`
 }
 
 type TargetFile struct {
@@ -91,16 +98,32 @@ func GetRootStatus(ctx context.Context) (*RootStatus, error) {
 	return t.getRootStatus()
 }
 
+func getMetadataStatus(b []byte) (*MetadataStatus, error) {
+	expires, err := getExpiration(b)
+	if err != nil {
+		return nil, err
+	}
+	version, err := getVersion(b)
+	if err != nil {
+		return nil, err
+	}
+	return &MetadataStatus{
+		Size:       len(b),
+		Expiration: expires.Format(time.RFC822),
+		Version:    int(version),
+	}, nil
+}
+
 func (t *TUF) getRootStatus() (*RootStatus, error) {
 	local := "embedded"
 	if !t.embedded {
 		local = rootCacheDir()
 	}
 	status := &RootStatus{
-		Local:      local,
-		Remote:     t.mirror,
-		Expiration: map[string]string{},
-		Targets:    []string{},
+		Local:    local,
+		Remote:   t.mirror,
+		Metadata: make(map[string]MetadataStatus),
+		Targets:  []string{},
 	}
 
 	// Get targets
@@ -118,11 +141,11 @@ func (t *TUF) getRootStatus() (*RootStatus, error) {
 		return nil, errors.Wrap(err, "getting trusted meta")
 	}
 	for role, md := range trustedMeta {
-		expires, err := getExpiration(md)
+		mdStatus, err := getMetadataStatus(md)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("getting expiration for %s", role))
+			continue
 		}
-		status.Expiration[role] = expires.Format(time.RFC822)
+		status.Metadata[role] = *mdStatus
 	}
 
 	return status, nil
@@ -360,6 +383,12 @@ func embeddedLocalStore() (client.LocalStore, error) {
 	return local, nil
 }
 
+type signedMeta struct {
+	Type    string    `json:"_type"`
+	Expires time.Time `json:"expires"`
+	Version int64     `json:"version"`
+}
+
 //go:embed repository
 var embeddedRootRepo embed.FS
 
@@ -368,11 +397,23 @@ func getExpiration(metadata []byte) (*time.Time, error) {
 	if err := json.Unmarshal(metadata, s); err != nil {
 		return nil, err
 	}
-	sm := &data.Timestamp{}
+	sm := &signedMeta{}
 	if err := json.Unmarshal(s.Signed, sm); err != nil {
 		return nil, err
 	}
 	return &sm.Expires, nil
+}
+
+func getVersion(metadata []byte) (int64, error) {
+	s := &data.Signed{}
+	if err := json.Unmarshal(metadata, s); err != nil {
+		return 0, err
+	}
+	sm := &signedMeta{}
+	if err := json.Unmarshal(s.Signed, sm); err != nil {
+		return 0, err
+	}
+	return sm.Version, nil
 }
 
 var isExpiredTimestamp = func(metadata []byte) bool {
@@ -387,7 +428,37 @@ func (t *TUF) updateMetadataAndDownloadTargets() error {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
 	targetFiles, err := t.client.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
-		return errors.Wrap(err, "updating tuf metadata")
+		// Get some extra information for debugging. What was the state of the metadata
+		// on the remote?
+		status := struct {
+			Mirror   string                    `json:"mirror"`
+			Metadata map[string]MetadataStatus `json:"metadata"`
+		}{
+			Mirror:   t.mirror,
+			Metadata: make(map[string]MetadataStatus),
+		}
+		for _, md := range []string{"root.json", "targets.json", "snapshot.json", "timestamp.json"} {
+			r, _, err := t.remote.GetMeta(md)
+			if err != nil {
+				// May be missing, or failed download.
+				continue
+			}
+			defer r.Close()
+			b, err := ioutil.ReadAll(r)
+			if err != nil {
+				continue
+			}
+			mdStatus, err := getMetadataStatus(b)
+			if err != nil {
+				continue
+			}
+			status.Metadata[md] = *mdStatus
+		}
+		b, innerErr := json.MarshalIndent(status, "", "\t")
+		if innerErr != nil {
+			return innerErr
+		}
+		return fmt.Errorf("error updating to TUF remote mirror: %w\nremote status:%s", err, string(b))
 	}
 
 	// Update the in-memory targets.
