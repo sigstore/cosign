@@ -16,6 +16,9 @@
 package cli
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/download"
@@ -64,6 +67,7 @@ func downloadSBOM() *cobra.Command {
 		Example: "  cosign download sbom <image uri>",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Fprintln(os.Stderr, "WARNING: Downloading SBOMs this way does not ensure its authenticity. If you want to ensure a tamper-proof SBOM, download it using 'cosign download attestation <image uri>' or verify its signature.")
 			_, err := download.SBOMCmd(cmd.Context(), *o, args[0], cmd.OutOrStdout())
 			return err
 		},
