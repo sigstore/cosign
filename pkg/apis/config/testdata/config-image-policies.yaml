@@ -31,21 +31,25 @@ data:
       images:
       - glob: rando
       authorities:
-      - key:
+      - name: attestation-0
+        key:
           data: inlinedata here
-      - key:
+      - name: attestation-1
+        key:
           kms: whatevs
     cluster-image-policy-1: |
       images:
       - glob: randomstuff*
       authorities:
-      - key:
+      - name: attestation-0
+        key:
           data: otherinline here
     cluster-image-policy-2: |
       images:
       - glob: rando3
       authorities:
-      - keyless:
+      - name: attestation-0
+        keyless:
           ca-cert:
             data: cacert chilling here
           url: http://keylessurl.here
@@ -56,7 +60,8 @@ data:
       images:
       - glob: inlinecert
       authorities:
-      - key:
+      - name: attestation-0
+        key:
           data: |-
             -----BEGIN PUBLIC KEY-----
             MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J
@@ -66,7 +71,8 @@ data:
       images:
       - regex: .*regexstring.*
       authorities:
-      - key:
+      - name: attestation-0
+        key:
           data: |-
             -----BEGIN PUBLIC KEY-----
             MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J
@@ -76,7 +82,26 @@ data:
       images:
       - regex: .*regexstringtoo.*
       authorities:
-      - key:
+      - name: attestation-0
+        key:
           data: inlinedata here
     cluster-image-policy-json: "{\"images\":[{\"glob\":\"ghcr.io/example/*\",\"regex\":\"\"}],\"authorities\":[{\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}]}"
-
+    cluster-image-policy-with-policy-attestations: |
+      images:
+      - glob: withattestations
+      authorities:
+      - name: attestation-0
+        keyless:
+          ca-cert:
+            data: cacert chilling here
+          url: http://keylessurl.here
+          identities:
+          - issuer: issuer
+            subject: subject
+        attestations:
+        - predicateType: vuln
+          type: cue
+          data: "test-cue-here"
+      policy:
+        type: cue
+        data: "cip level cue here"

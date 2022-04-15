@@ -164,6 +164,11 @@ func (in *ClusterImagePolicySpec) DeepCopyInto(out *ClusterImagePolicySpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Policy != nil {
+		in, out := &in.Policy, &out.Policy
+		*out = new(Policy)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

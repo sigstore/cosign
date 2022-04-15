@@ -23,6 +23,7 @@ import (
 	"crypto/elliptic"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -286,10 +287,10 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
-			fe.Details = digest.String()
+			fe.Details = fmt.Sprintf("%s %s", digest.String(), `fetching FulcioRoot: getting root cert: parse "http://http:%2F%2Fexample.com%2F/api/v1/rootCert": invalid port ":%2F%2Fexample.com%2F" after host`)
 			errs = errs.Also(fe)
 			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
-			fe2.Details = digest.String()
+			fe2.Details = fmt.Sprintf("%s %s", digest.String(), `fetching FulcioRoot: getting root cert: parse "http://http:%2F%2Fexample.com%2F/api/v1/rootCert": invalid port ":%2F%2Fexample.com%2F" after host`)
 			errs = errs.Also(fe2)
 			return errs
 		}(),
@@ -329,10 +330,10 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
-			fe.Details = digest.String()
+			fe.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe)
 			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
-			fe2.Details = digest.String()
+			fe2.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe2)
 			return errs
 		}(),
@@ -375,10 +376,10 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
-			fe.Details = digest.String()
+			fe.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe)
 			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
-			fe2.Details = digest.String()
+			fe2.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe2)
 			return errs
 		}(),

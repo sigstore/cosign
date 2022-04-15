@@ -106,7 +106,7 @@ func validAttestations(ctx context.Context, ref name.Reference, verifier signatu
 	attestations, _, err := cosignVerifyAttestations(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
 		SigVerifier:        verifier,
-		ClaimVerifier:      cosign.SimpleClaimVerifier,
+		ClaimVerifier:      cosign.IntotoSubjectClaimVerifier,
 	})
 	return attestations, err
 }
@@ -118,7 +118,7 @@ func validAttestationsWithFulcio(ctx context.Context, ref name.Reference, fulcio
 		RegistryClientOpts: opts,
 		RootCerts:          fulcioRoots,
 		RekorClient:        rekorClient,
-		ClaimVerifier:      cosign.SimpleClaimVerifier,
+		ClaimVerifier:      cosign.IntotoSubjectClaimVerifier,
 		Identities:         identities,
 	})
 	return attestations, err

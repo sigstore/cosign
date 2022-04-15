@@ -54,6 +54,11 @@ func (*ClusterImagePolicy) GetGroupVersionKind() schema.GroupVersionKind {
 type ClusterImagePolicySpec struct {
 	Images      []ImagePattern `json:"images"`
 	Authorities []Authority    `json:"authorities"`
+	// Policy is an optional policy that can be applied against all the
+	// successfully validated Authorities. If no authorities pass, this does
+	// not even get evaluated, as the Policy is considered failed.
+	// +optional
+	Policy *Policy `json:"policy,omitempty"`
 }
 
 // ImagePattern defines a pattern and its associated authorties
@@ -137,8 +142,9 @@ type KeylessRef struct {
 // only after the validation of the Attestation signature has been verified.
 type Attestation struct {
 	// Which predicate type to verify. Matches cosign verify-attestation options.
-	PredicateType string  `json:"predicateType"`
-	Policy        *Policy `json:"policy,omitempty"`
+	PredicateType string `json:"predicateType"`
+	// +optional
+	Policy *Policy `json:"policy,omitempty"`
 }
 
 // Policy specifies a policy to use for Attestation validation.

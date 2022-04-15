@@ -27,7 +27,7 @@ func (c *ClusterImagePolicy) SetDefaults(ctx context.Context) {
 func (cs *ClusterImagePolicySpec) SetDefaults(ctx context.Context) {
 	for i, authority := range cs.Authorities {
 		if authority.Name == "" {
-			cs.Authorities[i].Name = fmt.Sprintf("attestation-%d", i)
+			cs.Authorities[i].Name = fmt.Sprintf("authority-%d", i)
 		}
 	}
 }

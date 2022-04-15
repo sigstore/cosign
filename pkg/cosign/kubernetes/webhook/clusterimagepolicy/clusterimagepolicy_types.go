@@ -36,6 +36,10 @@ import (
 type ClusterImagePolicy struct {
 	Images      []v1alpha1.ImagePattern `json:"images"`
 	Authorities []Authority             `json:"authorities"`
+	// Policy is an optional policy used to evaluate the results of valid
+	// Authorities. Will not get evaluated unless at least one Authority
+	// succeeds.
+	Policy *AttestationPolicy `json:"policy,omitempty"`
 }
 
 type Authority struct {
@@ -56,7 +60,7 @@ type Authority struct {
 	// +optional
 	RemoteOpts []remote.Option `json:"-"`
 	// +optional
-	Attestations []Attestation `json:"attestations,omitempty"`
+	Attestations []AttestationPolicy `json:"attestations,omitempty"`
 }
 
 // This references a public verification key stored in
@@ -80,7 +84,7 @@ type KeylessRef struct {
 	CACert *KeyRef `json:"ca-cert,omitempty"`
 }
 
-type Attestation struct {
+type AttestationPolicy struct {
 	// PredicateType to attest, one of the accepted in verify-attestation
 	PredicateType string `json:"predicateType"`
 	// Type specifies how to evaluate policy, only rego/cue are understood.
@@ -152,9 +156,18 @@ func ConvertClusterImagePolicyV1alpha1ToWebhook(in *v1alpha1.ClusterImagePolicy)
 		outAuthorities = append(outAuthorities, *outAuthority)
 	}
 
+	// If there's a ClusterImagePolicy level AttestationPolicy, convert it here.
+	var cipAttestationPolicy *AttestationPolicy
+	if in.Spec.Policy != nil {
+		cipAttestationPolicy = &AttestationPolicy{
+			Type: in.Spec.Policy.Type,
+			Data: in.Spec.Policy.Data,
+		}
+	}
 	return &ClusterImagePolicy{
 		Images:      copyIn.Spec.Images,
 		Authorities: outAuthorities,
+		Policy:      cipAttestationPolicy,
 	}
 }
 
@@ -173,10 +186,10 @@ func convertAuthorityV1Alpha1ToWebhook(in v1alpha1.Authority) *Authority {
 	}
 }
 
-func convertAttestationsV1Alpha1ToWebhook(in []v1alpha1.Attestation) []Attestation {
-	ret := []Attestation{}
+func convertAttestationsV1Alpha1ToWebhook(in []v1alpha1.Attestation) []AttestationPolicy {
+	ret := []AttestationPolicy{}
 	for _, inAtt := range in {
-		outAtt := Attestation{PredicateType: inAtt.PredicateType}
+		outAtt := AttestationPolicy{PredicateType: inAtt.PredicateType}
 		if inAtt.Policy != nil {
 			outAtt.Type = inAtt.Policy.Type
 			outAtt.Data = inAtt.Policy.Data

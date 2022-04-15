@@ -77,15 +77,15 @@ func parseEntry(entry string, out interface{}) error {
 
 // GetMatchingPolicies returns all matching Policies and their Authorities that
 // need to be matched for the given Image.
-// Returned map contains the name of the CIP as the key, and an array of
-// authorities from that Policy that must be validated against.
-func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string][]webhookcip.Authority, error) {
+// Returned map contains the name of the CIP as the key, and a normalized
+// ClusterImagePolicy for it.
+func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string]webhookcip.ClusterImagePolicy, error) {
 	if p == nil {
 		return nil, errors.New("config is nil")
 	}
 
 	var lastError error
-	ret := map[string][]webhookcip.Authority{}
+	ret := make(map[string]webhookcip.ClusterImagePolicy)
 
 	// TODO(vaikas): this is very inefficient, we should have a better
 	// way to go from image to Authorities, but just seeing if this is even
@@ -94,13 +94,13 @@ func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string][]webh
 		for _, pattern := range v.Images {
 			if pattern.Glob != "" {
 				if GlobMatch(image, pattern.Glob) {
-					ret[k] = append(ret[k], v.Authorities...)
+					ret[k] = v
 				}
 			} else if pattern.Regex != "" {
 				if regex, err := regexp.Compile(pattern.Regex); err != nil {
 					lastError = err
 				} else if regex.MatchString(image) {
-					ret[k] = append(ret[k], v.Authorities...)
+					ret[k] = v
 				}
 			}
 		}

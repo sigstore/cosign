@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 
 	"cuelang.org/go/cue/cuecontext"
@@ -179,9 +180,14 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 						// Do we really want to add all the error details here?
 						// Seems like we can just say which policy failed, so
 						// doing that for now.
-						for failingPolicy := range fieldErrors {
+						for failingPolicy, policyErrs := range fieldErrors {
 							errorField := apis.ErrGeneric(fmt.Sprintf("failed policy: %s", failingPolicy), "image").ViaFieldIndex(field, i)
-							errorField.Details = c.Image
+							errDetails := c.Image
+							for _, policyErr := range policyErrs {
+								errDetails = errDetails + " " + policyErr.Error()
+							}
+							//errorField.Details = c.Image
+							errorField.Details = errDetails
 							errs = errs.Also(errorField)
 						}
 						// Because there was at least one policy that was
@@ -232,7 +238,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
+func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string]webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
 	// Gather all validated policies here.
 	policyResults := make(map[string]*PolicyResult)
 	// For a policy that does not pass at least one authority, gather errors
@@ -245,14 +251,35 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 	// policies must be satisfied for the image to be admitted."
 	// If none of the Authorities for a given policy pass the checks, gather
 	// the errors here. If one passes, do not return the errors.
-	authorityErrors := []error{}
-	for p, authorities := range policies {
-		logging.FromContext(ctx).Debugf("Checking Policy: %s", p)
-		policyResult, errs := ValidatePolicy(ctx, ref, kc, authorities, remoteOpts...)
+	for cipName, cip := range policies {
+		logging.FromContext(ctx).Debugf("Checking Policy: %s", cipName)
+		policyResult, errs := ValidatePolicy(ctx, ref, kc, cip, remoteOpts...)
 		if len(errs) > 0 {
-			ret[p] = append(ret[p], authorityErrors...)
+			for _, ae := range errs {
+				logging.FromContext(ctx).Errorf("GOT THE FOLLOWING ERROR: %w", ae)
+			}
+			ret[cipName] = append(ret[cipName], errs...)
 		} else {
-			policyResults[p] = policyResult
+			// Ok, at least one Authority  on the policy passed. If there's a CIP level
+			// policy, apply it against the results of the successful Authorities
+			// outputs.
+			if cip.Policy != nil {
+				logging.FromContext(ctx).Infof("Validating CIP level policy against %+v", policyResult)
+				policyJSON, err := json.Marshal(policyResult)
+				if err != nil {
+					ret[cipName] = append(ret[cipName], errors.Wrap(err, "marshaling policyresult"))
+				} else {
+					logging.FromContext(ctx).Infof("Validating CIP level policy against %s", string(policyJSON))
+					err = EvaluatePolicyAgainstJSON(ctx, "ClusterImagePolicy", cip.Policy.Type, cip.Policy.Data, policyJSON)
+					if err != nil {
+						ret[cipName] = append(ret[cipName], err)
+					} else {
+						policyResults[cipName] = policyResult
+					}
+				}
+			} else {
+				policyResults[cipName] = policyResult
+			}
 		}
 	}
 	return policyResults, ret
@@ -272,6 +299,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 	// return it.
 	policyResult := PolicyResult{AuthorityMatches: make(map[string]AuthorityMatch)}
 	for _, authority := range cip.Authorities {
+		logging.FromContext(ctx).Debugf("Checking Authority: %s", authority.Name)
 		// Assignment for appendAssign lint error
 		authorityRemoteOpts := remoteOpts
 		authorityRemoteOpts = append(authorityRemoteOpts, authority.RemoteOpts...)
@@ -294,7 +322,8 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 			}
 		}
 	}
-	return nil, authorityErrors
+
+	return &policyResult, authorityErrors
 }
 
 func ociSignatureToPolicySignature(ctx context.Context, sigs []oci.Signature) []PolicySignature {
@@ -399,7 +428,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 			}
 			va, err := validAttestationsWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
 			if err != nil {
-				logging.FromContext(ctx).Errorf("failed validSignatures for authority %s with fulcio for %s: %v", name, ref.Name(), err)
+				logging.FromContext(ctx).Errorf("failed validAttestationsWithFulcio for authority %s with fulcio for %s: %v", name, ref.Name(), err)
 				return nil, errors.Wrap(err, "validate signatures with fulcio")
 			} else {
 				verifiedAttestations = append(verifiedAttestations, va...)
@@ -412,6 +441,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 		logging.FromContext(ctx).Errorf("no valid attestations found with authority %s for %s", name, ref.Name())
 		return nil, fmt.Errorf("no valid attestations found with authority %s for %s", name, ref.Name())
 	}
+	logging.FromContext(ctx).Infof("FOUND %d valid attestations, validating policies for them", len(verifiedAttestations))
 	// Now spin through the Attestations that the user specified and validate
 	// them.
 	// TODO(vaikas): Pretty inefficient here, figure out a better way if
@@ -431,19 +461,8 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 			if err != nil {
 				return nil, errors.Wrap(err, "Failed to convert attestation payload to json")
 			}
-			switch wantedAttestation.Type {
-			case "cue":
-				cueValidationErr := evaluateCue(ctx, attBytes, wantedAttestation.Data)
-				if cueValidationErr != nil {
-					return nil, errors.Wrap(cueValidationErr, fmt.Sprintf("failed evaluating cue policy for type %s", wantedAttestation.PredicateType))
-				}
-			case "rego":
-				regoValidationErr := evaluateRego(ctx, attBytes, wantedAttestation.Data)
-				if regoValidationErr != nil {
-					return nil, errors.Wrap(regoValidationErr, fmt.Sprintf("failed evaluating cue policy for type %s", wantedAttestation.PredicateType))
-				}
-			default:
-				return nil, fmt.Errorf("Sorry Type %s is not supported yet", wantedAttestation.Type)
+			if err := EvaluatePolicyAgainstJSON(ctx, wantedAttestation.PredicateType, wantedAttestation.Type, wantedAttestation.Data, attBytes); err != nil {
+				return nil, err
 			}
 			// Ok, so this passed aok, jot it down to our result set as
 			// verified attestation with the predicate type match
@@ -453,10 +472,33 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 	return ret, nil
 }
 
+// EvaluatePolicyAgainstJson is used to run a policy engine against JSON bytes.
+// These bytes can be for example Attestations, or ClusterImagePolicy result
+// types.
+// predicateType - which predicate are we evaluating, custon, vuln, policy, etc.
+// policyType - cue|rego
+// policyBody - String representing either cue or rego language
+// jsonBytes - Bytes to evaluate against the policyBody in the given language
+func EvaluatePolicyAgainstJSON(ctx context.Context, predicateType, policyType string, policyBody string, jsonBytes []byte) error {
+	switch policyType {
+	case "cue":
+		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
+		if cueValidationErr != nil {
+			return fmt.Errorf("failed evaluating cue policy for type %s : %s", predicateType, cueValidationErr.Error())
+		}
+	case "rego":
+		regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
+		if regoValidationErr != nil {
+			return fmt.Errorf("failed evaluating rego policy for type %s", predicateType)
+		}
+	default:
+		return fmt.Errorf("Sorry Type %s is not supported yet", policyType)
+	}
+	return nil
+}
+
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
 func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
-	// TODO(vaikas): Do these bring in the glog????
-	return nil
 	cueCtx := cuecontext.New()
 	v := cueCtx.CompileString(evaluator)
 	return cuejson.Validate(attestation, v)

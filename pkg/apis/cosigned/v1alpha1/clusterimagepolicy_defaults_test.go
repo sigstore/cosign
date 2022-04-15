@@ -28,13 +28,13 @@ func TestNameDefaulting(t *testing.T) {
 		wantNames []string
 	}{
 		{in: cipWithNames([]string{""}),
-			wantNames: []string{"attestation-0"},
+			wantNames: []string{"authority-0"},
 		},
 		{in: cipWithNames([]string{"", "vuln-scan"}),
-			wantNames: []string{"attestation-0", "vuln-scan"},
+			wantNames: []string{"authority-0", "vuln-scan"},
 		},
 		{in: cipWithNames([]string{"vuln-scan", ""}),
-			wantNames: []string{"vuln-scan", "attestation-1"},
+			wantNames: []string{"vuln-scan", "authority-1"},
 		},
 		{in: cipWithNames([]string{"first", "second"}),
 			wantNames: []string{"first", "second"},
