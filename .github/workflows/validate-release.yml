@@ -43,7 +43,7 @@ jobs:
       COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.7.2@sha256:ad2985a87622d5934a4bc06a61faadff772e377937e42519af4f506e1b019d1e
 
     steps:
-      - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 #v2.4.0
+      - uses: actions/checkout@dcd71f646680f2efd8db4afa5ad64fdcba30e748 #v2.4.0
 
       - name: Check Signature
         run: |
