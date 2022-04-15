@@ -177,15 +177,25 @@ func GetIntermediates() *x509.CertPool {
 }
 
 func NewClient(fulcioURL string) (fulciopb.CAClient, error) {
+	var opts []grpc.DialOption
 	fulcioServer, err := url.Parse(fulcioURL)
 	if err != nil {
 		return nil, err
 	}
-	dialOpt := grpc.WithTransportCredentials(insecure.NewCredentials())
-	if fulcioServer.Scheme == "https" {
-		dialOpt = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13}))
+	host := fulcioServer.Host
+	switch fulcioServer.Scheme {
+	case "https":
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})))
+		if fulcioServer.Port() == "" {
+			host = fmt.Sprintf("%s:443", host)
+		}
+	default:
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if fulcioServer.Port() == "" {
+			host = fmt.Sprintf("%s:80", host)
+		}
 	}
-	conn, err := grpc.Dial(fulcioServer.Host, dialOpt)
+	conn, err := grpc.Dial(host, opts...)
 	if err != nil {
 		return nil, err
 	}

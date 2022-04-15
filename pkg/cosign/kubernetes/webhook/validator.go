@@ -418,12 +418,20 @@ func (v *Validator) resolvePodSpec(ctx context.Context, ps *corev1.PodSpec, opt 
 
 func getFulcioCert(fulcioURL *apis.URL) (*x509.CertPool, error) {
 	var opts []grpc.DialOption
-	if fulcioURL.Scheme == "https" {
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13})))
-	} else {
+	host := fulcioURL.Host
+	switch fulcioURL.Scheme {
+	case "https":
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})))
+		if fulcioURL.URL().Port() == "" {
+			host = fmt.Sprintf("%s:443", host)
+		}
+	default:
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if fulcioURL.URL().Port() == "" {
+			host = fmt.Sprintf("%s:80", host)
+		}
 	}
-	conn, err := grpc.Dial(fulcioURL.Host, opts...)
+	conn, err := grpc.Dial(host, opts...)
 	if err != nil {
 		return nil, err
 	}
