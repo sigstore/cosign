@@ -17,9 +17,12 @@ package webhook
 
 import (
 	"context"
+	"crypto"
 	"crypto/x509"
 	"fmt"
 
+	"cuelang.org/go/cue/cuecontext"
+	cuejson "cuelang.org/go/encoding/json"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -29,9 +32,11 @@ import (
 	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/policy"
 	"github.com/sigstore/fulcio/pkg/api"
 	rekor "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/sigstore/pkg/signature"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	listersv1 "k8s.io/client-go/listers/core/v1"
@@ -227,9 +232,9 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string][]oci.Signature, map[string][]error) {
-	// Gather all validated signatures here.
-	signatures := map[string][]oci.Signature{}
+func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string][]webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
+	// Gather all validated policies here.
+	policyResults := make(map[string]*PolicyResult)
 	// For a policy that does not pass at least one authority, gather errors
 	// here so that we can give meaningful errors to the user.
 	ret := map[string][]error{}
@@ -243,82 +248,227 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 	authorityErrors := []error{}
 	for p, authorities := range policies {
 		logging.FromContext(ctx).Debugf("Checking Policy: %s", p)
-		sigs, errs := ValidatePolicy(ctx, ref, kc, authorities, remoteOpts...)
+		policyResult, errs := ValidatePolicy(ctx, ref, kc, authorities, remoteOpts...)
 		if len(errs) > 0 {
 			ret[p] = append(ret[p], authorityErrors...)
 		} else {
-			signatures[p] = append(signatures[p], sigs...)
+			policyResults[p] = policyResult
 		}
 	}
-	return signatures, ret
+	return policyResults, ret
 }
 
-// ValidatePolicy will go through all the Authorities for a given image and
-// return a success if at least one of the Authorities validated the signatures.
-// Returns the validated signatures, or the errors encountered.
-func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, authorities []webhookcip.Authority, remoteOpts ...ociremote.Option) ([]oci.Signature, []error) {
+// ValidatePolicy will go through all the Authorities for a given image/policy
+// and return a success if at least one of the Authorities validated the
+// signatures OR attestations if atttestations were specified.
+// Returns PolicyResult, or errors encountered if none of the authorities
+// passed.
+func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, cip webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (*PolicyResult, []error) {
 	remoteOpts = append(remoteOpts, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
-
 	// If none of the Authorities for a given policy pass the checks, gather
 	// the errors here. If one passes, do not return the errors.
 	authorityErrors := []error{}
-	for _, authority := range authorities {
+	// We collect all the successfully satisfied Authorities into this and
+	// return it.
+	policyResult := PolicyResult{AuthorityMatches: make(map[string]AuthorityMatch)}
+	for _, authority := range cip.Authorities {
 		// Assignment for appendAssign lint error
 		authorityRemoteOpts := remoteOpts
 		authorityRemoteOpts = append(authorityRemoteOpts, authority.RemoteOpts...)
 
-		switch {
-		case authority.Key != nil && len(authority.Key.PublicKeys) > 0:
-			// TODO(vaikas): What should happen if there are multiple keys
-			// Is it even allowed? 'valid' returns success if any key
-			// matches.
-			// https://github.com/sigstore/cosign/issues/1652
-			sps, err := valid(ctx, ref, authority.Key.PublicKeys, authorityRemoteOpts...)
+		if len(authority.Attestations) > 0 {
+			// We're doing the verify-attestations path, so validate (.att)
+			validatedAttestations, err := ValidatePolicyAttestationsForAuthority(ctx, ref, kc, authority, authorityRemoteOpts...)
 			if err != nil {
-				authorityErrors = append(authorityErrors, errors.Wrap(err, "failed to validate keys"))
-				continue
+				authorityErrors = append(authorityErrors, err)
 			} else {
-				if len(sps) > 0 {
-					logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", ref.Name(), len(sps))
-					return sps, nil
-				}
-				logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
-				authorityErrors = append(authorityErrors, fmt.Errorf("no valid signatures found for %s", ref.Name()))
+				policyResult.AuthorityMatches[authority.Name] = AuthorityMatch{Attestations: validatedAttestations}
 			}
-		case authority.Keyless != nil:
-			if authority.Keyless != nil && authority.Keyless.URL != nil {
-				logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
-				fulcioroot, err := getFulcioCert(authority.Keyless.URL)
-				if err != nil {
-					authorityErrors = append(authorityErrors, errors.Wrap(err, "fetching FulcioRoot"))
-					continue
-				}
-				var rekorClient *client.Rekor
-				if authority.CTLog != nil && authority.CTLog.URL != nil {
-					logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
-					rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
-					if err != nil {
-						logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
-						authorityErrors = append(authorityErrors, errors.Wrap(err, "creating Rekor client"))
-						continue
-					}
-				}
-				sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, authorityRemoteOpts...)
-				if err != nil {
-					logging.FromContext(ctx).Errorf("failed validSignatures with fulcio for %s: %v", ref.Name(), err)
-					authorityErrors = append(authorityErrors, errors.Wrap(err, "validate signatures with fulcio"))
-				} else {
-					if len(sps) > 0 {
-						logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", ref.Name(), len(sps))
-						return sps, nil
-					}
-					logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
-					authorityErrors = append(authorityErrors, fmt.Errorf("no valid signatures found for %s", ref.Name()))
-				}
+		} else {
+			// We're doing the verify path, so validate image signatures (.sig)
+			validatedSignatures, err := ValidatePolicySignaturesForAuthority(ctx, ref, kc, authority, authorityRemoteOpts...)
+			if err != nil {
+				authorityErrors = append(authorityErrors, err)
+			} else {
+				policyResult.AuthorityMatches[authority.Name] = AuthorityMatch{Signatures: validatedSignatures}
 			}
 		}
 	}
 	return nil, authorityErrors
+}
+
+func ociSignatureToPolicySignature(ctx context.Context, sigs []oci.Signature) []PolicySignature {
+	ret := []PolicySignature{}
+	for _, ociSig := range sigs {
+		logging.FromContext(ctx).Debugf("Converting signature %+v", ociSig)
+		ret = append(ret, PolicySignature{Subject: "PLACEHOLDER", Issuer: "PLACEHOLDER"})
+	}
+	return ret
+}
+
+// ValidatePolicySignaturesForAuthority takes the Authority and tries to
+// verify a signature against it.
+func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Reference, kc authn.Keychain, authority webhookcip.Authority, remoteOpts ...ociremote.Option) ([]PolicySignature, error) {
+	name := authority.Name
+	switch {
+	case authority.Key != nil && len(authority.Key.PublicKeys) > 0:
+		// TODO(vaikas): What should happen if there are multiple keys
+		// Is it even allowed? 'valid' returns success if any key
+		// matches.
+		// https://github.com/sigstore/cosign/issues/1652
+		sps, err := valid(ctx, ref, authority.Key.PublicKeys, remoteOpts...)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to validate public keys with authority %s for %s", name, ref.Name()))
+		} else {
+			if len(sps) > 0 {
+				logging.FromContext(ctx).Debugf("validated signature for %s with authority %s got %d signatures", ref.Name(), authority.Name, len(sps))
+				return ociSignatureToPolicySignature(ctx, sps), nil
+			}
+			logging.FromContext(ctx).Errorf("no validSignatures found with authority %s for %s", name, ref.Name())
+			return nil, fmt.Errorf("no valid signatures found with authority %s for %s", name, ref.Name())
+		}
+	case authority.Keyless != nil:
+		if authority.Keyless != nil && authority.Keyless.URL != nil {
+			logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
+			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
+			if err != nil {
+				return nil, errors.Wrap(err, "fetching FulcioRoot")
+			}
+			var rekorClient *client.Rekor
+			if authority.CTLog != nil && authority.CTLog.URL != nil {
+				logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
+				rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
+				if err != nil {
+					logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
+					return nil, errors.Wrap(err, "creating Rekor client")
+				}
+			}
+			sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
+			if err != nil {
+				logging.FromContext(ctx).Errorf("failed validSignatures for authority %s with fulcio for %s: %v", name, ref.Name(), err)
+				return nil, errors.Wrap(err, "validate signatures with fulcio")
+			} else {
+				if len(sps) > 0 {
+					logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", ref.Name(), len(sps))
+					return ociSignatureToPolicySignature(ctx, sps), nil
+				}
+				logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
+				return nil, fmt.Errorf("no valid signatures found with authority %s for  %s", name, ref.Name())
+			}
+		}
+	}
+	return nil, fmt.Errorf("Something went really wrong here")
+}
+
+// ValidatePolicyAttestationsForAuthority takes the Authority and tries to
+// verify attestations against it.
+func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Reference, kc authn.Keychain, authority webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string][]PolicySignature, error) {
+	name := authority.Name
+	verifiedAttestations := []oci.Signature{}
+	switch {
+	case authority.Key != nil && len(authority.Key.PublicKeys) > 0:
+		for _, k := range authority.Key.PublicKeys {
+			verifier, err := signature.LoadVerifier(k, crypto.SHA256)
+			if err != nil {
+				logging.FromContext(ctx).Errorf("error creating verifier: %v", err)
+				return nil, errors.Wrap(err, "creating verifier")
+			}
+			va, err := validAttestations(ctx, ref, verifier, remoteOpts...)
+			if err != nil {
+				logging.FromContext(ctx).Errorf("error validating attestations: %v", err)
+				return nil, errors.Wrap(err, "validating attestations")
+			}
+			verifiedAttestations = append(verifiedAttestations, va...)
+		}
+		logging.FromContext(ctx).Debug("No valid signatures were found.")
+	case authority.Keyless != nil:
+		if authority.Keyless != nil && authority.Keyless.URL != nil {
+			logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
+			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
+			if err != nil {
+				return nil, errors.Wrap(err, "fetching FulcioRoot")
+			}
+			var rekorClient *client.Rekor
+			if authority.CTLog != nil && authority.CTLog.URL != nil {
+				logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
+				rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
+				if err != nil {
+					logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
+					return nil, errors.Wrap(err, "creating Rekor client")
+				}
+			}
+			va, err := validAttestationsWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
+			if err != nil {
+				logging.FromContext(ctx).Errorf("failed validSignatures for authority %s with fulcio for %s: %v", name, ref.Name(), err)
+				return nil, errors.Wrap(err, "validate signatures with fulcio")
+			} else {
+				verifiedAttestations = append(verifiedAttestations, va...)
+			}
+		}
+	}
+	// If we didn't get any verified attestations either from the Key or Keyless
+	// path, then error out
+	if len(verifiedAttestations) == 0 {
+		logging.FromContext(ctx).Errorf("no valid attestations found with authority %s for %s", name, ref.Name())
+		return nil, fmt.Errorf("no valid attestations found with authority %s for %s", name, ref.Name())
+	}
+	// Now spin through the Attestations that the user specified and validate
+	// them.
+	// TODO(vaikas): Pretty inefficient here, figure out a better way if
+	// possible.
+	ret := map[string][]PolicySignature{}
+	for _, wantedAttestation := range authority.Attestations {
+		// If there's no type / policy to do more checking against,
+		// then we're done here. It matches all the attestations
+		if wantedAttestation.Type == "" {
+			ret[wantedAttestation.PredicateType] = ociSignatureToPolicySignature(ctx, verifiedAttestations)
+			continue
+		}
+		// There's a particular type, so we need to go through all the verified
+		// attestations and make sure that our particular one is satisfied.
+		for _, va := range verifiedAttestations {
+			attBytes, err := policy.AttestationToPayloadJSON(ctx, wantedAttestation.PredicateType, va)
+			if err != nil {
+				return nil, errors.Wrap(err, "Failed to convert attestation payload to json")
+			}
+			switch wantedAttestation.Type {
+			case "cue":
+				cueValidationErr := evaluateCue(ctx, attBytes, wantedAttestation.Data)
+				if cueValidationErr != nil {
+					return nil, errors.Wrap(cueValidationErr, fmt.Sprintf("failed evaluating cue policy for type %s", wantedAttestation.PredicateType))
+				}
+			case "rego":
+				regoValidationErr := evaluateRego(ctx, attBytes, wantedAttestation.Data)
+				if regoValidationErr != nil {
+					return nil, errors.Wrap(regoValidationErr, fmt.Sprintf("failed evaluating cue policy for type %s", wantedAttestation.PredicateType))
+				}
+			default:
+				return nil, fmt.Errorf("Sorry Type %s is not supported yet", wantedAttestation.Type)
+			}
+			// Ok, so this passed aok, jot it down to our result set as
+			// verified attestation with the predicate type match
+			ret[wantedAttestation.PredicateType] = ociSignatureToPolicySignature(ctx, verifiedAttestations)
+		}
+	}
+	return ret, nil
+}
+
+// evaluateCue evaluates a cue policy `evaluator` against `attestation`
+func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
+	// TODO(vaikas): Do these bring in the glog????
+	return nil
+	cueCtx := cuecontext.New()
+	v := cueCtx.CompileString(evaluator)
+	return cuejson.Validate(attestation, v)
+}
+
+// evaluateRego evaluates a rego policy `evaluator` against `attestation`
+func evaluateRego(ctx context.Context, attestation []byte, evaluator string) error {
+	// TODO(vaikas) Fix this
+	// The existing stuff wants files, and it doesn't work. There must be
+	// a way to load it from a []byte. Tomorrows problem
+	// regoValidationErrs := rego.ValidateJSON(payload, regoPolicies)
+	return fmt.Errorf("TODO(vaikas): Don't know how to this from bytes yet")
 }
 
 // ResolvePodSpecable implements duckv1.PodSpecValidator

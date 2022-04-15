@@ -74,6 +74,7 @@ func valid(ctx context.Context, ref name.Reference, keys []crypto.PublicKey, opt
 
 // For testing
 var cosignVerifySignatures = cosign.VerifyImageSignatures
+var cosignVerifyAttestations = cosign.VerifyImageAttestations
 
 func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier, opts ...ociremote.Option) ([]oci.Signature, error) {
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
@@ -99,6 +100,28 @@ func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRo
 		Identities:         ids,
 	})
 	return sigs, err
+}
+
+func validAttestations(ctx context.Context, ref name.Reference, verifier signature.Verifier, opts ...ociremote.Option) ([]oci.Signature, error) {
+	attestations, _, err := cosignVerifyAttestations(ctx, ref, &cosign.CheckOpts{
+		RegistryClientOpts: opts,
+		SigVerifier:        verifier,
+		ClaimVerifier:      cosign.SimpleClaimVerifier,
+	})
+	return attestations, err
+}
+
+// validAttestationsWithFulcio expects a Fulcio Cert to verify against. An
+// optional rekorClient can also be given, if nil passed, default is assumed.
+func validAttestationsWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, identities []v1alpha1.Identity, opts ...ociremote.Option) ([]oci.Signature, error) {
+	attestations, _, err := cosignVerifyAttestations(ctx, ref, &cosign.CheckOpts{
+		RegistryClientOpts: opts,
+		RootCerts:          fulcioRoots,
+		RekorClient:        rekorClient,
+		ClaimVerifier:      cosign.SimpleClaimVerifier,
+		Identities:         identities,
+	})
+	return attestations, err
 }
 
 func getKeys(ctx context.Context, cfg map[string][]byte) ([]crypto.PublicKey, *apis.FieldError) {
