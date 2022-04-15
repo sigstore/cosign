@@ -72,6 +72,7 @@ cosign verify [flags]
       --cert-email string                                                                        the email expected in a valid Fulcio certificate
       --cert-oidc-issuer string                                                                  the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth
       --check-claims                                                                             whether to check the claims found (default true)
+      --enforce-sct                                                                              whether to enforce that a certificate contain an embedded SCT, a proof of inclusion in a certificate transparency log
   -h, --help                                                                                     help for verify
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret

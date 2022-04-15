@@ -28,12 +28,14 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
+	"github.com/google/certificate-transparency-go/testdata"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
@@ -45,6 +47,7 @@ import (
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
 	rtypes "github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/stretchr/testify/require"
@@ -341,6 +344,64 @@ func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
 	}
 }
 
+func TestValidateAndUnpackCertWithSCT(t *testing.T) {
+	chain, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(testdata.TestEmbeddedCertPEM + testdata.CACertPEM))
+	if err != nil {
+		t.Fatalf("error unmarshalling certificate chain: %v", err)
+	}
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(chain[1])
+	co := &CheckOpts{
+		RootCerts: rootPool,
+	}
+
+	// write SCT verification key to disk
+	tmpPrivFile, err := os.CreateTemp(t.TempDir(), "cosign_verify_sct_*.key")
+	if err != nil {
+		t.Fatalf("failed to create temp key file: %v", err)
+	}
+	defer tmpPrivFile.Close()
+	if _, err := tmpPrivFile.Write([]byte(testdata.LogPublicKeyPEM)); err != nil {
+		t.Fatalf("failed to write key file: %v", err)
+	}
+	os.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
+	defer os.Unsetenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE")
+
+	_, err = ValidateAndUnpackCert(chain[0], co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+
+	// validate again, explicitly setting enforce SCT
+	co.EnforceSCT = true
+	_, err = ValidateAndUnpackCert(chain[0], co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertWithoutRequiredSCT(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertEmail:      subject,
+		CertOidcIssuer: oidcIssuer,
+		EnforceSCT:     true,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "certificate does not include required embedded SCT")
+}
+
 func TestValidateAndUnpackCertInvalidRoot(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"
@@ -613,9 +674,15 @@ func TestTrustedCertSuccess(t *testing.T) {
 	subPool := x509.NewCertPool()
 	subPool.AddCert(subCert)
 
-	err := TrustedCert(leafCert, rootPool, subPool)
+	chains, err := TrustedCert(leafCert, rootPool, subPool)
 	if err != nil {
 		t.Fatalf("expected no error verifying certificate, got %v", err)
+	}
+	if len(chains) != 1 {
+		t.Fatalf("unexpected number of chains found, expected 1, got %v", len(chains))
+	}
+	if len(chains[0]) != 3 {
+		t.Fatalf("unexpected number of certs in chain, expected 3, got %v", len(chains[0]))
 	}
 }
 
@@ -626,7 +693,7 @@ func TestTrustedCertSuccessNoIntermediates(t *testing.T) {
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
 
-	err := TrustedCert(leafCert, rootPool, nil)
+	_, err := TrustedCert(leafCert, rootPool, nil)
 	if err != nil {
 		t.Fatalf("expected no error verifying certificate, got %v", err)
 	}
@@ -644,7 +711,7 @@ func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
 	subPool := x509.NewCertPool()
 	subPool.AddCert(subCert)
 
-	err := TrustedCert(leafCert, rootPool, subPool)
+	_, err := TrustedCert(leafCert, rootPool, subPool)
 	if err != nil {
 		t.Fatalf("expected no error verifying certificate, got %v", err)
 	}

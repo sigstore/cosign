@@ -61,7 +61,8 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, certOidcIssuer, certChain, sigRef, blobRef string) error {
+func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail,
+	certOidcIssuer, certChain, sigRef, blobRef string, enforceSCT bool) error {
 	var verifier signature.Verifier
 	var cert *x509.Certificate
 
@@ -119,6 +120,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 			co := &cosign.CheckOpts{
 				CertEmail:      certEmail,
 				CertOidcIssuer: certOidcIssuer,
+				EnforceSCT:     enforceSCT,
 			}
 			verifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
@@ -162,7 +164,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 		if len(uuids) == 0 {
 			return errors.New("could not find a tlog entry for provided blob")
 		}
-		return verifySigByUUID(ctx, ko, rClient, certEmail, certOidcIssuer, sig, b64sig, uuids, blobBytes)
+		return verifySigByUUID(ctx, ko, rClient, certEmail, certOidcIssuer, sig, b64sig, uuids, blobBytes, enforceSCT)
 	}
 
 	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
@@ -184,7 +186,8 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 	return nil
 }
 
-func verifySigByUUID(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string, uuids []string, blobBytes []byte) error {
+func verifySigByUUID(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string,
+	uuids []string, blobBytes []byte, enforceSCT bool) error {
 	var validSigExists bool
 	for _, u := range uuids {
 		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, u)
@@ -202,6 +205,7 @@ func verifySigByUUID(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor
 			IntermediateCerts: fulcio.GetIntermediates(),
 			CertEmail:         certEmail,
 			CertOidcIssuer:    certOidcIssuer,
+			EnforceSCT:        enforceSCT,
 		}
 		cert := certs[0]
 		verifier, err := cosign.ValidateAndUnpackCert(cert, co)

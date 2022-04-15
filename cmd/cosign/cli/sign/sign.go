@@ -32,6 +32,7 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	icos "github.com/sigstore/cosign/internal/pkg/cosign"
@@ -414,8 +415,21 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	for _, c := range certChain[:len(certChain)-1] {
 		subPool.AddCert(c)
 	}
-	if err := cosign.TrustedCert(leafCert, rootPool, subPool); err != nil {
+	if _, err := cosign.TrustedCert(leafCert, rootPool, subPool); err != nil {
 		return nil, errors.Wrap(err, "unable to validate certificate chain")
+	}
+	// Verify SCT if present in the leaf certificate.
+	contains, err := ctl.ContainsSCT(leafCert.Raw)
+	if err != nil {
+		return nil, err
+	}
+	if contains {
+		var chain []*x509.Certificate
+		chain = append(chain, leafCert)
+		chain = append(chain, certChain...)
+		if err := ctl.VerifyEmbeddedSCT(context.Background(), chain); err != nil {
+			return nil, err
+		}
 	}
 	certSigner.Chain = []string{string(certChainBytes)}
 

@@ -17,102 +17,16 @@ package fulcioverifier
 
 import (
 	"context"
-	"crypto"
-	"crypto/x509"
-	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"os"
+	"strings"
 
-	ct "github.com/google/certificate-transparency-go"
-	"github.com/google/certificate-transparency-go/ctutil"
-	ctx509 "github.com/google/certificate-transparency-go/x509"
-	"github.com/google/certificate-transparency-go/x509util"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	fulciopb "github.com/sigstore/fulcio/pkg/generated/protobuf"
 )
-
-// This is the CT log public key target name
-var ctPublicKeyStr = `ctfe.pub`
-
-// Setting this env variable will over ride what is used to validate
-// the SCT coming back from Fulcio.
-const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
-
-// verifySCT verifies the SCT against the Fulcio CT log public key.
-// By default this comes from TUF, but you can override this (for test)
-// purposes by using an env variable `SIGSTORE_CT_LOG_PUBLIC_KEY_FILE`. If using
-// an alternate, the file can be PEM, or DER format.
-//
-// The SCT is a `Signed Certificate Timestamp`, which promises that
-// the certificate issued by Fulcio was also added to the public CT log within
-// some defined time period
-func verifySCT(ctx context.Context, certPEM string, rawSCT []byte) error {
-	pubKeys := make(map[crypto.PublicKey]tuf.StatusKind)
-	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
-	if rootEnv == "" {
-		tufClient, err := tuf.NewFromEnv(ctx)
-		if err != nil {
-			return err
-		}
-		defer tufClient.Close()
-
-		targets, err := tufClient.GetTargetsByMeta(tuf.CTFE, []string{ctPublicKeyStr})
-		if err != nil {
-			return err
-		}
-		for _, t := range targets {
-			ctPub, err := cosign.PemToECDSAKey(t.Target)
-			if err != nil {
-				return errors.Wrap(err, "converting Public CT to ECDSAKey")
-			}
-			pubKeys[ctPub] = t.Status
-		}
-	} else {
-		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
-		raw, err := os.ReadFile(rootEnv)
-		if err != nil {
-			return errors.Wrap(err, "error reading alternate public key file")
-		}
-		pubKey, err := getAlternatePublicKey(raw)
-		if err != nil {
-			return errors.Wrap(err, "error parsing alternate public key from the file")
-		}
-		pubKeys[pubKey] = tuf.Active
-	}
-	if len(pubKeys) == 0 {
-		return errors.New("none of the CTFE keys have been found")
-	}
-	cert, err := x509util.CertificateFromPEM([]byte(certPEM))
-	if err != nil {
-		return err
-	}
-	var addChainResp ct.AddChainResponse
-	if err := json.Unmarshal(rawSCT, &addChainResp); err != nil {
-		return errors.Wrap(err, "unmarshal")
-	}
-	sct, err := addChainResp.ToSignedCertificateTimestamp()
-	if err != nil {
-		return err
-	}
-	var verifySctErr error
-	for pubKey, status := range pubKeys {
-		verifySctErr = ctutil.VerifySCT(pubKey, []*ctx509.Certificate{cert}, sct, false)
-		// Exit after successful verification of the SCT
-		if verifySctErr == nil {
-			if status != tuf.Active {
-				fmt.Fprintf(os.Stderr, "**Info** Successfully verified SCT using an expired verification key\n")
-			}
-			return nil
-		}
-	}
-	// Return the last error that occurred during verification.
-	return verifySctErr
-}
 
 func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient fulciopb.CAClient) (*fulcio.Signer, error) {
 	fs, err := fulcio.NewSigner(ctx, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL, fClient)
@@ -121,35 +35,10 @@ func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClien
 	}
 
 	// verify the sct
-	if err := verifySCT(ctx, fs.Cert, fs.SCT); err != nil {
+	if err := ctl.VerifySCT(ctx, []byte(fs.Cert), []byte(strings.Join(fs.Chain, "\n")), fs.SCT); err != nil {
 		return nil, errors.Wrap(err, "verifying SCT")
 	}
 	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")
 
 	return fs, nil
-}
-
-// Given a byte array, try to construct a public key from it.
-// Will try first to see if it's PEM formatted, if not, then it will
-// try to parse it as der publics, and failing that
-func getAlternatePublicKey(in []byte) (crypto.PublicKey, error) {
-	var pubKey crypto.PublicKey
-	var err error
-	var derBytes []byte
-	pemBlock, _ := pem.Decode(in)
-	if pemBlock == nil {
-		fmt.Fprintf(os.Stderr, "Failed to decode non-standard public key for verifying SCT using PEM decode, trying as DER")
-		derBytes = in
-	} else {
-		derBytes = pemBlock.Bytes
-	}
-	pubKey, err = x509.ParsePKIXPublicKey(derBytes)
-	if err != nil {
-		// Try using the PKCS1 before giving up.
-		pubKey, err = x509.ParsePKCS1PublicKey(derBytes)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse alternate public key")
-		}
-	}
-	return pubKey, nil
 }

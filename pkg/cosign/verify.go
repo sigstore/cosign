@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
@@ -83,6 +84,9 @@ type CheckOpts struct {
 	CertEmail string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertOidcIssuer string
+	// EnforceSCT requires that a certificate contain an embedded SCT during verification. An SCT is proof of inclusion in a
+	// certificate transparency log.
+	EnforceSCT bool
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
@@ -158,7 +162,8 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	}
 
 	// Now verify the cert, then the signature.
-	if err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts); err != nil {
+	chains, err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts)
+	if err != nil {
 		return nil, err
 	}
 	if co.CertEmail != "" {
@@ -220,6 +225,22 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 			}
 		}
 		return nil, errors.New("none of the expected identities matched what was in the certificate")
+	}
+	contains, err := ctl.ContainsSCT(cert.Raw)
+	if err != nil {
+		return nil, err
+	}
+	if co.EnforceSCT && !contains {
+		return nil, errors.New("certificate does not include required embedded SCT")
+	}
+	if contains {
+		// handle if chains has more than one chain - grab first and print message
+		if len(chains) > 1 {
+			fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
+		}
+		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
+			return nil, err
+		}
 	}
 	return verifier, nil
 }
@@ -901,8 +922,8 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	return nil
 }
 
-func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x509.CertPool) error {
-	if _, err := cert.Verify(x509.VerifyOptions{
+func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x509.CertPool) ([][]*x509.Certificate, error) {
+	chains, err := cert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
 		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
@@ -912,10 +933,11 @@ func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x5
 		KeyUsages: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageCodeSigning,
 		},
-	}); err != nil {
-		return err
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return chains, nil
 }
 
 func correctAnnotations(wanted, have map[string]interface{}) bool {

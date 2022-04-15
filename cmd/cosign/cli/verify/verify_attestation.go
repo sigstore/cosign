@@ -50,6 +50,7 @@ type VerifyAttestationCommand struct {
 	CertEmail      string
 	CertOidcIssuer string
 	CertChain      string
+	EnforceSCT     bool
 	Sk             bool
 	Slot           string
 	Output         string
@@ -77,6 +78,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		RegistryClientOpts: ociremoteOpts,
 		CertEmail:          c.CertEmail,
 		CertOidcIssuer:     c.CertOidcIssuer,
+		EnforceSCT:         c.EnforceSCT,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
