@@ -15,7 +15,7 @@
 package config
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"strings"
@@ -143,7 +143,7 @@ func checkGetMatches(t *testing.T, c map[string][]webhookcip.Authority, err erro
 	t.Error("Wanted a config and non-zero authorities, got no authorities")
 }
 
-func checkPublicKey(t *testing.T, gotKey *ecdsa.PublicKey) {
+func checkPublicKey(t *testing.T, gotKey crypto.PublicKey) {
 	t.Helper()
 
 	derBytes, err := x509.MarshalPKIXPublicKey(gotKey)
