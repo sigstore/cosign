@@ -18,6 +18,7 @@ package webhook
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/x509"
@@ -240,7 +241,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 								{
 									Key: &webhookcip.KeyRef{
 										Data:       authorityKeyCosignPubString,
-										PublicKeys: []*ecdsa.PublicKey{authorityKeyCosignPub},
+										PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
 									},
 								},
 							},

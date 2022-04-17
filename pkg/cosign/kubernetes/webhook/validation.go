@@ -18,7 +18,6 @@ package webhook
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -37,7 +36,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
+func valid(ctx context.Context, ref name.Reference, keys []crypto.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
 		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroots.Get(), nil /* rekor */, nil /* no identities */, opts...)
@@ -52,7 +51,7 @@ func valid(ctx context.Context, ref name.Reference, keys []*ecdsa.PublicKey, opt
 	// We return nil if ANY key matches
 	var lastErr error
 	for _, k := range keys {
-		verifier, err := signature.LoadECDSAVerifier(k, crypto.SHA256)
+		verifier, err := signature.LoadVerifier(k, crypto.SHA256)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error creating verifier: %v", err)
 			lastErr = err
@@ -98,8 +97,8 @@ func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRo
 	return sigs, err
 }
 
-func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *apis.FieldError) {
-	keys := []*ecdsa.PublicKey{}
+func getKeys(ctx context.Context, cfg map[string][]byte) ([]crypto.PublicKey, *apis.FieldError) {
+	keys := []crypto.PublicKey{}
 	errs := []error{}
 
 	logging.FromContext(ctx).Debugf("Got public key: %v", cfg["cosign.pub"])
@@ -111,7 +110,7 @@ func getKeys(ctx context.Context, cfg map[string][]byte) ([]*ecdsa.PublicKey, *a
 		if err != nil {
 			errs = append(errs, err)
 		} else {
-			keys = append(keys, key.(*ecdsa.PublicKey))
+			keys = append(keys, key.(crypto.PublicKey))
 		}
 	}
 	if keys == nil {

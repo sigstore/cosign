@@ -15,7 +15,7 @@
 package clusterimagepolicy
 
 import (
-	"crypto/ecdsa"
+	"crypto"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -55,7 +55,7 @@ type KeyRef struct {
 	// PublicKeys are not marshalled because JSON unmarshalling
 	// errors for *big.Int
 	// +optional
-	PublicKeys []*ecdsa.PublicKey `json:"-"`
+	PublicKeys []crypto.PublicKey `json:"-"`
 }
 
 type KeylessRef struct {
@@ -70,7 +70,7 @@ type KeylessRef struct {
 // UnmarshalJSON populates the PublicKeys using Data because
 // JSON unmashalling errors for *big.Int
 func (k *KeyRef) UnmarshalJSON(data []byte) error {
-	var publicKeys []*ecdsa.PublicKey
+	var publicKeys []crypto.PublicKey
 	var err error
 
 	ret := make(map[string]string)
@@ -143,28 +143,36 @@ func convertKeylessRefV1Alpha1ToWebhook(in *v1alpha1.KeylessRef) *KeylessRef {
 	}
 }
 
-func ConvertKeyDataToPublicKeys(pubKey string) ([]*ecdsa.PublicKey, error) {
-	keys := []*ecdsa.PublicKey{}
-	pems := parsePems([]byte(pubKey))
+func parsePEMKey(b []byte) ([]*pem.Block, bool) {
+	pemKey, rest := pem.Decode(b)
+	valid := true
+	if pemKey == nil {
+		return nil, false
+	}
+	pemBlocks := []*pem.Block{pemKey}
+
+	if len(rest) > 0 {
+		list, check := parsePEMKey(rest)
+		return append(pemBlocks, list...), check
+	}
+	return pemBlocks, valid
+}
+
+func ConvertKeyDataToPublicKeys(pubKey string) ([]crypto.PublicKey, error) {
+	keys := []crypto.PublicKey{}
+	pems, validPEM := parsePEMKey([]byte(pubKey))
+	if !validPEM {
+		// TODO: If it is not valid report the error instead of ignore the key
+		return keys, nil
+	}
+
 	for _, p := range pems {
 		key, err := x509.ParsePKIXPublicKey(p.Bytes)
 		if err != nil {
 			return nil, err
 		}
-		keys = append(keys, key.(*ecdsa.PublicKey))
+		keys = append(keys, key.(crypto.PublicKey))
 	}
+
 	return keys, nil
-}
-
-func parsePems(b []byte) []*pem.Block {
-	p, rest := pem.Decode(b)
-	if p == nil {
-		return nil
-	}
-	pems := []*pem.Block{p}
-
-	if rest != nil {
-		return append(pems, parsePems(rest)...)
-	}
-	return pems
 }
