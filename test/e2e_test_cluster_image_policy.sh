@@ -307,6 +307,10 @@ else
 fi
 echo '::endgroup::'
 
+echo '::group:: Generate New Signing Key For Remote Signature'
+COSIGN_PASSWORD="" ./cosign generate-key-pair
+echo '::endgroup::'
+
 echo '::group:: Sign demoimage2 with key'
 COSIGN_PASSWORD="" ./cosign sign --key cosign.key --force --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage2}
 echo '::endgroup::'
