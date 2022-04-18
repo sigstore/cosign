@@ -36,7 +36,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func valid(ctx context.Context, ref name.Reference, rekorClient *client.Rekor, keys []*crypto.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
+func valid(ctx context.Context, ref name.Reference, rekorClient *client.Rekor, keys []crypto.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
 		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroots.Get(), nil /* rekor */, nil /* no identities */, opts...)

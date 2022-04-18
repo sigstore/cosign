@@ -135,10 +135,10 @@ kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-identities.yaml
 sleep 5
 echo '::endgroup::'
 
-# This has correct issuer/subject, so not work
+# This has correct issuer/subject, so should work
 echo '::group:: test job success with identities'
 if ! kubectl create -n demo-keyless-signing job demo-identities-works --image=${demoimage} ; then
-  echo Failed to create Job in namespace without label!
+  echo Failed to create Job in namespace with matching issuer/subject!
   exit 1
 else
   echo Succcessfully created Job with signed image keyless
@@ -169,11 +169,6 @@ echo '::group:: Generate New Signing Key For Colocated Signature'
 COSIGN_PASSWORD="" ./cosign generate-key-pair
 mv cosign.key cosign-colocated-signing.key
 mv cosign.pub cosign-colocated-signing.pub
-echo '::endgroup::'
-
-echo '::group:: Create and label new namespace for verification'
-kubectl create namespace demo-key-signing
-kubectl label namespace demo-key-signing cosigned.sigstore.dev/include=true
 echo '::endgroup::'
 
 echo '::group:: Deploy ClusterImagePolicy With Key Signing'
