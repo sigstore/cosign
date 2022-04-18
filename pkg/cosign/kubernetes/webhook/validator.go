@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"cuelang.org/go/cue/cuecontext"
 	cuejson "cuelang.org/go/encoding/json"
@@ -214,7 +215,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				continue
 			}
 
-			if _, err := valid(ctx, ref, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
+			if _, err := valid(ctx, ref, nil, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
 				errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)
 				errorField.Details = c.Image
 				errs = errs.Also(errorField)
@@ -339,13 +340,25 @@ func ociSignatureToPolicySignature(ctx context.Context, sigs []oci.Signature) []
 // verify a signature against it.
 func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Reference, kc authn.Keychain, authority webhookcip.Authority, remoteOpts ...ociremote.Option) ([]PolicySignature, error) {
 	name := authority.Name
+
+	var rekorClient *client.Rekor
+	var err error
+	if authority.CTLog != nil && authority.CTLog.URL != nil {
+		logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
+		rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
+		if err != nil {
+			logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
+			return nil, errors.Wrap(err, "creating Rekor client")
+		}
+	}
+
 	switch {
 	case authority.Key != nil && len(authority.Key.PublicKeys) > 0:
 		// TODO(vaikas): What should happen if there are multiple keys
 		// Is it even allowed? 'valid' returns success if any key
 		// matches.
 		// https://github.com/sigstore/cosign/issues/1652
-		sps, err := valid(ctx, ref, authority.Key.PublicKeys, remoteOpts...)
+		sps, err := valid(ctx, ref, rekorClient, authority.Key.PublicKeys, remoteOpts...)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to validate public keys with authority %s for %s", name, ref.Name()))
 		} else {
@@ -362,15 +375,6 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
 			if err != nil {
 				return nil, errors.Wrap(err, "fetching FulcioRoot")
-			}
-			var rekorClient *client.Rekor
-			if authority.CTLog != nil && authority.CTLog.URL != nil {
-				logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
-				rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
-				if err != nil {
-					logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
-					return nil, errors.Wrap(err, "creating Rekor client")
-				}
 			}
 			sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
 			if err != nil {
@@ -393,6 +397,17 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 // verify attestations against it.
 func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Reference, kc authn.Keychain, authority webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string][]PolicySignature, error) {
 	name := authority.Name
+	var rekorClient *client.Rekor
+	var err error
+	if authority.CTLog != nil && authority.CTLog.URL != nil {
+		logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
+		rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
+		if err != nil {
+			logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
+			return nil, errors.Wrap(err, "creating Rekor client")
+		}
+	}
+
 	verifiedAttestations := []oci.Signature{}
 	switch {
 	case authority.Key != nil && len(authority.Key.PublicKeys) > 0:
@@ -402,7 +417,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 				logging.FromContext(ctx).Errorf("error creating verifier: %v", err)
 				return nil, errors.Wrap(err, "creating verifier")
 			}
-			va, err := validAttestations(ctx, ref, verifier, remoteOpts...)
+			va, err := validAttestations(ctx, ref, verifier, rekorClient, remoteOpts...)
 			if err != nil {
 				logging.FromContext(ctx).Errorf("error validating attestations: %v", err)
 				return nil, errors.Wrap(err, "validating attestations")
@@ -416,15 +431,6 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
 			if err != nil {
 				return nil, errors.Wrap(err, "fetching FulcioRoot")
-			}
-			var rekorClient *client.Rekor
-			if authority.CTLog != nil && authority.CTLog.URL != nil {
-				logging.FromContext(ctx).Debugf("Using CTLog %s for %s", authority.CTLog.URL, ref.Name())
-				rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
-				if err != nil {
-					logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
-					return nil, errors.Wrap(err, "creating Rekor client")
-				}
 			}
 			va, err := validAttestationsWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
 			if err != nil {
@@ -462,6 +468,10 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 				return nil, errors.Wrap(err, "Failed to convert attestation payload to json")
 			}
 			if err := EvaluatePolicyAgainstJSON(ctx, wantedAttestation.PredicateType, wantedAttestation.Type, wantedAttestation.Data, attBytes); err != nil {
+				if strings.Contains(err.Error(), "invalid JSON") {
+					logging.FromContext(ctx).Errorf("Invalid Json for predicatetype: %s : JSONBYTES: %s", wantedAttestation.PredicateType, string(attBytes))
+					continue
+				}
 				return nil, err
 			}
 			// Ok, so this passed aok, jot it down to our result set as
@@ -480,6 +490,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 // policyBody - String representing either cue or rego language
 // jsonBytes - Bytes to evaluate against the policyBody in the given language
 func EvaluatePolicyAgainstJSON(ctx context.Context, predicateType, policyType string, policyBody string, jsonBytes []byte) error {
+	logging.FromContext(ctx).Infof("vaikas: Evaluating JSON:\n%s\n%s", string(jsonBytes), policyBody)
 	switch policyType {
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)

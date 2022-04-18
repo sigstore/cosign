@@ -1,0 +1,152 @@
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: cosigned.sigstore.dev/v1alpha1
+kind: ClusterImagePolicy
+metadata:
+  name: image-policy-requires-two-signatures-two-attestations
+spec:
+  images:
+  - glob: registry.local:5000/cosigned/demo*
+  authorities:
+  - name: keyless-att
+    keyless:
+      url: http://fulcio.fulcio-system.svc
+    ctlog:
+      url: http://rekor.rekor-system.svc
+    attestations:
+    - predicateType: custom
+      policy:
+        type: cue
+        data: |
+          import "time"
+          before: time.Parse(time.RFC3339, "2049-10-09T17:10:27Z")
+          predicateType: "cosign.sigstore.dev/attestation/v1"
+          predicate: {
+            Timestamp: <before
+          }
+    - predicateType: vuln
+      policy:
+        type: cue
+        data: |
+          import "time"
+          before: time.Parse(time.RFC3339, "2022-04-15T17:10:27Z")
+          after: time.Parse(time.RFC3339, "2022-03-09T17:10:27Z")
+          predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+          predicate: {
+            invocation: {
+              uri: "invocation.example.com/cosign-testing"
+            }
+            scanner: {
+              uri: "fakescanner.example.com/cosign-testing"
+            }
+            metadata: {
+              scanStartedOn: <before
+              scanStartedOn: >after
+              scanFinishedOn: <before
+              scanFinishedOn: >after
+            }
+          }
+  - name: key-att
+    key:
+      data: |
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOz9FcbJM/oOkC26Wfo9paG2tYGBL
+        usDLHze93DzgLaAPDsyJrygpVnL9M6SOyfyXEsjpBTUu6uFZqHua8hwAlA==
+        -----END PUBLIC KEY-----
+    attestations:
+    - predicateType: vuln
+      policy:
+        type: cue
+        data: |
+          import "time"
+          before: time.Parse(time.RFC3339, "2022-04-15T17:10:27Z")
+          after: time.Parse(time.RFC3339, "2022-03-09T17:10:27Z")
+          predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+          predicate: {
+            invocation: {
+              uri: "invocation.example.com/cosign-testing"
+            }
+            scanner: {
+              uri: "fakescanner.example.com/cosign-testing"
+            }
+            metadata: {
+              scanStartedOn: <before
+              scanStartedOn: >after
+              scanFinishedOn: <before
+              scanFinishedOn: >after
+            }
+          }
+    ctlog:
+      url: http://rekor.rekor-system.svc
+  - name: keyless-signature
+    keyless:
+      url: http://fulcio.fulcio-system.svc
+    ctlog:
+      url: http://rekor.rekor-system.svc
+  - name: key-signature
+    key:
+      data: |
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOz9FcbJM/oOkC26Wfo9paG2tYGBL
+        usDLHze93DzgLaAPDsyJrygpVnL9M6SOyfyXEsjpBTUu6uFZqHua8hwAlA==
+        -----END PUBLIC KEY-----
+    ctlog:
+      url: http://rekor.rekor-system.svc
+  policy:
+    type: cue
+    data: |
+      if len(authorityMatches."keyless-att".attestations) < 2 {
+        keylessAttestationsErr: "error"
+        keylessAttestationsErr: "Did not get both keyless attestations"
+      }
+      if len(authorityMatches."key-att".attestations) < 1 {
+        keyAttestationsErr: 1
+        keyAttestationsErr: "Did not get key attestation"
+      }
+      if len(authorityMatches."keyless-signature".signatures) < 1 {
+        keylessSignatureErr: 1
+        keylessSignatureErr: "Did not get keyless signature"
+      }
+      if len(authorityMatches."key-signature".signatures) < 1 {
+        keySignatureErr: 1
+        keySignatureErr: "Did not get key signature"
+      }
+      authorityMatches: {
+        "custom-att": {
+          attestations: {
+            custom: [
+              {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
+            ]
+          }
+        }
+        "vuln-att": {
+          attestations: {
+            vuln: [
+              {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
+            ]
+          }
+        }
+        "keyless-signature": {
+          signatures: [
+            {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
+          ]
+        }
+        "key-signature": {
+          signatures: [
+            {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
+          ]
+        }
+      }
+

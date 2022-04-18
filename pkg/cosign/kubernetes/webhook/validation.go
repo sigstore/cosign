@@ -36,7 +36,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func valid(ctx context.Context, ref name.Reference, keys []crypto.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
+func valid(ctx context.Context, ref name.Reference, rekorClient *client.Rekor, keys []*crypto.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
 		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroots.Get(), nil /* rekor */, nil /* no identities */, opts...)
@@ -58,7 +58,7 @@ func valid(ctx context.Context, ref name.Reference, keys []crypto.PublicKey, opt
 			continue
 		}
 
-		sps, err := validSignatures(ctx, ref, verifier, opts...)
+		sps, err := validSignatures(ctx, ref, verifier, rekorClient, opts...)
 		if err != nil {
 			logging.FromContext(ctx).Errorf("error validating signatures: %v", err)
 			lastErr = err
@@ -76,10 +76,11 @@ func valid(ctx context.Context, ref name.Reference, keys []crypto.PublicKey, opt
 var cosignVerifySignatures = cosign.VerifyImageSignatures
 var cosignVerifyAttestations = cosign.VerifyImageAttestations
 
-func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier, opts ...ociremote.Option) ([]oci.Signature, error) {
+func validSignatures(ctx context.Context, ref name.Reference, verifier signature.Verifier, rekorClient *client.Rekor, opts ...ociremote.Option) ([]oci.Signature, error) {
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
 		SigVerifier:        verifier,
+		RekorClient:        rekorClient,
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
 	})
 	return sigs, err
@@ -102,10 +103,11 @@ func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRo
 	return sigs, err
 }
 
-func validAttestations(ctx context.Context, ref name.Reference, verifier signature.Verifier, opts ...ociremote.Option) ([]oci.Signature, error) {
+func validAttestations(ctx context.Context, ref name.Reference, verifier signature.Verifier, rekorClient *client.Rekor, opts ...ociremote.Option) ([]oci.Signature, error) {
 	attestations, _, err := cosignVerifyAttestations(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
 		SigVerifier:        verifier,
+		RekorClient:        rekorClient,
 		ClaimVerifier:      cosign.IntotoSubjectClaimVerifier,
 	})
 	return attestations, err
