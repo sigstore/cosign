@@ -286,6 +286,10 @@ echo '::group:: Remove existing cips to get a fresh start'
 kubectl delete cip --all
 echo '::endgroup::'
 
+echo '::group:: Generate New Signing Key For Remote Signature'
+COSIGN_PASSWORD="" ./cosign generate-key-pair
+echo '::endgroup::'
+
 echo '::group:: Add cip for two signatures and two attestations'
 yq '. | .spec.authorities[1].key.data |= load_str("cosign.pub") | .spec.authorities[3].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-requires-two-signatures-and-two-attestations.yaml | kubectl apply -f -
 echo '::endgroup::'
@@ -305,10 +309,6 @@ else
     exit 1
   fi
 fi
-echo '::endgroup::'
-
-echo '::group:: Generate New Signing Key For Remote Signature'
-COSIGN_PASSWORD="" ./cosign generate-key-pair
 echo '::endgroup::'
 
 echo '::group:: Sign demoimage2 with key'
