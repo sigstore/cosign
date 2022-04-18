@@ -40,8 +40,7 @@ func TestGetFulcioRoots(t *testing.T) {
 	if _, err := tmpCertFile.Write(chain); err != nil {
 		t.Fatalf("failed to write cert file: %v", err)
 	}
-	os.Setenv("SIGSTORE_ROOT_FILE", tmpCertFile.Name())
-	defer os.Unsetenv("SIGSTORE_ROOT_FILE")
+	t.Setenv("SIGSTORE_ROOT_FILE", tmpCertFile.Name())
 
 	rootCertPool := Get()
 	// ignore deprecation error because certificates do not contain from SystemCertPool
