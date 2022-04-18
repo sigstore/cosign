@@ -386,7 +386,7 @@ echo '::endgroup::'
 echo '::group:: Create one key attestation and verify it'
 COSIGN_PASSWORD="" ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --rekor-url ${REKOR_URL} --type=vuln --key ./cosign.key --allow-insecure-registry --force ${demoimage2}
 
-./cosign verify-attestation --type vuln --key ./cosign.pub --allow-insecure-registry ${demoimage2}
+./cosign verify-attestation --type vuln --key ./cosign.pub --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage2}
 echo '::endgroup::'
 
 echo '::group:: test job rejection'
