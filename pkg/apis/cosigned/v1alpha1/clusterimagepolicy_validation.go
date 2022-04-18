@@ -83,6 +83,12 @@ func (authority *Authority) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(authority.Keyless.Validate(ctx).ViaField("keyless"))
 	}
 
+	if len(authority.Sources) > 0 {
+		for _, source := range authority.Sources {
+			errs = errs.Also(source.Validate(ctx).ViaField("source"))
+		}
+	}
+
 	return errs
 }
 
@@ -126,6 +132,14 @@ func (keyless *KeylessRef) Validate(ctx context.Context) *apis.FieldError {
 
 	for i, identity := range keyless.Identities {
 		errs = errs.Also(identity.Validate(ctx).ViaFieldIndex("identities", i))
+	}
+	return errs
+}
+
+func (source *Source) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
+	if source.OCI == "" {
+		errs = errs.Also(apis.ErrMissingField("oci"))
 	}
 	return errs
 }

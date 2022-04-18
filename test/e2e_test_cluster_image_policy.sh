@@ -165,13 +165,21 @@ kubectl delete cip image-policy-keyless-with-identities-mismatch
 sleep 5
 echo '::endgroup::'
 
-echo '::group:: Generate signing key'
+echo '::group:: Generate New Signing Key For Colocated Signature'
 COSIGN_PASSWORD="" ./cosign generate-key-pair
+mv cosign.key cosign-colocated-signing.key
+mv cosign.pub cosign-colocated-signing.pub
 echo '::endgroup::'
 
 echo '::group:: Deploy ClusterImagePolicy With Key Signing'
-yq '. | .spec.authorities[0].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-key.yaml | kubectl apply -f -
+yq '. | .spec.authorities[0].key.data |= load_str("cosign-colocated-signing.pub")' \
+  ./test/testdata/cosigned/e2e/cip-key.yaml | \
+  kubectl apply -f -
 echo '::endgroup::'
+
+echo '::group:: Create and label new namespace for verification'
+kubectl create namespace demo-key-signing
+kubectl label namespace demo-key-signing cosigned.sigstore.dev/include=true
 
 echo '::group:: Verify blocks unsigned with the key'
 if kubectl create -n demo-key-signing job demo --image=${demoimage}; then
@@ -181,16 +189,12 @@ fi
 echo '::endgroup::'
 
 echo '::group:: Sign demoimage with cosign key'
-COSIGN_PASSWORD="" ./cosign sign --key cosign.key --force --allow-insecure-registry ${demoimage}
+COSIGN_PASSWORD="" ./cosign sign --key cosign-colocated-signing.key --force --allow-insecure-registry ${demoimage}
 echo '::endgroup::'
 
 echo '::group:: Verify demoimage with cosign key'
-./cosign verify --key cosign.pub --allow-insecure-registry ${demoimage}
+./cosign verify --key cosign-colocated-signing.pub --allow-insecure-registry ${demoimage}
 echo '::endgroup::'
-
-echo '::group:: Create and label new namespace for verification'
-kubectl create namespace demo-key-signing
-kubectl label namespace demo-key-signing cosigned.sigstore.dev/include=true
 
 echo '::group:: test job success'
 # We signed this above, this should work
@@ -212,7 +216,66 @@ else
 fi
 echo '::endgroup::'
 
+echo '::group:: Generate New Signing Key For Remote Signature'
+COSIGN_PASSWORD="" ./cosign generate-key-pair
+mv cosign.key cosign-remote-signing.key
+mv cosign.pub cosign-remote-signing.pub
+echo '::endgroup::'
+
+echo '::group:: Deploy ClusterImagePolicy With Remote Public Key But Missing Source'
+yq '. | .metadata.name = "image-policy-remote-source"
+    | .spec.authorities[0].key.data |= load_str("cosign-remote-signing.pub")' \
+  ./test/testdata/cosigned/e2e/cip-key.yaml | \
+  kubectl apply -f -
+echo '::endgroup::'
+
+echo '::group:: Sign demoimage with cosign remote key'
+COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign sign --key cosign-remote-signing.key --force --allow-insecure-registry ${demoimage}
+echo '::endgroup::'
+
+echo '::group:: Verify demoimage with cosign remote key'
+if ./cosign verify --key cosign-remote-signing.pub --allow-insecure-registry ${demoimage}; then
+  echo "Signature should not have been verified unless COSIGN_REPOSITORY was defined"
+  exit 1
+fi
+
+if ! COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign verify --key cosign-remote-signing.pub --allow-insecure-registry ${demoimage}; then
+  echo "Signature should have been verified when COSIGN_REPOSITORY was defined"
+  exit 1
+fi
+echo '::endgroup::'
+
+echo '::group:: Create test namespace and label for remote key verification'
+kubectl create namespace demo-key-remote
+kubectl label namespace demo-key-remote cosigned.sigstore.dev/include=true
+echo '::endgroup::'
+
+echo '::group:: Verify with three CIP, one without correct Source set'
+if kubectl create -n demo-key-remote job demo --image=${demoimage}; then
+  echo Failed to block unsigned Job creation!
+  exit 1
+fi
+echo '::endgroup::'
+
+echo '::group:: Deploy ClusterImagePolicy With Remote Public Key With Source'
+yq '. | .metadata.name = "image-policy-remote-source"
+    | .spec.authorities[0].key.data |= load_str("cosign-remote-signing.pub")
+    | .spec.authorities[0] += {"source": [{"oci": env(KO_DOCKER_REPO)+"/remote-signature"}]}' \
+  ./test/testdata/cosigned/e2e/cip-key.yaml | \
+  kubectl apply -f -
+echo '::endgroup::'
+
+echo '::group:: Verify with three CIP, one with correct Source set'
+# We signed this above and applied remote signature source location above
+if ! kubectl create -n demo-key-remote job demo --image=${demoimage}; then
+  echo Failed to create Job in namespace without label!
+  exit 1
+else
+  echo Succcessfully created Job with signed image
+fi
+echo '::endgroup::'
+
 echo '::group::' Cleanup
 kubectl delete cip --all
 kubectl delete ns demo-key-signing demo-keyless-signing
-rm cosign.key cosign.pub
+rm cosign*.key cosign*.pub

@@ -20,7 +20,10 @@ import (
 	"encoding/json"
 	"encoding/pem"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/oci/remote"
 
 	"knative.dev/pkg/apis"
 )
@@ -44,6 +47,10 @@ type Authority struct {
 	Sources []v1alpha1.Source `json:"source,omitempty"`
 	// +optional
 	CTLog *v1alpha1.TLog `json:"ctlog,omitempty"`
+	// RemoteOpts are not marshalled because they are an unsupported type
+	// RemoteOpts will be populated by the Authority UnmarshalJSON override
+	// +optional
+	RemoteOpts []remote.Option `json:"-"`
 }
 
 // This references a public verification key stored in
@@ -89,6 +96,34 @@ func (k *KeyRef) UnmarshalJSON(data []byte) error {
 
 	k.PublicKeys = publicKeys
 
+	return nil
+}
+
+// UnmarshalJSON populates the authority with the remoteOpts
+// from authority sources
+func (a *Authority) UnmarshalJSON(data []byte) error {
+	// Create a new type to avoid recursion
+	type RawAuthority Authority
+
+	var rawAuthority RawAuthority
+	err := json.Unmarshal(data, &rawAuthority)
+	if err != nil {
+		return err
+	}
+
+	// Determine additional RemoteOpts
+	if len(rawAuthority.Sources) > 0 {
+		for _, source := range rawAuthority.Sources {
+			if targetRepoOverride, err := name.NewRepository(source.OCI); err != nil {
+				return errors.Wrap(err, "failed to determine source")
+			} else if (targetRepoOverride != name.Repository{}) {
+				rawAuthority.RemoteOpts = append(rawAuthority.RemoteOpts, remote.WithTargetRepository(targetRepoOverride))
+			}
+		}
+	}
+
+	// Set the new type instance to casted original
+	*a = Authority(rawAuthority)
 	return nil
 }
 

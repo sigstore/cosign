@@ -397,7 +397,57 @@ func TestAuthoritiesValidation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "Should pass when source oci is present",
+			expectErr: false,
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Regex: ".*"}},
+					Authorities: []Authority{
+						{
+							Key:     &KeyRef{KMS: "kms://key/path"},
+							Sources: []Source{{OCI: "registry.example.com"}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail when source oci is empty",
+			expectErr:   true,
+			errorString: "missing field(s): spec.authorities[0].source.oci",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Regex: ".*"}},
+					Authorities: []Authority{
+						{
+							Key:     &KeyRef{KMS: "kms://key/path"},
+							Sources: []Source{{OCI: ""}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:      "Should pass with multiple source oci is present",
+			expectErr: false,
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Regex: ".*"}},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{KMS: "kms://key/path"},
+							Sources: []Source{
+								{OCI: "registry1"},
+								{OCI: "registry2"},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			err := test.policy.Validate(context.TODO())
