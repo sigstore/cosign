@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"cuelang.org/go/cue/cuecontext"
 	cuejson "cuelang.org/go/encoding/json"
@@ -255,21 +254,18 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 		logging.FromContext(ctx).Debugf("Checking Policy: %s", cipName)
 		policyResult, errs := ValidatePolicy(ctx, ref, kc, cip, remoteOpts...)
 		if len(errs) > 0 {
-			for _, ae := range errs {
-				logging.FromContext(ctx).Errorf("GOT THE FOLLOWING ERROR: %w", ae)
-			}
 			ret[cipName] = append(ret[cipName], errs...)
 		} else {
 			// Ok, at least one Authority  on the policy passed. If there's a CIP level
 			// policy, apply it against the results of the successful Authorities
 			// outputs.
 			if cip.Policy != nil {
-				logging.FromContext(ctx).Infof("Validating CIP level policy against %+v", policyResult)
+				logging.FromContext(ctx).Debugf("Validating CIP level policy for %s", cipName)
 				policyJSON, err := json.Marshal(policyResult)
 				if err != nil {
 					ret[cipName] = append(ret[cipName], errors.Wrap(err, "marshaling policyresult"))
 				} else {
-					logging.FromContext(ctx).Infof("Validating CIP level policy against %s", string(policyJSON))
+					logging.FromContext(ctx).Debugf("Validating CIP level policy against %s", string(policyJSON))
 					err = EvaluatePolicyAgainstJSON(ctx, "ClusterImagePolicy", cip.Policy.Type, cip.Policy.Data, policyJSON)
 					if err != nil {
 						ret[cipName] = append(ret[cipName], err)
@@ -327,6 +323,8 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 }
 
 func ociSignatureToPolicySignature(ctx context.Context, sigs []oci.Signature) []PolicySignature {
+	// TODO(vaikas): Validate whether these are useful at all, or if we should
+	// simplify at least for starters.
 	ret := []PolicySignature{}
 	for _, ociSig := range sigs {
 		logging.FromContext(ctx).Debugf("Converting signature %+v", ociSig)
@@ -441,7 +439,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 		logging.FromContext(ctx).Errorf("no valid attestations found with authority %s for %s", name, ref.Name())
 		return nil, fmt.Errorf("no valid attestations found with authority %s for %s", name, ref.Name())
 	}
-	logging.FromContext(ctx).Infof("FOUND %d valid attestations, validating policies for them", len(verifiedAttestations))
+	logging.FromContext(ctx).Debugf("Found %d valid attestations, validating policies for them", len(verifiedAttestations))
 	// Now spin through the Attestations that the user specified and validate
 	// them.
 	// TODO(vaikas): Pretty inefficient here, figure out a better way if
@@ -459,13 +457,14 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 		for _, va := range verifiedAttestations {
 			attBytes, err := policy.AttestationToPayloadJSON(ctx, wantedAttestation.PredicateType, va)
 			if err != nil {
-				return nil, errors.Wrap(err, "Failed to convert attestation payload to json")
+				return nil, errors.Wrap(err, "failed to convert attestation payload to json")
+			}
+			if attBytes == nil {
+				// This happens when we ask for a predicate type that this
+				// attestation is not for. It's not an error, so we skip it.
+				continue
 			}
 			if err := EvaluatePolicyAgainstJSON(ctx, wantedAttestation.PredicateType, wantedAttestation.Type, wantedAttestation.Data, attBytes); err != nil {
-				if strings.Contains(err.Error(), "invalid JSON") {
-					logging.FromContext(ctx).Errorf("Invalid Json for predicatetype: %s : JSONBYTES: %s", wantedAttestation.PredicateType, string(attBytes))
-					continue
-				}
 				return nil, err
 			}
 			// Ok, so this passed aok, jot it down to our result set as
@@ -479,12 +478,12 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 // EvaluatePolicyAgainstJson is used to run a policy engine against JSON bytes.
 // These bytes can be for example Attestations, or ClusterImagePolicy result
 // types.
-// predicateType - which predicate are we evaluating, custon, vuln, policy, etc.
+// predicateType - which predicate are we evaluating, custom, vuln, policy, etc.
 // policyType - cue|rego
 // policyBody - String representing either cue or rego language
 // jsonBytes - Bytes to evaluate against the policyBody in the given language
 func EvaluatePolicyAgainstJSON(ctx context.Context, predicateType, policyType string, policyBody string, jsonBytes []byte) error {
-	logging.FromContext(ctx).Infof("vaikas: Evaluating JSON:\n%s\n%s", string(jsonBytes), policyBody)
+	logging.FromContext(ctx).Debugf("Evaluating JSON: %s against policy: %s", string(jsonBytes), policyBody)
 	switch policyType {
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
@@ -513,7 +512,7 @@ func evaluateCue(_ context.Context, attestation []byte, evaluator string) error 
 func evaluateRego(ctx context.Context, attestation []byte, evaluator string) error {
 	// TODO(vaikas) Fix this
 	// The existing stuff wants files, and it doesn't work. There must be
-	// a way to load it from a []byte. Tomorrows problem
+	// a way to load it from a []byte like we can do with cue. Tomorrows problem
 	// regoValidationErrs := rego.ValidateJSON(payload, regoPolicies)
 	return fmt.Errorf("TODO(vaikas): Don't know how to this from bytes yet")
 }
