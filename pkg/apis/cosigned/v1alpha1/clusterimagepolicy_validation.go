@@ -25,8 +25,8 @@ import (
 )
 
 // Validate implements apis.Validatable
-func (policy *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError {
-	return policy.Spec.Validate(ctx).ViaField("spec")
+func (c *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError {
+	return c.Spec.Validate(ctx).ViaField("spec")
 }
 
 func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.FieldError) {

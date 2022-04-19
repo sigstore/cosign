@@ -88,10 +88,10 @@ type AttestationPolicy struct {
 	// PredicateType to attest, one of the accepted in verify-attestation
 	PredicateType string `json:"predicateType"`
 	// Type specifies how to evaluate policy, only rego/cue are understood.
-	Type string `json:"type,optional"`
+	Type string `json:"type,omitempty"`
 	// Data is the inlined version of the Policy used to evaluate the
 	// Attestation.
-	Data string `json:"data,optional"`
+	Data string `json:"data,omitempty"`
 }
 
 // UnmarshalJSON populates the PublicKeys using Data because

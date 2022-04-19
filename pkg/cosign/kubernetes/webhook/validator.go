@@ -187,7 +187,6 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 							for _, policyErr := range policyErrs {
 								errDetails = errDetails + " " + policyErr.Error()
 							}
-							//errorField.Details = c.Image
 							errorField.Details = errDetails
 							errs = errs.Also(errorField)
 						}
@@ -361,14 +360,12 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 		sps, err := valid(ctx, ref, rekorClient, authority.Key.PublicKeys, remoteOpts...)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to validate public keys with authority %s for %s", name, ref.Name()))
-		} else {
-			if len(sps) > 0 {
-				logging.FromContext(ctx).Debugf("validated signature for %s with authority %s got %d signatures", ref.Name(), authority.Name, len(sps))
-				return ociSignatureToPolicySignature(ctx, sps), nil
-			}
-			logging.FromContext(ctx).Errorf("no validSignatures found with authority %s for %s", name, ref.Name())
-			return nil, fmt.Errorf("no valid signatures found with authority %s for %s", name, ref.Name())
+		} else if len(sps) > 0 {
+			logging.FromContext(ctx).Debugf("validated signature for %s with authority %s got %d signatures", ref.Name(), authority.Name, len(sps))
+			return ociSignatureToPolicySignature(ctx, sps), nil
 		}
+		logging.FromContext(ctx).Errorf("no validSignatures found with authority %s for %s", name, ref.Name())
+		return nil, fmt.Errorf("no valid signatures found with authority %s for %s", name, ref.Name())
 	case authority.Keyless != nil:
 		if authority.Keyless != nil && authority.Keyless.URL != nil {
 			logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
@@ -380,17 +377,15 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 			if err != nil {
 				logging.FromContext(ctx).Errorf("failed validSignatures for authority %s with fulcio for %s: %v", name, ref.Name(), err)
 				return nil, errors.Wrap(err, "validate signatures with fulcio")
-			} else {
-				if len(sps) > 0 {
-					logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", ref.Name(), len(sps))
-					return ociSignatureToPolicySignature(ctx, sps), nil
-				}
-				logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
-				return nil, fmt.Errorf("no valid signatures found with authority %s for  %s", name, ref.Name())
+			} else if len(sps) > 0 {
+				logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", ref.Name(), len(sps))
+				return ociSignatureToPolicySignature(ctx, sps), nil
 			}
+			logging.FromContext(ctx).Errorf("no validSignatures found for %s", ref.Name())
+			return nil, fmt.Errorf("no valid signatures found with authority %s for  %s", name, ref.Name())
 		}
 	}
-	return nil, fmt.Errorf("Something went really wrong here")
+	return nil, fmt.Errorf("something went really wrong here")
 }
 
 // ValidatePolicyAttestationsForAuthority takes the Authority and tries to
@@ -436,9 +431,8 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 			if err != nil {
 				logging.FromContext(ctx).Errorf("failed validAttestationsWithFulcio for authority %s with fulcio for %s: %v", name, ref.Name(), err)
 				return nil, errors.Wrap(err, "validate signatures with fulcio")
-			} else {
-				verifiedAttestations = append(verifiedAttestations, va...)
 			}
+			verifiedAttestations = append(verifiedAttestations, va...)
 		}
 	}
 	// If we didn't get any verified attestations either from the Key or Keyless
@@ -495,7 +489,7 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, predicateType, policyType st
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
 		if cueValidationErr != nil {
-			return fmt.Errorf("failed evaluating cue policy for type %s : %s", predicateType, cueValidationErr.Error())
+			return fmt.Errorf("failed evaluating cue policy for type %s : %s", predicateType, cueValidationErr.Error()) // nolint
 		}
 	case "rego":
 		regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
@@ -503,13 +497,13 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, predicateType, policyType st
 			return fmt.Errorf("failed evaluating rego policy for type %s", predicateType)
 		}
 	default:
-		return fmt.Errorf("Sorry Type %s is not supported yet", policyType)
+		return fmt.Errorf("sorry Type %s is not supported yet", policyType)
 	}
 	return nil
 }
 
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
-func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
+func evaluateCue(_ context.Context, attestation []byte, evaluator string) error {
 	cueCtx := cuecontext.New()
 	v := cueCtx.CompileString(evaluator)
 	return cuejson.Validate(attestation, v)

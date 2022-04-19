@@ -24,10 +24,10 @@ func (c *ClusterImagePolicy) SetDefaults(ctx context.Context) {
 	c.Spec.SetDefaults(ctx)
 }
 
-func (cs *ClusterImagePolicySpec) SetDefaults(ctx context.Context) {
-	for i, authority := range cs.Authorities {
+func (spec *ClusterImagePolicySpec) SetDefaults(ctx context.Context) {
+	for i, authority := range spec.Authorities {
 		if authority.Name == "" {
-			cs.Authorities[i].Name = fmt.Sprintf("authority-%d", i)
+			spec.Authorities[i].Name = fmt.Sprintf("authority-%d", i)
 		}
 	}
 }

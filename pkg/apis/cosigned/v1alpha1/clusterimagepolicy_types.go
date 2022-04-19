@@ -46,7 +46,7 @@ var (
 )
 
 // GetGroupVersionKind implements kmeta.OwnerRefable
-func (*ClusterImagePolicy) GetGroupVersionKind() schema.GroupVersionKind {
+func (c *ClusterImagePolicy) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("ClusterImagePolicy")
 }
 
