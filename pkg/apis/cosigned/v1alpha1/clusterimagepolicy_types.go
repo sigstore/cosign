@@ -141,6 +141,9 @@ type KeylessRef struct {
 // specified attestation types, and if Policy is specified, then it's applied
 // only after the validation of the Attestation signature has been verified.
 type Attestation struct {
+	// Name of the attestation. These can then be referenced at the CIP level
+	// policy.
+	Name string `json:"name"`
 	// Which predicate type to verify. Matches cosign verify-attestation options.
 	PredicateType string `json:"predicateType"`
 	// +optional

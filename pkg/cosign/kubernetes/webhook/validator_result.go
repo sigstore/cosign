@@ -43,8 +43,7 @@ type AuthorityMatch struct {
 	// attestations name, aka, make this into a map.
 	Signatures []PolicySignature `json:"signatures"`
 
-	// Mapping from predicate type to all of the matching attestations’
-	// of that type’s signature
+	// Mapping from attestation name to all of verified attestations
 	Attestations map[string][]PolicySignature `json:"attestations"`
 }
 

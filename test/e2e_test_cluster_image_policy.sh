@@ -297,7 +297,7 @@ echo '::endgroup::'
 KUBECTL_OUT_FILE=./kubectl.output
 
 echo '::group:: test job rejection'
-# We signed this with key, but there are other things that will fail.
+# This image has not been signed at all, so should get auto-reject
 if kubectl create -n demo-key-signing job demo2 --image=${demoimage2} 2> ./${KUBECTL_OUT_FILE} ; then
   echo Failed to block unsigned Job creation!
   exit 1
@@ -320,9 +320,10 @@ echo '::group:: Verify demoimage2 with cosign key'
 echo '::endgroup::'
 
 echo '::group:: test job rejection'
-# We signed this with key, but needs two signatures
+# We signed this with key, but it needs two signatures, one from
+# keyless and one with keyless
 if kubectl create -n demo-key-signing job demo2 --image=${demoimage2} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block unsigned Job creation!
+  echo Failed to block signed Job creation that requires two signatures!
   exit 1
 else
   echo Successfully blocked Job creation with only one signature on image
@@ -345,12 +346,13 @@ COSIGN_EXPERIMENTAL=1 ./cosign verify --rekor-url ${REKOR_URL} --allow-insecure-
 echo '::endgroup::'
 
 echo '::group:: test job rejection'
-# We signed this with key and keyless, but there are other things that will fail.
+# We signed this with key and keyless, but there are attestations that are
+# required, which will fail now.
 if kubectl create -n demo-key-signing job demo2 --image=${demoimage2} 2> ./${KUBECTL_OUT_FILE} ; then
   echo Failed to block Job with no attestations creation!
   exit 1
 else
-  echo Successfully blocked Job creation with only one signature on image
+  echo Successfully blocked Job creation with two signatures but no attestations
   if ! grep -q 'validate signatures with fulcio: no matching attestations' ${KUBECTL_OUT_FILE} ; then
     echo Did not get expected failure message, wanted validate signatures with fulcio: no matching attestations got
     cat ${KUBECTL_OUT_FILE}
@@ -367,12 +369,13 @@ COSIGN_EXPERIMENTAL=1 ./cosign verify-attestation --type=custom --rekor-url ${RE
 echo '::endgroup::'
 
 echo '::group:: test job rejection'
-# We signed this with key and keyless and it has keyless attestation, but there are other things that will fail.
+# We signed this with key and keyless and it has keyless attestation, but it
+# requires two keyless and one key one.
 if kubectl create -n demo-key-signing job demo2 --image=${demoimage2} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block unsigned Job creation!
+  echo Failed to block Job with missing attestations creation!
   exit 1
 else
-  echo Successfully blocked Job creation with only one signature on image
+  echo Successfully blocked Job creation with not enough attestations on it
   if ! grep -q 'failed policy: image-policy-requires-two-signatures-two-attestations' ${KUBECTL_OUT_FILE} ; then
     echo Did not get expected failure message, wanted failed policy: image-policy-requires-two-signatures-two-attestations got
     cat ${KUBECTL_OUT_FILE}
@@ -382,7 +385,8 @@ fi
 echo '::endgroup::'
 
 # Then add the vuln attestation with key, we have then one attestation
-# with key, one with keyless, but that's still not enough, so will fail.
+# with key, one with keyless, but that's still not enough because we need
+# two with keyless.
 echo '::group:: Create one key attestation and verify it'
 COSIGN_PASSWORD="" ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --rekor-url ${REKOR_URL} --type=vuln --key ./cosign.key --allow-insecure-registry --force ${demoimage2}
 
@@ -390,12 +394,12 @@ COSIGN_PASSWORD="" ./cosign attest --predicate ./test/testdata/attestations/vuln
 echo '::endgroup::'
 
 echo '::group:: test job rejection'
-# We signed this with key and keyless and it has one keyless attestation and one with key, but there are other things that will fail.
+# We signed this with key and keyless and it has one keyless attestation and one with key, but it is still missing the second keyless attestation.
 if kubectl create -n demo-key-signing job demo2 --image=${demoimage2} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block unsigned Job creation!
+  echo Failed to block Job creation with one missing keyless attestation
   exit 1
 else
-  echo Successfully blocked Job creation with only one signature on image
+  echo Successfully blocked Job creation with one missing keyless attestation
   if ! grep -q 'failed policy: image-policy-requires-two-signatures-two-attestations' ${KUBECTL_OUT_FILE} ; then
     echo Did not get expected failure message, wanted failed policy: image-policy-requires-two-signatures-two-attestations got
     cat ${KUBECTL_OUT_FILE}
@@ -411,9 +415,10 @@ COSIGN_EXPERIMENTAL=1 ./cosign verify-attestation --type=vuln --rekor-url ${REKO
 echo '::endgroup::'
 
 echo '::group:: test job success'
-# We signed this with key and keyless and it has keyless attestation, but there are other things that will fail.
+# We signed this with key and keyless and it has two keyless attestations and
+# it has one key attestation, so it should succeed.
 if ! kubectl create -n demo-key-signing job demo2 --image=${demoimage2} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to create job that should have been allowed through!
+  echo Failed to create job that has two signatures and 3 attestations
   cat ${KUBECTL_OUT_FILE}
   exit 1
 fi

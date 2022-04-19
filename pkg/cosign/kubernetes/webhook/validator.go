@@ -449,7 +449,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 		// If there's no type / policy to do more checking against,
 		// then we're done here. It matches all the attestations
 		if wantedAttestation.Type == "" {
-			ret[wantedAttestation.PredicateType] = ociSignatureToPolicySignature(ctx, verifiedAttestations)
+			ret[wantedAttestation.Name] = ociSignatureToPolicySignature(ctx, verifiedAttestations)
 			continue
 		}
 		// There's a particular type, so we need to go through all the verified
@@ -469,7 +469,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 			}
 			// Ok, so this passed aok, jot it down to our result set as
 			// verified attestation with the predicate type match
-			ret[wantedAttestation.PredicateType] = ociSignatureToPolicySignature(ctx, verifiedAttestations)
+			ret[wantedAttestation.Name] = ociSignatureToPolicySignature(ctx, verifiedAttestations)
 		}
 	}
 	return ret, nil

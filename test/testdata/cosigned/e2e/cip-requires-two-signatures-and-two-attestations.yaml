@@ -27,6 +27,7 @@ spec:
       url: http://rekor.rekor-system.svc
     attestations:
     - predicateType: custom
+      name: custom-keyless
       policy:
         type: cue
         data: |
@@ -37,6 +38,7 @@ spec:
             Timestamp: <before
           }
     - predicateType: vuln
+      name: vuln-keyless
       policy:
         type: cue
         data: |
@@ -67,6 +69,7 @@ spec:
         -----END PUBLIC KEY-----
     attestations:
     - predicateType: vuln
+      name: vuln-key
       policy:
         type: cue
         data: |
@@ -124,18 +127,21 @@ spec:
         keySignatureErr: "Did not get key signature"
       }
       authorityMatches: {
-        "custom-att": {
+        "key-att": {
           attestations: {
-            custom: [
+            vuln-key: [
               {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
             ]
           }
         }
-        "vuln-att": {
+        "keyless-att": {
           attestations: {
-            vuln: [
+            vuln-keyless: [
               {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
-            ]
+            ],
+            custom-keyless: [
+              {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
+            ],
           }
         }
         "keyless-signature": {

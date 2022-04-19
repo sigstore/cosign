@@ -49,6 +49,9 @@ spec:
                         items:
                           type: object
                           properties:
+                            name:
+                              description: Name of the attestation. These can then be referenced at the CIP level policy.
+                              type: string
                             policy:
                               type: object
                               properties:

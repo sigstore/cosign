@@ -85,6 +85,8 @@ type KeylessRef struct {
 }
 
 type AttestationPolicy struct {
+	// Name of the Attestation
+	Name string `json:"name"`
 	// PredicateType to attest, one of the accepted in verify-attestation
 	PredicateType string `json:"predicateType"`
 	// Type specifies how to evaluate policy, only rego/cue are understood.
@@ -189,7 +191,10 @@ func convertAuthorityV1Alpha1ToWebhook(in v1alpha1.Authority) *Authority {
 func convertAttestationsV1Alpha1ToWebhook(in []v1alpha1.Attestation) []AttestationPolicy {
 	ret := []AttestationPolicy{}
 	for _, inAtt := range in {
-		outAtt := AttestationPolicy{PredicateType: inAtt.PredicateType}
+		outAtt := AttestationPolicy{
+			Name:          inAtt.Name,
+			PredicateType: inAtt.PredicateType,
+		}
 		if inAtt.Policy != nil {
 			outAtt.Type = inAtt.Policy.Type
 			outAtt.Data = inAtt.Policy.Data
