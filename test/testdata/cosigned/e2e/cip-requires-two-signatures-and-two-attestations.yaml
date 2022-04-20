@@ -129,17 +129,17 @@ spec:
       authorityMatches: {
         "key-att": {
           attestations: {
-            vuln-key: [
+            "vuln-key": [
               {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
             ]
           }
         }
         "keyless-att": {
           attestations: {
-            vuln-keyless: [
+            "vuln-keyless": [
               {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
             ],
-            custom-keyless: [
+            "custom-keyless": [
               {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
             ],
           }
