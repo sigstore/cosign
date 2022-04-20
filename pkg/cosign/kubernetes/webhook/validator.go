@@ -466,7 +466,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 				// attestation is not for. It's not an error, so we skip it.
 				continue
 			}
-			if err := EvaluatePolicyAgainstJSON(ctx, wantedAttestation.PredicateType, wantedAttestation.Type, wantedAttestation.Data, attBytes); err != nil {
+			if err := EvaluatePolicyAgainstJSON(ctx, wantedAttestation.Name, wantedAttestation.Type, wantedAttestation.Data, attBytes); err != nil {
 				return nil, err
 			}
 			// Ok, so this passed aok, jot it down to our result set as
@@ -480,22 +480,22 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 // EvaluatePolicyAgainstJson is used to run a policy engine against JSON bytes.
 // These bytes can be for example Attestations, or ClusterImagePolicy result
 // types.
-// predicateType - which predicate are we evaluating, custom, vuln, policy, etc.
+// name - which attestation are we evaluating
 // policyType - cue|rego
 // policyBody - String representing either cue or rego language
 // jsonBytes - Bytes to evaluate against the policyBody in the given language
-func EvaluatePolicyAgainstJSON(ctx context.Context, predicateType, policyType string, policyBody string, jsonBytes []byte) error {
+func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, policyBody string, jsonBytes []byte) error {
 	logging.FromContext(ctx).Debugf("Evaluating JSON: %s against policy: %s", string(jsonBytes), policyBody)
 	switch policyType {
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
 		if cueValidationErr != nil {
-			return fmt.Errorf("failed evaluating cue policy for type %s : %s", predicateType, cueValidationErr.Error()) // nolint
+			return fmt.Errorf("failed evaluating cue policy for %s : %s", name, cueValidationErr.Error()) // nolint
 		}
 	case "rego":
 		regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
 		if regoValidationErr != nil {
-			return fmt.Errorf("failed evaluating rego policy for type %s", predicateType)
+			return fmt.Errorf("failed evaluating rego policy for type %s", name)
 		}
 	default:
 		return fmt.Errorf("sorry Type %s is not supported yet", policyType)
@@ -504,7 +504,8 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, predicateType, policyType st
 }
 
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
-func evaluateCue(_ context.Context, attestation []byte, evaluator string) error {
+func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
+	logging.FromContext(ctx).Infof("Evaluating attestation: %s", string(attestation))
 	cueCtx := cuecontext.New()
 	v := cueCtx.CompileString(evaluator)
 	return cuejson.Validate(attestation, v)

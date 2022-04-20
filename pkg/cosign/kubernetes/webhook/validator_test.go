@@ -56,6 +56,12 @@ import (
 const (
 	fulcioRootCert = "-----BEGIN CERTIFICATE-----\nMIICNzCCAd2gAwIBAgITPLBoBQhl1hqFND9S+SGWbfzaRTAKBggqhkjOPQQDAjBo\nMQswCQYDVQQGEwJVSzESMBAGA1UECBMJV2lsdHNoaXJlMRMwEQYDVQQHEwpDaGlw\ncGVuaGFtMQ8wDQYDVQQKEwZSZWRIYXQxDDAKBgNVBAsTA0NUTzERMA8GA1UEAxMI\ndGVzdGNlcnQwHhcNMjEwMzEyMjMyNDQ5WhcNMzEwMjI4MjMyNDQ5WjBoMQswCQYD\nVQQGEwJVSzESMBAGA1UECBMJV2lsdHNoaXJlMRMwEQYDVQQHEwpDaGlwcGVuaGFt\nMQ8wDQYDVQQKEwZSZWRIYXQxDDAKBgNVBAsTA0NUTzERMA8GA1UEAxMIdGVzdGNl\ncnQwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQRn+Alyof6xP3GQClSwgV0NFuY\nYEwmKP/WLWr/LwB6LUYzt5v49RlqG83KuaJSpeOj7G7MVABdpIZYWwqAiZV3o2Yw\nZDAOBgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBATAdBgNVHQ4EFgQU\nT8Jwm6JuVb0dsiuHUROiHOOVHVkwHwYDVR0jBBgwFoAUT8Jwm6JuVb0dsiuHUROi\nHOOVHVkwCgYIKoZIzj0EAwIDSAAwRQIhAJkNZmP6sKA+8EebRXFkBa9DPjacBpTc\nOljJotvKidRhAiAuNrIazKEw2G4dw8x1z6EYk9G+7fJP5m93bjm/JfMBtA==\n-----END CERTIFICATE-----"
 	rekorResponse  = "bad response"
+
+	customAttestation = "{\"_type\":\"https://in-toto.io/Statement/v0.1\",\"predicateType\":\"cosign.sigstore.dev/attestation/v1\",\"subject\":[{\"name\":\"registry.local:5000/cosigned/demo\",\"digest\":{\"sha256\":\"416cc82c76114b1744ea58bcbf2f411a0f2de4b0456703bf1bb83d33656951bc\"}}],\"predicate\":{\"Data\":\"foobar e2e test\",\"Timestamp\":\"2022-04-20T18:17:19Z\"}}"
+
+	vulnAttestation = "{\"_type\":\"https://in-toto.io/Statement/v0.1\",\"predicateType\":\"cosign.sigstore.dev/attestation/vuln/v1\",\"subject\":[{\"name\":\"registry.local:5000/cosigned/demo\",\"digest\":{\"sha256\":\"416cc82c76114b1744ea58bcbf2f411a0f2de4b0456703bf1bb83d33656951bc\"}}],\"predicate\":{\"invocation\":{\"parameters\":null,\"uri\":\"invocation.example.com/cosign-testing\",\"event_id\":\"\",\"builder.id\":\"\"},\"scanner\":{\"uri\":\"fakescanner.example.com/cosign-testing\",\"version\":\"\",\"db\":{\"uri\":\"\",\"version\":\"\"},\"result\":null},\"metadata\":{\"scanStartedOn\":\"2022-04-12T00:00:00Z\",\"scanFinishedOn\":\"2022-04-12T00:10:00Z\"}}}"
+
+	cipAttestation = "{\"authorityMatches\":{\"key-att\":{\"signatures\":null,\"attestations\":{\"vuln-key\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"key-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keyless-att\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}}"
 )
 
 func TestValidatePodSpec(t *testing.T) {
@@ -340,6 +346,39 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			return errs
 		}(),
 		cvs: fail,
+	}, {
+		name: "simple, no error, authority keyless, good fulcio",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(context.Background(),
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
+						"cluster-image-policy-keyless": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []webhookcip.Authority{
+								{
+									Keyless: &webhookcip.KeylessRef{
+										URL: fulcioURL,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		cvs: pass,
 	}, {
 		name: "simple, error, authority keyless, good fulcio, bad rekor",
 		ps: &corev1.PodSpec{
@@ -1208,6 +1247,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		policy        webhookcip.ClusterImagePolicy
 		want          *PolicyResult
 		wantErrs      []string
+		cva           func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
 		cvs           func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
 		customContext context.Context
 	}{{
@@ -1251,12 +1291,45 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 				},
 			}},
 		},
+		want: &PolicyResult{
+			AuthorityMatches: map[string]AuthorityMatch{
+				"authority-0": {
+					Signatures: []PolicySignature{{
+						Subject: "PLACEHOLDER",
+						Issuer:  "PLACEHOLDER"}},
+				}},
+		},
 		cvs: authorityPublicKeyCVS,
+	}, {
+		name: "simple, keyless attestation, works",
+		policy: webhookcip.ClusterImagePolicy{
+			Authorities: []webhookcip.Authority{{
+				Name: "authority-0",
+				Keyless: &webhookcip.KeylessRef{
+					URL: fulcioURL,
+				},
+				Attestations: []webhookcip.AttestationPolicy{{
+					Name:          "test-att",
+					PredicateType: "custom",
+				}},
+			},
+			},
+		},
+		want: &PolicyResult{
+			AuthorityMatches: map[string]AuthorityMatch{
+				"authority-0": {
+					Attestations: map[string][]PolicySignature{"test-att": {{
+						Subject: "PLACEHOLDER",
+						Issuer:  "PLACEHOLDER"}},
+					}}},
+		},
+		cva: pass,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cosignVerifySignatures = test.cvs
+			cosignVerifyAttestations = test.cva
 			testContext := context.Background()
 
 			if test.customContext != nil {
@@ -1279,6 +1352,71 @@ func validateErrors(t *testing.T, wantErr []string, got []error) {
 		for i, want := range wantErr {
 			if !strings.Contains(got[i].Error(), want) {
 				t.Errorf("Unwanted error at %d want: %s got: %s", i, want, got[i])
+			}
+		}
+	}
+}
+
+func TestEvalPolicy(t *testing.T) {
+	// TODO(vaikas): Consider moving the attestations/cue files into testdata
+	// directory.
+	tests := []struct {
+		name       string
+		json       string
+		policyType string
+		policyFile string
+		wantErr    bool
+		wantErrSub string
+	}{{
+		name:       "custom attestation, mismatched predicateType",
+		json:       customAttestation,
+		policyType: "cue",
+		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"`,
+		wantErr:    true,
+		wantErrSub: `conflicting values "cosign.sigstore.dev/attestation/v1" and "cosign.sigstore.dev/attestation/vuln/v1"`,
+	}, {
+		name:       "custom attestation, predicateType and data checks out",
+		json:       customAttestation,
+		policyType: "cue",
+		policyFile: `predicateType: "cosign.sigstore.dev/attestation/v1"
+		predicate: Data: "foobar e2e test"`,
+	}, {
+		name:       "custom attestation, data mismatch",
+		json:       customAttestation,
+		policyType: "cue",
+		policyFile: `predicateType: "cosign.sigstore.dev/attestation/v1"
+		predicate: Data: "invalid data here"`,
+		wantErr:    true,
+		wantErrSub: `predicate.Data: conflicting values "foobar e2e test" and "invalid data here"`,
+	}, {
+		name:       "vuln attestation, wrong invocation url",
+		json:       vulnAttestation,
+		policyType: "cue",
+		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+		predicate: invocation: uri: "invocation.example.com/wrong-url-here"`,
+		wantErr:    true,
+		wantErrSub: `conflicting values "invocation.example.com/cosign-testing" and "invocation.example.com/wrong-url-here"`,
+	}, {
+		name:       "vuln attestation, checks out",
+		json:       vulnAttestation,
+		policyType: "cue",
+		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+		predicate: invocation: uri: "invocation.example.com/cosign-testing"`,
+	}}
+	for _, tc := range tests {
+		ctx := context.Background()
+		err := EvaluatePolicyAgainstJSON(ctx, tc.name, tc.policyType, tc.policyFile, []byte(tc.json))
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("Did not get an error, wanted %s", tc.wantErrSub)
+			} else {
+				if !strings.Contains(err.Error(), tc.wantErrSub) {
+					t.Errorf("Unexpected error, want: %s got: %s", tc.wantErrSub, err.Error())
+				}
+			}
+		} else {
+			if !tc.wantErr && err != nil {
+				t.Errorf("Unexpected error, wanted none, got: %s", err.Error())
 			}
 		}
 	}

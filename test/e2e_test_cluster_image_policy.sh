@@ -426,6 +426,6 @@ echo '::endgroup::'
 
 echo '::group::' Cleanup
 kubectl delete cip --all
-kubectl delete ns demo-key-signing demo-keyless-signing
+kubectl delete ns demo-key-signing demo-keyless-signing demo-key-remote
 rm cosign*.key cosign*.pub
 echo '::endgroup::'
