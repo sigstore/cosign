@@ -318,7 +318,9 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 			}
 		}
 	}
-
+	if len(authorityErrors) > 0 {
+		return nil, authorityErrors
+	}
 	return &policyResult, authorityErrors
 }
 
