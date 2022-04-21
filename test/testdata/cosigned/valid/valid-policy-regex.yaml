@@ -27,9 +27,50 @@ spec:
           name: ca-cert-secret
           namespace: some-namespacemak
   - keyless:
+      name: "keyless signatures"
       identities:
       - issuer: "issue-details"
         subject: "subject-details"
+  - keyless:
+      name: "keyless attestations"
+      identities:
+      - issuer: "issue-details"
+        subject: "subject-details"
+      attestations:
+      - name: custom-predicate-type-validation
+        predicateType: "cosign.sigstore.dev/attestation/v1"
+        policy:
+          type: cue
+          data: |
+            import "time"
+            before: time.Parse(time.RFC3339, "2049-10-09T17:10:27Z")
+            predicateType: "cosign.sigstore.dev/attestation/v1"
+            predicate: {
+              Timestamp: <before
+            }
+      - name: vuln-predicate-type-validation
+        predicateType: vuln
+        policy:
+          type: cue
+          data: |
+            import "time"
+            before: time.Parse(time.RFC3339, "2022-04-15T17:10:27Z")
+            after: time.Parse(time.RFC3339, "2022-03-09T17:10:27Z")
+            predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+            predicate: {
+              invocation: {
+                uri: "invocation.example.com/cosign-testing"
+              }
+              scanner: {
+                uri: "fakescanner.example.com/cosign-testing"
+              }
+              metadata: {
+                scanStartedOn: <before
+                scanStartedOn: >after
+                scanFinishedOn: <before
+                scanFinishedOn: >after
+              }
+            }
   - keyless:
       identities:
       - issuer: "issue-details1"
