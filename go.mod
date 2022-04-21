@@ -99,7 +99,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.28.0
-	k8s.io/code-generator v0.23.5
+	k8s.io/code-generator v0.23.6
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
 	knative.dev/hack v0.0.0-20220224013837-e1785985d364
 	knative.dev/hack/schema v0.0.0-20220224013837-e1785985d364
