@@ -42,6 +42,10 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 		return err
 	}
 
+	if len(payload) == 0 {
+		return fmt.Errorf("%s payload is empty", signedPayload)
+	}
+
 	env := ssldsse.Envelope{}
 	if err := json.Unmarshal(payload, &env); err != nil {
 		return err
