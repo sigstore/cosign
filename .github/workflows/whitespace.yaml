@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@dcd71f646680f2efd8db4afa5ad64fdcba30e748 #v2.4.0
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b #v2.4.0
 
       - uses: chainguard-dev/actions/trailing-space@84c993eaf02da1c325854fb272a4df9184bd80fc # main
         if: ${{ always() }}

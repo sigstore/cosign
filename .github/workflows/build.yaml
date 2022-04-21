@@ -33,7 +33,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@dcd71f646680f2efd8db4afa5ad64fdcba30e748 # v2.4.0
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
 
       - uses: sigstore/cosign-installer@bb61838e7ee5bf314f85f2e219b3706835fa6306 # v2.0.1
 
