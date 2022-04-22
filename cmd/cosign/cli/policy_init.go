@@ -179,7 +179,7 @@ func signPolicy() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sv, err := sign.SignerFromKeyOpts(ctx, "", "", sign.KeyOpts{
+			sv, err := sign.SignerFromKeyOpts(ctx, "", "", options.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,

@@ -74,7 +74,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 }
 
 //nolint
-func AttestCmd(ctx context.Context, ko sign.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string, certChainPath string,
+func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string, certChainPath string,
 	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
