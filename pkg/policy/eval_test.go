@@ -27,7 +27,14 @@ const (
 	vulnAttestation = "{\"_type\":\"https://in-toto.io/Statement/v0.1\",\"predicateType\":\"cosign.sigstore.dev/attestation/vuln/v1\",\"subject\":[{\"name\":\"registry.local:5000/cosigned/demo\",\"digest\":{\"sha256\":\"416cc82c76114b1744ea58bcbf2f411a0f2de4b0456703bf1bb83d33656951bc\"}}],\"predicate\":{\"invocation\":{\"parameters\":null,\"uri\":\"invocation.example.com/cosign-testing\",\"event_id\":\"\",\"builder.id\":\"\"},\"scanner\":{\"uri\":\"fakescanner.example.com/cosign-testing\",\"version\":\"\",\"db\":{\"uri\":\"\",\"version\":\"\"},\"result\":null},\"metadata\":{\"scanStartedOn\":\"2022-04-12T00:00:00Z\",\"scanFinishedOn\":\"2022-04-12T00:10:00Z\"}}}"
 
 	// TODO(vaikas): Enable tests once we sort this out.
-	//	cipAttestation = "{\"authorityMatches\":{\"key-att\":{\"signatures\":null,\"attestations\":{\"vuln-key\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"key-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keyless-att\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}}"
+	cipAttestation = "{\"authorityMatches\":{\"key-att\":{\"signatures\":null,\"attestations\":{\"custom-match-predicate\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"key-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keyless-att\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"keyless-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null}}}"
+
+	cipPolicy = `
+	import "struct"
+	keylessAttestationsErr: authorityMatches."keyless-att".attestations
+	keylessAttestationsErr: struct.MaxFields(1)
+	keylessAttestationsErr: struct.MinFields(1)
+	`
 )
 
 func TestEvalPolicy(t *testing.T) {
@@ -75,6 +82,11 @@ func TestEvalPolicy(t *testing.T) {
 		policyType: "cue",
 		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
 		predicate: invocation: uri: "invocation.example.com/cosign-testing"`,
+	}, {
+		name:       "cip attestation, checks out",
+		json:       vulnAttestation,
+		policyType: "cue",
+		policyFile: cipPolicy,
 	}}
 	for _, tc := range tests {
 		ctx := context.Background()

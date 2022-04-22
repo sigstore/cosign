@@ -35,6 +35,7 @@ spec:
           before: time.Parse(time.RFC3339, "2049-10-09T17:10:27Z")
           predicateType: "cosign.sigstore.dev/attestation/v1"
           predicate: {
+            Data: "foobar e2e test"
             Timestamp: <before
           }
     - predicateType: vuln
@@ -67,32 +68,16 @@ spec:
         MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOz9FcbJM/oOkC26Wfo9paG2tYGBL
         usDLHze93DzgLaAPDsyJrygpVnL9M6SOyfyXEsjpBTUu6uFZqHua8hwAlA==
         -----END PUBLIC KEY-----
+    ctlog:
+      url: http://rekor.rekor-system.svc
     attestations:
-    - predicateType: vuln
-      name: vuln-key
+    - name: custom-match-predicate
+      predicateType: custom
       policy:
         type: cue
         data: |
-          import "time"
-          before: time.Parse(time.RFC3339, "2022-04-15T17:10:27Z")
-          after: time.Parse(time.RFC3339, "2022-03-09T17:10:27Z")
-          predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
-          predicate: {
-            invocation: {
-              uri: "invocation.example.com/cosign-testing"
-            }
-            scanner: {
-              uri: "fakescanner.example.com/cosign-testing"
-            }
-            metadata: {
-              scanStartedOn: <before
-              scanStartedOn: >after
-              scanFinishedOn: <before
-              scanFinishedOn: >after
-            }
-          }
-    ctlog:
-      url: http://rekor.rekor-system.svc
+          predicateType: "cosign.sigstore.dev/attestation/v1"
+          predicate: Data: "foobar key e2e test"
   - name: keyless-signature
     keyless:
       url: http://fulcio.fulcio-system.svc
@@ -127,14 +112,14 @@ spec:
         keySignatureErr: "Did not get key signature"
       }
       authorityMatches: {
-        "key-att": {
+        key-att: {
           attestations: {
             "vuln-key": [
               {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
             ]
           }
         }
-        "keyless-att": {
+        keyless-att: {
           attestations: {
             "vuln-keyless": [
               {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
@@ -144,15 +129,14 @@ spec:
             ],
           }
         }
-        "keyless-signature": {
+        keyless-signature: {
           signatures: [
             {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
           ]
         }
-        "key-signature": {
+        key-signature: {
           signatures: [
             {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
           ]
         }
       }
-

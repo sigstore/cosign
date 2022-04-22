@@ -102,6 +102,8 @@ echo '::endgroup::'
 
 echo '::group:: Create CIP that requires keyless signature and custom attestation with policy'
 kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-attestations.yaml
+# allow things to propagate
+sleep 5
 echo '::endgroup::'
 
 # This image has not been signed at all, so should get auto-reject
@@ -141,10 +143,16 @@ else
 fi
 echo '::endgroup::'
 
+echo '::group:: Generate New Signing Key that we use for key-ful signing'
+COSIGN_PASSWORD="" ./cosign generate-key-pair
+echo '::endgroup::'
+
 # Ok, so now we have satisfied the keyless requirements, one signature, one
 # custom attestation. Let's now do it for 'keyful' one.
 echo '::group:: Create CIP that requires a keyful signature and an attestation'
 yq '. | .spec.authorities[0].key.data |= load_str("cosign.pub") | .spec.authorities[1].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-key-with-attestations.yaml | kubectl apply -f -
+# allow things to propagate
+sleep 5
 echo '::endgroup::'
 
 # This image has been signed with keyless, but does not have a keyful signature
@@ -154,17 +162,13 @@ expected_error='no matching signatures'
 assert_error ${expected_error}
 echo '::endgroup::'
 
-echo '::group:: Generate New Signing Key that we use for key-ful signing'
-COSIGN_PASSWORD="" ./cosign generate-key-pair
-echo '::endgroup::'
-
 # Sign it with key
-echo '::group:: Sign demoimage with key'
-COSIGN_PASSWORD="" ./cosign sign --key cosign.key --force --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
+echo '::group:: Sign demoimage with key, and add to rekor'
+COSIGN_EXPERIMENTAL=1 COSIGN_PASSWORD="" ./cosign sign --key cosign.key --force --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
 echo '::endgroup::'
 
 echo '::group:: Verify demoimage with cosign key'
-./cosign verify --key cosign.pub --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage}
+COSIGN_EXPERIMENTAL=1 ./cosign verify --key cosign.pub --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage}
 echo '::endgroup::'
 
 # This image has been signed with key, but does not have a key attestation
@@ -175,20 +179,16 @@ assert_error ${expected_error}
 echo '::endgroup::'
 
 # Fine, so create an attestation for it that's different from the keyless one
-echo '::group:: create keyful attestation'
+echo '::group:: create keyful attestation, add add to rekor'
 echo -n 'foobar key e2e test' > ./predicate-file-key-custom
-COSIGN_PASSWORD="" ./cosign attest --predicate ./predicate-file-key-custom --rekor-url ${REKOR_URL} --key ./cosign.key --allow-insecure-registry --force ${demoimage}
+COSIGN_EXPERIMENTAL=1 COSIGN_PASSWORD="" ./cosign attest --predicate ./predicate-file-key-custom --rekor-url ${REKOR_URL} --key ./cosign.key --allow-insecure-registry --force ${demoimage}
 
-./cosign verify-attestation --key ./cosign.pub --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
+COSIGN_EXPERIMENTAL=1 ./cosign verify-attestation --key ./cosign.pub --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
 echo '::endgroup::'
 
-echo Do not submit, working down the list...
-exit 1
-
 echo '::group:: test job success with key / keyless'
-# We signed this with keyless and key and it has a key /keyless attestation, so
+# We signed this with keyless and key and it has a key/keyless attestation, so
 # should pass.
-export KUBECTL_SUCCESS_FILE="/tmp/kubectl.success.out"
 if ! kubectl create -n ${NS} job demo2 --image=${demoimage} 2> ${KUBECTL_SUCCESS_FILE} ; then
   echo Failed to create job with both key/keyless signatures and attestations
   cat ${KUBECTL_SUCCESS_FILE}
@@ -198,123 +198,21 @@ else
 fi
 echo '::endgroup::'
 
-echo Do not submit, working down the list...
-exit 1
-
-
+# So at this point, we have two CIP, one that requires keyless/key sig
+# and attestations with both. Let's take it up a notch.
 # Let's create a policy that requires both a keyless and keyful
-# signature on the image, as well as two attestations signed by the keyless
-# one vuln attestation that's signed by key.
+# signature on the image, as well as two attestations signed by the keyless and
+# one custom attestation that's signed by key.
 # Note we have to bake in the inline data from the keys above
 echo '::group:: Add cip for two signatures and two attestations'
 yq '. | .spec.authorities[1].key.data |= load_str("cosign.pub") | .spec.authorities[3].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-requires-two-signatures-and-two-attestations.yaml | kubectl apply -f -
 echo '::endgroup::'
 
-
+# The CIP policy is the one that should fail now because it doesn't have enough
+# attestations
 echo '::group:: test job rejection'
-# This image has not been signed at all, so should get auto-reject
-if kubectl create -n ${NS} job demo --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block unsigned Job creation!
-  exit 1
-else
-  echo Successfully blocked Job creation with unsigned image
-  if ! grep -q 'no matching signatures' ${KUBECTL_OUT_FILE} ; then
-    echo Did not get expected failure message, wanted no matching signatures, got
-    cat ${KUBECTL_OUT_FILE}
-    exit 1
-  fi
-fi
-echo '::endgroup::'
-
-echo '::group:: Sign demoimage with key'
-COSIGN_PASSWORD="" ./cosign sign --key cosign.key --force --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
-echo '::endgroup::'
-
-echo '::group:: Verify demoimage with cosign key'
-./cosign verify --key cosign.pub --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage}
-echo '::endgroup::'
-
-echo '::group:: test job rejection'
-# We signed this with key, but it needs two signatures, one from
-# keyless and one with keyless
-if kubectl create -n ${NS} job demo --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block signed Job creation that requires two signatures!
-  exit 1
-else
-  echo Successfully blocked Job creation with only one signature on image
-  if ! grep -q 'no matching signatures' ${KUBECTL_OUT_FILE} ; then
-    echo Did not get expected failure message, wanted no matching signatures, got
-    cat ${KUBECTL_OUT_FILE}
-    exit 1
-  fi
-fi
-echo '::endgroup::'
-
-echo '::group:: Sign demoimage with keyless'
-# Tests run for awhile, grab a fresh OIDC_TOKEN
-export OIDC_TOKEN=`curl -s ${ISSUER_URL}`
-COSIGN_EXPERIMENTAL=1 ./cosign sign --rekor-url ${REKOR_URL} --fulcio-url ${FULCIO_URL} --force --allow-insecure-registry ${demoimage} --identity-token ${OIDC_TOKEN}
-echo '::endgroup::'
-
-echo '::group:: Verify demoimage'
-COSIGN_EXPERIMENTAL=1 ./cosign verify --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage}
-echo '::endgroup::'
-
-echo '::group:: test job rejection'
-# We signed this with key and keyless, but there are attestations that are
-# required, which will fail now.
-if kubectl create -n ${NS} job demo --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block Job with no attestations creation!
-  exit 1
-else
-  echo Successfully blocked Job creation with two signatures but no attestations
-  if ! grep -q 'validate signatures with fulcio: no matching attestations' ${KUBECTL_OUT_FILE} ; then
-    echo Did not get expected failure message, wanted validate signatures with fulcio: no matching attestations got
-    cat ${KUBECTL_OUT_FILE}
-    exit 1
-  fi
-fi
-echo '::endgroup::'
-
-
-echo '::group:: test job rejection'
-# We signed this with key and keyless and it has keyless attestation, but it
-# requires two keyless and one key one.
-if kubectl create -n ${NS} job demo --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block Job with missing attestations creation!
-  exit 1
-else
-  echo Successfully blocked Job creation with not enough attestations on it
-  if ! grep -q 'failed policy: image-policy-requires-two-signatures-two-attestations' ${KUBECTL_OUT_FILE} ; then
-    echo Did not get expected failure message, wanted failed policy: image-policy-requires-two-signatures-two-attestations got
-    cat ${KUBECTL_OUT_FILE}
-    exit 1
-  fi
-fi
-echo '::endgroup::'
-
-# Then add the vuln attestation with key, we have then one attestation
-# with key, one with keyless, but that's still not enough because we need
-# two with keyless.
-echo '::group:: Create one key attestation and verify it'
-COSIGN_PASSWORD="" ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --rekor-url ${REKOR_URL} --type=vuln --key ./cosign.key --allow-insecure-registry --force ${demoimage}
-
-./cosign verify-attestation --type vuln --key ./cosign.pub --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
-echo '::endgroup::'
-
-echo '::group:: test job rejection'
-# We signed this with key and keyless and it has one keyless attestation and one with key, but it is still missing the second keyless attestation.
-if kubectl create -n ${NS} job demo --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
-  echo Failed to block Job creation with one missing keyless attestation
-  exit 1
-else
-  echo Successfully blocked Job creation with one missing keyless attestation
-  if ! grep -q 'failed policy: image-policy-requires-two-signatures-two-attestations' ${KUBECTL_OUT_FILE} ; then
-    echo Did not get expected failure message, wanted failed policy: image-policy-requires-two-signatures-two-attestations got
-    cat ${KUBECTL_OUT_FILE}
-    exit 1
-  fi
-fi
+expected_error='no matching attestations'
+assert_error ${expected_error}
 echo '::endgroup::'
 
 echo '::group:: Create vuln keyless attestation and verify it'
@@ -326,7 +224,7 @@ echo '::endgroup::'
 echo '::group:: test job success'
 # We signed this with key and keyless and it has two keyless attestations and
 # it has one key attestation, so it should succeed.
-if ! kubectl create -n ${NS} job demo --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
+if ! kubectl create -n ${NS} job demo3 --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
   echo Failed to create job that has two signatures and 3 attestations
   cat ${KUBECTL_OUT_FILE}
   exit 1

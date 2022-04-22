@@ -258,12 +258,12 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 			// policy, apply it against the results of the successful Authorities
 			// outputs.
 			if cip.Policy != nil {
-				logging.FromContext(ctx).Debugf("Validating CIP level policy for %s", cipName)
+				logging.FromContext(ctx).Infof("Validating CIP level policy for %s", cipName)
 				policyJSON, err := json.Marshal(policyResult)
 				if err != nil {
 					ret[cipName] = append(ret[cipName], errors.Wrap(err, "marshaling policyresult"))
 				} else {
-					logging.FromContext(ctx).Debugf("Validating CIP level policy against %s", string(policyJSON))
+					logging.FromContext(ctx).Infof("Validating CIP level policy against %s", string(policyJSON))
 					err = policy.EvaluatePolicyAgainstJSON(ctx, "ClusterImagePolicy", cip.Policy.Type, cip.Policy.Data, policyJSON)
 					if err != nil {
 						ret[cipName] = append(ret[cipName], err)
