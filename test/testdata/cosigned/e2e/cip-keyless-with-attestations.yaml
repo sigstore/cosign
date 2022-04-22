@@ -26,7 +26,13 @@ spec:
     ctlog:
       url: http://rekor.rekor-system.svc
     attestations:
-    - predicateType: custom
+    - name: custom-match-predicate
+      predicateType: custom
+      policy:
+        type: cue
+        data: |
+          predicateType: "cosign.sigstore.dev/attestation/v1"
+          predicate: Data: "foobar e2e test"
   - name: verify signature
     keyless:
       url: http://fulcio.fulcio-system.svc
