@@ -22,7 +22,6 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 )
 
 func Attest() *cobra.Command {
@@ -63,7 +62,7 @@ func Attest() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
