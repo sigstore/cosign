@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 
@@ -57,6 +56,13 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
+
+// Identity specifies an issuer/subject to verify a signature against.
+// Both Issuer/Subject support regexp.
+type Identity struct {
+	Issuer  string
+	Subject string
+}
 
 // CheckOpts are the options for checking signatures.
 type CheckOpts struct {
@@ -94,7 +100,7 @@ type CheckOpts struct {
 	// Identities is an array of Identity (Subject, Issuer) matchers that have
 	// to be met for the signature to ve valid.
 	// Supercedes CertEmail / CertOidcIssuer
-	Identities []v1alpha1.Identity
+	Identities []Identity
 }
 
 func getSignedEntity(signedImgRef name.Reference, regClientOpts []ociremote.Option) (oci.SignedEntity, v1.Hash, error) {
@@ -189,7 +195,6 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		for _, identity := range co.Identities {
 			issuerMatches := false
 			// Check the issuer first
-			fmt.Fprintf(os.Stderr, "Checking identity: %+v", identity)
 			if identity.Issuer != "" {
 				issuer := getIssuer(cert)
 				if regex, err := regexp.Compile(identity.Issuer); err != nil {

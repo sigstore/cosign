@@ -87,12 +87,16 @@ func validSignatures(ctx context.Context, ref name.Reference, verifier signature
 // validSignaturesWithFulcio expects a Fulcio Cert to verify against. An
 // optional rekorClient can also be given, if nil passed, default is assumed.
 func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, identities []v1alpha1.Identity, opts ...ociremote.Option) ([]oci.Signature, error) {
+	ids := make([]cosign.Identity, len(identities))
+	for i, id := range identities {
+		ids[i] = cosign.Identity{Issuer: id.Issuer, Subject: id.Subject}
+	}
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
 		RootCerts:          fulcioRoots,
 		RekorClient:        rekorClient,
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
-		Identities:         identities,
+		Identities:         ids,
 	})
 	return sigs, err
 }

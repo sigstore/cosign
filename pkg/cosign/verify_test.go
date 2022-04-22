@@ -40,7 +40,6 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -558,7 +557,7 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 	oidcIssuer := "https://accounts.google.com"
 
 	tests := []struct {
-		identities       []v1alpha1.Identity
+		identities       []Identity
 		wantErrSubstring string
 		dnsNames         []string
 		emailAddresses   []string
@@ -566,48 +565,48 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 		uris             []*url.URL
 	}{
 		{identities: nil /* No matches required, checks out */},
-		{identities: []v1alpha1.Identity{ // Strict match on both
+		{identities: []Identity{ // Strict match on both
 			{Subject: emailSubject, Issuer: oidcIssuer}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // just issuer
+		{identities: []Identity{ // just issuer
 			{Issuer: oidcIssuer}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // just subject
+		{identities: []Identity{ // just subject
 			{Subject: emailSubject}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // mis-match
+		{identities: []Identity{ // mis-match
 			{Subject: "wrongsubject", Issuer: oidcIssuer},
 			{Subject: emailSubject, Issuer: "wrongissuer"}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: "none of the expected identities matched"},
-		{identities: []v1alpha1.Identity{ // one good identity, other does not match
+		{identities: []Identity{ // one good identity, other does not match
 			{Subject: "wrongsubject", Issuer: "wrongissuer"},
 			{Subject: emailSubject, Issuer: oidcIssuer}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // illegal regex for subject
+		{identities: []Identity{ // illegal regex for subject
 			{Subject: "****", Issuer: oidcIssuer}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: "malformed subject in identity"},
-		{identities: []v1alpha1.Identity{ // illegal regex for issuer
+		{identities: []Identity{ // illegal regex for issuer
 			{Subject: emailSubject, Issuer: "****"}},
 			wantErrSubstring: "malformed issuer in identity"},
-		{identities: []v1alpha1.Identity{ // regex matches
+		{identities: []Identity{ // regex matches
 			{Subject: ".*example.com", Issuer: ".*accounts.google.*"}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // regex matches dnsNames
+		{identities: []Identity{ // regex matches dnsNames
 			{Subject: ".*ubject.example.com", Issuer: ".*accounts.google.*"}},
 			dnsNames:         dnsSubjects,
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // regex matches ip
+		{identities: []Identity{ // regex matches ip
 			{Subject: "1.2.3.*", Issuer: ".*accounts.google.*"}},
 			ipAddresses:      ipSubjects,
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // regex matches urls
+		{identities: []Identity{ // regex matches urls
 			{Subject: ".*url.examp.*", Issuer: ".*accounts.google.*"}},
 			uris:             uriSubjects,
 			wantErrSubstring: ""},
