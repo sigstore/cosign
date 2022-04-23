@@ -108,6 +108,35 @@ func TestPublicKeyFromFileRef(t *testing.T) {
 	}
 }
 
+func TestPublicKeyFromEnvVar(t *testing.T) {
+	keys, err := cosign.GenerateKeyPair(pass("whatever"))
+	if err != nil {
+		t.Fatalf("failed to generate keypair: %v", err)
+	}
+	ctx := context.Background()
+
+	os.Setenv("MY_ENV_VAR", string(keys.PublicBytes))
+	defer os.Unsetenv("MY_ENV_VAR")
+	if _, err := PublicKeyFromKeyRef(ctx, "env://MY_ENV_VAR"); err != nil {
+		t.Fatalf("PublicKeyFromKeyRef returned error: %v", err)
+	}
+}
+
+func TestSignerVerifierFromEnvVar(t *testing.T) {
+	passFunc := pass("whatever")
+	keys, err := cosign.GenerateKeyPair(passFunc)
+	if err != nil {
+		t.Fatalf("failed to generate keypair: %v", err)
+	}
+	ctx := context.Background()
+
+	os.Setenv("MY_ENV_VAR", string(keys.PrivateBytes))
+	defer os.Unsetenv("MY_ENV_VAR")
+	if _, err := SignerVerifierFromKeyRef(ctx, "env://MY_ENV_VAR", passFunc); err != nil {
+		t.Fatalf("SignerVerifierFromKeyRef returned error: %v", err)
+	}
+}
+
 func pass(s string) cosign.PassFunc {
 	return func(_ bool) ([]byte, error) {
 		return []byte(s), nil
