@@ -1329,7 +1329,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			if test.customContext != nil {
 				testContext = test.customContext
 			}
-			got, gotErrs := ValidatePolicy(testContext, digest, nil, test.policy)
+			got, gotErrs := ValidatePolicy(testContext, digest, test.policy)
 			validateErrors(t, test.wantErrs, gotErrs)
 			if !reflect.DeepEqual(test.want, got) {
 				t.Errorf("unexpected PolicyResult, want: %+v got: %+v", test.want, got)

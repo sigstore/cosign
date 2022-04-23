@@ -208,6 +208,11 @@ echo '::group:: Add cip for two signatures and two attestations'
 yq '. | .spec.authorities[1].key.data |= load_str("cosign.pub") | .spec.authorities[3].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-requires-two-signatures-and-two-attestations.yaml | kubectl apply -f -
 echo '::endgroup::'
 
+# TODO(vaikas): Enable the remaining tests once we sort out how to write
+# a valid CUE policy, or once #1787 goes in try implementing a Rego one.
+echo 'Not testing the CIP policy evaluation yet'
+exit 0
+
 # The CIP policy is the one that should fail now because it doesn't have enough
 # attestations
 echo '::group:: test job rejection'

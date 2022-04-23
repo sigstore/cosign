@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -172,7 +171,8 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				// If there is at least one policy that matches, that means it
 				// has to be satisfied.
 				if len(policies) > 0 {
-					signatures, fieldErrors := validatePolicies(ctx, ref, kc, policies)
+					signatures, fieldErrors := validatePolicies(ctx, ref, policies, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
+
 					if len(signatures) != len(policies) {
 						logging.FromContext(ctx).Warnf("Failed to validate at least one policy for %s", ref.Name())
 						// Do we really want to add all the error details here?
@@ -235,7 +235,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain, policies map[string]webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
+func validatePolicies(ctx context.Context, ref name.Reference, policies map[string]webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
 	// Gather all validated policies here.
 	policyResults := make(map[string]*PolicyResult)
 	// For a policy that does not pass at least one authority, gather errors
@@ -250,7 +250,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 	// the errors here. If one passes, do not return the errors.
 	for cipName, cip := range policies {
 		logging.FromContext(ctx).Debugf("Checking Policy: %s", cipName)
-		policyResult, errs := ValidatePolicy(ctx, ref, kc, cip, remoteOpts...)
+		policyResult, errs := ValidatePolicy(ctx, ref, cip, remoteOpts...)
 		if len(errs) > 0 {
 			ret[cipName] = append(ret[cipName], errs...)
 		} else {
@@ -284,8 +284,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, kc authn.Keychain
 // signatures OR attestations if atttestations were specified.
 // Returns PolicyResult, or errors encountered if none of the authorities
 // passed.
-func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, cip webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (*PolicyResult, []error) {
-	remoteOpts = append(remoteOpts, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
+func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (*PolicyResult, []error) {
 	// If none of the Authorities for a given policy pass the checks, gather
 	// the errors here. If one passes, do not return the errors.
 	authorityErrors := []error{}
@@ -300,7 +299,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 
 		if len(authority.Attestations) > 0 {
 			// We're doing the verify-attestations path, so validate (.att)
-			validatedAttestations, err := ValidatePolicyAttestationsForAuthority(ctx, ref, kc, authority, authorityRemoteOpts...)
+			validatedAttestations, err := ValidatePolicyAttestationsForAuthority(ctx, ref, authority, authorityRemoteOpts...)
 			if err != nil {
 				authorityErrors = append(authorityErrors, err)
 			} else {
@@ -308,7 +307,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, kc authn.Keychain, 
 			}
 		} else {
 			// We're doing the verify path, so validate image signatures (.sig)
-			validatedSignatures, err := ValidatePolicySignaturesForAuthority(ctx, ref, kc, authority, authorityRemoteOpts...)
+			validatedSignatures, err := ValidatePolicySignaturesForAuthority(ctx, ref, authority, authorityRemoteOpts...)
 			if err != nil {
 				authorityErrors = append(authorityErrors, err)
 			} else {
@@ -335,7 +334,7 @@ func ociSignatureToPolicySignature(ctx context.Context, sigs []oci.Signature) []
 
 // ValidatePolicySignaturesForAuthority takes the Authority and tries to
 // verify a signature against it.
-func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Reference, kc authn.Keychain, authority webhookcip.Authority, remoteOpts ...ociremote.Option) ([]PolicySignature, error) {
+func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Reference, authority webhookcip.Authority, remoteOpts ...ociremote.Option) ([]PolicySignature, error) {
 	name := authority.Name
 
 	var rekorClient *client.Rekor
@@ -383,12 +382,14 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 			return nil, fmt.Errorf("no valid signatures found with authority %s for  %s", name, ref.Name())
 		}
 	}
-	return nil, fmt.Errorf("something went really wrong here")
+	// This should never happen because authority has to have been
+	// validated to be either having a Key or Keyless
+	return nil, fmt.Errorf("Authority has neither key or keyless specified")
 }
 
 // ValidatePolicyAttestationsForAuthority takes the Authority and tries to
 // verify attestations against it.
-func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Reference, kc authn.Keychain, authority webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string][]PolicySignature, error) {
+func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Reference, authority webhookcip.Authority, remoteOpts ...ociremote.Option) (map[string][]PolicySignature, error) {
 	name := authority.Name
 	var rekorClient *client.Rekor
 	var err error

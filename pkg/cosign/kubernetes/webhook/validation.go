@@ -116,12 +116,17 @@ func validAttestations(ctx context.Context, ref name.Reference, verifier signatu
 // validAttestationsWithFulcio expects a Fulcio Cert to verify against. An
 // optional rekorClient can also be given, if nil passed, default is assumed.
 func validAttestationsWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, identities []v1alpha1.Identity, opts ...ociremote.Option) ([]oci.Signature, error) {
+	ids := make([]cosign.Identity, len(identities))
+	for i, id := range identities {
+		ids[i] = cosign.Identity{Issuer: id.Issuer, Subject: id.Subject}
+	}
+
 	attestations, _, err := cosignVerifyAttestations(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
 		RootCerts:          fulcioRoots,
 		RekorClient:        rekorClient,
 		ClaimVerifier:      cosign.IntotoSubjectClaimVerifier,
-		Identities:         identities,
+		Identities:         ids,
 	})
 	return attestations, err
 }

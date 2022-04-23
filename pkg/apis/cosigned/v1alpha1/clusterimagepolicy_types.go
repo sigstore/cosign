@@ -83,7 +83,7 @@ type Authority struct {
 	// Name is the name for this authority. Used by the CIP Policy
 	// validator to be able to reference matching signature or attestation
 	// verifications.
-	// If not specified, the name will be attestation-<index in array>
+	// If not specified, the name will be authority-<index in array>
 	Name string `json:"name"`
 	// +optional
 	Key *KeyRef `json:"key,omitempty"`

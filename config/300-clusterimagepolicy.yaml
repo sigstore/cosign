@@ -130,7 +130,7 @@ spec:
                           url:
                             type: string
                       name:
-                        description: Name is the name for this authority. Used by the CIP Policy validator to be able to reference matching signature or attestation verifications. If not specified, the name will be attestation-<index in array>
+                        description: Name is the name for this authority. Used by the CIP Policy validator to be able to reference matching signature or attestation verifications. If not specified, the name will be authority-<index in array>
                         type: string
                       source:
                         type: array
