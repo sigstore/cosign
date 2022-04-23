@@ -43,6 +43,13 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
+		case "env://":
+			envVar := parts[1]
+			value, found := os.LookupEnv(envVar)
+			if !found {
+				return nil, fmt.Errorf("loading URL: env var $%s not found", envVar)
+			}
+			raw = []byte(value)
 		default:
 			return nil, fmt.Errorf("loading URL: unrecognized scheme: %s", scheme)
 		}

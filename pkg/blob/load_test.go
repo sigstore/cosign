@@ -62,8 +62,30 @@ func TestLoadFileOrURL(t *testing.T) {
 		t.Errorf("LoadFileOrURL(HTTP) = '%s'; want '%s'", actual, data)
 	}
 
+	os.Setenv("MY_ENV_VAR", string(data))
+	actual, err = LoadFileOrURL("env://MY_ENV_VAR")
+	if err != nil {
+		t.Errorf("Reading from environment failed: %v", err)
+	} else if !bytes.Equal(actual, data) {
+		t.Errorf("LoadFileOrURL(env) = '%s'; want '%s'", actual, data)
+	}
+
+	os.Setenv("MY_ENV_VAR", "")
+	actual, err = LoadFileOrURL("env://MY_ENV_VAR")
+	if err != nil {
+		t.Errorf("Reading from environment failed: %v", err)
+	} else if !bytes.Equal(actual, make([]byte, 0)) {
+		t.Errorf("LoadFileOrURL(env) = '%s'; should be empty", actual)
+	}
+
+	os.Unsetenv("MY_ENV_VAR")
+	_, err = LoadFileOrURL("env://MY_ENV_VAR")
+	if err == nil {
+		t.Error("LoadFileOrURL(): expected error for unset env var")
+	}
+
 	_, err = LoadFileOrURL("invalid://url")
 	if err == nil {
-		t.Error("LoadFileOrURL(): expected error")
+		t.Error("LoadFileOrURL(): expected error for invalid scheme")
 	}
 }
