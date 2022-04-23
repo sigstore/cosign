@@ -384,7 +384,7 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 	}
 	// This should never happen because authority has to have been
 	// validated to be either having a Key or Keyless
-	return nil, fmt.Errorf("Authority has neither key or keyless specified")
+	return nil, fmt.Errorf("authority has neither key or keyless specified")
 }
 
 // ValidatePolicyAttestationsForAuthority takes the Authority and tries to

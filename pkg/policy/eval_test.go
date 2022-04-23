@@ -76,7 +76,7 @@ const (
 	  }`
 
 	// TODO(vaikas): Enable tests once we sort this out.
-	//cipAttestation = "authorityMatches:{\"key-att\":{\"signatures\":null,\"attestations\":{\"custom-match-predicate\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"key-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keyless-att\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"keyless-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null}}"
+	// cipAttestation = "authorityMatches:{\"key-att\":{\"signatures\":null,\"attestations\":{\"custom-match-predicate\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"key-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keyless-att\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"keyless-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null}}"
 )
 
 func TestEvalPolicy(t *testing.T) {
