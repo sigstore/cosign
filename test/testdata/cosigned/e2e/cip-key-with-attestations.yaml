@@ -15,12 +15,30 @@
 apiVersion: cosigned.sigstore.dev/v1alpha1
 kind: ClusterImagePolicy
 metadata:
-  name: image-policy-key
+  name: image-policy-key-with-attestations
 spec:
   images:
   - glob: registry.local:5000/cosigned/demo*
   authorities:
-  - key:
+  - name: verify custom attestation
+    key:
+      data: |
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZxAfzrQG1EbWyCI8LiSB7YgSFXoI
+        FNGTyQGKHFc6/H8TQumT9VLS78pUwtv3w7EfKoyFZoP32KrO7nzUy2q6Cw==
+        -----END PUBLIC KEY-----
+    ctlog:
+      url: http://rekor.rekor-system.svc
+    attestations:
+    - name: custom-match-predicate
+      predicateType: custom
+      policy:
+        type: cue
+        data: |
+          predicateType: "cosign.sigstore.dev/attestation/v1"
+          predicate: Data: "foobar key e2e test"
+  - name: verify signature
+    key:
       data: |
         -----BEGIN PUBLIC KEY-----
         MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZxAfzrQG1EbWyCI8LiSB7YgSFXoI

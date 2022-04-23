@@ -14,8 +14,20 @@
 
 package v1alpha1
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // SetDefaults implements apis.Defaultable
-func (*ClusterImagePolicy) SetDefaults(ctx context.Context) {
+func (c *ClusterImagePolicy) SetDefaults(ctx context.Context) {
+	c.Spec.SetDefaults(ctx)
+}
+
+func (spec *ClusterImagePolicySpec) SetDefaults(ctx context.Context) {
+	for i, authority := range spec.Authorities {
+		if authority.Name == "" {
+			spec.Authorities[i].Name = fmt.Sprintf("authority-%d", i)
+		}
+	}
 }

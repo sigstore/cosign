@@ -446,6 +446,46 @@ func TestAuthoritiesValidation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "Should pass with multiple source oci is present",
+			expectErr: false,
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Regex: ".*"}},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{KMS: "kms://key/path"},
+							Sources: []Source{
+								{OCI: "registry1"},
+								{OCI: "registry2"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:      "Should pass with attestations present",
+			expectErr: false,
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Regex: ".*"}},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{KMS: "kms://key/path"},
+							Attestations: []Attestation{
+								{Name: "first", PredicateType: "vuln"},
+								{Name: "second", PredicateType: "custom", Policy: &Policy{
+									Type: "cue",
+									Data: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"`,
+								},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -461,6 +501,72 @@ func TestAuthoritiesValidation(t *testing.T) {
 	}
 }
 
+func TestAttestationsValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		expectErr   bool
+		errorString string
+		attestation Attestation
+	}{{
+		name:        "vuln",
+		attestation: Attestation{Name: "first", PredicateType: "vuln"},
+	}, {
+		name:        "missing name",
+		attestation: Attestation{PredicateType: "vuln"},
+		expectErr:   true,
+		errorString: "missing field(s): name",
+	}, {
+		name:        "missing predicatetype",
+		attestation: Attestation{Name: "first"},
+		expectErr:   true,
+		errorString: "missing field(s): predicateType",
+	}, {
+		name:        "invalid predicatetype",
+		attestation: Attestation{Name: "first", PredicateType: "notsupported"},
+		expectErr:   true,
+		errorString: "invalid value: notsupported: predicateType\nunsupported precicate type",
+	}, {
+		name: "custom with invalid policy type",
+		attestation: Attestation{Name: "second", PredicateType: "custom",
+			Policy: &Policy{
+				Type: "not-cue",
+				Data: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"`,
+			},
+		},
+		expectErr:   true,
+		errorString: "invalid value: not-cue: policy.type\nonly cue is supported at the moment",
+	}, {
+		name: "custom with missing policy data",
+		attestation: Attestation{Name: "second", PredicateType: "custom",
+			Policy: &Policy{
+				Type: "cue",
+			},
+		},
+		expectErr:   true,
+		errorString: "missing field(s): policy.data",
+	}, {
+		name: "custom with policy",
+		attestation: Attestation{Name: "second", PredicateType: "custom",
+			Policy: &Policy{
+				Type: "cue",
+				Data: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"`,
+			},
+		},
+	},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.attestation.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				require.EqualError(t, err, test.errorString)
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}
 func TestIdentitiesValidation(t *testing.T) {
 	tests := []struct {
 		name        string

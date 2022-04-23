@@ -46,7 +46,7 @@ var (
 )
 
 // GetGroupVersionKind implements kmeta.OwnerRefable
-func (*ClusterImagePolicy) GetGroupVersionKind() schema.GroupVersionKind {
+func (c *ClusterImagePolicy) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("ClusterImagePolicy")
 }
 
@@ -54,6 +54,11 @@ func (*ClusterImagePolicy) GetGroupVersionKind() schema.GroupVersionKind {
 type ClusterImagePolicySpec struct {
 	Images      []ImagePattern `json:"images"`
 	Authorities []Authority    `json:"authorities"`
+	// Policy is an optional policy that can be applied against all the
+	// successfully validated Authorities. If no authorities pass, this does
+	// not even get evaluated, as the Policy is considered failed.
+	// +optional
+	Policy *Policy `json:"policy,omitempty"`
 }
 
 // ImagePattern defines a pattern and its associated authorties
@@ -75,6 +80,11 @@ type ImagePattern struct {
 // image.
 
 type Authority struct {
+	// Name is the name for this authority. Used by the CIP Policy
+	// validator to be able to reference matching signature or attestation
+	// verifications.
+	// If not specified, the name will be authority-<index in array>
+	Name string `json:"name"`
 	// +optional
 	Key *KeyRef `json:"key,omitempty"`
 	// +optional
@@ -83,6 +93,8 @@ type Authority struct {
 	Sources []Source `json:"source,omitempty"`
 	// +optional
 	CTLog *TLog `json:"ctlog,omitempty"`
+	// +optional
+	Attestations []Attestation `json:"attestations,omitempty"`
 }
 
 // This references a public verification key stored in
@@ -122,6 +134,45 @@ type KeylessRef struct {
 	Identities []Identity `json:"identities,omitempty"`
 	// +optional
 	CACert *KeyRef `json:"ca-cert,omitempty"`
+}
+
+// Attestation defines the type of attestation to validate and optionally
+// apply a policy decision to it. Authority block is used to verify the
+// specified attestation types, and if Policy is specified, then it's applied
+// only after the validation of the Attestation signature has been verified.
+type Attestation struct {
+	// Name of the attestation. These can then be referenced at the CIP level
+	// policy.
+	Name string `json:"name"`
+	// Which predicate type to verify. Matches cosign verify-attestation options.
+	PredicateType string `json:"predicateType"`
+	// +optional
+	Policy *Policy `json:"policy,omitempty"`
+}
+
+// Policy specifies a policy to use for Attestation validation.
+// Exactly one of Data, URL, or ConfigMapReference must be specified.
+type Policy struct {
+	// Which kind of policy this is, currently only rego or cue are supported.
+	// Furthermore, only cue is tested :)
+	Type string `json:"type"`
+	// +optional
+	Data string `json:"data,omitempty"`
+	// +optional
+	URL *apis.URL `json:"url,omitempty"`
+	// +optional
+	ConfigMapRef *ConfigMapReference `json:"configMapRef,omitempty"`
+}
+
+// ConfigMapReference is cut&paste from SecretReference, but for the life of me
+// couldn't find one in the public types. If there's one, use it.
+type ConfigMapReference struct {
+	// Name is unique within a namespace to reference a configmap resource.
+	// +optional
+	Name string `json:"name,omitempty"`
+	// Namespace defines the space within which the configmap name must be unique.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // Identity may contain the issuer and/or the subject found in the transparency log.

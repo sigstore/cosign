@@ -138,14 +138,14 @@ echo '::endgroup::'
 # This has correct issuer/subject, so should work
 echo '::group:: test job success with identities'
 if ! kubectl create -n demo-keyless-signing job demo-identities-works --image=${demoimage} ; then
-  echo Failed to create Job in namespace without label!
+  echo Failed to create Job in namespace with matching issuer/subject!
   exit 1
 else
-  echo Succcessfully created Job with signed image
+  echo Succcessfully created Job with signed image keyless
 fi
 echo '::endgroup::'
 
-echo '::group:: Add cip with identities that match issuer/subject'
+echo '::group:: Add cip with identities that do not match issuer/subject'
 kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-identities-mismatch.yaml
 # make sure the reconciler has enough time to update the configmap
 sleep 5
@@ -160,8 +160,8 @@ else
 fi
 echo '::endgroup::'
 
-echo '::group:: Remove mismatching cip'
-kubectl delete cip image-policy-keyless-with-identities-mismatch
+echo '::group:: Remove mismatching cip, start fresh for key'
+kubectl delete cip --all
 sleep 5
 echo '::endgroup::'
 
@@ -189,17 +189,17 @@ fi
 echo '::endgroup::'
 
 echo '::group:: Sign demoimage with cosign key'
-COSIGN_PASSWORD="" ./cosign sign --key cosign-colocated-signing.key --force --allow-insecure-registry ${demoimage}
+COSIGN_PASSWORD="" ./cosign sign --key cosign-colocated-signing.key --force --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
 echo '::endgroup::'
 
 echo '::group:: Verify demoimage with cosign key'
-./cosign verify --key cosign-colocated-signing.pub --allow-insecure-registry ${demoimage}
+./cosign verify --key cosign-colocated-signing.pub --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
 echo '::endgroup::'
 
 echo '::group:: test job success'
 # We signed this above, this should work
 if ! kubectl create -n demo-key-signing job demo --image=${demoimage} ; then
-  echo Failed to create Job in namespace without label!
+  echo Failed to create Job in namespace after signing with key!
   exit 1
 else
   echo Succcessfully created Job with signed image
@@ -230,7 +230,7 @@ yq '. | .metadata.name = "image-policy-remote-source"
 echo '::endgroup::'
 
 echo '::group:: Sign demoimage with cosign remote key'
-COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign sign --key cosign-remote-signing.key --force --allow-insecure-registry ${demoimage}
+COSIGN_PASSWORD="" COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign sign --key cosign-remote-signing.key --force --allow-insecure-registry ${demoimage}
 echo '::endgroup::'
 
 echo '::group:: Verify demoimage with cosign remote key'
@@ -277,5 +277,6 @@ echo '::endgroup::'
 
 echo '::group::' Cleanup
 kubectl delete cip --all
-kubectl delete ns demo-key-signing demo-keyless-signing
+kubectl delete ns demo-key-signing demo-keyless-signing demo-key-remote
 rm cosign*.key cosign*.pub
+echo '::endgroup::'

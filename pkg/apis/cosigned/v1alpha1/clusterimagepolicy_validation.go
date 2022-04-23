@@ -25,8 +25,8 @@ import (
 )
 
 // Validate implements apis.Validatable
-func (policy *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError {
-	return policy.Spec.Validate(ctx).ViaField("spec")
+func (c *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError {
+	return c.Spec.Validate(ctx).ViaField("spec")
 }
 
 func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.FieldError) {
@@ -42,6 +42,7 @@ func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.
 	for i, authority := range spec.Authorities {
 		errors = errors.Also(authority.Validate(ctx).ViaFieldIndex("authorities", i))
 	}
+	errors = errors.Also(spec.Policy.Validate(ctx))
 
 	return
 }
@@ -83,10 +84,12 @@ func (authority *Authority) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(authority.Keyless.Validate(ctx).ViaField("keyless"))
 	}
 
-	if len(authority.Sources) > 0 {
-		for _, source := range authority.Sources {
-			errs = errs.Also(source.Validate(ctx).ViaField("source"))
-		}
+	for _, source := range authority.Sources {
+		errs = errs.Also(source.Validate(ctx).ViaField("source"))
+	}
+
+	for _, att := range authority.Attestations {
+		errs = errs.Also(att.Validate(ctx).ViaField("attestations"))
 	}
 
 	return errs
@@ -141,6 +144,39 @@ func (source *Source) Validate(ctx context.Context) *apis.FieldError {
 	if source.OCI == "" {
 		errs = errs.Also(apis.ErrMissingField("oci"))
 	}
+	return errs
+}
+
+func (a *Attestation) Validate(ctx context.Context) *apis.FieldError {
+	var errs *apis.FieldError
+	if a.Name == "" {
+		errs = errs.Also(apis.ErrMissingField("name"))
+	}
+	if a.PredicateType == "" {
+		errs = errs.Also(apis.ErrMissingField("predicateType"))
+	} else if a.PredicateType != "custom" && a.PredicateType != "slsaprovenance" && a.PredicateType != "spdx" && a.PredicateType != "link" && a.PredicateType != "vuln" {
+		// TODO(vaikas): The above should be using something like:
+		// if _, ok := options.PredicateTypeMap[a.PrecicateType]; !ok {
+		// But it causes an import loop. That refactor can be part of
+		// another PR.
+		errs = errs.Also(apis.ErrInvalidValue(a.PredicateType, "predicateType", "unsupported precicate type"))
+	}
+	errs = errs.Also(a.Policy.Validate(ctx).ViaField("policy"))
+	return errs
+}
+
+func (p *Policy) Validate(ctx context.Context) *apis.FieldError {
+	if p == nil {
+		return nil
+	}
+	var errs *apis.FieldError
+	if p.Type != "cue" {
+		errs = errs.Also(apis.ErrInvalidValue(p.Type, "type", "only cue is supported at the moment"))
+	}
+	if p.Data == "" {
+		errs = errs.Also(apis.ErrMissingField("data"))
+	}
+	// TODO(vaikas): How to validate the cue / rego bytes here (data).
 	return errs
 }
 

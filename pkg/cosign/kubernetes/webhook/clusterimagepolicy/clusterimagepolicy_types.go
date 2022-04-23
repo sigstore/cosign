@@ -36,9 +36,17 @@ import (
 type ClusterImagePolicy struct {
 	Images      []v1alpha1.ImagePattern `json:"images"`
 	Authorities []Authority             `json:"authorities"`
+	// Policy is an optional policy used to evaluate the results of valid
+	// Authorities. Will not get evaluated unless at least one Authority
+	// succeeds.
+	Policy *AttestationPolicy `json:"policy,omitempty"`
 }
 
 type Authority struct {
+	// Name is the name for this authority. Used by the CIP Policy
+	// validator to be able to reference matching signature or attestation
+	// verifications.
+	Name string `json:"name"`
 	// +optional
 	Key *KeyRef `json:"key,omitempty"`
 	// +optional
@@ -51,6 +59,8 @@ type Authority struct {
 	// RemoteOpts will be populated by the Authority UnmarshalJSON override
 	// +optional
 	RemoteOpts []remote.Option `json:"-"`
+	// +optional
+	Attestations []AttestationPolicy `json:"attestations,omitempty"`
 }
 
 // This references a public verification key stored in
@@ -72,6 +82,18 @@ type KeylessRef struct {
 	Identities []v1alpha1.Identity `json:"identities,omitempty"`
 	// +optional
 	CACert *KeyRef `json:"ca-cert,omitempty"`
+}
+
+type AttestationPolicy struct {
+	// Name of the Attestation
+	Name string `json:"name"`
+	// PredicateType to attest, one of the accepted in verify-attestation
+	PredicateType string `json:"predicateType"`
+	// Type specifies how to evaluate policy, only rego/cue are understood.
+	Type string `json:"type,omitempty"`
+	// Data is the inlined version of the Policy used to evaluate the
+	// Attestation.
+	Data string `json:"data,omitempty"`
 }
 
 // UnmarshalJSON populates the PublicKeys using Data because
@@ -136,22 +158,50 @@ func ConvertClusterImagePolicyV1alpha1ToWebhook(in *v1alpha1.ClusterImagePolicy)
 		outAuthorities = append(outAuthorities, *outAuthority)
 	}
 
+	// If there's a ClusterImagePolicy level AttestationPolicy, convert it here.
+	var cipAttestationPolicy *AttestationPolicy
+	if in.Spec.Policy != nil {
+		cipAttestationPolicy = &AttestationPolicy{
+			Type: in.Spec.Policy.Type,
+			Data: in.Spec.Policy.Data,
+		}
+	}
 	return &ClusterImagePolicy{
 		Images:      copyIn.Spec.Images,
 		Authorities: outAuthorities,
+		Policy:      cipAttestationPolicy,
 	}
 }
 
 func convertAuthorityV1Alpha1ToWebhook(in v1alpha1.Authority) *Authority {
 	keyRef := convertKeyRefV1Alpha1ToWebhook(in.Key)
 	keylessRef := convertKeylessRefV1Alpha1ToWebhook(in.Keyless)
+	attestations := convertAttestationsV1Alpha1ToWebhook(in.Attestations)
 
 	return &Authority{
-		Key:     keyRef,
-		Keyless: keylessRef,
-		Sources: in.Sources,
-		CTLog:   in.CTLog,
+		Name:         in.Name,
+		Key:          keyRef,
+		Keyless:      keylessRef,
+		Sources:      in.Sources,
+		CTLog:        in.CTLog,
+		Attestations: attestations,
 	}
+}
+
+func convertAttestationsV1Alpha1ToWebhook(in []v1alpha1.Attestation) []AttestationPolicy {
+	ret := []AttestationPolicy{}
+	for _, inAtt := range in {
+		outAtt := AttestationPolicy{
+			Name:          inAtt.Name,
+			PredicateType: inAtt.PredicateType,
+		}
+		if inAtt.Policy != nil {
+			outAtt.Type = inAtt.Policy.Type
+			outAtt.Data = inAtt.Policy.Data
+		}
+		ret = append(ret, outAtt)
+	}
+	return ret
 }
 
 func convertKeyRefV1Alpha1ToWebhook(in *v1alpha1.KeyRef) *KeyRef {

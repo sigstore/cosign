@@ -23,8 +23,11 @@ import (
 	"crypto/elliptic"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -286,10 +289,10 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
-			fe.Details = digest.String()
+			fe.Details = fmt.Sprintf("%s %s", digest.String(), `fetching FulcioRoot: getting root cert: parse "http://http:%2F%2Fexample.com%2F/api/v1/rootCert": invalid port ":%2F%2Fexample.com%2F" after host`)
 			errs = errs.Also(fe)
 			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
-			fe2.Details = digest.String()
+			fe2.Details = fmt.Sprintf("%s %s", digest.String(), `fetching FulcioRoot: getting root cert: parse "http://http:%2F%2Fexample.com%2F/api/v1/rootCert": invalid port ":%2F%2Fexample.com%2F" after host`)
 			errs = errs.Also(fe2)
 			return errs
 		}(),
@@ -329,14 +332,47 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
-			fe.Details = digest.String()
+			fe.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe)
 			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
-			fe2.Details = digest.String()
+			fe2.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe2)
 			return errs
 		}(),
 		cvs: fail,
+	}, {
+		name: "simple, no error, authority keyless, good fulcio",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(context.Background(),
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
+						"cluster-image-policy-keyless": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []webhookcip.Authority{
+								{
+									Keyless: &webhookcip.KeylessRef{
+										URL: fulcioURL,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		cvs: pass,
 	}, {
 		name: "simple, error, authority keyless, good fulcio, bad rekor",
 		ps: &corev1.PodSpec{
@@ -375,10 +411,10 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
-			fe.Details = digest.String()
+			fe.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe)
 			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
-			fe2.Details = digest.String()
+			fe2.Details = fmt.Sprintf("%s validate signatures with fulcio: bad signature", digest.String())
 			errs = errs.Also(fe2)
 			return errs
 		}(),
@@ -1102,5 +1138,215 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 				t.Errorf("ResolveCronJob = %s", cmp.Diff(cronJob, want))
 			}
 		})
+	}
+}
+
+func TestValidatePolicy(t *testing.T) {
+	// Resolved via crane digest on 2021/09/25
+	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
+
+	ctx, _ := rtesting.SetupFakeContext(t)
+	si := fakesecret.Get(ctx)
+
+	secretName := "blah"
+
+	// Non-existent URL for testing complete failure
+	badURL := apis.HTTP("http://example.com/")
+	t.Logf("badURL: %s", badURL.String())
+
+	// Spin up a Fulcio that responds with a Root Cert
+	fulcioServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte(fulcioRootCert))
+	}))
+	t.Cleanup(fulcioServer.Close)
+	fulcioURL, err := apis.ParseURL(fulcioServer.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse fake Fulcio URL")
+	}
+	t.Logf("fulcioURL: %s", fulcioURL.String())
+
+	rekorServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte(rekorResponse))
+	}))
+	t.Cleanup(rekorServer.Close)
+	rekorURL, err := apis.ParseURL(rekorServer.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse fake Rekor URL")
+	}
+	t.Logf("rekorURL: %s", rekorURL.String())
+	var authorityKeyCosignPub *ecdsa.PublicKey
+	// Random public key (cosign generate-key-pair) 2022-03-18
+	authorityKeyCosignPubString := `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENAyijLvRu5QpCPp2uOj8C79ZW1VJ
+SID/4H61ZiRzN4nqONzp+ZF22qQTk3MFO3D0/ZKmWHAosIf2pf2GHH7myA==
+-----END PUBLIC KEY-----`
+
+	pems := parsePems([]byte(authorityKeyCosignPubString))
+	if len(pems) > 0 {
+		key, _ := x509.ParsePKIXPublicKey(pems[0].Bytes)
+		authorityKeyCosignPub = key.(*ecdsa.PublicKey)
+	} else {
+		t.Errorf("Error parsing authority key from string")
+	}
+
+	si.Informer().GetIndexer().Add(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: system.Namespace(),
+			Name:      secretName,
+		},
+		Data: map[string][]byte{
+			// Random public key (cosign generate-key-pair) 2021-09-25
+			"cosign.pub": []byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEapTW568kniCbL0OXBFIhuhOboeox
+UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
+-----END PUBLIC KEY-----
+`),
+		},
+	})
+
+	cvs := cosignVerifySignatures
+	defer func() {
+		cosignVerifySignatures = cvs
+	}()
+	// Let's just say that everything is verified.
+	pass := func(_ context.Context, _ name.Reference, _ *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		sig, err := static.NewSignature(nil, "")
+		if err != nil {
+			return nil, false, err
+		}
+		return []oci.Signature{sig}, true, nil
+	}
+	// Let's just say that everything is not verified.
+	fail := func(_ context.Context, _ name.Reference, _ *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		return nil, false, errors.New("bad signature")
+	}
+
+	// Let's say it is verified if it is the expected Public Key
+	authorityPublicKeyCVS := func(ctx context.Context, signedImgRef name.Reference, co *cosign.CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+		actualPublicKey, _ := co.SigVerifier.PublicKey()
+		actualECDSAPubkey := actualPublicKey.(*ecdsa.PublicKey)
+		actualKeyData := elliptic.Marshal(actualECDSAPubkey, actualECDSAPubkey.X, actualECDSAPubkey.Y)
+
+		expectedKeyData := elliptic.Marshal(authorityKeyCosignPub, authorityKeyCosignPub.X, authorityKeyCosignPub.Y)
+
+		if bytes.Equal(actualKeyData, expectedKeyData) {
+			return pass(ctx, signedImgRef, co)
+		}
+
+		return fail(ctx, signedImgRef, co)
+	}
+
+	tests := []struct {
+		name          string
+		policy        webhookcip.ClusterImagePolicy
+		want          *PolicyResult
+		wantErrs      []string
+		cva           func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
+		cvs           func(context.Context, name.Reference, *cosign.CheckOpts) ([]oci.Signature, bool, error)
+		customContext context.Context
+	}{{
+		name: "simple, public key, no matches",
+		policy: webhookcip.ClusterImagePolicy{
+			Authorities: []webhookcip.Authority{{
+				Name: "authority-0",
+				Key: &webhookcip.KeyRef{
+					PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+				},
+			}},
+		},
+		wantErrs: []string{"failed to validate public keys with authority authority-0 for gcr.io/distroless/static@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4: bad signature"},
+		cvs:      fail,
+	}, {
+		name: "simple, public key, works",
+		policy: webhookcip.ClusterImagePolicy{
+			Authorities: []webhookcip.Authority{{
+				Name: "authority-0",
+				Key: &webhookcip.KeyRef{
+					PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+				},
+			}},
+		},
+		want: &PolicyResult{
+			AuthorityMatches: map[string]AuthorityMatch{
+				"authority-0": {
+					Signatures: []PolicySignature{{
+						Subject: "PLACEHOLDER",
+						Issuer:  "PLACEHOLDER"}},
+				}},
+		},
+		cvs: pass,
+	}, {
+		name: "simple, public key, no error",
+		policy: webhookcip.ClusterImagePolicy{
+			Authorities: []webhookcip.Authority{{
+				Name: "authority-0",
+				Key: &webhookcip.KeyRef{
+					PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+				},
+			}},
+		},
+		want: &PolicyResult{
+			AuthorityMatches: map[string]AuthorityMatch{
+				"authority-0": {
+					Signatures: []PolicySignature{{
+						Subject: "PLACEHOLDER",
+						Issuer:  "PLACEHOLDER"}},
+				}},
+		},
+		cvs: authorityPublicKeyCVS,
+	}, {
+		name: "simple, keyless attestation, works",
+		policy: webhookcip.ClusterImagePolicy{
+			Authorities: []webhookcip.Authority{{
+				Name: "authority-0",
+				Keyless: &webhookcip.KeylessRef{
+					URL: fulcioURL,
+				},
+				Attestations: []webhookcip.AttestationPolicy{{
+					Name:          "test-att",
+					PredicateType: "custom",
+				}},
+			},
+			},
+		},
+		want: &PolicyResult{
+			AuthorityMatches: map[string]AuthorityMatch{
+				"authority-0": {
+					Attestations: map[string][]PolicySignature{"test-att": {{
+						Subject: "PLACEHOLDER",
+						Issuer:  "PLACEHOLDER"}},
+					}}},
+		},
+		cva: pass,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cosignVerifySignatures = test.cvs
+			cosignVerifyAttestations = test.cva
+			testContext := context.Background()
+
+			if test.customContext != nil {
+				testContext = test.customContext
+			}
+			got, gotErrs := ValidatePolicy(testContext, digest, test.policy)
+			validateErrors(t, test.wantErrs, gotErrs)
+			if !reflect.DeepEqual(test.want, got) {
+				t.Errorf("unexpected PolicyResult, want: %+v got: %+v", test.want, got)
+			}
+		})
+	}
+}
+
+func validateErrors(t *testing.T, wantErr []string, got []error) {
+	t.Helper()
+	if len(wantErr) != len(got) {
+		t.Errorf("Wanted %d errors got %d", len(wantErr), len(got))
+	} else {
+		for i, want := range wantErr {
+			if !strings.Contains(got[i].Error(), want) {
+				t.Errorf("Unwanted error at %d want: %s got: %s", i, want, got[i])
+			}
+		}
 	}
 }
