@@ -15,6 +15,7 @@
 package blob
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -25,16 +26,25 @@ import (
 func LoadFileOrURL(fileRef string) ([]byte, error) {
 	var raw []byte
 	var err error
-	if strings.HasPrefix(fileRef, "http://") || strings.HasPrefix(fileRef, "https://") {
-		// #nosec G107
-		resp, err := http.Get(fileRef)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		raw, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
+	parts := strings.SplitAfterN(fileRef, "://", 2)
+	if len(parts) == 2 {
+		scheme := parts[0]
+		switch scheme {
+		case "http://":
+			fallthrough
+		case "https://":
+			// #nosec G107
+			resp, err := http.Get(fileRef)
+			if err != nil {
+				return nil, err
+			}
+			defer resp.Body.Close()
+			raw, err = io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("loading URL: unrecognized scheme: %s", scheme)
 		}
 	} else {
 		raw, err = os.ReadFile(filepath.Clean(fileRef))

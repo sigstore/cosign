@@ -61,4 +61,9 @@ func TestLoadFileOrURL(t *testing.T) {
 	} else if !bytes.Equal(actual, data) {
 		t.Errorf("LoadFileOrURL(HTTP) = '%s'; want '%s'", actual, data)
 	}
+
+	_, err = LoadFileOrURL("invalid://url")
+	if err == nil {
+		t.Error("LoadFileOrURL(): expected error")
+	}
 }
