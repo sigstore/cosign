@@ -56,15 +56,15 @@ func evaluateCue(ctx context.Context, attestation []byte, evaluator string) erro
 	cueCtx := cuecontext.New()
 	cueEvaluator := cueCtx.CompileString(evaluator)
 	if cueEvaluator.Err() != nil {
-		return fmt.Errorf("failed to compile the cue policy with error: %v", cueEvaluator.Err())
+		return fmt.Errorf("failed to compile the cue policy with error: %w", cueEvaluator.Err())
 	}
 	cueAtt := cueCtx.CompileBytes(attestation)
 	if cueAtt.Err() != nil {
-		return fmt.Errorf("failed to compile the attestation data with error: %v", cueAtt.Err())
+		return fmt.Errorf("failed to compile the attestation data with error: %w", cueAtt.Err())
 	}
 	result := cueEvaluator.Unify(cueAtt)
 	if err := result.Validate(); err != nil {
-		return fmt.Errorf("failed to evaluate the policy with error: %v", err)
+		return fmt.Errorf("failed to evaluate the policy with error: %w", err)
 	}
 	return nil
 }
