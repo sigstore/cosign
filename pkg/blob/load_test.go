@@ -21,10 +21,14 @@ import (
 	"net/http/httptest"
 	"os"
 	"path"
+	"runtime"
 	"testing"
 )
 
-func TestLoadFileOrURL(t *testing.T) {
+func TestLoadFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows due to https://github.com/golang/go/issues/51442")
+	}
 	temp := t.TempDir()
 	fname := "filename.txt"
 	path := path.Join(temp, fname)
@@ -49,13 +53,17 @@ func TestLoadFileOrURL(t *testing.T) {
 	} else if !bytes.Equal(actual, data) {
 		t.Errorf("LoadFileOrURL(relative path) = '%s'; want '%s'", actual, data)
 	}
+}
+
+func TestLoadURL(t *testing.T) {
+	data := []byte("test")
 
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write(data)
 	}))
 	defer server.Close()
 
-	actual, err = LoadFileOrURL(server.URL)
+	actual, err := LoadFileOrURL(server.URL)
 	if err != nil {
 		t.Errorf("Reading from HTTP failed: %v", err)
 	} else if !bytes.Equal(actual, data) {
