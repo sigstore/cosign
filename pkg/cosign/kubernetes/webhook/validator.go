@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -237,8 +236,6 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
 func validatePolicies(ctx context.Context, ref name.Reference, policies map[string]webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
-	wg := sync.WaitGroup{}
-
 	type retChannelType struct {
 		name         string
 		policyResult *PolicyResult
@@ -258,9 +255,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, policies map[stri
 		cipName := cipName
 		cip := cip
 		logging.FromContext(ctx).Debugf("Checking Policy: %s", cipName)
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			result := retChannelType{name: cipName}
 
 			result.policyResult, result.errors = ValidatePolicy(ctx, ref, cip, remoteOpts...)
@@ -294,7 +289,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, policies map[stri
 	for i := 0; i < len(policies); i++ {
 		result, ok := <-results
 		if !ok {
-			break
+			ret["internalerror"] = append(ret["internalerror"], fmt.Errorf("results channel failed to produce a result"))
 		}
 		switch {
 		case len(result.errors) > 0:
@@ -305,8 +300,6 @@ func validatePolicies(ctx context.Context, ref name.Reference, policies map[stri
 			ret[result.name] = append(ret[result.name], fmt.Errorf("failed to process policy: %s", result.name))
 		}
 	}
-
-	wg.Wait()
 	return policyResults, ret
 }
 
@@ -316,7 +309,6 @@ func validatePolicies(ctx context.Context, ref name.Reference, policies map[stri
 // Returns PolicyResult, or errors encountered if none of the authorities
 // passed.
 func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (*PolicyResult, []error) {
-	wg := sync.WaitGroup{}
 	// Each gofunc creates and puts one of these into a results channel.
 	// Once each gofunc finishes, we go through the channel and pull out
 	// the results.
@@ -331,9 +323,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.Clus
 		authority := authority // due to gofunc
 		logging.FromContext(ctx).Debugf("Checking Authority: %s", authority.Name)
 
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			result := retChannelType{name: authority.Name}
 			// Assignment for appendAssign lint error
 			authorityRemoteOpts := remoteOpts
@@ -367,7 +357,7 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.Clus
 	for i := 0; i < len(cip.Authorities); i++ {
 		result, ok := <-results
 		if !ok {
-			break
+			authorityErrors = append(authorityErrors, fmt.Errorf("results channel failed to produce a result"))
 		}
 		switch {
 		case result.err != nil:
@@ -380,8 +370,6 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.Clus
 			authorityErrors = append(authorityErrors, fmt.Errorf("failed to process authority: %s", result.name))
 		}
 	}
-	wg.Wait()
-
 	if len(authorityErrors) > 0 {
 		return nil, authorityErrors
 	}
