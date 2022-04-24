@@ -19,8 +19,6 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -86,7 +84,7 @@ func VerifierForKeyRef(ctx context.Context, keyRef string, hashAlgorithm crypto.
 }
 
 func loadKey(keyPath string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
-	kb, err := os.ReadFile(filepath.Clean(keyPath))
+	kb, err := blob.LoadFileOrURL(keyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -169,10 +167,14 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 
 	if strings.Contains(keyRef, "://") {
 		sv, err := kms.Get(ctx, keyRef, crypto.SHA256)
-		if err != nil {
+		if err == nil {
+			return sv, nil
+		}
+		var e *kms.ProviderNotFoundError
+		if !errors.As(err, &e) {
 			return nil, fmt.Errorf("kms get: %w", err)
 		}
-		return sv, nil
+		// ProviderNotFoundError is okay; loadKey handles other URL schemes
 	}
 
 	return loadKey(keyRef, pf)

@@ -44,6 +44,9 @@ cosign verify [flags]
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
 
+  # verify image with a key stored in an environment variable
+  cosign verify --key env://[ENV_VAR] <IMAGE>
+
   # verify image with public key stored in Google Cloud KMS
   cosign verify --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <IMAGE>
 

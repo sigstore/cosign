@@ -47,6 +47,9 @@ func Sign() *cobra.Command {
   # sign a container image and add annotations
   cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE>
 
+  # sign a container image with a key stored in an environment variable
+  cosign sign --key env://[ENV_VAR] <IMAGE>
+
   # sign a container image with a key pair stored in Azure Key Vault
   cosign sign --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
 
