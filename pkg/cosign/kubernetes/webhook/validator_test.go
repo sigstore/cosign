@@ -56,6 +56,12 @@ import (
 const (
 	fulcioRootCert = "-----BEGIN CERTIFICATE-----\nMIICNzCCAd2gAwIBAgITPLBoBQhl1hqFND9S+SGWbfzaRTAKBggqhkjOPQQDAjBo\nMQswCQYDVQQGEwJVSzESMBAGA1UECBMJV2lsdHNoaXJlMRMwEQYDVQQHEwpDaGlw\ncGVuaGFtMQ8wDQYDVQQKEwZSZWRIYXQxDDAKBgNVBAsTA0NUTzERMA8GA1UEAxMI\ndGVzdGNlcnQwHhcNMjEwMzEyMjMyNDQ5WhcNMzEwMjI4MjMyNDQ5WjBoMQswCQYD\nVQQGEwJVSzESMBAGA1UECBMJV2lsdHNoaXJlMRMwEQYDVQQHEwpDaGlwcGVuaGFt\nMQ8wDQYDVQQKEwZSZWRIYXQxDDAKBgNVBAsTA0NUTzERMA8GA1UEAxMIdGVzdGNl\ncnQwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQRn+Alyof6xP3GQClSwgV0NFuY\nYEwmKP/WLWr/LwB6LUYzt5v49RlqG83KuaJSpeOj7G7MVABdpIZYWwqAiZV3o2Yw\nZDAOBgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBATAdBgNVHQ4EFgQU\nT8Jwm6JuVb0dsiuHUROiHOOVHVkwHwYDVR0jBBgwFoAUT8Jwm6JuVb0dsiuHUROi\nHOOVHVkwCgYIKoZIzj0EAwIDSAAwRQIhAJkNZmP6sKA+8EebRXFkBa9DPjacBpTc\nOljJotvKidRhAiAuNrIazKEw2G4dw8x1z6EYk9G+7fJP5m93bjm/JfMBtA==\n-----END CERTIFICATE-----"
 	rekorResponse  = "bad response"
+
+	// Random public key (cosign generate-key-pair) 2022-03-18
+	authorityKeyCosignPubString = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENAyijLvRu5QpCPp2uOj8C79ZW1VJ
+SID/4H61ZiRzN4nqONzp+ZF22qQTk3MFO3D0/ZKmWHAosIf2pf2GHH7myA==
+-----END PUBLIC KEY-----`
 )
 
 func TestValidatePodSpec(t *testing.T) {
@@ -91,11 +97,6 @@ func TestValidatePodSpec(t *testing.T) {
 	}
 
 	var authorityKeyCosignPub *ecdsa.PublicKey
-	// Random public key (cosign generate-key-pair) 2022-03-18
-	authorityKeyCosignPubString := `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENAyijLvRu5QpCPp2uOj8C79ZW1VJ
-SID/4H61ZiRzN4nqONzp+ZF22qQTk3MFO3D0/ZKmWHAosIf2pf2GHH7myA==
------END PUBLIC KEY-----`
 
 	pems := parsePems([]byte(authorityKeyCosignPubString))
 	if len(pems) > 0 {
@@ -1175,11 +1176,6 @@ func TestValidatePolicy(t *testing.T) {
 	}
 	t.Logf("rekorURL: %s", rekorURL.String())
 	var authorityKeyCosignPub *ecdsa.PublicKey
-	// Random public key (cosign generate-key-pair) 2022-03-18
-	authorityKeyCosignPubString := `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENAyijLvRu5QpCPp2uOj8C79ZW1VJ
-SID/4H61ZiRzN4nqONzp+ZF22qQTk3MFO3D0/ZKmWHAosIf2pf2GHH7myA==
------END PUBLIC KEY-----`
 
 	pems := parsePems([]byte(authorityKeyCosignPubString))
 	if len(pems) > 0 {
@@ -1349,4 +1345,58 @@ func validateErrors(t *testing.T, wantErr []string, got []error) {
 			}
 		}
 	}
+}
+
+func TestValidatePolicyCancelled(t *testing.T) {
+	var authorityKeyCosignPub *ecdsa.PublicKey
+	pems := parsePems([]byte(authorityKeyCosignPubString))
+	if len(pems) > 0 {
+		key, _ := x509.ParsePKIXPublicKey(pems[0].Bytes)
+		authorityKeyCosignPub = key.(*ecdsa.PublicKey)
+	} else {
+		t.Errorf("Error parsing authority key from string")
+	}
+	// Resolved via crane digest on 2021/09/25
+	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
+
+	testContext, cancelFunc := context.WithCancel(context.Background())
+	cip := webhookcip.ClusterImagePolicy{
+		Authorities: []webhookcip.Authority{{
+			Name: "authority-0",
+			Key: &webhookcip.KeyRef{
+				PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+			},
+		}},
+	}
+	wantErrs := []string{"context was canceled before validation completed"}
+	cancelFunc()
+	_, gotErrs := ValidatePolicy(testContext, digest, cip)
+	validateErrors(t, wantErrs, gotErrs)
+}
+
+func TestValidatePoliciesCancelled(t *testing.T) {
+	var authorityKeyCosignPub *ecdsa.PublicKey
+	pems := parsePems([]byte(authorityKeyCosignPubString))
+	if len(pems) > 0 {
+		key, _ := x509.ParsePKIXPublicKey(pems[0].Bytes)
+		authorityKeyCosignPub = key.(*ecdsa.PublicKey)
+	} else {
+		t.Errorf("Error parsing authority key from string")
+	}
+	// Resolved via crane digest on 2021/09/25
+	digest := name.MustParseReference("gcr.io/distroless/static:nonroot@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
+
+	testContext, cancelFunc := context.WithCancel(context.Background())
+	cip := webhookcip.ClusterImagePolicy{
+		Authorities: []webhookcip.Authority{{
+			Name: "authority-0",
+			Key: &webhookcip.KeyRef{
+				PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+			},
+		}},
+	}
+	wantErrs := []string{"context was canceled before validation completed"}
+	cancelFunc()
+	_, gotErrs := validatePolicies(testContext, digest, map[string]webhookcip.ClusterImagePolicy{"testcip": cip})
+	validateErrors(t, wantErrs, gotErrs["internalerror"])
 }

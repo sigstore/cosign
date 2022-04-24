@@ -287,19 +287,25 @@ func validatePolicies(ctx context.Context, ref name.Reference, policies map[stri
 	ret := map[string][]error{}
 
 	for i := 0; i < len(policies); i++ {
-		result, ok := <-results
-		if !ok {
-			ret["internalerror"] = append(ret["internalerror"], fmt.Errorf("results channel failed to produce a result"))
-		}
-		switch {
-		case len(result.errors) > 0:
-			ret[result.name] = append(ret[result.name], result.errors...)
-		case len(result.policyResult.AuthorityMatches) > 0:
-			policyResults[result.name] = result.policyResult
-		default:
-			ret[result.name] = append(ret[result.name], fmt.Errorf("failed to process policy: %s", result.name))
+		select {
+		case <-ctx.Done():
+			ret["internalerror"] = append(ret["internalerror"], fmt.Errorf("context was canceled before validation completed"))
+		case result, ok := <-results:
+			if !ok {
+				ret["internalerror"] = append(ret["internalerror"], fmt.Errorf("results channel failed to produce a result"))
+				continue
+			}
+			switch {
+			case len(result.errors) > 0:
+				ret[result.name] = append(ret[result.name], result.errors...)
+			case len(result.policyResult.AuthorityMatches) > 0:
+				policyResults[result.name] = result.policyResult
+			default:
+				ret[result.name] = append(ret[result.name], fmt.Errorf("failed to process policy: %s", result.name))
+			}
 		}
 	}
+
 	return policyResults, ret
 }
 
@@ -355,19 +361,24 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.Clus
 	// return it.
 	policyResult := &PolicyResult{AuthorityMatches: make(map[string]AuthorityMatch)}
 	for i := 0; i < len(cip.Authorities); i++ {
-		result, ok := <-results
-		if !ok {
-			authorityErrors = append(authorityErrors, fmt.Errorf("results channel failed to produce a result"))
-		}
-		switch {
-		case result.err != nil:
-			authorityErrors = append(authorityErrors, result.err)
-		case len(result.signatures) > 0:
-			policyResult.AuthorityMatches[result.name] = AuthorityMatch{Signatures: result.signatures}
-		case len(result.attestations) > 0:
-			policyResult.AuthorityMatches[result.name] = AuthorityMatch{Attestations: result.attestations}
-		default:
-			authorityErrors = append(authorityErrors, fmt.Errorf("failed to process authority: %s", result.name))
+		select {
+		case <-ctx.Done():
+			authorityErrors = append(authorityErrors, fmt.Errorf("context was canceled before validation completed"))
+		case result, ok := <-results:
+			if !ok {
+				authorityErrors = append(authorityErrors, fmt.Errorf("results channel failed to produce a result"))
+				continue
+			}
+			switch {
+			case result.err != nil:
+				authorityErrors = append(authorityErrors, result.err)
+			case len(result.signatures) > 0:
+				policyResult.AuthorityMatches[result.name] = AuthorityMatch{Signatures: result.signatures}
+			case len(result.attestations) > 0:
+				policyResult.AuthorityMatches[result.name] = AuthorityMatch{Attestations: result.attestations}
+			default:
+				authorityErrors = append(authorityErrors, fmt.Errorf("failed to process authority: %s", result.name))
+			}
 		}
 	}
 	if len(authorityErrors) > 0 {
