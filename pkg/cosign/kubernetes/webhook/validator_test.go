@@ -342,6 +342,54 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		}(),
 		cvs: fail,
 	}, {
+		name: "simple, authority keyless checks out, good fulcio, bad cip policy",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(context.Background(),
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
+						"cluster-image-policy-keyless": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []webhookcip.Authority{
+								{
+									Keyless: &webhookcip.KeylessRef{
+										URL: fulcioURL,
+									},
+								},
+							},
+							Policy: &webhookcip.AttestationPolicy{
+								Name: "invalid json policy",
+								Type: "cue",
+								Data: `{"wontgo}`,
+							},
+						},
+					},
+				},
+			},
+		),
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
+			fe.Details = fmt.Sprintf("%s failed evaluating cue policy for ClusterImagePolicy : string literal not terminated", digest.String())
+			errs = errs.Also(fe)
+			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
+			fe2.Details = fmt.Sprintf("%s failed evaluating cue policy for ClusterImagePolicy : string literal not terminated", digest.String())
+			errs = errs.Also(fe2)
+			return errs
+		}(),
+		cvs: pass,
+	}, {
 		name: "simple, no error, authority keyless, good fulcio",
 		ps: &corev1.PodSpec{
 			InitContainers: []corev1.Container{{
