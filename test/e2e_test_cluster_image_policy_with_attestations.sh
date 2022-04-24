@@ -62,6 +62,7 @@ assert_error() {
   local KUBECTL_OUT_FILE="/tmp/kubectl.failure.out"
   match="$@"
   echo looking for ${match}
+  kubectl delete job demo -n ${NS} --ignore-not-found=true
   if kubectl create -n ${NS} job demo --image=${demoimage} 2> ${KUBECTL_OUT_FILE} ; then
     echo Failed to block unsigned Job creation!
     exit 1
@@ -206,6 +207,8 @@ echo '::endgroup::'
 # Note we have to bake in the inline data from the keys above
 echo '::group:: Add cip for two signatures and two attestations'
 yq '. | .spec.authorities[1].key.data |= load_str("cosign.pub") | .spec.authorities[3].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-requires-two-signatures-and-two-attestations.yaml | kubectl apply -f -
+# allow things to propagate
+sleep 5
 echo '::endgroup::'
 
 # The CIP policy is the one that should fail now because it doesn't have enough
