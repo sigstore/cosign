@@ -20,7 +20,7 @@ spec:
   images:
   - glob: registry.local:5000/cosigned/demo*
   authorities:
-  - name: keyless-att
+  - name: keylessatt
     keyless:
       url: http://fulcio.fulcio-system.svc
     ctlog:
@@ -61,7 +61,7 @@ spec:
               scanFinishedOn: >after
             }
           }
-  - name: key-att
+  - name: keyatt
     key:
       data: |
         -----BEGIN PUBLIC KEY-----
@@ -78,12 +78,12 @@ spec:
         data: |
           predicateType: "cosign.sigstore.dev/attestation/v1"
           predicate: Data: "foobar key e2e test"
-  - name: keyless-signature
+  - name: keylesssignature
     keyless:
       url: http://fulcio.fulcio-system.svc
     ctlog:
       url: http://rekor.rekor-system.svc
-  - name: key-signature
+  - name: keysignature
     key:
       data: |
         -----BEGIN PUBLIC KEY-----
@@ -98,18 +98,17 @@ spec:
       package sigstore
       import "struct"
       import "list"
-
       authorityMatches: {
-        key-att: {
+        keyatt: {
           attestations: struct.MaxFields(1) & struct.MinFields(1)
         },
-        key-signature: {
+        keysignature: {
           signatures: list.MaxItems(1) & list.MinItems(1)
         },
-        keyless-att: {
+        keylessatt: {
           attestations: struct.MinFields(2) & struct.MaxFields(2)
         },
-        keyless-signature: {
+        keylesssignature: {
           signatures: list.MaxItems(1) & list.MinItems(1)
         }
       }
