@@ -53,6 +53,8 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
 func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
 	logging.FromContext(ctx).Infof("Evaluating attestation: %s", string(attestation))
+	logging.FromContext(ctx).Infof("Evaluator: %s", evaluator)
+
 	cueCtx := cuecontext.New()
 	cueEvaluator := cueCtx.CompileString(evaluator)
 	if cueEvaluator.Err() != nil {
