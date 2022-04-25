@@ -27,7 +27,7 @@ spec:
       url: http://rekor.rekor-system.svc
     attestations:
     - predicateType: custom
-      name: custom-keyless
+      name: customkeyless
       policy:
         type: cue
         data: |
@@ -39,7 +39,7 @@ spec:
             Timestamp: <before
           }
     - predicateType: vuln
-      name: vuln-keyless
+      name: vulnkeyless
       policy:
         type: cue
         data: |
@@ -105,8 +105,9 @@ spec:
         keysignature: {
           signatures: list.MaxItems(1) & list.MinItems(1)
         },
-        keylessatt: {
-          attestations: struct.MinFields(2) & struct.MaxFields(2)
+        if (len(authorityMatches.keylessatt.attestations) < 2) {
+          keylessattMinAttestations: 2
+          keylessattMinAttestations: "Error"
         },
         keylesssignature: {
           signatures: list.MaxItems(1) & list.MinItems(1)
