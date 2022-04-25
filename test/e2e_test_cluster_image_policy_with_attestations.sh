@@ -227,9 +227,9 @@ echo '::endgroup::'
 echo '::group:: test job success'
 # We signed this with key and keyless and it has two keyless attestations and
 # it has one key attestation, so it should succeed.
-if ! kubectl create -n ${NS} job demo3 --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
+if ! kubectl create -n ${NS} job demo3 --image=${demoimage} 2> ${KUBECTL_SUCCESS_FILE} ; then
   echo Failed to create job that has two signatures and 3 attestations
-  cat ${KUBECTL_OUT_FILE}
+  cat ${KUBECTL_SUCCESS_FILE}
   exit 1
 fi
 echo '::endgroup::'
