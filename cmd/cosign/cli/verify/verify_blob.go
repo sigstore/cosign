@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
@@ -60,7 +61,7 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
+func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail,
 	certOidcIssuer, certChain, sigRef, blobRef string, enforceSCT bool) error {
 	var verifier signature.Verifier
 	var cert *x509.Certificate
@@ -185,7 +186,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 	return nil
 }
 
-func verifySigByUUID(ctx context.Context, ko options.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string,
+func verifySigByUUID(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string,
 	uuids []string, blobBytes []byte, enforceSCT bool) error {
 	var validSigExists bool
 	for _, u := range uuids {
@@ -288,7 +289,7 @@ func payloadBytes(blobRef string) ([]byte, error) {
 	return blobBytes, nil
 }
 
-func verifyRekorEntry(ctx context.Context, ko options.KeyOpts, e *models.LogEntryAnon, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
+func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, e *models.LogEntryAnon, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
 	// If we have a bundle with a rekor entry, let's first try to verify offline
 	if ko.BundlePath != "" {
 		if err := verifyRekorBundle(ctx, ko.BundlePath, cert); err == nil {

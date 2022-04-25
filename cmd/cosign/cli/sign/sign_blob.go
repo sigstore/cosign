@@ -34,8 +34,27 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+type KeyOpts struct {
+	Sk               bool
+	Slot             string
+	KeyRef           string
+	FulcioURL        string
+	RekorURL         string
+	IDToken          string
+	PassFunc         cosign.PassFunc
+	OIDCIssuer       string
+	OIDCClientID     string
+	OIDCClientSecret string
+	OIDCRedirectURL  string
+	BundlePath       string
+
+	// Modeled after InsecureSkipVerify in tls.Config, this disables
+	// verifying the SCT.
+	InsecureSkipFulcioVerify bool
+}
+
 // nolint
-func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string) ([]byte, error) {
+func SignBlobCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string) ([]byte, error) {
 	var payload []byte
 	var err error
 	var rekorBytes []byte
