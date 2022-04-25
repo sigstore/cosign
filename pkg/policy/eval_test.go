@@ -138,7 +138,31 @@ func TestEvalPolicy(t *testing.T) {
 			signatures: list.MaxItems(1) & list.MinItems(1)
 		  },
 		  keylessatt: {
-			attestations: struct.MinFields(2) & struct.MaxFields(2)
+			attestations: struct.MaxFields(1) & struct.MinFields(1)
+		  },
+		  keylesssignature: {
+			signatures: list.MaxItems(1) & list.MinItems(1)
+		  }
+		}`,
+	}, {
+		name:       "cluster image policy main policy, fails",
+		json:       cipAttestation,
+		policyType: "cue",
+		wantErr:    true,
+		wantErrSub: `failed evaluating cue policy for cluster image policy main policy, fails : failed to evaluate the policy with error: authorityMatches.keylessattMinAttestations: conflicting values 2 and "Error" (mismatched types int and string)`,
+		policyFile: `package sigstore
+		import "struct"
+		import "list"
+		authorityMatches: {
+		  keyatt: {
+			attestations: struct.MaxFields(1) & struct.MinFields(1)
+		  },
+		  keysignature: {
+			signatures: list.MaxItems(1) & list.MinItems(1)
+		  },
+		  if( len(authorityMatches.keylessatt.attestations) < 2) {
+			keylessattMinAttestations: 2
+			keylessattMinAttestations: "Error"
 		  },
 		  keylesssignature: {
 			signatures: list.MaxItems(1) & list.MinItems(1)

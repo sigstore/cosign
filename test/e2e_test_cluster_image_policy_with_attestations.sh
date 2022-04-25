@@ -214,7 +214,7 @@ echo '::endgroup::'
 # The CIP policy is the one that should fail now because it doesn't have enough
 # attestations
 echo '::group:: test job rejection'
-expected_error='no matching attestations'
+expected_error='failed to evaluate the policy with error: authorityMatches.keylessattMinAttestations'
 assert_error ${expected_error}
 echo '::endgroup::'
 
