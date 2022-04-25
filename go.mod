@@ -45,7 +45,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/theupdateframework/go-tuf v0.0.0-20220211205608-f0c3294f63b9
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399
-	github.com/xanzy/go-gitlab v0.63.0
+	github.com/xanzy/go-gitlab v0.64.0
 	golang.org/x/net v0.0.0-20220412020605-290c469a71a5
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
