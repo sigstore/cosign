@@ -110,7 +110,7 @@ func generateCertificateFiles(t *testing.T, tmpDir string, pf cosign.PassFunc) (
 func TestSignCmdLocalKeyAndSk(t *testing.T) {
 	ro := &options.RootOptions{Timeout: options.DefaultTimeout}
 
-	for _, ko := range []options.KeyOpts{
+	for _, ko := range []KeyOpts{
 		// local and sk keys
 		{
 			KeyRef:   "testLocalPath",
