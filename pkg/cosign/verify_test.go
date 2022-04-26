@@ -309,6 +309,42 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	}
 }
 
+func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	otherSubCert, _, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+	subPool := x509.NewCertPool()
+	// Load in different sub cert so the chain doesn't verify
+	rootPool.AddCert(otherSubCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IntermediateCerts: subPool})
+	if err == nil {
+		t.Fatal("expected error while verifying signature")
+	}
+	if !strings.Contains(err.Error(), "certificate signed by unknown authority") {
+		t.Fatal("expected error while verifying signature")
+	}
+	// TODO: Create fake bundle and test verification
+	if verified == true {
+		t.Fatalf("expected verified=false, got verified=true")
+	}
+}
+
 func TestValidateAndUnpackCertSuccess(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"

@@ -92,6 +92,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			co.RekorClient = rekorClient
 		}
 		co.RootCerts = fulcio.GetRoots()
+		co.IntermediateCerts = fulcio.GetIntermediates()
 	}
 	keyRef := c.KeyRef
 

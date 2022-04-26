@@ -111,6 +111,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			co.RekorClient = rekorClient
 		}
 		co.RootCerts = fulcio.GetRoots()
+		co.IntermediateCerts = fulcio.GetIntermediates()
 	}
 	keyRef := c.KeyRef
 	certRef := c.CertRef

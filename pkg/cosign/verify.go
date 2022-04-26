@@ -475,7 +475,8 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 		// If the chain annotation is not present or there is only a root
 		if chain == nil || len(chain) <= 1 {
 			co.IntermediateCerts = nil
-		} else {
+		} else if co.IntermediateCerts == nil {
+			// If the intermediate certs have not been loaded in by TUF
 			pool := x509.NewCertPool()
 			for _, cert := range chain[:len(chain)-1] {
 				pool.AddCert(cert)
@@ -653,7 +654,8 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				// If the chain annotation is not present or there is only a root
 				if chain == nil || len(chain) <= 1 {
 					co.IntermediateCerts = nil
-				} else {
+				} else if co.IntermediateCerts == nil {
+					// If the intermediate certs have not been loaded in by TUF
 					pool := x509.NewCertPool()
 					for _, cert := range chain[:len(chain)-1] {
 						pool.AddCert(cert)

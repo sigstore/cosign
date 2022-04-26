@@ -83,8 +83,8 @@ func GetIntermediates() *x509.CertPool {
 }
 
 func initRoots() (*x509.CertPool, *x509.CertPool, error) {
-	rootPool := x509.NewCertPool()
-	intermediatePool := x509.NewCertPool()
+	var rootPool *x509.CertPool
+	var intermediatePool *x509.CertPool
 
 	rootEnv := os.Getenv(altRoot)
 	if rootEnv != "" {
@@ -99,8 +99,14 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 		for _, cert := range certs {
 			// root certificates are self-signed
 			if bytes.Equal(cert.RawSubject, cert.RawIssuer) {
+				if rootPool == nil {
+					rootPool = x509.NewCertPool()
+				}
 				rootPool.AddCert(cert)
 			} else {
+				if intermediatePool == nil {
+					intermediatePool = x509.NewCertPool()
+				}
 				intermediatePool.AddCert(cert)
 			}
 		}
@@ -127,11 +133,20 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 			for _, cert := range certs {
 				// root certificates are self-signed
 				if bytes.Equal(cert.RawSubject, cert.RawIssuer) {
+					if rootPool == nil {
+						rootPool = x509.NewCertPool()
+					}
 					rootPool.AddCert(cert)
 				} else {
+					if intermediatePool == nil {
+						intermediatePool = x509.NewCertPool()
+					}
 					intermediatePool.AddCert(cert)
 				}
 			}
+		}
+		if intermediatePool == nil {
+			intermediatePool = x509.NewCertPool()
 		}
 		intermediatePool.AppendCertsFromPEM([]byte(fulcioIntermediateV1))
 	}
