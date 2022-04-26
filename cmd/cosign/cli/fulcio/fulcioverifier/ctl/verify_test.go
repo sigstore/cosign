@@ -33,7 +33,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-func TestGetAlternatePublicKey(t *testing.T) {
+func TestGetPublicKey(t *testing.T) {
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get cwd: %v", err)
@@ -58,7 +58,7 @@ func TestGetAlternatePublicKey(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to read testfile %s : %v", tc.file, err)
 		}
-		got, err := getAlternatePublicKey(bytes)
+		got, err := getPublicKey(bytes)
 		switch {
 		case err == nil && tc.wantErrSub != "":
 			t.Errorf("Wanted Error for %s but got none", tc.file)
