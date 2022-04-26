@@ -155,37 +155,29 @@ func TestGetAuthorities(t *testing.T) {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 
-	// Test source oci and signaturePullSecrets
+	// Test source oci
+	matchedPolicy = "cluster-image-policy-source-oci"
 	c, err = defaults.GetMatchingPolicies("sourceocionly")
 	checkGetMatches(t, c, err)
 	if len(c) != 1 {
 		t.Errorf("Wanted 1 match, got %d", len(c))
 	}
-	matchedPolicy = "cluster-image-policy-source-oci"
-	if got := len(c[matchedPolicy].Authorities); got != 1 {
-		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
-	}
-	if got := len(c[matchedPolicy].Authorities[0].Sources); got != 1 {
-		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
-	}
 
+	checkSourceOCI(t, c[matchedPolicy].Authorities)
 	want = "example.registry.com/alternative/signature"
 	if got := c[matchedPolicy].Authorities[0].Sources[0].OCI; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 
+	// Test source signaturePullSecrets
+	matchedPolicy = "cluster-image-policy-source-oci-signature-pull-secrets"
 	c, err = defaults.GetMatchingPolicies("sourceocisignaturepullsecrets")
 	checkGetMatches(t, c, err)
 	if len(c) != 1 {
 		t.Errorf("Wanted 1 match, got %d", len(c))
 	}
-	matchedPolicy = "cluster-image-policy-source-oci-signature-pull-secrets"
-	if got := len(c[matchedPolicy].Authorities); got != 1 {
-		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
-	}
-	if got := len(c[matchedPolicy].Authorities[0].Sources); got != 1 {
-		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
-	}
+
+	checkSourceOCI(t, c[matchedPolicy].Authorities)
 	if got := len(c[matchedPolicy].Authorities[0].Sources[0].SignaturePullSecrets); got != 1 {
 		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
 	}
@@ -228,5 +220,21 @@ func checkPublicKey(t *testing.T, gotKey crypto.PublicKey) {
 	got := strings.TrimSuffix(string(pemBytes), "\n")
 	if got != inlineKeyData {
 		t.Errorf("Did not get what I wanted %s, got %s", inlineKeyData, string(pemBytes))
+	}
+}
+
+func checkSourceOCI(t *testing.T, authority []webhookcip.Authority) {
+	t.Helper()
+
+	if got := len(authority); got != 1 {
+		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
+	}
+	if got := len(authority[0].Sources); got != 1 {
+		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
+	}
+
+	want := len(authority[0].Sources)
+	if got := len(authority[0].RemoteOpts); got != want {
+		t.Errorf("Did not get what I wanted %d, got %d", want, got)
 	}
 }
