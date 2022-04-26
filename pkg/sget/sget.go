@@ -91,6 +91,7 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		fulcioVerified := (co.SigVerifier == nil)
 
 		co.RootCerts = fulcio.GetRoots()
+		co.IntermediateCerts = fulcio.GetIntermediates()
 
 		sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 		if err != nil {
