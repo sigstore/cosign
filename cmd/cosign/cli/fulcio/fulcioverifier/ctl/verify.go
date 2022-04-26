@@ -204,8 +204,8 @@ func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate) error {
 }
 
 // Given a byte array, try to construct a public key from it.
-// Will try first to see if it's PEM formatted, if not, then it will
-// try to parse it as der publics, and failing that
+// Supports PEM encoded public keys, falling back to DER. Supports
+// PKIX and PKCS1 encoded keys.
 func getPublicKey(in []byte) (crypto.PublicKey, error) {
 	var pubKey crypto.PublicKey
 	var err error
