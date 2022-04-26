@@ -15,17 +15,21 @@
 package clusterimagepolicy
 
 import (
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
-	"github.com/sigstore/cosign/pkg/oci/remote"
-
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"knative.dev/pkg/apis"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/logging"
 )
 
 // ClusterImagePolicy defines the images that go through verification
@@ -58,7 +62,7 @@ type Authority struct {
 	// RemoteOpts are not marshalled because they are an unsupported type
 	// RemoteOpts will be populated by the Authority UnmarshalJSON override
 	// +optional
-	RemoteOpts []remote.Option `json:"-"`
+	RemoteOpts []ociremote.Option `json:"-"`
 	// +optional
 	Attestations []AttestationPolicy `json:"attestations,omitempty"`
 }
@@ -139,7 +143,7 @@ func (a *Authority) UnmarshalJSON(data []byte) error {
 			if targetRepoOverride, err := name.NewRepository(source.OCI); err != nil {
 				return errors.Wrap(err, "failed to determine source")
 			} else if (targetRepoOverride != name.Repository{}) {
-				rawAuthority.RemoteOpts = append(rawAuthority.RemoteOpts, remote.WithTargetRepository(targetRepoOverride))
+				rawAuthority.RemoteOpts = append(rawAuthority.RemoteOpts, ociremote.WithTargetRepository(targetRepoOverride))
 			}
 		}
 	}
@@ -147,6 +151,33 @@ func (a *Authority) UnmarshalJSON(data []byte) error {
 	// Set the new type instance to casted original
 	*a = Authority(rawAuthority)
 	return nil
+}
+
+func (a *Authority) SourceSignaturePullSecretsOpts(ctx context.Context, namespace string) []ociremote.Option {
+	var ret []ociremote.Option
+	for _, source := range a.Sources {
+		if len(source.SignaturePullSecrets) > 0 {
+
+			signaturePullSecrets := make([]string, 0, len(source.SignaturePullSecrets))
+			for _, s := range source.SignaturePullSecrets {
+				signaturePullSecrets = append(signaturePullSecrets, s.Name)
+			}
+
+			opt := k8schain.Options{
+				Namespace:        namespace,
+				ImagePullSecrets: signaturePullSecrets,
+			}
+
+			kc, err := k8schain.New(ctx, kubeclient.Get(ctx), opt)
+			if err != nil {
+				logging.FromContext(ctx).Errorf("failed creating keychain: %+v", err)
+			}
+
+			ret = append(ret, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
+		}
+	}
+
+	return ret
 }
 
 func ConvertClusterImagePolicyV1alpha1ToWebhook(in *v1alpha1.ClusterImagePolicy) *ClusterImagePolicy {

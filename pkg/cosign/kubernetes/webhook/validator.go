@@ -334,28 +334,7 @@ func ValidatePolicy(ctx context.Context, namespace string, ref name.Reference, c
 			// Assignment for appendAssign lint error
 			authorityRemoteOpts := remoteOpts
 			authorityRemoteOpts = append(authorityRemoteOpts, authority.RemoteOpts...)
-
-			for _, source := range authority.Sources {
-				if len(source.SignaturePullSecrets) > 0 {
-
-					signaturePullSecrets := make([]string, 0, len(source.SignaturePullSecrets))
-					for _, s := range source.SignaturePullSecrets {
-						signaturePullSecrets = append(signaturePullSecrets, s.Name)
-					}
-
-					opt := k8schain.Options{
-						Namespace:        namespace,
-						ImagePullSecrets: signaturePullSecrets,
-					}
-
-					kc, err := k8schain.New(ctx, kubeclient.Get(ctx), opt)
-					if err != nil {
-						result.err = err
-					}
-
-					authorityRemoteOpts = append(authorityRemoteOpts, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
-				}
-			}
+			authorityRemoteOpts = append(authorityRemoteOpts, authority.SourceSignaturePullSecretsOpts(ctx, namespace)...)
 
 			if len(authority.Attestations) > 0 {
 				// We're doing the verify-attestations path, so validate (.att)
