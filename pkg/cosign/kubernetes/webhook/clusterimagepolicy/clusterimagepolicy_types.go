@@ -159,7 +159,6 @@ func (a *Authority) SourceSignaturePullSecretsOpts(ctx context.Context, namespac
 	var ret []ociremote.Option
 	for _, source := range a.Sources {
 		if len(source.SignaturePullSecrets) > 0 {
-
 			signaturePullSecrets := make([]string, 0, len(source.SignaturePullSecrets))
 			for _, s := range source.SignaturePullSecrets {
 				signaturePullSecrets = append(signaturePullSecrets, s.Name)
