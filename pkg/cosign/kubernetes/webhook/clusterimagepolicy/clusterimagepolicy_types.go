@@ -153,6 +153,8 @@ func (a *Authority) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// SourceSignaturePullSecretsOpts creates the signaturePullSecrets remoteOpts
+// This is not stored in the Authority under RemoteOpts as the namespace can be different
 func (a *Authority) SourceSignaturePullSecretsOpts(ctx context.Context, namespace string) []ociremote.Option {
 	var ret []ociremote.Option
 	for _, source := range a.Sources {
