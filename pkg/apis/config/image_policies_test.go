@@ -154,6 +154,45 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[matchedPolicy].Authorities[0].Attestations[0].Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
+
+	// Test source oci and signaturePullSecrets
+	c, err = defaults.GetMatchingPolicies("sourceocionly")
+	checkGetMatches(t, c, err)
+	if len(c) != 1 {
+		t.Errorf("Wanted 1 match, got %d", len(c))
+	}
+	matchedPolicy = "cluster-image-policy-source-oci"
+	if got := len(c[matchedPolicy].Authorities); got != 1 {
+		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
+	}
+	if got := len(c[matchedPolicy].Authorities[0].Sources); got != 1 {
+		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
+	}
+
+	want = "example.registry.com/alternative/signature"
+	if got := c[matchedPolicy].Authorities[0].Sources[0].OCI; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
+	}
+
+	c, err = defaults.GetMatchingPolicies("sourceocisignaturepullsecrets")
+	checkGetMatches(t, c, err)
+	if len(c) != 1 {
+		t.Errorf("Wanted 1 match, got %d", len(c))
+	}
+	matchedPolicy = "cluster-image-policy-source-oci-signature-pull-secrets"
+	if got := len(c[matchedPolicy].Authorities); got != 1 {
+		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
+	}
+	if got := len(c[matchedPolicy].Authorities[0].Sources); got != 1 {
+		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
+	}
+	if got := len(c[matchedPolicy].Authorities[0].Sources[0].SignaturePullSecrets); got != 1 {
+		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
+	}
+	want = "examplePullSecret"
+	if got := c[matchedPolicy].Authorities[0].Sources[0].SignaturePullSecrets[0].Name; got != want {
+		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
+	}
 }
 
 func checkGetMatches(t *testing.T, c map[string]webhookcip.ClusterImagePolicy, err error) {

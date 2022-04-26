@@ -105,3 +105,23 @@ data:
       policy:
         type: cue
         data: "cip level cue here"
+    cluster-image-policy-source-oci: |
+      images:
+      - regex: .*sourceocionly.*
+      authorities:
+      - name: attestation-0
+        key:
+          data: inlinedata here
+        source:
+        - oci: "example.registry.com/alternative/signature"
+    cluster-image-policy-source-oci-signature-pull-secrets: |
+      images:
+      - regex: .*sourceocisignaturepullsecrets.*
+      authorities:
+      - name: attestation-0
+        key:
+          data: inlinedata here
+        source:
+        - oci: "example.registry.com/alternative/signature"
+          signaturePullSecrets:
+          - name: examplePullSecret
