@@ -757,13 +757,14 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 	cert, err := sig.Cert()
 	if err != nil {
 		return false, err
-	} else if cert == nil {
-		return true, nil
 	}
 
-	// verify the cert against the integrated time
-	if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
-		return false, errors.Wrap(err, "checking expiry on cert")
+	if cert != nil {
+		// Verify the cert against the integrated time.
+		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
+		if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
+			return false, errors.Wrap(err, "checking expiry on cert")
+		}
 	}
 
 	payload, err := sig.Payload()
