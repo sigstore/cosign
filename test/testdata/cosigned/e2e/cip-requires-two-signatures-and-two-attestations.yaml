@@ -20,14 +20,14 @@ spec:
   images:
   - glob: registry.local:5000/cosigned/demo*
   authorities:
-  - name: keyless-att
+  - name: keylessatt
     keyless:
       url: http://fulcio.fulcio-system.svc
     ctlog:
       url: http://rekor.rekor-system.svc
     attestations:
     - predicateType: custom
-      name: custom-keyless
+      name: customkeyless
       policy:
         type: cue
         data: |
@@ -39,7 +39,7 @@ spec:
             Timestamp: <before
           }
     - predicateType: vuln
-      name: vuln-keyless
+      name: vulnkeyless
       policy:
         type: cue
         data: |
@@ -61,7 +61,7 @@ spec:
               scanFinishedOn: >after
             }
           }
-  - name: key-att
+  - name: keyatt
     key:
       data: |
         -----BEGIN PUBLIC KEY-----
@@ -78,12 +78,12 @@ spec:
         data: |
           predicateType: "cosign.sigstore.dev/attestation/v1"
           predicate: Data: "foobar key e2e test"
-  - name: keyless-signature
+  - name: keylesssignature
     keyless:
       url: http://fulcio.fulcio-system.svc
     ctlog:
       url: http://rekor.rekor-system.svc
-  - name: key-signature
+  - name: keysignature
     key:
       data: |
         -----BEGIN PUBLIC KEY-----
@@ -95,48 +95,21 @@ spec:
   policy:
     type: cue
     data: |
-      if len(authorityMatches."keyless-att".attestations) < 2 {
-        keylessAttestationsErr: "error"
-        keylessAttestationsErr: "Did not get both keyless attestations"
-      }
-      if len(authorityMatches."key-att".attestations) < 1 {
-        keyAttestationsErr: 1
-        keyAttestationsErr: "Did not get key attestation"
-      }
-      if len(authorityMatches."keyless-signature".signatures) < 1 {
-        keylessSignatureErr: 1
-        keylessSignatureErr: "Did not get keyless signature"
-      }
-      if len(authorityMatches."key-signature".signatures) < 1 {
-        keySignatureErr: 1
-        keySignatureErr: "Did not get key signature"
-      }
+      package sigstore
+      import "struct"
+      import "list"
       authorityMatches: {
-        key-att: {
-          attestations: {
-            "vuln-key": [
-              {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
-            ]
-          }
-        }
-        keyless-att: {
-          attestations: {
-            "vuln-keyless": [
-              {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
-            ],
-            "custom-keyless": [
-              {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
-            ],
-          }
-        }
-        keyless-signature: {
-          signatures: [
-            {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
-          ]
-        }
-        key-signature: {
-          signatures: [
-            {subject: "PLACEHOLDER", issuer: "PLACEHOLDER"},
-          ]
+        keyatt: {
+          attestations: struct.MaxFields(1) & struct.MinFields(1)
+        },
+        keysignature: {
+          signatures: list.MaxItems(1) & list.MinItems(1)
+        },
+        if (len(authorityMatches.keylessatt.attestations) < 2) {
+          keylessattMinAttestations: 2
+          keylessattMinAttestations: "Error"
+        },
+        keylesssignature: {
+          signatures: list.MaxItems(1) & list.MinItems(1)
         }
       }

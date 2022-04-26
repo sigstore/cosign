@@ -381,10 +381,10 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
 			fe := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("initContainers", 0)
-			fe.Details = fmt.Sprintf("%s failed evaluating cue policy for ClusterImagePolicy : string literal not terminated", digest.String())
+			fe.Details = fmt.Sprintf("%s failed evaluating cue policy for ClusterImagePolicy : failed to compile the cue policy with error: string literal not terminated", digest.String())
 			errs = errs.Also(fe)
 			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy-keyless", "image").ViaFieldIndex("containers", 0)
-			fe2.Details = fmt.Sprintf("%s failed evaluating cue policy for ClusterImagePolicy : string literal not terminated", digest.String())
+			fe2.Details = fmt.Sprintf("%s failed evaluating cue policy for ClusterImagePolicy : failed to compile the cue policy with error: string literal not terminated", digest.String())
 			errs = errs.Also(fe2)
 			return errs
 		}(),

@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"cuelang.org/go/cue/cuecontext"
-	cuejson "cuelang.org/go/encoding/json"
 
 	"knative.dev/pkg/logging"
 )
@@ -54,9 +53,22 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
 func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
 	logging.FromContext(ctx).Infof("Evaluating attestation: %s", string(attestation))
+	logging.FromContext(ctx).Infof("Evaluator: %s", evaluator)
+
 	cueCtx := cuecontext.New()
-	v := cueCtx.CompileString(evaluator)
-	return cuejson.Validate(attestation, v)
+	cueEvaluator := cueCtx.CompileString(evaluator)
+	if cueEvaluator.Err() != nil {
+		return fmt.Errorf("failed to compile the cue policy with error: %w", cueEvaluator.Err())
+	}
+	cueAtt := cueCtx.CompileBytes(attestation)
+	if cueAtt.Err() != nil {
+		return fmt.Errorf("failed to compile the attestation data with error: %w", cueAtt.Err())
+	}
+	result := cueEvaluator.Unify(cueAtt)
+	if err := result.Validate(); err != nil {
+		return fmt.Errorf("failed to evaluate the policy with error: %w", err)
+	}
+	return nil
 }
 
 // evaluateRego evaluates a rego policy `evaluator` against `attestation`

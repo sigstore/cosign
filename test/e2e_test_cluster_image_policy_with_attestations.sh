@@ -62,6 +62,7 @@ assert_error() {
   local KUBECTL_OUT_FILE="/tmp/kubectl.failure.out"
   match="$@"
   echo looking for ${match}
+  kubectl delete job demo -n ${NS} --ignore-not-found=true
   if kubectl create -n ${NS} job demo --image=${demoimage} 2> ${KUBECTL_OUT_FILE} ; then
     echo Failed to block unsigned Job creation!
     exit 1
@@ -206,17 +207,14 @@ echo '::endgroup::'
 # Note we have to bake in the inline data from the keys above
 echo '::group:: Add cip for two signatures and two attestations'
 yq '. | .spec.authorities[1].key.data |= load_str("cosign.pub") | .spec.authorities[3].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-requires-two-signatures-and-two-attestations.yaml | kubectl apply -f -
+# allow things to propagate
+sleep 5
 echo '::endgroup::'
-
-# TODO(vaikas): Enable the remaining tests once we sort out how to write
-# a valid CUE policy, or once #1787 goes in try implementing a Rego one.
-echo 'Not testing the CIP policy evaluation yet'
-exit 0
 
 # The CIP policy is the one that should fail now because it doesn't have enough
 # attestations
 echo '::group:: test job rejection'
-expected_error='no matching attestations'
+expected_error='failed to evaluate the policy with error: authorityMatches.keylessattMinAttestations'
 assert_error ${expected_error}
 echo '::endgroup::'
 
@@ -229,9 +227,9 @@ echo '::endgroup::'
 echo '::group:: test job success'
 # We signed this with key and keyless and it has two keyless attestations and
 # it has one key attestation, so it should succeed.
-if ! kubectl create -n ${NS} job demo3 --image=${demoimage} 2> ./${KUBECTL_OUT_FILE} ; then
+if ! kubectl create -n ${NS} job demo3 --image=${demoimage} 2> ${KUBECTL_SUCCESS_FILE} ; then
   echo Failed to create job that has two signatures and 3 attestations
-  cat ${KUBECTL_OUT_FILE}
+  cat ${KUBECTL_SUCCESS_FILE}
   exit 1
 fi
 echo '::endgroup::'

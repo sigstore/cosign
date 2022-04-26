@@ -75,8 +75,7 @@ const (
 		}
 	  }`
 
-	// TODO(vaikas): Enable tests once we sort this out.
-	// cipAttestation = "authorityMatches:{\"key-att\":{\"signatures\":null,\"attestations\":{\"custom-match-predicate\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"key-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keyless-att\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"keyless-signature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null}}"
+	cipAttestation = "{\"authorityMatches\":{\"keyatt\":{\"signatures\":null,\"attestations\":{\"vuln-key\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"keysignature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keylessatt\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}}}}"
 )
 
 func TestEvalPolicy(t *testing.T) {
@@ -124,6 +123,51 @@ func TestEvalPolicy(t *testing.T) {
 		policyType: "cue",
 		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
 		predicate: invocation: uri: "invocation.example.com/cosign-testing"`,
+	}, {
+		name:       "cluster image policy main policy, checks out",
+		json:       cipAttestation,
+		policyType: "cue",
+		policyFile: `package sigstore
+		import "struct"
+		import "list"
+		authorityMatches: {
+		  keyatt: {
+			attestations: struct.MaxFields(1) & struct.MinFields(1)
+		  },
+		  keysignature: {
+			signatures: list.MaxItems(1) & list.MinItems(1)
+		  },
+		  keylessatt: {
+			attestations: struct.MaxFields(1) & struct.MinFields(1)
+		  },
+		  keylesssignature: {
+			signatures: list.MaxItems(1) & list.MinItems(1)
+		  }
+		}`,
+	}, {
+		name:       "cluster image policy main policy, fails",
+		json:       cipAttestation,
+		policyType: "cue",
+		wantErr:    true,
+		wantErrSub: `failed evaluating cue policy for cluster image policy main policy, fails : failed to evaluate the policy with error: authorityMatches.keylessattMinAttestations: conflicting values 2 and "Error" (mismatched types int and string)`,
+		policyFile: `package sigstore
+		import "struct"
+		import "list"
+		authorityMatches: {
+		  keyatt: {
+			attestations: struct.MaxFields(1) & struct.MinFields(1)
+		  },
+		  keysignature: {
+			signatures: list.MaxItems(1) & list.MinItems(1)
+		  },
+		  if( len(authorityMatches.keylessatt.attestations) < 2) {
+			keylessattMinAttestations: 2
+			keylessattMinAttestations: "Error"
+		  },
+		  keylesssignature: {
+			signatures: list.MaxItems(1) & list.MinItems(1)
+		  }
+		}`,
 	}}
 	for _, tc := range tests {
 		ctx := context.Background()
