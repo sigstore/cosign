@@ -83,6 +83,8 @@ RCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==
 
 	// This is the patch for inlined secret for keyless cakey ref data
 	inlinedSecretKeylessPatch = `[{"op":"replace","path":"/data/test-cip-2","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"name\":\"authority-0\",\"keyless\":{\"ca-cert\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"}}}]}"}]`
+
+	replaceCIPKeySourcePatch = `[{"op":"replace","path":"/data/test-cip","value":"{\"images\":[{\"glob\":\"ghcr.io/example/*\"}],\"authorities\":[{\"name\":\"authority-0\",\"key\":{\"data\":\"-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExB6+H6054/W1SJgs5JR6AJr6J35J\\nRCTfQ5s1kD+hGMSE1rH7s46hmXEeyhnlRnaGF8eMU/SBJE/2NKPnxE7WzQ==\\n-----END PUBLIC KEY-----\"},\"source\":[{\"oci\":\"example.com/alternative/signature\",\"signaturePullSecrets\":[{\"name\":\"signaturePullSecretName\"}]}]}]}"}]`
 )
 
 func TestReconcile(t *testing.T) {
@@ -526,6 +528,34 @@ func TestReconcile(t *testing.T) {
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchKMS(mainContext, t, fakeKMSKey),
+			},
+		}, {
+			Name: "Key with data, source, and signature pull secrets",
+			Key:  testKey,
+
+			SkipNamespaceValidation: true, // Cluster scoped
+			Objects: []runtime.Object{
+				NewClusterImagePolicy(cipName,
+					WithFinalizer,
+					WithImagePattern(v1alpha1.ImagePattern{
+						Glob: glob,
+					}),
+					WithAuthority(v1alpha1.Authority{
+						Key: &v1alpha1.KeyRef{
+							Data: validPublicKeyData,
+						},
+						Sources: []v1alpha1.Source{{
+							OCI: "example.com/alternative/signature",
+							SignaturePullSecrets: []corev1.LocalObjectReference{
+								{Name: "signaturePullSecretName"},
+							},
+						}},
+					}),
+				),
+				makeConfigMap(),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				makePatch(replaceCIPKeySourcePatch),
 			},
 		}, {}}
 

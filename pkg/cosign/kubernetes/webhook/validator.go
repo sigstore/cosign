@@ -76,7 +76,7 @@ func (v *Validator) ValidatePodSpecable(ctx context.Context, wp *duckv1.WithPod)
 		ServiceAccountName: wp.Spec.Template.Spec.ServiceAccountName,
 		ImagePullSecrets:   imagePullSecrets,
 	}
-	return v.validatePodSpec(ctx, &wp.Spec.Template.Spec, opt).ViaField("spec.template.spec")
+	return v.validatePodSpec(ctx, wp.Namespace, &wp.Spec.Template.Spec, opt).ViaField("spec.template.spec")
 }
 
 // ValidatePod implements duckv1.PodValidator
@@ -94,7 +94,7 @@ func (v *Validator) ValidatePod(ctx context.Context, p *duckv1.Pod) *apis.FieldE
 		ServiceAccountName: p.Spec.ServiceAccountName,
 		ImagePullSecrets:   imagePullSecrets,
 	}
-	return v.validatePodSpec(ctx, &p.Spec, opt).ViaField("spec")
+	return v.validatePodSpec(ctx, p.Namespace, &p.Spec, opt).ViaField("spec")
 }
 
 // ValidateCronJob implements duckv1.CronJobValidator
@@ -112,10 +112,10 @@ func (v *Validator) ValidateCronJob(ctx context.Context, c *duckv1.CronJob) *api
 		ServiceAccountName: c.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName,
 		ImagePullSecrets:   imagePullSecrets,
 	}
-	return v.validatePodSpec(ctx, &c.Spec.JobTemplate.Spec.Template.Spec, opt).ViaField("spec.jobTemplate.spec.template.spec")
+	return v.validatePodSpec(ctx, c.Namespace, &c.Spec.JobTemplate.Spec.Template.Spec, opt).ViaField("spec.jobTemplate.spec.template.spec")
 }
 
-func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt k8schain.Options) (errs *apis.FieldError) {
+func (v *Validator) validatePodSpec(ctx context.Context, namespace string, ps *corev1.PodSpec, opt k8schain.Options) (errs *apis.FieldError) {
 	kc, err := k8schain.New(ctx, v.client, opt)
 	if err != nil {
 		logging.FromContext(ctx).Warnf("Unable to build k8schain: %v", err)
@@ -171,7 +171,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 				// If there is at least one policy that matches, that means it
 				// has to be satisfied.
 				if len(policies) > 0 {
-					signatures, fieldErrors := validatePolicies(ctx, ref, policies, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
+					signatures, fieldErrors := validatePolicies(ctx, namespace, ref, policies, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
 
 					if len(signatures) != len(policies) {
 						logging.FromContext(ctx).Warnf("Failed to validate at least one policy for %s", ref.Name())
@@ -235,7 +235,7 @@ func (v *Validator) validatePodSpec(ctx context.Context, ps *corev1.PodSpec, opt
 // Note that if an image does not match any policies, it's perfectly
 // reasonable that the return value is 0, nil since there were no errors, but
 // the image was not validated against any matching policy and hence authority.
-func validatePolicies(ctx context.Context, ref name.Reference, policies map[string]webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
+func validatePolicies(ctx context.Context, namespace string, ref name.Reference, policies map[string]webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (map[string]*PolicyResult, map[string][]error) {
 	type retChannelType struct {
 		name         string
 		policyResult *PolicyResult
@@ -258,7 +258,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, policies map[stri
 		go func() {
 			result := retChannelType{name: cipName}
 
-			result.policyResult, result.errors = ValidatePolicy(ctx, ref, cip, remoteOpts...)
+			result.policyResult, result.errors = ValidatePolicy(ctx, namespace, ref, cip, remoteOpts...)
 			if len(result.errors) == 0 {
 				// Ok, at least one Authority  on the policy passed. If there's a CIP level
 				// policy, apply it against the results of the successful Authorities
@@ -314,7 +314,7 @@ func validatePolicies(ctx context.Context, ref name.Reference, policies map[stri
 // signatures OR attestations if atttestations were specified.
 // Returns PolicyResult, or errors encountered if none of the authorities
 // passed.
-func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (*PolicyResult, []error) {
+func ValidatePolicy(ctx context.Context, namespace string, ref name.Reference, cip webhookcip.ClusterImagePolicy, remoteOpts ...ociremote.Option) (*PolicyResult, []error) {
 	// Each gofunc creates and puts one of these into a results channel.
 	// Once each gofunc finishes, we go through the channel and pull out
 	// the results.
@@ -334,6 +334,28 @@ func ValidatePolicy(ctx context.Context, ref name.Reference, cip webhookcip.Clus
 			// Assignment for appendAssign lint error
 			authorityRemoteOpts := remoteOpts
 			authorityRemoteOpts = append(authorityRemoteOpts, authority.RemoteOpts...)
+
+			for _, source := range authority.Sources {
+				if len(source.SignaturePullSecrets) > 0 {
+
+					signaturePullSecrets := make([]string, 0, len(source.SignaturePullSecrets))
+					for _, s := range source.SignaturePullSecrets {
+						signaturePullSecrets = append(signaturePullSecrets, s.Name)
+					}
+
+					opt := k8schain.Options{
+						Namespace:        namespace,
+						ImagePullSecrets: signaturePullSecrets,
+					}
+
+					kc, err := k8schain.New(ctx, kubeclient.Get(ctx), opt)
+					if err != nil {
+						result.err = err
+					}
+
+					authorityRemoteOpts = append(authorityRemoteOpts, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
+				}
+			}
 
 			if len(authority.Attestations) > 0 {
 				// We're doing the verify-attestations path, so validate (.att)

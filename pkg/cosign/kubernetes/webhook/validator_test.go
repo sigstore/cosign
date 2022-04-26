@@ -480,7 +480,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			}
 
 			// Check the core mechanics
-			got := v.validatePodSpec(testContext, test.ps, k8schain.Options{})
+			got := v.validatePodSpec(testContext, system.Namespace(), test.ps, k8schain.Options{})
 			if (got != nil) != (test.want != nil) {
 				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
 			} else if got != nil && got.Error() != test.want.Error() {
@@ -1373,7 +1373,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			if test.customContext != nil {
 				testContext = test.customContext
 			}
-			got, gotErrs := ValidatePolicy(testContext, digest, test.policy)
+			got, gotErrs := ValidatePolicy(testContext, system.Namespace(), digest, test.policy)
 			validateErrors(t, test.wantErrs, gotErrs)
 			if !reflect.DeepEqual(test.want, got) {
 				t.Errorf("unexpected PolicyResult, want: %+v got: %+v", test.want, got)
@@ -1418,7 +1418,7 @@ func TestValidatePolicyCancelled(t *testing.T) {
 	}
 	wantErrs := []string{"context was canceled before validation completed"}
 	cancelFunc()
-	_, gotErrs := ValidatePolicy(testContext, digest, cip)
+	_, gotErrs := ValidatePolicy(testContext, system.Namespace(), digest, cip)
 	validateErrors(t, wantErrs, gotErrs)
 }
 
@@ -1445,6 +1445,6 @@ func TestValidatePoliciesCancelled(t *testing.T) {
 	}
 	wantErrs := []string{"context was canceled before validation completed"}
 	cancelFunc()
-	_, gotErrs := validatePolicies(testContext, digest, map[string]webhookcip.ClusterImagePolicy{"testcip": cip})
+	_, gotErrs := validatePolicies(testContext, system.Namespace(), digest, map[string]webhookcip.ClusterImagePolicy{"testcip": cip})
 	validateErrors(t, wantErrs, gotErrs["internalerror"])
 }

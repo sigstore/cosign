@@ -115,6 +115,8 @@ type KeyRef struct {
 type Source struct {
 	// +optional
 	OCI string `json:"oci,omitempty"`
+	// +optional
+	SignaturePullSecrets []v1.LocalObjectReference `json:"signaturePullSecrets,omitempty"`
 }
 
 // TLog specifies the URL to a transparency log that holds

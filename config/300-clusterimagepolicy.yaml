@@ -139,6 +139,14 @@ spec:
                           properties:
                             oci:
                               type: string
+                            signaturePullSecrets:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                    type: string
                 images:
                   type: array
                   items:
