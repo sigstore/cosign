@@ -17,7 +17,6 @@ package ctl
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
@@ -93,15 +92,11 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 			if err != nil {
 				return err
 			}
-			ctPub, ok := pub.(*ecdsa.PublicKey)
-			if !ok {
-				return fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
-			}
-			keyID, err := ctutil.GetCTLogID(ctPub)
+			keyID, err := ctutil.GetCTLogID(pub)
 			if err != nil {
 				return errors.Wrap(err, "error getting CTFE public key hash")
 			}
-			pubKeys[keyID] = logIDMetadata{ctPub, t.Status}
+			pubKeys[keyID] = logIDMetadata{pub, t.Status}
 		}
 	} else {
 		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
