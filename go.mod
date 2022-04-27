@@ -64,7 +64,7 @@ require (
 )
 
 require (
-	github.com/armon/go-metrics v0.3.10
+	github.com/armon/go-metrics v0.3.11
 	github.com/armon/go-radix v1.0.0
 	github.com/bytecodealliance/wasmtime-go v0.33.1 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
