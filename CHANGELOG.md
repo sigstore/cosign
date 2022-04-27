@@ -1,3 +1,77 @@
+# v1.8.0
+
+_NOTE_: If you use Fulcio to issue certificates you will need to use this release.
+
+## Enhancements
+
+* Handle context cancelled properly + tests. (https://github.com/sigstore/cosign/pull/1796)
+* Allow passing keys via environment variables (`env://` refs) (https://github.com/sigstore/cosign/pull/1794)
+* Add parallelization for processing policies / authorities. (https://github.com/sigstore/cosign/pull/1795)
+* Attestations + policy in cip. (https://github.com/sigstore/cosign/pull/1772)
+* Refactor fulcio signer to take in KeyOpts. (https://github.com/sigstore/cosign/pull/1788)
+* Remove the dependency on v1alpha1.Identity which brings in (https://github.com/sigstore/cosign/pull/1790)
+* Add Fulcio intermediate CA certificate to intermediate pool (https://github.com/sigstore/cosign/pull/1774)
+* Cosigned validate against remote sig src (https://github.com/sigstore/cosign/pull/1754)
+* tuf: add debug info if tuf update fails (https://github.com/sigstore/cosign/pull/1766)
+* Break the CIP action tests into a sh script. (https://github.com/sigstore/cosign/pull/1767)
+* [policy-webhook] The webhooks name is now configurable via --(validating|mutating)-webhook-name flags (https://github.com/sigstore/cosign/pull/1757)
+* Verify embedded SCTs (https://github.com/sigstore/cosign/pull/1731)
+* Validate issuer/subject regexp in validate webhook. (https://github.com/sigstore/cosign/pull/1761)
+* Add intermediate CA certificate pool for Fulcio (https://github.com/sigstore/cosign/pull/1749)
+* [cosigned] The webhook name is now configurable via --webhook-name flag (https://github.com/sigstore/cosign/pull/1726)
+* Use bundle log ID to find verification key (https://github.com/sigstore/cosign/pull/1748)
+* Refactor policy related code, add support for vuln verify (https://github.com/sigstore/cosign/pull/1747)
+* Create convert functions for internal CIP (https://github.com/sigstore/cosign/pull/1736)
+* Move the KMS integration imports into the binary entrypoints (https://github.com/sigstore/cosign/pull/1744)
+
+## Bug Fixes
+
+* Fix a bug where an error would send duplicate results. (https://github.com/sigstore/cosign/pull/1797)
+* fix: more informative error (https://github.com/sigstore/cosign/pull/1778)
+* fix: add support for rsa keys (https://github.com/sigstore/cosign/pull/1768)
+* Implement identities, fix bug in webhook validation. (https://github.com/sigstore/cosign/pull/1759)
+
+## Others
+
+* Bump github.com/hashicorp/go-retryablehttp from 0.7.0 to 0.7.1 (https://github.com/sigstore/cosign/pull/1758)
+* Bump google-github-actions/auth from 0.7.0 to 0.7.1 (https://github.com/sigstore/cosign/pull/1801)
+* Bump google.golang.org/grpc from 1.45.0 to 1.46.0 (https://github.com/sigstore/cosign/pull/1800)
+* Bump github.com/xanzy/go-gitlab from 0.63.0 to 0.64.0 (https://github.com/sigstore/cosign/pull/1799)
+* Revert "Refactor fulcio signer to take in KeyOpts. (https://github.com/sigstore/cosign/pull/1788)" (https://github.com/sigstore/cosign/pull/1798)
+* chore: add rego function to consume modules (https://github.com/sigstore/cosign/pull/1787)
+* test: add cue unit tests (https://github.com/sigstore/cosign/pull/1791)
+* Run update-codegen. (https://github.com/sigstore/cosign/pull/1789)
+* Bump actions/checkout from 3.0.1 to 3.0.2 (https://github.com/sigstore/cosign/pull/1783)
+* Bump github.com/mitchellh/mapstructure from 1.4.3 to 1.5.0 (https://github.com/sigstore/cosign/pull/1782)
+* Bump k8s.io/code-generator from 0.23.5 to 0.23.6 (https://github.com/sigstore/cosign/pull/1781)
+* Bump google.golang.org/api from 0.74.0 to 0.75.0 (https://github.com/sigstore/cosign/pull/1780)
+* Bump cuelang.org/go from 0.4.2 to 0.4.3 (https://github.com/sigstore/cosign/pull/1779)
+* Bump codecov/codecov-action from 3.0.0 to 3.1.0 (https://github.com/sigstore/cosign/pull/1784)
+* Bump actions/checkout from 3.0.0 to 3.0.1 (https://github.com/sigstore/cosign/pull/1764)
+* Bump mikefarah/yq from 4.24.4 to 4.24.5 (https://github.com/sigstore/cosign/pull/1765)
+* chore: add warning when downloading a sBOM (https://github.com/sigstore/cosign/pull/1763)
+* chore: add warn when attaching sBOM (https://github.com/sigstore/cosign/pull/1756)
+* Bump sigstore/cosign-installer from 2.2.0 to 2.2.1 (https://github.com/sigstore/cosign/pull/1752)
+* update go builder and cosign images (https://github.com/sigstore/cosign/pull/1755)
+* test: create fake TUF test root and create test SETs for verification (https://github.com/sigstore/cosign/pull/1750)
+* Bump github.com/spf13/viper from 1.10.1 to 1.11.0 (https://github.com/sigstore/cosign/pull/1751)
+* Bump mikefarah/yq from 4.24.2 to 4.24.4 (https://github.com/sigstore/cosign/pull/1746)
+* Bump github.com/xanzy/go-gitlab from 0.62.0 to 0.63.0 (https://github.com/sigstore/cosign/pull/1745)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Billy Lynch (@wlynch)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Denny (@DennyHoang)
+* Hayden Blauzvern (@haydentherapper)
+* Hector Fernandez (@hectorj2f)
+* Matt Moore (@mattmoor)
+* Ville Aikas (@vaikas)
+* Vladimir Nachev (@vpnachev)
+* Youssef Bel Mekki (@ybelMekk)
+* Zack Newman (@znewman01)
+
 # v1.7.2
 
 ## Bug Fixes
