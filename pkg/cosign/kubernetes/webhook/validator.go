@@ -322,7 +322,7 @@ func ValidatePolicy(ctx context.Context, namespace string, ref name.Reference, c
 		name         string
 		attestations map[string][]PolicySignature
 		signatures   []PolicySignature
-		err          error
+		errs         []error
 	}
 	results := make(chan retChannelType, len(cip.Authorities))
 	for _, authority := range cip.Authorities {
@@ -334,20 +334,25 @@ func ValidatePolicy(ctx context.Context, namespace string, ref name.Reference, c
 			// Assignment for appendAssign lint error
 			authorityRemoteOpts := remoteOpts
 			authorityRemoteOpts = append(authorityRemoteOpts, authority.RemoteOpts...)
-			authorityRemoteOpts = append(authorityRemoteOpts, authority.SourceSignaturePullSecretsOpts(ctx, namespace)...)
+
+			signaturePullSecretsOpts, err := authority.SourceSignaturePullSecretsOpts(ctx, namespace)
+			if err != nil {
+				result.errs = append(result.errs, err)
+			}
+			authorityRemoteOpts = append(authorityRemoteOpts, signaturePullSecretsOpts...)
 
 			if len(authority.Attestations) > 0 {
 				// We're doing the verify-attestations path, so validate (.att)
 				validatedAttestations, err := ValidatePolicyAttestationsForAuthority(ctx, ref, authority, authorityRemoteOpts...)
 				if err != nil {
-					result.err = err
+					result.errs = append(result.errs, err)
 				} else {
 					result.attestations = validatedAttestations
 				}
 			} else {
 				validatedSignatures, err := ValidatePolicySignaturesForAuthority(ctx, ref, authority, authorityRemoteOpts...)
 				if err != nil {
-					result.err = err
+					result.errs = append(result.errs, err)
 				} else {
 					result.signatures = validatedSignatures
 				}
@@ -371,8 +376,8 @@ func ValidatePolicy(ctx context.Context, namespace string, ref name.Reference, c
 				continue
 			}
 			switch {
-			case result.err != nil:
-				authorityErrors = append(authorityErrors, result.err)
+			case len(result.errs) > 0:
+				authorityErrors = append(authorityErrors, result.errs...)
 			case len(result.signatures) > 0:
 				policyResult.AuthorityMatches[result.name] = AuthorityMatch{Signatures: result.signatures}
 			case len(result.attestations) > 0:

@@ -155,7 +155,7 @@ func (a *Authority) UnmarshalJSON(data []byte) error {
 
 // SourceSignaturePullSecretsOpts creates the signaturePullSecrets remoteOpts
 // This is not stored in the Authority under RemoteOpts as the namespace can be different
-func (a *Authority) SourceSignaturePullSecretsOpts(ctx context.Context, namespace string) []ociremote.Option {
+func (a *Authority) SourceSignaturePullSecretsOpts(ctx context.Context, namespace string) ([]ociremote.Option, error) {
 	var ret []ociremote.Option
 	for _, source := range a.Sources {
 		if len(source.SignaturePullSecrets) > 0 {
@@ -172,13 +172,14 @@ func (a *Authority) SourceSignaturePullSecretsOpts(ctx context.Context, namespac
 			kc, err := k8schain.New(ctx, kubeclient.Get(ctx), opt)
 			if err != nil {
 				logging.FromContext(ctx).Errorf("failed creating keychain: %+v", err)
+				return nil, err
 			}
 
 			ret = append(ret, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc)))
 		}
 	}
 
-	return ret
+	return ret, nil
 }
 
 func ConvertClusterImagePolicyV1alpha1ToWebhook(in *v1alpha1.ClusterImagePolicy) *ClusterImagePolicy {

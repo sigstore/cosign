@@ -43,6 +43,7 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/static"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
@@ -468,6 +469,58 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			return errs
 		}(),
 		cvs: fail,
+	}, {
+		name: "simple, error, authority source signaturePullSecrets, invalid secret",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(ctx,
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
+						"cluster-image-policy": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []webhookcip.Authority{
+								{
+									Key: &webhookcip.KeyRef{
+										Data:       authorityKeyCosignPubString,
+										PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+									},
+									Sources: []v1alpha1.Source{{
+										OCI: "example.com/alternative/signature",
+										SignaturePullSecrets: []v1.LocalObjectReference{{
+											Name: "non-existing-secret",
+										}},
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrGeneric("failed policy: cluster-image-policy", "image").ViaFieldIndex("initContainers", 0)
+			fe.Details = fmt.Sprintf("%s secrets \"non-existing-secret\" not found", digest.String())
+			errs = errs.Also(fe)
+
+			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy", "image").ViaFieldIndex("containers", 0)
+			fe2.Details = fmt.Sprintf("%s secrets \"non-existing-secret\" not found", digest.String())
+			errs = errs.Also(fe2)
+
+			return errs
+		}(),
+		cvs: authorityPublicKeyCVS,
 	}}
 
 	for _, test := range tests {
