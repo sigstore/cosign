@@ -4,6 +4,9 @@ _NOTE_: If you use Fulcio to issue certificates you will need to use this releas
 
 ## Enhancements
 
+* Support PKCS1 encoded and non-ECDSA CT log public keys (https://github.com/sigstore/cosign/pull/1806)
+* Load in intermediate cert pool from TUF (https://github.com/sigstore/cosign/pull/1804)
+* Don't fail open in VerifyBundle (https://github.com/sigstore/cosign/pull/1648)
 * Handle context cancelled properly + tests. (https://github.com/sigstore/cosign/pull/1796)
 * Allow passing keys via environment variables (`env://` refs) (https://github.com/sigstore/cosign/pull/1794)
 * Add parallelization for processing policies / authorities. (https://github.com/sigstore/cosign/pull/1795)
