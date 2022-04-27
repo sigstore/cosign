@@ -17,7 +17,6 @@ package ctl
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
@@ -89,19 +88,15 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 			return err
 		}
 		for _, t := range targets {
-			pub, err := cryptoutils.UnmarshalPEMToPublicKey(t.Target)
+			pub, err := getPublicKey(t.Target)
 			if err != nil {
 				return err
 			}
-			ctPub, ok := pub.(*ecdsa.PublicKey)
-			if !ok {
-				return fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
-			}
-			keyID, err := ctutil.GetCTLogID(ctPub)
+			keyID, err := ctutil.GetCTLogID(pub)
 			if err != nil {
 				return errors.Wrap(err, "error getting CTFE public key hash")
 			}
-			pubKeys[keyID] = logIDMetadata{ctPub, t.Status}
+			pubKeys[keyID] = logIDMetadata{pub, t.Status}
 		}
 	} else {
 		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
@@ -109,7 +104,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 		if err != nil {
 			return errors.Wrap(err, "error reading alternate public key file")
 		}
-		pubKey, err := getAlternatePublicKey(raw)
+		pubKey, err := getPublicKey(raw)
 		if err != nil {
 			return errors.Wrap(err, "error parsing alternate public key from the file")
 		}
@@ -204,9 +199,9 @@ func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate) error {
 }
 
 // Given a byte array, try to construct a public key from it.
-// Will try first to see if it's PEM formatted, if not, then it will
-// try to parse it as der publics, and failing that
-func getAlternatePublicKey(in []byte) (crypto.PublicKey, error) {
+// Supports PEM encoded public keys, falling back to DER. Supports
+// PKIX and PKCS1 encoded keys.
+func getPublicKey(in []byte) (crypto.PublicKey, error) {
 	var pubKey crypto.PublicKey
 	var err error
 	var derBytes []byte
@@ -222,7 +217,7 @@ func getAlternatePublicKey(in []byte) (crypto.PublicKey, error) {
 		// Try using the PKCS1 before giving up.
 		pubKey, err = x509.ParsePKCS1PublicKey(derBytes)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse alternate public key")
+			return nil, errors.Wrap(err, "failed to parse CT log public key")
 		}
 	}
 	return pubKey, nil
