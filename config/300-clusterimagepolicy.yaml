@@ -140,6 +140,7 @@ spec:
                             oci:
                               type: string
                             signaturePullSecrets:
+                              description: SignaturePullSecrets is an optional list of references to secrets in the same namespace as the deploying resource for pulling any of the signatures used by this Source.
                               type: array
                               items:
                                 type: object
