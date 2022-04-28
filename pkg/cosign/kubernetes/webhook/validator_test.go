@@ -531,7 +531,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 
 			return errs
 		}(),
-		cvs: authorityPublicKeyCVS,
+		cvs: fail,
 	}, {
 		name: "simple, no error, authority source signaturePullSecrets, valid secret",
 		ps: &corev1.PodSpec{
