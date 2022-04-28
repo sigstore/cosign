@@ -56,6 +56,26 @@ fi
 # Trust our own custom Rekor API
 export SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1
 
+# To simplify testing failures, use this function to execute a kubectl to create
+# our job and verify that the failure is expected.
+assert_error() {
+  local KUBECTL_OUT_FILE="/tmp/kubectl.failure.out"
+  match="$@"
+  echo looking for ${match}
+  kubectl delete job job-that-fails -n ${NS} --ignore-not-found=true
+  if kubectl create -n ${NS} job job-that-fails --image=${demoimage} 2> ${KUBECTL_OUT_FILE} ; then
+    echo Failed to block expected Job failure!
+    exit 1
+  else
+    echo Successfully blocked Job creation with expected error: "${match}"
+    if ! grep -q "${match}" ${KUBECTL_OUT_FILE} ; then
+      echo Did not get expected failure message, wanted "${match}", got
+      cat ${KUBECTL_OUT_FILE}
+      exit 1
+    fi
+  fi
+}
+
 # Publish the first test image
 echo '::group:: publish test image demoimage'
 pushd $(mktemp -d)
@@ -107,6 +127,7 @@ echo '::endgroup::'
 echo '::group:: Create test namespace and label for verification'
 kubectl create namespace demo-keyless-signing
 kubectl label namespace demo-keyless-signing cosigned.sigstore.dev/include=true
+export NS=demo-keyless-signing
 echo '::endgroup::'
 
 echo '::group:: test job success'
@@ -151,13 +172,9 @@ kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-identities-mismat
 sleep 5
 echo '::endgroup::'
 
-echo '::group:: test job block'
-if kubectl create -n demo-keyless-signing job demo-identities-works --image=${demoimage} ; then
-  echo Failed to block Job in namespace with non matching issuer and subject!
-  exit 1
-else
-  echo Succcessfully blocked Job with mismatching issuer and subject
-fi
+echo '::group:: test job block with mismatching issuer/subject'
+expected_error='none of the expected identities matched what was in the certificate'
+assert_error ${expected_error}
 echo '::endgroup::'
 
 echo '::group:: Remove mismatching cip, start fresh for key'
