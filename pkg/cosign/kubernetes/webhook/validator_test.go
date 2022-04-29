@@ -122,11 +122,23 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 	})
 
 	kc := fakekube.Get(ctx)
-	kc.CoreV1().ServiceAccounts("default").Create(ctx, &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "default",
-		},
-	}, metav1.CreateOptions{})
+	// Setup service acc and fakeSignaturePullSecrets for "default" and "cosign-system" namespace
+	for _, ns := range []string{"default", system.Namespace()} {
+		kc.CoreV1().ServiceAccounts(ns).Create(ctx, &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+		}, metav1.CreateOptions{})
+
+		kc.CoreV1().Secrets(ns).Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "fakeSignaturePullSecrets",
+			},
+			Data: map[string][]byte{
+				"dockerconfigjson": []byte(`{"auths":{"https://index.docker.io/v1/":{"username":"username","password":"password","auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}`),
+			},
+		}, metav1.CreateOptions{})
+	}
 
 	v := NewValidator(ctx, secretName)
 
@@ -468,6 +480,98 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			return errs
 		}(),
 		cvs: fail,
+	}, {
+		name: "simple, error, authority source signaturePullSecrets, non exisiting secret",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(ctx,
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
+						"cluster-image-policy": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []webhookcip.Authority{
+								{
+									Key: &webhookcip.KeyRef{
+										Data:       authorityKeyCosignPubString,
+										PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+									},
+									Sources: []v1alpha1.Source{{
+										OCI: "example.com/alternative/signature",
+										SignaturePullSecrets: []corev1.LocalObjectReference{{
+											Name: "non-existing-secret",
+										}},
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrGeneric("failed policy: cluster-image-policy", "image").ViaFieldIndex("initContainers", 0)
+			fe.Details = fmt.Sprintf("%s secrets \"non-existing-secret\" not found", digest.String())
+			errs = errs.Also(fe)
+
+			fe2 := apis.ErrGeneric("failed policy: cluster-image-policy", "image").ViaFieldIndex("containers", 0)
+			fe2.Details = fmt.Sprintf("%s secrets \"non-existing-secret\" not found", digest.String())
+			errs = errs.Also(fe2)
+
+			return errs
+		}(),
+		cvs: fail,
+	}, {
+		name: "simple, no error, authority source signaturePullSecrets, valid secret",
+		ps: &corev1.PodSpec{
+			InitContainers: []corev1.Container{{
+				Name:  "setup-stuff",
+				Image: digest.String(),
+			}},
+			Containers: []corev1.Container{{
+				Name:  "user-container",
+				Image: digest.String(),
+			}},
+		},
+		customContext: config.ToContext(ctx,
+			&config.Config{
+				ImagePolicyConfig: &config.ImagePolicyConfig{
+					Policies: map[string]webhookcip.ClusterImagePolicy{
+						"cluster-image-policy": {
+							Images: []v1alpha1.ImagePattern{{
+								Regex: ".*",
+							}},
+							Authorities: []webhookcip.Authority{
+								{
+									Key: &webhookcip.KeyRef{
+										Data:       authorityKeyCosignPubString,
+										PublicKeys: []crypto.PublicKey{authorityKeyCosignPub},
+									},
+									Sources: []v1alpha1.Source{{
+										OCI: "example.com/alternative/signature",
+										SignaturePullSecrets: []corev1.LocalObjectReference{{
+											Name: "fakeSignaturePullSecrets",
+										}},
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+		),
+		cvs: authorityPublicKeyCVS,
 	}}
 
 	for _, test := range tests {
@@ -480,7 +584,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			}
 
 			// Check the core mechanics
-			got := v.validatePodSpec(testContext, test.ps, k8schain.Options{})
+			got := v.validatePodSpec(testContext, system.Namespace(), test.ps, k8schain.Options{})
 			if (got != nil) != (test.want != nil) {
 				t.Errorf("validatePodSpec() = %v, wanted %v", got, test.want)
 			} else if got != nil && got.Error() != test.want.Error() {
@@ -1373,7 +1477,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 			if test.customContext != nil {
 				testContext = test.customContext
 			}
-			got, gotErrs := ValidatePolicy(testContext, digest, test.policy)
+			got, gotErrs := ValidatePolicy(testContext, system.Namespace(), digest, test.policy)
 			validateErrors(t, test.wantErrs, gotErrs)
 			if !reflect.DeepEqual(test.want, got) {
 				t.Errorf("unexpected PolicyResult, want: %+v got: %+v", test.want, got)
@@ -1418,7 +1522,7 @@ func TestValidatePolicyCancelled(t *testing.T) {
 	}
 	wantErrs := []string{"context was canceled before validation completed"}
 	cancelFunc()
-	_, gotErrs := ValidatePolicy(testContext, digest, cip)
+	_, gotErrs := ValidatePolicy(testContext, system.Namespace(), digest, cip)
 	validateErrors(t, wantErrs, gotErrs)
 }
 
@@ -1445,6 +1549,6 @@ func TestValidatePoliciesCancelled(t *testing.T) {
 	}
 	wantErrs := []string{"context was canceled before validation completed"}
 	cancelFunc()
-	_, gotErrs := validatePolicies(testContext, digest, map[string]webhookcip.ClusterImagePolicy{"testcip": cip})
+	_, gotErrs := validatePolicies(testContext, system.Namespace(), digest, map[string]webhookcip.ClusterImagePolicy{"testcip": cip})
 	validateErrors(t, wantErrs, gotErrs["internalerror"])
 }

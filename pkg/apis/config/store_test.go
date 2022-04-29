@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/sigstore/cosign/pkg/oci/remote"
 	"k8s.io/apimachinery/pkg/api/resource"
 	logtesting "knative.dev/pkg/logging/testing"
 
@@ -28,6 +29,8 @@ import (
 
 var ignoreStuff = cmp.Options{
 	cmpopts.IgnoreUnexported(resource.Quantity{}),
+	// Ignore functional remote options
+	cmpopts.IgnoreTypes((remote.Option)(nil)),
 }
 
 func TestStoreLoadWithContext(t *testing.T) {

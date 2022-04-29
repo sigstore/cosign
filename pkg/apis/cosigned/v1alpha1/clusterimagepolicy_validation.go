@@ -84,8 +84,8 @@ func (authority *Authority) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(authority.Keyless.Validate(ctx).ViaField("keyless"))
 	}
 
-	for _, source := range authority.Sources {
-		errs = errs.Also(source.Validate(ctx).ViaField("source"))
+	for i, source := range authority.Sources {
+		errs = errs.Also(source.Validate(ctx).ViaFieldIndex("source", i))
 	}
 
 	for _, att := range authority.Attestations {
@@ -143,6 +143,14 @@ func (source *Source) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if source.OCI == "" {
 		errs = errs.Also(apis.ErrMissingField("oci"))
+	}
+
+	if len(source.SignaturePullSecrets) > 0 {
+		for i, secret := range source.SignaturePullSecrets {
+			if secret.Name == "" {
+				errs = errs.Also(apis.ErrMissingField("name")).ViaFieldIndex("signaturePullSecrets", i)
+			}
+		}
 	}
 	return errs
 }

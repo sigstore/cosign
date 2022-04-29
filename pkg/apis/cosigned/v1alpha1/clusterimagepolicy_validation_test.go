@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -415,7 +416,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 		{
 			name:        "Should fail when source oci is empty",
 			expectErr:   true,
-			errorString: "missing field(s): spec.authorities[0].source.oci",
+			errorString: "missing field(s): spec.authorities[0].source[0].oci",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{{Regex: ".*"}},
@@ -479,6 +480,51 @@ func TestAuthoritiesValidation(t *testing.T) {
 									Type: "cue",
 									Data: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"`,
 								},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail with signaturePullSecret name empty",
+			expectErr:   true,
+			errorString: "missing field(s): spec.authorities[0].source[0].signaturePullSecrets[0].name",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Regex: ".*"}},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{KMS: "kms://key/path"},
+							Sources: []Source{
+								{
+									OCI: "registry1",
+									SignaturePullSecrets: []v1.LocalObjectReference{
+										{Name: ""},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:      "Should pass with signaturePullSecret name filled",
+			expectErr: false,
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Regex: ".*"}},
+					Authorities: []Authority{
+						{
+							Key: &KeyRef{KMS: "kms://key/path"},
+							Sources: []Source{
+								{
+									OCI: "registry1",
+									SignaturePullSecrets: []v1.LocalObjectReference{
+										{Name: "testPullSecrets"},
+									},
 								},
 							},
 						},

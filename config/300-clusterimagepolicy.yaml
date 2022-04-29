@@ -139,6 +139,15 @@ spec:
                           properties:
                             oci:
                               type: string
+                            signaturePullSecrets:
+                              description: SignaturePullSecrets is an optional list of references to secrets in the same namespace as the deploying resource for pulling any of the signatures used by this Source.
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                    type: string
                 images:
                   type: array
                   items:

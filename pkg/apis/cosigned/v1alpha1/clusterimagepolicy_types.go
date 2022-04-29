@@ -115,6 +115,11 @@ type KeyRef struct {
 type Source struct {
 	// +optional
 	OCI string `json:"oci,omitempty"`
+	// SignaturePullSecrets is an optional list of references to secrets in the
+	// same namespace as the deploying resource for pulling any of the signatures
+	// used by this Source.
+	// +optional
+	SignaturePullSecrets []v1.LocalObjectReference `json:"signaturePullSecrets,omitempty"`
 }
 
 // TLog specifies the URL to a transparency log that holds
