@@ -167,8 +167,38 @@ func TestEvalPolicy(t *testing.T) {
 		  keylesssignature: {
 			signatures: list.MaxItems(1) & list.MinItems(1)
 		  }
-		}`,
-	}}
+		}`}, {
+		name:       "Rego cluster image policy main policy, checks out",
+		json:       cipAttestation,
+		policyType: "rego",
+		policyFile: `package sigstore
+			default isCompliant = false
+			isCompliant {
+				attestationsKeylessATT := input.authorityMatches.keylessatt.attestations
+				count(attestationsKeylessATT) == 1
+				attestationsKeyATT := input.authorityMatches.keyatt.attestations
+				count(attestationsKeyATT) == 1
+				keySignature := input.authorityMatches.keysignature.signatures
+				count(keySignature) == 1
+			}`,
+	},
+		{
+			name:       "Rego cluster image policy main policy, fails",
+			json:       cipAttestation,
+			policyType: "rego",
+			wantErr:    true,
+			wantErrSub: `failed evaluating rego policy for type Rego cluster image policy main policy, fails: policy is not compliant for query 'isCompliant = data.sigstore.isCompliant'`,
+			policyFile: `package sigstore
+			default isCompliant = false
+			isCompliant {
+			    attestationsKeylessATT := input.authorityMatches.keylessatt.attestations
+				count(attestationsKeylessATT) == 2
+				attestationsKeyATT := input.authorityMatches.keyatt.attestations
+				count(attestationsKeyATT) == 1
+				keySignature := input.authorityMatches.keysignature.signatures
+				count(keySignature) == 1
+			}`,
+		}}
 	for _, tc := range tests {
 		ctx := context.Background()
 		err := EvaluatePolicyAgainstJSON(ctx, tc.name, tc.policyType, tc.policyFile, []byte(tc.json))
