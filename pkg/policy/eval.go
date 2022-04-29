@@ -43,7 +43,7 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 	case "rego":
 		regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
 		if regoValidationErr != nil {
-			return fmt.Errorf("failed evaluating rego policy for type %s: %w", name, regoValidationErr.Error())
+			return fmt.Errorf("failed evaluating rego policy for type %s: %s", name, regoValidationErr.Error()) // nolint
 		}
 	default:
 		return fmt.Errorf("sorry Type %s is not supported yet", policyType)
