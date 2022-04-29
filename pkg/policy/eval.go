@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"cuelang.org/go/cue/cuecontext"
+	"github.com/sigstore/cosign/pkg/cosign/rego"
 
 	"knative.dev/pkg/logging"
 )
@@ -42,7 +43,7 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 	case "rego":
 		regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
 		if regoValidationErr != nil {
-			return fmt.Errorf("failed evaluating rego policy for type %s", name)
+			return fmt.Errorf("failed evaluating rego policy for type %s: %w", name, regoValidationErr.Error())
 		}
 	default:
 		return fmt.Errorf("sorry Type %s is not supported yet", policyType)
@@ -73,9 +74,8 @@ func evaluateCue(ctx context.Context, attestation []byte, evaluator string) erro
 
 // evaluateRego evaluates a rego policy `evaluator` against `attestation`
 func evaluateRego(ctx context.Context, attestation []byte, evaluator string) error {
-	// TODO(vaikas) Fix this
-	// The existing stuff wants files, and it doesn't work. There must be
-	// a way to load it from a []byte like we can do with cue. Tomorrows problem
-	// regoValidationErrs := rego.ValidateJSON(payload, regoPolicies)
-	return fmt.Errorf("TODO(vaikas): Don't know how to this from bytes yet")
+	logging.FromContext(ctx).Infof("Evaluating attestation: %s", string(attestation))
+	logging.FromContext(ctx).Infof("Evaluating evaluator: %s", evaluator)
+
+	return rego.ValidateJSONWithModuleInput(attestation, evaluator)
 }
