@@ -155,16 +155,14 @@ func (r *Reconciler) inlinePublicKeys(ctx context.Context, cip *v1alpha1.Cluster
 				return nil, err
 			}
 		}
-		if authority.Key != nil && authority.Key.KMS != "" {
-			if strings.Contains(authority.Key.KMS, "://") {
-				pubKeyString, err := getKMSPublicKey(ctx, authority.Key.KMS)
-				if err != nil {
-					return nil, err
-				}
-
-				authority.Key.Data = pubKeyString
-				authority.Key.KMS = ""
+		if authority.Key != nil && strings.Contains(authority.Key.KMS, "://") {
+			pubKeyString, err := getKMSPublicKey(ctx, authority.Key.KMS)
+			if err != nil {
+				return nil, err
 			}
+
+			authority.Key.Data = pubKeyString
+			authority.Key.KMS = ""
 		}
 	}
 	return ret, nil
