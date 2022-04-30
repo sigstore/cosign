@@ -78,16 +78,20 @@ func getCertForOauthID(ctx context.Context, priv *ecdsa.PrivateKey, fc fulciopb.
 	}
 
 	cscr := &fulciopb.CreateSigningCertificateRequest{
-		PublicKey: &fulciopb.PublicKey{
-			Algorithm: fulciopb.PublicKeyAlgorithm_ECDSA,
-			Content:   string(pubPEM),
+		Key: &fulciopb.CreateSigningCertificateRequest_PublicKeyRequest{
+			PublicKeyRequest: &fulciopb.PublicKeyRequest{
+				PublicKey: &fulciopb.PublicKey{
+					Algorithm: fulciopb.PublicKeyAlgorithm_ECDSA,
+					Content:   string(pubPEM),
+				},
+				ProofOfPossession: proof,
+			},
 		},
 		Credentials: &fulciopb.Credentials{
 			Credentials: &fulciopb.Credentials_OidcIdentityToken{
 				OidcIdentityToken: tok.RawString,
 			},
 		},
-		ProofOfPossession: proof,
 	}
 
 	return fc.CreateSigningCertificate(ctx, cscr)
