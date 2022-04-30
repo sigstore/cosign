@@ -82,7 +82,7 @@ func Sign() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,

@@ -47,12 +47,14 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/walk"
-	providers "github.com/sigstore/cosign/pkg/providers/all"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+
+	// Loads OIDC providers
+	_ "github.com/sigstore/cosign/pkg/providers/all"
 )
 
 func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, url string) bool {
@@ -93,7 +95,7 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 }
 
 // nolint
-func SignCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
+func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
 	imgs []string, certPath string, certChainPath string, upload bool, outputSignature, outputCertificate string,
 	payloadPath string, force bool, recursive bool, attachment string) error {
 	if options.EnableExperimental() {
@@ -183,7 +185,7 @@ func SignCmd(ro *options.RootOptions, ko KeyOpts, regOpts options.RegistryOption
 	return nil
 }
 
-func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko KeyOpts,
+func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts,
 	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool, recursive bool,
 	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
@@ -436,29 +438,18 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
-	fClient, err := fulcio.NewClient(ko.FulcioURL)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating Fulcio client")
-	}
-
-	tok := ko.IDToken
-	// If token is not set in the options, get one from the provders
-	if tok == "" && providers.Enabled(ctx) {
-		tok, err = providers.Provide(ctx, "sigstore")
-		if err != nil {
-			return nil, errors.Wrap(err, "fetching ambient OIDC credentials")
-		}
-	}
-
-	var k *fulcio.Signer
+func keylessSigner(ctx context.Context, ko options.KeyOpts) (*SignerVerifier, error) {
+	var (
+		k   *fulcio.Signer
+		err error
+	)
 
 	if ko.InsecureSkipFulcioVerify {
-		if k, err = fulcio.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient); err != nil {
+		if k, err = fulcio.NewSigner(ctx, ko); err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
 	} else {
-		if k, err = fulcioverifier.NewSigner(ctx, tok, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient); err != nil {
+		if k, err = fulcioverifier.NewSigner(ctx, ko); err != nil {
 			return nil, errors.Wrap(err, "getting key from Fulcio")
 		}
 	}
@@ -470,7 +461,7 @@ func keylessSigner(ctx context.Context, ko KeyOpts) (*SignerVerifier, error) {
 	}, nil
 }
 
-func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko KeyOpts) (*SignerVerifier, error) {
+func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
 	if ko.Sk {
 		return signerFromSecurityKey(ko.Slot)
 	}

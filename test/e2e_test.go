@@ -125,7 +125,7 @@ func TestSignVerify(t *testing.T) {
 	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
 	// Now sign the image
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
 
 	// Now verify and download should work!
@@ -160,7 +160,7 @@ func TestSignVerifyClean(t *testing.T) {
 	ctx := context.Background()
 
 	// Now sign the image
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
 
 	// Now verify and download should work!
@@ -189,7 +189,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 	ctx := context.Background()
 
 	// Now sign the image
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
 
 	// Now verify and download should work!
@@ -232,7 +232,7 @@ func TestAttestVerify(t *testing.T) {
 	}
 
 	// Now attest the image
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
 		"slsaprovenance", false, 30*time.Second), t)
 
@@ -273,7 +273,7 @@ func TestAttestationReplace(t *testing.T) {
 	defer cleanup()
 
 	_, privKeyPath, _ := keypair(t, td)
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 
 	ctx := context.Background()
 
@@ -327,7 +327,7 @@ func TestRekorBundle(t *testing.T) {
 
 	_, privKeyPath, pubKeyPath := keypair(t, td)
 
-	ko := sign.KeyOpts{
+	ko := options.KeyOpts{
 		KeyRef:   privKeyPath,
 		PassFunc: passFunc,
 		RekorURL: rekorURL,
@@ -363,7 +363,7 @@ func TestDuplicateSign(t *testing.T) {
 	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
 	// Now sign the image
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
 
 	// Now verify and download should work!
@@ -460,7 +460,7 @@ func TestMultipleSignatures(t *testing.T) {
 	mustErr(verify(pub2, imgName, true, nil, ""), t)
 
 	// Now sign the image with one key
-	ko := sign.KeyOpts{KeyRef: priv1, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: priv1, PassFunc: passFunc}
 	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil, ""), t)
@@ -494,10 +494,10 @@ func TestSignBlob(t *testing.T) {
 
 	ctx := context.Background()
 
-	ko1 := sign.KeyOpts{
+	ko1 := options.KeyOpts{
 		KeyRef: pubKeyPath1,
 	}
-	ko2 := sign.KeyOpts{
+	ko2 := options.KeyOpts{
 		KeyRef: pubKeyPath2,
 	}
 	// Verify should fail on a bad input
@@ -505,7 +505,7 @@ func TestSignBlob(t *testing.T) {
 	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, false), t)
 
 	// Now sign the blob with one key
-	ko := sign.KeyOpts{
+	ko := options.KeyOpts{
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
@@ -535,7 +535,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	ctx := context.Background()
 
-	ko1 := sign.KeyOpts{
+	ko1 := options.KeyOpts{
 		KeyRef:     pubKeyPath1,
 		BundlePath: bundlePath,
 	}
@@ -543,7 +543,7 @@ func TestSignBlobBundle(t *testing.T) {
 	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", "", blob, false), t)
 
 	// Now sign the blob with one key
-	ko := sign.KeyOpts{
+	ko := options.KeyOpts{
 		KeyRef:     privKeyPath1,
 		PassFunc:   passFunc,
 		BundlePath: bundlePath,
@@ -849,7 +849,7 @@ func TestSaveLoad(t *testing.T) {
 
 			ctx := context.Background()
 			// Now sign the image and verify it
-			ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+			ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 			must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
 			must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
@@ -882,7 +882,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 
 	ctx := context.Background()
 	// Now sign the image and verify it
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
@@ -894,7 +894,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	}
 
 	// Now attest the image
-	ko = sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
 		"custom", false, 30*time.Second), t)
 
@@ -971,7 +971,7 @@ func TestAttachSBOM(t *testing.T) {
 	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom"), t)
 
 	// Now sign the sbom with one key
-	ko1 := sign.KeyOpts{KeyRef: privKeyPath1, PassFunc: passFunc}
+	ko1 := options.KeyOpts{KeyRef: privKeyPath1, PassFunc: passFunc}
 	must(sign.SignCmd(ro, ko1, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "sbom"), t)
 
 	// Now verify should work with that one, but not the other
@@ -1004,7 +1004,7 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Now sign the image without the tlog
-	ko := sign.KeyOpts{
+	ko := options.KeyOpts{
 		KeyRef:   privKeyPath,
 		PassFunc: passFunc,
 		RekorURL: rekorURL,
@@ -1182,7 +1182,7 @@ func TestInvalidBundle(t *testing.T) {
 	// (we're just using it for its bundle)
 	defer setenv(t, options.ExperimentalEnv, "1")()
 	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
-	ko := sign.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	regOpts := options.RegistryOptions{}
 
 	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img1}, "", "", true, "", "", "", true, false, ""), t)

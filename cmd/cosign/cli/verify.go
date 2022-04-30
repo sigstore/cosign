@@ -20,7 +20,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )
 
@@ -249,7 +248,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:     o.Key,
 				Sk:         o.SecurityKey.Use,
 				Slot:       o.SecurityKey.Slot,

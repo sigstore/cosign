@@ -24,11 +24,11 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
-	"github.com/sigstore/fulcio/pkg/api"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
-func NewSigner(ctx context.Context, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.Client) (*fulcio.Signer, error) {
-	fs, err := fulcio.NewSigner(ctx, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL, fClient)
+func NewSigner(ctx context.Context, ko options.KeyOpts) (*fulcio.Signer, error) {
+	fs, err := fulcio.NewSigner(ctx, ko)
 	if err != nil {
 		return nil, err
 	}
