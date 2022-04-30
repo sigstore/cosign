@@ -511,8 +511,9 @@ func TestReconcile(t *testing.T) {
 				AssertTrackingSecret(system.Namespace(), keylessSecretName),
 			},
 		}, {
-			Name:                    "ClusterImagePolicy with glob and KMS key, added the data after querying the fake signer",
-			Key:                     cipKMSName,
+			Name: "ClusterImagePolicy with glob and KMS key, added the data after querying the fake signer",
+			Key:  cipKMSName,
+
 			SkipNamespaceValidation: true, // Cluster scoped
 			Objects: []runtime.Object{
 				NewClusterImagePolicy(cipKMSName,
@@ -557,7 +558,35 @@ func TestReconcile(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				makePatch(replaceCIPKeySourcePatch),
 			},
-		}, {}}
+		}, {
+			Name: "ClusterImagePolicy with glob and KMS key, for unsupported KMS provider",
+			Key:  cipKMSName,
+
+			// gcpkms:// is not enabled in tests; this test serves
+			// as an extra check that "real" KMS providers like GCP
+			// aren't enabled in dependencies of this test.
+			SkipNamespaceValidation: true, // Cluster scoped
+			Objects: []runtime.Object{
+				NewClusterImagePolicy(cipKMSName,
+					WithImagePattern(v1alpha1.ImagePattern{
+						Glob: glob,
+					}),
+					WithAuthority(v1alpha1.Authority{
+						Key: &v1alpha1.KeyRef{
+							KMS: "gcpkms://blah",
+						}},
+					)),
+				makeEmptyConfigMap(), // Make the existing configmap
+			},
+			WantErr: true,
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(system.Namespace(), cipKMSName),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-kms-cip" finalizers`),
+				Eventf(corev1.EventTypeWarning, "InternalError", `no kms provider found for key reference: gcpkms://blah`),
+			},
+		}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
