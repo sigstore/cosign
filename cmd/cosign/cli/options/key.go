@@ -30,6 +30,10 @@ type KeyOpts struct {
 	OIDCClientSecret string
 	OIDCRedirectURL  string
 	BundlePath       string
+	// FulcioAuthFlow is the auth flow to use when authenticating against
+	// Fulcio. See https://pkg.go.dev/github.com/sigstore/cosign/cmd/cosign/cli/fulcio#pkg-constants
+	// for valid values.
+	FulcioAuthFlow string
 
 	// Modeled after InsecureSkipVerify in tls.Config, this disables
 	// verifying the SCT.
