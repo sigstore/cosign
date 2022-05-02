@@ -95,6 +95,7 @@ func Sign() *cobra.Command {
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 			}
 			annotationsMap, err := o.AnnotationsMap()
 			if err != nil {

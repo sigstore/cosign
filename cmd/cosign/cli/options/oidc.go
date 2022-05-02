@@ -29,10 +29,11 @@ const DefaultOIDCIssuerURL = "https://oauth2.sigstore.dev/auth"
 
 // OIDCOptions is the wrapper for OIDC related options.
 type OIDCOptions struct {
-	Issuer           string
-	ClientID         string
-	clientSecretFile string
-	RedirectURL      string
+	Issuer                  string
+	ClientID                string
+	clientSecretFile        string
+	RedirectURL             string
+	DisableAmbientProviders bool
 }
 
 func (o *OIDCOptions) ClientSecret() (string, error) {
@@ -66,4 +67,7 @@ func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RedirectURL, "oidc-redirect-url", "",
 		"[EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.")
+
+	cmd.Flags().BoolVar(&o.DisableAmbientProviders, "oidc-disable-ambient-providers", false,
+		"[EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read")
 }
