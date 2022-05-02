@@ -119,7 +119,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 
 	idToken := ko.IDToken
 	// If token is not set in the options, get one from the provders
-	if idToken == "" && providers.Enabled(ctx) {
+	if idToken == "" && providers.Enabled(ctx) && !ko.OIDCDisableProviders {
 		idToken, err = providers.Provide(ctx, "sigstore")
 		if err != nil {
 			return nil, errors.Wrap(err, "fetching ambient OIDC credentials")

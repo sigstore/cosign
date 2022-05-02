@@ -81,6 +81,7 @@ func SignBlob() *cobra.Command {
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 				BundlePath:               o.BundlePath,
 			}
 			for _, blob := range args {
