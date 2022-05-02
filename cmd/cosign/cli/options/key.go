@@ -18,18 +18,19 @@ package options
 import "github.com/sigstore/cosign/pkg/cosign"
 
 type KeyOpts struct {
-	Sk               bool
-	Slot             string
-	KeyRef           string
-	FulcioURL        string
-	RekorURL         string
-	IDToken          string
-	PassFunc         cosign.PassFunc
-	OIDCIssuer       string
-	OIDCClientID     string
-	OIDCClientSecret string
-	OIDCRedirectURL  string
-	BundlePath       string
+	Sk                   bool
+	Slot                 string
+	KeyRef               string
+	FulcioURL            string
+	RekorURL             string
+	IDToken              string
+	PassFunc             cosign.PassFunc
+	OIDCIssuer           string
+	OIDCClientID         string
+	OIDCClientSecret     string
+	OIDCRedirectURL      string
+	OIDCDisableProviders bool // Disable OIDC credential providers in keyless signer
+	BundlePath           string
 	// FulcioAuthFlow is the auth flow to use when authenticating against
 	// Fulcio. See https://pkg.go.dev/github.com/sigstore/cosign/cmd/cosign/cli/fulcio#pkg-constants
 	// for valid values.
