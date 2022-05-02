@@ -40,11 +40,13 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	rtypes "github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -342,6 +344,41 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 	// TODO: Create fake bundle and test verification
 	if verified == true {
 		t.Fatalf("expected verified=false, got verified=true")
+	}
+}
+
+// This test ensures that image signature validation fails properly if we are
+// using a SigVerifier with Rekor.
+// See https://github.com/sigstore/cosign/issues/1816 for more details.
+func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
+	sv, privKey, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatalf("error generating verifier: %v", err)
+	}
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	sig, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(sig))
+
+	// Add a fake rekor client - this makes it look like there's a matching
+	// tlog entry for the signature during validation (even though it does not
+	// match the underlying data / key)
+	mClient := new(client.Rekor)
+	mClient.Entries = &mock.EntriesClient{}
+
+	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
+		SigVerifier: sv,
+		RekorClient: mClient,
+	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
+		// TODO(wlynch): This is a weak test, since this is really failing because
+		// there is no inclusion proof for the Rekor entry rather than failing to
+		// validate the Rekor public key itself. At the very least this ensures
+		// that we're hitting tlog validation during signature checking,
+		// but we should look into improving this once there is an in-memory
+		// Rekor client that is capable of performing inclusion proof validation
+		// in unit tests.
+		t.Fatal("expected error while verifying signature")
 	}
 }
 

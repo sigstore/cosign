@@ -303,15 +303,7 @@ func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub c
 	if err != nil {
 		return err
 	}
-	b64sig, err := sig.Base64Signature()
-	if err != nil {
-		return err
-	}
-	payload, err := sig.Payload()
-	if err != nil {
-		return err
-	}
-	_, err = FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
+	_, err = tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
 	return err
 }
 
@@ -324,23 +316,28 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	b64sig, err := sig.Base64Signature()
+	e, err := tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
 	if err != nil {
-		return err
-	}
-	payload, err := sig.Payload()
-	if err != nil {
-		return err
-	}
-	e, err := FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
-	if err != nil {
-		return err
-	}
-	if err := VerifyTLogEntry(ctx, rekorClient, e); err != nil {
 		return err
 	}
 	// if we have a cert, we should check expiry
 	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
+}
+
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
+	b64sig, err := sig.Base64Signature()
+	if err != nil {
+		return nil, err
+	}
+	payload, err := sig.Payload()
+	if err != nil {
+		return nil, err
+	}
+	e, err := FindTlogEntry(ctx, client, b64sig, payload, pem)
+	if err != nil {
+		return nil, err
+	}
+	return e, VerifyTLogEntry(ctx, client, e)
 }
 
 type fakeOCISignatures struct {
