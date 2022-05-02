@@ -138,6 +138,9 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 
 	var flow string
 	switch {
+	case ko.FulcioAuthFlow != "":
+		// Caller manually set flow option.
+		flow = ko.FulcioAuthFlow
 	case idToken != "":
 		flow = FlowToken
 	case !term.IsTerminal(0):
