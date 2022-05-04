@@ -35,7 +35,7 @@ spec:
           - podAffinityTerm:
               labelSelector:
                 matchLabels:
-                  app: policy-webhook
+                  role: policy-webhook
               topologyKey: kubernetes.io/hostname
             weight: 100
 
