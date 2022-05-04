@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -47,7 +48,7 @@ func TestSigner(t *testing.T) {
 
 	// Mock out Rekor client
 	var mClient client.Rekor
-	mClient.Entries = &MockEntriesClient{}
+	mClient.Entries = &mock.EntriesClient{}
 
 	testSigner := NewSigner(payloadSigner, &mClient)
 
