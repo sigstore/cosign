@@ -33,7 +33,7 @@ func TestImagePatternValidation(t *testing.T) {
 		{
 			name:        "Should fail when both regex and glob are present",
 			expectErr:   true,
-			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex\ninvalid value: **: spec.images[0].glob\nglob match supports only a single * as a trailing character\nmissing field(s): spec.authorities",
+			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex\nmissing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -58,28 +58,14 @@ func TestImagePatternValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Glob should fail with multiple *",
+			name:        "Glob should fail with invalid glob",
 			expectErr:   true,
-			errorString: "invalid value: **: spec.images[0].glob\nglob match supports only a single * as a trailing character\nmissing field(s): spec.authorities",
+			errorString: "invalid value: [: spec.images[0].glob\nglob is invalid: syntax error in pattern\nmissing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Glob: "**",
-						},
-					},
-				},
-			},
-		},
-		{
-			name:        "Glob should fail with non-trailing *",
-			expectErr:   true,
-			errorString: "invalid value: foo*bar: spec.images[0].glob\nglob match supports only * as a trailing character\nmissing field(s): spec.authorities",
-			policy: ClusterImagePolicy{
-				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{
-						{
-							Glob: "foo*bar",
+							Glob: "[",
 						},
 					},
 				},
