@@ -83,3 +83,15 @@ func Provide(ctx context.Context, audience string) (string, error) {
 	}
 	return id, err
 }
+
+// ProvideFrom fetches the specified provider
+func ProvideFrom(ctx context.Context, provider string) (Interface, error) {
+	m.Lock()
+	defer m.Unlock()
+
+	p, ok := providers[provider]
+	if !ok {
+		return nil, fmt.Errorf("%s is not a valid provider", provider)
+	}
+	return p, nil
+}
