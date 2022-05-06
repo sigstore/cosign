@@ -17,8 +17,8 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/sigstore/cosign/pkg/apis/utils"
 	"knative.dev/pkg/apis"
@@ -202,20 +202,13 @@ func (identity *Identity) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-// ValidateGlob makes sure that if there's "*" specified it's the trailing
-// character.
+// ValidateGlob glob compilation by testing against empty string
 func ValidateGlob(glob string) *apis.FieldError {
-	c := strings.Count(glob, "*")
-	switch c {
-	case 0:
-		return nil
-	case 1:
-		if !strings.HasSuffix(glob, "*") {
-			return apis.ErrInvalidValue(glob, apis.CurrentField, "glob match supports only * as a trailing character")
-		}
-	default:
-		return apis.ErrInvalidValue(glob, apis.CurrentField, "glob match supports only a single * as a trailing character")
+	_, err := filepath.Match(glob, "")
+	if err != nil {
+		return apis.ErrInvalidValue(glob, apis.CurrentField, fmt.Sprintf("glob is invalid: %v", err))
 	}
+
 	return nil
 }
 

@@ -15,14 +15,19 @@
 package config
 
 import (
+	"runtime"
 	"testing"
 )
 
 func TestGlobMatch(t *testing.T) {
 	tests := []struct {
-		glob  string
-		input string
-		match bool
+		glob         string
+		input        string
+		match        bool
+		errString    string
+		windowsMatch *struct {
+			match bool
+		}
 	}{
 		{glob: "foo", input: "foo", match: true},     // exact match
 		{glob: "fooo*", input: "foo", match: false},  // prefix too long
@@ -30,11 +35,47 @@ func TestGlobMatch(t *testing.T) {
 		{glob: "foo*", input: "foo", match: true},    // works
 		{glob: "*", input: "foo", match: true},       // matches anything
 		{glob: "*", input: "bar", match: true},       // matches anything
+		{glob: "*foo*", input: "1foo2", match: true}, // matches wildcard around
+		{glob: "*repository/*", input: "repository/image", match: true},
+		{glob: "*.repository/*", input: "other.repository/image", match: true},
+		{glob: "repository/*", input: "repository/image", match: true},
+		{glob: "repository/*", input: "other.repository/image", match: false},
+		{glob: "repository/*", input: "index.docker.io/repository/image", match: true}, // Testing resolved digest
+		{glob: "image", input: "index.docker.io/library/image", match: true},           // Testing resolved digest and official dockerhub public repository
+		{glob: "[", input: "[", match: false, errString: "syntax error in pattern"},    // Invalid glob pattern
+		{glob: "gcr.io/projectsigstore/*", input: "gcr.io/projectsigstore/cosign", match: true},
+		{glob: "gcr.io/projectsigstore/*", input: "us.gcr.io/projectsigstore/cosign", match: false},
+		{glob: "*gcr.io/projectsigstore/*", input: "gcr.io/projectsigstore/cosign", match: true},
+		{glob: "*gcr.io/projectsigstore/*", input: "gcr.io/projectsigstore2/cosign", match: false},
+		{glob: "*gcr.io/*/*", input: "us.gcr.io/projectsigstore/cosign", match: true}, // Does match with multiple '*'
+		{glob: "us.gcr.io/*/*", input: "us.gcr.io/projectsigstore/cosign", match: true},
+		{glob: "us.gcr.io/*/*", input: "gcr.io/projectsigstore/cosign", match: false},
+		{glob: "*.gcr.io/*/*", input: "asia.gcr.io/projectsigstore/cosign", match: true},
+		{glob: "*.gcr.io/*/*", input: "gcr.io/projectsigstore/cosign", match: false},
+		// Does not match since '*' only handles until next non-separator character '/'
+		// On Windows, '/' is not the separator and therefore it passes
+		{glob: "*gcr.io/*", input: "us.gcr.io/projectsigstore/cosign", match: false, windowsMatch: &struct{ match bool }{match: true}},
 	}
 	for _, tc := range tests {
-		got := GlobMatch(tc.input, tc.glob)
-		if got != tc.match {
-			t.Errorf("expected %v for glob: %q input: %q", tc.match, tc.glob, tc.input)
+		got, err := GlobMatch(tc.glob, tc.input)
+
+		if tc.errString != "" {
+			if tc.errString != err.Error() {
+				t.Errorf("expected %s for error: %s", tc.errString, err.Error())
+			}
+		} else if err != nil {
+			t.Errorf("unexpected error: %v for glob: %q input: %q", err, tc.glob, tc.input)
+		}
+
+		want := tc.match
+
+		// If OS is Windows, check if there is a different expected match value
+		if runtime.GOOS == "windows" && tc.windowsMatch != nil {
+			want = tc.windowsMatch.match
+		}
+
+		if got != want {
+			t.Errorf("expected %v for glob: %q input: %q", want, tc.glob, tc.input)
 		}
 	}
 }

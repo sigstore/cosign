@@ -15,17 +15,53 @@
 
 package config
 
-import "strings"
+import (
+	"net/url"
+	"path/filepath"
+	"strings"
+)
 
-// GlobMatch takes a string and handles only trailing '*' character as a
-// wildcard. This is little different from various packages that I was able
-// to find, since they handle '*' anywhere in the string as a wildcard. For our
-// use we only want to handle it at the end, and hence this effectively turns
-// into 'hasPrefix' string matching up to the trailing *.
-func GlobMatch(image, glob string) bool {
-	if !strings.HasSuffix(glob, "*") {
-		// Doesn't end with *, so do an exact match
-		return image == glob
+const (
+	ResolvedDockerhubHost = "index.docker.io/"
+	// Images such as "busybox" reside in the dockerhub "library" repository
+	// The full resolved image reference would be index.docker.io/library/busybox
+	DockerhubPublicRepository = "library/"
+)
+
+// GlobMatch will attempt to:
+// 1. match the glob first
+// 2. When the pattern is <repository>/*, therefore missing a host,
+//    it should match for the resolved image digest in the form of index.docker.io/<repository>/*
+// 3. When the pattern is <image>, it should match for the resolved image digest
+//    against the official Dockerhub repository in the form of index.docker.io/library/*
+func GlobMatch(glob, image string) (bool, error) {
+	matched, err := filepath.Match(glob, image)
+	if err != nil {
+		return false, err
 	}
-	return strings.HasPrefix(image, strings.TrimSuffix(glob, "*"))
+
+	// If matched, return early
+	if matched {
+		return matched, nil
+	}
+
+	// If not matched, check if missing host and default to index.docker.io
+	u, err := url.Parse(glob)
+	if err != nil {
+		return false, err
+	}
+
+	if u.Host == "" {
+		dockerhubGlobPattern := ResolvedDockerhubHost
+
+		// If the image is expected to be part of the Dockerhub official "library" repository
+		if len(strings.Split(u.Path, "/")) < 2 {
+			dockerhubGlobPattern += DockerhubPublicRepository
+		}
+
+		dockerhubGlobPattern += glob
+		return filepath.Match(dockerhubGlobPattern, image)
+	}
+
+	return matched, nil
 }
