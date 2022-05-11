@@ -31,16 +31,16 @@ var _ Interface = (*RekorOptions)(nil)
 
 // AddFlags implements Interface
 func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.Cert, "cert", "",
+	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the public certificate")
 
-	cmd.Flags().StringVar(&o.CertEmail, "cert-email", "",
+	cmd.Flags().StringVar(&o.CertEmail, "certificate-email", "",
 		"the email expected in a valid Fulcio certificate")
 
-	cmd.Flags().StringVar(&o.CertOidcIssuer, "cert-oidc-issuer", "",
+	cmd.Flags().StringVar(&o.CertOidcIssuer, "certificate-oidc-issuer", "",
 		"the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth")
 
-	cmd.Flags().StringVar(&o.CertChain, "cert-chain", "",
+	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+

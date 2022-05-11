@@ -70,10 +70,10 @@ cosign verify [flags]
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment string                                                                        related image attachment to sign (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
-      --cert string                                                                              path to the public certificate
-      --cert-chain string                                                                        path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate
-      --cert-email string                                                                        the email expected in a valid Fulcio certificate
-      --cert-oidc-issuer string                                                                  the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth
+      --certificate string                                                                       path to the public certificate
+      --certificate-chain string                                                                 path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate
+      --certificate-email string                                                                 the email expected in a valid Fulcio certificate
+      --certificate-oidc-issuer string                                                           the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth
       --check-claims                                                                             whether to check the claims found (default true)
       --enforce-sct                                                                              whether to enforce that a certificate contain an embedded SCT, a proof of inclusion in a certificate transparency log
   -h, --help                                                                                     help for verify
