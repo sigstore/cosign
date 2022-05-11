@@ -43,6 +43,7 @@ var targets = []string{
 	"fulcio_v1.crt.pem",
 	"ctfe.pub",
 	"rekor.pub",
+	"rekor.0.pub",
 }
 
 func TestNewFromEnv(t *testing.T) {
