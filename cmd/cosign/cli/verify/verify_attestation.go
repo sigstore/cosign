@@ -123,6 +123,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return errors.Wrap(err, "loading certificate from reference")
 		}
 		if c.CertChain == "" {
+			err = cosign.CheckCertificatePolicy(cert, co)
+			if err != nil {
+				return err
+			}
 			co.SigVerifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 			if err != nil {
 				return errors.Wrap(err, "creating certificate verifier")

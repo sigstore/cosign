@@ -144,6 +144,10 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return err
 		}
 		if c.CertChain == "" {
+			err = cosign.CheckCertificatePolicy(cert, co)
+			if err != nil {
+				return err
+			}
 			pubKey, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 			if err != nil {
 				return err

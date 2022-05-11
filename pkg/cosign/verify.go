@@ -172,65 +172,12 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	if err != nil {
 		return nil, err
 	}
-	if co.CertEmail != "" {
-		emailVerified := false
-		for _, em := range cert.EmailAddresses {
-			if co.CertEmail == em {
-				emailVerified = true
-				break
-			}
-		}
-		if !emailVerified {
-			return nil, errors.New("expected email not found in certificate")
-		}
-	}
-	if co.CertOidcIssuer != "" {
-		if getIssuer(cert) != co.CertOidcIssuer {
-			return nil, errors.New("expected oidc issuer not found in certificate")
-		}
-	}
-	// If there are identities given, go through them and if one of them
-	// matches, call that good, otherwise, return an error.
-	if len(co.Identities) > 0 {
-		for _, identity := range co.Identities {
-			issuerMatches := false
-			// Check the issuer first
-			if identity.Issuer != "" {
-				issuer := getIssuer(cert)
-				if regex, err := regexp.Compile(identity.Issuer); err != nil {
-					return nil, fmt.Errorf("malformed issuer in identity: %s : %w", identity.Issuer, err)
-				} else if regex.MatchString(issuer) {
-					issuerMatches = true
-				}
-			} else {
-				// No issuer constraint on this identity, so checks out
-				issuerMatches = true
-			}
 
-			// Then the subject
-			subjectMatches := false
-			if identity.Subject != "" {
-				regex, err := regexp.Compile(identity.Subject)
-				if err != nil {
-					return nil, fmt.Errorf("malformed subject in identity: %s : %w", identity.Subject, err)
-				}
-				for _, san := range getSubjectAlternateNames(cert) {
-					if regex.MatchString(san) {
-						subjectMatches = true
-						break
-					}
-				}
-			} else {
-				// No subject constraint on this identity, so checks out
-				subjectMatches = true
-			}
-			if subjectMatches && issuerMatches {
-				// If both issuer / subject match, return verifier
-				return verifier, nil
-			}
-		}
-		return nil, errors.New("none of the expected identities matched what was in the certificate")
+	err = CheckCertificatePolicy(cert, co)
+	if err != nil {
+		return nil, err
 	}
+
 	contains, err := ctl.ContainsSCT(cert.Raw)
 	if err != nil {
 		return nil, err
@@ -247,7 +194,73 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 			return nil, err
 		}
 	}
+
 	return verifier, nil
+}
+
+// CheckCertificatePolicy checks that the certificate subject and issuer match
+// the expected values.
+func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
+	if co.CertEmail != "" {
+		emailVerified := false
+		for _, em := range cert.EmailAddresses {
+			if co.CertEmail == em {
+				emailVerified = true
+				break
+			}
+		}
+		if !emailVerified {
+			return errors.New("expected email not found in certificate")
+		}
+	}
+	if co.CertOidcIssuer != "" {
+		if getIssuer(cert) != co.CertOidcIssuer {
+			return errors.New("expected oidc issuer not found in certificate")
+		}
+	}
+	// If there are identities given, go through them and if one of them
+	// matches, call that good, otherwise, return an error.
+	if len(co.Identities) > 0 {
+		for _, identity := range co.Identities {
+			issuerMatches := false
+			// Check the issuer first
+			if identity.Issuer != "" {
+				issuer := getIssuer(cert)
+				if regex, err := regexp.Compile(identity.Issuer); err != nil {
+					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.Issuer, err)
+				} else if regex.MatchString(issuer) {
+					issuerMatches = true
+				}
+			} else {
+				// No issuer constraint on this identity, so checks out
+				issuerMatches = true
+			}
+
+			// Then the subject
+			subjectMatches := false
+			if identity.Subject != "" {
+				regex, err := regexp.Compile(identity.Subject)
+				if err != nil {
+					return fmt.Errorf("malformed subject in identity: %s : %w", identity.Subject, err)
+				}
+				for _, san := range getSubjectAlternateNames(cert) {
+					if regex.MatchString(san) {
+						subjectMatches = true
+						break
+					}
+				}
+			} else {
+				// No subject constraint on this identity, so checks out
+				subjectMatches = true
+			}
+			if subjectMatches && issuerMatches {
+				// If both issuer / subject match, return verifier
+				return nil
+			}
+		}
+		return errors.New("none of the expected identities matched what was in the certificate")
+	}
+	return nil
 }
 
 // getSubjectAlternateNames returns all of the following for a Certificate.
