@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"sigs.k8s.io/release-utils/version"
 
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
@@ -30,6 +31,22 @@ import (
 var (
 	ro = &options.RootOptions{}
 )
+
+func normalizeCertificateFlags(_ *pflag.FlagSet, name string) pflag.NormalizedName {
+	switch name {
+	case "cert":
+		name = "certificate"
+	case "cert-email":
+		name = "certificate-email"
+	case "cert-chain":
+		name = "certificate-chain"
+	case "cert-oidc-issuer":
+		name = "certificate-oidc-issuer"
+	case "output-cert":
+		name = "output-certificate"
+	}
+	return pflag.NormalizedName(name)
+}
 
 func New() *cobra.Command {
 	var (
@@ -97,5 +114,8 @@ func New() *cobra.Command {
 	cmd.AddCommand(version.WithFont("starwars"))
 
 	cmd.AddCommand(cranecmd.NewCmdAuthLogin("cosign"))
+
+	cmd.SetGlobalNormalizationFunc(normalizeCertificateFlags)
+
 	return cmd
 }
