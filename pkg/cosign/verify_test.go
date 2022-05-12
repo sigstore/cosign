@@ -402,6 +402,10 @@ func TestValidateAndUnpackCertSuccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
 }
 
 func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
@@ -421,6 +425,10 @@ func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
 }
 
@@ -522,6 +530,8 @@ func TestValidateAndUnpackCertInvalidOidcIssuer(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
 }
 
 func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
@@ -541,6 +551,8 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected email not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
 	require.Contains(t, err.Error(), "expected email not found in certificate")
 }
 
@@ -696,6 +708,17 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 			Identities: tc.identities,
 		}
 		_, err := ValidateAndUnpackCert(leafCert, co)
+		if err == nil && tc.wantErrSubstring != "" {
+			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
+		} else if err != nil {
+			if tc.wantErrSubstring == "" {
+				t.Errorf("Did not expect an error, got err = %v", err)
+			} else if !strings.Contains(err.Error(), tc.wantErrSubstring) {
+				t.Errorf("Did not get the expected error %s, got err = %v", tc.wantErrSubstring, err)
+			}
+		}
+		// Test CheckCertificatePolicy
+		err = CheckCertificatePolicy(leafCert, co)
 		if err == nil && tc.wantErrSubstring != "" {
 			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
 		} else if err != nil {

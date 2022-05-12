@@ -105,7 +105,16 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 		if err != nil {
 			return err
 		}
+		co := &cosign.CheckOpts{
+			CertEmail:      certEmail,
+			CertOidcIssuer: certOidcIssuer,
+			EnforceSCT:     enforceSCT,
+		}
 		if certChain == "" {
+			err = cosign.CheckCertificatePolicy(cert, co)
+			if err != nil {
+				return err
+			}
 			verifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 			if err != nil {
 				return err
@@ -115,11 +124,6 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			chain, err := loadCertChainFromFileOrURL(certChain)
 			if err != nil {
 				return err
-			}
-			co := &cosign.CheckOpts{
-				CertEmail:      certEmail,
-				CertOidcIssuer: certOidcIssuer,
-				EnforceSCT:     enforceSCT,
 			}
 			verifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
