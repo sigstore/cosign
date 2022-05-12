@@ -34,7 +34,8 @@ jobs:
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
       - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
         with:
-          go-version: '1.17.x'
+          go-version: '1.17'
+          check-latest: true
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@877d4953d2c70a0ba7ef3290ae968eb24af233bb # v0.5.1
         with:
