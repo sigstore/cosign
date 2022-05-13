@@ -251,7 +251,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{
@@ -285,7 +285,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{
@@ -328,7 +328,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{
@@ -371,7 +371,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{
@@ -419,7 +419,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{
@@ -452,7 +452,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy-keyless": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{
@@ -498,7 +498,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{
@@ -550,7 +550,7 @@ UoJou2P8sbDxpLiE/v3yLw1/jyOrCPWYHWFXnyyeGlkgSVefG54tNoK7Uw==
 					Policies: map[string]webhookcip.ClusterImagePolicy{
 						"cluster-image-policy": {
 							Images: []v1alpha1.ImagePattern{{
-								Regex: ".*",
+								Glob: "gcr.io/*/*",
 							}},
 							Authorities: []webhookcip.Authority{
 								{

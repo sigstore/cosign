@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 
 	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	corev1 "k8s.io/api/core/v1"
@@ -96,12 +95,6 @@ func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string]webhoo
 				if matched, err := GlobMatch(pattern.Glob, image); err != nil {
 					lastError = err
 				} else if matched {
-					ret[k] = v
-				}
-			} else if pattern.Regex != "" {
-				if regex, err := regexp.Compile(pattern.Regex); err != nil {
-					lastError = err
-				} else if regex.MatchString(image) {
 					ret[k] = v
 				}
 			}

@@ -77,8 +77,8 @@ func TestGetAuthorities(t *testing.T) {
 	if got := c[matchedPolicy].Authorities[0].Keyless.Identities[0].Subject; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
-	// Make sure regex matches ".*regexstring.*"
-	c, err = defaults.GetMatchingPolicies("randomregexstringstuff")
+	// Make sure regex matches "regexstring*"
+	c, err = defaults.GetMatchingPolicies("regexstringstuff")
 	checkGetMatches(t, c, err)
 	matchedPolicy = "cluster-image-policy-4"
 	want = inlineKeyData

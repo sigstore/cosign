@@ -204,12 +204,15 @@ func (v *Validator) validatePodSpec(ctx context.Context, namespace string, ps *c
 						}
 					}
 				}
+				logging.FromContext(ctx).Errorf("policies: for %v", policies)
 			}
 
 			if passedPolicyChecks {
 				logging.FromContext(ctx).Debugf("Found at least one matching policy and it was validated for %s", ref.Name())
 				continue
 			}
+			logging.FromContext(ctx).Errorf("ref: for %v", ref)
+			logging.FromContext(ctx).Errorf("container Keys: for %v", containerKeys)
 
 			if _, err := valid(ctx, ref, nil, containerKeys, ociremote.WithRemoteOptions(remote.WithAuthFromKeychain(kc))); err != nil {
 				errorField := apis.ErrGeneric(err.Error(), "image").ViaFieldIndex(field, i)

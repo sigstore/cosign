@@ -18,8 +18,8 @@ metadata:
   name: image-policy
 spec:
   images:
-  - regex: images\..*
-  - regex: image.*
+  - glob: images.*
+  - glob: image*
   authorities:
   - keyless:
       ca-cert:
