@@ -64,9 +64,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 		return err
 	}
 
-	registryClientOpts := regOpts.GetRegistryClientOpts(ctx)
-
-	attRef, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
+	attRef, err := ociremote.AttestationTag(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -82,7 +80,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 		}
 	}
 
-	sigRef, err := ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
+	sigRef, err := ociremote.SignatureTag(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -98,7 +96,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 		}
 	}
 
-	sbomRef, err := ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
+	sbomRef, err := ociremote.SBOMTag(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
