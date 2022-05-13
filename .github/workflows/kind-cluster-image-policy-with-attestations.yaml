@@ -49,7 +49,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@dcd71f646680f2efd8db4afa5ad64fdcba30e748 # v2.4.0
-    - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
+    - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2 # v2.2.0
       with:
         go-version: '1.17'
         check-latest: true
