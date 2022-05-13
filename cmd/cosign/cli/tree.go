@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -46,12 +45,6 @@ func Tree() *cobra.Command {
 	c.AddFlags(cmd)
 	return cmd
 }
-
-const (
-	SignatureTagSuffix   = ".sig"
-	SBOMTagSuffix        = ".sbom"
-	AttestationTagSuffix = ".att"
-)
 
 func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
 	scsaMap := map[name.Tag][]v1.Layer{}
@@ -110,7 +103,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 		return err
 	}
 
-	sbombs, err := simg.Attachment("sbom")
+	sbombs, err := simg.Attachment(ociremote.SBOMTagSuffix)
 	if err == nil {
 		layers, err := sbombs.Layers()
 		if err != nil {
@@ -128,12 +121,12 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 	}
 
 	for t, k := range scsaMap {
-		switch {
-		case strings.HasSuffix(t.TagStr(), SignatureTagSuffix):
+		switch t {
+		case sigRef:
 			fmt.Fprintf(os.Stdout, "└── 🔐 Signatures for an image tag: %s\n", t.String())
-		case strings.HasSuffix(t.TagStr(), SBOMTagSuffix):
+		case sbomRef:
 			fmt.Fprintf(os.Stdout, "└── 📦 SBOMs for an image tag: %s\n", t.String())
-		case strings.HasSuffix(t.TagStr(), AttestationTagSuffix):
+		case attRef:
 			fmt.Fprintf(os.Stdout, "└── 💾 Attestations for an image tag: %s\n", t.String())
 		}
 
