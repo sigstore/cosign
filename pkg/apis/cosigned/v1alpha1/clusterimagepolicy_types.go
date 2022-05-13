@@ -90,6 +90,8 @@ type Authority struct {
 	// +optional
 	Keyless *KeylessRef `json:"keyless,omitempty"`
 	// +optional
+	Trusted *TrustedRef `json:"trusted,omitempty"`
+	// +optional
 	Sources []Source `json:"source,omitempty"`
 	// +optional
 	CTLog *TLog `json:"ctlog,omitempty"`
@@ -139,6 +141,13 @@ type KeylessRef struct {
 	Identities []Identity `json:"identities,omitempty"`
 	// +optional
 	CACert *KeyRef `json:"ca-cert,omitempty"`
+}
+
+// TrustedRef is reserved for those images that for whatever reason are not or cannot
+// be signed. An optional expiry date may be added.
+type TrustedRef struct {
+	Trust  string `json:"trust,omitempty"`
+	Expiry string `json:"expiry,omitempty"`
 }
 
 // Attestation defines the type of attestation to validate and optionally
