@@ -79,16 +79,15 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 	}
 
 	atts, err := simg.Attestations()
-	var attLayers []v1.Layer
 	if err == nil {
 		layers, err := atts.Layers()
 		if err != nil {
 			return err
 		}
-		attLayers = append(attLayers, layers...)
+		if len(layers) > 0 {
+			scsaMap[attRef] = layers
+		}
 	}
-
-	scsaMap[attRef] = attLayers
 
 	sigRef, err := ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
 	if err != nil {
@@ -96,16 +95,15 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 	}
 
 	sigs, err := simg.Signatures()
-	var sigLayers []v1.Layer
 	if err == nil {
 		layers, err := sigs.Layers()
 		if err != nil {
 			return err
 		}
-		sigLayers = append(sigLayers, layers...)
+		if len(layers) > 0 {
+			scsaMap[sigRef] = layers
+		}
 	}
-
-	scsaMap[sigRef] = sigLayers
 
 	sbomRef, err := ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
 	if err != nil {
@@ -113,16 +111,15 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 	}
 
 	sbombs, err := simg.Attachment("sbom")
-	var sbomLayers []v1.Layer
 	if err == nil {
 		layers, err := sbombs.Layers()
 		if err != nil {
 			return err
 		}
-		sbomLayers = append(sbomLayers, layers...)
+		if len(layers) > 0 {
+			scsaMap[sbomRef] = layers
+		}
 	}
-
-	scsaMap[sbomRef] = sbomLayers
 
 	if len(scsaMap) == 0 {
 		fmt.Fprintf(os.Stdout, "No Supply Chain Security Related Artifacts artifacts found for image %s\n, start creating one with simply running"+
