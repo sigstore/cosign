@@ -18,6 +18,7 @@ package fake
 
 import (
 	cosignedv1alpha1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	cosignedv1beta1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,6 +31,7 @@ var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
 	cosignedv1alpha1.AddToScheme,
+	cosignedv1beta1.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition
