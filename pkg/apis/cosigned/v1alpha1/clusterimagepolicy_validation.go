@@ -49,20 +49,12 @@ func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.
 
 func (image *ImagePattern) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-	if image.Regex != "" && image.Glob != "" {
-		errs = errs.Also(apis.ErrMultipleOneOf("regex", "glob"))
-	}
-
-	if image.Regex == "" && image.Glob == "" {
-		errs = errs.Also(apis.ErrMissingOneOf("regex", "glob"))
+	if image.Glob == "" {
+		errs = errs.Also(apis.ErrMissingField("glob"))
 	}
 
 	if image.Glob != "" {
 		errs = errs.Also(ValidateGlob(image.Glob).ViaField("glob"))
-	}
-
-	if image.Regex != "" {
-		errs = errs.Also(ValidateRegex(image.Regex).ViaField("regex"))
 	}
 
 	return errs

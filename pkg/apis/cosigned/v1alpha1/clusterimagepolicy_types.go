@@ -67,8 +67,6 @@ type ClusterImagePolicySpec struct {
 type ImagePattern struct {
 	// +optional
 	Glob string `json:"glob,omitempty"`
-	// +optional
-	Regex string `json:"regex,omitempty"`
 }
 
 // The authorities block defines the rules for discovering and

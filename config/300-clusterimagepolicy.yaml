@@ -155,8 +155,6 @@ spec:
                     properties:
                       glob:
                         type: string
-                      regex:
-                        type: string
                 policy:
                   description: Policy is an optional policy that can be applied against all the successfully validated Authorities. If no authorities pass, this does not even get evaluated, as the Policy is considered failed.
                   type: object

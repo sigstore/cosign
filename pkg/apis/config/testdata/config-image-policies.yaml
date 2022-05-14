@@ -69,7 +69,7 @@ data:
             -----END PUBLIC KEY-----
     cluster-image-policy-4: |
       images:
-      - regex: .*regexstring.*
+      - glob: regexstring*
       authorities:
       - name: attestation-0
         key:
@@ -80,7 +80,7 @@ data:
             -----END PUBLIC KEY-----
     cluster-image-policy-5: |
       images:
-      - regex: .*regexstringtoo.*
+      - glob: regexstringtoo*
       authorities:
       - name: attestation-0
         key:
@@ -107,7 +107,7 @@ data:
         data: "cip level cue here"
     cluster-image-policy-source-oci: |
       images:
-      - regex: .*sourceocionly.*
+      - glob: sourceocionly*
       authorities:
       - name: attestation-0
         key:
@@ -116,7 +116,7 @@ data:
         - oci: "example.registry.com/alternative/signature"
     cluster-image-policy-source-oci-signature-pull-secrets: |
       images:
-      - regex: .*sourceocisignaturepullsecrets.*
+      - glob: sourceocisignaturepullsecrets*
       authorities:
       - name: attestation-0
         key:

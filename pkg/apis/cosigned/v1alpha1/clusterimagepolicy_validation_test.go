@@ -31,24 +31,9 @@ func TestImagePatternValidation(t *testing.T) {
 		policy      ClusterImagePolicy
 	}{
 		{
-			name:        "Should fail when both regex and glob are present",
+			name:        "Should fail when glob is not present",
 			expectErr:   true,
-			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex\nmissing field(s): spec.authorities",
-			policy: ClusterImagePolicy{
-				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{
-						{
-							Regex: "//",
-							Glob:  "**",
-						},
-					},
-				},
-			},
-		},
-		{
-			name:        "Should fail when neither regex nor glob are present",
-			expectErr:   true,
-			errorString: "expected exactly one, got neither: spec.images[0].glob, spec.images[0].regex\nmissing field(s): spec.authorities",
+			errorString: "missing field(s): spec.authorities, spec.images[0].glob",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -80,27 +65,27 @@ func TestImagePatternValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when regex is invalid: %v",
+			name:        "Should fail when glob is invalid: %v",
 			expectErr:   true,
-			errorString: "invalid value: *: spec.images[0].regex\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`\nmissing field(s): spec.authorities",
+			errorString: "missing field(s): spec.authorities",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: "*",
+							Glob: "]",
 						},
 					},
 				},
 			},
 		},
 		{
-			name:      "Should pass when regex is valid: %v",
+			name:      "Should pass when glob is valid: %v",
 			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
 						{
-							Regex: ".*",
+							Glob: "gcr.io/*",
 						},
 					},
 					Authorities: []Authority{
@@ -389,7 +374,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{{Regex: ".*"}},
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
 					Authorities: []Authority{
 						{
 							Key:     &KeyRef{KMS: "kms://key/path"},
@@ -405,7 +390,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 			errorString: "missing field(s): spec.authorities[0].source[0].oci",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{{Regex: ".*"}},
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
 					Authorities: []Authority{
 						{
 							Key:     &KeyRef{KMS: "kms://key/path"},
@@ -420,7 +405,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{{Regex: ".*"}},
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
 					Authorities: []Authority{
 						{
 							Key: &KeyRef{KMS: "kms://key/path"},
@@ -438,7 +423,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{{Regex: ".*"}},
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
 					Authorities: []Authority{
 						{
 							Key: &KeyRef{KMS: "kms://key/path"},
@@ -456,7 +441,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{{Regex: ".*"}},
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
 					Authorities: []Authority{
 						{
 							Key: &KeyRef{KMS: "kms://key/path"},
@@ -479,7 +464,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 			errorString: "missing field(s): spec.authorities[0].source[0].signaturePullSecrets[0].name",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{{Regex: ".*"}},
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
 					Authorities: []Authority{
 						{
 							Key: &KeyRef{KMS: "kms://key/path"},
@@ -501,7 +486,7 @@ func TestAuthoritiesValidation(t *testing.T) {
 			expectErr: false,
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{{Regex: ".*"}},
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
 					Authorities: []Authority{
 						{
 							Key: &KeyRef{KMS: "kms://key/path"},
