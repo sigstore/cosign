@@ -23,10 +23,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	cjson "github.com/secure-systems-lab/go-securesystemslib/cjson"
 )
@@ -139,14 +139,14 @@ func (r *Root) ValidKey(key *Key, role string) (string, error) {
 	// Returns the key ID or an error if invalid key.
 	fulcioKeyVal, err := GetFulcioKeyVal(key)
 	if err != nil {
-		return "", errors.Wrap(err, "error parsing signer key")
+		return "", fmt.Errorf("error parsing signer key: %w", err)
 	}
 
 	result := ""
 	for keyid, rootKey := range r.Keys {
 		fulcioRootKeyVal, err := GetFulcioKeyVal(rootKey)
 		if err != nil {
-			return "", errors.Wrap(err, "error parsing root key")
+			return "", fmt.Errorf("error parsing root key: %w", err)
 		}
 		if fulcioKeyVal.Identity == fulcioRootKeyVal.Identity {
 			if fulcioRootKeyVal.Issuer == "" || fulcioRootKeyVal.Issuer == fulcioKeyVal.Issuer {
@@ -189,7 +189,7 @@ func (s *Signed) JSONMarshal(prefix, indent string) ([]byte, error) {
 func (s *Signed) AddOrUpdateSignature(key *Key, signature Signature) error {
 	root := &Root{}
 	if err := json.Unmarshal(s.Signed, root); err != nil {
-		return errors.Wrap(err, "unmarshalling root policy")
+		return fmt.Errorf("unmarshalling root policy: %w", err)
 	}
 	var err error
 	signature.KeyID, err = root.ValidKey(key, "root")

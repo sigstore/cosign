@@ -20,12 +20,12 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/apis/config"
 	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -421,7 +421,7 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 		rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
 		if err != nil {
 			logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
-			return nil, errors.Wrap(err, "creating Rekor client")
+			return nil, fmt.Errorf("creating Rekor client: %w", err)
 		}
 	}
 
@@ -433,7 +433,7 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 		// https://github.com/sigstore/cosign/issues/1652
 		sps, err := valid(ctx, ref, rekorClient, authority.Key.PublicKeys, remoteOpts...)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("failed to validate public keys with authority %s for %s", name, ref.Name()))
+			return nil, fmt.Errorf(fmt.Sprintf("failed to validate public keys with authority %s for %s: %w", name, ref.Name()), err)
 		} else if len(sps) > 0 {
 			logging.FromContext(ctx).Debugf("validated signature for %s with authority %s got %d signatures", ref.Name(), authority.Name, len(sps))
 			return ociSignatureToPolicySignature(ctx, sps), nil
@@ -445,12 +445,12 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 			logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
 			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
 			if err != nil {
-				return nil, errors.Wrap(err, "fetching FulcioRoot")
+				return nil, fmt.Errorf("fetching FulcioRoot: %w", err)
 			}
 			sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
 			if err != nil {
 				logging.FromContext(ctx).Errorf("failed validSignatures for authority %s with fulcio for %s: %v", name, ref.Name(), err)
-				return nil, errors.Wrap(err, "validate signatures with fulcio")
+				return nil, fmt.Errorf("validate signatures with fulcio: %w", err)
 			} else if len(sps) > 0 {
 				logging.FromContext(ctx).Debugf("validated signature for %s, got %d signatures", ref.Name(), len(sps))
 				return ociSignatureToPolicySignature(ctx, sps), nil
@@ -475,7 +475,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 		rekorClient, err = rekor.GetRekorClient(authority.CTLog.URL.String())
 		if err != nil {
 			logging.FromContext(ctx).Errorf("failed creating rekor client: +v", err)
-			return nil, errors.Wrap(err, "creating Rekor client")
+			return nil, fmt.Errorf("creating Rekor client: %w", err)
 		}
 	}
 
@@ -486,12 +486,12 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 			verifier, err := signature.LoadVerifier(k, crypto.SHA256)
 			if err != nil {
 				logging.FromContext(ctx).Errorf("error creating verifier: %v", err)
-				return nil, errors.Wrap(err, "creating verifier")
+				return nil, fmt.Errorf("creating verifier: %w", err)
 			}
 			va, err := validAttestations(ctx, ref, verifier, rekorClient, remoteOpts...)
 			if err != nil {
 				logging.FromContext(ctx).Errorf("error validating attestations: %v", err)
-				return nil, errors.Wrap(err, "validating attestations")
+				return nil, fmt.Errorf("validating attestations: %w", err)
 			}
 			verifiedAttestations = append(verifiedAttestations, va...)
 		}
@@ -501,12 +501,12 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 			logging.FromContext(ctx).Debugf("Fetching FulcioRoot for %s : From: %s ", ref.Name(), authority.Keyless.URL)
 			fulcioroot, err := getFulcioCert(authority.Keyless.URL)
 			if err != nil {
-				return nil, errors.Wrap(err, "fetching FulcioRoot")
+				return nil, fmt.Errorf("fetching FulcioRoot: %w", err)
 			}
 			va, err := validAttestationsWithFulcio(ctx, ref, fulcioroot, rekorClient, authority.Keyless.Identities, remoteOpts...)
 			if err != nil {
 				logging.FromContext(ctx).Errorf("failed validAttestationsWithFulcio for authority %s with fulcio for %s: %v", name, ref.Name(), err)
-				return nil, errors.Wrap(err, "validate signatures with fulcio")
+				return nil, fmt.Errorf("validate signatures with fulcio: %w", err)
 			}
 			verifiedAttestations = append(verifiedAttestations, va...)
 		}
@@ -535,7 +535,7 @@ func ValidatePolicyAttestationsForAuthority(ctx context.Context, ref name.Refere
 		for _, va := range verifiedAttestations {
 			attBytes, err := policy.AttestationToPayloadJSON(ctx, wantedAttestation.PredicateType, va)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to convert attestation payload to json")
+				return nil, fmt.Errorf("failed to convert attestation payload to json: %w", err)
 			}
 			if attBytes == nil {
 				// This happens when we ask for a predicate type that this
@@ -647,7 +647,7 @@ func getFulcioCert(u *apis.URL) (*x509.CertPool, error) {
 	fClient := api.NewClient(u.URL())
 	rootCertResponse, err := fClient.RootCert()
 	if err != nil {
-		return nil, errors.Wrap(err, "getting root cert")
+		return nil, fmt.Errorf("getting root cert: %w", err)
 	}
 
 	cp := x509.NewCertPool()

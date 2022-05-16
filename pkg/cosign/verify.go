@@ -25,6 +25,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -42,7 +43,6 @@ import (
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/pkg/errors"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -164,7 +164,7 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid certificate found on signature")
+		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
 
 	// Now verify the cert, then the signature.
@@ -512,7 +512,7 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 
 	bundleVerified, err = VerifyBundle(ctx, sig)
 	if err != nil && co.RekorClient == nil {
-		return false, errors.Wrap(err, "unable to verify bundle")
+		return false, fmt.Errorf("unable to verify bundle: %w", err)
 	}
 
 	if !bundleVerified && co.RekorClient != nil {
@@ -691,7 +691,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 
 			verified, err := VerifyBundle(ctx, att)
 			if err != nil && co.RekorClient == nil {
-				return errors.Wrap(err, "unable to verify bundle")
+				return fmt.Errorf("unable to verify bundle: %w", err)
 			}
 			bundleVerified = bundleVerified || verified
 
@@ -751,7 +751,7 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 
 	publicKeys, err := GetRekorPubs(ctx)
 	if err != nil {
-		return false, errors.Wrap(err, "retrieving rekor public key")
+		return false, fmt.Errorf("retrieving rekor public key: %w", err)
 	}
 
 	pubKey, ok := publicKeys[bundle.Payload.LogID]
@@ -775,17 +775,17 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		// Verify the cert against the integrated time.
 		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
 		if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
-			return false, errors.Wrap(err, "checking expiry on cert")
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
 		}
 	}
 
 	payload, err := sig.Payload()
 	if err != nil {
-		return false, errors.Wrap(err, "reading payload")
+		return false, fmt.Errorf("reading payload: %w", err)
 	}
 	signature, err := sig.Base64Signature()
 	if err != nil {
-		return false, errors.Wrap(err, "reading base64signature")
+		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
 
 	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature)
@@ -793,7 +793,7 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 	payloadHash := hex.EncodeToString(h[:])
 
 	if alg != "sha256" || bundlehash != payloadHash {
-		return false, errors.Wrap(err, "matching bundle to payload")
+		return false, fmt.Errorf("matching bundle to payload: %w", err)
 	}
 	return true, nil
 }
@@ -804,7 +804,7 @@ func compareSigs(bundleBody string, sig oci.Signature) error {
 	// we've returned nil (there are several reasons possible here).
 	actualSig, err := sig.Base64Signature()
 	if err != nil {
-		return errors.Wrap(err, "base64 signature")
+		return fmt.Errorf("base64 signature: %w", err)
 	}
 	if actualSig == "" {
 		// NB: empty sig means this is an attestation
@@ -812,7 +812,7 @@ func compareSigs(bundleBody string, sig oci.Signature) error {
 	}
 	bundleSignature, err := bundleSig(bundleBody)
 	if err != nil {
-		return errors.Wrap(err, "failed to extract signature from bundle")
+		return fmt.Errorf("failed to extract signature from bundle: %w", err)
 	}
 	if bundleSignature == "" {
 		return nil
@@ -893,7 +893,7 @@ func bundleSig(bundleBody string) (string, error) {
 
 	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
 	if err != nil {
-		return "", errors.Wrap(err, "decoding bundleBody")
+		return "", fmt.Errorf("decoding bundleBody: %w", err)
 	}
 
 	// Try Rekord
@@ -925,11 +925,11 @@ func bundleSig(bundleBody string) (string, error) {
 func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {
 	contents, err := json.Marshal(bundlePayload)
 	if err != nil {
-		return errors.Wrap(err, "marshaling")
+		return fmt.Errorf("marshaling: %w", err)
 	}
 	canonicalized, err := jsoncanonicalizer.Transform(contents)
 	if err != nil {
-		return errors.Wrap(err, "canonicalizing")
+		return fmt.Errorf("canonicalizing: %w", err)
 	}
 
 	// verify the SET against the public key
