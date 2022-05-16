@@ -127,7 +127,10 @@ func WithTargetRepository(repo name.Repository) Option {
 func GetEnvTargetRepository() (name.Repository, error) {
 	if ro := os.Getenv(RepoOverrideEnvKey); ro != "" {
 		repo, err := name.NewRepository(ro)
-		return repo, fmt.Errorf("parsing $"+RepoOverrideEnvKey+": %w", err)
+		if err != nil {
+			return name.Repository{}, fmt.Errorf("parsing $"+RepoOverrideEnvKey+": %w", err)
+		}
+		return repo, nil
 	}
 	return name.Repository{}, nil
 }
