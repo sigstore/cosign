@@ -16,6 +16,7 @@
 package remote
 
 import (
+	"errors"
 	"os"
 	"reflect"
 	"testing"
@@ -23,7 +24,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 )
 
 func TestOptions(t *testing.T) {
