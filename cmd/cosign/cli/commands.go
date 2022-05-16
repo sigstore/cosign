@@ -16,10 +16,10 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/logs"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/release-utils/version"
@@ -63,7 +63,7 @@ func New() *cobra.Command {
 				var err error
 				out, err = os.Create(ro.OutputFile)
 				if err != nil {
-					return errors.Wrapf(err, "Error creating output file %s", ro.OutputFile)
+					return fmt.Errorf("error creating output file %s: %w", ro.OutputFile, err)
 				}
 				stdout = os.Stdout
 				os.Stdout = out // TODO: don't do this.

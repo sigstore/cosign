@@ -26,7 +26,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
@@ -94,7 +93,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
-		return errors.Wrap(err, "parsing reference")
+		return fmt.Errorf("parsing reference: %w", err)
 	}
 
 	if timeout != 0 {
@@ -119,7 +118,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 
 	sv, err := sign.SignerFromKeyOpts(ctx, certPath, certChainPath, ko)
 	if err != nil {
-		return errors.Wrap(err, "getting signer")
+		return fmt.Errorf("getting signer: %w", err)
 	}
 	defer sv.Close()
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
@@ -148,7 +147,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	}
 	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
-		return errors.Wrap(err, "signing")
+		return fmt.Errorf("signing: %w", err)
 	}
 
 	if noUpload {

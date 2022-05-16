@@ -16,7 +16,8 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
@@ -79,7 +80,7 @@ func Attest() *cobra.Command {
 			for _, img := range args {
 				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
 					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout); err != nil {
-					return errors.Wrapf(err, "signing %s", img)
+					return fmt.Errorf("signing %s: %w", img, err)
 				}
 			}
 			return nil

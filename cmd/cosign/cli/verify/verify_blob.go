@@ -24,13 +24,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
 	"github.com/go-openapi/runtime"
-	"github.com/pkg/errors"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -84,7 +84,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 	case ko.KeyRef != "":
 		verifier, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
 		if err != nil {
-			return errors.Wrap(err, "loading public key")
+			return fmt.Errorf("loading public key: %w", err)
 		}
 		pkcs11Key, ok := verifier.(*pkcs11key.Key)
 		if ok {
@@ -93,12 +93,12 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 	case ko.Sk:
 		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
 		if err != nil {
-			return errors.Wrap(err, "opening piv token")
+			return fmt.Errorf("opening piv token: %w", err)
 		}
 		defer sk.Close()
 		verifier, err = sk.Verifier()
 		if err != nil {
-			return errors.Wrap(err, "loading public key from token")
+			return fmt.Errorf("loading public key from token: %w", err)
 		}
 	case certRef != "":
 		cert, err = loadCertFromFileOrURL(certRef)
@@ -356,7 +356,7 @@ func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certif
 	}
 	publicKeys, err := cosign.GetRekorPubs(ctx)
 	if err != nil {
-		return errors.Wrap(err, "retrieving rekor public key")
+		return fmt.Errorf("retrieving rekor public key: %w", err)
 	}
 
 	pubKey, ok := publicKeys[b.Bundle.Payload.LogID]

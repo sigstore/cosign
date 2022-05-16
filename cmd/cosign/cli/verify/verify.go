@@ -22,12 +22,12 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -89,7 +89,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
-		return errors.Wrap(err, "constructing client options")
+		return fmt.Errorf("constructing client options: %w", err)
 	}
 	co := &cosign.CheckOpts{
 		Annotations:        c.Annotations.Annotations,
@@ -106,7 +106,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
-				return errors.Wrap(err, "creating Rekor client")
+				return fmt.Errorf("creating Rekor client: %w", err)
 			}
 			co.RekorClient = rekorClient
 		}
@@ -122,7 +122,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	case keyRef != "":
 		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
 		if err != nil {
-			return errors.Wrap(err, "loading public key")
+			return fmt.Errorf("loading public key: %w", err)
 		}
 		pkcs11Key, ok := pubKey.(*pkcs11key.Key)
 		if ok {
@@ -131,12 +131,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	case c.Sk:
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
-			return errors.Wrap(err, "opening piv token")
+			return fmt.Errorf("opening piv token: %w", err)
 		}
 		defer sk.Close()
 		pubKey, err = sk.Verifier()
 		if err != nil {
-			return errors.Wrap(err, "initializing piv token verifier")
+			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case certRef != "":
 		cert, err := loadCertFromFileOrURL(c.CertRef)
@@ -184,11 +184,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		} else {
 			ref, err := name.ParseReference(img)
 			if err != nil {
-				return errors.Wrap(err, "parsing reference")
+				return fmt.Errorf("parsing reference: %w", err)
 			}
 			ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
 			if err != nil {
-				return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
+				return fmt.Errorf("resolving attachment type %s for image %s: %w", c.Attachment, img, err)
 			}
 
 			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)

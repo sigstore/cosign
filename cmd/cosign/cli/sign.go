@@ -17,8 +17,8 @@ package cli
 
 import (
 	"flag"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
@@ -104,9 +104,9 @@ func Sign() *cobra.Command {
 			if err := sign.SignCmd(ro, ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.CertChain, o.Upload,
 				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
 				if o.Attachment == "" {
-					return errors.Wrapf(err, "signing %v", args)
+					return fmt.Errorf("signing %v: %w", args, err)
 				}
-				return errors.Wrapf(err, "signing attachment %s for image %v", o.Attachment, args)
+				return fmt.Errorf("signing attachment %s for image %v: %w", o.Attachment, args, err)
 			}
 			return nil
 		},
