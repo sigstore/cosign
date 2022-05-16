@@ -433,7 +433,7 @@ func ValidatePolicySignaturesForAuthority(ctx context.Context, ref name.Referenc
 		// https://github.com/sigstore/cosign/issues/1652
 		sps, err := valid(ctx, ref, rekorClient, authority.Key.PublicKeys, remoteOpts...)
 		if err != nil {
-			return nil, fmt.Errorf(fmt.Sprintf("failed to validate public keys with authority %s for %s: %w", name, ref.Name()), err)
+			return nil, fmt.Errorf("failed to validate public keys with authority %s for %s: %w", name, ref.Name(), err)
 		} else if len(sps) > 0 {
 			logging.FromContext(ctx).Debugf("validated signature for %s with authority %s got %d signatures", ref.Name(), authority.Name, len(sps))
 			return ociSignatureToPolicySignature(ctx, sps), nil
