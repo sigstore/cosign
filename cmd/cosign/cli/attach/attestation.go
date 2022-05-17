@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
@@ -33,7 +32,7 @@ import (
 func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signedPayload, imageRef string) error {
 	ociremoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
-		return errors.Wrap(err, "constructing client options")
+		return fmt.Errorf("constructing client options: %w", err)
 	}
 
 	fmt.Fprintln(os.Stderr, "Using payload from:", signedPayload)

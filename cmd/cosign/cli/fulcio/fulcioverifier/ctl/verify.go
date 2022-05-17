@@ -21,13 +21,13 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 
 	ct "github.com/google/certificate-transparency-go"
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/google/certificate-transparency-go/x509util"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctutil"
 
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
@@ -94,7 +94,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 			}
 			keyID, err := ctutil.GetCTLogID(pub)
 			if err != nil {
-				return errors.Wrap(err, "error getting CTFE public key hash")
+				return fmt.Errorf("error getting CTFE public key hash")
 			}
 			pubKeys[keyID] = logIDMetadata{pub, t.Status}
 		}
@@ -102,15 +102,15 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for verifying SCT: %s\n", rootEnv)
 		raw, err := os.ReadFile(rootEnv)
 		if err != nil {
-			return errors.Wrap(err, "error reading alternate public key file")
+			return fmt.Errorf("error reading alternate public key file")
 		}
 		pubKey, err := getPublicKey(raw)
 		if err != nil {
-			return errors.Wrap(err, "error parsing alternate public key from the file")
+			return fmt.Errorf("error parsing alternate public key from the file")
 		}
 		keyID, err := ctutil.GetCTLogID(pubKey)
 		if err != nil {
-			return errors.Wrap(err, "error getting CTFE public key hash")
+			return fmt.Errorf("error getting CTFE public key hash")
 		}
 		pubKeys[keyID] = logIDMetadata{pubKey, tuf.Active}
 	}
@@ -150,7 +150,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 			}
 			err := ctutil.VerifySCT(pubKeyMetadata.pubKey, []*ctx509.Certificate{cert, certChain[0]}, sct, true)
 			if err != nil {
-				return errors.Wrap(err, "error verifying embedded SCT")
+				return fmt.Errorf("error verifying embedded SCT")
 			}
 			if pubKeyMetadata.status != tuf.Active {
 				fmt.Fprintf(os.Stderr, "**Info** Successfully verified embedded SCT using an expired verification key\n")
@@ -162,7 +162,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 	// check SCT in response header
 	var addChainResp ct.AddChainResponse
 	if err := json.Unmarshal(rawSCT, &addChainResp); err != nil {
-		return errors.Wrap(err, "unmarshal")
+		return fmt.Errorf("unmarshal")
 	}
 	sct, err := addChainResp.ToSignedCertificateTimestamp()
 	if err != nil {
@@ -174,7 +174,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 	}
 	err = ctutil.VerifySCT(pubKeyMetadata.pubKey, []*ctx509.Certificate{cert}, sct, false)
 	if err != nil {
-		return errors.Wrap(err, "error verifying SCT")
+		return fmt.Errorf("error verifying SCT")
 	}
 	if pubKeyMetadata.status != tuf.Active {
 		fmt.Fprintf(os.Stderr, "**Info** Successfully verified SCT using an expired verification key\n")
@@ -217,7 +217,7 @@ func getPublicKey(in []byte) (crypto.PublicKey, error) {
 		// Try using the PKCS1 before giving up.
 		pubKey, err = x509.ParsePKCS1PublicKey(derBytes)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse CT log public key")
+			return nil, fmt.Errorf("failed to parse CT log public key: %w", err)
 		}
 	}
 	return pubKey, nil

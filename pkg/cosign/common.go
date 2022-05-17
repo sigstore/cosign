@@ -17,12 +17,12 @@ package cosign
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
 	"golang.org/x/term"
 )
 

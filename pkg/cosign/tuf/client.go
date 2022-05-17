@@ -32,7 +32,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/client"
 	tuf_leveldbstore "github.com/theupdateframework/go-tuf/client/leveldbstore"
 	"github.com/theupdateframework/go-tuf/data"
@@ -167,7 +166,7 @@ func (t *TUF) getRootStatus() (*RootStatus, error) {
 	// Get metadata expiration
 	trustedMeta, err := t.local.GetMeta()
 	if err != nil {
-		return nil, errors.Wrap(err, "getting trusted meta")
+		return nil, fmt.Errorf("getting trusted meta: %w", err)
 	}
 	for role, md := range trustedMeta {
 		mdStatus, err := getMetadataStatus(md)
@@ -250,20 +249,20 @@ func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, 
 	trustedMeta, err := t.local.GetMeta()
 	if err != nil {
 		t.Close()
-		return nil, errors.Wrap(err, "getting trusted meta")
+		return nil, fmt.Errorf("getting trusted meta: %w", err)
 	}
 
 	if root == nil {
 		root, err = getRoot(trustedMeta)
 		if err != nil {
 			t.Close()
-			return nil, errors.Wrap(err, "getting trusted root")
+			return nil, fmt.Errorf("getting trusted root: %w", err)
 		}
 	}
 
 	if err := t.client.InitLocal(root); err != nil {
 		t.Close()
-		return nil, errors.Wrap(err, "unable to initialize client, local cache may be corrupt")
+		return nil, fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err)
 	}
 
 	// We have our local store, whether it was embedded or not!
@@ -276,7 +275,7 @@ func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, 
 	// Update when timestamp is out of date.
 	if err := t.updateMetadataAndDownloadTargets(); err != nil {
 		t.Close()
-		return nil, errors.Wrap(err, "updating local metadata and targets")
+		return nil, fmt.Errorf("updating local metadata and targets: %w", err)
 	}
 
 	return t, err
@@ -330,7 +329,7 @@ func Initialize(ctx context.Context, mirror string, root []byte) error {
 		return err
 	}
 	if err := os.WriteFile(cachedRemote(rootCacheDir()), b, 0600); err != nil {
-		return errors.Wrap(err, "storing remote")
+		return fmt.Errorf("storing remote: %w", err)
 	}
 	return nil
 }
@@ -339,7 +338,7 @@ func (t *TUF) GetTarget(name string) ([]byte, error) {
 	// Get valid target metadata. Does a local verification.
 	validMeta, err := t.client.Target(name)
 	if err != nil {
-		return nil, errors.Wrap(err, "error verifying local metadata; local cache may be corrupt")
+		return nil, fmt.Errorf("error verifying local metadata; local cache may be corrupt: %w", err)
 	}
 
 	targetBytes, err := t.targets.Get(name)
@@ -363,7 +362,7 @@ func (t *TUF) GetTarget(name string) ([]byte, error) {
 func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFile, error) {
 	targets, err := t.client.Targets()
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting targets")
+		return nil, fmt.Errorf("error getting targets: %w", err)
 	}
 	var matchedTargets []TargetFile
 	for name, targetMeta := range targets {
@@ -380,7 +379,7 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 		if scm.Sigstore.Usage == usage {
 			target, err := t.GetTarget(name)
 			if err != nil {
-				return nil, errors.Wrap(err, "error getting target by usage")
+				return nil, fmt.Errorf("error getting target by usage: %w", err)
 			}
 			matchedTargets = append(matchedTargets, TargetFile{Target: target, Status: scm.Sigstore.Status})
 		}
@@ -404,7 +403,7 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 func localStore(cacheRoot string) (client.LocalStore, error) {
 	local, err := tuf_leveldbstore.FileLocalStore(cacheRoot)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating cached local store")
+		return nil, fmt.Errorf("creating cached local store: %w", err)
 	}
 	return local, nil
 }
@@ -414,10 +413,10 @@ func embeddedLocalStore() (client.LocalStore, error) {
 	for _, mdFilename := range []string{"root.json", "targets.json", "snapshot.json", "timestamp.json"} {
 		b, err := embeddedRootRepo.ReadFile(path.Join("repository", mdFilename))
 		if err != nil {
-			return nil, errors.Wrap(err, "reading embedded file")
+			return nil, fmt.Errorf("reading embedded file: %w", err)
 		}
 		if err := local.SetMeta(mdFilename, b); err != nil {
-			return nil, errors.Wrap(err, "setting local meta")
+			return nil, fmt.Errorf("setting local meta: %w", err)
 		}
 	}
 	return local, nil
@@ -491,7 +490,7 @@ func (t *targetDestination) Delete() error {
 func downloadRemoteTarget(name string, c *client.Client, w io.Writer) error {
 	dest := targetDestination{}
 	if err := c.Download(name, &dest); err != nil {
-		return errors.Wrap(err, "downloading target")
+		return fmt.Errorf("downloading target: %w", err)
 	}
 	_, err := io.Copy(w, &dest.buf)
 	return err
@@ -575,7 +574,7 @@ type diskCache struct {
 
 func (d *diskCache) Set(p string, b []byte) error {
 	if err := os.MkdirAll(d.base, 0700); err != nil {
-		return errors.Wrap(err, "creating targets dir")
+		return fmt.Errorf("creating targets dir: %w", err)
 	}
 	fp := filepath.Join(d.base, p)
 	return os.WriteFile(fp, b, 0600)

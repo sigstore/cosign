@@ -16,7 +16,8 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -258,7 +259,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
 				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain,
 				o.Signature, args[0], o.CertVerify.EnforceSCT); err != nil {
-				return errors.Wrapf(err, "verifying blob %s", args)
+				return fmt.Errorf("verifying blob %s: %w", args, err)
 			}
 			return nil
 		},

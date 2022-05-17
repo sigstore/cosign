@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
-
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -35,7 +33,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*fulcio.Signer, error) 
 
 	// verify the sct
 	if err := ctl.VerifySCT(ctx, fs.Cert, fs.Chain, fs.SCT); err != nil {
-		return nil, errors.Wrap(err, "verifying SCT")
+		return nil, fmt.Errorf("verifying SCT: %w", err)
 	}
 	fmt.Fprintln(os.Stderr, "Successfully verified SCT...")
 

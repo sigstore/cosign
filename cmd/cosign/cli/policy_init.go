@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/mail"
@@ -31,7 +32,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
@@ -135,7 +135,7 @@ func initPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to %s", outfile)
+					return fmt.Errorf("error writing to %s: %w", outfile, err)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")
@@ -226,24 +226,24 @@ func signPolicy() *cobra.Command {
 
 			result := &bytes.Buffer{}
 			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
-				return errors.Wrap(err, "error getting result")
+				return fmt.Errorf("error getting result: %w", err)
 			}
 			b, err := io.ReadAll(result)
 			if err != nil {
-				return errors.Wrap(err, "error reading bytes from root.json")
+				return fmt.Errorf("error reading bytes from root.json: %w", err)
 			}
 
 			// Unmarshal policy and verify that Fulcio signer email is in the trusted
 			signed := &tuf.Signed{}
 			if err := json.Unmarshal(b, signed); err != nil {
-				return errors.Wrap(err, "unmarshalling signed root policy")
+				return fmt.Errorf("unmarshalling signed root policy: %w", err)
 			}
 
 			// Create and add signature
 			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
 			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(ctx))
 			if err != nil {
-				return errors.Wrap(err, "error occurred while during artifact signing")
+				return fmt.Errorf("error occurred while during artifact signing): %w", err)
 			}
 			signature := tuf.Signature{
 				Signature: base64.StdEncoding.EncodeToString(sig),
@@ -279,7 +279,7 @@ func signPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to %s", outfile)
+					return fmt.Errorf("error writing to %s: %w", outfile, err)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")

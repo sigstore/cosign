@@ -16,6 +16,7 @@
 package remote
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 
@@ -23,7 +24,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/pkg/errors"
 )
 
 func TestSignaturesErrors(t *testing.T) {

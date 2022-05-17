@@ -19,10 +19,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"os"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -90,11 +91,11 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 	if rootEnv != "" {
 		raw, err := os.ReadFile(rootEnv)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "error reading root PEM file")
+			return nil, nil, fmt.Errorf("error reading root PEM file: %w", err)
 		}
 		certs, err := cryptoutils.UnmarshalCertificatesFromPEM(raw)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "error unmarshalling certificates")
+			return nil, nil, fmt.Errorf("error unmarshalling certificates: %w", err)
 		}
 		for _, cert := range certs {
 			// root certificates are self-signed
@@ -113,7 +114,7 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 	} else {
 		tufClient, err := tuf.NewFromEnv(context.Background())
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "initializing tuf")
+			return nil, nil, fmt.Errorf("initializing tuf: %w", err)
 		}
 		defer tufClient.Close()
 		// Retrieve from the embedded or cached TUF root. If expired, a network
@@ -128,7 +129,7 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 		for _, t := range targets {
 			certs, err := cryptoutils.UnmarshalCertificatesFromPEM(t.Target)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "error unmarshalling certificates")
+				return nil, nil, fmt.Errorf("error unmarshalling certificates: %w", err)
 			}
 			for _, cert := range certs {
 				// root certificates are self-signed

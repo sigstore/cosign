@@ -18,13 +18,13 @@ package verify
 import (
 	"context"
 	"crypto"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -72,7 +72,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
-		return errors.Wrap(err, "constructing client options")
+		return fmt.Errorf("constructing client options: %w", err)
 	}
 	co := &cosign.CheckOpts{
 		RegistryClientOpts: ociremoteOpts,
@@ -87,7 +87,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
-				return errors.Wrap(err, "creating Rekor client")
+				return fmt.Errorf("creating Rekor client: %w", err)
 			}
 			co.RekorClient = rekorClient
 		}
@@ -101,7 +101,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	case keyRef != "":
 		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
-			return errors.Wrap(err, "loading public key")
+			return fmt.Errorf("loading public key: %w", err)
 		}
 		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
 		if ok {
@@ -110,17 +110,17 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	case c.Sk:
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
-			return errors.Wrap(err, "opening piv token")
+			return fmt.Errorf("opening piv token: %w", err)
 		}
 		defer sk.Close()
 		co.SigVerifier, err = sk.Verifier()
 		if err != nil {
-			return errors.Wrap(err, "initializing piv token verifier")
+			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case c.CertRef != "":
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
-			return errors.Wrap(err, "loading certificate from reference")
+			return fmt.Errorf("loading certificate from reference: %w", err)
 		}
 		if c.CertChain == "" {
 			err = cosign.CheckCertificatePolicy(cert, co)
@@ -129,7 +129,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 			co.SigVerifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 			if err != nil {
-				return errors.Wrap(err, "creating certificate verifier")
+				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
 		} else {
 			// Verify certificate with chain
@@ -139,7 +139,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
-				return errors.Wrap(err, "creating certificate verifier")
+				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
 		}
 	}
@@ -189,7 +189,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		for _, vp := range verified {
 			payload, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, vp)
 			if err != nil {
-				return errors.Wrap(err, "converting to consumable policy validation")
+				return fmt.Errorf("converting to consumable policy validation: %w", err)
 			}
 			if len(payload) == 0 {
 				// This is not the predicate type we're looking for.

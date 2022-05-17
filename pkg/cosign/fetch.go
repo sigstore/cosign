@@ -24,7 +24,6 @@ import (
 	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"knative.dev/pkg/pool"
@@ -69,14 +68,14 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 
 	sigs, err := simg.Signatures()
 	if err != nil {
-		return nil, errors.Wrap(err, "remote image")
+		return nil, fmt.Errorf("remote image: %w", err)
 	}
 	l, err := sigs.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching signatures")
+		return nil, fmt.Errorf("fetching signatures: %w", err)
 	}
 	if len(l) == 0 {
-		return nil, fmt.Errorf("no signatures associated with %v", ref)
+		return nil, fmt.Errorf("no signatures associated with %v: %w", ref, err)
 	}
 
 	g := pool.New(runtime.NumCPU())
@@ -119,14 +118,14 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 
 	atts, err := simg.Attestations()
 	if err != nil {
-		return nil, errors.Wrap(err, "remote image")
+		return nil, fmt.Errorf("remote image: %w", err)
 	}
 	l, err := atts.Get()
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching attestations")
+		return nil, fmt.Errorf("fetching attestations: %w", err)
 	}
 	if len(l) == 0 {
-		return nil, fmt.Errorf("no attestations associated with %v", ref)
+		return nil, fmt.Errorf("no attestations associated with %v: %w", ref, err)
 	}
 
 	g := pool.New(runtime.NumCPU())
@@ -153,7 +152,7 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 func FetchLocalSignedPayloadFromPath(path string) (*LocalSignedPayload, error) {
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "reading %s", path)
+		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
 	var b *LocalSignedPayload
 	if err := json.Unmarshal(contents, &b); err != nil {

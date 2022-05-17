@@ -18,12 +18,12 @@ package generate
 import (
 	"context"
 	"crypto"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/git"
 	"github.com/sigstore/cosign/pkg/cosign/git/github"
 	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
@@ -48,7 +48,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		}
 		pubKey, err := k.CreateKey(ctx, k.DefaultAlgorithm())
 		if err != nil {
-			return errors.Wrap(err, "creating key")
+			return fmt.Errorf("creating key: %w", err)
 		}
 		pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pubKey)
 		if err != nil {

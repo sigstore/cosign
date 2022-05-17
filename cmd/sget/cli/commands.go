@@ -17,10 +17,10 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/version"
 

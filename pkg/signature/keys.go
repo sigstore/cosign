@@ -18,10 +18,9 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -77,7 +76,7 @@ func VerifierForKeyRef(ctx context.Context, keyRef string, hashAlgorithm crypto.
 	// PEM encoded file.
 	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
 	if err != nil {
-		return nil, errors.Wrap(err, "pem to public key")
+		return nil, fmt.Errorf("pem to public key: %w", err)
 	}
 
 	return signature.LoadVerifier(pubKey, hashAlgorithm)
@@ -103,7 +102,7 @@ func LoadPublicKeyRaw(raw []byte, hashAlgorithm crypto.Hash) (signature.Verifier
 	// PEM encoded file.
 	ed, err := cosign.PemToECDSAKey(raw)
 	if err != nil {
-		return nil, errors.Wrap(err, "pem to ecdsa")
+		return nil, fmt.Errorf("pem to ecdsa: %w", err)
 	}
 	return signature.LoadECDSAVerifier(ed, hashAlgorithm)
 }
@@ -118,19 +117,19 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
 		err := pkcs11UriConfig.Parse(keyRef)
 		if err != nil {
-			return nil, errors.Wrap(err, "parsing pkcs11 uri")
+			return nil, fmt.Errorf("parsing pkcs11 uri: %w", err)
 		}
 
 		// Since we'll be signing, we need to set askForPinIsNeeded to true
 		// because we need access to the private key.
 		sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, true)
 		if err != nil {
-			return nil, errors.Wrap(err, "opening pkcs11 token key")
+			return nil, fmt.Errorf("opening pkcs11 token key: %w", err)
 		}
 
 		sv, err := sk.SignerVerifier()
 		if err != nil {
-			return nil, errors.Wrap(err, "initializing pkcs11 token signer verifier")
+			return nil, fmt.Errorf("initializing pkcs11 token signer verifier: %w", err)
 		}
 
 		return sv, nil
@@ -200,19 +199,19 @@ func PublicKeyFromKeyRefWithHashAlgo(ctx context.Context, keyRef string, hashAlg
 		pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
 		err := pkcs11UriConfig.Parse(keyRef)
 		if err != nil {
-			return nil, errors.Wrap(err, "parsing pkcs11 uri")
+			return nil, fmt.Errorf("parsing pkcs11 uri): %w", err)
 		}
 
 		// Since we'll be verifying a signature, we do not need to set askForPinIsNeeded to true
 		// because we only need access to the public key.
 		sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, false)
 		if err != nil {
-			return nil, errors.Wrap(err, "opening pkcs11 token key")
+			return nil, fmt.Errorf("opening pkcs11 token key: %w", err)
 		}
 
 		v, err := sk.Verifier()
 		if err != nil {
-			return nil, errors.Wrap(err, "initializing pkcs11 token verifier")
+			return nil, fmt.Errorf("initializing pkcs11 token verifier: %w", err)
 		}
 
 		return v, nil

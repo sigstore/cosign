@@ -20,11 +20,11 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"knative.dev/pkg/apis"
@@ -141,7 +141,7 @@ func (a *Authority) UnmarshalJSON(data []byte) error {
 	if len(rawAuthority.Sources) > 0 {
 		for _, source := range rawAuthority.Sources {
 			if targetRepoOverride, err := name.NewRepository(source.OCI); err != nil {
-				return errors.Wrap(err, "failed to determine source")
+				return fmt.Errorf("failed to determine source: %w", err)
 			} else if (targetRepoOverride != name.Repository{}) {
 				rawAuthority.RemoteOpts = append(rawAuthority.RemoteOpts, ociremote.WithTargetRepository(targetRepoOverride))
 			}

@@ -18,11 +18,11 @@ package cosign
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 
 	"github.com/sigstore/cosign/pkg/oci"

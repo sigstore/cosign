@@ -15,13 +15,12 @@
 package pkcs11key
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -117,7 +116,7 @@ func (conf *Pkcs11UriConfig) Parse(uriString string) error {
 
 	uri, err := url.Parse(uriString)
 	if err != nil {
-		return errors.Wrap(err, "parse uri")
+		return fmt.Errorf("parse uri: %w", err)
 	}
 	if uri.Scheme != "pkcs11" {
 		return errors.New("invalid uri: not a PKCS11 uri")
@@ -129,12 +128,12 @@ func (conf *Pkcs11UriConfig) Parse(uriString string) error {
 	uri.Opaque = strings.ReplaceAll(uri.Opaque, ";", "&")
 	uriPathAttributes, err := url.ParseQuery(uri.Opaque)
 	if err != nil {
-		return errors.Wrap(err, "parse uri path")
+		return fmt.Errorf("parse uri path: %w", err)
 	}
 	uri.RawQuery = strings.ReplaceAll(uri.RawQuery, ";", "&")
 	uriQueryAttributes, err := url.ParseQuery(uri.RawQuery)
 	if err != nil {
-		return errors.Wrap(err, "parse uri query")
+		return fmt.Errorf("parse uri query: %w", err)
 	}
 	modulePath := uriQueryAttributes.Get("module-path")
 	pinValue := uriQueryAttributes.Get("pin-value")
@@ -213,7 +212,7 @@ func (conf *Pkcs11UriConfig) Construct() (string, error) {
 	if conf.TokenLabel != "" {
 		tokenLabel, err = EncodeURIComponent(conf.TokenLabel, true, true)
 		if err != nil {
-			return "", errors.Wrap(err, "encode token label")
+			return "", fmt.Errorf("encode token label: %w", err)
 		}
 		uriString += "token=" + tokenLabel
 	}
@@ -228,19 +227,19 @@ func (conf *Pkcs11UriConfig) Construct() (string, error) {
 	if len(conf.KeyLabel) != 0 {
 		keyLabel, err = EncodeURIComponent(string(conf.KeyLabel), true, true)
 		if err != nil {
-			return "", errors.Wrap(err, "encode key label")
+			return "", fmt.Errorf("encode key label: %w", err)
 		}
 		uriString += ";object=" + keyLabel
 	}
 	modulePath, err = EncodeURIComponent(conf.ModulePath, false, true)
 	if err != nil {
-		return "", errors.Wrap(err, "encode module path")
+		return "", fmt.Errorf("encode module path: %w", err)
 	}
 	uriString += "?module-path=" + modulePath
 	if conf.Pin != "" {
 		pinValue, err = EncodeURIComponent(conf.Pin, false, true)
 		if err != nil {
-			return "", errors.Wrap(err, "encode pin")
+			return "", fmt.Errorf("encode pin: %w", err)
 		}
 		uriString += "&pin-value=" + pinValue
 	}

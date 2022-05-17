@@ -21,7 +21,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +39,7 @@ func (o *OIDCOptions) ClientSecret() (string, error) {
 	if o.clientSecretFile != "" {
 		clientSecretBytes, err := os.ReadFile(o.clientSecretFile)
 		if err != nil {
-			return "", errors.Wrap(err, "reading OIDC client secret")
+			return "", fmt.Errorf("reading OIDC client secret: %w", err)
 		}
 		if !utf8.Valid(clientSecretBytes) {
 			return "", fmt.Errorf("OIDC client secret in file %s not valid utf8", o.clientSecretFile)

@@ -26,7 +26,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/pkg/errors"
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
@@ -114,7 +113,7 @@ type Signer struct {
 func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	fClient, err := NewClient(ko.FulcioURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating Fulcio client")
+		return nil, fmt.Errorf("creating Fulcio client: %w", err)
 	}
 
 	idToken := ko.IDToken
@@ -122,13 +121,13 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	if idToken == "" && providers.Enabled(ctx) && !ko.OIDCDisableProviders {
 		idToken, err = providers.Provide(ctx, "sigstore")
 		if err != nil {
-			return nil, errors.Wrap(err, "fetching ambient OIDC credentials")
+			return nil, fmt.Errorf("fetching ambient OIDC credentials: %w", err)
 		}
 	}
 
 	priv, err := cosign.GeneratePrivateKey()
 	if err != nil {
-		return nil, errors.Wrap(err, "generating cert")
+		return nil, fmt.Errorf("generating cert: %w", err)
 	}
 	signer, err := signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
 	if err != nil {
@@ -151,7 +150,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	}
 	Resp, err := GetCert(ctx, priv, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
 	if err != nil {
-		return nil, errors.Wrap(err, "retrieving cert")
+		return nil, fmt.Errorf("retrieving cert: %w", err)
 	}
 
 	f := &Signer{

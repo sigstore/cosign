@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -61,7 +60,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 
 	sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
-		return nil, errors.Wrap(err, "signing blob")
+		return nil, fmt.Errorf("signing blob: %w", err)
 	}
 
 	signedPayload := cosign.LocalSignedPayload{}
@@ -101,7 +100,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 			bts = []byte(base64.StdEncoding.EncodeToString(sig))
 		}
 		if err := os.WriteFile(outputSignature, bts, 0600); err != nil {
-			return nil, errors.Wrap(err, "create signature file")
+			return nil, fmt.Errorf("create signature file: %w", err)
 		}
 
 		fmt.Printf("Signature wrote in the file %s\n", outputSignature)
@@ -121,7 +120,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 			bts = []byte(base64.StdEncoding.EncodeToString(rekorBytes))
 		}
 		if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
-			return nil, errors.Wrap(err, "create certificate file")
+			return nil, fmt.Errorf("create certificate file: %w", err)
 		}
 		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}

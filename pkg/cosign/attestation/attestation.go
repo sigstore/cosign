@@ -26,7 +26,6 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -189,7 +188,7 @@ func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (i
 
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawPayload, &result); err != nil {
-		return nil, errors.Wrapf(err, "invalid JSON payload for predicate type %s", customType)
+		return nil, fmt.Errorf("invalid JSON payload for predicate type %s: %w", customType, err)
 	}
 
 	return result, nil
@@ -203,7 +202,7 @@ func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo stri
 	}
 	err = json.Unmarshal(rawPayload, &predicate)
 	if err != nil {
-		return "", errors.Wrap(err, "unmarshal Provenance predicate")
+		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
 	}
 	return in_toto.ProvenanceStatement{
 		StatementHeader: generateStatementHeader(digest, repo, slsa.PredicateSLSAProvenance),
@@ -219,7 +218,7 @@ func generateLinkStatement(rawPayload []byte, digest string, repo string) (inter
 	}
 	err = json.Unmarshal(rawPayload, &link)
 	if err != nil {
-		return "", errors.Wrap(err, "unmarshal Link statement")
+		return "", fmt.Errorf("unmarshal Link statement: %w", err)
 	}
 	return in_toto.LinkStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateLinkV1),

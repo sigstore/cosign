@@ -18,6 +18,7 @@ package github
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,7 +26,6 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v42/github"
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -44,7 +44,7 @@ func New() *Gh {
 func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
 	keys, err := cosign.GenerateKeyPair(pf)
 	if err != nil {
-		return errors.Wrap(err, "generating key pair")
+		return fmt.Errorf("generating key pair: %w", err)
 	}
 
 	var httpClient *http.Client
@@ -66,7 +66,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	key, getRepoPubKeyResp, err := client.Actions.GetRepoPublicKey(ctx, owner, repo)
 	if err != nil {
-		return errors.Wrap(err, "could not get repository public key")
+		return fmt.Errorf("could not get repository public key: %w", err)
 	}
 
 	if getRepoPubKeyResp.StatusCode < 200 && getRepoPubKeyResp.StatusCode >= 300 {
@@ -82,7 +82,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	passwordSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, passwordSecretEnv)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" github actions secret")
+		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" github actions secret: %w", err)
 	}
 
 	if passwordSecretEnvResp.StatusCode < 200 && passwordSecretEnvResp.StatusCode >= 300 {
@@ -100,7 +100,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	privateKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, privateKeySecretEnv)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" github actions secret")
+		return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" github actions secret: %w", err)
 	}
 
 	if privateKeySecretEnvResp.StatusCode < 200 && privateKeySecretEnvResp.StatusCode >= 300 {
@@ -118,7 +118,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	publicKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, publicKeySecretEnv)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PUBLIC_KEY\" github actions secret")
+		return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" github actions secret: %w", err)
 	}
 
 	if publicKeySecretEnvResp.StatusCode < 200 && publicKeySecretEnvResp.StatusCode >= 300 {
