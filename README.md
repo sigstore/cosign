@@ -117,6 +117,7 @@ This core set includes:
   * Tekton Bundles
   * Helm Charts
   * WASM modules
+  * eBPF modules
   * (probably anything else, feel free to add things to this list)
 * Text files and other binary blobs, using `cosign sign-blob`
 
@@ -251,6 +252,31 @@ $ cosign sign --key cosign.key us.gcr.io/dlorenc-vmtest2/wasm
 Enter password for private key:
 tlog entry created with index: 5198
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812.sig
+```
+#### eBPF
+
+[eBPF](https://ebpf.io) modules can also be stored in an OCI registry, using this [specification](https://github.com/solo-io/bumblebee/tree/main/spec).
+
+The image below was built using the `bee` tool. More information can be found [here](https://github.com/solo-io/bumblebee/)
+
+Cosign can then sign these images as they can any other OCI image.
+
+```shell
+$ bee build ./examples/tcpconnect/tcpconnect.c localhost:5000/tcpconnect:test
+$ bee push localhost:5000/tcpconnect:test
+$ cosign sign  --key cosign.key localhost:5000/tcpconnect:test
+Enter password for private key:
+Pushing signature to: localhost:5000/tcpconnect
+$ cosign verify --key cosign.pub localhost:5000/tcpconnect:test
+cosign verify --key pubkey.pem localhost:5001/tcpconnect:test
+
+Verification for localhost:5000/tcpconnect:test --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+
+[{"critical":{"identity":{"docker-reference":"localhost:5000/tcpconnect"},"image":{"docker-manifest-digest":"sha256:7a91c50d922925f152fec96ed1d84b7bc6b2079c169d68826f6cf307f22d40e6"},"type":"cosign container image signature"},"optional":null}]
+
 ```
 
 #### In-Toto Attestations
