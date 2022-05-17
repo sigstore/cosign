@@ -1156,8 +1156,8 @@ github.com/google/go-containerregistry v0.8.0/go.mod h1:wW5v71NHGnQyb4k+gSshjxid
 github.com/google/go-containerregistry v0.8.1-0.20220110151055-a61fd0a8e2bb/go.mod h1:wW5v71NHGnQyb4k+gSshjxidrC7lN33MdWEn+Mz9TsI=
 github.com/google/go-containerregistry v0.8.1-0.20220209165246-a44adc326839 h1:7PunQZxMao2q43If8gKj1JFRzapmhgny9NWwXY4PGa4=
 github.com/google/go-containerregistry v0.8.1-0.20220209165246-a44adc326839/go.mod h1:cwx3SjrH84Rh9VFJSIhPh43ovyOp3DCWgY3h8nWmdGQ=
-github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220310143843-f1fa40b162a1 h1:Ep/MaO46DAXMsKBjoIQH3sJ3kN5MS1qnYo9vod4M71Q=
-github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220310143843-f1fa40b162a1/go.mod h1:gm/Zjh0iiPBfwgDIYgHJCRxaGzBZu1njCgwX1EmC1Tw=
+github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220413173345-f1b065c6cb3d h1:lW/Wt1DLz5EDvR7h3+wLaE7Ug5c2SafJC9uQiAUCmoY=
+github.com/google/go-containerregistry/pkg/authn/k8schain v0.0.0-20220413173345-f1b065c6cb3d/go.mod h1:gm/Zjh0iiPBfwgDIYgHJCRxaGzBZu1njCgwX1EmC1Tw=
 github.com/google/go-containerregistry/pkg/authn/kubernetes v0.0.0-20220301182634-bfe2ffc6b6bd h1:DVnBwEU/77+h/Celwk8RLwnYiuaIdBv2gguN3xHfcJM=
 github.com/google/go-containerregistry/pkg/authn/kubernetes v0.0.0-20220301182634-bfe2ffc6b6bd/go.mod h1:MO/Ilc3XTxy/Pi8aMXEiRUl6icOqResFyhSFCLlqtR8=
 github.com/google/go-github/v27 v27.0.6/go.mod h1:/0Gr8pJ55COkmv+S/yPKCczSkUPIM/LnFyubufRNIS0=
