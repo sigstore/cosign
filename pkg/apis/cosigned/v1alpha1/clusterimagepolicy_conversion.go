@@ -26,32 +26,32 @@ import (
 var _ apis.Convertible = (*ClusterImagePolicy)(nil)
 
 // ConvertTo implements api.Convertible
-func (cip *ClusterImagePolicy) ConvertTo(ctx context.Context, obj apis.Convertible) error {
+func (c *ClusterImagePolicy) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.ClusterImagePolicy:
-		sink.ObjectMeta = cip.ObjectMeta
-		return cip.Spec.ConvertTo(ctx, &sink.Spec)
+		sink.ObjectMeta = c.ObjectMeta
+		return c.Spec.ConvertTo(ctx, &sink.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 }
 
 // ConvertFrom implements api.Convertible
-func (cip *ClusterImagePolicy) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
+func (c *ClusterImagePolicy) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.ClusterImagePolicy:
-		cip.ObjectMeta = source.ObjectMeta
-		return cip.Spec.ConvertFrom(ctx, &source.Spec)
+		c.ObjectMeta = source.ObjectMeta
+		return c.Spec.ConvertFrom(ctx, &source.Spec)
 	default:
-		return fmt.Errorf("unknown version, got: %T", cip)
+		return fmt.Errorf("unknown version, got: %T", c)
 	}
 }
 
-func (cips *ClusterImagePolicySpec) ConvertTo(ctx context.Context, sink *v1beta1.ClusterImagePolicySpec) error {
-	for _, image := range cips.Images {
+func (spec *ClusterImagePolicySpec) ConvertTo(ctx context.Context, sink *v1beta1.ClusterImagePolicySpec) error {
+	for _, image := range spec.Images {
 		sink.Images = append(sink.Images, v1beta1.ImagePattern{Glob: image.Glob})
 	}
-	for _, authority := range cips.Authorities {
+	for _, authority := range spec.Authorities {
 		v1beta1Authority := v1beta1.Authority{}
 		err := authority.ConvertTo(ctx, &v1beta1Authority)
 		if err != nil {
@@ -62,12 +62,12 @@ func (cips *ClusterImagePolicySpec) ConvertTo(ctx context.Context, sink *v1beta1
 	return nil
 }
 
-func (auth *Authority) ConvertTo(ctx context.Context, sink *v1beta1.Authority) error {
-	sink.Name = auth.Name
-	if auth.CTLog != nil && auth.CTLog.URL != nil {
-		sink.CTLog = &v1beta1.TLog{URL: auth.CTLog.URL.DeepCopy()}
+func (authority *Authority) ConvertTo(ctx context.Context, sink *v1beta1.Authority) error {
+	sink.Name = authority.Name
+	if authority.CTLog != nil && authority.CTLog.URL != nil {
+		sink.CTLog = &v1beta1.TLog{URL: authority.CTLog.URL.DeepCopy()}
 	}
-	for _, source := range auth.Sources {
+	for _, source := range authority.Sources {
 		v1beta1Source := v1beta1.Source{}
 		v1beta1Source.OCI = source.OCI
 		for _, sps := range source.SignaturePullSecrets {
@@ -75,7 +75,7 @@ func (auth *Authority) ConvertTo(ctx context.Context, sink *v1beta1.Authority) e
 		}
 		sink.Sources = append(sink.Sources, v1beta1Source)
 	}
-	for _, att := range auth.Attestations {
+	for _, att := range authority.Attestations {
 		v1beta1Att := v1beta1.Attestation{}
 		v1beta1Att.Name = att.Name
 		v1beta1Att.PredicateType = att.PredicateType
@@ -94,20 +94,20 @@ func (auth *Authority) ConvertTo(ctx context.Context, sink *v1beta1.Authority) e
 		}
 		sink.Attestations = append(sink.Attestations, v1beta1Att)
 	}
-	if auth.Key != nil {
+	if authority.Key != nil {
 		sink.Key = &v1beta1.KeyRef{}
-		auth.Key.ConvertTo(ctx, sink.Key)
+		authority.Key.ConvertTo(ctx, sink.Key)
 	}
-	if auth.Keyless != nil {
+	if authority.Keyless != nil {
 		sink.Keyless = &v1beta1.KeylessRef{
-			URL: auth.Keyless.URL.DeepCopy(),
+			URL: authority.Keyless.URL.DeepCopy(),
 		}
-		for _, id := range auth.Keyless.Identities {
+		for _, id := range authority.Keyless.Identities {
 			sink.Keyless.Identities = append(sink.Keyless.Identities, v1beta1.Identity{Issuer: id.Issuer, Subject: id.Subject})
 		}
-		if auth.Keyless.CACert != nil {
+		if authority.Keyless.CACert != nil {
 			sink.Keyless.CACert = &v1beta1.KeyRef{}
-			auth.Keyless.CACert.ConvertTo(ctx, sink.Keyless.CACert)
+			authority.Keyless.CACert.ConvertTo(ctx, sink.Keyless.CACert)
 		}
 	}
 	return nil
@@ -119,25 +119,25 @@ func (key *KeyRef) ConvertTo(ctx context.Context, sink *v1beta1.KeyRef) {
 	sink.KMS = key.KMS
 }
 
-func (cips *ClusterImagePolicySpec) ConvertFrom(ctx context.Context, source *v1beta1.ClusterImagePolicySpec) error {
+func (spec *ClusterImagePolicySpec) ConvertFrom(ctx context.Context, source *v1beta1.ClusterImagePolicySpec) error {
 	for _, image := range source.Images {
-		cips.Images = append(cips.Images, ImagePattern{Glob: image.Glob})
+		spec.Images = append(spec.Images, ImagePattern{Glob: image.Glob})
 	}
-	for _, sourceAuth := range source.Authorities {
+	for i := range source.Authorities {
 		authority := Authority{}
-		err := authority.ConvertFrom(ctx, &sourceAuth)
+		err := authority.ConvertFrom(ctx, &source.Authorities[i])
 		if err != nil {
 			return err
 		}
-		cips.Authorities = append(cips.Authorities, authority)
+		spec.Authorities = append(spec.Authorities, authority)
 	}
 	return nil
 }
 
-func (auth *Authority) ConvertFrom(ctx context.Context, source *v1beta1.Authority) error {
-	auth.Name = source.Name
+func (authority *Authority) ConvertFrom(ctx context.Context, source *v1beta1.Authority) error {
+	authority.Name = source.Name
 	if source.CTLog != nil && source.CTLog.URL != nil {
-		auth.CTLog = &TLog{URL: source.CTLog.URL.DeepCopy()}
+		authority.CTLog = &TLog{URL: source.CTLog.URL.DeepCopy()}
 	}
 	for _, s := range source.Sources {
 		src := Source{}
@@ -145,7 +145,7 @@ func (auth *Authority) ConvertFrom(ctx context.Context, source *v1beta1.Authorit
 		for _, sps := range s.SignaturePullSecrets {
 			src.SignaturePullSecrets = append(src.SignaturePullSecrets, v1.LocalObjectReference{Name: sps.Name})
 		}
-		auth.Sources = append(auth.Sources, src)
+		authority.Sources = append(authority.Sources, src)
 	}
 	for _, att := range source.Attestations {
 		attestation := Attestation{}
@@ -164,22 +164,22 @@ func (auth *Authority) ConvertFrom(ctx context.Context, source *v1beta1.Authorit
 				}
 			}
 		}
-		auth.Attestations = append(auth.Attestations, attestation)
+		authority.Attestations = append(authority.Attestations, attestation)
 	}
 	if source.Key != nil {
-		auth.Key = &KeyRef{}
-		auth.Key.ConvertFrom(ctx, source.Key)
+		authority.Key = &KeyRef{}
+		authority.Key.ConvertFrom(ctx, source.Key)
 	}
 	if source.Keyless != nil {
-		auth.Keyless = &KeylessRef{
+		authority.Keyless = &KeylessRef{
 			URL: source.Keyless.URL.DeepCopy(),
 		}
 		for _, id := range source.Keyless.Identities {
-			auth.Keyless.Identities = append(auth.Keyless.Identities, Identity{Issuer: id.Issuer, Subject: id.Subject})
+			authority.Keyless.Identities = append(authority.Keyless.Identities, Identity{Issuer: id.Issuer, Subject: id.Subject})
 		}
 		if source.Keyless.CACert != nil {
-			auth.Keyless.CACert = &KeyRef{}
-			auth.Keyless.CACert.ConvertFrom(ctx, source.Keyless.CACert)
+			authority.Keyless.CACert = &KeyRef{}
+			authority.Keyless.CACert.ConvertFrom(ctx, source.Keyless.CACert)
 		}
 	}
 	return nil

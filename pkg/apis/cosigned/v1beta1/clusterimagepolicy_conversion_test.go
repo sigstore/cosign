@@ -42,11 +42,3 @@ func TestClusterTaskConversionBadType(t *testing.T) {
 		t.Errorf("ConvertFrom() = %#v, wanted error", good)
 	}
 }
-
-func (cips *ClusterImagePolicySpec) ConvertTo(ctx context.Context, obj apis.Convertible) error {
-	return nil
-}
-
-func (cips *ClusterImagePolicySpec) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
-	return nil
-}

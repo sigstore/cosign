@@ -91,6 +91,7 @@ func main() {
 		clusterimagepolicy.NewController,
 		NewPolicyValidatingAdmissionController,
 		NewPolicyMutatingAdmissionController,
+		newConversionController,
 	)
 }
 

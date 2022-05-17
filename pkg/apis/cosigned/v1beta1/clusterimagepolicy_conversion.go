@@ -24,11 +24,11 @@ import (
 var _ apis.Convertible = (*ClusterImagePolicy)(nil)
 
 // ConvertTo implements api.Convertible
-func (ct *ClusterImagePolicy) ConvertTo(ctx context.Context, sink apis.Convertible) error {
+func (c *ClusterImagePolicy) ConvertTo(ctx context.Context, sink apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
 }
 
 // ConvertFrom implements api.Convertible
-func (ct *ClusterImagePolicy) ConvertFrom(ctx context.Context, source apis.Convertible) error {
+func (c *ClusterImagePolicy) ConvertFrom(ctx context.Context, source apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest know version, got: %T", source)
 }
