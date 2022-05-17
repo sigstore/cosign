@@ -28,11 +28,14 @@ import (
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
 	"knative.dev/pkg/webhook/resourcesemantics"
+	"knative.dev/pkg/webhook/resourcesemantics/conversion"
 	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/cosign/pkg/apis/cosigned"
 	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/cosigned/v1beta1"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
 
 	// Register the provider-specific plugins
@@ -60,6 +63,13 @@ var (
 	//    https://github.com/sigstore/helm-charts/blob/main/charts/cosigned/templates/policy-webhook/policy_webhook_configurations.yaml
 	validatingWebhookName = flag.String("validating-webhook-name", "validating.clusterimagepolicy.sigstore.dev", "The name of the validating webhook configuration as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to policy-webhook.")
 )
+
+var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+	// v1alpha1
+	v1alpha1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1alpha1.ClusterImagePolicy{},
+	// v1beta1
+	v1beta1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1beta1.ClusterImagePolicy{},
+}
 
 func main() {
 	opts := webhook.Options{
@@ -89,9 +99,7 @@ func NewPolicyValidatingAdmissionController(ctx context.Context, cmw configmap.W
 		ctx,
 		*validatingWebhookName,
 		"/validating",
-		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-			v1alpha1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1alpha1.ClusterImagePolicy{},
-		},
+		types,
 		func(ctx context.Context) context.Context {
 			return ctx
 		},
@@ -104,12 +112,40 @@ func NewPolicyMutatingAdmissionController(ctx context.Context, cmw configmap.Wat
 		ctx,
 		*mutatingWebhookName,
 		"/defaulting",
-		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-			v1alpha1.SchemeGroupVersion.WithKind("ClusterImagePolicy"): &v1alpha1.ClusterImagePolicy{},
-		},
+		types,
 		func(ctx context.Context) context.Context {
 			return ctx
 		},
 		true,
+	)
+}
+
+func newConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	// nolint: revive
+	var (
+		v1alpha1GroupVersion = v1alpha1.SchemeGroupVersion.Version
+		v1beta1GroupVersion  = v1beta1.SchemeGroupVersion.Version
+	)
+
+	return conversion.NewConversionController(ctx,
+		// The path on which to serve the webhook
+		"/resource-conversion",
+
+		// Specify the types of custom resource definitions that should be converted
+		map[schema.GroupKind]conversion.GroupKindConversion{
+			v1beta1.Kind("ClusterImagePolicy"): {
+				DefinitionName: cosigned.ClusterImagePolicyResource.String(),
+				HubVersion:     v1alpha1GroupVersion,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					v1alpha1GroupVersion: &v1alpha1.ClusterImagePolicy{},
+					v1beta1GroupVersion:  &v1beta1.ClusterImagePolicy{},
+				},
+			},
+		},
+
+		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata
+		func(ctx context.Context) context.Context {
+			return ctx
+		},
 	)
 }

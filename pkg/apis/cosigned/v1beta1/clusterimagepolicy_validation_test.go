@@ -31,23 +31,9 @@ func TestImagePatternValidation(t *testing.T) {
 		policy      ClusterImagePolicy
 	}{
 		{
-			name:        "Should fail when both regex and glob are present",
+			name:        "Should fail when glob is not present",
 			expectErr:   true,
-			errorString: "expected exactly one, got both: spec.images[0].glob, spec.images[0].regex\nmissing field(s): spec.authorities",
-			policy: ClusterImagePolicy{
-				Spec: ClusterImagePolicySpec{
-					Images: []ImagePattern{
-						{
-							Glob: "**",
-						},
-					},
-				},
-			},
-		},
-		{
-			name:        "Should fail when neither regex nor glob are present",
-			expectErr:   true,
-			errorString: "expected exactly one, got neither: spec.images[0].glob, spec.images[0].regex\nmissing field(s): spec.authorities",
+			errorString: "missing field(s): spec.authorities, spec.images[0].glob",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{

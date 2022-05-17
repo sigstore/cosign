@@ -53,10 +53,7 @@ func (image *ImagePattern) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField("glob"))
 	}
 
-	if image.Glob != "" {
-		errs = errs.Also(ValidateGlob(image.Glob).ViaField("glob"))
-	}
-
+	errs = errs.Also(ValidateGlob(image.Glob).ViaField("glob"))
 	return errs
 }
 

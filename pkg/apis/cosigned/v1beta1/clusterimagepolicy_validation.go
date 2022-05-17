@@ -19,14 +19,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/sigstore/cosign/pkg/apis/utils"
 	"knative.dev/pkg/apis"
 )
-
-// If the subject / issuer is prefixed with this, then it's treated as a regex.
-const rePrefix = "re:"
 
 // Validate implements apis.Validatable
 func (c *ClusterImagePolicy) Validate(ctx context.Context) *apis.FieldError {
@@ -53,13 +49,11 @@ func (spec *ClusterImagePolicySpec) Validate(ctx context.Context) (errors *apis.
 
 func (image *ImagePattern) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-	if image.Glob != "" {
+	if image.Glob == "" {
 		errs = errs.Also(apis.ErrMissingField("glob"))
 	}
 
-	if image.Glob != "" {
-		errs = errs.Also(ValidateGlob(image.Glob).ViaField("glob"))
-	}
+	errs = errs.Also(ValidateGlob(image.Glob).ViaField("glob"))
 
 	return errs
 }
@@ -209,13 +203,8 @@ func ValidateGlob(glob string) *apis.FieldError {
 }
 
 func ValidateRegex(regex string) *apis.FieldError {
-	if !strings.HasPrefix(regex, rePrefix) {
-		return nil
-	}
-
 	// It's a regexp, so pull out the regex
-	re := strings.TrimPrefix(regex, rePrefix)
-	_, err := regexp.Compile(re)
+	_, err := regexp.Compile(regex)
 	if err != nil {
 		return apis.ErrInvalidValue(regex, apis.CurrentField, fmt.Sprintf("regex is invalid: %v", err))
 	}
