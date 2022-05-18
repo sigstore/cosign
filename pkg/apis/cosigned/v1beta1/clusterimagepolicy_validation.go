@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package v1beta1
 
 import (
 	"context"
@@ -54,6 +54,7 @@ func (image *ImagePattern) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	errs = errs.Also(ValidateGlob(image.Glob).ViaField("glob"))
+
 	return errs
 }
 
@@ -202,6 +203,7 @@ func ValidateGlob(glob string) *apis.FieldError {
 }
 
 func ValidateRegex(regex string) *apis.FieldError {
+	// It's a regexp, so pull out the regex
 	_, err := regexp.Compile(regex)
 	if err != nil {
 		return apis.ErrInvalidValue(regex, apis.CurrentField, fmt.Sprintf("regex is invalid: %v", err))

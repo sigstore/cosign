@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	v1beta1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1beta1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -53,6 +54,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=cosigned.sigstore.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("clusterimagepolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Cosigned().V1alpha1().ClusterImagePolicies().Informer()}, nil
+
+		// Group=cosigned.sigstore.dev, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("clusterimagepolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Cosigned().V1beta1().ClusterImagePolicies().Informer()}, nil
 
 	}
 

@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosigned
+package v1beta1
 
-import "k8s.io/apimachinery/pkg/runtime/schema"
+import (
+	"context"
+	"fmt"
 
-const (
-	// GroupName is the name of the API group.
-	GroupName = "cosigned.sigstore.dev"
+	"knative.dev/pkg/apis"
 )
 
-var (
-	// ClusterImagePolicyResource represents a ClusterImagePolicy
-	ClusterImagePolicyResource = schema.GroupResource{
-		Group:    GroupName,
-		Resource: "clusterimagepolicies",
-	}
-)
+var _ apis.Convertible = (*ClusterImagePolicy)(nil)
+
+// ConvertTo implements api.Convertible
+func (c *ClusterImagePolicy) ConvertTo(ctx context.Context, sink apis.Convertible) error {
+	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+}
+
+// ConvertFrom implements api.Convertible
+func (c *ClusterImagePolicy) ConvertFrom(ctx context.Context, source apis.Convertible) error {
+	return fmt.Errorf("v1beta1 is the highest know version, got: %T", source)
+}

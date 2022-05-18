@@ -12,19 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosigned
-
-import "k8s.io/apimachinery/pkg/runtime/schema"
-
-const (
-	// GroupName is the name of the API group.
-	GroupName = "cosigned.sigstore.dev"
-)
-
-var (
-	// ClusterImagePolicyResource represents a ClusterImagePolicy
-	ClusterImagePolicyResource = schema.GroupResource{
-		Group:    GroupName,
-		Resource: "clusterimagepolicies",
-	}
-)
+// +k8s:deepcopy-gen=package
+// +groupName=cosigned.sigstore.dev
+package v1beta1

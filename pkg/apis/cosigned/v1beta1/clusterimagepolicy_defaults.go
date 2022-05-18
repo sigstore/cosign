@@ -12,19 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosigned
+package v1beta1
 
-import "k8s.io/apimachinery/pkg/runtime/schema"
-
-const (
-	// GroupName is the name of the API group.
-	GroupName = "cosigned.sigstore.dev"
+import (
+	"context"
+	"fmt"
 )
 
-var (
-	// ClusterImagePolicyResource represents a ClusterImagePolicy
-	ClusterImagePolicyResource = schema.GroupResource{
-		Group:    GroupName,
-		Resource: "clusterimagepolicies",
+// SetDefaults implements apis.Defaultable
+func (c *ClusterImagePolicy) SetDefaults(ctx context.Context) {
+	c.Spec.SetDefaults(ctx)
+}
+
+func (spec *ClusterImagePolicySpec) SetDefaults(ctx context.Context) {
+	for i, authority := range spec.Authorities {
+		if authority.Name == "" {
+			spec.Authorities[i].Name = fmt.Sprintf("authority-%d", i)
+		}
 	}
-)
+}

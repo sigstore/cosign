@@ -20,6 +20,8 @@ import (
 	clientset "github.com/sigstore/cosign/pkg/client/clientset/versioned"
 	cosignedv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1alpha1"
 	fakecosignedv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1alpha1/fake"
+	cosignedv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1beta1"
+	fakecosignedv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -80,4 +82,9 @@ var (
 // CosignedV1alpha1 retrieves the CosignedV1alpha1Client
 func (c *Clientset) CosignedV1alpha1() cosignedv1alpha1.CosignedV1alpha1Interface {
 	return &fakecosignedv1alpha1.FakeCosignedV1alpha1{Fake: &c.Fake}
+}
+
+// CosignedV1beta1 retrieves the CosignedV1beta1Client
+func (c *Clientset) CosignedV1beta1() cosignedv1beta1.CosignedV1beta1Interface {
+	return &fakecosignedv1beta1.FakeCosignedV1beta1{Fake: &c.Fake}
 }

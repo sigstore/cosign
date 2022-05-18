@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	cosignedv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1alpha1"
+	cosignedv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -29,6 +30,7 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	CosignedV1alpha1() cosignedv1alpha1.CosignedV1alpha1Interface
+	CosignedV1beta1() cosignedv1beta1.CosignedV1beta1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -36,11 +38,17 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	cosignedV1alpha1 *cosignedv1alpha1.CosignedV1alpha1Client
+	cosignedV1beta1  *cosignedv1beta1.CosignedV1beta1Client
 }
 
 // CosignedV1alpha1 retrieves the CosignedV1alpha1Client
 func (c *Clientset) CosignedV1alpha1() cosignedv1alpha1.CosignedV1alpha1Interface {
 	return c.cosignedV1alpha1
+}
+
+// CosignedV1beta1 retrieves the CosignedV1beta1Client
+func (c *Clientset) CosignedV1beta1() cosignedv1beta1.CosignedV1beta1Interface {
+	return c.cosignedV1beta1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -91,6 +99,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.cosignedV1beta1, err = cosignedv1beta1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
@@ -113,6 +125,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.cosignedV1alpha1 = cosignedv1alpha1.New(c)
+	cs.cosignedV1beta1 = cosignedv1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
