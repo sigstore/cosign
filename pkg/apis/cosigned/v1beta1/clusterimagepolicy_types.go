@@ -65,8 +65,7 @@ type ClusterImagePolicySpec struct {
 // If multiple patterns match a particular image, then ALL of
 // those authorities must be satisfied for the image to be admitted.
 type ImagePattern struct {
-	// +optional
-	Glob string `json:"glob,omitempty"`
+	Glob string `json:"glob"`
 }
 
 // The authorities block defines the rules for discovering and
