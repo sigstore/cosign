@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: policycontroller.sigstore.dev/v1alpha1
+apiVersion: policy.sigstore.dev/v1alpha1
 kind: ClusterImagePolicy
 metadata:
   name: image-policy-keyless-with-attestations

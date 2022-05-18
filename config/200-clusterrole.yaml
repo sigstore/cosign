@@ -28,7 +28,7 @@ rules:
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
     verbs: ["get", "update"]
-    resourceNames: ["policycontroller.sigstore.dev", "validating.clusterimagepolicy.sigstore.dev", "defaulting.clusterimagepolicy.sigstore.dev"]
+    resourceNames: ["policy.sigstore.dev", "validating.clusterimagepolicy.sigstore.dev", "defaulting.clusterimagepolicy.sigstore.dev"]
 
   - apiGroups: [""]
     resources: ["namespaces"]
@@ -45,10 +45,10 @@ rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["get", "update"]
-    resourceNames: ["clusterimagepolicies.policycontroller.sigstore.dev"]
+    resourceNames: ["clusterimagepolicies.policy.sigstore.dev"]
 
   # Allow reconciliation of the ClusterImagePolic CRDs.
-  - apiGroups: ["policycontroller.sigstore.dev"]
+  - apiGroups: ["policy.sigstore.dev"]
     resources: ["clusterimagepolicies"]
     verbs: ["get", "list", "update", "watch", "patch"]
 

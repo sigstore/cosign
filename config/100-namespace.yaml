@@ -17,4 +17,4 @@ kind: Namespace
 metadata:
   name: cosign-system
   labels:
-    policycontroller.sigstore.dev/include: "false"
+    policy.sigstore.dev/include: "false"

@@ -19,8 +19,8 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/sigstore/cosign/pkg/apis/policycontroller/v1alpha1"
-	v1beta1 "github.com/sigstore/cosign/pkg/apis/policycontroller/v1beta1"
+	v1alpha1 "github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
+	v1beta1 "github.com/sigstore/cosign/pkg/apis/policy/v1beta1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -51,13 +51,13 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=policycontroller.sigstore.dev, Version=v1alpha1
+	// Group=policy.sigstore.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("clusterimagepolicies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Policycontroller().V1alpha1().ClusterImagePolicies().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Policy().V1alpha1().ClusterImagePolicies().Informer()}, nil
 
-		// Group=policycontroller.sigstore.dev, Version=v1beta1
+		// Group=policy.sigstore.dev, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("clusterimagepolicies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Policycontroller().V1beta1().ClusterImagePolicies().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Policy().V1beta1().ClusterImagePolicies().Informer()}, nil
 
 	}
 

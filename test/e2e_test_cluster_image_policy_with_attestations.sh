@@ -97,7 +97,7 @@ echo '::endgroup::'
 
 echo '::group:: Create and label new namespace for verification'
 kubectl create namespace demo-attestations
-kubectl label namespace demo-attestations policycontroller.sigstore.dev/include=true
+kubectl label namespace demo-attestations policy.sigstore.dev/include=true
 export NS=demo-attestations
 echo '::endgroup::'
 

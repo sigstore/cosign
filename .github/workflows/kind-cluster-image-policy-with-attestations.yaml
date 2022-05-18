@@ -80,7 +80,7 @@ jobs:
         GIT_VERSION: ci
         LDFLAGS: ""
         COSIGNED_YAML: policy-controller-e2e.yaml
-        KO_PREFIX: registry.local:5000/cospolicy-controllerigned
+        KO_PREFIX: registry.local:5000/policy-controller
         COSIGNED_ARCHS: linux/amd64
       run: |
         make ko-policy-controller

@@ -18,10 +18,10 @@ package fake
 
 import (
 	clientset "github.com/sigstore/cosign/pkg/client/clientset/versioned"
-	policycontrollerv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policycontroller/v1alpha1"
-	fakepolicycontrollerv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policycontroller/v1alpha1/fake"
-	policycontrollerv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policycontroller/v1beta1"
-	fakepolicycontrollerv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policycontroller/v1beta1/fake"
+	policyv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1alpha1"
+	fakepolicyv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1alpha1/fake"
+	policyv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1beta1"
+	fakepolicyv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,12 +79,12 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// PolicycontrollerV1alpha1 retrieves the PolicycontrollerV1alpha1Client
-func (c *Clientset) PolicycontrollerV1alpha1() policycontrollerv1alpha1.PolicycontrollerV1alpha1Interface {
-	return &fakepolicycontrollerv1alpha1.FakePolicycontrollerV1alpha1{Fake: &c.Fake}
+// PolicyV1alpha1 retrieves the PolicyV1alpha1Client
+func (c *Clientset) PolicyV1alpha1() policyv1alpha1.PolicyV1alpha1Interface {
+	return &fakepolicyv1alpha1.FakePolicyV1alpha1{Fake: &c.Fake}
 }
 
-// PolicycontrollerV1beta1 retrieves the PolicycontrollerV1beta1Client
-func (c *Clientset) PolicycontrollerV1beta1() policycontrollerv1beta1.PolicycontrollerV1beta1Interface {
-	return &fakepolicycontrollerv1beta1.FakePolicycontrollerV1beta1{Fake: &c.Fake}
+// PolicyV1beta1 retrieves the PolicyV1beta1Client
+func (c *Clientset) PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface {
+	return &fakepolicyv1beta1.FakePolicyV1beta1{Fake: &c.Fake}
 }

@@ -23,7 +23,7 @@ import (
 
 	versioned "github.com/sigstore/cosign/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/sigstore/cosign/pkg/client/informers/externalversions/internalinterfaces"
-	policycontroller "github.com/sigstore/cosign/pkg/client/informers/externalversions/policycontroller"
+	policy "github.com/sigstore/cosign/pkg/client/informers/externalversions/policy"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -170,9 +170,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Policycontroller() policycontroller.Interface
+	Policy() policy.Interface
 }
 
-func (f *sharedInformerFactory) Policycontroller() policycontroller.Interface {
-	return policycontroller.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Policy() policy.Interface {
+	return policy.New(f, f.namespace, f.tweakListOptions)
 }

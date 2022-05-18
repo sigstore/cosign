@@ -33,9 +33,9 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/cosign/pkg/apis/policycontroller"
-	"github.com/sigstore/cosign/pkg/apis/policycontroller/v1alpha1"
-	"github.com/sigstore/cosign/pkg/apis/policycontroller/v1beta1"
+	"github.com/sigstore/cosign/pkg/apis/policy"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1beta1"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
 
 	// Register the provider-specific plugins
@@ -135,7 +135,7 @@ func newConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			v1beta1.Kind("ClusterImagePolicy"): {
-				DefinitionName: policycontroller.ClusterImagePolicyResource.String(),
+				DefinitionName: policy.ClusterImagePolicyResource.String(),
 				HubVersion:     v1alpha1GroupVersion,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					v1alpha1GroupVersion: &v1alpha1.ClusterImagePolicy{},

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Cosigned KinD E2E
+name: Policy Controller KinD E2E
 
 on:
   pull_request:
@@ -121,7 +121,7 @@ jobs:
       run: |
         ./test/e2e_test_policy_crd.sh
 
-    - name: Run Cosigned Tests
+    - name: Run Policy Controller Tests
       run: |
         ./test/e2e_test_policy_controller.sh
 

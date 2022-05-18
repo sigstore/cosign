@@ -92,7 +92,7 @@ echo '::endgroup::'
 
 
 echo '::group:: enable verification'
-kubectl label namespace default --overwrite policycontroller.sigstore.dev/include=true
+kubectl label namespace default --overwrite policy.sigstore.dev/include=true
 echo '::endgroup::'
 
 
@@ -121,7 +121,7 @@ kubectl delete secret -n cosign-system  verification-key
 kubectl create secret generic -n cosign-system verification-key --from-file=cosign.pub=manykeys.pem --from-literal=cosign.password=${COSIGN_PASSWORD} --from-file=cosign.key
 
 echo '::group:: disable verification'
-kubectl label namespace default --overwrite policycontroller.sigstore.dev/include=false
+kubectl label namespace default --overwrite policy.sigstore.dev/include=false
 echo '::endgroup::'
 
 
@@ -157,7 +157,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: enable verification'
-kubectl label namespace default --overwrite policycontroller.sigstore.dev/include=true
+kubectl label namespace default --overwrite policy.sigstore.dev/include=true
 echo '::endgroup::'
 
 

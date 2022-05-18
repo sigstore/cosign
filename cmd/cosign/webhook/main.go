@@ -52,7 +52,7 @@ var secretName = flag.String("secret-name", "", "The name of the secret in the w
 //    ./config/500-webhook-configuration.yaml
 //    https://github.com/sigstore/helm-charts/blob/main/charts/policy-controller/templates/webhook/webhook_mutating.yaml
 //    https://github.com/sigstore/helm-charts/blob/main/charts/policy-controller/templates/webhook/webhook_validating.yaml
-var webhookName = flag.String("webhook-name", "policycontroller.sigstore.dev", "The name of the validating and mutating webhook configurations as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to policy-controller.")
+var webhookName = flag.String("webhook-name", "policy.sigstore.dev", "The name of the validating and mutating webhook configurations as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to policy-controller.")
 
 func main() {
 	opts := webhook.Options{

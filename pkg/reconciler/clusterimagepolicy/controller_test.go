@@ -21,7 +21,7 @@ import (
 	rtesting "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "github.com/sigstore/cosign/pkg/client/injection/informers/policycontroller/v1alpha1/clusterimagepolicy/fake"
+	_ "github.com/sigstore/cosign/pkg/client/injection/informers/policy/v1alpha1/clusterimagepolicy/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 	_ "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/configmap/fake"
 	_ "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret/fake"

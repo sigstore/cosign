@@ -126,7 +126,7 @@ echo '::endgroup::'
 
 echo '::group:: Create test namespace and label for verification'
 kubectl create namespace demo-keyless-signing
-kubectl label namespace demo-keyless-signing policycontroller.sigstore.dev/include=true
+kubectl label namespace demo-keyless-signing policy.sigstore.dev/include=true
 export NS=demo-keyless-signing
 echo '::endgroup::'
 
@@ -196,7 +196,7 @@ echo '::endgroup::'
 
 echo '::group:: Create and label new namespace for verification'
 kubectl create namespace demo-key-signing
-kubectl label namespace demo-key-signing policycontroller.sigstore.dev/include=true
+kubectl label namespace demo-key-signing policy.sigstore.dev/include=true
 
 echo '::group:: Verify blocks unsigned with the key'
 if kubectl create -n demo-key-signing job demo --image=${demoimage}; then
@@ -264,7 +264,7 @@ echo '::endgroup::'
 
 echo '::group:: Create test namespace and label for remote key verification'
 kubectl create namespace demo-key-remote
-kubectl label namespace demo-key-remote policycontroller.sigstore.dev/include=true
+kubectl label namespace demo-key-remote policy.sigstore.dev/include=true
 echo '::endgroup::'
 
 echo '::group:: Verify with three CIP, one without correct Source set'
