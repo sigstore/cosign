@@ -28,7 +28,7 @@
 bin*
 dist/
 cosignImagerefs
-cosignedImagerefs
+policyControllerImagerefs
 sgetImagerefs
 policyImagerefs
 

@@ -40,7 +40,7 @@ jobs:
       REGISTRY_PORT: 5000
       INSECURE_REGISTRY_NAME: insecure-registry.notlocal
       INSECURE_REGISTRY_PORT: 5001
-      KO_DOCKER_REPO: registry.local:5000/cosigned
+      KO_DOCKER_REPO: registry.local:5000/policy-controller
 
     steps:
     - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
@@ -97,17 +97,17 @@ jobs:
         # local registry, even when pushing $INSECURE_REGISTRY_NAME:$INSECURE_REGISTRY_NAME/some/image
         sudo echo "127.0.0.1 $INSECURE_REGISTRY_NAME" | sudo tee -a /etc/hosts
 
-    - name: Install cosigned
+    - name: Install policy-controller
       env:
         GIT_HASH: ${{ github.sha }}
         GIT_VERSION: ci
         LDFLAGS: ""
-        COSIGNED_YAML: cosigned-e2e.yaml
-        KO_PREFIX: registry.local:5000/cosigned
+        COSIGNED_YAML: policy-controller-e2e.yaml
+        KO_PREFIX: registry.local:5000/policy-controller
         COSIGNED_ARCHS: linux/amd64
       run: |
-        make ko-cosigned
-        kubectl apply -f cosigned-e2e.yaml
+        make ko-policy-controller
+        kubectl apply -f policy-controller-e2e.yaml
 
         # Wait for the webhook to come up and become Ready
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
@@ -123,7 +123,7 @@ jobs:
 
     - name: Run Cosigned Tests
       run: |
-        ./test/e2e_test_cosigned.sh
+        ./test/e2e_test_policy_controller.sh
 
     - name: Collect diagnostics
       if: ${{ failure() }}

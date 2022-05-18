@@ -32,7 +32,7 @@ builds:
   - -extldflags "-static"
   - "{{ .Env.LDFLAGS }}"
 
-- id: cosigned
+- id: policy-controller
   dir: .
   main: ./cmd/cosign/webhook
   env:
