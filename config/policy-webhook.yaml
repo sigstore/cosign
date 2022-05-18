@@ -60,7 +60,7 @@ spec:
         - name: CONFIG_LOGGING_NAME
           value: config-logging
         - name: METRICS_DOMAIN
-          value: sigstore.dev/cosigned
+          value: sigstore.dev/policycontroller
         - name: WEBHOOK_NAME
           value: policy-webhook
 
