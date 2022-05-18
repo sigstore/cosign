@@ -28,7 +28,7 @@ const (
 		"predicateType": "cosign.sigstore.dev/attestation/v1",
 		"subject": [
 		  {
-			"name": "registry.local:5000/cosigned/demo",
+			"name": "registry.local:5000/policy-controller/demo",
 			"digest": {
 			  "sha256": "416cc82c76114b1744ea58bcbf2f411a0f2de4b0456703bf1bb83d33656951bc"
 			}
@@ -46,7 +46,7 @@ const (
 		"predicateType": "cosign.sigstore.dev/attestation/vuln/v1",
 		"subject": [
 		  {
-			"name": "registry.local:5000/cosigned/demo",
+			"name": "registry.local:5000/policy-controller/demo",
 			"digest": {
 			  "sha256": "416cc82c76114b1744ea58bcbf2f411a0f2de4b0456703bf1bb83d33656951bc"
 			}

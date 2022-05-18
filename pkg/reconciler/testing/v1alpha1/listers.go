@@ -15,9 +15,9 @@
 package testing
 
 import (
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policycontroller/v1alpha1"
 	fakecosignclientset "github.com/sigstore/cosign/pkg/client/clientset/versioned/fake"
-	cosignlisters "github.com/sigstore/cosign/pkg/client/listers/cosigned/v1alpha1"
+	cosignlisters "github.com/sigstore/cosign/pkg/client/listers/policycontroller/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"

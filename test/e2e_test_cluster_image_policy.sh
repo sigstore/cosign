@@ -113,7 +113,7 @@ popd
 echo '::endgroup::'
 
 echo '::group:: Deploy ClusterImagePolicy with keyless signing'
-kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless.yaml
+kubectl apply -f ./test/testdata/policy-controller/e2e/cip-keyless.yaml
 echo '::endgroup::'
 
 echo '::group:: Sign demo image'
@@ -126,7 +126,7 @@ echo '::endgroup::'
 
 echo '::group:: Create test namespace and label for verification'
 kubectl create namespace demo-keyless-signing
-kubectl label namespace demo-keyless-signing cosigned.sigstore.dev/include=true
+kubectl label namespace demo-keyless-signing policycontroller.sigstore.dev/include=true
 export NS=demo-keyless-signing
 echo '::endgroup::'
 
@@ -151,7 +151,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: Add cip with identities that match issuer/subject'
-kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-identities.yaml
+kubectl apply -f ./test/testdata/policy-controller/e2e/cip-keyless-with-identities.yaml
 # make sure the reconciler has enough time to update the configmap
 sleep 5
 echo '::endgroup::'
@@ -167,7 +167,7 @@ fi
 echo '::endgroup::'
 
 echo '::group:: Add cip with identities that do not match issuer/subject'
-kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-identities-mismatch.yaml
+kubectl apply -f ./test/testdata/policy-controller/e2e/cip-keyless-with-identities-mismatch.yaml
 # make sure the reconciler has enough time to update the configmap
 sleep 5
 echo '::endgroup::'
@@ -190,13 +190,13 @@ echo '::endgroup::'
 
 echo '::group:: Deploy ClusterImagePolicy With Key Signing'
 yq '. | .spec.authorities[0].key.data |= load_str("cosign-colocated-signing.pub")' \
-  ./test/testdata/cosigned/e2e/cip-key.yaml | \
+  ./test/testdata/policy-controller/e2e/cip-key.yaml | \
   kubectl apply -f -
 echo '::endgroup::'
 
 echo '::group:: Create and label new namespace for verification'
 kubectl create namespace demo-key-signing
-kubectl label namespace demo-key-signing cosigned.sigstore.dev/include=true
+kubectl label namespace demo-key-signing policycontroller.sigstore.dev/include=true
 
 echo '::group:: Verify blocks unsigned with the key'
 if kubectl create -n demo-key-signing job demo --image=${demoimage}; then
@@ -242,7 +242,7 @@ echo '::endgroup::'
 echo '::group:: Deploy ClusterImagePolicy With Remote Public Key But Missing Source'
 yq '. | .metadata.name = "image-policy-remote-source"
     | .spec.authorities[0].key.data |= load_str("cosign-remote-signing.pub")' \
-  ./test/testdata/cosigned/e2e/cip-key.yaml | \
+  ./test/testdata/policy-controller/e2e/cip-key.yaml | \
   kubectl apply -f -
 echo '::endgroup::'
 
@@ -264,7 +264,7 @@ echo '::endgroup::'
 
 echo '::group:: Create test namespace and label for remote key verification'
 kubectl create namespace demo-key-remote
-kubectl label namespace demo-key-remote cosigned.sigstore.dev/include=true
+kubectl label namespace demo-key-remote policycontroller.sigstore.dev/include=true
 echo '::endgroup::'
 
 echo '::group:: Verify with three CIP, one without correct Source set'
@@ -278,7 +278,7 @@ echo '::group:: Deploy ClusterImagePolicy With Remote Public Key With Source'
 yq '. | .metadata.name = "image-policy-remote-source"
     | .spec.authorities[0].key.data |= load_str("cosign-remote-signing.pub")
     | .spec.authorities[0] += {"source": [{"oci": env(KO_DOCKER_REPO)+"/remote-signature"}]}' \
-  ./test/testdata/cosigned/e2e/cip-key.yaml | \
+  ./test/testdata/policy-controller/e2e/cip-key.yaml | \
   kubectl apply -f -
 echo '::endgroup::'
 

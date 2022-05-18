@@ -97,12 +97,12 @@ echo '::endgroup::'
 
 echo '::group:: Create and label new namespace for verification'
 kubectl create namespace demo-attestations
-kubectl label namespace demo-attestations cosigned.sigstore.dev/include=true
+kubectl label namespace demo-attestations policycontroller.sigstore.dev/include=true
 export NS=demo-attestations
 echo '::endgroup::'
 
 echo '::group:: Create CIP that requires keyless signature and custom attestation with policy'
-kubectl apply -f ./test/testdata/cosigned/e2e/cip-keyless-with-attestations.yaml
+kubectl apply -f ./test/testdata/policy-controller/e2e/cip-keyless-with-attestations.yaml
 # allow things to propagate
 sleep 5
 echo '::endgroup::'
@@ -151,7 +151,7 @@ echo '::endgroup::'
 # Ok, so now we have satisfied the keyless requirements, one signature, one
 # custom attestation. Let's now do it for 'keyful' one.
 echo '::group:: Create CIP that requires a keyful signature and an attestation'
-yq '. | .spec.authorities[0].key.data |= load_str("cosign.pub") | .spec.authorities[1].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-key-with-attestations.yaml | kubectl apply -f -
+yq '. | .spec.authorities[0].key.data |= load_str("cosign.pub") | .spec.authorities[1].key.data |= load_str("cosign.pub")' ./test/testdata/policy-controller/e2e/cip-key-with-attestations.yaml | kubectl apply -f -
 # allow things to propagate
 sleep 5
 echo '::endgroup::'
@@ -206,7 +206,7 @@ echo '::endgroup::'
 # one custom attestation that's signed by key.
 # Note we have to bake in the inline data from the keys above
 echo '::group:: Add cip for two signatures and two attestations'
-yq '. | .spec.authorities[1].key.data |= load_str("cosign.pub") | .spec.authorities[3].key.data |= load_str("cosign.pub")' ./test/testdata/cosigned/e2e/cip-requires-two-signatures-and-two-attestations.yaml | kubectl apply -f -
+yq '. | .spec.authorities[1].key.data |= load_str("cosign.pub") | .spec.authorities[3].key.data |= load_str("cosign.pub")' ./test/testdata/policy-controller/e2e/cip-requires-two-signatures-and-two-attestations.yaml | kubectl apply -f -
 # allow things to propagate
 sleep 5
 echo '::endgroup::'

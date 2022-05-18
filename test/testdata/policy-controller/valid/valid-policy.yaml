@@ -1,0 +1,92 @@
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: policycontroller.sigstore.dev/v1alpha1
+kind: ClusterImagePolicy
+metadata:
+  name: image-policy
+spec:
+  images:
+  - glob: images.*
+  - glob: image*
+  authorities:
+  - keyless:
+      ca-cert:
+        secretRef:
+          name: ca-cert-secret
+          namespace: some-namespacemak
+  - name: "keyless signatures"
+    keyless:
+      identities:
+      - issuer: "issue-details"
+        subject: "subject-details"
+  - name: "keyless attestations"
+    keyless:
+      identities:
+      - issuer: "issue-details"
+        subject: "subject-details"
+    attestations:
+    - name: custom-predicate-type-validation
+      predicateType: custom
+      policy:
+        type: cue
+        data: |
+          import "time"
+          before: time.Parse(time.RFC3339, "2049-10-09T17:10:27Z")
+          predicateType: "cosign.sigstore.dev/attestation/v1"
+          predicate: {
+            Timestamp: <before
+          }
+    - name: vuln-predicate-type-validation
+      predicateType: vuln
+      policy:
+        type: cue
+        data: |
+          import "time"
+          before: time.Parse(time.RFC3339, "2022-04-15T17:10:27Z")
+          after: time.Parse(time.RFC3339, "2022-03-09T17:10:27Z")
+          predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+          predicate: {
+            invocation: {
+              uri: "invocation.example.com/cosign-testing"
+            }
+            scanner: {
+              uri: "fakescanner.example.com/cosign-testing"
+            }
+            metadata: {
+              scanStartedOn: <before
+              scanStartedOn: >after
+              scanFinishedOn: <before
+              scanFinishedOn: >after
+            }
+          }
+  - keyless:
+      identities:
+      - issuer: "issue-details1"
+        subject: ".*subject.*"
+  - keyless:
+      identities:
+      - issuer: "issue.*"
+  - key:
+      data: |
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s
+        TBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==
+        -----END PUBLIC KEY-----
+  - key:
+      kms: "kms://key/path"
+  - key:
+      secretRef:
+        name: secret-name
+        namespace: secret-namespce

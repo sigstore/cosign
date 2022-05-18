@@ -18,11 +18,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policycontroller/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const finalizerName = "clusterimagepolicies.cosigned.sigstore.dev"
+const finalizerName = "clusterimagepolicies.policycontroller.sigstore.dev"
 
 // ClusterImagePolicyOption enables further configuration of a ClusterImagePolicy.
 type ClusterImagePolicyOption func(*v1alpha1.ClusterImagePolicy)
