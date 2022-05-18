@@ -425,7 +425,7 @@ func embeddedLocalStore() (client.LocalStore, error) {
 func (t *TUF) updateMetadataAndDownloadTargets() error {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
 	targetFiles, err := t.client.Update()
-	if err != nil && !client.IsLatestSnapshot(err) {
+	if err != nil {
 		// Get some extra information for debugging. What was the state of the metadata
 		// on the remote?
 		status := struct {
