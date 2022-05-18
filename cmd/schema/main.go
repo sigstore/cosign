@@ -20,7 +20,7 @@ import (
 	"knative.dev/hack/schema/commands"
 	"knative.dev/hack/schema/registry"
 
-	v1alpha1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	v1alpha1 "github.com/sigstore/cosign/pkg/apis/policycontroller/v1alpha1"
 )
 
 // schema is a tool to dump the schema for Eventing resources.
