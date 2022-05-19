@@ -352,7 +352,7 @@ func forceExpiration(t *testing.T, expire bool) {
 	})
 }
 
-func forceExpirationVersion(t *testing.T, version int) {
+func forceExpirationVersion(t *testing.T, version int64) {
 	oldIsExpiredTimestamp := isExpiredTimestamp
 	isExpiredTimestamp = func(metadata []byte) bool {
 		s := &data.Signed{}
