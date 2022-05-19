@@ -48,7 +48,7 @@ rules:
     resourceNames: ["clusterimagepolicies.cosigned.sigstore.dev"]
 
   # Allow reconciliation of the ClusterImagePolic CRDs.
-  - apiGroups: ["cosigned.sigstore.dev", "validating.clusterimagepolicy.sigstore.dev", "defaulting.clusterimagepolicy.sigstore.dev"]
+  - apiGroups: ["cosigned.sigstore.dev"]
     resources: ["clusterimagepolicies"]
     verbs: ["get", "list", "update", "watch", "patch"]
 
