@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"golang.org/x/term"
 
@@ -41,6 +42,13 @@ const (
 	FlowNormal = "normal"
 	FlowDevice = "device"
 	FlowToken  = "token"
+	// spacing is intentional to have this indented
+	PrivacyStatement = `
+        Note that there may be personally identifiable information associated with this signed artifact.
+        This may include the email address associated with the account with which you authenticate.
+        This information will be used for signing this artifact and will be stored in public transparency logs and cannot be removed later.
+        By continuing, you attest that you grant (or have permission to grant) and agree to have this information stored permanently in transparency logs.
+`
 )
 
 type oidcConnector interface {
@@ -92,6 +100,9 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 		c.flow = oauthflow.NewDeviceFlowTokenGetter(
 			oidcIssuer, oauthflow.SigstoreDeviceURL, oauthflow.SigstoreTokenURL)
 	case FlowNormal:
+		//nolint:govet // Extra newline intentional
+		fmt.Fprintln(os.Stderr, PrivacyStatement)
+		time.Sleep(4 * time.Second)
 		c.flow = oauthflow.DefaultIDTokenGetter
 	case FlowToken:
 		c.flow = &oauthflow.StaticTokenGetter{RawToken: idToken}
