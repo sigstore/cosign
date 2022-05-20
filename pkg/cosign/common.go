@@ -26,6 +26,14 @@ import (
 	"golang.org/x/term"
 )
 
+// skipConfirmation is a global variable to store whether or not the user has provided
+// the --yes flag to skip all confirmation prompts
+var skipConfirmation bool
+
+func SetSkipConfirmation(skip bool) {
+	skipConfirmation = skip
+}
+
 // TODO need to centralize this logic
 func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
@@ -35,14 +43,32 @@ func FileExists(filename string) bool {
 	return !info.IsDir()
 }
 
+// ConfirmPrompt prompts the user for confirmation for an action. Supports skipping
+// the confirmation prompt when the global skipConfirmation is set.
 func ConfirmPrompt(msg string) (bool, error) {
-	fmt.Fprintf(os.Stderr, "%s\n\nAre you sure you want to continue? [Y/n]: ", msg)
+	if skipConfirmation {
+		return skipConfirmation, nil
+	}
+
+	fmt.Fprintf(os.Stderr, "%s\n\nAre you sure you want to continue? (y/[N]): ", msg)
 	reader := bufio.NewReader(os.Stdin)
 	r, err := reader.ReadString('\n')
 	if err != nil {
 		return false, err
 	}
-	return strings.Trim(r, "\n") == "Y", nil
+	return strings.Trim(r, "\n") == "Y" || strings.Trim(r, "\n") == "y", nil
+}
+
+// ConfirmPromptDestructive prompts the user for confirmation for an action. Ignores
+// skipConfirmation.
+func ConfirmPromptDestructive(msg string) (bool, error) {
+	fmt.Fprintf(os.Stderr, "%s\n\nAre you sure you want to continue? (y/[N]): ", msg)
+	reader := bufio.NewReader(os.Stdin)
+	r, err := reader.ReadString('\n')
+	if err != nil {
+		return false, err
+	}
+	return strings.Trim(r, "\n") == "Y" || strings.Trim(r, "\n") == "y", nil
 }
 
 func GetPassFromTerm(confirm bool) ([]byte, error) {

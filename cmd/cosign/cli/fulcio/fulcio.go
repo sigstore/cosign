@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -41,6 +42,12 @@ const (
 	FlowNormal = "normal"
 	FlowDevice = "device"
 	FlowToken  = "token"
+	// spacing is intentional to have this indented
+	PrivacyStatement = `
+        Note that there may be personally identifiable information associated with this signed artifact.
+        This may include the email address associated with the account with which you authenticate.
+        This information will be used for signing this artifact and will be stored in public transparency logs and cannot be removed later.`
+	PrivacyStatementConfirmation = "        By typing 'y', you attest that you grant (or have permission to grant) and agree to have this information stored permanently in transparency logs."
 )
 
 type oidcConnector interface {
@@ -135,6 +142,8 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	}
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
+	fmt.Fprintln(os.Stderr, PrivacyStatement)
+
 	var flow string
 	switch {
 	case ko.FulcioAuthFlow != "":
@@ -146,6 +155,13 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
 		flow = FlowDevice
 	default:
+		ok, err := cosign.ConfirmPrompt(PrivacyStatementConfirmation)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("no confirmation")
+		}
 		flow = FlowNormal
 	}
 	Resp, err := GetCert(ctx, priv, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
