@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Test cosigned with ClusterImagePolicy with attestations
+name: Test policy-controller with ClusterImagePolicy with attestations
 
 on:
   pull_request:
@@ -40,7 +40,7 @@ jobs:
 
     env:
       KNATIVE_VERSION: "1.1.0"
-      KO_DOCKER_REPO: "registry.local:5000/cosigned"
+      KO_DOCKER_REPO: "registry.local:5000/policy-controller"
       SCAFFOLDING_RELEASE_VERSION: "v0.2.8"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
@@ -74,17 +74,17 @@ jobs:
     - name: Install cluster + cosign
       uses: sigstore/scaffolding/actions/setup@main
 
-    - name: Install cosigned
+    - name: Install policy-controller
       env:
         GIT_HASH: ${{ github.sha }}
         GIT_VERSION: ci
         LDFLAGS: ""
-        COSIGNED_YAML: cosigned-e2e.yaml
-        KO_PREFIX: registry.local:5000/cosigned
+        COSIGNED_YAML: policy-controller-e2e.yaml
+        KO_PREFIX: registry.local:5000/policy-controller
         COSIGNED_ARCHS: linux/amd64
       run: |
-        make ko-cosigned
-        kubectl apply -f cosigned-e2e.yaml
+        make ko-policy-controller
+        kubectl apply -f policy-controller-e2e.yaml
 
         # Wait for the webhook to come up and become Ready
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook

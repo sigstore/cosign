@@ -22,11 +22,11 @@ import (
 	errors "errors"
 	fmt "fmt"
 
-	v1alpha1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
-	v1beta1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1beta1"
+	v1alpha1 "github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
+	v1beta1 "github.com/sigstore/cosign/pkg/apis/policy/v1beta1"
 	versioned "github.com/sigstore/cosign/pkg/client/clientset/versioned"
-	typedcosignedv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1alpha1"
-	typedcosignedv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1beta1"
+	typedpolicyv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1alpha1"
+	typedpolicyv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -96,40 +96,40 @@ func convert(from interface{}, to runtime.Object) error {
 	return nil
 }
 
-// CosignedV1alpha1 retrieves the CosignedV1alpha1Client
-func (w *wrapClient) CosignedV1alpha1() typedcosignedv1alpha1.CosignedV1alpha1Interface {
-	return &wrapCosignedV1alpha1{
+// PolicyV1alpha1 retrieves the PolicyV1alpha1Client
+func (w *wrapClient) PolicyV1alpha1() typedpolicyv1alpha1.PolicyV1alpha1Interface {
+	return &wrapPolicyV1alpha1{
 		dyn: w.dyn,
 	}
 }
 
-type wrapCosignedV1alpha1 struct {
+type wrapPolicyV1alpha1 struct {
 	dyn dynamic.Interface
 }
 
-func (w *wrapCosignedV1alpha1) RESTClient() rest.Interface {
+func (w *wrapPolicyV1alpha1) RESTClient() rest.Interface {
 	panic("RESTClient called on dynamic client!")
 }
 
-func (w *wrapCosignedV1alpha1) ClusterImagePolicies() typedcosignedv1alpha1.ClusterImagePolicyInterface {
-	return &wrapCosignedV1alpha1ClusterImagePolicyImpl{
+func (w *wrapPolicyV1alpha1) ClusterImagePolicies() typedpolicyv1alpha1.ClusterImagePolicyInterface {
+	return &wrapPolicyV1alpha1ClusterImagePolicyImpl{
 		dyn: w.dyn.Resource(schema.GroupVersionResource{
-			Group:    "cosigned.sigstore.dev",
+			Group:    "policy.sigstore.dev",
 			Version:  "v1alpha1",
 			Resource: "clusterimagepolicies",
 		}),
 	}
 }
 
-type wrapCosignedV1alpha1ClusterImagePolicyImpl struct {
+type wrapPolicyV1alpha1ClusterImagePolicyImpl struct {
 	dyn dynamic.NamespaceableResourceInterface
 }
 
-var _ typedcosignedv1alpha1.ClusterImagePolicyInterface = (*wrapCosignedV1alpha1ClusterImagePolicyImpl)(nil)
+var _ typedpolicyv1alpha1.ClusterImagePolicyInterface = (*wrapPolicyV1alpha1ClusterImagePolicyImpl)(nil)
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Create(ctx context.Context, in *v1alpha1.ClusterImagePolicy, opts v1.CreateOptions) (*v1alpha1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) Create(ctx context.Context, in *v1alpha1.ClusterImagePolicy, opts v1.CreateOptions) (*v1alpha1.ClusterImagePolicy, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "cosigned.sigstore.dev",
+		Group:   "policy.sigstore.dev",
 		Version: "v1alpha1",
 		Kind:    "ClusterImagePolicy",
 	})
@@ -148,15 +148,15 @@ func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Create(ctx context.Context,
 	return out, nil
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return w.dyn.Delete(ctx, name, opts)
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	return w.dyn.DeleteCollection(ctx, opts, listOpts)
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ClusterImagePolicy, error) {
 	uo, err := w.dyn.Get(ctx, name, opts)
 	if err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Get(ctx context.Context, na
 	return out, nil
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ClusterImagePolicyList, error) {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ClusterImagePolicyList, error) {
 	uo, err := w.dyn.List(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) List(ctx context.Context, o
 	return out, nil
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterImagePolicy, err error) {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterImagePolicy, err error) {
 	uo, err := w.dyn.Patch(ctx, name, pt, data, opts)
 	if err != nil {
 		return nil, err
@@ -192,9 +192,9 @@ func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Patch(ctx context.Context, 
 	return out, nil
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Update(ctx context.Context, in *v1alpha1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1alpha1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) Update(ctx context.Context, in *v1alpha1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1alpha1.ClusterImagePolicy, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "cosigned.sigstore.dev",
+		Group:   "policy.sigstore.dev",
 		Version: "v1alpha1",
 		Kind:    "ClusterImagePolicy",
 	})
@@ -213,9 +213,9 @@ func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Update(ctx context.Context,
 	return out, nil
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) UpdateStatus(ctx context.Context, in *v1alpha1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1alpha1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) UpdateStatus(ctx context.Context, in *v1alpha1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1alpha1.ClusterImagePolicy, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "cosigned.sigstore.dev",
+		Group:   "policy.sigstore.dev",
 		Version: "v1alpha1",
 		Kind:    "ClusterImagePolicy",
 	})
@@ -234,44 +234,44 @@ func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) UpdateStatus(ctx context.Co
 	return out, nil
 }
 
-func (w *wrapCosignedV1alpha1ClusterImagePolicyImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (w *wrapPolicyV1alpha1ClusterImagePolicyImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return nil, errors.New("NYI: Watch")
 }
 
-// CosignedV1beta1 retrieves the CosignedV1beta1Client
-func (w *wrapClient) CosignedV1beta1() typedcosignedv1beta1.CosignedV1beta1Interface {
-	return &wrapCosignedV1beta1{
+// PolicyV1beta1 retrieves the PolicyV1beta1Client
+func (w *wrapClient) PolicyV1beta1() typedpolicyv1beta1.PolicyV1beta1Interface {
+	return &wrapPolicyV1beta1{
 		dyn: w.dyn,
 	}
 }
 
-type wrapCosignedV1beta1 struct {
+type wrapPolicyV1beta1 struct {
 	dyn dynamic.Interface
 }
 
-func (w *wrapCosignedV1beta1) RESTClient() rest.Interface {
+func (w *wrapPolicyV1beta1) RESTClient() rest.Interface {
 	panic("RESTClient called on dynamic client!")
 }
 
-func (w *wrapCosignedV1beta1) ClusterImagePolicies() typedcosignedv1beta1.ClusterImagePolicyInterface {
-	return &wrapCosignedV1beta1ClusterImagePolicyImpl{
+func (w *wrapPolicyV1beta1) ClusterImagePolicies() typedpolicyv1beta1.ClusterImagePolicyInterface {
+	return &wrapPolicyV1beta1ClusterImagePolicyImpl{
 		dyn: w.dyn.Resource(schema.GroupVersionResource{
-			Group:    "cosigned.sigstore.dev",
+			Group:    "policy.sigstore.dev",
 			Version:  "v1beta1",
 			Resource: "clusterimagepolicies",
 		}),
 	}
 }
 
-type wrapCosignedV1beta1ClusterImagePolicyImpl struct {
+type wrapPolicyV1beta1ClusterImagePolicyImpl struct {
 	dyn dynamic.NamespaceableResourceInterface
 }
 
-var _ typedcosignedv1beta1.ClusterImagePolicyInterface = (*wrapCosignedV1beta1ClusterImagePolicyImpl)(nil)
+var _ typedpolicyv1beta1.ClusterImagePolicyInterface = (*wrapPolicyV1beta1ClusterImagePolicyImpl)(nil)
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Create(ctx context.Context, in *v1beta1.ClusterImagePolicy, opts v1.CreateOptions) (*v1beta1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) Create(ctx context.Context, in *v1beta1.ClusterImagePolicy, opts v1.CreateOptions) (*v1beta1.ClusterImagePolicy, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "cosigned.sigstore.dev",
+		Group:   "policy.sigstore.dev",
 		Version: "v1beta1",
 		Kind:    "ClusterImagePolicy",
 	})
@@ -290,15 +290,15 @@ func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Create(ctx context.Context, 
 	return out, nil
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return w.dyn.Delete(ctx, name, opts)
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	return w.dyn.DeleteCollection(ctx, opts, listOpts)
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ClusterImagePolicy, error) {
 	uo, err := w.dyn.Get(ctx, name, opts)
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Get(ctx context.Context, nam
 	return out, nil
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ClusterImagePolicyList, error) {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ClusterImagePolicyList, error) {
 	uo, err := w.dyn.List(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -322,7 +322,7 @@ func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) List(ctx context.Context, op
 	return out, nil
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ClusterImagePolicy, err error) {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ClusterImagePolicy, err error) {
 	uo, err := w.dyn.Patch(ctx, name, pt, data, opts)
 	if err != nil {
 		return nil, err
@@ -334,9 +334,9 @@ func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Patch(ctx context.Context, n
 	return out, nil
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Update(ctx context.Context, in *v1beta1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1beta1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) Update(ctx context.Context, in *v1beta1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1beta1.ClusterImagePolicy, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "cosigned.sigstore.dev",
+		Group:   "policy.sigstore.dev",
 		Version: "v1beta1",
 		Kind:    "ClusterImagePolicy",
 	})
@@ -355,9 +355,9 @@ func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Update(ctx context.Context, 
 	return out, nil
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) UpdateStatus(ctx context.Context, in *v1beta1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1beta1.ClusterImagePolicy, error) {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) UpdateStatus(ctx context.Context, in *v1beta1.ClusterImagePolicy, opts v1.UpdateOptions) (*v1beta1.ClusterImagePolicy, error) {
 	in.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "cosigned.sigstore.dev",
+		Group:   "policy.sigstore.dev",
 		Version: "v1beta1",
 		Kind:    "ClusterImagePolicy",
 	})
@@ -376,6 +376,6 @@ func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) UpdateStatus(ctx context.Con
 	return out, nil
 }
 
-func (w *wrapCosignedV1beta1ClusterImagePolicyImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (w *wrapPolicyV1beta1ClusterImagePolicyImpl) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return nil, errors.New("NYI: Watch")
 }

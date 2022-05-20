@@ -17,9 +17,9 @@
 set -ex
 
 echo '::group:: Invalid policy tests:'
-for i in `ls ./test/testdata/cosigned/invalid/`
+for i in `ls ./test/testdata/policy-controller/invalid/`
 do
-  if kubectl create -f ./test/testdata/cosigned/invalid/$i ; then
+  if kubectl create -f ./test/testdata/policy-controller/invalid/$i ; then
     echo "${i} policy created when it should not have"
     exit 1
   else
@@ -29,16 +29,16 @@ done
 echo '::endgroup:: Invalid policy test:'
 
 echo '::group:: Valid policy test:'
-for i in `ls ./test/testdata/cosigned/valid/`
+for i in `ls ./test/testdata/policy-controller/valid/`
 do
-  if kubectl create -f ./test/testdata/cosigned/valid/$i ; then
+  if kubectl create -f ./test/testdata/policy-controller/valid/$i ; then
     echo "${i} created as expected"
   else
     echo "${i} failed when it should not have"
     exit 1
   fi
 
-  kubectl delete -f ./test/testdata/cosigned/valid/$i --ignore-not-found=true
+  kubectl delete -f ./test/testdata/policy-controller/valid/$i --ignore-not-found=true
 done
 
 echo '::endgroup:: Valid policy test:'

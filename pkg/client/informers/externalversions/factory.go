@@ -22,8 +22,8 @@ import (
 	time "time"
 
 	versioned "github.com/sigstore/cosign/pkg/client/clientset/versioned"
-	cosigned "github.com/sigstore/cosign/pkg/client/informers/externalversions/cosigned"
 	internalinterfaces "github.com/sigstore/cosign/pkg/client/informers/externalversions/internalinterfaces"
+	policy "github.com/sigstore/cosign/pkg/client/informers/externalversions/policy"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -170,9 +170,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Cosigned() cosigned.Interface
+	Policy() policy.Interface
 }
 
-func (f *sharedInformerFactory) Cosigned() cosigned.Interface {
-	return cosigned.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Policy() policy.Interface {
+	return policy.New(f, f.namespace, f.tweakListOptions)
 }

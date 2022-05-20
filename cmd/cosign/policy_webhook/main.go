@@ -33,9 +33,9 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/cosign/pkg/apis/cosigned"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1beta1"
+	"github.com/sigstore/cosign/pkg/apis/policy"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1beta1"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy"
 
 	// Register the provider-specific plugins
@@ -52,7 +52,7 @@ var (
 	// with the resource types, namespace selectors, CABindle and service path.
 	// If this changes, you must also change:
 	//    ./config/501-policy-webhook-configurations.yaml
-	//    https://github.com/sigstore/helm-charts/blob/main/charts/cosigned/templates/policy-webhook/policy_webhook_configurations.yaml
+	//    https://github.com/sigstore/helm-charts/blob/main/charts/policy-controller/templates/policy-webhook/policy_webhook_configurations.yaml
 	mutatingWebhookName = flag.String("mutating-webhook-name", "defaulting.clusterimagepolicy.sigstore.dev", "The name of the mutating webhook configuration as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to policy-webhook.")
 	// validatingWebhookName holds the name of the validating webhook configuration
 	// resource dispatching admission requests to policy-webhook.
@@ -60,7 +60,7 @@ var (
 	// with the resource types, namespace selectors, CABindle and service path.
 	// If this changes, you must also change:
 	//    ./config/501-policy-webhook-configurations.yaml
-	//    https://github.com/sigstore/helm-charts/blob/main/charts/cosigned/templates/policy-webhook/policy_webhook_configurations.yaml
+	//    https://github.com/sigstore/helm-charts/blob/main/charts/policy-controller/templates/policy-webhook/policy_webhook_configurations.yaml
 	validatingWebhookName = flag.String("validating-webhook-name", "validating.clusterimagepolicy.sigstore.dev", "The name of the validating webhook configuration as well as the webhook name that is automatically configured, if exists, with different rules and client settings setting how the admission requests to be dispatched to policy-webhook.")
 )
 
@@ -135,7 +135,7 @@ func newConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			v1beta1.Kind("ClusterImagePolicy"): {
-				DefinitionName: cosigned.ClusterImagePolicyResource.String(),
+				DefinitionName: policy.ClusterImagePolicyResource.String(),
 				HubVersion:     v1alpha1GroupVersion,
 				Zygotes: map[string]conversion.ConvertibleObject{
 					v1alpha1GroupVersion: &v1alpha1.ClusterImagePolicy{},

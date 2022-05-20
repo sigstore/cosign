@@ -15,7 +15,7 @@
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: cosigned-namespace-rbac
+  name: policy-controller-namespace-rbac
   namespace: cosign-system
 rules:
   # Needed to watch and load configuration and secret data.

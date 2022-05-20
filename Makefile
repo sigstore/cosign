@@ -91,9 +91,9 @@ cosign: $(SRCS)
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 go build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
-## Build cosigned binary
-.PHONY: cosigned
-cosigned: policy-webhook
+## Build policy-controller binary
+.PHONY: policy-controller
+policy-controller: policy-webhook
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/webhook
 
 .PHONY: policy-webhook
@@ -128,7 +128,7 @@ test:
 
 clean:
 	rm -rf cosign
-	rm -rf cosigned
+	rm -rf policy-controller
 	rm -rf sget
 	rm -rf dist/
 
@@ -151,7 +151,7 @@ endef
 # ko build
 ##########
 .PHONY: ko
-ko: ko-cosign ko-sget ko-cosigned
+ko: ko-cosign ko-sget ko-policy-controller
 
 .PHONY: ko-cosign
 ko-cosign:
@@ -171,13 +171,13 @@ ko-sget:
 		--image-refs sgetImagerefs \
 		github.com/sigstore/cosign/cmd/sget
 
-.PHONY: ko-cosigned
-ko-cosigned: kustomize-cosigned ko-policy-webhook
-	# cosigned
+.PHONY: ko-policy-controller
+ko-policy-controller: kustomize-policy-controller ko-policy-webhook
+	# policy-controller
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/cosigned ko resolve --bare \
+	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/policy-controller ko resolve --bare \
 		--platform=$(COSIGNED_ARCHS) --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
-		--image-refs cosignedImagerefs --filename config/webhook.yaml >> $(COSIGNED_YAML)
+		--image-refs policyControllerImagerefs --filename config/webhook.yaml >> $(COSIGNED_YAML)
 
 ko-policy-webhook:
 	# policy_webhook
@@ -212,8 +212,8 @@ ko-apply:
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -Bf config/
 
 
-.PHONY: kustomize-cosigned
-kustomize-cosigned:
+.PHONY: kustomize-policy-controller
+kustomize-policy-controller:
 	kustomize build config/ > $(COSIGNED_YAML)
 
 ##################

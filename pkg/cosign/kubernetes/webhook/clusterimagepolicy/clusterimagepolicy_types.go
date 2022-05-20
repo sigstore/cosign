@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"knative.dev/pkg/apis"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"

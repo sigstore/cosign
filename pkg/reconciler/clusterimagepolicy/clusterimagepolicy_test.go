@@ -25,9 +25,9 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 
 	"github.com/sigstore/cosign/pkg/apis/config"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
 	fakecosignclient "github.com/sigstore/cosign/pkg/client/injection/client/fake"
-	"github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
+	"github.com/sigstore/cosign/pkg/client/injection/reconciler/policy/v1alpha1/clusterimagepolicy"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

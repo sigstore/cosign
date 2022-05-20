@@ -28,7 +28,7 @@ import (
 	"knative.dev/pkg/logging"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
-	v1alpha1 "github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	v1alpha1 "github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"

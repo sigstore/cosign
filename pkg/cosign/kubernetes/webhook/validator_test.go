@@ -35,7 +35,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/pkg/apis/config"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
 	"github.com/sigstore/cosign/pkg/cosign"
 	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/oci"

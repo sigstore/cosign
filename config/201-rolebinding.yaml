@@ -15,7 +15,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: cosigned-webhook
+  name: policy-controller-webhook
   namespace: cosign-system
 subjects:
   - kind: ServiceAccount
@@ -23,5 +23,5 @@ subjects:
     namespace: cosign-system
 roleRef:
   kind: Role
-  name: cosigned-namespace-rbac
+  name: policy-controller-namespace-rbac
   apiGroup: rbac.authorization.k8s.io

@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"net/http"
 
-	cosignedv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1alpha1"
-	cosignedv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/cosigned/v1beta1"
+	policyv1alpha1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1alpha1"
+	policyv1beta1 "github.com/sigstore/cosign/pkg/client/clientset/versioned/typed/policy/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -29,26 +29,26 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	CosignedV1alpha1() cosignedv1alpha1.CosignedV1alpha1Interface
-	CosignedV1beta1() cosignedv1beta1.CosignedV1beta1Interface
+	PolicyV1alpha1() policyv1alpha1.PolicyV1alpha1Interface
+	PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	cosignedV1alpha1 *cosignedv1alpha1.CosignedV1alpha1Client
-	cosignedV1beta1  *cosignedv1beta1.CosignedV1beta1Client
+	policyV1alpha1 *policyv1alpha1.PolicyV1alpha1Client
+	policyV1beta1  *policyv1beta1.PolicyV1beta1Client
 }
 
-// CosignedV1alpha1 retrieves the CosignedV1alpha1Client
-func (c *Clientset) CosignedV1alpha1() cosignedv1alpha1.CosignedV1alpha1Interface {
-	return c.cosignedV1alpha1
+// PolicyV1alpha1 retrieves the PolicyV1alpha1Client
+func (c *Clientset) PolicyV1alpha1() policyv1alpha1.PolicyV1alpha1Interface {
+	return c.policyV1alpha1
 }
 
-// CosignedV1beta1 retrieves the CosignedV1beta1Client
-func (c *Clientset) CosignedV1beta1() cosignedv1beta1.CosignedV1beta1Interface {
-	return c.cosignedV1beta1
+// PolicyV1beta1 retrieves the PolicyV1beta1Client
+func (c *Clientset) PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface {
+	return c.policyV1beta1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -95,11 +95,11 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.cosignedV1alpha1, err = cosignedv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.policyV1alpha1, err = policyv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
-	cs.cosignedV1beta1, err = cosignedv1beta1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.policyV1beta1, err = policyv1beta1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +124,8 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.cosignedV1alpha1 = cosignedv1alpha1.New(c)
-	cs.cosignedV1beta1 = cosignedv1beta1.New(c)
+	cs.policyV1alpha1 = policyv1alpha1.New(c)
+	cs.policyV1beta1 = policyv1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

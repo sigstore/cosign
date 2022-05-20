@@ -32,15 +32,15 @@ import (
 	"knative.dev/pkg/system"
 
 	"github.com/sigstore/cosign/pkg/apis/config"
-	clusterimagepolicyinformer "github.com/sigstore/cosign/pkg/client/injection/informers/cosigned/v1alpha1/clusterimagepolicy"
-	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
+	clusterimagepolicyinformer "github.com/sigstore/cosign/pkg/client/injection/informers/policy/v1alpha1/clusterimagepolicy"
+	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/policy/v1alpha1/clusterimagepolicy"
 	cminformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/configmap"
 	secretinformer "knative.dev/pkg/injection/clients/namespacedkube/informers/core/v1/secret"
 )
 
 // This is what the default finalizer name is, but make it explicit so we can
 // use it in tests as well.
-const finalizerName = "clusterimagepolicies.cosigned.sigstore.dev"
+const finalizerName = "clusterimagepolicies.policy.sigstore.dev"
 
 // NewController creates a Reconciler and returns the result of NewImpl.
 func NewController(

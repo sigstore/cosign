@@ -21,9 +21,9 @@ import (
 	"strings"
 
 	"github.com/sigstore/cosign/pkg/apis/config"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/pkg/apis/policy/v1alpha1"
 	"github.com/sigstore/cosign/pkg/apis/utils"
-	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/cosigned/v1alpha1/clusterimagepolicy"
+	clusterimagepolicyreconciler "github.com/sigstore/cosign/pkg/client/injection/reconciler/policy/v1alpha1/clusterimagepolicy"
 	webhookcip "github.com/sigstore/cosign/pkg/cosign/kubernetes/webhook/clusterimagepolicy"
 	"github.com/sigstore/cosign/pkg/reconciler/clusterimagepolicy/resources"
 
