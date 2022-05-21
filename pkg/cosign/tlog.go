@@ -30,8 +30,11 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962"
+
+	// TODO: update to use https://github.com/transparency-dev/merkle when that have the logverifier
+	"github.com/google/trillian/merkle/logverifier" // nolint: staticcheck
+	"github.com/google/trillian/merkle/rfc6962"     // nolint: staticcheck
+
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/rekor/pkg/generated/client/index"

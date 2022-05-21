@@ -19,7 +19,7 @@ import (
 	"encoding/hex"
 
 	"github.com/go-openapi/runtime"
-	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/google/trillian/merkle/rfc6962" // nolint: staticcheck
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
