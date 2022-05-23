@@ -92,7 +92,7 @@ func (p *ImagePolicyConfig) GetMatchingPolicies(image string) (map[string]webhoo
 	for k, v := range p.Policies {
 		for _, pattern := range v.Images {
 			if pattern.Glob != "" {
-				if matched, err := GlobMatch(pattern.Glob, image); err != nil {
+				if matched, _, err := GlobMatch(pattern.Glob, image); err != nil {
 					lastError = err
 				} else if matched {
 					ret[k] = v
