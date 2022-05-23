@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -66,8 +68,8 @@ func TestNewFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tuf.Close()
 	checkTargetsAndMeta(t, tuf)
+	tuf.Close()
 
 	if err := Initialize(ctx, DefaultRemoteRoot, nil); err != nil {
 		t.Error()
@@ -137,12 +139,12 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tuf.Close()
 
 	if l := dirLen(t, td); l == 0 {
 		t.Errorf("expected filesystem writes, got %d entries", l)
 	}
 	checkTargetsAndMeta(t, tuf)
+	tuf.Close()
 }
 
 func TestCustomRoot(t *testing.T) {
@@ -308,6 +310,84 @@ func TestGetTargetsByMeta(t *testing.T) {
 	}
 }
 
+func makeMapFS(repo string) (fs fstest.MapFS) {
+	fs = make(fstest.MapFS)
+	_ = filepath.Walk(repo,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, _ := filepath.Rel(repo, path)
+			if info.IsDir() {
+				fs[filepath.FromSlash(filepath.Join("repository", rel))] = &fstest.MapFile{Mode: os.ModeDir}
+			} else {
+				b, _ := os.ReadFile(path)
+				fs[filepath.FromSlash(filepath.Join("repository", rel))] = &fstest.MapFile{Data: b}
+			}
+			return nil
+		})
+	return
+}
+
+// Regression test for failure to locate newly added/renamed targets from a TUF update.
+// Previously, the embedded or in-memory targetImpl did not fetch any updated targets.
+func TestUpdatedTargetNamesEmbedded(t *testing.T) {
+	td := t.TempDir()
+	// Set the TUF_ROOT so we don't interact with other tests and local TUF roots.
+	t.Setenv("TUF_ROOT", td)
+
+	origEmbedded := GetEmbedded
+	origDefaultRemote := GetRemoteRoot
+	defer func() {
+		GetEmbedded = origEmbedded
+		GetRemoteRoot = origDefaultRemote
+	}()
+
+	// Create an "expired" embedded repository.
+	ctx := context.Background()
+	store, r := newTufCustomRepo(t, td, "foo")
+	repository := filepath.FromSlash(filepath.Join(td, "repository"))
+	mapfs := makeMapFS(repository)
+	GetEmbedded = func() fs.FS { return mapfs }
+
+	oldIsExpired := verify.IsExpired
+	isExpiredTimestamp = func(metadata []byte) bool {
+		m, _ := store.GetMeta()
+		timestampExpires, _ := getExpiration(m["timestamp.json"])
+		metadataExpires, _ := getExpiration(metadata)
+		return metadataExpires.Sub(*timestampExpires) <= 0
+	}
+
+	// Serve an updated remote repository with a new target.
+	addNewCustomTarget(t, td, r, "newdata")
+	s := httptest.NewServer(http.FileServer(http.Dir(repository)))
+	defer s.Close()
+	GetRemoteRoot = func() string { return s.URL }
+
+	// Initialize.
+	tufObj, err := NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tufObj.Close()
+
+	// Try to retrieve the newly added target.
+	targets, err := tufObj.GetTargetsByMeta(Fulcio, []string{"fooNoCustom.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(targets) != 3 {
+		t.Fatalf("expected three target without custom metadata, got %d targets", len(targets))
+	}
+	targetBytes := []string{string(targets[0].Target), string(targets[1].Target), string(targets[2].Target)}
+	expectedTB := []string{"foo", "foo", "newdata"}
+	if !cmp.Equal(targetBytes, expectedTB,
+		cmpopts.SortSlices(func(a, b string) bool { return a < b })) {
+		t.Fatalf("target data mismatched, expected: %v, got: %v", expectedTB, targetBytes)
+	}
+	verify.IsExpired = oldIsExpired
+}
+
 func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
 	// Check the targets
 	t.Helper()
@@ -399,7 +479,7 @@ func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStor
 	for name, scm := range map[string]json.RawMessage{
 		"fooNoCustom.txt": nil, "fooNoCustomOther.txt": nil,
 		"fooActive.txt": scmActive, "fooExpired.txt": scmExpired} {
-		targetPath := filepath.Join(td, "staged", "targets", name)
+		targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", name))
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 			t.Error(err)
 		}
@@ -422,6 +502,33 @@ func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStor
 	return remote, r
 }
 
+func addNewCustomTarget(t *testing.T, td string, r *tuf.Repo, targetData string) {
+	scmActive, err := json.Marshal(&sigstoreCustomMetadata{Sigstore: customMetadata{Usage: Fulcio, Status: Active}})
+	if err != nil {
+		t.Error(err)
+	}
+
+	targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", "fooNew.txt"))
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		t.Error(err)
+	}
+	if err := ioutil.WriteFile(targetPath, []byte(targetData), 0600); err != nil {
+		t.Error(err)
+	}
+	if err := r.AddTarget("fooNew.txt", scmActive); err != nil {
+		t.Error(err)
+	}
+	if err := r.Snapshot(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Timestamp(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Commit(); err != nil {
+		t.Error(err)
+	}
+}
+
 func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tuf.Repo) {
 	remote := tuf.FileSystemStore(td, nil)
 	r, err := tuf.NewRepo(remote)
@@ -436,7 +543,7 @@ func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tu
 			t.Error(err)
 		}
 	}
-	targetPath := filepath.Join(td, "staged", "targets", "foo.txt")
+	targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", "foo.txt"))
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		t.Error(err)
 	}
@@ -459,7 +566,7 @@ func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tu
 }
 
 func updateTufRepo(t *testing.T, td string, r *tuf.Repo, targetData string) {
-	targetPath := filepath.Join(td, "staged", "targets", "foo.txt")
+	targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", "foo.txt"))
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		t.Error(err)
 	}

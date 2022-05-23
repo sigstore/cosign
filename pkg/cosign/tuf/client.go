@@ -20,18 +20,20 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/secure-systems-lab/go-securesystemslib/cjson"
 	"github.com/theupdateframework/go-tuf/client"
 	tuf_leveldbstore "github.com/theupdateframework/go-tuf/client/leveldbstore"
 	"github.com/theupdateframework/go-tuf/data"
@@ -43,6 +45,10 @@ const (
 	TufRootEnv        = "TUF_ROOT"
 	SigstoreNoCache   = "SIGSTORE_NO_CACHE"
 )
+
+var GetRemoteRoot = func() string {
+	return DefaultRemoteRoot
+}
 
 type TUF struct {
 	client   *client.Client
@@ -186,7 +192,11 @@ func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
 		return trustedRoot, nil
 	}
 	// On first initialize, there will be no root in the TUF DB, so read from embedded.
-	trustedRoot, err := embeddedRootRepo.ReadFile(path.Join("repository", "root.json"))
+	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	if !ok {
+		return nil, errors.New("fs.ReadFileFS unimplemented for embedded repo")
+	}
+	trustedRoot, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", "root.json")))
 	if err != nil {
 		return nil, err
 	}
@@ -222,20 +232,18 @@ func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, 
 		embedded: embed,
 	}
 
+	t.targets = newFileImpl()
+	// Lazily init the local store in case we start with an embedded.
+	var initLocal = newLocalStore
 	var err error
 	if t.embedded {
-		t.local, err = embeddedLocalStore()
-		if err != nil {
-			return nil, err
-		}
-		t.targets = newEmbeddedImpl()
+		t.targets = wrapEmbedded(t.targets)
+		t.local = wrapEmbeddedLocal(initLocal)
 	} else {
-		tufDB := filepath.Join(rootCacheDir(), "tuf.db")
-		t.local, err = localStore(tufDB)
+		t.local, err = initLocal()
 		if err != nil {
 			return nil, err
 		}
-		t.targets = newFileImpl()
 	}
 
 	t.remote, err = remoteFromMirror(ctx, t.mirror)
@@ -283,7 +291,7 @@ func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, 
 
 func NewFromEnv(ctx context.Context) (*TUF, error) {
 	// Get local and mirror from env
-	tufDB := filepath.Join(rootCacheDir(), "tuf.db")
+	tufDB := filepath.FromSlash(filepath.Join(rootCacheDir(), "tuf.db"))
 	var embed bool
 
 	// Check for the current local.
@@ -296,12 +304,12 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 		// Some other error, bail
 		return nil, statErr
 	default:
-		// There is a root! Happy path.
+		// There is a local root! Happy path.
 		embed = false
 	}
 
 	// Check for the current remote mirror.
-	mirror := DefaultRemoteRoot
+	mirror := GetRemoteRoot()
 	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
 	if err == nil {
 		remoteInfo := remoteCache{}
@@ -340,7 +348,6 @@ func (t *TUF) GetTarget(name string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error verifying local metadata; local cache may be corrupt: %w", err)
 	}
-
 	targetBytes, err := t.targets.Get(name)
 	if err != nil {
 		return nil, err
@@ -379,7 +386,7 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 		if scm.Sigstore.Usage == usage {
 			target, err := t.GetTarget(name)
 			if err != nil {
-				return nil, fmt.Errorf("error getting target by usage: %w", err)
+				return nil, fmt.Errorf("error getting target %s by usage: %w", name, err)
 			}
 			matchedTargets = append(matchedTargets, TargetFile{Target: target, Status: scm.Sigstore.Status})
 		}
@@ -400,30 +407,9 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 	return matchedTargets, nil
 }
 
-func localStore(cacheRoot string) (client.LocalStore, error) {
-	local, err := tuf_leveldbstore.FileLocalStore(cacheRoot)
-	if err != nil {
-		return nil, fmt.Errorf("creating cached local store: %w", err)
-	}
-	return local, nil
-}
-
-func embeddedLocalStore() (client.LocalStore, error) {
-	local := client.MemoryLocalStore()
-	for _, mdFilename := range []string{"root.json", "targets.json", "snapshot.json", "timestamp.json"} {
-		b, err := embeddedRootRepo.ReadFile(path.Join("repository", mdFilename))
-		if err != nil {
-			return nil, fmt.Errorf("reading embedded file: %w", err)
-		}
-		if err := local.SetMeta(mdFilename, b); err != nil {
-			return nil, fmt.Errorf("setting local meta: %w", err)
-		}
-	}
-	return local, nil
-}
-
 func (t *TUF) updateMetadataAndDownloadTargets() error {
 	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
+	// NOTE: This only returns *updated* targets.
 	targetFiles, err := t.client.Update()
 	if err != nil {
 		// Get some extra information for debugging. What was the state of the metadata
@@ -459,8 +445,8 @@ func (t *TUF) updateMetadataAndDownloadTargets() error {
 		return fmt.Errorf("error updating to TUF remote mirror: %w\nremote status:%s", err, string(b))
 	}
 
-	// Update the in-memory targets.
-	// If the cache directory is enabled, update that too.
+	// Download newly updated targets.
+	// TODO: Consider lazily downloading these -- be careful with embedded targets if so.
 	for name := range targetFiles {
 		buf := bytes.Buffer{}
 		if err := downloadRemoteTarget(name, t.client, &buf); err != nil {
@@ -503,49 +489,175 @@ func rootCacheDir() string {
 		if err != nil {
 			home = ""
 		}
-		return filepath.Join(home, ".sigstore", "root")
+		return filepath.FromSlash(filepath.Join(home, ".sigstore", "root"))
 	}
 	return rootDir
 }
 
 func cachedRemote(cacheRoot string) string {
-	return filepath.Join(cacheRoot, "remote.json")
+	return filepath.FromSlash(filepath.Join(cacheRoot, "remote.json"))
 }
 
 func cachedTargetsDir(cacheRoot string) string {
-	return filepath.Join(cacheRoot, "targets")
+	return filepath.FromSlash(filepath.Join(cacheRoot, "targets"))
 }
 
-type targetImpl interface {
-	Get(string) ([]byte, error)
-	setImpl
-}
-
-type setImpl interface {
-	Set(string, []byte) error
-}
-
-type memoryCache struct {
-	targets map[string][]byte
-}
-
-func (m *memoryCache) Set(p string, b []byte) error {
-	if m.targets == nil {
-		m.targets = map[string][]byte{}
+// Local store implementations
+func newLocalStore() (client.LocalStore, error) {
+	if noCache() {
+		return client.MemoryLocalStore(), nil
 	}
-	m.targets[p] = b
+	tufDB := filepath.FromSlash(filepath.Join(rootCacheDir(), "tuf.db"))
+	local, err := tuf_leveldbstore.FileLocalStore(tufDB)
+	if err != nil {
+		return nil, fmt.Errorf("creating cached local store: %w", err)
+	}
+	return local, nil
+}
+
+type localInitFunc func() (client.LocalStore, error)
+
+type embeddedLocalStore struct {
+	// This is where updated repository info will be written to, if needed.
+	writeable     client.LocalStore
+	writeableFunc localInitFunc
+}
+
+var GetEmbedded = func() fs.FS {
+	return embeddedRootRepo
+}
+
+func wrapEmbeddedLocal(s localInitFunc) client.LocalStore {
+	return &embeddedLocalStore{writeableFunc: s, writeable: nil}
+}
+
+func (e embeddedLocalStore) GetMeta() (map[string]json.RawMessage, error) {
+	if e.writeable != nil {
+		// We are using a writeable store, so use that.
+		return e.writeable.GetMeta()
+	}
+	// We haven't needed to create or write new metadata, so get the embedded metadata.
+	meta := make(map[string]json.RawMessage)
+	ed, ok := GetEmbedded().(fs.ReadDirFS)
+	if !ok {
+		return nil, errors.New("fs.ReadDirFS unimplemented for embedded repo")
+	}
+	entries, err := ed.ReadDir("repository")
+	if err != nil {
+		return nil, err
+	}
+	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	if !ok {
+		return nil, errors.New("fs.ReadFileFS unimplemented for embedded repo")
+	}
+	for _, entry := range entries {
+		if entry.Type().IsRegular() {
+			b, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", entry.Name())))
+			if err != nil {
+				return nil, fmt.Errorf("reading embedded file: %w", err)
+			}
+			meta[entry.Name()] = b
+		}
+	}
+	return meta, err
+}
+
+func (e *embeddedLocalStore) SetMeta(name string, meta json.RawMessage) error {
+	// Only write to the underlying writeable store if the metadata is new.
+	embeddedMeta, err := e.GetMeta()
+	if err != nil {
+		return err
+	}
+	if metaContent, ok := embeddedMeta[name]; ok {
+		stored, err := cjson.EncodeCanonical(metaContent)
+		if err != nil {
+			return err
+		}
+		toSet, err := cjson.EncodeCanonical(meta)
+		if err != nil {
+			return err
+		}
+		if bytes.EqualFold(stored, toSet) {
+			return nil
+		}
+	}
+	// If we reach here, we have to update metadata.
+	if e.writeable == nil {
+		// We haven't needed an update yet, so create and populate the writeable store!
+		meta, err := e.GetMeta()
+		if err != nil {
+			return fmt.Errorf("error retrieving embedded repo: %w", err)
+		}
+		e.writeable, err = e.writeableFunc()
+		if err != nil {
+			return fmt.Errorf("initializing local: %w", err)
+		}
+		for m, md := range meta {
+			if err := e.writeable.SetMeta(m, md); err != nil {
+				return fmt.Errorf("error transferring to cached repo: %w", err)
+			}
+		}
+	}
+	// We have a writeable store, so set the metadata.
+	return e.writeable.SetMeta(name, meta)
+}
+
+func (e embeddedLocalStore) DeleteMeta(name string) error {
+	if e.writeable != nil {
+		return e.writeable.DeleteMeta(name)
+	}
+	return nil
+}
+
+func (e embeddedLocalStore) Close() error {
+	if e.writeable != nil {
+		return e.writeable.Close()
+	}
 	return nil
 }
 
 //go:embed repository
 var embeddedRootRepo embed.FS
 
-type embedded struct {
-	setImpl
+// Target Implementations
+type targetImpl interface {
+	Set(string, []byte) error
+	Get(string) ([]byte, error)
 }
 
-func (e *embedded) Get(p string) ([]byte, error) {
-	b, err := embeddedRootRepo.ReadFile(path.Join("repository", "targets", p))
+func newFileImpl() targetImpl {
+	if noCache() {
+		return &memoryCache{}
+	}
+	return &diskCache{base: cachedTargetsDir(rootCacheDir())}
+}
+
+func wrapEmbedded(t targetImpl) targetImpl {
+	return &embeddedWrapper{writeable: t, embedded: true}
+}
+
+type embeddedWrapper struct {
+	// If we have an embedded fallback that needs updates, use
+	// the writeable targetImpl
+	writeable targetImpl
+	// Whether we are using the embedded or writeable
+	embedded bool
+}
+
+func (e *embeddedWrapper) Get(p string) ([]byte, error) {
+	if !e.embedded {
+		// Get it from the writeable target store since there's been updates.
+		b, err := e.writeable.Get(p)
+		if err == nil {
+			return b, nil
+		}
+		fmt.Fprintf(os.Stderr, "**Warning** Updated target not found; falling back on embedded target %s\n", p)
+	}
+	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	if !ok {
+		return nil, errors.New("fs.ReadFileFS unimplemented for embedded repo")
+	}
+	b, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", "targets", p)))
 	if err != nil {
 		return nil, err
 	}
@@ -558,25 +670,75 @@ func (e *embedded) Get(p string) ([]byte, error) {
 	return b, nil
 }
 
-type file struct {
-	base string
-	setImpl
+func (e *embeddedWrapper) Set(name string, b []byte) error {
+	// An embedded targetImpl needs to set a file, copy files to cache.
+	if e.embedded {
+		ed, ok := GetEmbedded().(fs.ReadDirFS)
+		if !ok {
+			return errors.New("fs.ReadFileFS unimplemented for embedded repo")
+		}
+		entries, err := ed.ReadDir(filepath.FromSlash(filepath.Join("repository", "targets")))
+		if err != nil {
+			return err
+		}
+		rd, ok := GetEmbedded().(fs.ReadFileFS)
+		if !ok {
+			return errors.New("fs.ReadFileFS unimplemented for embedded repo")
+		}
+		for _, entry := range entries {
+			b, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", "targets", entry.Name())))
+			if err != nil {
+				return fmt.Errorf("reading embedded file: %w", err)
+			}
+			if err := e.writeable.Set(entry.Name(), b); err != nil {
+				return fmt.Errorf("setting embedded file: %w", err)
+			}
+		}
+		e.embedded = false
+	}
+	return e.writeable.Set(name, b)
 }
 
-func (f *file) Get(p string) ([]byte, error) {
-	fp := filepath.Join(f.base, p)
-	return os.ReadFile(fp)
+// In-memory cache for targets
+type memoryCache struct {
+	targets map[string][]byte
 }
 
+func (m *memoryCache) Set(p string, b []byte) error {
+	if m.targets == nil {
+		m.targets = map[string][]byte{}
+	}
+	m.targets[p] = b
+	return nil
+}
+
+func (m *memoryCache) Get(p string) ([]byte, error) {
+	if m.targets == nil {
+		// This should never happen, a memory cache is used only after items are Set.
+		return nil, fmt.Errorf("no cached targets available, cannot retrieve %s", p)
+	}
+	b, ok := m.targets[p]
+	if !ok {
+		return nil, fmt.Errorf("missing cached target %s", p)
+	}
+	return b, nil
+}
+
+// On-disk cache for targets
 type diskCache struct {
 	base string
+}
+
+func (d *diskCache) Get(p string) ([]byte, error) {
+	fp := filepath.FromSlash(filepath.Join(d.base, p))
+	return os.ReadFile(fp)
 }
 
 func (d *diskCache) Set(p string, b []byte) error {
 	if err := os.MkdirAll(d.base, 0700); err != nil {
 		return fmt.Errorf("creating targets dir: %w", err)
 	}
-	fp := filepath.Join(d.base, p)
+	fp := filepath.FromSlash(filepath.Join(d.base, p))
 	return os.WriteFile(fp, b, 0600)
 }
 
@@ -586,27 +748,6 @@ func noCache() bool {
 		return false
 	}
 	return b
-}
-
-func newEmbeddedImpl() targetImpl {
-	e := &embedded{}
-	if noCache() {
-		e.setImpl = &memoryCache{}
-	} else {
-		e.setImpl = &diskCache{base: cachedTargetsDir(rootCacheDir())}
-	}
-	return e
-}
-
-func newFileImpl() targetImpl {
-	base := cachedTargetsDir(rootCacheDir())
-	f := &file{base: base}
-	if noCache() {
-		f.setImpl = &memoryCache{}
-	} else {
-		f.setImpl = &diskCache{base: base}
-	}
-	return f
 }
 
 func remoteFromMirror(ctx context.Context, mirror string) (client.RemoteStore, error) {

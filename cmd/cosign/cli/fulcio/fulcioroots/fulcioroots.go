@@ -121,7 +121,7 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 		// call is made to update the root.
 		targets, err := tufClient.GetTargetsByMeta(tuf.Fulcio, []string{fulcioTargetStr, fulcioV1TargetStr})
 		if err != nil {
-			return nil, nil, errors.New("error getting targets")
+			return nil, nil, fmt.Errorf("error getting targets: %w", err)
 		}
 		if len(targets) == 0 {
 			return nil, nil, errors.New("none of the Fulcio roots have been found")
