@@ -30,14 +30,14 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/transparency-dev/merkle/proof"
+	"github.com/transparency-dev/merkle/rfc6962"
+
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/tuf"
-	"github.com/sigstore/rekor/pkg/generated/client/index"
-
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
@@ -345,8 +345,8 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 	leafHash := rfc6962.DefaultHasher.HashLeaf(entryBytes)
 
 	// Verify the inclusion proof.
-	v := logverifier.New(rfc6962.DefaultHasher)
-	if err := v.VerifyInclusionProof(*e.Verification.InclusionProof.LogIndex, *e.Verification.InclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(*e.Verification.InclusionProof.LogIndex), uint64(*e.Verification.InclusionProof.TreeSize),
+		leafHash, hashes, rootHash); err != nil {
 		return fmt.Errorf("verifying inclusion proof: %w", err)
 	}
 
