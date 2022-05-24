@@ -16,9 +16,11 @@
 package config
 
 import (
-	"net/url"
-	"path/filepath"
+	"fmt"
+	"regexp"
 	"strings"
+
+	"github.com/google/go-containerregistry/pkg/name"
 )
 
 const (
@@ -28,40 +30,62 @@ const (
 	DockerhubPublicRepository = "library/"
 )
 
-// GlobMatch will attempt to:
-// 1. match the glob first
-// 2. When the pattern is <repository>/*, therefore missing a host,
-//    it should match for the resolved image digest in the form of index.docker.io/<repository>/*
-// 3. When the pattern is <image>, it should match for the resolved image digest
-//    against the official Dockerhub repository in the form of index.docker.io/library/*
+var validGlob = regexp.MustCompile(`^[a-zA-Z0-9-_:\/\*\.]+$`)
+
+// GlobMatch will return true if the image reference matches the requested glob pattern.
+//
+// If the image reference is invalid, an error will be returned.
+//
+// In the glob pattern, the "*" character matches any non-"/" character, and "**" matches any character, including "/".
+//
+// If the image is a DockerHub official image like "ubuntu" or "debian", the glob that matches it must be something like index.docker.io/library/ubuntu.
+// If the image is a DockerHub used-owned image like "myuser/myapp", then the glob that matches it must be something like index.docker.io/myuser/myapp.
+// This means that the glob patterns "*" will not match the image name "ubuntu", and "*/*" will not match "myuser/myapp"; the "index.docker.io" prefix is required.
+//
+// If the image does not specify a tag (e.g., :latest or :v1.2.3), the tag ":latest" will be assumed.
+//
+// Note that the tag delimiter (":") does not act as a breaking separator for the purposes of a "*" glob.
+// To match any tag, the glob should end with ":**".
 func GlobMatch(glob, image string) (bool, error) {
-	matched, err := filepath.Match(glob, image)
+	if glob == "*/*" {
+		// TODO: Warn that the glob match "*/*" should be "index.docker.io/*/*".
+		glob = "index.docker.io/*/*"
+	}
+	if glob == "*" {
+		// TODO: Warn that the glob match "*" should be "index.docker.io/library/*".
+		glob = "index.docker.io/library/*"
+	}
+
+	ref, err := name.ParseReference(image, name.WeakValidation)
 	if err != nil {
 		return false, err
 	}
 
-	// If matched, return early
-	if matched {
-		return matched, nil
+	// Reject that glob doesn't look like a regexp
+	if !validGlob.MatchString(glob) {
+		return false, fmt.Errorf("invalid glob %q", glob)
 	}
 
-	// If not matched, check if missing host and default to index.docker.io
-	u, err := url.Parse(glob)
+	// Translate glob to regexp.
+	glob = strings.ReplaceAll(glob, ".", `\.`) // . in glob means \. in regexp
+	glob = strings.ReplaceAll(glob, "**", "#") // ** in glob means 0+ of any character in regexp
+	// We replace ** with a placeholder here, rather than `.*` directly, because the next line
+	// would replace that `*` again, breaking the regexp. So we stash the change with a placeholder,
+	// then replace the placeholder later to preserve the original intent.
+	glob = strings.ReplaceAll(glob, "*", "[^/]*") // * in glob means 0+ of any non-`/` character in regexp
+	glob = strings.ReplaceAll(glob, "#", ".*")
+	glob = fmt.Sprintf("^%s$", glob) // glob must match the whole string
+
+	// TODO: do we want ":" to count as a separator like "/" is?
+
+	match, err := regexp.MatchString(glob, ref.Name())
 	if err != nil {
 		return false, err
 	}
-
-	if u.Host == "" {
-		dockerhubGlobPattern := ResolvedDockerhubHost
-
-		// If the image is expected to be part of the Dockerhub official "library" repository
-		if len(strings.Split(u.Path, "/")) < 2 {
-			dockerhubGlobPattern += DockerhubPublicRepository
-		}
-
-		dockerhubGlobPattern += glob
-		return filepath.Match(dockerhubGlobPattern, image)
+	if !match && ref.Name() != image {
+		// If the image was not fully qualified, try matching the glob against the original non-fully-qualified.
+		// This should be a warning and this behavior should eventually be removed.
+		match, err = regexp.MatchString(glob, image)
 	}
-
-	return matched, nil
+	return match, err
 }

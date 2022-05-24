@@ -42,6 +42,19 @@ func TestDefaultsConfigurationFromFile(t *testing.T) {
 }
 
 func TestGetAuthorities(t *testing.T) {
+	// TODO: Clean up this test to be table-driven with sub-tests, instead of one big test.
+	getAuthority := func(t *testing.T, m map[string]webhookcip.ClusterImagePolicy, mp string) webhookcip.Authority {
+		t.Helper()
+		cip, found := m[mp]
+		if !found {
+			t.Fatalf("failed to find matching policy %q", mp)
+		}
+		if len(cip.Authorities) == 0 {
+			t.Fatalf("no authorities for matching policy %q", mp)
+		}
+		return cip.Authorities[0]
+	}
+
 	_, example := ConfigMapsFromTestFile(t, ImagePoliciesConfigName)
 	defaults, err := NewImagePoliciesConfigFromConfigMap(example)
 	if err != nil {
@@ -51,7 +64,7 @@ func TestGetAuthorities(t *testing.T) {
 	checkGetMatches(t, c, err)
 	matchedPolicy := "cluster-image-policy-0"
 	want := "inlinedata here"
-	if got := c[matchedPolicy].Authorities[0].Key.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Make sure glob matches 'randomstuff*'
@@ -59,22 +72,22 @@ func TestGetAuthorities(t *testing.T) {
 	checkGetMatches(t, c, err)
 	matchedPolicy = "cluster-image-policy-1"
 	want = "otherinline here"
-	if got := c[matchedPolicy].Authorities[0].Key.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	c, err = defaults.GetMatchingPolicies("rando3")
 	checkGetMatches(t, c, err)
 	matchedPolicy = "cluster-image-policy-2"
 	want = "cacert chilling here"
-	if got := c[matchedPolicy].Authorities[0].Keyless.CACert.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Keyless.CACert.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	want = "issuer"
-	if got := c[matchedPolicy].Authorities[0].Keyless.Identities[0].Issuer; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Keyless.Identities[0].Issuer; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	want = "subject"
-	if got := c[matchedPolicy].Authorities[0].Keyless.Identities[0].Subject; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Keyless.Identities[0].Subject; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Make sure regex matches "regexstring*"
@@ -82,30 +95,30 @@ func TestGetAuthorities(t *testing.T) {
 	checkGetMatches(t, c, err)
 	matchedPolicy = "cluster-image-policy-4"
 	want = inlineKeyData
-	if got := c[matchedPolicy].Authorities[0].Key.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
-	checkPublicKey(t, c[matchedPolicy].Authorities[0].Key.PublicKeys[0])
+	checkPublicKey(t, getAuthority(t, c, matchedPolicy).Key.PublicKeys[0])
 
 	// Test multiline yaml cert
 	c, err = defaults.GetMatchingPolicies("inlinecert")
 	checkGetMatches(t, c, err)
 	matchedPolicy = "cluster-image-policy-3"
 	want = inlineKeyData
-	if got := c[matchedPolicy].Authorities[0].Key.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
-	checkPublicKey(t, c[matchedPolicy].Authorities[0].Key.PublicKeys[0])
+	checkPublicKey(t, getAuthority(t, c, matchedPolicy).Key.PublicKeys[0])
 
 	// Test multiline cert but json encoded
-	c, err = defaults.GetMatchingPolicies("ghcr.io/example/*")
+	c, err = defaults.GetMatchingPolicies("ghcr.io/example/foo")
 	checkGetMatches(t, c, err)
 	matchedPolicy = "cluster-image-policy-json"
 	want = inlineKeyData
-	if got := c[matchedPolicy].Authorities[0].Key.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
-	checkPublicKey(t, c[matchedPolicy].Authorities[0].Key.PublicKeys[0])
+	checkPublicKey(t, getAuthority(t, c, matchedPolicy).Key.PublicKeys[0])
 
 	// Test multiple matches
 	c, err = defaults.GetMatchingPolicies("regexstringtoo")
@@ -115,14 +128,14 @@ func TestGetAuthorities(t *testing.T) {
 	}
 	matchedPolicy = "cluster-image-policy-4"
 	want = inlineKeyData
-	if got := c[matchedPolicy].Authorities[0].Key.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
-	checkPublicKey(t, c[matchedPolicy].Authorities[0].Key.PublicKeys[0])
+	checkPublicKey(t, getAuthority(t, c, matchedPolicy).Key.PublicKeys[0])
 
 	matchedPolicy = "cluster-image-policy-5"
 	want = "inlinedata here"
-	if got := c[matchedPolicy].Authorities[0].Key.Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Key.Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 
@@ -134,7 +147,7 @@ func TestGetAuthorities(t *testing.T) {
 	}
 	matchedPolicy = "cluster-image-policy-with-policy-attestations"
 	want = "attestation-0"
-	if got := c[matchedPolicy].Authorities[0].Name; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Name; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	// Both top & authority policy is using cue
@@ -147,11 +160,11 @@ func TestGetAuthorities(t *testing.T) {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	want = "cue"
-	if got := c[matchedPolicy].Authorities[0].Attestations[0].Type; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Attestations[0].Type; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 	want = "test-cue-here"
-	if got := c[matchedPolicy].Authorities[0].Attestations[0].Data; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Attestations[0].Data; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 
@@ -165,7 +178,7 @@ func TestGetAuthorities(t *testing.T) {
 
 	checkSourceOCI(t, c[matchedPolicy].Authorities)
 	want = "example.registry.com/alternative/signature"
-	if got := c[matchedPolicy].Authorities[0].Sources[0].OCI; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Sources[0].OCI; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 
@@ -178,11 +191,11 @@ func TestGetAuthorities(t *testing.T) {
 	}
 
 	checkSourceOCI(t, c[matchedPolicy].Authorities)
-	if got := len(c[matchedPolicy].Authorities[0].Sources[0].SignaturePullSecrets); got != 1 {
+	if got := len(getAuthority(t, c, matchedPolicy).Sources[0].SignaturePullSecrets); got != 1 {
 		t.Errorf("Did not get what I wanted %d, got %d", 1, got)
 	}
 	want = "examplePullSecret"
-	if got := c[matchedPolicy].Authorities[0].Sources[0].SignaturePullSecrets[0].Name; got != want {
+	if got := getAuthority(t, c, matchedPolicy).Sources[0].SignaturePullSecrets[0].Name; got != want {
 		t.Errorf("Did not get what I wanted %q, got %+v", want, got)
 	}
 }
