@@ -15,16 +15,14 @@
 package config
 
 import (
-	"reflect"
 	"testing"
 )
 
 func TestGlobMatch(t *testing.T) {
 	for _, c := range []struct {
-		image, glob  string
-		wantMatch    bool
-		wantWarnings []string
-		wantErr      bool
+		image, glob string
+		wantMatch   bool
+		wantErr     bool
 	}{
 		{image: "foo", glob: "index.docker.io/library/foo:latest", wantMatch: true},
 		{image: "foo", glob: "index.docker.io/library/foo:*", wantMatch: true},
@@ -35,7 +33,10 @@ func TestGlobMatch(t *testing.T) {
 		{image: "foo", glob: "index.docker.**", wantMatch: true},
 		{image: "foo", glob: "inde**", wantMatch: true},
 		{image: "foo", glob: "**", wantMatch: true},
-		{image: "foo", glob: "foo", wantMatch: false}, // must have index.docker.io/library prefix.
+		{image: "foo", glob: "foo", wantMatch: true},   // matches because of deprecated fallback logic.
+		{image: "foo", glob: "foo*", wantMatch: true},  // * matches 0+ characters
+		{image: "foo", glob: "foo**", wantMatch: true}, // ** matches 0+ characters
+
 		{image: "myuser/myapp", glob: "index.docker.io/myuser/myapp:latest", wantMatch: true},
 		{image: "myuser/myapp", glob: "index.docker.io/myuser/myapp:*", wantMatch: true},
 		{image: "myuser/myapp", glob: "index.docker.io/myuser/*", wantMatch: true},
@@ -45,7 +46,11 @@ func TestGlobMatch(t *testing.T) {
 		{image: "myuser/myapp", glob: "index.docker.**", wantMatch: true},
 		{image: "myuser/myapp", glob: "inde**", wantMatch: true},
 		{image: "myuser/myapp", glob: "**", wantMatch: true},
-		{image: "myuser/myapp", glob: "myuser/myapp", wantMatch: false}, // must have index.docker.io prefix.
+		{image: "myuser/myapp", glob: "myuser/myapp", wantMatch: true},   // matches because of deprecated fallback logic.
+		{image: "myuser/myapp", glob: "myuser/myapp*", wantMatch: true},  // * matches 0+ characters
+		{image: "myuser/myapp", glob: "myuser/myapp**", wantMatch: true}, // ** matches 0+ characters
+
+		// Fully qualified refs and globs.
 		{image: "ghcr.io/foo/bar", glob: "ghcr.io/*/*", wantMatch: true},
 		{image: "ghcr.io/foo/bar", glob: "ghcr.io/**", wantMatch: true},
 		{image: "ghcr.io/foo", glob: "ghcr.io/*/*", wantMatch: false}, // doesn't match second *
@@ -53,24 +58,25 @@ func TestGlobMatch(t *testing.T) {
 		{image: "ghcr.io/foo", glob: "ghc**", wantMatch: true},
 		{image: "ghcr.io/foo", glob: "**", wantMatch: true},
 		{image: "ghcr.io/foo", glob: "*/**", wantMatch: true},
+		{image: "ghcr.io/foo", glob: "ghcr.io/foo*", wantMatch: true},  // * matches 0+ characters
+		{image: "ghcr.io/foo", glob: "ghcr.io/foo**", wantMatch: true}, // ** matches 0+ characters
+
+		// Various error cases.
 		{image: "prefix-ghcr.io/foo", glob: "ghcr.io/foo", wantMatch: false},     // glob starts at beginning.
 		{image: "ghcr.io/foo-suffix", glob: "ghcr.io/foo", wantMatch: false},     // glob ends at the end.
 		{image: "ghcrxio/foo", glob: "ghcr.io/**", wantMatch: false},             // dots in glob are replaced with \., not treated as regexp .
 		{image: "invalid&name", glob: "**", wantMatch: false, wantErr: true},     // invalid refs are not matched.
 		{image: "invalid-glob", glob: ".+", wantMatch: false, wantErr: true},     // invalid globs are rejected.
 		{image: "invalid-glob", glob: "[a-z]*", wantMatch: false, wantErr: true}, // invalid globs are rejected.
-		{image: "foo", glob: "*", wantMatch: true,
-			wantWarnings: []string{`The glob match "*" should be "index.docker.io/library/*"`}},
-		{image: "myuser/myapp", glob: "*/*", wantMatch: true,
-			wantWarnings: []string{`The glob match "*/*" should be "index.docker.io/*/*"`}},
+
+		// Upgrading unqualified globs to assume index.docker.io prefix.
+		{image: "foo", glob: "*", wantMatch: true},
+		{image: "myuser/myapp", glob: "*/*", wantMatch: true},
 	} {
 		t.Run(c.image+"|"+c.glob, func(t *testing.T) {
-			match, warnings, err := GlobMatch(c.glob, c.image)
+			match, err := GlobMatch(c.glob, c.image)
 			if match != c.wantMatch {
 				t.Errorf("match: got %t, want %t", match, c.wantMatch)
-			}
-			if !reflect.DeepEqual(warnings, c.wantWarnings) {
-				t.Errorf("warnings: got %v, want %v", warnings, c.wantWarnings)
 			}
 			if gotErr := err != nil; gotErr != c.wantErr {
 				t.Errorf("err: got %v, want %t", err, c.wantErr)
