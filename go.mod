@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.22.1
 	cuelang.org/go v0.4.3
 	github.com/ThalesIgnite/crypto11 v1.2.5
-	github.com/armon/go-metrics v0.3.11
+	github.com/armon/go-metrics v0.4.0
 	github.com/armon/go-radix v1.0.0
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220228164355-396b2034c795
 	github.com/cenkalti/backoff/v3 v3.2.2
