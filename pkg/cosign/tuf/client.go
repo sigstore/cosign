@@ -94,6 +94,10 @@ type signedMeta struct {
 	Version int64     `json:"version"`
 }
 
+var (
+	errEmbeddedMetadataNeedsUpdate = fmt.Errorf("new metadata requires an unsupported write operation")
+)
+
 // RemoteCache contains information to cache on the location of the remote
 // repository.
 type remoteCache struct {
@@ -148,6 +152,19 @@ func getMetadataStatus(b []byte) (*MetadataStatus, error) {
 	}, nil
 }
 
+func isMetaEqual(x json.RawMessage, y json.RawMessage) (bool, error) {
+	stored, err := cjson.EncodeCanonical(x)
+	if err != nil {
+		return false, err
+	}
+	toSet, err := cjson.EncodeCanonical(y)
+	if err != nil {
+		return false, err
+	}
+	cmp := bytes.EqualFold(stored, toSet)
+	return cmp, nil
+}
+
 func (t *TUF) getRootStatus() (*RootStatus, error) {
 	local := "embedded"
 	if !t.embedded {
@@ -186,13 +203,13 @@ func (t *TUF) getRootStatus() (*RootStatus, error) {
 	return status, nil
 }
 
-func getRoot(meta map[string]json.RawMessage) (json.RawMessage, error) {
+func getRoot(meta map[string]json.RawMessage, ed fs.FS) (json.RawMessage, error) {
 	trustedRoot, ok := meta["root.json"]
 	if ok {
 		return trustedRoot, nil
 	}
 	// On first initialize, there will be no root in the TUF DB, so read from embedded.
-	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	rd, ok := ed.(fs.ReadFileFS)
 	if !ok {
 		return nil, errors.New("fs.ReadFileFS unimplemented for embedded repo")
 	}
@@ -236,9 +253,10 @@ func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, 
 	// Lazily init the local store in case we start with an embedded.
 	var initLocal = newLocalStore
 	var err error
+	embeddedRepo := GetEmbedded()
 	if t.embedded {
-		t.targets = wrapEmbedded(t.targets)
-		t.local = wrapEmbeddedLocal(initLocal)
+		t.targets = wrapEmbedded(embeddedRepo, t.targets)
+		t.local = wrapEmbeddedLocal(embeddedRepo, initLocal)
 	} else {
 		t.local, err = initLocal()
 		if err != nil {
@@ -261,7 +279,7 @@ func initializeTUF(ctx context.Context, embed bool, mirror string, root []byte, 
 	}
 
 	if root == nil {
-		root, err = getRoot(trustedMeta)
+		root, err = getRoot(trustedMeta, embeddedRepo)
 		if err != nil {
 			t.Close()
 			return nil, fmt.Errorf("getting trusted root: %w", err)
@@ -515,30 +533,20 @@ func newLocalStore() (client.LocalStore, error) {
 	return local, nil
 }
 
-type localInitFunc func() (client.LocalStore, error)
-
-type embeddedLocalStore struct {
-	// This is where updated repository info will be written to, if needed.
-	writeable     client.LocalStore
-	writeableFunc localInitFunc
-}
+type localStoreInit func() (client.LocalStore, error)
 
 var GetEmbedded = func() fs.FS {
 	return embeddedRootRepo
 }
 
-func wrapEmbeddedLocal(s localInitFunc) client.LocalStore {
-	return &embeddedLocalStore{writeableFunc: s, writeable: nil}
+// A read-only local store using embedded metadata
+type embeddedLocalStore struct {
+	ed fs.FS
 }
 
 func (e embeddedLocalStore) GetMeta() (map[string]json.RawMessage, error) {
-	if e.writeable != nil {
-		// We are using a writeable store, so use that.
-		return e.writeable.GetMeta()
-	}
-	// We haven't needed to create or write new metadata, so get the embedded metadata.
 	meta := make(map[string]json.RawMessage)
-	ed, ok := GetEmbedded().(fs.ReadDirFS)
+	ed, ok := e.ed.(fs.ReadDirFS)
 	if !ok {
 		return nil, errors.New("fs.ReadDirFS unimplemented for embedded repo")
 	}
@@ -546,49 +554,86 @@ func (e embeddedLocalStore) GetMeta() (map[string]json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	rd, ok := e.ed.(fs.ReadFileFS)
 	if !ok {
 		return nil, errors.New("fs.ReadFileFS unimplemented for embedded repo")
 	}
 	for _, entry := range entries {
-		if entry.Type().IsRegular() {
-			b, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", entry.Name())))
-			if err != nil {
-				return nil, fmt.Errorf("reading embedded file: %w", err)
-			}
-			meta[entry.Name()] = b
+		if !entry.Type().IsRegular() {
+			// Skip the target directory or other strange files.
+			continue
 		}
+		b, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", entry.Name())))
+		if err != nil {
+			return nil, fmt.Errorf("reading embedded file: %w", err)
+		}
+		meta[entry.Name()] = b
 	}
 	return meta, err
 }
 
 func (e *embeddedLocalStore) SetMeta(name string, meta json.RawMessage) error {
-	// Only write to the underlying writeable store if the metadata is new.
+	// Return no error if no real "write" is required: the meta matches the embedded content.
 	embeddedMeta, err := e.GetMeta()
 	if err != nil {
 		return err
 	}
-	if metaContent, ok := embeddedMeta[name]; ok {
-		stored, err := cjson.EncodeCanonical(metaContent)
-		if err != nil {
-			return err
-		}
-		toSet, err := cjson.EncodeCanonical(meta)
-		if err != nil {
-			return err
-		}
-		if bytes.EqualFold(stored, toSet) {
-			return nil
-		}
+	metaContent, ok := embeddedMeta[name]
+	if !ok {
+		return errEmbeddedMetadataNeedsUpdate
 	}
-	// If we reach here, we have to update metadata.
+	equal, err := isMetaEqual(metaContent, meta)
+	if err != nil {
+		return fmt.Errorf("error comparing metadata: %w", err)
+	}
+	if equal {
+		return nil
+	}
+	return errEmbeddedMetadataNeedsUpdate
+}
+
+func (e embeddedLocalStore) DeleteMeta(name string) error {
+	return errors.New("attempting to delete embedded metadata")
+}
+
+func (e embeddedLocalStore) Close() error {
+	return nil
+}
+
+type wrappedEmbeddedLocalStore struct {
+	// The read-only embedded local store.
+	embedded client.LocalStore
+	// Initially nil, initialized with makeWriteableStore once a write operation is needed.
+	writeable          client.LocalStore
+	makeWriteableStore localStoreInit
+}
+
+func wrapEmbeddedLocal(ed fs.FS, s localStoreInit) client.LocalStore {
+	return &wrappedEmbeddedLocalStore{embedded: &embeddedLocalStore{ed: ed}, makeWriteableStore: s, writeable: nil}
+}
+
+func (e wrappedEmbeddedLocalStore) GetMeta() (map[string]json.RawMessage, error) {
+	if e.writeable != nil {
+		// We are using a writeable store, so use that.
+		return e.writeable.GetMeta()
+	}
+	// We haven't needed to create or write new metadata, so get the embedded metadata.
+	return e.embedded.GetMeta()
+}
+
+func (e *wrappedEmbeddedLocalStore) SetMeta(name string, meta json.RawMessage) error {
 	if e.writeable == nil {
+		// Check if we the set operation "succeeds" for the read-only embedded store.
+		// This only succeeds if the metadata matches the embedded (i.e. no-op).
+		if err := e.embedded.SetMeta(name, meta); err == nil || !errors.Is(err, errEmbeddedMetadataNeedsUpdate) {
+			return err
+		}
 		// We haven't needed an update yet, so create and populate the writeable store!
 		meta, err := e.GetMeta()
 		if err != nil {
 			return fmt.Errorf("error retrieving embedded repo: %w", err)
 		}
-		e.writeable, err = e.writeableFunc()
+		e.writeable, err = e.makeWriteableStore()
 		if err != nil {
 			return fmt.Errorf("initializing local: %w", err)
 		}
@@ -602,18 +647,18 @@ func (e *embeddedLocalStore) SetMeta(name string, meta json.RawMessage) error {
 	return e.writeable.SetMeta(name, meta)
 }
 
-func (e embeddedLocalStore) DeleteMeta(name string) error {
+func (e wrappedEmbeddedLocalStore) DeleteMeta(name string) error {
 	if e.writeable != nil {
 		return e.writeable.DeleteMeta(name)
 	}
-	return nil
+	return e.embedded.DeleteMeta(name)
 }
 
-func (e embeddedLocalStore) Close() error {
+func (e wrappedEmbeddedLocalStore) Close() error {
 	if e.writeable != nil {
 		return e.writeable.Close()
 	}
-	return nil
+	return e.embedded.Close()
 }
 
 //go:embed repository
@@ -632,20 +677,21 @@ func newFileImpl() targetImpl {
 	return &diskCache{base: cachedTargetsDir(rootCacheDir())}
 }
 
-func wrapEmbedded(t targetImpl) targetImpl {
-	return &embeddedWrapper{writeable: t, embedded: true}
+func wrapEmbedded(ed fs.FS, t targetImpl) targetImpl {
+	return &embeddedWrapper{embeddedRepo: ed, writeable: t, modified: false}
 }
 
 type embeddedWrapper struct {
+	embeddedRepo fs.FS
 	// If we have an embedded fallback that needs updates, use
 	// the writeable targetImpl
 	writeable targetImpl
-	// Whether we are using the embedded or writeable
-	embedded bool
+	// Whether we modified targets and need to fetch from the writeable target store.
+	modified bool
 }
 
 func (e *embeddedWrapper) Get(p string) ([]byte, error) {
-	if !e.embedded {
+	if e.modified {
 		// Get it from the writeable target store since there's been updates.
 		b, err := e.writeable.Get(p)
 		if err == nil {
@@ -653,7 +699,7 @@ func (e *embeddedWrapper) Get(p string) ([]byte, error) {
 		}
 		fmt.Fprintf(os.Stderr, "**Warning** Updated target not found; falling back on embedded target %s\n", p)
 	}
-	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	rd, ok := e.embeddedRepo.(fs.ReadFileFS)
 	if !ok {
 		return nil, errors.New("fs.ReadFileFS unimplemented for embedded repo")
 	}
@@ -671,9 +717,9 @@ func (e *embeddedWrapper) Get(p string) ([]byte, error) {
 }
 
 func (e *embeddedWrapper) Set(name string, b []byte) error {
-	// An embedded targetImpl needs to set a file, copy files to cache.
-	if e.embedded {
-		ed, ok := GetEmbedded().(fs.ReadDirFS)
+	// If Set is called, our embedded cache is busted so we need to move over to the writeable targetsImpl.
+	if !e.modified {
+		ed, ok := e.embeddedRepo.(fs.ReadDirFS)
 		if !ok {
 			return errors.New("fs.ReadFileFS unimplemented for embedded repo")
 		}
@@ -681,10 +727,11 @@ func (e *embeddedWrapper) Set(name string, b []byte) error {
 		if err != nil {
 			return err
 		}
-		rd, ok := GetEmbedded().(fs.ReadFileFS)
+		rd, ok := e.embeddedRepo.(fs.ReadFileFS)
 		if !ok {
 			return errors.New("fs.ReadFileFS unimplemented for embedded repo")
 		}
+		// Copy targets to the writeable store so we can find all of them later.
 		for _, entry := range entries {
 			b, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", "targets", entry.Name())))
 			if err != nil {
@@ -694,8 +741,10 @@ func (e *embeddedWrapper) Set(name string, b []byte) error {
 				return fmt.Errorf("setting embedded file: %w", err)
 			}
 		}
-		e.embedded = false
 	}
+	// Now that we Set a target, we are now in a "modified" state and must check the writeable
+	// store for targets.
+	e.modified = true
 	return e.writeable.Set(name, b)
 }
 

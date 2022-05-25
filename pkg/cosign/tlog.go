@@ -78,15 +78,6 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
 func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
-	tufClient, err := tuf.NewFromEnv(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tufClient.Close()
-	targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
-	if err != nil {
-		return nil, err
-	}
 	publicKeys := make(map[string]RekorPubKey)
 	altRekorPub := os.Getenv(altRekorPublicKey)
 	if altRekorPub != "" {
@@ -105,6 +96,15 @@ func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
 		}
 		publicKeys[keyID] = RekorPubKey{PubKey: extra, Status: tuf.Active}
 	} else {
+		tufClient, err := tuf.NewFromEnv(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tufClient.Close()
+		targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
+		if err != nil {
+			return nil, err
+		}
 		for _, t := range targets {
 			rekorPubKey, err := PemToECDSAKey(t.Target)
 			if err != nil {

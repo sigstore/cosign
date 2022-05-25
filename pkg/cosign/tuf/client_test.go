@@ -329,8 +329,9 @@ func makeMapFS(repo string) (fs fstest.MapFS) {
 	return
 }
 
-// Regression test for failure to locate newly added/renamed targets from a TUF update.
-// Previously, the embedded or in-memory targetImpl did not fetch any updated targets.
+// Regression test for failure to fetch a target that does not exist in the embedded
+// repository on an update. The new target exists on the remote before the TUF object
+// is initialized.
 func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 	td := t.TempDir()
 	// Set the TUF_ROOT so we don't interact with other tests and local TUF roots.
@@ -343,7 +344,7 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 		GetRemoteRoot = origDefaultRemote
 	}()
 
-	// Create an "expired" embedded repository.
+	// Create an "expired" embedded repository that does not contain newTarget.
 	ctx := context.Background()
 	store, r := newTufCustomRepo(t, td, "foo")
 	repository := filepath.FromSlash(filepath.Join(td, "repository"))
@@ -358,8 +359,18 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 		return metadataExpires.Sub(*timestampExpires) <= 0
 	}
 
-	// Serve an updated remote repository with a new target.
-	addNewCustomTarget(t, td, r, "newdata")
+	// Assert that the embedded repository does not contain the newTarget.
+	newTarget := "fooNew.txt"
+	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	if !ok {
+		t.Fatal("fs.ReadFileFS unimplemented for embedded repo")
+	}
+	if _, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", "targets", newTarget))); err == nil {
+		t.Fatal("embedded repository should not contain new target")
+	}
+
+	// Serve an updated remote repository with the newTarget.
+	addNewCustomTarget(t, td, r, map[string]string{newTarget: "newdata"})
 	s := httptest.NewServer(http.FileServer(http.Dir(repository)))
 	defer s.Close()
 	GetRemoteRoot = func() string { return s.URL }
@@ -502,22 +513,25 @@ func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStor
 	return remote, r
 }
 
-func addNewCustomTarget(t *testing.T, td string, r *tuf.Repo, targetData string) {
+func addNewCustomTarget(t *testing.T, td string, r *tuf.Repo, targetData map[string]string) {
 	scmActive, err := json.Marshal(&sigstoreCustomMetadata{Sigstore: customMetadata{Usage: Fulcio, Status: Active}})
 	if err != nil {
 		t.Error(err)
 	}
 
-	targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", "fooNew.txt"))
-	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-		t.Error(err)
+	for name, data := range targetData {
+		targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", name))
+		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+			t.Error(err)
+		}
+		if err := ioutil.WriteFile(targetPath, []byte(data), 0600); err != nil {
+			t.Error(err)
+		}
+		if err := r.AddTarget(name, scmActive); err != nil {
+			t.Error(err)
+		}
 	}
-	if err := ioutil.WriteFile(targetPath, []byte(targetData), 0600); err != nil {
-		t.Error(err)
-	}
-	if err := r.AddTarget("fooNew.txt", scmActive); err != nil {
-		t.Error(err)
-	}
+
 	if err := r.Snapshot(); err != nil {
 		t.Error(err)
 	}
