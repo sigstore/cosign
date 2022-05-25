@@ -51,7 +51,7 @@ func Clean() *cobra.Command {
 
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string, force bool) error {
 	if !force {
-		ok, err := cosign.ConfirmPrompt(prompt(cleanType))
+		ok, err := cosign.ConfirmPromptDestructive(prompt(cleanType))
 		if err != nil {
 			return err
 		}

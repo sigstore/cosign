@@ -26,6 +26,7 @@ import (
 
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 var (
@@ -73,6 +74,11 @@ func New() *cobra.Command {
 			if ro.Verbose {
 				logs.Debug.SetOutput(os.Stderr)
 			}
+
+			if ro.SkipConfirmation {
+				cosign.SetSkipConfirmation(ro.SkipConfirmation)
+			}
+
 			return nil
 		},
 		PersistentPostRun: func(cmd *cobra.Command, args []string) {
