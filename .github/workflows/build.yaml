@@ -49,7 +49,7 @@ jobs:
         run: go get golang.org/x/tools/cmd/goimports
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/auth@81012c2689e66f7f020ed6d8ab43596a0f8b503a # v0.6.0
+        uses: google-github-actions/auth@ceee102ec2387dd9e844e01b530ccd4ec87ce955 # v0.8.0
         with:
           workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
           service_account: 'github-actions@projectsigstore.iam.gserviceaccount.com'
