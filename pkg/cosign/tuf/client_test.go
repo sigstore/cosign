@@ -94,9 +94,7 @@ func TestNoCache(t *testing.T) {
 	td := t.TempDir()
 	t.Setenv("TUF_ROOT", td)
 
-	// Force expiration so we have some content to download
-	forceExpiration(t, true)
-
+	// First initialization, populate the cache.
 	tuf, err := NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -104,6 +102,17 @@ func TestNoCache(t *testing.T) {
 	checkTargetsAndMeta(t, tuf)
 	tuf.Close()
 
+	// Force expiration so we have some content to download
+	forceExpiration(t, true)
+
+	tuf, err = NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTargetsAndMeta(t, tuf)
+	tuf.Close()
+
+	// No filesystem writes when using SIGSTORE_NO_CACHE.
 	if l := dirLen(t, td); l != 0 {
 		t.Errorf("expected no filesystem writes, got %d entries", l)
 	}
@@ -111,7 +120,7 @@ func TestNoCache(t *testing.T) {
 
 func TestCache(t *testing.T) {
 	ctx := context.Background()
-	// Once more with NO_CACHE
+	// Once more with cache.
 	t.Setenv("SIGSTORE_NO_CACHE", "false")
 	td := t.TempDir()
 	t.Setenv("TUF_ROOT", td)
@@ -121,26 +130,38 @@ func TestCache(t *testing.T) {
 		t.Errorf("expected no filesystem writes, got %d entries", l)
 	}
 
-	// Nothing should get downloaded if everything is up to date
-	forceExpiration(t, false)
+	// First initialization, populate the cache. Expect disk writes.
 	tuf, err := NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTargetsAndMeta(t, tuf)
+	tuf.Close()
+	cachedDirLen := dirLen(t, td)
+	if cachedDirLen == 0 {
+		t.Errorf("expected filesystem writes, got %d entries", cachedDirLen)
+	}
+
+	// Nothing should get downloaded if everything is up to date.
+	forceExpiration(t, false)
+	tuf, err = NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	tuf.Close()
 
-	if l := dirLen(t, td); l != 0 {
-		t.Errorf("expected no filesystem writes, got %d entries", l)
+	if l := dirLen(t, td); cachedDirLen != l {
+		t.Errorf("expected no filesystem writes, got %d entries", l-cachedDirLen)
 	}
 
-	// Force expiration so that content gets downloaded. This should write to disk
+	// Forcing expiration, but expect no disk writes because all targets up to date.
 	forceExpiration(t, true)
 	tuf, err = NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if l := dirLen(t, td); l == 0 {
+	if l := dirLen(t, td); l != cachedDirLen {
 		t.Errorf("expected filesystem writes, got %d entries", l)
 	}
 	checkTargetsAndMeta(t, tuf)
