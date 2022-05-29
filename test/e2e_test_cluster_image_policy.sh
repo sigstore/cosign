@@ -247,16 +247,16 @@ yq '. | .metadata.name = "image-policy-remote-source"
 echo '::endgroup::'
 
 echo '::group:: Sign demoimage with cosign remote key'
-COSIGN_PASSWORD="" COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign sign --key cosign-remote-signing.key --force --allow-insecure-registry ${demoimage}
+COSIGN_PASSWORD="" COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign sign --key cosign-remote-signing.key --force --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}
 echo '::endgroup::'
 
 echo '::group:: Verify demoimage with cosign remote key'
-if ./cosign verify --key cosign-remote-signing.pub --allow-insecure-registry ${demoimage}; then
+if ./cosign verify --key cosign-remote-signing.pub --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}; then
   echo "Signature should not have been verified unless COSIGN_REPOSITORY was defined"
   exit 1
 fi
 
-if ! COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign verify --key cosign-remote-signing.pub --allow-insecure-registry ${demoimage}; then
+if ! COSIGN_REPOSITORY="${KO_DOCKER_REPO}/remote-signature" ./cosign verify --key cosign-remote-signing.pub --allow-insecure-registry --rekor-url ${REKOR_URL} ${demoimage}; then
   echo "Signature should have been verified when COSIGN_REPOSITORY was defined"
   exit 1
 fi
@@ -285,7 +285,7 @@ echo '::endgroup::'
 echo '::group:: Verify with three CIP, one with correct Source set'
 # We signed this above and applied remote signature source location above
 if ! kubectl create -n demo-key-remote job demo --image=${demoimage}; then
-  echo Failed to create Job in namespace without label!
+  echo Failed to create Job with Remote Public Key with Source
   exit 1
 else
   echo Succcessfully created Job with signed image
