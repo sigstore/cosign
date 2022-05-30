@@ -358,11 +358,9 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 		LogID:          *e.LogID,
 	}
 
-	rekorPubKeys, err := GetRekorPubs(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to fetch Rekor public keys from TUF repository: %w", err)
-	}
-
+	// If we've been told to fetch the Public Key from Rekor, fetch it here
+	// first before using the TUF code below.
+	rekorPubKeys := make(map[string]RekorPubKey)
 	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor)
 	if addRekorPublic != "" {
 		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
@@ -380,6 +378,17 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 		rekorPubKeys[keyID] = RekorPubKey{PubKey: pubFromAPI, Status: tuf.Active}
 	}
 
+	rekorPubKeysTuf, err := GetRekorPubs(ctx)
+	if err != nil {
+		if len(rekorPubKeys) == 0 {
+			return fmt.Errorf("unable to fetch Rekor public keys from TUF repository, and not trusting the Rekor API for fetching public keys: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "**Warning** Failed to fetch Rekor public keys from TUF but using the public key from Rekor API because %s was specified", addRekorPublicKeyFromRekor)
+	}
+
+	for k, v := range rekorPubKeysTuf {
+		rekorPubKeys[k] = v
+	}
 	pubKey, ok := rekorPubKeys[payload.LogID]
 	if !ok {
 		return errors.New("rekor log public key not found for payload")
