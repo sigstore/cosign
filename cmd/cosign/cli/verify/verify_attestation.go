@@ -58,6 +58,7 @@ type VerifyAttestationCommand struct {
 	PredicateType  string
 	Policies       []string
 	LocalImage     bool
+	Annotations    sigs.AnnotationsMap
 }
 
 // Exec runs the verification command
@@ -79,7 +80,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		CertEmail:          c.CertEmail,
 		CertOidcIssuer:     c.CertOidcIssuer,
 		EnforceSCT:         c.EnforceSCT,
+		Annotations:        c.Annotations.Annotations,
 	}
+
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}

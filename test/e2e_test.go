@@ -273,8 +273,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, attestationPath, false,
-		predicateType, false, 30*time.Second), t)
-
+		predicateType, false, 30*time.Second, nil), t)
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
 	verifyAttestation.PredicateType = predicateType
@@ -322,13 +321,13 @@ func TestAttestationReplace(t *testing.T) {
 
 	// Attest once with with replace=false creating an attestation
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second), t)
+		"slsaprovenance", false, 30*time.Second, nil), t)
 	// Attest again with replace=true, replacing the previous attestation
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second), t)
+		"slsaprovenance", true, 30*time.Second, nil), t)
 	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", true, 30*time.Second), t)
+		"custom", true, 30*time.Second, nil), t)
 
 	// Download and count the attestations
 	ref, err := name.ParseReference(imgName)
@@ -939,7 +938,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Now attest the image
 	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", false, 30*time.Second), t)
+		"custom", false, 30*time.Second, nil), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()

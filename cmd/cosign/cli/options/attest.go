@@ -35,6 +35,7 @@ type AttestOptions struct {
 	SecurityKey SecurityKeyOptions
 	Predicate   PredicateLocalOptions
 	Registry    RegistryOptions
+	AnnotationOptions
 }
 
 var _ Interface = (*AttestOptions)(nil)
@@ -47,6 +48,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	o.OIDC.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")

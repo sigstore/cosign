@@ -171,6 +171,10 @@ against the transparency log.`,
 
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			annotations, err := o.AnnotationsMap()
+			if err != nil {
+				return err
+			}
 			v := verify.VerifyAttestationCommand{
 				RegistryOptions: o.Registry,
 				CheckClaims:     o.CheckClaims,
@@ -187,6 +191,7 @@ against the transparency log.`,
 				PredicateType:   o.Predicate.Type,
 				Policies:        o.Policies,
 				LocalImage:      o.LocalImage,
+				Annotations:     annotations,
 			}
 			return v.Exec(cmd.Context(), args)
 		},

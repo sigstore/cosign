@@ -79,6 +79,7 @@ type VerifyAttestationOptions struct {
 	Predicate   PredicateRemoteOptions
 	Policies    []string
 	LocalImage  bool
+	AnnotationOptions
 }
 
 var _ Interface = (*VerifyAttestationOptions)(nil)
@@ -90,6 +91,7 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
+	o.AnnotationOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")

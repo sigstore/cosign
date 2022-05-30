@@ -74,7 +74,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 
 //nolint
 func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string, certChainPath string,
-	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration) error {
+	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, annotations map[string]interface{}) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -155,7 +155,16 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 		return nil
 	}
 
-	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
+	ann := make(map[string]string)
+	for k, v := range annotations {
+		if _, ok := v.(string); !ok {
+			return fmt.Errorf("annotation %s must be a string", k)
+		}
+		ann[k] = v.(string)
+	}
+
+	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType),
+		static.WithAnnotations(ann)}
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}

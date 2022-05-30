@@ -55,10 +55,26 @@ func SimpleClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map
 }
 
 // IntotoSubjectClaimVerifier verifies that sig.Payload() is an Intoto statement which references the given image digest.
-func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, _ map[string]interface{}) error {
+func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error {
 	p, err := sig.Payload()
 	if err != nil {
 		return err
+	}
+
+	optional, err := sig.Annotations()
+	if err != nil {
+		return err
+	}
+
+	ann := make(map[string]interface{})
+	for i, v := range optional {
+		ann[i] = v
+	}
+
+	if annotations != nil {
+		if !correctAnnotations(annotations, ann) {
+			return errors.New("missing or incorrect annotation")
+		}
 	}
 
 	// The payload here is an envelope. We already verified the signature earlier.
@@ -85,5 +101,6 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, _ map[st
 			return nil
 		}
 	}
+
 	return errors.New("no matching subject digest found")
 }

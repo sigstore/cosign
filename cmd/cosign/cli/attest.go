@@ -63,6 +63,12 @@ func Attest() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			annotations, err := o.AnnotationsMap()
+			if err != nil {
+				return err
+			}
+
 			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
@@ -79,7 +85,7 @@ func Attest() *cobra.Command {
 			}
 			for _, img := range args {
 				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
-					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout); err != nil {
+					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout, annotations.Annotations); err != nil {
 					return fmt.Errorf("signing %s: %w", img, err)
 				}
 			}
