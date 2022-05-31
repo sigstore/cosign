@@ -29,6 +29,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -474,7 +475,15 @@ func maybeDownloadRemoteTarget(name string, meta data.TargetFileMeta, t *TUF) er
 		return errors.New("fs.ReadFileFS unimplemented for embedded repo")
 	}
 	b, err := rd.ReadFile(path.Join("repository", "targets", name))
+
 	if err == nil {
+		// Unfortunately go:embed appears to somehow replace our line endings on windows, we need to switch them back.
+		// It should theoretically be safe to do this everywhere - but the files only seem to get mutated on Windows so
+		// let's only change them back there.
+		if runtime.GOOS == "windows" {
+			b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+		}
+
 		if isValidTarget(b, meta) {
 			if _, err := io.Copy(&w, bytes.NewReader(b)); err != nil {
 				return fmt.Errorf("using embedded target: %w", err)
