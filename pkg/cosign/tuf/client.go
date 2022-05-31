@@ -200,7 +200,7 @@ func getRoot(meta map[string]json.RawMessage, fallback fs.FS) (json.RawMessage, 
 	if !ok {
 		return nil, errors.New("fs.ReadFileFS unimplemented for embedded repo")
 	}
-	trustedRoot, err := rd.ReadFile(filepath.Join("repository", "root.json"))
+	trustedRoot, err := rd.ReadFile(path.Join("repository", "root.json"))
 	if err != nil {
 		return nil, err
 	}
