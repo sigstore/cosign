@@ -242,7 +242,7 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 	var err error
 	t.local, err = newLocalStore()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating new local store: %w", err)
 	}
 
 	t.remote, err = remoteFromMirror(ctx, t.mirror)

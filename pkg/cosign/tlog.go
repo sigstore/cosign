@@ -102,12 +102,12 @@ func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
 	} else {
 		tufClient, err := tuf.NewFromEnv(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error creating new TUF obj from env: %w", err)
 		}
 		defer tufClient.Close()
 		targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting rekor target by metadata: %w", err)
 		}
 		for _, t := range targets {
 			rekorPubKey, err := PemToECDSAKey(t.Target)
@@ -387,10 +387,13 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 
 	rekorPubKeysTuf, err := GetRekorPubs(ctx)
 	if err != nil {
-		if len(rekorPubKeys) == 0 {
-			return fmt.Errorf("unable to fetch Rekor public keys from TUF repository, and not trusting the Rekor API for fetching public keys: %w", err)
-		}
-		fmt.Fprintf(os.Stderr, "**Warning** Failed to fetch Rekor public keys from TUF, using the public key from Rekor API because %s was specified", addRekorPublicKeyFromRekor)
+		return fmt.Errorf("Failed to fetch Rekor public keys from TUF: %w", err)
+		/*
+			if len(rekorPubKeys) == 0 {
+				return fmt.Errorf("unable to fetch Rekor public keys from TUF repository, and not trusting the Rekor API for fetching public keys: %w", err)
+			}
+			fmt.Fprintf(os.Stderr, "**Warning** Failed to fetch Rekor public keys from TUF, using the public key from Rekor API because %s was specified", addRekorPublicKeyFromRekor)
+		*/
 	}
 
 	for k, v := range rekorPubKeysTuf {
