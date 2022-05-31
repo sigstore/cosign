@@ -228,12 +228,14 @@ func (t *TUF) Close() error {
 //   * mirror: provides a reference to a remote GCS or HTTP mirror.
 //   * root: provides an external initial root.json. When this is not provided, this
 //       defaults to the embedded root.json.
+//   * embedded: An embedded filesystem that provides a trusted root and pre-downloaded
+//       targets in a targets/ subfolder.
 //   * forceUpdate: indicates checking the remote for an update, even when the local
 //       timestamp.json is up to date.
-func initializeTUF(ctx context.Context, mirror string, root []byte, forceUpdate bool) (*TUF, error) {
+func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) (*TUF, error) {
 	t := &TUF{
 		mirror:   mirror,
-		embedded: GetEmbedded(),
+		embedded: embedded,
 	}
 
 	t.targets = newFileImpl()
@@ -299,12 +301,12 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 	}
 
 	// Initializes a new TUF object from the local cache or defaults.
-	return initializeTUF(ctx, mirror, nil, false)
+	return initializeTUF(ctx, mirror, nil, GetEmbedded(), false)
 }
 
 func Initialize(ctx context.Context, mirror string, root []byte) error {
 	// Initialize the client. Force an update.
-	t, err := initializeTUF(ctx, mirror, root, true)
+	t, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true)
 	if err != nil {
 		return err
 	}
