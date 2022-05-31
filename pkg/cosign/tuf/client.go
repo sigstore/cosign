@@ -219,6 +219,7 @@ func GetRootStatus(ctx context.Context) (*RootStatus, error) {
 
 // Close closes the local TUF store. Should only be called once per client.
 func (t *TUF) Close() error {
+	fmt.Printf("Closing TUF obj\n")
 	return t.local.Close()
 }
 
@@ -290,6 +291,7 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 }
 
 func NewFromEnv(ctx context.Context) (*TUF, error) {
+	fmt.Printf("Creating new TUF obj\n")
 	// Check for the current remote mirror.
 	mirror := GetRemoteRoot()
 	b, err := os.ReadFile(cachedRemote(rootCacheDir()))

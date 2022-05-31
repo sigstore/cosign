@@ -387,7 +387,7 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 
 	rekorPubKeysTuf, err := GetRekorPubs(ctx)
 	if err != nil {
-		return fmt.Errorf("Failed to fetch Rekor public keys from TUF: %w", err)
+		return fmt.Errorf("failed to fetch Rekor public keys from TUF: %w", err)
 		/*
 			if len(rekorPubKeys) == 0 {
 				return fmt.Errorf("unable to fetch Rekor public keys from TUF repository, and not trusting the Rekor API for fetching public keys: %w", err)
