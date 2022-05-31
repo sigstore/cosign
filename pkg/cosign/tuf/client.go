@@ -191,8 +191,7 @@ func (t *TUF) getRootStatus() (*RootStatus, error) {
 }
 
 func getRoot(meta map[string]json.RawMessage, fallback fs.FS) (json.RawMessage, error) {
-	trustedRoot, ok := meta["root.json"]
-	if ok {
+	if trustedRoot, ok := meta["root.json"]; ok {
 		return trustedRoot, nil
 	}
 	// On first initialize, there will be no root in the TUF DB, so read from embedded.

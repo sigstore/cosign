@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -334,16 +335,16 @@ func TestGetTargetsByMeta(t *testing.T) {
 func makeMapFS(repo string) (fs fstest.MapFS) {
 	fs = make(fstest.MapFS)
 	_ = filepath.Walk(repo,
-		func(path string, info os.FileInfo, err error) error {
+		func(fpath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			rel, _ := filepath.Rel(repo, path)
+			rel, _ := filepath.Rel(repo, fpath)
 			if info.IsDir() {
-				fs[filepath.FromSlash(filepath.Join("repository", rel))] = &fstest.MapFile{Mode: os.ModeDir}
+				fs[path.Join("repository", rel)] = &fstest.MapFile{Mode: os.ModeDir}
 			} else {
-				b, _ := os.ReadFile(path)
-				fs[filepath.FromSlash(filepath.Join("repository", rel))] = &fstest.MapFile{Data: b}
+				b, _ := os.ReadFile(fpath)
+				fs[path.Join("repository", rel)] = &fstest.MapFile{Data: b}
 			}
 			return nil
 		})
@@ -386,7 +387,7 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 	if !ok {
 		t.Fatal("fs.ReadFileFS unimplemented for embedded repo")
 	}
-	if _, err := rd.ReadFile(filepath.FromSlash(filepath.Join("repository", "targets", newTarget))); err == nil {
+	if _, err := rd.ReadFile(path.Join("repository", "targets", newTarget)); err == nil {
 		t.Fatal("embedded repository should not contain new target")
 	}
 
