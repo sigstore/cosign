@@ -77,18 +77,13 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
+// There is an Env variable that can be used to override this behaviour:
+// SIGSTORE_REKOR_PUBLIC_KEY - If specified, location of the file that contains
+// the Rekor Public Key on local filesystem
 func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
-	tufClient, err := tuf.NewFromEnv(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tufClient.Close()
-	targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
-	if err != nil {
-		return nil, err
-	}
 	publicKeys := make(map[string]RekorPubKey)
 	altRekorPub := os.Getenv(altRekorPublicKey)
+
 	if altRekorPub != "" {
 		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for Rekor: %s\n", altRekorPub)
 		raw, err := os.ReadFile(altRekorPub)
@@ -105,6 +100,15 @@ func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
 		}
 		publicKeys[keyID] = RekorPubKey{PubKey: extra, Status: tuf.Active}
 	} else {
+		tufClient, err := tuf.NewFromEnv(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tufClient.Close()
+		targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
+		if err != nil {
+			return nil, err
+		}
 		for _, t := range targets {
 			rekorPubKey, err := PemToECDSAKey(t.Target)
 			if err != nil {
@@ -326,6 +330,9 @@ func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, pa
 	return searchIndex.GetPayload(), nil
 }
 
+// VerityTLogEntry verifies a TLog entry. If the Env variable
+// SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY is specified, fetches the Rekor public
+// key from the Rekor server using the provided rekorClient.
 func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.LogEntryAnon) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
@@ -358,11 +365,9 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 		LogID:          *e.LogID,
 	}
 
-	rekorPubKeys, err := GetRekorPubs(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to fetch Rekor public keys from TUF repository: %w", err)
-	}
-
+	// If we've been told to fetch the Public Key from Rekor, fetch it here
+	// first before using the TUF code below.
+	rekorPubKeys := make(map[string]RekorPubKey)
 	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor)
 	if addRekorPublic != "" {
 		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
@@ -380,6 +385,17 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 		rekorPubKeys[keyID] = RekorPubKey{PubKey: pubFromAPI, Status: tuf.Active}
 	}
 
+	rekorPubKeysTuf, err := GetRekorPubs(ctx)
+	if err != nil {
+		if len(rekorPubKeys) == 0 {
+			return fmt.Errorf("unable to fetch Rekor public keys from TUF repository, and not trusting the Rekor API for fetching public keys: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "**Warning** Failed to fetch Rekor public keys from TUF, using the public key from Rekor API because %s was specified", addRekorPublicKeyFromRekor)
+	}
+
+	for k, v := range rekorPubKeysTuf {
+		rekorPubKeys[k] = v
+	}
 	pubKey, ok := rekorPubKeys[payload.LogID]
 	if !ok {
 		return errors.New("rekor log public key not found for payload")

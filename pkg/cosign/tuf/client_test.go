@@ -19,15 +19,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -66,8 +69,8 @@ func TestNewFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tuf.Close()
 	checkTargetsAndMeta(t, tuf)
+	tuf.Close()
 
 	if err := Initialize(ctx, DefaultRemoteRoot, nil); err != nil {
 		t.Error()
@@ -92,9 +95,7 @@ func TestNoCache(t *testing.T) {
 	td := t.TempDir()
 	t.Setenv("TUF_ROOT", td)
 
-	// Force expiration so we have some content to download
-	forceExpiration(t, true)
-
+	// First initialization, populate the cache.
 	tuf, err := NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -102,6 +103,17 @@ func TestNoCache(t *testing.T) {
 	checkTargetsAndMeta(t, tuf)
 	tuf.Close()
 
+	// Force expiration so we have some content to download
+	forceExpiration(t, true)
+
+	tuf, err = NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTargetsAndMeta(t, tuf)
+	tuf.Close()
+
+	// No filesystem writes when using SIGSTORE_NO_CACHE.
 	if l := dirLen(t, td); l != 0 {
 		t.Errorf("expected no filesystem writes, got %d entries", l)
 	}
@@ -109,7 +121,7 @@ func TestNoCache(t *testing.T) {
 
 func TestCache(t *testing.T) {
 	ctx := context.Background()
-	// Once more with NO_CACHE
+	// Once more with cache.
 	t.Setenv("SIGSTORE_NO_CACHE", "false")
 	td := t.TempDir()
 	t.Setenv("TUF_ROOT", td)
@@ -119,30 +131,42 @@ func TestCache(t *testing.T) {
 		t.Errorf("expected no filesystem writes, got %d entries", l)
 	}
 
-	// Nothing should get downloaded if everything is up to date
-	forceExpiration(t, false)
+	// First initialization, populate the cache. Expect disk writes.
 	tuf, err := NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	checkTargetsAndMeta(t, tuf)
 	tuf.Close()
-
-	if l := dirLen(t, td); l != 0 {
-		t.Errorf("expected no filesystem writes, got %d entries", l)
+	cachedDirLen := dirLen(t, td)
+	if cachedDirLen == 0 {
+		t.Errorf("expected filesystem writes, got %d entries", cachedDirLen)
 	}
 
-	// Force expiration so that content gets downloaded. This should write to disk
-	forceExpiration(t, true)
+	// Nothing should get downloaded if everything is up to date.
+	forceExpiration(t, false)
 	tuf, err = NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	tuf.Close()
 
-	if l := dirLen(t, td); l == 0 {
+	if l := dirLen(t, td); cachedDirLen != l {
+		t.Errorf("expected no filesystem writes, got %d entries", l-cachedDirLen)
+	}
+
+	// Forcing expiration, but expect no disk writes because all targets up to date.
+	forceExpiration(t, true)
+	tuf, err = NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if l := dirLen(t, td); l != cachedDirLen {
 		t.Errorf("expected filesystem writes, got %d entries", l)
 	}
 	checkTargetsAndMeta(t, tuf)
+	tuf.Close()
 }
 
 func TestCustomRoot(t *testing.T) {
@@ -308,6 +332,95 @@ func TestGetTargetsByMeta(t *testing.T) {
 	}
 }
 
+func makeMapFS(repo string) (fs fstest.MapFS) {
+	fs = make(fstest.MapFS)
+	_ = filepath.Walk(repo,
+		func(fpath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, _ := filepath.Rel(repo, fpath)
+			if info.IsDir() {
+				fs[path.Join("repository", rel)] = &fstest.MapFile{Mode: os.ModeDir}
+			} else {
+				b, _ := os.ReadFile(fpath)
+				fs[path.Join("repository", rel)] = &fstest.MapFile{Data: b}
+			}
+			return nil
+		})
+	return
+}
+
+// Regression test for failure to fetch a target that does not exist in the embedded
+// repository on an update. The new target exists on the remote before the TUF object
+// is initialized.
+func TestUpdatedTargetNamesEmbedded(t *testing.T) {
+	td := t.TempDir()
+	// Set the TUF_ROOT so we don't interact with other tests and local TUF roots.
+	t.Setenv("TUF_ROOT", td)
+
+	origEmbedded := GetEmbedded
+	origDefaultRemote := GetRemoteRoot
+	defer func() {
+		GetEmbedded = origEmbedded
+		GetRemoteRoot = origDefaultRemote
+	}()
+
+	// Create an "expired" embedded repository that does not contain newTarget.
+	ctx := context.Background()
+	store, r := newTufCustomRepo(t, td, "foo")
+	repository := filepath.FromSlash(filepath.Join(td, "repository"))
+	mapfs := makeMapFS(repository)
+	GetEmbedded = func() fs.FS { return mapfs }
+
+	oldIsExpired := verify.IsExpired
+	isExpiredTimestamp = func(metadata []byte) bool {
+		m, _ := store.GetMeta()
+		timestampExpires, _ := getExpiration(m["timestamp.json"])
+		metadataExpires, _ := getExpiration(metadata)
+		return metadataExpires.Sub(*timestampExpires) <= 0
+	}
+
+	// Assert that the embedded repository does not contain the newTarget.
+	newTarget := "fooNew.txt"
+	rd, ok := GetEmbedded().(fs.ReadFileFS)
+	if !ok {
+		t.Fatal("fs.ReadFileFS unimplemented for embedded repo")
+	}
+	if _, err := rd.ReadFile(path.Join("repository", "targets", newTarget)); err == nil {
+		t.Fatal("embedded repository should not contain new target")
+	}
+
+	// Serve an updated remote repository with the newTarget.
+	addNewCustomTarget(t, td, r, map[string]string{newTarget: "newdata"})
+	s := httptest.NewServer(http.FileServer(http.Dir(repository)))
+	defer s.Close()
+	GetRemoteRoot = func() string { return s.URL }
+
+	// Initialize.
+	tufObj, err := NewFromEnv(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tufObj.Close()
+
+	// Try to retrieve the newly added target.
+	targets, err := tufObj.GetTargetsByMeta(Fulcio, []string{"fooNoCustom.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(targets) != 3 {
+		t.Fatalf("expected three target without custom metadata, got %d targets", len(targets))
+	}
+	targetBytes := []string{string(targets[0].Target), string(targets[1].Target), string(targets[2].Target)}
+	expectedTB := []string{"foo", "foo", "newdata"}
+	if !cmp.Equal(targetBytes, expectedTB,
+		cmpopts.SortSlices(func(a, b string) bool { return a < b })) {
+		t.Fatalf("target data mismatched, expected: %v, got: %v", expectedTB, targetBytes)
+	}
+	verify.IsExpired = oldIsExpired
+}
+
 func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
 	// Check the targets
 	t.Helper()
@@ -399,7 +512,7 @@ func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStor
 	for name, scm := range map[string]json.RawMessage{
 		"fooNoCustom.txt": nil, "fooNoCustomOther.txt": nil,
 		"fooActive.txt": scmActive, "fooExpired.txt": scmExpired} {
-		targetPath := filepath.Join(td, "staged", "targets", name)
+		targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", name))
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 			t.Error(err)
 		}
@@ -422,6 +535,36 @@ func newTufCustomRepo(t *testing.T, td string, targetData string) (tuf.LocalStor
 	return remote, r
 }
 
+func addNewCustomTarget(t *testing.T, td string, r *tuf.Repo, targetData map[string]string) {
+	scmActive, err := json.Marshal(&sigstoreCustomMetadata{Sigstore: customMetadata{Usage: Fulcio, Status: Active}})
+	if err != nil {
+		t.Error(err)
+	}
+
+	for name, data := range targetData {
+		targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", name))
+		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+			t.Error(err)
+		}
+		if err := ioutil.WriteFile(targetPath, []byte(data), 0600); err != nil {
+			t.Error(err)
+		}
+		if err := r.AddTarget(name, scmActive); err != nil {
+			t.Error(err)
+		}
+	}
+
+	if err := r.Snapshot(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Timestamp(); err != nil {
+		t.Error(err)
+	}
+	if err := r.Commit(); err != nil {
+		t.Error(err)
+	}
+}
+
 func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tuf.Repo) {
 	remote := tuf.FileSystemStore(td, nil)
 	r, err := tuf.NewRepo(remote)
@@ -436,7 +579,7 @@ func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tu
 			t.Error(err)
 		}
 	}
-	targetPath := filepath.Join(td, "staged", "targets", "foo.txt")
+	targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", "foo.txt"))
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		t.Error(err)
 	}
@@ -459,7 +602,7 @@ func newTufRepo(t *testing.T, td string, targetData string) (tuf.LocalStore, *tu
 }
 
 func updateTufRepo(t *testing.T, td string, r *tuf.Repo, targetData string) {
-	targetPath := filepath.Join(td, "staged", "targets", "foo.txt")
+	targetPath := filepath.FromSlash(filepath.Join(td, "staged", "targets", "foo.txt"))
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		t.Error(err)
 	}
