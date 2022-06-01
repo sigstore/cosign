@@ -267,12 +267,12 @@ kubectl create namespace demo-key-remote
 kubectl label namespace demo-key-remote policy.sigstore.dev/include=true
 echo '::endgroup::'
 
-echo '::group:: Verify with three CIP, one without correct Source set'
-if kubectl create -n demo-key-remote job demo --image=${demoimage}; then
-  echo Failed to block unsigned Job creation!
-  exit 1
-fi
-echo '::endgroup::'
+# echo '::group:: Verify with three CIP, one without correct Source set'
+# if kubectl create -n demo-key-remote job demo --image=${demoimage}; then
+#   echo Failed to block unsigned Job creation!
+#   exit 1
+# fi
+# echo '::endgroup::'
 
 echo '::group:: Deploy ClusterImagePolicy With Remote Public Key With Source'
 yq '. | .metadata.name = "image-policy-remote-source"
