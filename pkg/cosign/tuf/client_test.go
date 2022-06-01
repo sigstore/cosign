@@ -29,6 +29,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -621,4 +622,25 @@ func updateTufRepo(t *testing.T, td string, r *tuf.Repo, targetData string) {
 	if err := r.Commit(); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestConcurrentAccess(t *testing.T) {
+	var wg sync.WaitGroup
+
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tufObj, err := NewFromEnv(context.Background())
+			if err != nil {
+				t.Errorf("Failed to construct NewFromEnv: %s", err)
+			}
+			if tufObj == nil {
+				t.Error("Got back nil tufObj")
+			}
+			time.Sleep(1 * time.Second)
+			tufObj.Close()
+		}()
+	}
+	wg.Wait()
 }
