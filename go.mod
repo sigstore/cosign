@@ -54,7 +54,7 @@ require (
 	github.com/open-policy-agent/opa v0.35.0
 	github.com/pierrec/lz4 v2.6.1+incompatible
 	github.com/ryanuber/go-glob v1.0.0
-	github.com/secure-systems-lab/go-securesystemslib v0.3.1
+	github.com/secure-systems-lab/go-securesystemslib v0.4.0
 	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7
 	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3
 	github.com/sigstore/sigstore v1.2.1-0.20220424143412-3d41663116d5
