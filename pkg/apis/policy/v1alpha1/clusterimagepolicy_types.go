@@ -104,6 +104,7 @@ type KeyRef struct {
 	// +optional
 	Data string `json:"data,omitempty"`
 	// KMS contains the KMS url of the public key
+	// Supported formats differ based on the KMS system used.
 	// +optional
 	KMS string `json:"kms,omitempty"`
 }
