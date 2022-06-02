@@ -331,8 +331,9 @@ github.com/aws/aws-sdk-go v1.43.45/go.mod h1:y4AeaBuwd2Lk+GepC1E9v0qOiTws0MIWAX4
 github.com/aws/aws-sdk-go-v2 v0.18.0/go.mod h1:JWVYvqSMppoMJC0x5wdwiImzgXTI9FuZwxzkQq9wy+g=
 github.com/aws/aws-sdk-go-v2 v1.7.1/go.mod h1:L5LuPC1ZgDr2xQS7AmIec/Jlc7O/Y1u2KxJyNVab250=
 github.com/aws/aws-sdk-go-v2 v1.11.0/go.mod h1:SQfA+m2ltnu1cA0soUkj4dRSsmITiVQUJvBIZjzfPyQ=
-github.com/aws/aws-sdk-go-v2 v1.14.0 h1:IzSYBJHu0ZdUi27kIW6xVrs0eSxI4AzwbenzfXhhVs4=
 github.com/aws/aws-sdk-go-v2 v1.14.0/go.mod h1:ZA3Y8V0LrlWj63MQAnRHgKf/5QB//LSZCPNWlWrNGLU=
+github.com/aws/aws-sdk-go-v2 v1.16.4 h1:swQTEQUyJF/UkEA94/Ga55miiKFoXmm/Zd67XHgmjSg=
+github.com/aws/aws-sdk-go-v2 v1.16.4/go.mod h1:ytwTPBG6fXTZLxxeeCCWj2/EMYp/xDUgX+OET6TLNNU=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.0.0/go.mod h1:Xn6sxgRuIDflLRJFj5Ev7UxABIkNbccFPV/p8itDReM=
 github.com/aws/aws-sdk-go-v2/config v1.5.0/go.mod h1:RWlPOAW3E3tbtNAqTwvSW54Of/yP3oiZXMI0xfUdjyA=
 github.com/aws/aws-sdk-go-v2/config v1.10.1/go.mod h1:auIv5pIIn3jIBHNRcVQcsczn6Pfa6Dyv80Fai0ueoJU=
@@ -385,8 +386,9 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.15.0 h1:zC/vHxWTlqZ0tIPJItg0zWHsa25c
 github.com/aws/aws-sdk-go-v2/service/sts v1.15.0/go.mod h1:E264g2Gl5U9KTGzmd8ypGEAoh75VmqyuA/Ox5O1eRE4=
 github.com/aws/smithy-go v1.6.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/aws/smithy-go v1.9.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
-github.com/aws/smithy-go v1.11.0 h1:nOfSDwiiH232f90OuevPnAEQO5ZqH+xnn8uGVsvBCw4=
 github.com/aws/smithy-go v1.11.0/go.mod h1:3xHYmszWVx2c0kIwQeEVf9uSm4fYZt67FBJnwub1bgM=
+github.com/aws/smithy-go v1.11.2 h1:eG/N+CcUMAvsdffgMvjMKwfyDzIkjM6pfxMJ8Mzc6mE=
+github.com/aws/smithy-go v1.11.2/go.mod h1:3xHYmszWVx2c0kIwQeEVf9uSm4fYZt67FBJnwub1bgM=
 github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220228164355-396b2034c795 h1:IWeCJzU+IYaO2rVEBlGPTBfe90cmGXFTLdhUFlzDGsY=
 github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220228164355-396b2034c795/go.mod h1:8vJsEZ4iRqG+Vx6pKhWK6U00qcj0KC37IsfszMkY6UE=
 github.com/aybabtme/rgbterm v0.0.0-20170906152045-cc83f3b3ce59/go.mod h1:q/89r3U2H7sSsE2t6Kca0lfwTK8JdoNGS/yzM/4iH5I=
