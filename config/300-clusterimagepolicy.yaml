@@ -86,7 +86,7 @@ spec:
                             description: Data contains the inline public key
                             type: string
                           kms:
-                            description: KMS contains the KMS url of the public key
+                            description: KMS contains the KMS url of the public key Supported formats differ based on the KMS system used.
                             type: string
                           secretRef:
                             type: object
@@ -107,7 +107,7 @@ spec:
                                 description: Data contains the inline public key
                                 type: string
                               kms:
-                                description: KMS contains the KMS url of the public key
+                                description: KMS contains the KMS url of the public key Supported formats differ based on the KMS system used.
                                 type: string
                               secretRef:
                                 type: object
