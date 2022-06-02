@@ -47,8 +47,6 @@ const (
 )
 
 // Global in-memory targets to avoid re-downloading when there is no local cache.
-// TODO: Consider using this map even when local caching to avoid reading from disk
-// multiple times (e.g. when there are multiple signatures to verify in a single call).
 var memoryTargets = map[string][]byte{}
 
 var GetRemoteRoot = func() string {
@@ -399,13 +397,12 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 	return matchedTargets, nil
 }
 
-func (t *TUF) updateMetadataAndDownloadTargets() error {
-	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
-	// NOTE: This only returns *updated* targets.
-	targetFiles, err := t.client.Update()
+// updateClient() updates the TUF client and also caches new metadata, if needed.
+func (t *TUF) updateClient() (data.TargetFiles, error) {
+	targets, err := t.client.Update()
 	if err != nil {
-		// Get some extra information for debugging. What was the state of the metadata
-		// on the remote?
+		// Get some extra information for debugging. What was the state of the top-level
+		// metadata on the remote?
 		status := struct {
 			Mirror   string                    `json:"mirror"`
 			Metadata map[string]MetadataStatus `json:"metadata"`
@@ -432,9 +429,38 @@ func (t *TUF) updateMetadataAndDownloadTargets() error {
 		}
 		b, innerErr := json.MarshalIndent(status, "", "\t")
 		if innerErr != nil {
-			return innerErr
+			return nil, innerErr
 		}
-		return fmt.Errorf("error updating to TUF remote mirror: %w\nremote status:%s", err, string(b))
+		return nil, fmt.Errorf("error updating to TUF remote mirror: %w\nremote status:%s", err, string(b))
+	}
+	// Success! Cache new metadata, if needed.
+	if noCache() {
+		return targets, nil
+	}
+	// Sync the in-memory local store to the on-disk cache.
+	tufDB := filepath.FromSlash(filepath.Join(rootCacheDir(), "tuf.db"))
+	diskLocal, err := tuf_leveldbstore.FileLocalStore(tufDB)
+	defer func() {
+		if diskLocal != nil {
+			diskLocal.Close()
+		}
+	}()
+	if err != nil {
+		return nil, fmt.Errorf("creating cached local store: %w", err)
+	}
+	if err := syncLocalMeta(t.local, diskLocal); err != nil {
+		return nil, err
+	}
+	// Return updated targets.
+	return targets, nil
+}
+
+func (t *TUF) updateMetadataAndDownloadTargets() error {
+	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
+	// NOTE: This only returns *updated* targets.
+	targetFiles, err := t.updateClient()
+	if err != nil {
+		return err
 	}
 
 	// Download **newly** updated targets.
@@ -528,15 +554,40 @@ func cachedTargetsDir(cacheRoot string) string {
 	return filepath.FromSlash(filepath.Join(cacheRoot, "targets"))
 }
 
+func syncLocalMeta(from client.LocalStore, to client.LocalStore) error {
+	// Otherwise populate the in-memory local store with data fetched from the cache.
+	tufLocalStoreMeta, err := from.GetMeta()
+	if err != nil {
+		return fmt.Errorf("getting metadata to sync: %w", err)
+	}
+	for k, v := range tufLocalStoreMeta {
+		if err := to.SetMeta(k, v); err != nil {
+			return fmt.Errorf("syncing local store for metadata %s", k)
+		}
+	}
+	// We're done with this now, so close it.
+	return nil
+}
+
 // Local store implementations
 func newLocalStore() (client.LocalStore, error) {
+	local := client.MemoryLocalStore()
 	if noCache() {
-		return client.MemoryLocalStore(), nil
+		return local, nil
 	}
+	// Otherwise populate the in-memory local store with data fetched from the cache.
 	tufDB := filepath.FromSlash(filepath.Join(rootCacheDir(), "tuf.db"))
-	local, err := tuf_leveldbstore.FileLocalStore(tufDB)
+	diskLocal, err := tuf_leveldbstore.FileLocalStore(tufDB)
+	defer func() {
+		if diskLocal != nil {
+			diskLocal.Close()
+		}
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("creating cached local store: %w", err)
+	}
+	if err := syncLocalMeta(diskLocal, local); err != nil {
+		return nil, err
 	}
 	return local, nil
 }
@@ -555,10 +606,15 @@ type targetImpl interface {
 }
 
 func newFileImpl() targetImpl {
+	memTargets := &memoryCache{targets: memoryTargets}
 	if noCache() {
-		return &memoryCache{targets: memoryTargets}
+		return memTargets
 	}
-	return &diskCache{base: cachedTargetsDir(rootCacheDir())}
+	// Otherwise use a disk-cache with in-memory cached targets.
+	return &diskCache{
+		base:   cachedTargetsDir(rootCacheDir()),
+		memory: memTargets,
+	}
 }
 
 // In-memory cache for targets
@@ -587,15 +643,25 @@ func (m *memoryCache) Get(p string) ([]byte, error) {
 
 // On-disk cache for targets
 type diskCache struct {
+	// Base directory for accessing targets.
 	base string
+	// An in-memory map of targets that are kept in synced.
+	memory *memoryCache
 }
 
 func (d *diskCache) Get(p string) ([]byte, error) {
+	// Read from the in-memory cache first.
+	if b, err := d.memory.Get(p); err == nil {
+		return b, nil
+	}
 	fp := filepath.FromSlash(filepath.Join(d.base, p))
 	return os.ReadFile(fp)
 }
 
 func (d *diskCache) Set(p string, b []byte) error {
+	if err := d.memory.Set(p, b); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(d.base, 0700); err != nil {
 		return fmt.Errorf("creating targets dir: %w", err)
 	}
