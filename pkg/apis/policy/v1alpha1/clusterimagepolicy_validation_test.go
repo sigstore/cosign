@@ -16,12 +16,15 @@ package v1alpha1
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
+
+const validPublicKey = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaEOVJCFtduYr3xqTxeRWSW32CY/s\nTBNZj4oIUPl8JvhVPJ1TKDPlNcuT4YphSt6t3yOmMvkdQbCj8broX6vijw==\n-----END PUBLIC KEY-----"
 
 func TestImagePatternValidation(t *testing.T) {
 	tests := []struct {
@@ -282,7 +285,7 @@ func TestKeylessValidation(t *testing.T) {
 									Host: "myhost",
 								},
 								CACert: &KeyRef{
-									Data: "---certificate---",
+									Data: validPublicKey,
 								},
 							},
 						},
@@ -379,6 +382,37 @@ func TestAuthoritiesValidation(t *testing.T) {
 						{
 							Key:     &KeyRef{KMS: "kms://key/path"},
 							Sources: []Source{{OCI: "registry.example.com"}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail with invalid AWS KMS for Keyful",
+			expectErr:   true,
+			errorString: "invalid value: awskms://localhost:8888/arn:butnotvalid: spec.authorities[0].key.kms\nfailed to parse either key or alias arn: arn: not enough sections",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
+					Authorities: []Authority{
+						{
+							Key:     &KeyRef{KMS: "awskms://localhost:8888/arn:butnotvalid"},
+							Sources: []Source{{OCI: "registry.example.com"}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail with invalid AWS KMS for Keyless",
+			expectErr:   true,
+			errorString: "invalid value: awskms://localhost:8888/arn:butnotvalid: spec.authorities[0].keyless.ca-cert.kms\nfailed to parse either key or alias arn: arn: not enough sections",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{{Glob: "gcr.io/*"}},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{CACert: &KeyRef{KMS: "awskms://localhost:8888/arn:butnotvalid"}},
 						},
 					},
 				},
@@ -712,6 +746,12 @@ func TestIdentitiesValidation(t *testing.T) {
 }
 
 func TestAWSKMSValidation(t *testing.T) {
+	// Note the error messages betweeen the kms / cacert validation is
+	// identical, with the only difference being `kms` or `ca-cert.kms`. Reason
+	// for the ca-cert.kms is because it's embedded within the ca-cert that
+	// we pass in. So we put a KMSORCACERT into the err string that we then
+	// replace based on the tests so we don't have to write identical tests
+	// for both of them.
 	tests := []struct {
 		name        string
 		expectErr   bool
@@ -721,25 +761,25 @@ func TestAWSKMSValidation(t *testing.T) {
 		{
 			name:        "malformed, only 2 slashes ",
 			expectErr:   true,
-			errorString: "invalid value: awskms://1234abcd-12ab-34cd-56ef-1234567890ab: kms\nmalformed AWS KMS format, should be: 'awskms://$ENDPOINT/$KEYID'",
+			errorString: "invalid value: awskms://1234abcd-12ab-34cd-56ef-1234567890ab: KMSORCACERT\nmalformed AWS KMS format, should be: 'awskms://$ENDPOINT/$KEYID'",
 			kms:         "awskms://1234abcd-12ab-34cd-56ef-1234567890ab",
 		},
 		{
 			name:        "fails with invalid host",
 			expectErr:   true,
-			errorString: "invalid value: awskms://localhost:::4566/alias/exampleAlias: kms\nmalformed endpoint: address localhost:::4566: too many colons in address",
+			errorString: "invalid value: awskms://localhost:::4566/alias/exampleAlias: KMSORCACERT\nmalformed endpoint: address localhost:::4566: too many colons in address",
 			kms:         "awskms://localhost:::4566/alias/exampleAlias",
 		},
 		{
 			name:        "fails with non-arn alias",
 			expectErr:   true,
-			errorString: "invalid value: awskms://localhost:4566/alias/exampleAlias: kms\nfailed to parse either key or alias arn: arn: invalid prefix",
+			errorString: "invalid value: awskms://localhost:4566/alias/exampleAlias: KMSORCACERT\nfailed to parse either key or alias arn: arn: invalid prefix",
 			kms:         "awskms://localhost:4566/alias/exampleAlias",
 		},
 		{
 			name:        "Should fail when arn is invalid",
 			expectErr:   true,
-			errorString: "invalid value: awskms://localhost:4566/arn:sonotvalid: kms\nfailed to parse either key or alias arn: arn: not enough sections",
+			errorString: "invalid value: awskms://localhost:4566/arn:sonotvalid: KMSORCACERT\nfailed to parse either key or alias arn: arn: not enough sections",
 			kms:         "awskms://localhost:4566/arn:sonotvalid",
 		},
 		{
@@ -761,11 +801,23 @@ func TestAWSKMSValidation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			// First test with KeyRef
 			keyRef := KeyRef{KMS: test.kms}
 			err := keyRef.Validate(context.TODO())
 			if test.expectErr {
 				require.NotNil(t, err)
-				require.EqualError(t, err, test.errorString)
+				kmsErrString := strings.Replace(test.errorString, "KMSORCACERT", "kms", 1)
+				require.EqualError(t, err, kmsErrString)
+			} else {
+				require.Nil(t, err)
+			}
+			// Then with Keyless with CACert as KeyRef
+			keylessRef := KeylessRef{CACert: &keyRef}
+			err = keylessRef.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				caCertErrString := strings.Replace(test.errorString, "KMSORCACERT", "ca-cert.kms", 1)
+				require.EqualError(t, err, caCertErrString)
 			} else {
 				require.Nil(t, err)
 			}
