@@ -710,3 +710,66 @@ func TestIdentitiesValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestAWSKMSValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		expectErr   bool
+		errorString string
+		kms         string
+	}{
+		{
+			name:        "malformed, only 2 slashes ",
+			expectErr:   true,
+			errorString: "invalid value: awskms://1234abcd-12ab-34cd-56ef-1234567890ab: kms\nmalformed AWS KMS format, should be: 'awskms://$ENDPOINT/$KEYID'",
+			kms:         "awskms://1234abcd-12ab-34cd-56ef-1234567890ab",
+		},
+		{
+			name:        "fails with invalid host",
+			expectErr:   true,
+			errorString: "invalid value: awskms://localhost:::4566/alias/exampleAlias: kms\nmalformed endpoint: address localhost:::4566: too many colons in address",
+			kms:         "awskms://localhost:::4566/alias/exampleAlias",
+		},
+		{
+			name:        "fails with non-arn alias",
+			expectErr:   true,
+			errorString: "invalid value: awskms://localhost:4566/alias/exampleAlias: kms\nfailed to parse either key or alias arn: arn: invalid prefix",
+			kms:         "awskms://localhost:4566/alias/exampleAlias",
+		},
+		{
+			name:        "Should fail when arn is invalid",
+			expectErr:   true,
+			errorString: "invalid value: awskms://localhost:4566/arn:sonotvalid: kms\nfailed to parse either key or alias arn: arn: not enough sections",
+			kms:         "awskms://localhost:4566/arn:sonotvalid",
+		},
+		{
+			name: "works with valid arn key and endpoint",
+			kms:  "awskms://localhost:4566/arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+		},
+		{
+			name: "works with valid arn key and no endpoint",
+			kms:  "awskms:///arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+		},
+		{
+			name: "works with valid arn alias and endpoint",
+			kms:  "awskms://localhost:4566/arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias",
+		},
+		{
+			name: "works with valid arn alias and no endpoint",
+			kms:  "awskms:///arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			keyRef := KeyRef{KMS: test.kms}
+			err := keyRef.Validate(context.TODO())
+			if test.expectErr {
+				require.NotNil(t, err)
+				require.EqualError(t, err, test.errorString)
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+
+}
