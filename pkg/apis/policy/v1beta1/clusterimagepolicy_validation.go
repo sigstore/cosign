@@ -133,6 +133,9 @@ func (keyless *KeylessRef) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField("identities"))
 	}
 
+	if keyless.CACert != nil {
+		errs = errs.Also(keyless.DeepCopy().CACert.Validate(ctx).ViaField("ca-cert"))
+	}
 	for i, identity := range keyless.Identities {
 		errs = errs.Also(identity.Validate(ctx).ViaFieldIndex("identities", i))
 	}
@@ -213,7 +216,6 @@ func ValidateGlob(glob string) *apis.FieldError {
 }
 
 func ValidateRegex(regex string) *apis.FieldError {
-	// It's a regexp, so pull out the regex
 	_, err := regexp.Compile(regex)
 	if err != nil {
 		return apis.ErrInvalidValue(regex, apis.CurrentField, fmt.Sprintf("regex is invalid: %v", err))
