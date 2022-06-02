@@ -62,7 +62,7 @@ func TestNewFromEnv(t *testing.T) {
 	}
 
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	// Now try with expired targets
 	forceExpiration(t, true)
@@ -71,7 +71,7 @@ func TestNewFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	if err := Initialize(ctx, DefaultRemoteRoot, nil); err != nil {
 		t.Error()
@@ -86,7 +86,7 @@ func TestNewFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 }
 
 func TestNoCache(t *testing.T) {
@@ -102,7 +102,7 @@ func TestNoCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	// Force expiration so we have some content to download
 	forceExpiration(t, true)
@@ -112,7 +112,7 @@ func TestNoCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	// No filesystem writes when using SIGSTORE_NO_CACHE.
 	if l := dirLen(t, td); l != 0 {
@@ -138,7 +138,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 	cachedDirLen := dirLen(t, td)
 	if cachedDirLen == 0 {
 		t.Errorf("expected filesystem writes, got %d entries", cachedDirLen)
@@ -150,8 +150,7 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tuf.Close()
-
+	resetForTests()
 	if l := dirLen(t, td); cachedDirLen != l {
 		t.Errorf("expected no filesystem writes, got %d entries", l-cachedDirLen)
 	}
@@ -167,7 +166,7 @@ func TestCache(t *testing.T) {
 		t.Errorf("expected filesystem writes, got %d entries", l)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 }
 
 func TestCustomRoot(t *testing.T) {
@@ -206,7 +205,7 @@ func TestCustomRoot(t *testing.T) {
 	if b, err := tufObj.GetTarget("foo.txt"); err != nil || !bytes.Equal(b, []byte("foo")) {
 		t.Fatal(err)
 	}
-	tufObj.Close()
+	resetForTests()
 
 	// Force expiration on the first timestamp and internal go-tuf verification.
 	forceExpirationVersion(t, 1)
@@ -232,7 +231,6 @@ func TestCustomRoot(t *testing.T) {
 	if b, err := tufObj.GetTarget("foo.txt"); err != nil || !bytes.Equal(b, []byte("foo1")) {
 		t.Fatal(err)
 	}
-	tufObj.Close()
 }
 
 func TestGetTargetsByMeta(t *testing.T) {
@@ -267,7 +265,7 @@ func TestGetTargetsByMeta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tufObj.Close()
+
 	// Fetch a target with no custom metadata.
 	targets, err := tufObj.GetTargetsByMeta(UnknownUsage, []string{"fooNoCustom.txt"})
 	if err != nil {
@@ -403,7 +401,6 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tufObj.Close()
 
 	// Try to retrieve the newly added target.
 	targets, err := tufObj.GetTargetsByMeta(Fulcio, []string{"fooNoCustom.txt"})
@@ -639,7 +636,6 @@ func TestConcurrentAccess(t *testing.T) {
 				t.Error("Got back nil tufObj")
 			}
 			time.Sleep(1 * time.Second)
-			tufObj.Close()
 		}()
 	}
 	wg.Wait()

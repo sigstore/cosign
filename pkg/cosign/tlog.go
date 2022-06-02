@@ -104,7 +104,6 @@ func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error creating new TUF obj from env: %w", err)
 		}
-		defer tufClient.Close()
 		targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
 		if err != nil {
 			return nil, fmt.Errorf("error getting rekor target by metadata: %w", err)
