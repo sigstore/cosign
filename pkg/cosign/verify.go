@@ -510,7 +510,7 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 		}
 	}
 
-	bundleVerified, err = VerifyBundle(ctx, sig)
+	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
 	if err != nil && co.RekorClient == nil {
 		return false, fmt.Errorf("unable to verify bundle: %w", err)
 	}
@@ -689,7 +689,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				}
 			}
 
-			verified, err := VerifyBundle(ctx, att)
+			verified, err := VerifyBundle(ctx, att, co.RekorClient)
 			if err != nil && co.RekorClient == nil {
 				return fmt.Errorf("unable to verify bundle: %w", err)
 			}
@@ -737,7 +737,7 @@ func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
+func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Rekor) (bool, error) {
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return false, err
@@ -749,7 +749,7 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, err
 	}
 
-	publicKeys, err := GetRekorPubs(ctx)
+	publicKeys, err := GetRekorPubs(ctx, rekorClient)
 	if err != nil {
 		return false, fmt.Errorf("retrieving rekor public key: %w", err)
 	}
