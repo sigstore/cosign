@@ -32,6 +32,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/theupdateframework/go-tuf/client"
@@ -46,8 +47,12 @@ const (
 	SigstoreNoCache   = "SIGSTORE_NO_CACHE"
 )
 
-// Global in-memory targets to avoid re-downloading when there is no local cache.
-var memoryTargets = map[string][]byte{}
+var (
+	// singletonTUF holds a single instance of TUF that will get reused on
+	// subsequent invocations of initializeTUF
+	singletonTUF   *TUF
+	singletonTUFMu sync.Mutex
+)
 
 var GetRemoteRoot = func() string {
 	return DefaultRemoteRoot
@@ -101,6 +106,12 @@ type signedMeta struct {
 // repository.
 type remoteCache struct {
 	Mirror string `json:"mirror"`
+}
+
+func resetForTests() {
+	singletonTUFMu.Lock()
+	singletonTUF = nil
+	singletonTUFMu.Unlock()
 }
 
 func getExpiration(metadata []byte) (*time.Time, error) {
@@ -211,13 +222,7 @@ func GetRootStatus(ctx context.Context) (*RootStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer t.Close()
 	return t.getRootStatus()
-}
-
-// Close closes the local TUF store. Should only be called once per client.
-func (t *TUF) Close() error {
-	return t.local.Close()
 }
 
 // initializeTUF creates a TUF client using the following params:
@@ -231,6 +236,12 @@ func (t *TUF) Close() error {
 //   * forceUpdate: indicates checking the remote for an update, even when the local
 //       timestamp.json is up to date.
 func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) (*TUF, error) {
+	singletonTUFMu.Lock()
+	defer singletonTUFMu.Unlock()
+	if singletonTUF != nil {
+		return singletonTUF, nil
+	}
+
 	t := &TUF{
 		mirror:   mirror,
 		embedded: embedded,
@@ -245,7 +256,6 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 
 	t.remote, err = remoteFromMirror(ctx, t.mirror)
 	if err != nil {
-		t.Close()
 		return nil, err
 	}
 
@@ -253,7 +263,6 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 
 	trustedMeta, err := t.local.GetMeta()
 	if err != nil {
-		t.Close()
 		return nil, fmt.Errorf("getting trusted meta: %w", err)
 	}
 
@@ -262,28 +271,29 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 	if root == nil {
 		root, err = getRoot(trustedMeta, t.embedded)
 		if err != nil {
-			t.Close()
 			return nil, fmt.Errorf("getting trusted root: %w", err)
 		}
 	}
 
 	if err := t.client.InitLocal(root); err != nil {
-		t.Close()
 		return nil, fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err)
 	}
 
 	// We may already have an up-to-date local store! Check to see if it needs to be updated.
 	trustedTimestamp, ok := trustedMeta["timestamp.json"]
 	if ok && !isExpiredTimestamp(trustedTimestamp) && !forceUpdate {
+		// We're golden so stash the TUF object for later use
+		singletonTUF = t
 		return t, nil
 	}
 
 	// Update if local is not populated or out of date.
 	if err := t.updateMetadataAndDownloadTargets(); err != nil {
-		t.Close()
 		return nil, fmt.Errorf("updating local metadata and targets: %w", err)
 	}
 
+	// We're golden so stash the TUF object for later use
+	singletonTUF = t
 	return t, err
 }
 
@@ -304,11 +314,9 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 
 func Initialize(ctx context.Context, mirror string, root []byte) error {
 	// Initialize the client. Force an update.
-	t, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true)
-	if err != nil {
+	if _, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true); err != nil {
 		return err
 	}
-	t.Close()
 
 	// Store the remote for later if we are caching.
 	if !noCache() {
@@ -565,7 +573,6 @@ func syncLocalMeta(from client.LocalStore, to client.LocalStore) error {
 			return fmt.Errorf("syncing local store for metadata %s", k)
 		}
 	}
-	// We're done with this now, so close it.
 	return nil
 }
 
@@ -606,7 +613,7 @@ type targetImpl interface {
 }
 
 func newFileImpl() targetImpl {
-	memTargets := &memoryCache{targets: memoryTargets}
+	memTargets := &memoryCache{}
 	if noCache() {
 		return memTargets
 	}

@@ -109,7 +109,6 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 		if err != nil {
 			return nil, err
 		}
-		defer tufClient.Close()
 		targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
 		if err != nil {
 			return nil, err

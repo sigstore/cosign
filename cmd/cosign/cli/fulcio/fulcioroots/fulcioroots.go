@@ -116,7 +116,6 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("initializing tuf: %w", err)
 		}
-		defer tufClient.Close()
 		// Retrieve from the embedded or cached TUF root. If expired, a network
 		// call is made to update the root.
 		targets, err := tufClient.GetTargetsByMeta(tuf.Fulcio, []string{fulcioTargetStr, fulcioV1TargetStr})
