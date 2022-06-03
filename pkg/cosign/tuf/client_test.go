@@ -216,9 +216,19 @@ func TestCustomRoot(t *testing.T) {
 		return true
 	}
 
-	if _, err = NewFromEnv(ctx); err == nil {
-		t.Errorf("expected expired timestamp from the remote")
-	}
+	// Force a panic error that the remote metadata is expired.
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("NewFromEnv with expired remote metadata should have panicked!")
+			}
+		}()
+		// This should cause a panic
+		if _, err = NewFromEnv(ctx); err == nil {
+			t.Errorf("expected expired timestamp from the remote")
+		}
+	}()
+
 	// Let internal TUF verification succeed normally now.
 	verify.IsExpired = oldIsExpired
 
@@ -226,6 +236,7 @@ func TestCustomRoot(t *testing.T) {
 	updateTufRepo(t, td, r, "foo1")
 
 	// Use newTuf and successfully get updated metadata using the cached remote location.
+	resetForTests()
 	tufObj, err = NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)

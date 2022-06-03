@@ -50,8 +50,8 @@ const (
 var (
 	// singletonTUF holds a single instance of TUF that will get reused on
 	// subsequent invocations of initializeTUF
-	singletonTUF   *TUF
-	singletonTUFMu sync.Mutex
+	singletonTUF     *TUF
+	singletonTUFOnce = new(sync.Once)
 )
 
 var GetRemoteRoot = func() string {
@@ -109,9 +109,7 @@ type remoteCache struct {
 }
 
 func resetForTests() {
-	singletonTUFMu.Lock()
-	singletonTUF = nil
-	singletonTUFMu.Unlock()
+	singletonTUFOnce = new(sync.Once)
 }
 
 func getExpiration(metadata []byte) (*time.Time, error) {
@@ -235,66 +233,62 @@ func GetRootStatus(ctx context.Context) (*RootStatus, error) {
 //       targets in a targets/ subfolder.
 //   * forceUpdate: indicates checking the remote for an update, even when the local
 //       timestamp.json is up to date.
-func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) (*TUF, error) {
-	singletonTUFMu.Lock()
-	defer singletonTUFMu.Unlock()
-	if singletonTUF != nil {
-		return singletonTUF, nil
-	}
-
-	t := &TUF{
-		mirror:   mirror,
-		embedded: embedded,
-	}
-
-	t.targets = newFileImpl()
-	var err error
-	t.local, err = newLocalStore()
-	if err != nil {
-		return nil, err
-	}
-
-	t.remote, err = remoteFromMirror(ctx, t.mirror)
-	if err != nil {
-		return nil, err
-	}
-
-	t.client = client.NewClient(t.local, t.remote)
-
-	trustedMeta, err := t.local.GetMeta()
-	if err != nil {
-		return nil, fmt.Errorf("getting trusted meta: %w", err)
-	}
-
-	// If the caller does not supply a root, then either use the root in the local store
-	// or default to the embedded one.
-	if root == nil {
-		root, err = getRoot(trustedMeta, t.embedded)
-		if err != nil {
-			return nil, fmt.Errorf("getting trusted root: %w", err)
+func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) *TUF {
+	singletonTUFOnce.Do(func() {
+		t := &TUF{
+			mirror:   mirror,
+			embedded: embedded,
 		}
-	}
 
-	if err := t.client.InitLocal(root); err != nil {
-		return nil, fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err)
-	}
+		t.targets = newFileImpl()
+		var err error
+		t.local, err = newLocalStore()
+		if err != nil {
+			panic(err)
+		}
 
-	// We may already have an up-to-date local store! Check to see if it needs to be updated.
-	trustedTimestamp, ok := trustedMeta["timestamp.json"]
-	if ok && !isExpiredTimestamp(trustedTimestamp) && !forceUpdate {
+		t.remote, err = remoteFromMirror(ctx, t.mirror)
+		if err != nil {
+			panic(err)
+		}
+
+		t.client = client.NewClient(t.local, t.remote)
+
+		trustedMeta, err := t.local.GetMeta()
+		if err != nil {
+			panic(fmt.Errorf("getting trusted meta: %w", err))
+		}
+
+		// If the caller does not supply a root, then either use the root in the local store
+		// or default to the embedded one.
+		if root == nil {
+			root, err = getRoot(trustedMeta, t.embedded)
+			if err != nil {
+				panic(fmt.Errorf("getting trusted root: %w", err))
+			}
+		}
+
+		if err := t.client.InitLocal(root); err != nil {
+			panic(fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err))
+		}
+
+		// We may already have an up-to-date local store! Check to see if it needs to be updated.
+		trustedTimestamp, ok := trustedMeta["timestamp.json"]
+		if ok && !isExpiredTimestamp(trustedTimestamp) && !forceUpdate {
+			// We're golden so stash the TUF object for later use
+			singletonTUF = t
+			return
+		}
+
+		// Update if local is not populated or out of date.
+		if err := t.updateMetadataAndDownloadTargets(); err != nil {
+			panic(fmt.Errorf("updating local metadata and targets: %w", err))
+		}
+
 		// We're golden so stash the TUF object for later use
 		singletonTUF = t
-		return t, nil
-	}
-
-	// Update if local is not populated or out of date.
-	if err := t.updateMetadataAndDownloadTargets(); err != nil {
-		return nil, fmt.Errorf("updating local metadata and targets: %w", err)
-	}
-
-	// We're golden so stash the TUF object for later use
-	singletonTUF = t
-	return t, err
+	})
+	return singletonTUF
 }
 
 func NewFromEnv(ctx context.Context) (*TUF, error) {
@@ -309,14 +303,12 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 	}
 
 	// Initializes a new TUF object from the local cache or defaults.
-	return initializeTUF(ctx, mirror, nil, GetEmbedded(), false)
+	return initializeTUF(ctx, mirror, nil, GetEmbedded(), false), nil
 }
 
 func Initialize(ctx context.Context, mirror string, root []byte) error {
-	// Initialize the client. Force an update.
-	if _, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true); err != nil {
-		return err
-	}
+	// Initialize the client. Force an update with remote.
+	_ = initializeTUF(ctx, mirror, root, GetEmbedded(), true)
 
 	// Store the remote for later if we are caching.
 	if !noCache() {
@@ -445,7 +437,7 @@ func (t *TUF) updateClient() (data.TargetFiles, error) {
 	if noCache() {
 		return targets, nil
 	}
-	// Sync the in-memory local store to the on-disk cache.
+	// Sync the on-disk cache with the metadata from the in-memory store.
 	tufDB := filepath.FromSlash(filepath.Join(rootCacheDir(), "tuf.db"))
 	diskLocal, err := tuf_leveldbstore.FileLocalStore(tufDB)
 	defer func() {
@@ -563,7 +555,7 @@ func cachedTargetsDir(cacheRoot string) string {
 }
 
 func syncLocalMeta(from client.LocalStore, to client.LocalStore) error {
-	// Otherwise populate the in-memory local store with data fetched from the cache.
+	// Copy trusted metadata in the from LocalStore into the to LocalStore.
 	tufLocalStoreMeta, err := from.GetMeta()
 	if err != nil {
 		return fmt.Errorf("getting metadata to sync: %w", err)
@@ -593,6 +585,7 @@ func newLocalStore() (client.LocalStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating cached local store: %w", err)
 	}
+	// Populate the in-memory local store with data fetched from the cache.
 	if err := syncLocalMeta(diskLocal, local); err != nil {
 		return nil, err
 	}
@@ -652,7 +645,7 @@ func (m *memoryCache) Get(p string) ([]byte, error) {
 type diskCache struct {
 	// Base directory for accessing targets.
 	base string
-	// An in-memory map of targets that are kept in synced.
+	// An in-memory map of targets that are kept in sync.
 	memory *memoryCache
 }
 
