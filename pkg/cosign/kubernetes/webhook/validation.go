@@ -91,7 +91,7 @@ func validSignatures(ctx context.Context, ref name.Reference, verifier signature
 func validSignaturesWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, identities []v1alpha1.Identity, opts ...ociremote.Option) ([]oci.Signature, error) {
 	ids := make([]cosign.Identity, len(identities))
 	for i, id := range identities {
-		ids[i] = cosign.Identity{Issuer: id.Issuer, Subject: id.Subject}
+		ids[i] = cosign.Identity{Issuer: id.Issuer, Subject: id.Subject, IssuerRE: id.IssuerRE, SubjectRE: id.SubjectRE}
 	}
 	sigs, _, err := cosignVerifySignatures(ctx, ref, &cosign.CheckOpts{
 		RegistryClientOpts: opts,
@@ -118,7 +118,7 @@ func validAttestations(ctx context.Context, ref name.Reference, verifier signatu
 func validAttestationsWithFulcio(ctx context.Context, ref name.Reference, fulcioRoots *x509.CertPool, rekorClient *client.Rekor, identities []v1alpha1.Identity, opts ...ociremote.Option) ([]oci.Signature, error) {
 	ids := make([]cosign.Identity, len(identities))
 	for i, id := range identities {
-		ids[i] = cosign.Identity{Issuer: id.Issuer, Subject: id.Subject}
+		ids[i] = cosign.Identity{Issuer: id.Issuer, Subject: id.Subject, IssuerRE: id.IssuerRE, SubjectRE: id.SubjectRE}
 	}
 
 	attestations, _, err := cosignVerifyAttestations(ctx, ref, &cosign.CheckOpts{

@@ -652,16 +652,13 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 		{identities: nil /* No matches required, checks out */},
 		{identities: []Identity{ // Strict match on both
 			{Subject: emailSubject, Issuer: oidcIssuer}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
+			emailAddresses: []string{emailSubject}},
 		{identities: []Identity{ // just issuer
 			{Issuer: oidcIssuer}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
+			emailAddresses: []string{emailSubject}},
 		{identities: []Identity{ // just subject
 			{Subject: emailSubject}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
+			emailAddresses: []string{emailSubject}},
 		{identities: []Identity{ // mis-match
 			{Subject: "wrongsubject", Issuer: oidcIssuer},
 			{Subject: emailSubject, Issuer: "wrongissuer"}},
@@ -670,29 +667,28 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 		{identities: []Identity{ // one good identity, other does not match
 			{Subject: "wrongsubject", Issuer: "wrongissuer"},
 			{Subject: emailSubject, Issuer: oidcIssuer}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
+			emailAddresses: []string{emailSubject}},
 		{identities: []Identity{ // illegal regex for subject
-			{Subject: "****", Issuer: oidcIssuer}},
+			{SubjectRE: "****", Issuer: oidcIssuer}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: "malformed subject in identity"},
 		{identities: []Identity{ // illegal regex for issuer
-			{Subject: emailSubject, Issuer: "****"}},
+			{Subject: emailSubject, IssuerRE: "****"}},
 			wantErrSubstring: "malformed issuer in identity"},
 		{identities: []Identity{ // regex matches
-			{Subject: ".*example.com", Issuer: ".*accounts.google.*"}},
+			{SubjectRE: ".*example.com", IssuerRE: ".*accounts.google.*"}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: ""},
 		{identities: []Identity{ // regex matches dnsNames
-			{Subject: ".*ubject.example.com", Issuer: ".*accounts.google.*"}},
+			{SubjectRE: ".*ubject.example.com", IssuerRE: ".*accounts.google.*"}},
 			dnsNames:         dnsSubjects,
 			wantErrSubstring: ""},
 		{identities: []Identity{ // regex matches ip
-			{Subject: "1.2.3.*", Issuer: ".*accounts.google.*"}},
+			{SubjectRE: "1.2.3.*", IssuerRE: ".*accounts.google.*"}},
 			ipAddresses:      ipSubjects,
 			wantErrSubstring: ""},
 		{identities: []Identity{ // regex matches urls
-			{Subject: ".*url.examp.*", Issuer: ".*accounts.google.*"}},
+			{SubjectRE: ".*url.examp.*", IssuerRE: ".*accounts.google.*"}},
 			uris:             uriSubjects,
 			wantErrSubstring: ""},
 	}

@@ -58,10 +58,13 @@ import (
 )
 
 // Identity specifies an issuer/subject to verify a signature against.
-// Both Issuer/Subject support regexp.
+// Both IssuerRE/SubjectRE support regexp while Issuer/Subject are for strict
+// matching
 type Identity struct {
-	Issuer  string
-	Subject string
+	Issuer    string
+	Subject   string
+	IssuerRE  string
+	SubjectRE string
 }
 
 // CheckOpts are the options for checking signatures.
@@ -224,11 +227,15 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 		for _, identity := range co.Identities {
 			issuerMatches := false
 			// Check the issuer first
-			if identity.Issuer != "" {
+			if identity.IssuerRE != "" {
 				issuer := getIssuer(cert)
-				if regex, err := regexp.Compile(identity.Issuer); err != nil {
-					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.Issuer, err)
+				if regex, err := regexp.Compile(identity.IssuerRE); err != nil {
+					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRE, err)
 				} else if regex.MatchString(issuer) {
+					issuerMatches = true
+				}
+			} else if identity.Issuer != "" {
+				if identity.Issuer == getIssuer(cert) {
 					issuerMatches = true
 				}
 			} else {
@@ -238,13 +245,20 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 
 			// Then the subject
 			subjectMatches := false
-			if identity.Subject != "" {
-				regex, err := regexp.Compile(identity.Subject)
+			if identity.SubjectRE != "" {
+				regex, err := regexp.Compile(identity.SubjectRE)
 				if err != nil {
-					return fmt.Errorf("malformed subject in identity: %s : %w", identity.Subject, err)
+					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRE, err)
 				}
 				for _, san := range getSubjectAlternateNames(cert) {
 					if regex.MatchString(san) {
+						subjectMatches = true
+						break
+					}
+				}
+			} else if identity.Subject != "" {
+				for _, san := range getSubjectAlternateNames(cert) {
+					if san == identity.Subject {
 						subjectMatches = true
 						break
 					}
