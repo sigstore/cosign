@@ -53,7 +53,7 @@ wget -O ${DISTROLESS_PUB_KEY} https://raw.githubusercontent.com/GoogleContainerT
 if (./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_build_stage.Dockerfile); then false; fi
 ./cosign dockerfile verify --base-image-only --key ${DISTROLESS_PUB_KEY} ./test/testdata/unsigned_build_stage.Dockerfile
 ./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/fancy_from.Dockerfile
-test_image="gcr.io/distroless/base" ./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile
+test_image="ghcr.io/distroless/alpine-base" ./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile
 # Image exists, but is unsigned
 if (test_image="ubuntu" ./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/with_arg.Dockerfile); then false; fi
 ./cosign dockerfile verify --key ${DISTROLESS_PUB_KEY} ./test/testdata/with_lowercase.Dockerfile

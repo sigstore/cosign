@@ -59,7 +59,7 @@ jobs:
           docker run --rm --privileged \
           -e PROJECT_ID=honk-fake-project \
           -e CI=$CI \
-          -e RUNTIME_IMAGE=gcr.io/distroless/static:debug-nonroot \
+          -e RUNTIME_IMAGE=ghcr.io/distroless/static:latest \
           -v ${PWD}:/go/src/sigstore/cosign \
           -v /var/run/docker.sock:/var/run/docker.sock \
           -w /go/src/sigstore/cosign \

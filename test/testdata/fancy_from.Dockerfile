@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=linux/amd64 gcr.io/distroless/base AS base
+FROM --platform=linux/amd64 ghcr.io/distroless/alpine-base AS base
 
 # blah blah

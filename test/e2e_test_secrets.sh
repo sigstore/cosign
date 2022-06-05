@@ -46,7 +46,7 @@ img_copy="${img}/copy"
 crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; done
 multiarch_img="${TEST_INSTANCE_REPO}/multiarch-test"
 crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${tag}" ; done
-crane cp gcr.io/distroless/base $multiarch_img
+crane cp ghcr.io/distroless/alpine-base $multiarch_img
 
 # `initialize`
 ./cosign initialize

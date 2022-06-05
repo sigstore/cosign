@@ -24,7 +24,7 @@ GOFILES ?= $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 # Set version variables for LDFLAGS
 PROJECT_ID ?= projectsigstore
-RUNTIME_IMAGE ?= gcr.io/distroless/static
+RUNTIME_IMAGE ?= ghcr.io/distroless/static
 GIT_TAG ?= dirty-tag
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
