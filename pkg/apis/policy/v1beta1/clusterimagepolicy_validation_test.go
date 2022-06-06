@@ -615,7 +615,7 @@ func TestIdentitiesValidation(t *testing.T) {
 		{
 			name:        "Should fail when issuer has invalid regex",
 			expectErr:   true,
-			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].issuerRE\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
+			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].issuerRegExp\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -626,7 +626,7 @@ func TestIdentitiesValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Keyless: &KeylessRef{
-								Identities: []Identity{{IssuerRE: "****"}},
+								Identities: []Identity{{IssuerRegExp: "****"}},
 							},
 						},
 					},
@@ -636,7 +636,7 @@ func TestIdentitiesValidation(t *testing.T) {
 		{
 			name:        "Should fail when subject has invalid regex",
 			expectErr:   true,
-			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].subjectRE\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
+			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].subjectRegExp\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -647,7 +647,7 @@ func TestIdentitiesValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Keyless: &KeylessRef{
-								Identities: []Identity{{SubjectRE: "****"}},
+								Identities: []Identity{{SubjectRegExp: "****"}},
 							},
 						},
 					},
@@ -666,7 +666,7 @@ func TestIdentitiesValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Keyless: &KeylessRef{
-								Identities: []Identity{{SubjectRE: ".*subject.*", IssuerRE: ".*issuer.*"}},
+								Identities: []Identity{{SubjectRegExp: ".*subject.*", IssuerRegExp: ".*issuer.*"}},
 							},
 						},
 					},

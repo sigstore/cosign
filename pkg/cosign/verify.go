@@ -58,13 +58,13 @@ import (
 )
 
 // Identity specifies an issuer/subject to verify a signature against.
-// Both IssuerRE/SubjectRE support regexp while Issuer/Subject are for strict
-// matching
+// Both IssuerRegExp/SubjectRegExp support regexp while Issuer/Subject are for
+// strict matching.
 type Identity struct {
-	Issuer    string
-	Subject   string
-	IssuerRE  string
-	SubjectRE string
+	Issuer        string
+	Subject       string
+	IssuerRegExp  string
+	SubjectRegExp string
 }
 
 // CheckOpts are the options for checking signatures.
@@ -226,29 +226,31 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	if len(co.Identities) > 0 {
 		for _, identity := range co.Identities {
 			issuerMatches := false
+			switch {
 			// Check the issuer first
-			if identity.IssuerRE != "" {
+			case identity.IssuerRegExp != "":
 				issuer := getIssuer(cert)
-				if regex, err := regexp.Compile(identity.IssuerRE); err != nil {
-					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRE, err)
+				if regex, err := regexp.Compile(identity.IssuerRegExp); err != nil {
+					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRegExp, err)
 				} else if regex.MatchString(issuer) {
 					issuerMatches = true
 				}
-			} else if identity.Issuer != "" {
+			case identity.Issuer != "":
 				if identity.Issuer == getIssuer(cert) {
 					issuerMatches = true
 				}
-			} else {
+			default:
 				// No issuer constraint on this identity, so checks out
 				issuerMatches = true
 			}
 
 			// Then the subject
 			subjectMatches := false
-			if identity.SubjectRE != "" {
-				regex, err := regexp.Compile(identity.SubjectRE)
+			switch {
+			case identity.SubjectRegExp != "":
+				regex, err := regexp.Compile(identity.SubjectRegExp)
 				if err != nil {
-					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRE, err)
+					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRegExp, err)
 				}
 				for _, san := range getSubjectAlternateNames(cert) {
 					if regex.MatchString(san) {
@@ -256,14 +258,14 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 						break
 					}
 				}
-			} else if identity.Subject != "" {
+			case identity.Subject != "":
 				for _, san := range getSubjectAlternateNames(cert) {
 					if san == identity.Subject {
 						subjectMatches = true
 						break
 					}
 				}
-			} else {
+			default:
 				// No subject constraint on this identity, so checks out
 				subjectMatches = true
 			}

@@ -125,11 +125,11 @@ spec:
                               properties:
                                 issuer:
                                   type: string
-                                issuerRE:
+                                issuerRegExp:
                                   type: string
                                 subject:
                                   type: string
-                                subjectRE:
+                                subjectRegExp:
                                   type: string
                           url:
                             type: string

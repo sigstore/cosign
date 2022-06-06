@@ -193,14 +193,14 @@ func (p *Policy) Validate(ctx context.Context) *apis.FieldError {
 
 func (identity *Identity) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-	if identity.Issuer == "" && identity.Subject == "" && identity.IssuerRE == "" && identity.SubjectRE == "" {
-		errs = errs.Also(apis.ErrMissingOneOf("issuer", "subject", "issuerRE", "subjectRE"))
+	if identity.Issuer == "" && identity.Subject == "" && identity.IssuerRegExp == "" && identity.SubjectRegExp == "" {
+		errs = errs.Also(apis.ErrMissingOneOf("issuer", "subject", "issuerRegExp", "subjectRegExp"))
 	}
-	if identity.IssuerRE != "" {
-		errs = errs.Also(ValidateRegex(identity.IssuerRE).ViaField("issuerRE"))
+	if identity.IssuerRegExp != "" {
+		errs = errs.Also(ValidateRegex(identity.IssuerRegExp).ViaField("issuerRegExp"))
 	}
-	if identity.SubjectRE != "" {
-		errs = errs.Also(ValidateRegex(identity.SubjectRE).ViaField("subjectRE"))
+	if identity.SubjectRegExp != "" {
+		errs = errs.Also(ValidateRegex(identity.SubjectRegExp).ViaField("subjectRegExp"))
 	}
 	return errs
 }
