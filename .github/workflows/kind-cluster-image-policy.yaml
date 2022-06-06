@@ -41,7 +41,7 @@ jobs:
     env:
       KNATIVE_VERSION: "1.1.0"
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.2.2"
+      SCAFFOLDING_RELEASE_VERSION: "v0.2.8"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
@@ -90,6 +90,7 @@ jobs:
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
 
     - name: Run Cluster Image Policy Tests
+      timeout-minutes: 15
       run: |
         ./test/e2e_test_cluster_image_policy.sh
 

@@ -90,6 +90,7 @@ jobs:
         kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
 
     - name: Run Cluster Image Policy Tests with attestations
+      timeout-minutes: 15
       run: |
         ./test/e2e_test_cluster_image_policy_with_attestations.sh
 
