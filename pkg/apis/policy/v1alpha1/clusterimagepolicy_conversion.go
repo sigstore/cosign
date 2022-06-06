@@ -103,7 +103,7 @@ func (authority *Authority) ConvertTo(ctx context.Context, sink *v1beta1.Authori
 			URL: authority.Keyless.URL.DeepCopy(),
 		}
 		for _, id := range authority.Keyless.Identities {
-			sink.Keyless.Identities = append(sink.Keyless.Identities, v1beta1.Identity{Issuer: id.Issuer, Subject: id.Subject})
+			sink.Keyless.Identities = append(sink.Keyless.Identities, v1beta1.Identity{Issuer: id.Issuer, Subject: id.Subject, IssuerRegExp: id.IssuerRegExp, SubjectRegExp: id.SubjectRegExp})
 		}
 		if authority.Keyless.CACert != nil {
 			sink.Keyless.CACert = &v1beta1.KeyRef{}
@@ -175,7 +175,7 @@ func (authority *Authority) ConvertFrom(ctx context.Context, source *v1beta1.Aut
 			URL: source.Keyless.URL.DeepCopy(),
 		}
 		for _, id := range source.Keyless.Identities {
-			authority.Keyless.Identities = append(authority.Keyless.Identities, Identity{Issuer: id.Issuer, Subject: id.Subject})
+			authority.Keyless.Identities = append(authority.Keyless.Identities, Identity{Issuer: id.Issuer, Subject: id.Subject, IssuerRegExp: id.IssuerRegExp, SubjectRegExp: id.SubjectRegExp})
 		}
 		if source.Keyless.CACert != nil {
 			authority.Keyless.CACert = &KeyRef{}

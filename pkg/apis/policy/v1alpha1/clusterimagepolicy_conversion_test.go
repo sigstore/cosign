@@ -47,6 +47,23 @@ func TestConversionRoundTripV1alpha1(t *testing.T) {
 				},
 			},
 		},
+	}, {name: "key and keyless, regexp",
+		in: &ClusterImagePolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-cip",
+			},
+			Spec: ClusterImagePolicySpec{
+				Images: []ImagePattern{{Glob: "*"}},
+				Authorities: []Authority{
+					{Key: &KeyRef{
+						SecretRef: &v1.SecretReference{Name: "mysecret"}}},
+					{Keyless: &KeylessRef{
+						Identities: []Identity{{SubjectRegExp: "subjectregexp", IssuerRegExp: "issuerregexp"}},
+						CACert:     &KeyRef{KMS: "kms", Data: "data", SecretRef: &v1.SecretReference{Name: "secret"}},
+					}},
+				},
+			},
+		},
 	}, {name: "source and attestations",
 		in: &ClusterImagePolicy{
 			ObjectMeta: metav1.ObjectMeta{
