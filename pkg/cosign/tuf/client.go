@@ -52,6 +52,7 @@ var (
 	// subsequent invocations of initializeTUF
 	singletonTUF     *TUF
 	singletonTUFOnce = new(sync.Once)
+	singletonTUFErr  error
 )
 
 var GetRemoteRoot = func() string {
@@ -233,7 +234,7 @@ func GetRootStatus(ctx context.Context) (*RootStatus, error) {
 //       targets in a targets/ subfolder.
 //   * forceUpdate: indicates checking the remote for an update, even when the local
 //       timestamp.json is up to date.
-func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) *TUF {
+func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) (*TUF, error) {
 	singletonTUFOnce.Do(func() {
 		t := &TUF{
 			mirror:   mirror,
@@ -241,22 +242,22 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 		}
 
 		t.targets = newFileImpl()
-		var err error
-		t.local, err = newLocalStore()
-		if err != nil {
-			panic(err)
+		t.local, singletonTUFErr = newLocalStore()
+		if singletonTUFErr != nil {
+			return
 		}
 
-		t.remote, err = remoteFromMirror(ctx, t.mirror)
-		if err != nil {
-			panic(err)
+		t.remote, singletonTUFErr = remoteFromMirror(ctx, t.mirror)
+		if singletonTUFErr != nil {
+			return
 		}
 
 		t.client = client.NewClient(t.local, t.remote)
 
 		trustedMeta, err := t.local.GetMeta()
 		if err != nil {
-			panic(fmt.Errorf("getting trusted meta: %w", err))
+			singletonTUFErr = fmt.Errorf("getting trusted meta: %w", err)
+			return
 		}
 
 		// If the caller does not supply a root, then either use the root in the local store
@@ -264,12 +265,14 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 		if root == nil {
 			root, err = getRoot(trustedMeta, t.embedded)
 			if err != nil {
-				panic(fmt.Errorf("getting trusted root: %w", err))
+				singletonTUFErr = fmt.Errorf("getting trusted root: %w", err)
+				return
 			}
 		}
 
 		if err := t.client.InitLocal(root); err != nil {
-			panic(fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err))
+			singletonTUFErr = fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err)
+			return
 		}
 
 		// We may already have an up-to-date local store! Check to see if it needs to be updated.
@@ -282,13 +285,14 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 
 		// Update if local is not populated or out of date.
 		if err := t.updateMetadataAndDownloadTargets(); err != nil {
-			panic(fmt.Errorf("updating local metadata and targets: %w", err))
+			singletonTUFErr = fmt.Errorf("updating local metadata and targets: %w", err)
+			return
 		}
 
 		// We're golden so stash the TUF object for later use
 		singletonTUF = t
 	})
-	return singletonTUF
+	return singletonTUF, singletonTUFErr
 }
 
 func NewFromEnv(ctx context.Context) (*TUF, error) {
@@ -303,12 +307,14 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 	}
 
 	// Initializes a new TUF object from the local cache or defaults.
-	return initializeTUF(ctx, mirror, nil, GetEmbedded(), false), nil
+	return initializeTUF(ctx, mirror, nil, GetEmbedded(), false)
 }
 
 func Initialize(ctx context.Context, mirror string, root []byte) error {
 	// Initialize the client. Force an update with remote.
-	_ = initializeTUF(ctx, mirror, root, GetEmbedded(), true)
+	if _, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true); err != nil {
+		return err
+	}
 
 	// Store the remote for later if we are caching.
 	if !noCache() {
