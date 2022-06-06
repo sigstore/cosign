@@ -763,7 +763,7 @@ func TestIdentitiesValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Keyless: &KeylessRef{
-								Identities: []Identity{{Subject: ".*subject.*", Issuer: ".*issuer.*"}},
+								Identities: []Identity{{SubjectRegExp: ".*subject.*", IssuerRegExp: ".*issuer.*"}},
 							},
 						},
 					},
