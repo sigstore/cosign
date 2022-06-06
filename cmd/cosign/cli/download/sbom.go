@@ -17,6 +17,7 @@ package download
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -47,7 +48,10 @@ func SBOMCmd(
 
 	file, err := se.Attachment("sbom")
 	if err != nil {
-		return nil, err
+		if errors.Is(err, ociremote.ErrImageNotFound) {
+			return nil, errors.New("no sbom attached to reference")
+		}
+		return nil, fmt.Errorf("getting sbom attachment: %+w", err)
 	}
 
 	// "attach sbom" attaches a single static.NewFile
