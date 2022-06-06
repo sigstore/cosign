@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/base
+FROM ghcr.io/distroless/alpine-base
 
 # blah blah

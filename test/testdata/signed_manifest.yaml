@@ -20,4 +20,4 @@ spec:
   restartPolicy: Never
   containers:
     - name: distroless
-      image: gcr.io/distroless/base
+      image: ghcr.io/distroless/alpine-base

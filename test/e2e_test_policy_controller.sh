@@ -39,8 +39,8 @@ spec:
   restartPolicy: Never
   containers:
   - name: sample
-    image: gcr.io/distroless/base:debug
-    command: [/busybox/sh, -c]
+    image: ghcr.io/distroless/alpine-base:latest
+    command: [/bin/sh, -c]
     args:
     - |
       echo Testing Fulcio verification
