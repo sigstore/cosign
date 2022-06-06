@@ -26,7 +26,10 @@ import (
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
-func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, out io.Writer) ([]string, error) {
+func SBOMCmd(
+	ctx context.Context, regOpts options.RegistryOptions,
+	dnOpts options.SBOMDownloadOptions, imageRef string, out io.Writer,
+) ([]string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return nil, err
