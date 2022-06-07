@@ -42,7 +42,7 @@ import (
 )
 
 const (
-	DefaultRemoteRoot = "sigstore-tuf-root"
+	DefaultRemoteRoot = "https://sigstore-tuf-root.storage.googleapis.com"
 	TufRootEnv        = "TUF_ROOT"
 	SigstoreNoCache   = "SIGSTORE_NO_CACHE"
 )
@@ -234,7 +234,7 @@ func GetRootStatus(ctx context.Context) (*RootStatus, error) {
 //       targets in a targets/ subfolder.
 //   * forceUpdate: indicates checking the remote for an update, even when the local
 //       timestamp.json is up to date.
-func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) (*TUF, error) {
+func initializeTUF(mirror string, root []byte, embedded fs.FS, forceUpdate bool) (*TUF, error) {
 	singletonTUFOnce.Do(func() {
 		t := &TUF{
 			mirror:   mirror,
@@ -247,7 +247,7 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 			return
 		}
 
-		t.remote, singletonTUFErr = remoteFromMirror(ctx, t.mirror)
+		t.remote, singletonTUFErr = remoteFromMirror(t.mirror)
 		if singletonTUFErr != nil {
 			return
 		}
@@ -295,7 +295,8 @@ func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.
 	return singletonTUF, singletonTUFErr
 }
 
-func NewFromEnv(ctx context.Context) (*TUF, error) {
+// TODO: Remove ctx arg.
+func NewFromEnv(_ context.Context) (*TUF, error) {
 	// Check for the current remote mirror.
 	mirror := GetRemoteRoot()
 	b, err := os.ReadFile(cachedRemote(rootCacheDir()))
@@ -307,12 +308,12 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 	}
 
 	// Initializes a new TUF object from the local cache or defaults.
-	return initializeTUF(ctx, mirror, nil, GetEmbedded(), false)
+	return initializeTUF(mirror, nil, GetEmbedded(), false)
 }
 
 func Initialize(ctx context.Context, mirror string, root []byte) error {
 	// Initialize the client. Force an update with remote.
-	if _, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true); err != nil {
+	if _, err := initializeTUF(mirror, root, GetEmbedded(), true); err != nil {
 		return err
 	}
 
@@ -683,9 +684,10 @@ func noCache() bool {
 	return b
 }
 
-func remoteFromMirror(ctx context.Context, mirror string) (client.RemoteStore, error) {
+func remoteFromMirror(mirror string) (client.RemoteStore, error) {
+	// This is for compatibility with specifying a GCS bucket remote.
 	if _, parseErr := url.ParseRequestURI(mirror); parseErr != nil {
-		return GcsRemoteStore(ctx, mirror, nil, nil)
+		mirror = fmt.Sprintf("https://%s.storage.googleapis.com", mirror)
 	}
 	return client.HTTPRemoteStore(mirror, nil, nil)
 }
