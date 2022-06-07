@@ -165,7 +165,7 @@ func (a *Attestation) Validate(ctx context.Context) *apis.FieldError {
 	}
 	if a.PredicateType == "" {
 		errs = errs.Also(apis.ErrMissingField("predicateType"))
-	} else if a.PredicateType != "custom" && a.PredicateType != "slsaprovenance" && a.PredicateType != "spdx" && a.PredicateType != "link" && a.PredicateType != "vuln" {
+	} else if a.PredicateType != "custom" && a.PredicateType != "slsaprovenance" && a.PredicateType != "spdx" && a.PredicateType != "spdxjson" && a.PredicateType != "link" && a.PredicateType != "vuln" {
 		// TODO(vaikas): The above should be using something like:
 		// if _, ok := options.PredicateTypeMap[a.PrecicateType]; !ok {
 		// But it causes an import loop. That refactor can be part of

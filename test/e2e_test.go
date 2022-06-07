@@ -204,11 +204,33 @@ func TestImportSignVerifyClean(t *testing.T) {
 }
 
 func TestAttestVerify(t *testing.T) {
+	attestVerify(t,
+		"slsaprovenance",
+		`{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`,
+		`builder: id: "1"`,
+		`builder: id: "2"`,
+	)
+}
+
+func TestAttestVerifySPDXJSON(t *testing.T) {
+	attestationBytes, err := os.ReadFile("./testdata/bom-go-mod.spdx.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestVerify(t,
+		"spdxjson",
+		string(attestationBytes),
+		`Data: spdxVersion: "SPDX-9.9"`,
+		`Data: spdxVersion: "SPDX-2.2"`,
+	)
+}
+
+func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue string) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
 
-	imgName := path.Join(repo, "cosign-attest-e2e")
+	imgName := path.Join(repo, fmt.Sprintf("cosign-attest-%s-e2e-image", predicateType))
 
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
@@ -225,31 +247,28 @@ func TestAttestVerify(t *testing.T) {
 	// Fail case when using without type and policy flag
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
-	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
-	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	attestationPath := filepath.Join(td, fmt.Sprintf("cosign-attest-%s-e2e-attestation", predicateType))
+	if err := os.WriteFile(attestationPath, []byte(attestation), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second), t)
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, attestationPath, false,
+		predicateType, false, 30*time.Second), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
-	verifyAttestation.PredicateType = "slsaprovenance"
+	verifyAttestation.PredicateType = predicateType
 	verifyAttestation.Policies = []string{policyPath}
 
 	// Fail case
-	cuePolicy := `builder: id: "1"`
-	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+	if err := os.WriteFile(policyPath, []byte(badCue), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	// Success case
-	cuePolicy = `builder: id: "2"`
-	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+	if err := os.WriteFile(policyPath, []byte(goodCue), 0600); err != nil {
 		t.Fatal(err)
 	}
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)

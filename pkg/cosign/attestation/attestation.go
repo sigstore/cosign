@@ -99,7 +99,7 @@ type GenerateOpts struct {
 }
 
 // GenerateStatement returns an in-toto statement based on the provided
-// predicate type (custom|slsaprovenance|spdx|link).
+// predicate type (custom|slsaprovenance|spdx|spdxjson|link).
 func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	predicate, err := io.ReadAll(opts.Predicate)
 	if err != nil {
@@ -110,7 +110,9 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	case "slsaprovenance":
 		return generateSLSAProvenanceStatement(predicate, opts.Digest, opts.Repo)
 	case "spdx":
-		return generateSPDXStatement(predicate, opts.Digest, opts.Repo)
+		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, false)
+	case "spdxjson":
+		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, true)
 	case "link":
 		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
 	case "vuln":
@@ -226,11 +228,19 @@ func generateLinkStatement(rawPayload []byte, digest string, repo string) (inter
 	}, nil
 }
 
-func generateSPDXStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
+func generateSPDXStatement(rawPayload []byte, digest string, repo string, parseJSON bool) (interface{}, error) {
+	var data interface{}
+	if parseJSON {
+		if err := json.Unmarshal(rawPayload, &data); err != nil {
+			return nil, err
+		}
+	} else {
+		data = string(rawPayload)
+	}
 	return in_toto.SPDXStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateSPDX),
 		Predicate: CosignPredicate{
-			Data: string(rawPayload),
+			Data: data,
 		},
 	}, nil
 }
