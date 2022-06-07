@@ -138,9 +138,9 @@ The following environment variables must be set to let cosign authenticate to Az
 - AZURE_CLIENT_ID
 - AZURE_CLIENT_SECRET
 
-To create a key using `cosign generate-key-pair -kms azurekms://[VAULT_NAME][VAULT_URI]/[KEY]` you will need a user which has permissions to create keys in Key Vault. For example `Key Vault Crypto Officer` role.
+To create a key using `cosign generate-key-pair --kms azurekms://[VAULT_NAME][VAULT_URI]/[KEY]` you will need a user which has permissions to create keys in Key Vault. For example `Key Vault Crypto Officer` role.
 
-To sign images using `cosign sign -key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] [IMAGE]` you will need a user which has permissions to the sign action such as the `Key Vault Crypto User` role.
+To sign images using `cosign sign --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] [IMAGE]` you will need a user which has permissions to the sign action such as the `Key Vault Crypto User` role.
 
 ### Hashicorp Vault
 
