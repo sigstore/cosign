@@ -41,7 +41,7 @@ cosign initialize -mirror <url> -root <url>
 
 ```
   -h, --help            help for initialize
-      --mirror string   GCS bucket to a SigStore TUF repository or HTTP(S) base URL (default "sigstore-tuf-root")
+      --mirror string   GCS bucket to a SigStore TUF repository or HTTP(S) base URL (default "https://sigstore-tuf-root.storage.googleapis.com")
       --root string     path to trusted initial root. defaults to embedded root
 ```
 
