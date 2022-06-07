@@ -39,7 +39,11 @@ import (
 func valid(ctx context.Context, ref name.Reference, rekorClient *client.Rekor, keys []crypto.PublicKey, opts ...ociremote.Option) ([]oci.Signature, error) {
 	if len(keys) == 0 {
 		// If there are no keys, then verify against the fulcio root.
-		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioroots.Get(), nil /* rekor */, nil /* no identities */, opts...)
+		fulcioRoots, err := fulcioroots.Get()
+		if err != nil {
+			return nil, err
+		}
+		sps, err := validSignaturesWithFulcio(ctx, ref, fulcioRoots, nil /* rekor */, nil /* no identities */, opts...)
 		if err != nil {
 			return nil, err
 		}

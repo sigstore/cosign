@@ -204,12 +204,20 @@ func verifySigByUUID(ctx context.Context, ko options.KeyOpts, rClient *client.Re
 		}
 
 		co := &cosign.CheckOpts{
-			RootCerts:         fulcio.GetRoots(),
-			IntermediateCerts: fulcio.GetIntermediates(),
-			CertEmail:         certEmail,
-			CertOidcIssuer:    certOidcIssuer,
-			EnforceSCT:        enforceSCT,
+			CertEmail:      certEmail,
+			CertOidcIssuer: certOidcIssuer,
+			EnforceSCT:     enforceSCT,
 		}
+
+		co.RootCerts, err = fulcio.GetRoots()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio roots: %w", err)
+		}
+		co.IntermediateCerts, err = fulcio.GetIntermediates()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		}
+
 		cert := certs[0]
 		verifier, err := cosign.ValidateAndUnpackCert(cert, co)
 		if err != nil {
