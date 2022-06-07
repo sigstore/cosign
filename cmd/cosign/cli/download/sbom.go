@@ -24,7 +24,9 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/walk"
 )
 
 func SBOMCmd(
@@ -45,6 +47,33 @@ func SBOMCmd(
 	if err != nil {
 		return nil, err
 	}
+
+	idx, ok := se.(oci.SignedImageIndex)
+	if dnOpts.Platform != "" && ok {
+		im, err := idx.IndexManifest()
+		if err != nil {
+			return nil, fmt.Errorf("fetching index manifest: %w", err)
+		}
+		targetDigest := ""
+		for _, m := range im.Manifests {
+			if m.Platform.String() == dnOpts.Platform {
+				targetDigest = m.Digest.String()
+				break
+			}
+		}
+		if targetDigest != "" {
+			nse, err := findSignedImage(ctx, idx, targetDigest)
+			if err != nil {
+				return nil, fmt.Errorf("searching for image %s: %w", targetDigest, err)
+			}
+			if nse == nil {
+				return nil, fmt.Errorf("unable to find image %s", targetDigest)
+			}
+			se = nse
+		}
+	}
+
+	// TODO: What happens if the index does not have an sbom but the images do?
 
 	file, err := se.Attachment("sbom")
 	if err != nil {
@@ -72,4 +101,26 @@ func SBOMCmd(
 	fmt.Fprint(out, string(sbom))
 
 	return sboms, nil
+}
+
+func findSignedImage(ctx context.Context, sii oci.SignedImageIndex, targetDigest string) (se oci.SignedEntity, err error) {
+	if err := walk.SignedEntity(ctx, sii, func(ctx context.Context, e oci.SignedEntity) error {
+		img, ok := e.(oci.SignedImage)
+		if !ok {
+			return nil
+		}
+
+		d, err := img.Digest()
+		if err != nil {
+			return fmt.Errorf("getting image digest: %w", err)
+		}
+
+		if d.String() == targetDigest {
+			se = img
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("traversing signed entity: %+w", err)
+	}
+	return se, nil
 }
