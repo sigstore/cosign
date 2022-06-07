@@ -42,7 +42,7 @@ import (
 )
 
 const (
-	DefaultRemoteRoot = "sigstore-tuf-root"
+	DefaultRemoteRoot = "https://sigstore-tuf-root.storage.googleapis.com"
 	TufRootEnv        = "TUF_ROOT"
 	SigstoreNoCache   = "SIGSTORE_NO_CACHE"
 )
