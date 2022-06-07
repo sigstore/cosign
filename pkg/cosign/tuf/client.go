@@ -685,7 +685,7 @@ func noCache() bool {
 
 func remoteFromMirror(ctx context.Context, mirror string) (client.RemoteStore, error) {
 	if _, parseErr := url.ParseRequestURI(mirror); parseErr != nil {
-		return GcsRemoteStore(ctx, mirror, nil, nil)
+		return GCSRemoteStore(ctx, mirror, nil)
 	}
 	return client.HTTPRemoteStore(mirror, nil, nil)
 }

@@ -17,12 +17,12 @@ package tuf
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net/http"
 	"path"
 
-	"cloud.google.com/go/storage"
 	"github.com/theupdateframework/go-tuf/client"
-	"google.golang.org/api/option"
 )
 
 type GcsRemoteOptions struct {
@@ -33,27 +33,18 @@ type GcsRemoteOptions struct {
 type gcsRemoteStore struct {
 	bucket string
 	ctx    context.Context
-	client *storage.Client
 	opts   *GcsRemoteOptions
 }
 
-// A remote store for TUF metadata on GCS.
-func GcsRemoteStore(ctx context.Context, bucket string, opts *GcsRemoteOptions, client *storage.Client) (client.RemoteStore, error) {
+// GCSRemoteStore is a remote store for TUF metadata on GCS.
+func GCSRemoteStore(ctx context.Context, bucket string, opts *GcsRemoteOptions) (client.RemoteStore, error) {
 	if opts == nil {
 		opts = &GcsRemoteOptions{}
 	}
 	if opts.TargetsPath == "" {
 		opts.TargetsPath = "targets"
 	}
-	store := gcsRemoteStore{ctx: ctx, bucket: bucket, opts: opts, client: client}
-	if client == nil {
-		var err error
-		store.client, err = storage.NewClient(ctx, option.WithoutAuthentication())
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &store, nil
+	return &gcsRemoteStore{ctx: ctx, bucket: bucket, opts: opts}, nil
 }
 
 func (h *gcsRemoteStore) GetMeta(name string) (io.ReadCloser, int64, error) {
@@ -64,15 +55,20 @@ func (h *gcsRemoteStore) GetTarget(name string) (io.ReadCloser, int64, error) {
 	return h.get(path.Join(h.opts.TargetsPath, name))
 }
 
-func (h *gcsRemoteStore) get(s string) (io.ReadCloser, int64, error) {
-	obj := h.client.Bucket(h.bucket).Object(s)
-	attrs, err := obj.Attrs(h.ctx)
+func (h *gcsRemoteStore) get(path string) (io.ReadCloser, int64, error) {
+	url := fmt.Sprintf("https://storage.googleapis.com/%s/%s", h.bucket, path)
+	resp, err := http.Get(url)
 	if err != nil {
-		return nil, 0, client.ErrNotFound{File: s}
+		return nil, 0, client.ErrNotFound{File: path}
 	}
-	rc, err := obj.NewReader(h.ctx)
-	if err != nil {
-		return nil, 0, err
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return resp.Body, resp.ContentLength, nil
+	case http.StatusNotFound:
+		return nil, 0, client.ErrNotFound{File: path}
+	default:
+		defer resp.Body.Close()
+		all, _ := io.ReadAll(resp.Body)
+		return nil, 0, fmt.Errorf("GET %q: %s", url, string(all))
 	}
-	return rc, attrs.Size, nil
 }
