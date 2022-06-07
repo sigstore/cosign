@@ -18,6 +18,7 @@ package sget
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -90,8 +91,14 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		// was performed so we don't need to use this fragile logic here.
 		fulcioVerified := (co.SigVerifier == nil)
 
-		co.RootCerts = fulcio.GetRoots()
-		co.IntermediateCerts = fulcio.GetIntermediates()
+		co.RootCerts, err = fulcio.GetRoots()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio roots: %w", err)
+		}
+		co.IntermediateCerts, err = fulcio.GetIntermediates()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		}
 
 		sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 		if err != nil {

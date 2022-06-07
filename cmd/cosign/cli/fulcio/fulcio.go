@@ -186,11 +186,11 @@ func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey,
 
 var _ signature.Signer = &Signer{}
 
-func GetRoots() *x509.CertPool {
+func GetRoots() (*x509.CertPool, error) {
 	return fulcioroots.Get()
 }
 
-func GetIntermediates() *x509.CertPool {
+func GetIntermediates() (*x509.CertPool, error) {
 	return fulcioroots.GetIntermediates()
 }
 

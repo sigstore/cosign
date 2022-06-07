@@ -29,9 +29,10 @@ import (
 )
 
 var (
-	rootsOnce     sync.Once
-	roots         *x509.CertPool
-	intermediates *x509.CertPool
+	rootsOnce        sync.Once
+	roots            *x509.CertPool
+	intermediates    *x509.CertPool
+	singletonRootErr error
 )
 
 // This is the root in the fulcio project.
@@ -61,26 +62,24 @@ const (
 	altRoot = "SIGSTORE_ROOT_FILE"
 )
 
-func Get() *x509.CertPool {
+func Get() (*x509.CertPool, error) {
 	rootsOnce.Do(func() {
-		var err error
-		roots, intermediates, err = initRoots()
-		if err != nil {
-			panic(err)
+		roots, intermediates, singletonRootErr = initRoots()
+		if singletonRootErr != nil {
+			return
 		}
 	})
-	return roots
+	return roots, singletonRootErr
 }
 
-func GetIntermediates() *x509.CertPool {
+func GetIntermediates() (*x509.CertPool, error) {
 	rootsOnce.Do(func() {
-		var err error
-		roots, intermediates, err = initRoots()
-		if err != nil {
-			panic(err)
+		roots, intermediates, singletonRootErr = initRoots()
+		if singletonRootErr != nil {
+			return
 		}
 	})
-	return intermediates
+	return intermediates, singletonRootErr
 }
 
 func initRoots() (*x509.CertPool, *x509.CertPool, error) {

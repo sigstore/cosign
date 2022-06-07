@@ -42,15 +42,17 @@ func TestGetFulcioRoots(t *testing.T) {
 	}
 	t.Setenv("SIGSTORE_ROOT_FILE", tmpCertFile.Name())
 
-	rootCertPool := Get()
-	// ignore deprecation error because certificates do not contain from SystemCertPool
-	if len(rootCertPool.Subjects()) != 1 { // nolint:staticcheck
+	if rootCertPool, re := Get(); err != nil {
+		t.Fatalf("failed to get roots: %v", re)
+	} else if len(rootCertPool.Subjects()) != 1 { // nolint:staticcheck
+		// ignore deprecation error because certificates do not contain from SystemCertPool
 		t.Errorf("expected 1 root certificate, got 0")
 	}
 
-	subCertPool := GetIntermediates()
-	// ignore deprecation error because certificates do not contain from SystemCertPool
-	if len(subCertPool.Subjects()) != 1 { // nolint:staticcheck
+	if subCertPool, ie := GetIntermediates(); err != nil {
+		t.Fatalf("failed to get intermediates: %v", ie)
+	} else if len(subCertPool.Subjects()) != 1 { // nolint:staticcheck
+		// ignore deprecation error because certificates do not contain from SystemCertPool
 		t.Errorf("expected 1 intermediate certificate, got 0")
 	}
 }
