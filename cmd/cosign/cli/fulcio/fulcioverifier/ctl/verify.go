@@ -81,7 +81,6 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 		if err != nil {
 			return err
 		}
-		defer tufClient.Close()
 
 		targets, err := tufClient.GetTargetsByMeta(tuf.CTFE, []string{ctPublicKeyStr})
 		if err != nil {

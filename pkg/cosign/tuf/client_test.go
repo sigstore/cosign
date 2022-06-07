@@ -29,6 +29,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -61,7 +62,7 @@ func TestNewFromEnv(t *testing.T) {
 	}
 
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	// Now try with expired targets
 	forceExpiration(t, true)
@@ -70,7 +71,7 @@ func TestNewFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	if err := Initialize(ctx, DefaultRemoteRoot, nil); err != nil {
 		t.Error()
@@ -85,7 +86,7 @@ func TestNewFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 }
 
 func TestNoCache(t *testing.T) {
@@ -101,7 +102,7 @@ func TestNoCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	// Force expiration so we have some content to download
 	forceExpiration(t, true)
@@ -111,12 +112,13 @@ func TestNoCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 
 	// No filesystem writes when using SIGSTORE_NO_CACHE.
 	if l := dirLen(t, td); l != 0 {
 		t.Errorf("expected no filesystem writes, got %d entries", l)
 	}
+	resetForTests()
 }
 
 func TestCache(t *testing.T) {
@@ -137,7 +139,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 	cachedDirLen := dirLen(t, td)
 	if cachedDirLen == 0 {
 		t.Errorf("expected filesystem writes, got %d entries", cachedDirLen)
@@ -145,11 +147,11 @@ func TestCache(t *testing.T) {
 
 	// Nothing should get downloaded if everything is up to date.
 	forceExpiration(t, false)
-	tuf, err = NewFromEnv(ctx)
+	_, err = NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tuf.Close()
+	resetForTests()
 
 	if l := dirLen(t, td); cachedDirLen != l {
 		t.Errorf("expected no filesystem writes, got %d entries", l-cachedDirLen)
@@ -166,7 +168,7 @@ func TestCache(t *testing.T) {
 		t.Errorf("expected filesystem writes, got %d entries", l)
 	}
 	checkTargetsAndMeta(t, tuf)
-	tuf.Close()
+	resetForTests()
 }
 
 func TestCustomRoot(t *testing.T) {
@@ -205,7 +207,7 @@ func TestCustomRoot(t *testing.T) {
 	if b, err := tufObj.GetTarget("foo.txt"); err != nil || !bytes.Equal(b, []byte("foo")) {
 		t.Fatal(err)
 	}
-	tufObj.Close()
+	resetForTests()
 
 	// Force expiration on the first timestamp and internal go-tuf verification.
 	forceExpirationVersion(t, 1)
@@ -214,9 +216,11 @@ func TestCustomRoot(t *testing.T) {
 		return true
 	}
 
+	// This should cause an error that remote metadata is expired.
 	if _, err = NewFromEnv(ctx); err == nil {
 		t.Errorf("expected expired timestamp from the remote")
 	}
+
 	// Let internal TUF verification succeed normally now.
 	verify.IsExpired = oldIsExpired
 
@@ -224,6 +228,7 @@ func TestCustomRoot(t *testing.T) {
 	updateTufRepo(t, td, r, "foo1")
 
 	// Use newTuf and successfully get updated metadata using the cached remote location.
+	resetForTests()
 	tufObj, err = NewFromEnv(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -231,7 +236,7 @@ func TestCustomRoot(t *testing.T) {
 	if b, err := tufObj.GetTarget("foo.txt"); err != nil || !bytes.Equal(b, []byte("foo1")) {
 		t.Fatal(err)
 	}
-	tufObj.Close()
+	resetForTests()
 }
 
 func TestGetTargetsByMeta(t *testing.T) {
@@ -266,7 +271,7 @@ func TestGetTargetsByMeta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tufObj.Close()
+	defer resetForTests()
 	// Fetch a target with no custom metadata.
 	targets, err := tufObj.GetTargetsByMeta(UnknownUsage, []string{"fooNoCustom.txt"})
 	if err != nil {
@@ -361,10 +366,6 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 
 	origEmbedded := GetEmbedded
 	origDefaultRemote := GetRemoteRoot
-	defer func() {
-		GetEmbedded = origEmbedded
-		GetRemoteRoot = origDefaultRemote
-	}()
 
 	// Create an "expired" embedded repository that does not contain newTarget.
 	ctx := context.Background()
@@ -373,13 +374,18 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 	mapfs := makeMapFS(repository)
 	GetEmbedded = func() fs.FS { return mapfs }
 
-	oldIsExpired := verify.IsExpired
+	oldIsExpired := isExpiredTimestamp
 	isExpiredTimestamp = func(metadata []byte) bool {
 		m, _ := store.GetMeta()
 		timestampExpires, _ := getExpiration(m["timestamp.json"])
 		metadataExpires, _ := getExpiration(metadata)
 		return metadataExpires.Sub(*timestampExpires) <= 0
 	}
+	defer func() {
+		GetEmbedded = origEmbedded
+		GetRemoteRoot = origDefaultRemote
+		isExpiredTimestamp = oldIsExpired
+	}()
 
 	// Assert that the embedded repository does not contain the newTarget.
 	newTarget := "fooNew.txt"
@@ -402,7 +408,7 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tufObj.Close()
+	defer resetForTests()
 
 	// Try to retrieve the newly added target.
 	targets, err := tufObj.GetTargetsByMeta(Fulcio, []string{"fooNoCustom.txt"})
@@ -418,7 +424,6 @@ func TestUpdatedTargetNamesEmbedded(t *testing.T) {
 		cmpopts.SortSlices(func(a, b string) bool { return a < b })) {
 		t.Fatalf("target data mismatched, expected: %v, got: %v", expectedTB, targetBytes)
 	}
-	verify.IsExpired = oldIsExpired
 }
 
 func checkTargetsAndMeta(t *testing.T, tuf *TUF) {
@@ -621,4 +626,24 @@ func updateTufRepo(t *testing.T, td string, r *tuf.Repo, targetData string) {
 	if err := r.Commit(); err != nil {
 		t.Error(err)
 	}
+}
+func TestConcurrentAccess(t *testing.T) {
+	var wg sync.WaitGroup
+
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tufObj, err := NewFromEnv(context.Background())
+			if err != nil {
+				t.Errorf("Failed to construct NewFromEnv: %s", err)
+			}
+			if tufObj == nil {
+				t.Error("Got back nil tufObj")
+			}
+			time.Sleep(1 * time.Second)
+		}()
+	}
+	wg.Wait()
+	resetForTests()
 }

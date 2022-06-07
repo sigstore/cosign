@@ -293,9 +293,16 @@ func payloadBytes(blobRef string) ([]byte, error) {
 }
 
 func verifyRekorEntry(ctx context.Context, ko options.KeyOpts, e *models.LogEntryAnon, pubKey signature.Verifier, cert *x509.Certificate, b64sig string, blobBytes []byte) error {
+	// TODO: This can be moved below offline bundle verification when SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY
+	// is removed.
+	rekorClient, err := rekor.NewClient(ko.RekorURL)
+	if err != nil {
+		return err
+	}
+
 	// If we have a bundle with a rekor entry, let's first try to verify offline
 	if ko.BundlePath != "" {
-		if err := verifyRekorBundle(ctx, ko.BundlePath, cert); err == nil {
+		if err := verifyRekorBundle(ctx, ko.BundlePath, cert, rekorClient); err == nil {
 			fmt.Fprintf(os.Stderr, "tlog entry verified offline\n")
 			return nil
 		}
@@ -304,10 +311,6 @@ func verifyRekorEntry(ctx context.Context, ko options.KeyOpts, e *models.LogEntr
 		return nil
 	}
 
-	rekorClient, err := rekor.NewClient(ko.RekorURL)
-	if err != nil {
-		return err
-	}
 	// Only fetch from rekor tlog if we don't already have the entry.
 	if e == nil {
 		var pubBytes []byte
@@ -346,7 +349,7 @@ func verifyRekorEntry(ctx context.Context, ko options.KeyOpts, e *models.LogEntr
 	return cosign.CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
-func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certificate) error {
+func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certificate, rekorClient *client.Rekor) error {
 	b, err := cosign.FetchLocalSignedPayloadFromPath(bundlePath)
 	if err != nil {
 		return err
@@ -354,7 +357,7 @@ func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certif
 	if b.Bundle == nil {
 		return fmt.Errorf("rekor entry is not available")
 	}
-	publicKeys, err := cosign.GetRekorPubs(ctx)
+	publicKeys, err := cosign.GetRekorPubs(ctx, rekorClient)
 	if err != nil {
 		return fmt.Errorf("retrieving rekor public key: %w", err)
 	}

@@ -119,8 +119,12 @@ func NewSigstoreTufRepo(t *testing.T, root TestSigstoreRoot) (tuf.LocalStore, *t
 	if !ok {
 		t.Error(err)
 	}
+	resetForTests()
 	if err := Initialize(ctx, s.URL, rootBytes); err != nil {
 		t.Error(err)
 	}
+	t.Cleanup(func() {
+		resetForTests()
+	})
 	return remote, r
 }

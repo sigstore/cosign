@@ -32,6 +32,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/theupdateframework/go-tuf/client"
@@ -46,10 +47,13 @@ const (
 	SigstoreNoCache   = "SIGSTORE_NO_CACHE"
 )
 
-// Global in-memory targets to avoid re-downloading when there is no local cache.
-// TODO: Consider using this map even when local caching to avoid reading from disk
-// multiple times (e.g. when there are multiple signatures to verify in a single call).
-var memoryTargets = map[string][]byte{}
+var (
+	// singletonTUF holds a single instance of TUF that will get reused on
+	// subsequent invocations of initializeTUF
+	singletonTUF     *TUF
+	singletonTUFOnce = new(sync.Once)
+	singletonTUFErr  error
+)
 
 var GetRemoteRoot = func() string {
 	return DefaultRemoteRoot
@@ -103,6 +107,10 @@ type signedMeta struct {
 // repository.
 type remoteCache struct {
 	Mirror string `json:"mirror"`
+}
+
+func resetForTests() {
+	singletonTUFOnce = new(sync.Once)
 }
 
 func getExpiration(metadata []byte) (*time.Time, error) {
@@ -213,13 +221,7 @@ func GetRootStatus(ctx context.Context) (*RootStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer t.Close()
 	return t.getRootStatus()
-}
-
-// Close closes the local TUF store. Should only be called once per client.
-func (t *TUF) Close() error {
-	return t.local.Close()
 }
 
 // initializeTUF creates a TUF client using the following params:
@@ -233,60 +235,64 @@ func (t *TUF) Close() error {
 //   * forceUpdate: indicates checking the remote for an update, even when the local
 //       timestamp.json is up to date.
 func initializeTUF(ctx context.Context, mirror string, root []byte, embedded fs.FS, forceUpdate bool) (*TUF, error) {
-	t := &TUF{
-		mirror:   mirror,
-		embedded: embedded,
-	}
-
-	t.targets = newFileImpl()
-	var err error
-	t.local, err = newLocalStore()
-	if err != nil {
-		return nil, err
-	}
-
-	t.remote, err = remoteFromMirror(ctx, t.mirror)
-	if err != nil {
-		t.Close()
-		return nil, err
-	}
-
-	t.client = client.NewClient(t.local, t.remote)
-
-	trustedMeta, err := t.local.GetMeta()
-	if err != nil {
-		t.Close()
-		return nil, fmt.Errorf("getting trusted meta: %w", err)
-	}
-
-	// If the caller does not supply a root, then either use the root in the local store
-	// or default to the embedded one.
-	if root == nil {
-		root, err = getRoot(trustedMeta, t.embedded)
-		if err != nil {
-			t.Close()
-			return nil, fmt.Errorf("getting trusted root: %w", err)
+	singletonTUFOnce.Do(func() {
+		t := &TUF{
+			mirror:   mirror,
+			embedded: embedded,
 		}
-	}
 
-	if err := t.client.InitLocal(root); err != nil {
-		t.Close()
-		return nil, fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err)
-	}
+		t.targets = newFileImpl()
+		t.local, singletonTUFErr = newLocalStore()
+		if singletonTUFErr != nil {
+			return
+		}
 
-	// We may already have an up-to-date local store! Check to see if it needs to be updated.
-	trustedTimestamp, ok := trustedMeta["timestamp.json"]
-	if ok && !isExpiredTimestamp(trustedTimestamp) && !forceUpdate {
-		return t, nil
-	}
+		t.remote, singletonTUFErr = remoteFromMirror(ctx, t.mirror)
+		if singletonTUFErr != nil {
+			return
+		}
 
-	// Update if local is not populated or out of date.
-	if err := t.updateMetadataAndDownloadTargets(); err != nil {
-		t.Close()
-		return nil, fmt.Errorf("updating local metadata and targets: %w", err)
-	}
+		t.client = client.NewClient(t.local, t.remote)
 
-	return t, err
+		trustedMeta, err := t.local.GetMeta()
+		if err != nil {
+			singletonTUFErr = fmt.Errorf("getting trusted meta: %w", err)
+			return
+		}
+
+		// If the caller does not supply a root, then either use the root in the local store
+		// or default to the embedded one.
+		if root == nil {
+			root, err = getRoot(trustedMeta, t.embedded)
+			if err != nil {
+				singletonTUFErr = fmt.Errorf("getting trusted root: %w", err)
+				return
+			}
+		}
+
+		if err := t.client.InitLocal(root); err != nil {
+			singletonTUFErr = fmt.Errorf("unable to initialize client, local cache may be corrupt: %w", err)
+			return
+		}
+
+		// We may already have an up-to-date local store! Check to see if it needs to be updated.
+		trustedTimestamp, ok := trustedMeta["timestamp.json"]
+		if ok && !isExpiredTimestamp(trustedTimestamp) && !forceUpdate {
+			// We're golden so stash the TUF object for later use
+			singletonTUF = t
+			return
+		}
+
+		// Update if local is not populated or out of date.
+		if err := t.updateMetadataAndDownloadTargets(); err != nil {
+			singletonTUFErr = fmt.Errorf("updating local metadata and targets: %w", err)
+			return
+		}
+
+		// We're golden so stash the TUF object for later use
+		singletonTUF = t
+	})
+	return singletonTUF, singletonTUFErr
 }
 
 func NewFromEnv(ctx context.Context) (*TUF, error) {
@@ -305,12 +311,10 @@ func NewFromEnv(ctx context.Context) (*TUF, error) {
 }
 
 func Initialize(ctx context.Context, mirror string, root []byte) error {
-	// Initialize the client. Force an update.
-	t, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true)
-	if err != nil {
+	// Initialize the client. Force an update with remote.
+	if _, err := initializeTUF(ctx, mirror, root, GetEmbedded(), true); err != nil {
 		return err
 	}
-	t.Close()
 
 	// Store the remote for later if we are caching.
 	if !noCache() {
@@ -399,13 +403,12 @@ func (t *TUF) GetTargetsByMeta(usage UsageKind, fallbacks []string) ([]TargetFil
 	return matchedTargets, nil
 }
 
-func (t *TUF) updateMetadataAndDownloadTargets() error {
-	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
-	// NOTE: This only returns *updated* targets.
-	targetFiles, err := t.client.Update()
+// updateClient() updates the TUF client and also caches new metadata, if needed.
+func (t *TUF) updateClient() (data.TargetFiles, error) {
+	targets, err := t.client.Update()
 	if err != nil {
-		// Get some extra information for debugging. What was the state of the metadata
-		// on the remote?
+		// Get some extra information for debugging. What was the state of the top-level
+		// metadata on the remote?
 		status := struct {
 			Mirror   string                    `json:"mirror"`
 			Metadata map[string]MetadataStatus `json:"metadata"`
@@ -432,9 +435,38 @@ func (t *TUF) updateMetadataAndDownloadTargets() error {
 		}
 		b, innerErr := json.MarshalIndent(status, "", "\t")
 		if innerErr != nil {
-			return innerErr
+			return nil, innerErr
 		}
-		return fmt.Errorf("error updating to TUF remote mirror: %w\nremote status:%s", err, string(b))
+		return nil, fmt.Errorf("error updating to TUF remote mirror: %w\nremote status:%s", err, string(b))
+	}
+	// Success! Cache new metadata, if needed.
+	if noCache() {
+		return targets, nil
+	}
+	// Sync the on-disk cache with the metadata from the in-memory store.
+	tufDB := filepath.FromSlash(filepath.Join(rootCacheDir(), "tuf.db"))
+	diskLocal, err := tuf_leveldbstore.FileLocalStore(tufDB)
+	defer func() {
+		if diskLocal != nil {
+			diskLocal.Close()
+		}
+	}()
+	if err != nil {
+		return nil, fmt.Errorf("creating cached local store: %w", err)
+	}
+	if err := syncLocalMeta(t.local, diskLocal); err != nil {
+		return nil, err
+	}
+	// Return updated targets.
+	return targets, nil
+}
+
+func (t *TUF) updateMetadataAndDownloadTargets() error {
+	// Download updated targets and cache new metadata and targets in ${TUF_ROOT}.
+	// NOTE: This only returns *updated* targets.
+	targetFiles, err := t.updateClient()
+	if err != nil {
+		return err
 	}
 
 	// Download **newly** updated targets.
@@ -528,15 +560,40 @@ func cachedTargetsDir(cacheRoot string) string {
 	return filepath.FromSlash(filepath.Join(cacheRoot, "targets"))
 }
 
+func syncLocalMeta(from client.LocalStore, to client.LocalStore) error {
+	// Copy trusted metadata in the from LocalStore into the to LocalStore.
+	tufLocalStoreMeta, err := from.GetMeta()
+	if err != nil {
+		return fmt.Errorf("getting metadata to sync: %w", err)
+	}
+	for k, v := range tufLocalStoreMeta {
+		if err := to.SetMeta(k, v); err != nil {
+			return fmt.Errorf("syncing local store for metadata %s", k)
+		}
+	}
+	return nil
+}
+
 // Local store implementations
 func newLocalStore() (client.LocalStore, error) {
+	local := client.MemoryLocalStore()
 	if noCache() {
-		return client.MemoryLocalStore(), nil
+		return local, nil
 	}
+	// Otherwise populate the in-memory local store with data fetched from the cache.
 	tufDB := filepath.FromSlash(filepath.Join(rootCacheDir(), "tuf.db"))
-	local, err := tuf_leveldbstore.FileLocalStore(tufDB)
+	diskLocal, err := tuf_leveldbstore.FileLocalStore(tufDB)
+	defer func() {
+		if diskLocal != nil {
+			diskLocal.Close()
+		}
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("creating cached local store: %w", err)
+	}
+	// Populate the in-memory local store with data fetched from the cache.
+	if err := syncLocalMeta(diskLocal, local); err != nil {
+		return nil, err
 	}
 	return local, nil
 }
@@ -555,10 +612,15 @@ type targetImpl interface {
 }
 
 func newFileImpl() targetImpl {
+	memTargets := &memoryCache{}
 	if noCache() {
-		return &memoryCache{targets: memoryTargets}
+		return memTargets
 	}
-	return &diskCache{base: cachedTargetsDir(rootCacheDir())}
+	// Otherwise use a disk-cache with in-memory cached targets.
+	return &diskCache{
+		base:   cachedTargetsDir(rootCacheDir()),
+		memory: memTargets,
+	}
 }
 
 // In-memory cache for targets
@@ -587,15 +649,25 @@ func (m *memoryCache) Get(p string) ([]byte, error) {
 
 // On-disk cache for targets
 type diskCache struct {
+	// Base directory for accessing targets.
 	base string
+	// An in-memory map of targets that are kept in sync.
+	memory *memoryCache
 }
 
 func (d *diskCache) Get(p string) ([]byte, error) {
+	// Read from the in-memory cache first.
+	if b, err := d.memory.Get(p); err == nil {
+		return b, nil
+	}
 	fp := filepath.FromSlash(filepath.Join(d.base, p))
 	return os.ReadFile(fp)
 }
 
 func (d *diskCache) Set(p string, b []byte) error {
+	if err := d.memory.Set(p, b); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(d.base, 0700); err != nil {
 		return fmt.Errorf("creating targets dir: %w", err)
 	}
