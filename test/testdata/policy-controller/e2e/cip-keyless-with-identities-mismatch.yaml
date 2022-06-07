@@ -23,7 +23,7 @@ spec:
   - keyless:
       url: http://fulcio.fulcio-system.svc
       identities:
-      - issuer: .*kubernetes.securenamespace.*
-        subject: .*kubernetes.io/namespaces/securenamespace/serviceaccounts/default
+      - issuerRegExp: .*kubernetes.securenamespace.*
+        subjectRegExp: .*kubernetes.io/namespaces/securenamespace/serviceaccounts/default
     ctlog:
       url: http://rekor.rekor-system.svc

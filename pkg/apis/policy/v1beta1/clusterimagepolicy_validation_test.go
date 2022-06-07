@@ -613,9 +613,9 @@ func TestIdentitiesValidation(t *testing.T) {
 			},
 		},
 		{
-			name:        "Should fail when issuer has invalid regex",
+			name:        "Should fail when identities fields are empty",
 			expectErr:   true,
-			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].issuer\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
+			errorString: "missing field(s): spec.authorities[0].keyless.identities[0].issuer, spec.authorities[0].keyless.identities[0].issuerRegExp, spec.authorities[0].keyless.identities[0].subject, spec.authorities[0].keyless.identities[0].subjectRegExp",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -626,7 +626,71 @@ func TestIdentitiesValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Keyless: &KeylessRef{
-								Identities: []Identity{{Issuer: "****"}},
+								Identities: []Identity{{Issuer: ""}},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name:        "Should fail with both issuer and issuerRegExp",
+			expectErr:   true,
+			errorString: "expected exactly one, got both: spec.authorities[0].keyless.identities[0].issuer, spec.authorities[0].keyless.identities[0].issuerRegExp",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Glob: "globbityglob",
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{
+								Identities: []Identity{{Issuer: "issuer", IssuerRegExp: "issuerregexp"}},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail with both subject and subjectRegExp",
+			expectErr:   true,
+			errorString: "expected exactly one, got both: spec.authorities[0].keyless.identities[0].subject, spec.authorities[0].keyless.identities[0].subjectRegExp",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Glob: "globbityglob",
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{
+								Identities: []Identity{{Subject: "subject", SubjectRegExp: "subjectregexp"}},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "Should fail when issuer has invalid regex",
+			expectErr:   true,
+			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].issuerRegExp\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
+			policy: ClusterImagePolicy{
+				Spec: ClusterImagePolicySpec{
+					Images: []ImagePattern{
+						{
+							Glob: "globbityglob",
+						},
+					},
+					Authorities: []Authority{
+						{
+							Keyless: &KeylessRef{
+								Identities: []Identity{{IssuerRegExp: "****"}},
 							},
 						},
 					},
@@ -636,7 +700,7 @@ func TestIdentitiesValidation(t *testing.T) {
 		{
 			name:        "Should fail when subject has invalid regex",
 			expectErr:   true,
-			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].subject\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
+			errorString: "invalid value: ****: spec.authorities[0].keyless.identities[0].subjectRegExp\nregex is invalid: error parsing regexp: missing argument to repetition operator: `*`",
 			policy: ClusterImagePolicy{
 				Spec: ClusterImagePolicySpec{
 					Images: []ImagePattern{
@@ -647,7 +711,7 @@ func TestIdentitiesValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Keyless: &KeylessRef{
-								Identities: []Identity{{Subject: "****"}},
+								Identities: []Identity{{SubjectRegExp: "****"}},
 							},
 						},
 					},
@@ -666,7 +730,7 @@ func TestIdentitiesValidation(t *testing.T) {
 					Authorities: []Authority{
 						{
 							Keyless: &KeylessRef{
-								Identities: []Identity{{Subject: ".*subject.*", Issuer: ".*issuer.*"}},
+								Identities: []Identity{{SubjectRegExp: ".*subject.*", IssuerRegExp: ".*issuer.*"}},
 							},
 						},
 					},

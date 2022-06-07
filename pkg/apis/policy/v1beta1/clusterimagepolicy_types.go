@@ -178,13 +178,19 @@ type ConfigMapReference struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
-// Identity may contain the issuer and/or the subject found in the transparency log.
-// Either field supports a pattern glob.
+// Identity may contain the issuer and/or the subject found in the transparency
+// log.
+// Issuer/Subject uses a strict match, while IssuerRegExp and SubjectRegExp
+// apply a regexp for matching.
 type Identity struct {
 	// +optional
 	Issuer string `json:"issuer,omitempty"`
 	// +optional
 	Subject string `json:"subject,omitempty"`
+	// +optional
+	IssuerRegExp string `json:"issuerRegExp,omitempty"`
+	// +optional
+	SubjectRegExp string `json:"subjectRegExp,omitempty"`
 }
 
 // ClusterImagePolicyList is a list of ClusterImagePolicy resources

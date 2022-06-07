@@ -125,7 +125,11 @@ spec:
                               properties:
                                 issuer:
                                   type: string
+                                issuerRegExp:
+                                  type: string
                                 subject:
+                                  type: string
+                                subjectRegExp:
                                   type: string
                           url:
                             type: string
@@ -272,7 +276,11 @@ spec:
                               properties:
                                 issuer:
                                   type: string
+                                issuerRegExp:
+                                  type: string
                                 subject:
+                                  type: string
+                                subjectRegExp:
                                   type: string
                           url:
                             type: string

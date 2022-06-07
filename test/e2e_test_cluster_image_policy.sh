@@ -179,6 +179,7 @@ echo '::endgroup::'
 
 echo '::group:: Remove mismatching cip, start fresh for key'
 kubectl delete cip --all
+echo 'done deleting cips'
 sleep 5
 echo '::endgroup::'
 
