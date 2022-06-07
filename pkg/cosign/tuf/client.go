@@ -685,6 +685,7 @@ func noCache() bool {
 }
 
 func remoteFromMirror(mirror string) (client.RemoteStore, error) {
+	// This is for compatibility with specifying a GCS bucket remote.
 	if _, parseErr := url.ParseRequestURI(mirror); parseErr != nil {
 		mirror = fmt.Sprintf("https://%s.storage.googleapis.com", mirror)
 	}
