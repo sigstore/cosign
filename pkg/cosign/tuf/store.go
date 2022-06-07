@@ -79,7 +79,7 @@ func (h *gcsRemoteStore) GetTarget(name string) (io.ReadCloser, int64, error) {
 
 func (h *gcsRemoteStore) get(path string) (io.ReadCloser, int64, error) {
 	url := fmt.Sprintf("https://%s.storage.googleapis.com/%s", h.bucket, path)
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // nolint:gosec
 	if err != nil {
 		return nil, 0, client.ErrNotFound{File: path}
 	}
