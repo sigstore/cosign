@@ -36,7 +36,7 @@ const (
 	CosignVulnProvenanceV01 = "cosign.sigstore.dev/attestation/vuln/v1"
 
 	// PredicateCycloneDX represents a SBOM using the CycloneDX standard.
-	PredicateCycloneDX = "https://cyclonedx.org/Document"
+	PredicateCycloneDX = "https://cyclonedx.org/schema"
 )
 
 // CosignPredicate specifies the format of the Custom Predicate.
