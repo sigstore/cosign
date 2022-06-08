@@ -31,36 +31,8 @@ trap 'rm -rf ${TMP_DIR}' EXIT
 export GOMODCACHE=${GOPATH}/pkg/mod
 export GOPATH=${TMP_DIR}
 
-
 TMP_REPO_PATH="${TMP_DIR}/src/github.com/sigstore/cosign"
 mkdir -p "$(dirname "${TMP_REPO_PATH}")" && ln -s "${REPO_ROOT_DIR}" "${TMP_REPO_PATH}"
-
-echo "=== Update Codegen for ${MODULE_NAME}"
-
-group "Kubernetes Codegen"
-
-# generate the code with:
-# --output-base    because this script should also be able to run inside the vendor dir of
-#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
-#                  instead of the $GOPATH directly. For normal projects this can be dropped.
-${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/sigstore/cosign/pkg/client github.com/sigstore/cosign/pkg/apis \
-  "policy:v1alpha1 policy:v1beta1" \
-  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
-
-group "Knative Codegen"
-
-# Knative Injection
-${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
-  github.com/sigstore/cosign/pkg/client github.com/sigstore/cosign/pkg/apis \
-  "policy:v1alpha1 policy:v1beta1" \
-  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
-
-group "Update CRD Schema"
-
-go run $(dirname $0)/../cmd/schema/ dump ClusterImagePolicy \
-  | yq eval-all --inplace 'select(fileIndex == 0).spec.versions[0].schema.openAPIV3Schema = select(fileIndex == 1) | select(fileIndex == 0)' \
-  $(dirname $0)/../config/300-clusterimagepolicy.yaml -
 
 group "Update deps post-codegen"
 
