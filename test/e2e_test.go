@@ -225,6 +225,19 @@ func TestAttestVerifySPDXJSON(t *testing.T) {
 	)
 }
 
+func TestAttestVerifyCycloneDXJSON(t *testing.T) {
+	attestationBytes, err := os.ReadFile("./testdata/bom-go-mod.cyclonedx.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestVerify(t,
+		"cyclonedx",
+		string(attestationBytes),
+		`Data: specVersion: "7.7"`,
+		`Data: specVersion: "1.4"`,
+	)
+}
+
 func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue string) {
 	repo, stop := reg(t)
 	defer stop()
