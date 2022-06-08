@@ -104,7 +104,7 @@ func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifie
 		if err != nil {
 			return nil, fmt.Errorf("marshaling ProvenanceStatement: %w", err)
 		}
-	case options.PredicateSPDX:
+	case options.PredicateSPDX, options.PredicateSPDXJSON:
 		var spdxStatement in_toto.SPDXStatement
 		if err := json.Unmarshal(decodedPayload, &spdxStatement); err != nil {
 			return nil, fmt.Errorf("unmarshaling SPDXStatement: %w", err)
