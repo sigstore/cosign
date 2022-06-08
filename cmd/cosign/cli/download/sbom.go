@@ -21,13 +21,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/walk"
 )
+
+type platformList []struct {
+	hash     v1.Hash
+	platform *v1.Platform
+}
 
 func SBOMCmd(
 	ctx context.Context, regOpts options.RegistryOptions,
@@ -49,28 +56,53 @@ func SBOMCmd(
 	}
 
 	idx, ok := se.(oci.SignedImageIndex)
+
 	if dnOpts.Platform != "" && ok {
+		targetPlatform, err := v1.ParsePlatform(dnOpts.Platform)
+		if err != nil {
+			return nil, fmt.Errorf("parsing platform: %w", err)
+		}
 		im, err := idx.IndexManifest()
 		if err != nil {
 			return nil, fmt.Errorf("fetching index manifest: %w", err)
 		}
 		targetDigest := ""
+		platforms := platformList{}
 		for _, m := range im.Manifests {
-			if m.Platform.String() == dnOpts.Platform {
-				targetDigest = m.Digest.String()
-				break
+			if m.Platform == nil {
+				continue
 			}
+			platforms = append(platforms, struct {
+				hash     v1.Hash
+				platform *v1.Platform
+			}{m.Digest, m.Platform})
 		}
-		if targetDigest != "" {
-			nse, err := findSignedImage(ctx, idx, targetDigest)
-			if err != nil {
-				return nil, fmt.Errorf("searching for image %s: %w", targetDigest, err)
-			}
-			if nse == nil {
-				return nil, fmt.Errorf("unable to find image %s", targetDigest)
-			}
-			se = nse
+
+		platforms = matchPlatform(targetPlatform, platforms)
+		if len(platforms) == 0 {
+			return nil, fmt.Errorf("unable to find an SBOM for %s", targetPlatform.String())
 		}
+		if len(platforms) > 1 {
+			return nil, fmt.Errorf(
+				"platform spec matches more than one image architecture: %s",
+				func(pl platformList) string {
+					r := []string{}
+					for _, p := range pl {
+						r = append(r, p.platform.String())
+					}
+					return strings.Join(r, ", ")
+				}(platforms),
+			)
+		}
+
+		nse, err := findSignedImage(ctx, idx, platforms[0].hash)
+		if err != nil {
+			return nil, fmt.Errorf("searching for %s image: %w", targetDigest, err)
+		}
+		if nse == nil {
+			return nil, fmt.Errorf("unable to find image %s", targetDigest)
+		}
+		se = nse
 	}
 
 	// TODO: What happens if the index does not have an sbom but the images do?
@@ -103,7 +135,41 @@ func SBOMCmd(
 	return sboms, nil
 }
 
-func findSignedImage(ctx context.Context, sii oci.SignedImageIndex, targetDigest string) (se oci.SignedEntity, err error) {
+// matchPlatform filters a list of platforms returning only those matching
+// a base. "Based" on ko's internal equivalent while it moves to GGCR.
+func matchPlatform(base *v1.Platform, list platformList) platformList {
+	ret := platformList{}
+	for _, p := range list {
+		if base.OS != "" && base.OS != p.platform.OS {
+			continue
+		}
+		if base.Architecture != "" && base.Architecture != p.platform.Architecture {
+			continue
+		}
+		if base.Variant != "" && base.Variant != p.platform.Variant {
+			continue
+		}
+
+		if base.OSVersion != "" && p.platform.OSVersion != base.OSVersion {
+			if base.OS != "windows" {
+				continue
+			} else {
+				if pcount, bcount := strings.Count(base.OSVersion, "."), strings.Count(p.platform.OSVersion, "."); pcount == 2 && bcount == 3 {
+					if base.OSVersion != p.platform.OSVersion[:strings.LastIndex(p.platform.OSVersion, ".")] {
+						continue
+					}
+				} else {
+					continue
+				}
+			}
+		}
+		ret = append(ret, p)
+	}
+
+	return ret
+}
+
+func findSignedImage(ctx context.Context, sii oci.SignedImageIndex, iDigest v1.Hash) (se oci.SignedEntity, err error) {
 	if err := walk.SignedEntity(ctx, sii, func(ctx context.Context, e oci.SignedEntity) error {
 		img, ok := e.(oci.SignedImage)
 		if !ok {
@@ -115,7 +181,7 @@ func findSignedImage(ctx context.Context, sii oci.SignedImageIndex, targetDigest
 			return fmt.Errorf("getting image digest: %w", err)
 		}
 
-		if d.String() == targetDigest {
+		if d == iDigest {
 			se = img
 		}
 		return nil
