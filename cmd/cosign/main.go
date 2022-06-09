@@ -43,7 +43,17 @@ func main() {
 		} else if strings.HasPrefix(arg, "-") {
 			// Handle -output, convert to --output
 			newArg := fmt.Sprintf("-%s", arg)
-			fmt.Fprintf(os.Stderr, "WARNING: the flag %s is deprecated and will be removed in a future release. Please use the flag %s.\n", arg, newArg)
+			newArgType := "flag"
+			if newArg == "--version" {
+				newArg = "version"
+				newArgType = "subcommand"
+			}
+			fmt.Fprintf(
+				os.Stderr,
+				"WARNING: the %s flag is deprecated and will be removed in a future release. "+
+					"Please use the %s %s instead.\n",
+				arg, newArg, newArgType,
+			)
 			os.Args[i] = newArg
 		}
 	}
