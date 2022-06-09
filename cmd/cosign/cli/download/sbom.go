@@ -55,27 +55,21 @@ func SBOMCmd(
 		return nil, err
 	}
 
-	idx, ok := se.(oci.SignedImageIndex)
+	idx, isIndex := se.(oci.SignedImageIndex)
 
-	if dnOpts.Platform != "" && ok {
+	// We only allow --platform on multiarch indexes
+	if dnOpts.Platform != "" && !isIndex {
+		return nil, fmt.Errorf("specified reference is not a multiarch image")
+	}
+
+	if dnOpts.Platform != "" && isIndex {
 		targetPlatform, err := v1.ParsePlatform(dnOpts.Platform)
 		if err != nil {
 			return nil, fmt.Errorf("parsing platform: %w", err)
 		}
-		im, err := idx.IndexManifest()
+		platforms, err := getIndexPlatforms(idx)
 		if err != nil {
-			return nil, fmt.Errorf("fetching index manifest: %w", err)
-		}
-		targetDigest := ""
-		platforms := platformList{}
-		for _, m := range im.Manifests {
-			if m.Platform == nil {
-				continue
-			}
-			platforms = append(platforms, struct {
-				hash     v1.Hash
-				platform *v1.Platform
-			}{m.Digest, m.Platform})
+			return nil, fmt.Errorf("getting available platforms: %w", err)
 		}
 
 		platforms = matchPlatform(targetPlatform, platforms)
@@ -97,22 +91,36 @@ func SBOMCmd(
 
 		nse, err := findSignedImage(ctx, idx, platforms[0].hash)
 		if err != nil {
-			return nil, fmt.Errorf("searching for %s image: %w", targetDigest, err)
+			return nil, fmt.Errorf("searching for %s image: %w", platforms[0].hash.String(), err)
 		}
 		if nse == nil {
-			return nil, fmt.Errorf("unable to find image %s", targetDigest)
+			return nil, fmt.Errorf("unable to find image %s", platforms[0].hash.String())
 		}
 		se = nse
 	}
 
-	// TODO: What happens if the index does not have an sbom but the images do?
-
 	file, err := se.Attachment("sbom")
 	if err != nil {
 		if errors.Is(err, ociremote.ErrImageNotFound) {
-			return nil, errors.New("no sbom attached to reference")
+			if !isIndex {
+				return nil, errors.New("no sbom attached to reference")
+			}
+			// Help the user with the available architectures
+			pl, err := getIndexPlatforms(idx)
+			if len(pl) > 0 && err == nil {
+				fmt.Fprintln(os.Stderr, "\nThis multiarch image does not have an SBOM attached at the index level.")
+				fmt.Fprintln(os.Stderr, "Try using --platform with one of the following architectures:")
+				as := []string{}
+				for _, a := range pl {
+					if a.platform.String() != "" {
+						as = append(as, a.platform.String())
+					}
+				}
+				fmt.Fprintf(os.Stderr, " %s\n\n", strings.Join(as, ", "))
+			}
+			return nil, fmt.Errorf("no SBOM found attached to image index")
 		}
-		return nil, fmt.Errorf("getting sbom attachment: %+w", err)
+		return nil, fmt.Errorf("getting sbom attachment: %w", err)
 	}
 
 	// "attach sbom" attaches a single static.NewFile
@@ -133,6 +141,25 @@ func SBOMCmd(
 	fmt.Fprint(out, string(sbom))
 
 	return sboms, nil
+}
+
+func getIndexPlatforms(idx oci.SignedImageIndex) (platformList, error) {
+	im, err := idx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("fetching index manifest: %w", err)
+	}
+
+	platforms := platformList{}
+	for _, m := range im.Manifests {
+		if m.Platform == nil {
+			continue
+		}
+		platforms = append(platforms, struct {
+			hash     v1.Hash
+			platform *v1.Platform
+		}{m.Digest, m.Platform})
+	}
+	return platforms, nil
 }
 
 // matchPlatform filters a list of platforms returning only those matching
@@ -186,7 +213,7 @@ func findSignedImage(ctx context.Context, sii oci.SignedImageIndex, iDigest v1.H
 		}
 		return nil
 	}); err != nil {
-		return nil, fmt.Errorf("traversing signed entity: %+w", err)
+		return nil, fmt.Errorf("traversing signed entity: %w", err)
 	}
 	return se, nil
 }
