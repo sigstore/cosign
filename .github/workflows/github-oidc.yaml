@@ -42,14 +42,14 @@ jobs:
           check-latest: true
 
       # Install tools.
-      - uses: sigstore/cosign-installer@536b37ec5d5b543420bdfd9b744c5965bd4d8730 # v2.3.0
+      - uses: sigstore/cosign-installer@7e0881f8fe90b25e305bbf0309761e9314607e25 # v2.3.0
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
 
       - name: Build and sign a container image
         run: |
           set -e
           # Build and publish an image.
-          make sign-keyless-container
+          make sign-ci-keyless-containers
 
       - name: Build and sign a blob
         run: |

@@ -41,6 +41,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
+	// Initialize all known client auth plugins
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
@@ -459,7 +464,13 @@ func TestGenerateKeyPairK8s(t *testing.T) {
 		t.Fatal(err)
 	}
 	// make sure the secret actually exists
-	client, err := kubernetes.Client()
+
+	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(), nil).ClientConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := k8s.NewForConfig(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
