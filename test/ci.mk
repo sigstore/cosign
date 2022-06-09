@@ -3,12 +3,12 @@
 ############
 
 .PHONY: sign-ci-containers
-sign-ci-container: ko
+sign-ci-containers: ko
 	cosign sign --key .github/workflows/cosign-test.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/cosign:$(GIT_HASH)
 	cosign sign --key .github/workflows/cosign-test.key -a GIT_HASH=$(GIT_HASH) ${KO_PREFIX}/sget:$(GIT_HASH)
 
 .PHONY: sign-ci-keyless-containers
-sign-ci-keyless-container: ko
+sign-ci-keyless-containers: ko
 	cosign sign -a sha=$(GIT_HASH) -a run_id=${GITHUB_RUN_ID} -a run_attempt=${GITHUB_RUN_ATTEMPT} ${KO_PREFIX}/cosign:$(GIT_HASH)
 	cosign sign -a sha=$(GIT_HASH) -a run_id=${GITHUB_RUN_ID} -a run_attempt=${GITHUB_RUN_ATTEMPT} ${KO_PREFIX}/cosign:$(GIT_VERSION)
 	cosign sign -a sha=$(GIT_HASH) -a run_id=${GITHUB_RUN_ID} -a run_attempt=${GITHUB_RUN_ATTEMPT} ${KO_PREFIX}/sget:$(GIT_HASH)
