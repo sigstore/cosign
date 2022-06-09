@@ -40,7 +40,7 @@ func GetKeyPairSecret(ctx context.Context, k8sRef string) (*v1.Secret, error) {
 		return nil, err
 	}
 
-	client, err := Client()
+	client, err := client()
 	if err != nil {
 		return nil, fmt.Errorf("new for config: %w", err)
 	}
@@ -65,7 +65,7 @@ func KeyPairSecret(ctx context.Context, k8sRef string, pf cosign.PassFunc) error
 	}
 
 	// create the k8s client
-	client, err := Client()
+	client, err := client()
 	if err != nil {
 		return fmt.Errorf("new for config: %w", err)
 	}
