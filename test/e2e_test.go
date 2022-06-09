@@ -934,7 +934,12 @@ func TestAttachSBOM(t *testing.T) {
 	defer cleanup()
 
 	out := bytes.Buffer{}
-	_, err := download.SBOMCmd(ctx, options.RegistryOptions{}, img.Name(), &out)
+
+	_, errPl := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{Platform: "darwin/amd64"}, img.Name(), &out)
+	if errPl == nil {
+		t.Fatalf("Expected error when passing Platform to single arch image")
+	}
+	_, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, img.Name(), &out)
 	if err == nil {
 		t.Fatal("Expected error")
 	}
@@ -944,7 +949,7 @@ func TestAttachSBOM(t *testing.T) {
 	// Upload it!
 	must(attach.SBOMCmd(ctx, options.RegistryOptions{}, "./testdata/bom-go-mod.spdx", "spdx", imgName), t)
 
-	sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, imgName, &out)
+	sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
 	if err != nil {
 		t.Fatal(err)
 	}
