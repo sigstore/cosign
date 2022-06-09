@@ -36,6 +36,14 @@ type platformList []struct {
 	platform *v1.Platform
 }
 
+func (pl *platformList) String() string {
+	r := []string{}
+	for _, p := range *pl {
+		r = append(r, p.platform.String())
+	}
+	return strings.Join(r, ", ")
+}
+
 func SBOMCmd(
 	ctx context.Context, regOpts options.RegistryOptions,
 	dnOpts options.SBOMDownloadOptions, imageRef string, out io.Writer,
@@ -79,13 +87,7 @@ func SBOMCmd(
 		if len(platforms) > 1 {
 			return nil, fmt.Errorf(
 				"platform spec matches more than one image architecture: %s",
-				func(pl platformList) string {
-					r := []string{}
-					for _, p := range pl {
-						r = append(r, p.platform.String())
-					}
-					return strings.Join(r, ", ")
-				}(platforms),
+				platforms.String(),
 			)
 		}
 
@@ -100,26 +102,22 @@ func SBOMCmd(
 	}
 
 	file, err := se.Attachment("sbom")
-	if err != nil {
-		if errors.Is(err, ociremote.ErrImageNotFound) {
-			if !isIndex {
-				return nil, errors.New("no sbom attached to reference")
-			}
-			// Help the user with the available architectures
-			pl, err := getIndexPlatforms(idx)
-			if len(pl) > 0 && err == nil {
-				fmt.Fprintln(os.Stderr, "\nThis multiarch image does not have an SBOM attached at the index level.")
-				fmt.Fprintln(os.Stderr, "Try using --platform with one of the following architectures:")
-				as := []string{}
-				for _, a := range pl {
-					if a.platform.String() != "" {
-						as = append(as, a.platform.String())
-					}
-				}
-				fmt.Fprintf(os.Stderr, " %s\n\n", strings.Join(as, ", "))
-			}
-			return nil, fmt.Errorf("no SBOM found attached to image index")
+	if errors.Is(err, ociremote.ErrImageNotFound) {
+		if !isIndex {
+			return nil, errors.New("no sbom attached to reference")
 		}
+		// Help the user with the available architectures
+		pl, err := getIndexPlatforms(idx)
+		if len(pl) > 0 && err == nil {
+			fmt.Fprintf(
+				os.Stderr,
+				"\nThis multiarch image does not have an SBOM attached at the index level.\n"+
+					"Try using --platform with one of the following architectures:\n%s\n\n",
+				pl.String(),
+			)
+		}
+		return nil, fmt.Errorf("no SBOM found attached to image index")
+	} else if err != nil {
 		return nil, fmt.Errorf("getting sbom attachment: %w", err)
 	}
 
@@ -164,6 +162,7 @@ func getIndexPlatforms(idx oci.SignedImageIndex) (platformList, error) {
 
 // matchPlatform filters a list of platforms returning only those matching
 // a base. "Based" on ko's internal equivalent while it moves to GGCR.
+// https://github.com/google/ko/blob/e6a7a37e26d82a8b2bb6df991c5a6cf6b2728794/pkg/build/gobuild.go#L1020
 func matchPlatform(base *v1.Platform, list platformList) platformList {
 	ret := platformList{}
 	for _, p := range list {
