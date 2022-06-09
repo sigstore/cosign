@@ -49,7 +49,7 @@ jobs:
         run: |
           set -e
           # Build and publish an image.
-          make sign-keyless-container
+          make sign-ci-keyless-containers
 
       - name: Build and sign a blob
         run: |

@@ -28,17 +28,9 @@ snapshot:
 copy-cosign-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:$(GIT_VERSION)
 
-.PHONY: copy-policy-controller-signed-release-to-ghcr
-copy-policy-controller-signed-release-to-ghcr:
-	cosign copy $(KO_PREFIX)/policy-controller:$(GIT_VERSION) $(GHCR_PREFIX)/policy-controller:$(GIT_VERSION)
-
-.PHONY: copy-policy-webhook-signed-release-to-ghcr
-copy-policy-webhook-signed-release-to-ghcr:
-	cosign copy $(KO_PREFIX)/policy-webhook:$(GIT_VERSION) $(GHCR_PREFIX)/policy-webhook:$(GIT_VERSION)
-
 .PHONY: copy-sget-signed-release-to-ghcr
 copy-sget-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/sget:$(GIT_VERSION) $(GHCR_PREFIX)/sget:$(GIT_VERSION)
 
 .PHONY: copy-signed-release-to-ghcr
-copy-signed-release-to-ghcr: copy-cosign-signed-release-to-ghcr copy-policy-controller-signed-release-to-ghcr copy-sget-signed-release-to-ghcr copy-policy-webhook-signed-release-to-ghcr
+copy-signed-release-to-ghcr: copy-cosign-signed-release-to-ghcr copy-sget-signed-release-to-ghcr
