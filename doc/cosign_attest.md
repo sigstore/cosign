@@ -62,7 +62,7 @@ cosign attest [flags]
       --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|vuln|custom) or an URI (default "custom")
+      --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
 ```
 
 ### Options inherited from parent commands

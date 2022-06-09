@@ -113,6 +113,15 @@ func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifie
 		if err != nil {
 			return nil, fmt.Errorf("marshaling SPDXStatement: %w", err)
 		}
+	case options.PredicateCycloneDX:
+		var cyclonedxStatement attestation.CycloneDXStatement
+		if err := json.Unmarshal(decodedPayload, &cyclonedxStatement); err != nil {
+			return nil, fmt.Errorf("unmarshaling CycloneDXStatement: %w", err)
+		}
+		payload, err = json.Marshal(cyclonedxStatement)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling CycloneDXStatement: %w", err)
+		}
 	case options.PredicateVuln:
 		var vulnStatement attestation.CosignVulnStatement
 		if err := json.Unmarshal(decodedPayload, &vulnStatement); err != nil {
