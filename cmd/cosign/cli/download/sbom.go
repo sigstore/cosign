@@ -28,7 +28,6 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"github.com/sigstore/cosign/pkg/oci/walk"
 )
 
 type platformList []struct {
@@ -91,7 +90,7 @@ func SBOMCmd(
 			)
 		}
 
-		nse, err := findSignedImage(ctx, idx, platforms[0].hash)
+		nse, err := idx.SignedImage(platforms[0].hash)
 		if err != nil {
 			return nil, fmt.Errorf("searching for %s image: %w", platforms[0].hash.String(), err)
 		}
@@ -193,26 +192,4 @@ func matchPlatform(base *v1.Platform, list platformList) platformList {
 	}
 
 	return ret
-}
-
-func findSignedImage(ctx context.Context, sii oci.SignedImageIndex, iDigest v1.Hash) (se oci.SignedEntity, err error) {
-	if err := walk.SignedEntity(ctx, sii, func(ctx context.Context, e oci.SignedEntity) error {
-		img, ok := e.(oci.SignedImage)
-		if !ok {
-			return nil
-		}
-
-		d, err := img.Digest()
-		if err != nil {
-			return fmt.Errorf("getting image digest: %w", err)
-		}
-
-		if d == iDigest {
-			se = img
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("traversing signed entity: %w", err)
-	}
-	return se, nil
 }
