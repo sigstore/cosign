@@ -42,6 +42,17 @@ If you have Go 1.17+, you can setup a development environment:
     $ go install ./cmd/cosign
     $ $(go env GOPATH)/bin/cosign
 
+## Dockerfile
+Here is how to install and use cosign inside a Dockerfile through the gcr.io/projectsigstore/cosign image:
+
+```shell
+FROM gcr.io/projectsigstore/cosign:v1.9.0 as cosign-bin
+
+FROM scratch
+COPY --from=cosign-bin /ko-app/cosign /usr/local/bin/cosign
+ENTRYPOINT [ "cosign" ]
+```
+
 ## Quick Start
 
 This shows how to:
