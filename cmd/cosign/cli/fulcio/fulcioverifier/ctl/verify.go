@@ -30,8 +30,8 @@ import (
 	"github.com/google/certificate-transparency-go/x509util"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctutil"
 
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 // This is the CT log public key target name

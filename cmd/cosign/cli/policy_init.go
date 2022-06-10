@@ -40,10 +40,10 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/sget"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
 )
 
