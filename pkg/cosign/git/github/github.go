@@ -25,7 +25,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v42/github"
+	"github.com/google/go-github/v45/github"
 	"golang.org/x/oauth2"
 
 	"github.com/sigstore/cosign/pkg/cosign"
