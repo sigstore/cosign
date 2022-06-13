@@ -42,11 +42,6 @@ func New() *Gh {
 }
 
 func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
-	keys, err := cosign.GenerateKeyPair(pf)
-	if err != nil {
-		return fmt.Errorf("generating key pair: %w", err)
-	}
-
 	var httpClient *http.Client
 	if token, ok := os.LookupEnv("GITHUB_TOKEN"); ok {
 		ts := oauth2.StaticTokenSource(
@@ -54,9 +49,14 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		)
 		httpClient = oauth2.NewClient(ctx, ts)
 	} else {
-		return errors.New("could not find \"GITHUB_TOKEN\" env variable")
+		return errors.New("could not find \"GITHUB_TOKEN\" environment variable")
 	}
 	client := github.NewClient(httpClient)
+
+	keys, err := cosign.GenerateKeyPair(pf)
+	if err != nil {
+		return fmt.Errorf("generating key pair: %w", err)
+	}
 
 	split := strings.Split(ref, "/")
 	if len(split) < 2 {
