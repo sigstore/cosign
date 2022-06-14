@@ -1372,8 +1372,9 @@ github.com/hashicorp/vault/api v1.3.1/go.mod h1:QeJoWxMFt+MsuWcYhmwRLwKEXrjwAFFy
 github.com/hashicorp/vault/api v1.7.2 h1:kawHE7s/4xwrdKbkmwQi0wYaIeUhk5ueek7ljuezCVQ=
 github.com/hashicorp/vault/api v1.7.2/go.mod h1:xbfA+1AvxFseDzxxdWaL0uO99n1+tndus4GCrtouy0M=
 github.com/hashicorp/vault/sdk v0.3.0/go.mod h1:aZ3fNuL5VNydQk8GcLJ2TV8YCRVvyaakYkhZRoVuhj0=
-github.com/hashicorp/vault/sdk v0.5.1 h1:zly/TmNgOXCGgWIRA8GojyXzG817POtVh3uzIwzZx+8=
 github.com/hashicorp/vault/sdk v0.5.1/go.mod h1:DoGraE9kKGNcVgPmTuX357Fm6WAx1Okvde8Vp3dPDoU=
+github.com/hashicorp/vault/sdk v0.5.2 h1:Lub3cuwra6ifGmVYqX0x2pehWmUZl3zTElIjnyvBe2M=
+github.com/hashicorp/vault/sdk v0.5.2/go.mod h1:DoGraE9kKGNcVgPmTuX357Fm6WAx1Okvde8Vp3dPDoU=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 h1:xixZ2bWeofWV68J+x6AzmKuVM/JWCQwkWm6GW/MUR6I=
 github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87/go.mod h1:CtWFDAQgb7dxtzFs4tWbplKIe2jSi3+5vKbgIO0SLnQ=
