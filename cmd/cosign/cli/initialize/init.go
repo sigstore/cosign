@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/sigstore/cosign/pkg/blob"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
+	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 func DoInitialize(ctx context.Context, root, mirror string) error {
