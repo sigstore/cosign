@@ -124,9 +124,18 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	}
 
 	idToken := ko.IDToken
+	var provider providers.Interface
 	// If token is not set in the options, get one from the provders
 	if idToken == "" && providers.Enabled(ctx) && !ko.OIDCDisableProviders {
-		idToken, err = providers.Provide(ctx, "sigstore")
+		if ko.OIDCProvider != "" {
+			provider, err = providers.ProvideFrom(ctx, ko.OIDCProvider)
+			if err != nil {
+				return nil, fmt.Errorf("getting provider: %w", err)
+			}
+			idToken, err = provider.Provide(ctx, "sigstore")
+		} else {
+			idToken, err = providers.Provide(ctx, "sigstore")
+		}
 		if err != nil {
 			return nil, fmt.Errorf("fetching ambient OIDC credentials: %w", err)
 		}

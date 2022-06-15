@@ -76,6 +76,7 @@ func Attest() *cobra.Command {
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCProvider:             o.OIDC.Provider,
 			}
 			for _, img := range args {
 				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
