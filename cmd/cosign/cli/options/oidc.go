@@ -32,6 +32,7 @@ type OIDCOptions struct {
 	ClientID                string
 	clientSecretFile        string
 	RedirectURL             string
+	Provider                string
 	DisableAmbientProviders bool
 }
 
@@ -66,6 +67,9 @@ func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RedirectURL, "oidc-redirect-url", "",
 		"[EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.")
+
+	cmd.Flags().StringVar(&o.Provider, "oidc-provider", "",
+		"[EXPERIMENTAL] Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem]")
 
 	cmd.Flags().BoolVar(&o.DisableAmbientProviders, "oidc-disable-ambient-providers", false,
 		"[EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read")
