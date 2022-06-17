@@ -20,7 +20,7 @@ require (
 	github.com/google/certificate-transparency-go v1.1.2
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-containerregistry v0.9.0
-	github.com/google/go-github/v42 v42.0.0
+	github.com/google/go-github/v45 v45.1.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-hclog v1.2.1
