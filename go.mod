@@ -48,6 +48,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/mozillazg/docker-credential-acr-helper v0.2.0
 	github.com/oklog/run v1.1.0
 	github.com/open-policy-agent/opa v0.35.0
 	github.com/pierrec/lz4 v2.6.1+incompatible
@@ -70,7 +71,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
-	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
+	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 	google.golang.org/api v0.84.0
@@ -113,6 +114,17 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
+	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect
+	github.com/alibabacloud-go/cr-20160607 v1.0.1 // indirect
+	github.com/alibabacloud-go/cr-20181201 v1.0.10 // indirect
+	github.com/alibabacloud-go/darabonba-openapi v0.1.18 // indirect
+	github.com/alibabacloud-go/debug v0.0.0-20190504072949-9472017b5c68 // indirect
+	github.com/alibabacloud-go/endpoint-util v1.1.1 // indirect
+	github.com/alibabacloud-go/openapi-util v0.0.11 // indirect
+	github.com/alibabacloud-go/tea v1.1.18 // indirect
+	github.com/alibabacloud-go/tea-utils v1.4.4 // indirect
+	github.com/alibabacloud-go/tea-xml v1.1.2 // indirect
+	github.com/aliyun/credentials-go v1.2.3 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.5 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.15.10 // indirect
@@ -137,6 +149,7 @@ require (
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+	github.com/clbanning/mxj/v2 v2.5.6 // indirect
 	github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4 // indirect
 	github.com/cncf/xds/go v0.0.0-20211130200136-a8f946100490 // indirect
 	github.com/cockroachdb/apd/v2 v2.0.1 // indirect
@@ -245,6 +258,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
+	github.com/tjfoc/gmsm v1.3.2 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802 // indirect
 	github.com/urfave/cli v1.22.5 // indirect
 	github.com/vbatts/tar-split v0.11.2 // indirect
