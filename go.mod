@@ -56,7 +56,7 @@ require (
 	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7
 	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3
 	github.com/sigstore/sigstore v1.2.1-0.20220614141825-9c0e2e247545
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
 	github.com/spiffe/go-spiffe/v2 v2.1.0
