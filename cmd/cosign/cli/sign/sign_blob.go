@@ -91,7 +91,10 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 		if err != nil {
 			return nil, err
 		}
-		return []byte(signedPayload.Base64Signature), os.WriteFile(ko.BundlePath, contents, 0600)
+		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+			return nil, fmt.Errorf("create bundle file: %w", err)
+		}
+		fmt.Printf("Bundle wrote in the file %s\n", ko.BundlePath)
 	}
 
 	if outputSignature != "" {
