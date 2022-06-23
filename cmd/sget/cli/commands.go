@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Deprecated: This package is deprecated and will be removed in a future release.
 package cli
 
 import (
@@ -36,6 +37,7 @@ func New() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sget <image reference>",
 		Short: "sget [--key <key reference>] <image reference>",
+		Long:  `sget is DEPRECATED in the cosign repo -- see https://github.com/sigstore/sget for the new tool.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return errors.New("a single image reference is required")
