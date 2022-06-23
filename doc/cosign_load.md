@@ -1,10 +1,10 @@
 ## cosign load
 
-Load a signed image on disk to a remote registry
+Load a signed image on disk to a remote registry or a local docker daemon
 
 ### Synopsis
 
-Load a signed image on disk to a remote registry
+Load a signed image on disk to a remote registry or a local docker daemon
 
 ```
 cosign load [flags]
@@ -20,6 +20,7 @@ cosign load [flags]
 
 ```
       --dir string   path to directory where the signed image is stored on disk
+      --local-daemon whether to load the image onto local registry of the current host
   -h, --help         help for load
 ```
 

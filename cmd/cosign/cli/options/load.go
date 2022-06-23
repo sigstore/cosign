@@ -21,7 +21,8 @@ import (
 
 // LoadOptions is the top level wrapper for the load command.
 type LoadOptions struct {
-	Directory string
+	Directory   string
+	LocalDaemon bool
 }
 
 var _ Interface = (*LoadOptions)(nil)
@@ -32,4 +33,7 @@ func (o *LoadOptions) AddFlags(cmd *cobra.Command) {
 		"path to directory where the signed image is stored on disk")
 	_ = cmd.Flags().SetAnnotation("dir", cobra.BashCompSubdirsInDir, []string{})
 	_ = cmd.MarkFlagRequired("dir")
+
+	cmd.Flags().BoolVar(&o.LocalDaemon, "local-daemon", false,
+		"whether to load the image onto local registry of the current host")
 }

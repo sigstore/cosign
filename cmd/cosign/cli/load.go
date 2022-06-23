@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci/layout"
+	"github.com/sigstore/cosign/pkg/oci/local"
 	"github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/spf13/cobra"
 )
@@ -31,8 +32,8 @@ func Load() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "load",
-		Short:   "Load a signed image on disk to a remote registry",
-		Long:    "Load a signed image on disk to a remote registry",
+		Short:   "Load a signed image on disk to a remote registry or a local docker daemon",
+		Long:    "Load a signed image on disk to a remote registry or a local docker daemon",
 		Example: `  cosign load --dir <path to directory> <IMAGE>`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -55,5 +56,11 @@ func LoadCmd(ctx context.Context, opts options.LoadOptions, imageRef string) err
 	if err != nil {
 		return fmt.Errorf("signed image index: %w", err)
 	}
-	return remote.WriteSignedImageIndexImages(ref, sii)
+
+	if opts.LocalDaemon {
+		return local.WriteLocalImage(ref, sii)
+	} else {
+		return remote.WriteSignedImageIndexImages(ref, sii)
+	}
+
 }
