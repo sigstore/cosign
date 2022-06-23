@@ -64,6 +64,7 @@ cosign attest [flags]
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
+  -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 
 ### Options inherited from parent commands
@@ -72,7 +73,6 @@ cosign attest [flags]
       --output-file string   log output to a file
   -t, --timeout duration     timeout for commands (default 3m0s)
   -d, --verbose              log debug output
-  -y, --yes                  skip confirmation prompts for non-destructive operations
 ```
 
 ### SEE ALSO
