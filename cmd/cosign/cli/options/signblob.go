@@ -33,6 +33,7 @@ type SignBlobOptions struct {
 	OIDC              OIDCOptions
 	Registry          RegistryOptions
 	BundlePath        string
+	SkipConfirmation  bool
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -62,4 +63,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
+
+	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
+		"skip confirmation prompts for non-destructive operations")
 }

@@ -82,6 +82,7 @@ func SignBlob() *cobra.Command {
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 				BundlePath:               o.BundlePath,
+				SkipConfirmation:         o.SkipConfirmation,
 			}
 			for _, blob := range args {
 				// TODO: remove when the output flag has been deprecated

@@ -32,6 +32,8 @@ type KeyOpts struct {
 	OIDCDisableProviders bool   // Disable OIDC credential providers in keyless signer
 	OIDCProvider         string // Specify which OIDC credential provider to use for keyless signer
 	BundlePath           string
+	SkipConfirmation     bool
+
 	// FulcioAuthFlow is the auth flow to use when authenticating against
 	// Fulcio. See https://pkg.go.dev/github.com/sigstore/cosign/cmd/cosign/cli/fulcio#pkg-constants
 	// for valid values.

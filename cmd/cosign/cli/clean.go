@@ -16,11 +16,13 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -28,7 +30,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 )
 
@@ -49,9 +50,21 @@ func Clean() *cobra.Command {
 	return cmd
 }
 
+// confirmPromptDestructive prompts the user for confirmation for an action. Ignores
+// skipConfirmation.
+func confirmPromptDestructive(msg string) (bool, error) {
+	fmt.Fprintf(os.Stderr, "%s\n\nAre you sure you want to continue? (y/[N]): ", msg)
+	reader := bufio.NewReader(os.Stdin)
+	r, err := reader.ReadString('\n')
+	if err != nil {
+		return false, err
+	}
+	return strings.Trim(r, "\n") == "Y" || strings.Trim(r, "\n") == "y", nil
+}
+
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string, force bool) error {
 	if !force {
-		ok, err := cosign.ConfirmPromptDestructive(prompt(cleanType))
+		ok, err := confirmPromptDestructive(prompt(cleanType))
 		if err != nil {
 			return err
 		}
