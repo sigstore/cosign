@@ -34,10 +34,10 @@ cosign public-key [flags]
   cosign public-key --key hashivault://[KEY]
 
   # extract public key from GitLab with project name
-  cosign verify --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
+  cosign public-key --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
 
   # extract public key from GitLab with project id
-  cosign verify --key gitlab://[PROJECT_ID] <IMAGE>
+  cosign public-key --key gitlab://[PROJECT_ID] <IMAGE>
 ```
 
 ### Options
