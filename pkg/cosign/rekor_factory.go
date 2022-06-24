@@ -21,17 +21,19 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 )
 
-// Key is used for associating the Rekor client client inside the
+// key is used for associating the Rekor client client inside the
 // context.Context.
-type Key struct{}
+type key struct{}
 
+// TODO(jason): Rename this to something better than pkg/cosign.Set.
 func Set(ctx context.Context, rekorClient *client.Rekor) context.Context {
-	return context.WithValue(ctx, Key{}, rekorClient)
+	return context.WithValue(ctx, key{}, rekorClient)
 }
 
 // Get extracts the Rekor client from the context.
+// TODO(jason): Rename this to something better than pkg/cosign.Get.
 func Get(ctx context.Context) *client.Rekor {
-	untyped := ctx.Value(Key{})
+	untyped := ctx.Value(key{})
 	if untyped == nil {
 		return nil
 	}
