@@ -25,8 +25,8 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/cosign/cmd/sget/cli/options"
-	"github.com/sigstore/cosign/pkg/sget"
+	"github.com/sigstore/cosign/cmd/sget/cli/options" //nolint:staticcheck
+	"github.com/sigstore/cosign/pkg/sget"             //nolint:staticcheck
 )
 
 var (

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sigstore/cosign/cmd/sget/cli"
+	"github.com/sigstore/cosign/cmd/sget/cli" //nolint:staticcheck
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
