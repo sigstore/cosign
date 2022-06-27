@@ -115,13 +115,15 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
   }
 }
 ```
+
   The following are REQUIRED properties of the bundle:
-    - The `SignedEntryTimestamp` is a rekor-signed signature over the logIndex, body and integratedTime of the Rekor Log Entry
-    - The `Payload` consists of all fields required to verify the SET:
-      - The `body` is the body of the Rekor Log Entry
-      - The `integratedTime` is the UNIX timestamp the log entry was integrated into the transparency log
-      - The `logIndex` is the index of the log entry in the transparency log
-      - The `logID` is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
+
+  - The `SignedEntryTimestamp` is a rekor-signed signature over the logIndex, body and integratedTime of the Rekor Log Entry
+  - The `Payload` consists of all fields required to verify the SET:
+    - The `body` is the body of the Rekor Log Entry
+    - The `integratedTime` is the UNIX timestamp the log entry was integrated into the transparency log
+    - The `logIndex` is the index of the log entry in the transparency log
+    - The `logID` is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
 
 For instructions on using the `bundle` for verification, see [USAGE.md](../USAGE.md#verify-a-signature-was-added-to-the-transparency-log).
 
