@@ -44,20 +44,25 @@ import (
 // nolint
 type VerifyAttestationCommand struct {
 	options.RegistryOptions
-	CheckClaims    bool
-	KeyRef         string
-	CertRef        string
-	CertEmail      string
-	CertOidcIssuer string
-	CertChain      string
-	EnforceSCT     bool
-	Sk             bool
-	Slot           string
-	Output         string
-	RekorURL       string
-	PredicateType  string
-	Policies       []string
-	LocalImage     bool
+	CheckClaims                  bool
+	KeyRef                       string
+	CertRef                      string
+	CertEmail                    string
+	CertOidcIssuer               string
+	CertGithubWorkflowTrigger    string
+	CertGithubWorkflowSha        string
+	CertGithubWorkflowName       string
+	CertGithubWorkflowRepository string
+	CertGithubWorkflowRef        string
+	CertChain                    string
+	EnforceSCT                   bool
+	Sk                           bool
+	Slot                         string
+	Output                       string
+	RekorURL                     string
+	PredicateType                string
+	Policies                     []string
+	LocalImage                   bool
 }
 
 // Exec runs the verification command
@@ -75,10 +80,15 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 	co := &cosign.CheckOpts{
-		RegistryClientOpts: ociremoteOpts,
-		CertEmail:          c.CertEmail,
-		CertOidcIssuer:     c.CertOidcIssuer,
-		EnforceSCT:         c.EnforceSCT,
+		RegistryClientOpts:           ociremoteOpts,
+		CertEmail:                    c.CertEmail,
+		CertOidcIssuer:               c.CertOidcIssuer,
+		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
+		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
+		CertGithubWorkflowName:       c.CertGithubWorkflowName,
+		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
+		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
+		EnforceSCT:                   c.EnforceSCT,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier

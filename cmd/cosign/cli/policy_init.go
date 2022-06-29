@@ -204,7 +204,8 @@ func signPolicy() *cobra.Command {
 				return errors.New("error decoding certificate")
 			}
 			signerEmail := sigs.CertSubject(certs[0])
-			signerIssuer := sigs.CertIssuerExtension(certs[0])
+			ce := cosign.CertExtensions{Cert: certs[0]}
+			signerIssuer := ce.GetIssuer()
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
