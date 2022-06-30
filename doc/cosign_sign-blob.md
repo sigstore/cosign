@@ -55,6 +55,7 @@ cosign sign-blob [flags]
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+  -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 
 ### Options inherited from parent commands
@@ -63,7 +64,6 @@ cosign sign-blob [flags]
       --output-file string   log output to a file
   -t, --timeout duration     timeout for commands (default 3m0s)
   -d, --verbose              log debug output
-  -y, --yes                  skip confirmation prompts for non-destructive operations
 ```
 
 ### SEE ALSO

@@ -56,11 +56,12 @@ func (o *PolicyInitOptions) AddFlags(cmd *cobra.Command) {
 }
 
 type PolicySignOptions struct {
-	ImageRef string
-	OutFile  string
-	Registry RegistryOptions
-	Fulcio   FulcioOptions
-	Rekor    RekorOptions
+	ImageRef         string
+	OutFile          string
+	Registry         RegistryOptions
+	Fulcio           FulcioOptions
+	Rekor            RekorOptions
+	SkipConfirmation bool
 
 	OIDC OIDCOptions
 }
@@ -74,6 +75,9 @@ func (o *PolicySignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.OutFile, "out", "o",
 		"output policy locally")
+
+	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
+		"skip confirmation prompts for non-destructive operations")
 
 	o.Registry.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)

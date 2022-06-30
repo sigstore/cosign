@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -74,6 +73,7 @@ type CheckOpts struct {
 
 	// Annotations optionally specifies image signature annotations to verify.
 	Annotations map[string]interface{}
+
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
 	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
 
@@ -93,6 +93,18 @@ type CheckOpts struct {
 	CertEmail string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertOidcIssuer string
+
+	// CertGithubWorkflowTrigger is the GitHub Workflow Trigger name expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowTrigger string
+	// CertGithubWorkflowSha is the GitHub Workflow SHA expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowSha string
+	// CertGithubWorkflowName is the GitHub Workflow Name expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowName string
+	// CertGithubWorkflowRepository is the GitHub Workflow Repository  expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowRepository string
+	// CertGithubWorkflowRef is the GitHub Workflow Ref expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowRef string
+
 	// EnforceSCT requires that a certificate contain an embedded SCT during verification. An SCT is proof of inclusion in a
 	// certificate transparency log.
 	EnforceSCT bool
@@ -204,6 +216,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 // CheckCertificatePolicy checks that the certificate subject and issuer match
 // the expected values.
 func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
+	ce := CertExtensions{Cert: cert}
 	if co.CertEmail != "" {
 		emailVerified := false
 		for _, em := range cert.EmailAddresses {
@@ -216,11 +229,11 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			return errors.New("expected email not found in certificate")
 		}
 	}
-	if co.CertOidcIssuer != "" {
-		if getIssuer(cert) != co.CertOidcIssuer {
-			return errors.New("expected oidc issuer not found in certificate")
-		}
+
+	if err := validateCertExtensions(ce, co); err != nil {
+		return err
 	}
+	issuer := ce.GetIssuer()
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
 	if len(co.Identities) > 0 {
@@ -229,14 +242,13 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			switch {
 			// Check the issuer first
 			case identity.IssuerRegExp != "":
-				issuer := getIssuer(cert)
 				if regex, err := regexp.Compile(identity.IssuerRegExp); err != nil {
 					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRegExp, err)
 				} else if regex.MatchString(issuer) {
 					issuerMatches = true
 				}
 			case identity.Issuer != "":
-				if identity.Issuer == getIssuer(cert) {
+				if identity.Issuer == issuer {
 					issuerMatches = true
 				}
 			default:
@@ -279,6 +291,45 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	return nil
 }
 
+func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
+	if co.CertOidcIssuer != "" {
+		if ce.GetIssuer() != co.CertOidcIssuer {
+			return errors.New("expected oidc issuer not found in certificate")
+		}
+	}
+
+	if co.CertGithubWorkflowTrigger != "" {
+		if ce.GetCertExtensionGithubWorkflowTrigger() != co.CertGithubWorkflowTrigger {
+			return errors.New("expected GitHub Workflow Trigger not found in certificate")
+		}
+	}
+
+	if co.CertGithubWorkflowSha != "" {
+		if ce.GetExtensionGithubWorkflowSha() != co.CertGithubWorkflowSha {
+			return errors.New("expected GitHub Workflow SHA not found in certificate")
+		}
+	}
+
+	if co.CertGithubWorkflowName != "" {
+		if ce.GetCertExtensionGithubWorkflowName() != co.CertGithubWorkflowName {
+			return errors.New("expected GitHub Workflow Name not found in certificate")
+		}
+	}
+
+	if co.CertGithubWorkflowRepository != "" {
+		if ce.GetCertExtensionGithubWorkflowRepository() != co.CertGithubWorkflowRepository {
+			return errors.New("expected GitHub Workflow Repository not found in certificate")
+		}
+	}
+
+	if co.CertGithubWorkflowRef != "" {
+		if ce.GetCertExtensionGithubWorkflowRef() != co.CertGithubWorkflowRef {
+			return errors.New("expected GitHub Workflow Ref not found in certificate")
+		}
+	}
+	return nil
+}
+
 // getSubjectAlternateNames returns all of the following for a Certificate.
 // DNSNames
 // EmailAddresses
@@ -295,16 +346,6 @@ func getSubjectAlternateNames(cert *x509.Certificate) []string {
 		sans = append(sans, uri.String())
 	}
 	return sans
-}
-
-// getIssuer returns the issuer for a Certificate
-func getIssuer(cert *x509.Certificate) string {
-	for _, ext := range cert.Extensions {
-		if ext.Id.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}) {
-			return string(ext.Value)
-		}
-	}
-	return ""
 }
 
 // ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate

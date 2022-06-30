@@ -31,7 +31,6 @@ var (
 
 // nolint
 func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
-
 	keys, err := cosign.ImportKeyPair(keyVal, GetPass)
 	if err != nil {
 		return err

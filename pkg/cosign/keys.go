@@ -57,16 +57,23 @@ type Keys struct {
 	public  crypto.PublicKey
 }
 
+// TODO(jason): Move this to an internal package.
 type KeysBytes struct {
 	PrivateBytes []byte
 	PublicBytes  []byte
 	password     []byte
 }
 
+func (k *KeysBytes) Password() []byte {
+	return k.password
+}
+
+// TODO(jason): Move this to an internal package.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
+// TODO(jason): Move this to the only place it's used in cmd/cosign/cli/importkeypair, and unexport it.
 func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
@@ -167,6 +174,7 @@ func marshalKeyPair(keypair Keys, pf PassFunc) (key *KeysBytes, err error) {
 	}, nil
 }
 
+// TODO(jason): Move this to an internal package.
 func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	priv, err := GeneratePrivateKey()
 	if err != nil {
@@ -176,10 +184,7 @@ func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(Keys{priv, priv.Public()}, pf)
 }
 
-func (k *KeysBytes) Password() []byte {
-	return k.password
-}
-
+// TODO(jason): Move this to an internal package.
 func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
@@ -192,6 +197,7 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	return ecdsaPub, nil
 }
 
+// TODO(jason): Move this to pkg/signature, the only place it's used, and unimport it.
 func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)

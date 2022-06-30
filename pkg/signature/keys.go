@@ -34,25 +34,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
-var (
-	// Fulcio cert-extensions, documented here: https://github.com/sigstore/fulcio/blob/main/docs/oid-info.md
-	CertExtensionOIDCIssuer               = "1.3.6.1.4.1.57264.1.1"
-	CertExtensionGithubWorkflowTrigger    = "1.3.6.1.4.1.57264.1.2"
-	CertExtensionGithubWorkflowSha        = "1.3.6.1.4.1.57264.1.3"
-	CertExtensionGithubWorkflowName       = "1.3.6.1.4.1.57264.1.4"
-	CertExtensionGithubWorkflowRepository = "1.3.6.1.4.1.57264.1.5"
-	CertExtensionGithubWorkflowRef        = "1.3.6.1.4.1.57264.1.6"
-
-	CertExtensionMap = map[string]string{
-		CertExtensionOIDCIssuer:               "oidcIssuer",
-		CertExtensionGithubWorkflowTrigger:    "githubWorkflowTrigger",
-		CertExtensionGithubWorkflowSha:        "githubWorkflowSha",
-		CertExtensionGithubWorkflowName:       "githubWorkflowName",
-		CertExtensionGithubWorkflowRepository: "githubWorkflowRepository",
-		CertExtensionGithubWorkflowRef:        "githubWorkflowRef",
-	}
-)
-
 // LoadPublicKey is a wrapper for VerifierForKeyRef, hardcoding SHA256 as the hash algorithm
 func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
 	return VerifierForKeyRef(ctx, keyRef, crypto.SHA256)
@@ -253,26 +234,4 @@ func CertSubject(c *x509.Certificate) string {
 		return c.URIs[0].String()
 	}
 	return ""
-}
-
-func CertIssuerExtension(cert *x509.Certificate) string {
-	for _, ext := range cert.Extensions {
-		if ext.Id.String() == CertExtensionOIDCIssuer {
-			return string(ext.Value)
-		}
-	}
-	return ""
-}
-
-func CertExtensions(cert *x509.Certificate) map[string]string {
-	extensions := map[string]string{}
-	for _, ext := range cert.Extensions {
-		readableName, ok := CertExtensionMap[ext.Id.String()]
-		if ok {
-			extensions[readableName] = string(ext.Value)
-		} else {
-			extensions[ext.Id.String()] = string(ext.Value)
-		}
-	}
-	return extensions
 }

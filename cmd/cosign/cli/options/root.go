@@ -23,10 +23,9 @@ import (
 
 // RootOptions define flags and options for the root cosign cli.
 type RootOptions struct {
-	OutputFile       string
-	Verbose          bool
-	Timeout          time.Duration
-	SkipConfirmation bool
+	OutputFile string
+	Verbose    bool
+	Timeout    time.Duration
 }
 
 // DefaultTimeout specifies the default timeout for commands.
@@ -44,7 +43,4 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.PersistentFlags().DurationVarP(&o.Timeout, "timeout", "t", DefaultTimeout,
 		"timeout for commands")
-
-	cmd.PersistentFlags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
-		"skip confirmation prompts for non-destructive operations")
 }

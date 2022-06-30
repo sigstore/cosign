@@ -51,6 +51,7 @@ func SimpleClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map
 			return errors.New("missing or incorrect annotation")
 		}
 	}
+
 	return nil
 }
 

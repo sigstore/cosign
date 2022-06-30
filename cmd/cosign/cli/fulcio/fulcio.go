@@ -164,7 +164,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
 		flow = FlowDevice
 	default:
-		ok, err := cosign.ConfirmPrompt(PrivacyStatementConfirmation)
+		ok, err := cosign.ConfirmPrompt(PrivacyStatementConfirmation, ko.SkipConfirmation)
 		if err != nil {
 			return nil, err
 		}

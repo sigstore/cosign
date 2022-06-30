@@ -32,6 +32,7 @@ type SignOptions struct {
 	Force             bool
 	Recursive         bool
 	Attachment        string
+	SkipConfirmation  bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -84,4 +85,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"related image attachment to sign (sbom), default none")
+
+	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
+		"skip confirmation prompts for non-destructive operations")
 }

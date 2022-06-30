@@ -131,7 +131,44 @@ func GenerateLeafCert(subject string, oidcIssuer string, parentTemplate *x509.Ce
 			Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
 			Critical: false,
 			Value:    []byte(oidcIssuer),
-		}},
+		},
+		},
+	}
+
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cert, err := createCertificate(certTemplate, parentTemplate, &priv.PublicKey, parentPriv)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cert, priv, nil
+}
+
+func GenerateLeafCertWithGitHubOIDs(subject string, oidcIssuer string, githubWorkflowTrigger, githubWorkflowSha, githubWorkflowName,
+	githubWorkflowRepository, githubWorkflowRef string, parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	certTemplate := &x509.Certificate{
+		SerialNumber:   big.NewInt(1),
+		EmailAddresses: []string{subject},
+		NotBefore:      time.Now().Add(-1 * time.Minute),
+		NotAfter:       time.Now().Add(time.Hour),
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		IsCA:           false,
+		ExtraExtensions: []pkix.Extension{{
+			// OID for OIDC Issuer extension
+			Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
+			Critical: false,
+			Value:    []byte(oidcIssuer),
+		},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 2}, Value: []byte(githubWorkflowTrigger)},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 3}, Value: []byte(githubWorkflowSha)},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 4}, Value: []byte(githubWorkflowName)},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 5}, Value: []byte(githubWorkflowRepository)},
+			{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 6}, Value: []byte(githubWorkflowRef)}},
 	}
 
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
