@@ -295,11 +295,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 }
 
-func TestAttestationReplace(t *testing.T) {
-	// This test is currently failing, see https://github.com/sigstore/cosign/issues/1378
-	// The replace option for attest does not appear to work on random.Image() generated images
-	t.Skip()
-
+func TestAttestationReplaceCreate(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -320,17 +316,6 @@ func TestAttestationReplace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Attest once with with replace=false creating an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second), t)
-	// Attest again with replace=true, replacing the previous attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second), t)
-	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", true, 30*time.Second), t)
-
-	// Download and count the attestations
 	ref, err := name.ParseReference(imgName)
 	if err != nil {
 		t.Fatal(err)
@@ -340,12 +325,89 @@ func TestAttestationReplace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Attest with replace=true to create an attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"slsaprovenance", true, 30*time.Second), t)
+
+	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+}
+
+func TestAttestationReplace(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-replace-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest once with replace=false creating an attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"slsaprovenance", false, 30*time.Second), t)
+
+	// Download and count the attestations
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+
+	// Attest again with replace=true, replacing the previous attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"slsaprovenance", true, 30*time.Second), t)
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+
+	// Download and count the attestations
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+
+	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"custom", true, 30*time.Second), t)
+
+	// Download and count the attestations
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(attestations) != 2 {
-		t.Fatal(fmt.Errorf("Expected len(attestations) == 2, got %d", len(attestations)))
+		t.Fatal(fmt.Errorf("expected len(attestations) == 2, got %d", len(attestations)))
 	}
 }
 
