@@ -55,7 +55,7 @@ type RekorPubKey struct {
 
 const (
 	// If specified, you can specify an oob Public Key that Rekor uses using
-	// this ENV variable.
+	// this ENV variable. This ENV var is only for testing purposes.
 	altRekorPublicKey = "SIGSTORE_REKOR_PUBLIC_KEY"
 	// Add Rekor API Public Key
 	// If specified, will fetch the Rekor Public Key from the specified Rekor
@@ -90,7 +90,7 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 	altRekorPub := os.Getenv(altRekorPublicKey)
 
 	if altRekorPub != "" {
-		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for Rekor: %s\n", altRekorPub)
+		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Using a non-standard public key for Rekor: %s\n", altRekorPublicKey, altRekorPub)
 		raw, err := os.ReadFile(altRekorPub)
 		if err != nil {
 			return nil, fmt.Errorf("error reading alternate Rekor public key file: %w", err)
