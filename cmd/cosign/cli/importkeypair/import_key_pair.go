@@ -37,15 +37,12 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 	}
 
 	if cosign.FileExists("import-cosign.key") {
-		var overwrite string
-		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
-		fmt.Scanf("%s", &overwrite)
-		switch overwrite {
-		case "y", "Y":
-		case "n", "N":
-			return nil
-		default:
-			fmt.Fprintln(os.Stderr, "Invalid input")
+		if overwrite, err := cosign.ConfirmPrompt(
+			"import-cosign.key already exists. This will overwrite it.", false,
+		); err != nil || !overwrite {
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
 			return nil
 		}
 	}

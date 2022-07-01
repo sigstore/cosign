@@ -86,15 +86,12 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 	}
 
 	if cosign.FileExists("cosign.key") {
-		var overwrite string
-		fmt.Fprint(os.Stderr, "File cosign.key already exists. Overwrite (y/n)? ")
-		fmt.Scanf("%s", &overwrite)
-		switch overwrite {
-		case "y", "Y":
-		case "n", "N":
-			return nil
-		default:
-			fmt.Fprintln(os.Stderr, "Invalid input")
+		if overwrite, err := cosign.ConfirmPrompt(
+			"cosign.key already exists. This will overwrite it.", false,
+		); err != nil || !overwrite {
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
 			return nil
 		}
 	}
