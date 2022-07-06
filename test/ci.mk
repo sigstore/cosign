@@ -9,10 +9,7 @@ sign-ci-containers: ko
 
 .PHONY: sign-ci-keyless-containers
 sign-ci-keyless-containers: ko
-	cosign sign -a sha=$(GIT_HASH) -a run_id=${GITHUB_RUN_ID} -a run_attempt=${GITHUB_RUN_ATTEMPT} ${KO_PREFIX}/cosign:$(GIT_HASH)
-	cosign sign -a sha=$(GIT_HASH) -a run_id=${GITHUB_RUN_ID} -a run_attempt=${GITHUB_RUN_ATTEMPT} ${KO_PREFIX}/cosign:$(GIT_VERSION)
-	cosign sign -a sha=$(GIT_HASH) -a run_id=${GITHUB_RUN_ID} -a run_attempt=${GITHUB_RUN_ATTEMPT} ${KO_PREFIX}/sget:$(GIT_HASH)
-	cosign sign -a sha=$(GIT_HASH) -a run_id=${GITHUB_RUN_ID} -a run_attempt=${GITHUB_RUN_ATTEMPT} ${KO_PREFIX}/sget:$(GIT_VERSION)
+	./scripts/sign-images-ci.sh
 
 .PHONY: sign-blob-experimental
 sign-blob-experimental:

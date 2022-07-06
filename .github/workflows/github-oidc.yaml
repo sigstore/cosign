@@ -40,10 +40,15 @@ jobs:
         with:
           go-version: '1.17'
           check-latest: true
+          cache: true
 
       # Install tools.
-      - uses: sigstore/cosign-installer@48866aa521d8bf870604709cd43ec2f602d03ff2 # v2.3.0
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+
+      - name: build cosign from the HEAD
+        run: |
+          make cosign
+          ./cosign version
 
       - name: Build and sign a container image
         run: |
@@ -54,5 +59,4 @@ jobs:
       - name: Build and sign a blob
         run: |
           set -e
-          make cosign
           make sign-blob-experimental
