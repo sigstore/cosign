@@ -29,11 +29,11 @@ BLOB=verify-experimental-blob
 date > $BLOB
 cat $BLOB
 
-# echo "Sign the blob with cosign first and upload to rekor"
-# $COSIGN_CLI sign-blob --output-certificate blob.cert --output-signature blob.sig $BLOB
+echo "Sign the blob with cosign first and upload to rekor"
+$COSIGN_CLI sign-blob --output-certificate blob.cert --output-signature blob.sig $BLOB
 
-# echo "Verifying ..."
-# $COSIGN_CLI verify-blob --signature blob.sig --cert blob.cert $BLOB
+echo "Verifying ..."
+$COSIGN_CLI verify-blob --signature blob.sig --cert blob.cert $BLOB
 
 # Now, sign the blob with a self-signed certificate and upload to rekor
 SIG_FILE=verify-experimental-signature
