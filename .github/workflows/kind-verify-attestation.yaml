@@ -32,16 +32,16 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.21.x
         - v1.22.x
         # Try without this one now, might have problems with job restartings
         # may require upstream changes.
-        #- v1.23.x
+        - v1.23.x
+        - v1.24.x
 
     env:
-      KNATIVE_VERSION: "1.1.0"
+      KNATIVE_VERSION: "1.5.0"
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.2.2"
+      SCAFFOLDING_RELEASE_VERSION: "v0.3.0"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
