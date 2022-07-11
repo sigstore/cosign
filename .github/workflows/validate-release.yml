@@ -39,7 +39,7 @@ jobs:
       statuses: none
 
     env:
-      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.17.11-0@sha256:b0c3083b0a420ff649d5a5bfd7e0a96719ab0a7b3f99a049a4950d836a72637a
+      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.18.3-0@sha256:d4614e3a12fd43b1ef29252d1add330c0b496b5313eda37975d4a87815a6ae90
       COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.9.0@sha256:ef2d14e16dbb7786d8713e4898a8512e69ace4105f5b371a9c115ffcc3e85d84
 
     steps:
