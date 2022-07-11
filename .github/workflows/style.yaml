@@ -15,7 +15,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v2.2.0
         with:
-          go-version: '1.17'
+          go-version: '1.18'
           check-latest: true
 
       - name: Check out code
@@ -33,10 +33,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v2.2.0
         with:
-          go-version: '1.17'
+          go-version: '1.18'
           check-latest: true
 
       - name: Check out code
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
 
-      - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+      - uses: chainguard-dev/actions/goimports@a646d5892c5f820e2041a3f7ed8115bb4418f751 # main

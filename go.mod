@@ -1,6 +1,6 @@
 module github.com/sigstore/cosign
 
-go 1.17
+go 1.18
 
 replace (
 	go.etcd.io/etcd/api/v3 v3.5.4 => go.etcd.io/etcd/api/v3 v3.6.0-alpha.0
@@ -90,7 +90,7 @@ require (
 	k8s.io/code-generator v0.23.6
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
-	knative.dev/hack v0.0.0-20220224013837-e1785985d364
+	knative.dev/hack v0.0.0-20220701014203-65c463ac8c98
 	knative.dev/pkg v0.0.0-20220325200448-1f7514acd0c2
 	sigs.k8s.io/release-utils v0.6.0
 )
