@@ -990,6 +990,9 @@ func TestSaveLoad(t *testing.T) {
 			imgName2 := path.Join(repo, fmt.Sprintf("save-load-%d-2", i))
 			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
 			must(verify(pubKeyPath, imgName2, true, nil, ""), t)
+
+			// load the same image from the temp dir into local repository
+			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir, LocalDaemon: true}, imgName), t)
 		})
 	}
 }
