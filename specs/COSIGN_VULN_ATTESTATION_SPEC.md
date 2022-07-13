@@ -23,16 +23,6 @@ And the final format for this is defined as follows:
   // Predicate:
   "predicateType": "cosign.sigstore.dev/attestation/vuln/v1",
   "predicate": {
-    "invocation": {
-      "parameters": [],
-      // [ "--format=json", "--skip-db-update" ]
-      "uri": "",
-      // https://github.com/developer-guy/alpine/actions/runs/1071875574
-      "event_id": "",
-      // 1071875574
-      "builder.id": ""
-      // GitHub Actions
-    },
     "scanner": {
       "uri": "",
       // pkg:github/aquasecurity/trivy@244fd47e07d1004f0aed9
@@ -258,14 +248,6 @@ Here is an example predicate containing a vulnerability scan result above:
 ```json
 {
   "predicate": {
-    "invocation": {
-      "parameters": [
-        "--format=json"
-      ],
-      "uri": "https://github.com/developer-guy/alpine/actions/runs/1071875574",
-      "event_id": "1071875574",
-      "builder.id": "github actions"
-    },
     "scanner": {
       "uri": "pkg:github/aquasecurity/trivy@244fd47e07d1004f0aed9",
       "version": "0.19.2",

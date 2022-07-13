@@ -47,9 +47,8 @@ type CosignPredicate struct {
 
 // VulnPredicate specifies the format of the Vulnerability Scan Predicate
 type CosignVulnPredicate struct {
-	Invocation Invocation `json:"invocation"`
-	Scanner    Scanner    `json:"scanner"`
-	Metadata   Metadata   `json:"metadata"`
+	Scanner  Scanner  `json:"scanner"`
+	Metadata Metadata `json:"metadata"`
 }
 
 // I think this will be moving to upstream in-toto in the fullness of time
@@ -65,13 +64,6 @@ type CosignVulnStatement struct {
 type CycloneDXStatement struct {
 	in_toto.StatementHeader
 	Predicate interface{} `json:"predicate"`
-}
-
-type Invocation struct {
-	Parameters interface{} `json:"parameters"`
-	URI        string      `json:"uri"`
-	EventID    string      `json:"event_id"`
-	BuilderID  string      `json:"builder.id"`
 }
 
 type DB struct {
