@@ -43,7 +43,7 @@ var PredicateTypeMap = map[string]string{
 	PredicateSLSA:      slsa.PredicateSLSAProvenance,
 	PredicateSPDX:      in_toto.PredicateSPDX,
 	PredicateSPDXJSON:  in_toto.PredicateSPDX,
-	PredicateCycloneDX: attestation.PredicateCycloneDX,
+	PredicateCycloneDX: in_toto.PredicateCycloneDX,
 	PredicateLink:      in_toto.PredicateLinkV1,
 	PredicateVuln:      attestation.CosignVulnProvenanceV01,
 }
