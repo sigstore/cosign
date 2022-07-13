@@ -2,12 +2,6 @@ module github.com/sigstore/cosign
 
 go 1.18
 
-replace (
-	go.etcd.io/etcd/api/v3 v3.5.4 => go.etcd.io/etcd/api/v3 v3.6.0-alpha.0
-	go.etcd.io/etcd/client/pkg/v3 v3.5.4 => go.etcd.io/etcd/client/pkg/v3 v3.6.0-alpha.0
-	go.etcd.io/etcd/v3 v3.5.4 => go.etcd.io/etcd/v3 v3.6.0-alpha.0
-)
-
 require (
 	cuelang.org/go v0.4.3
 	github.com/ThalesIgnite/crypto11 v1.2.5
@@ -274,7 +268,7 @@ require (
 	go.etcd.io/etcd/raft/v3 v3.6.0-alpha.0 // indirect
 	go.etcd.io/etcd/server/v3 v3.6.0-alpha.0 // indirect
 	go.etcd.io/etcd/tests/v3 v3.6.0-alpha.0 // indirect
-	go.etcd.io/etcd/v3 v3.5.4 // indirect
+	go.etcd.io/etcd/v3 v3.6.0-alpha.0 // indirect
 	go.mongodb.org/mongo-driver v1.8.3 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.28.0 // indirect
