@@ -45,7 +45,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/sdk v0.5.2
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87
-	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
+	github.com/in-toto/in-toto-golang v0.3.4-0.20220709202702-fa494aaa0add
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/letsencrypt/boulder v0.0.0-20220331220046-b23ab962616e
 	github.com/manifoldco/promptui v0.9.0
@@ -55,7 +55,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oklog/run v1.1.0
-	github.com/open-policy-agent/opa v0.42.0
+	github.com/open-policy-agent/opa v0.42.2
 	github.com/pierrec/lz4 v2.6.1+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
@@ -80,7 +80,7 @@ require (
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 	google.golang.org/api v0.86.0
-	google.golang.org/grpc v1.47.0
+	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v2 v2.4.0
