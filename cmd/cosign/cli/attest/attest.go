@@ -29,7 +29,6 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
@@ -37,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	"github.com/sigstore/cosign/pkg/sign"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/rekor/pkg/generated/client"
