@@ -25,8 +25,9 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/oci"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"knative.dev/pkg/pool"
+	"golang.org/x/sync/errgroup"
 )
 
 type SignedPayload struct {
@@ -60,6 +61,11 @@ const (
 	Attestation = "attestation"
 )
 
+type sigpair struct {
+	i   int
+	sig oci.Signature
+}
+
 func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]SignedPayload, error) {
 	simg, err := ociremote.SignedEntity(ref, opts...)
 	if err != nil {
@@ -78,36 +84,50 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 		return nil, fmt.Errorf("no signatures associated with %v: %w", ref, err)
 	}
 
-	g := pool.New(runtime.NumCPU())
 	signatures := make([]SignedPayload, len(l))
-	for i, sig := range l {
-		i, sig := i, sig
+	var g errgroup.Group
+	ch := make(chan sigpair)
+	for i := 0; i < runtime.NumCPU(); i++ {
 		g.Go(func() (err error) {
-			signatures[i].Payload, err = sig.Payload()
-			if err != nil {
-				return err
+			for p := range ch {
+				i, sig := p.i, p.sig
+				signatures[i].Payload, err = sig.Payload()
+				if err != nil {
+					return err
+				}
+				signatures[i].Base64Signature, err = sig.Base64Signature()
+				if err != nil {
+					return err
+				}
+				signatures[i].Cert, err = sig.Cert()
+				if err != nil {
+					return err
+				}
+				signatures[i].Chain, err = sig.Chain()
+				if err != nil {
+					return err
+				}
+				signatures[i].Bundle, err = sig.Bundle()
+				if err != nil {
+					return err
+				}
 			}
-			signatures[i].Base64Signature, err = sig.Base64Signature()
-			if err != nil {
-				return err
-			}
-			signatures[i].Cert, err = sig.Cert()
-			if err != nil {
-				return err
-			}
-			signatures[i].Chain, err = sig.Chain()
-			if err != nil {
-				return err
-			}
-			signatures[i].Bundle, err = sig.Bundle()
-			return err
+			return nil
 		})
+	}
+	for i, sig := range l {
+		ch <- sigpair{i, sig}
 	}
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
 	return signatures, nil
+}
+
+type attpair struct {
+	i   int
+	att oci.Signature
 }
 
 func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]AttestationPayload, error) {
@@ -128,18 +148,23 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 		return nil, fmt.Errorf("no attestations associated with %v: %w", ref, err)
 	}
 
-	g := pool.New(runtime.NumCPU())
 	attestations := make([]AttestationPayload, len(l))
-	for i, att := range l {
-		i, att := i, att
+	var g errgroup.Group
+	ch := make(chan attpair)
+	for i := 0; i < runtime.NumCPU(); i++ {
 		g.Go(func() (err error) {
-			attestPayload, _ := att.Payload()
-			err = json.Unmarshal(attestPayload, &attestations[i])
-			if err != nil {
-				return err
+			for p := range ch {
+				i, att := p.i, p.att
+				attestPayload, _ := att.Payload()
+				if err := json.Unmarshal(attestPayload, &attestations[i]); err != nil {
+					return err
+				}
 			}
-			return err
+			return nil
 		})
+	}
+	for i, att := range l {
+		ch <- attpair{i, att}
 	}
 	if err := g.Wait(); err != nil {
 		return nil, err

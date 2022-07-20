@@ -18,11 +18,10 @@ package policy
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
-
-	"knative.dev/pkg/logging"
 )
 
 // EvaluatePolicyAgainstJson is used to run a policy engine against JSON bytes.
@@ -33,7 +32,6 @@ import (
 // policyBody - String representing either cue or rego language
 // jsonBytes - Bytes to evaluate against the policyBody in the given language
 func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, policyBody string, jsonBytes []byte) error {
-	logging.FromContext(ctx).Debugf("Evaluating JSON: %s against policy: %s", string(jsonBytes), policyBody)
 	switch policyType {
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
@@ -53,8 +51,8 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
 func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
-	logging.FromContext(ctx).Infof("Evaluating attestation: %s", string(attestation))
-	logging.FromContext(ctx).Infof("Evaluator: %s", evaluator)
+	log.Printf("Evaluating attestation: %s", string(attestation))
+	log.Printf("Evaluator: %s", evaluator)
 
 	cueCtx := cuecontext.New()
 	cueEvaluator := cueCtx.CompileString(evaluator)
@@ -74,8 +72,8 @@ func evaluateCue(ctx context.Context, attestation []byte, evaluator string) erro
 
 // evaluateRego evaluates a rego policy `evaluator` against `attestation`
 func evaluateRego(ctx context.Context, attestation []byte, evaluator string) error {
-	logging.FromContext(ctx).Infof("Evaluating attestation: %s", string(attestation))
-	logging.FromContext(ctx).Infof("Evaluating evaluator: %s", evaluator)
+	log.Printf("Evaluating attestation: %s", string(attestation))
+	log.Printf("Evaluating evaluator: %s", evaluator)
 
 	return rego.ValidateJSONWithModuleInput(attestation, evaluator)
 }

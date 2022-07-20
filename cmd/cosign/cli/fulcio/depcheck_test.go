@@ -18,7 +18,7 @@ package fulcio_test
 import (
 	"testing"
 
-	"knative.dev/pkg/depcheck"
+	"github.com/depcheck-test/depcheck-test/depcheck"
 )
 
 func TestNoDeps(t *testing.T) {

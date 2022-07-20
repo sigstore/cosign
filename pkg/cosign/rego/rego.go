@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/open-policy-agent/opa/rego"
-	"knative.dev/pkg/logging"
 )
 
 // The query below should meet the following requirements:
@@ -112,7 +111,6 @@ func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) error {
 	for _, result := range rs {
 		isCompliant, ok := result.Bindings[CosignEvaluationRule].(bool)
 		if ok && isCompliant {
-			logging.FromContext(ctx).Info("Validated policy is compliant")
 			return nil
 		}
 	}
