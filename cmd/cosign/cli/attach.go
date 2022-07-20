@@ -84,12 +84,16 @@ func attachAttestation() *cobra.Command {
 	o := &options.AttachAttestationOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "attestation",
-		Short:   "Attach attestation to the supplied container image",
-		Example: "  cosign attach attestation <image uri>",
-		Args:    cobra.ExactArgs(1),
+		Use:   "attestation",
+		Short: "Attach attestation to the supplied container image",
+		Example: `  cosign attach attestation --attestation <payload path> <image uri>
+
+  # attach multiple attestations to a container image
+  cosign attach attestation --attestation <payload path> --attestation <payload path> <image uri>`,
+
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return attach.AttestationCmd(cmd.Context(), o.Registry, o.Attestation, args[0])
+			return attach.AttestationCmd(cmd.Context(), o.Registry, o.Attestations, args[0])
 		},
 	}
 
