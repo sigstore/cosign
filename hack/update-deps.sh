@@ -19,12 +19,6 @@ set -o nounset
 set -o pipefail
 
 pushd $(dirname "$0")/..
-echo === Vendoring scripts
-go mod vendor
 
-source $(dirname "$0")/../vendor/knative.dev/hack/library.sh
-
-go_update_deps "$@"
-
-echo === Removing vendor/
-rm -rf $REPO_ROOT_DIR/vendor/
+go get ./...
+go mod tidy
