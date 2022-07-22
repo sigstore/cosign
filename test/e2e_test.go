@@ -1136,6 +1136,44 @@ func TestTlog(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
+func TestNoTlog(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	// Verify should fail at first
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Now sign the image without the tlog
+	ko := options.KeyOpts{
+		KeyRef:   privKeyPath,
+		PassFunc: passFunc,
+		RekorURL: rekorURL,
+	}
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", true), t)
+
+	// Now verify should work!
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Now we turn on the tlog!
+	defer setenv(t, options.ExperimentalEnv, "1")()
+
+	// Verify shouldn't work since we haven't put anything in it yet.
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Sign again with the tlog env var on with option to not upload tlog
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
+	// And verify it still fails.
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
 func TestGetPublicKeyCustomOut(t *testing.T) {
 	td := t.TempDir()
 	keys, privKeyPath, _ := keypair(t, td)
