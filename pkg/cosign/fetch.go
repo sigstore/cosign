@@ -86,9 +86,9 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 
 	signatures := make([]SignedPayload, len(l))
 	var g errgroup.Group
-	ch := make(chan sigpair)
+	ch := make(chan sigpair, len(l))
 	for i := 0; i < runtime.NumCPU(); i++ {
-		g.Go(func() (err error) {
+		g.Go(func() error {
 			for p := range ch {
 				i, sig := p.i, p.sig
 				signatures[i].Payload, err = sig.Payload()
@@ -150,9 +150,9 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 
 	attestations := make([]AttestationPayload, len(l))
 	var g errgroup.Group
-	ch := make(chan attpair)
+	ch := make(chan attpair, len(l))
 	for i := 0; i < runtime.NumCPU(); i++ {
-		g.Go(func() (err error) {
+		g.Go(func() error {
 			for p := range ch {
 				i, att := p.i, p.att
 				attestPayload, _ := att.Payload()
