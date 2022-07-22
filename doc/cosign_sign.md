@@ -50,6 +50,9 @@ cosign sign [flags]
 
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
+
+  # sign a container image and not upload transparency log
+  cosign sign --key cosign.key --tlog_upload=false <IMAGE>
 ```
 
 ### Options
@@ -81,6 +84,7 @@ cosign sign [flags]
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --tlog_upload                                                                              whether to upload the transparency log (default true)
       --upload                                                                                   whether to upload the signature (default true)
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
