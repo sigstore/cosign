@@ -39,7 +39,7 @@ steps:
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.18.4-0@sha256:eb34062f525b626622ada1b4e7ee782537edef2c0938122fc133ea2ca4fafe9d
+  - 'ghcr.io/gythialy/golang-cross:v1.18.4-0@sha256:eb34062f525b626622ada1b4e7ee782537edef2c0938122fc133ea2ca4fafe9d'
 
 # maybe we can build our own image and use that to be more in a safe side
 - name: ghcr.io/gythialy/golang-cross:v1.18.4-0@sha256:eb34062f525b626622ada1b4e7ee782537edef2c0938122fc133ea2ca4fafe9d
