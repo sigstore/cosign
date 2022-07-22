@@ -33,6 +33,7 @@ type SignOptions struct {
 	Recursive         bool
 	Attachment        string
 	SkipConfirmation  bool
+	TlogUpload        bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -88,4 +89,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
+
+	cmd.Flags().BoolVar(&o.TlogUpload, "tlog_upload", true,
+		"whether to upload the transparency log")
 }

@@ -69,7 +69,11 @@ func Sign() *cobra.Command {
   cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
   # sign a container in a registry which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image`,
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
+
+  # sign a container image and not upload transparency log
+  cosign sign --key cosign.key --tlog_upload=false <IMAGE>`,
+
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch o.Attachment {
@@ -104,7 +108,7 @@ func Sign() *cobra.Command {
 				return err
 			}
 			if err := sign.SignCmd(ro, ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.CertChain, o.Upload,
-				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
+				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment, o.TlogUpload); err != nil {
 				if o.Attachment == "" {
 					return fmt.Errorf("signing %v: %w", args, err)
 				}
