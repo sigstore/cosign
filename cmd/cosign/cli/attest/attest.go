@@ -74,7 +74,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 
 //nolint
 func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string, certChainPath string,
-	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, tlogUpload bool) error {
+	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, noTlogUpload bool) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -161,7 +161,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	}
 
 	// Check whether we should be uploading to the transparency log
-	if sign.ShouldUploadToTlog(ctx, digest, force, tlogUpload, ko.RekorURL) {
+	if sign.ShouldUploadToTlog(ctx, digest, force, noTlogUpload, ko.RekorURL) {
 		bundle, err := uploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})

@@ -51,6 +51,7 @@ cosign attest [flags]
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
       --no-upload                                                                                do not upload the generated attestation
+      --no_tlog_upload                                                                           whether to not upload the transparency log
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           [EXPERIMENTAL] Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers                                                           [EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read
@@ -63,7 +64,6 @@ cosign attest [flags]
       --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --tlog_upload                                                                              whether to upload the transparency log (default true)
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```

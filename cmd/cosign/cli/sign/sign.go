@@ -57,7 +57,7 @@ import (
 	_ "github.com/sigstore/cosign/pkg/providers/all"
 )
 
-func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, tlogUpload bool, url string) bool {
+func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, noTlogUpload bool, url string) bool {
 	// Check whether experimental is on!
 	if !options.EnableExperimental() {
 		return false
@@ -66,8 +66,8 @@ func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, tlo
 	if force {
 		return true
 	}
-	// Check whether disabling Tlog upload
-	if !tlogUpload {
+	// Check whether to not upload Tlog.
+	if noTlogUpload {
 		return false
 	}
 
@@ -101,7 +101,7 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 // nolint
 func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
 	imgs []string, certPath string, certChainPath string, upload bool, outputSignature, outputCertificate string,
-	payloadPath string, force bool, recursive bool, attachment string, tlogUpload bool) error {
+	payloadPath string, force bool, recursive bool, attachment string, noTlogUpload bool) error {
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
 			return &options.KeyParseError{}
@@ -156,7 +156,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 			if err != nil {
 				return fmt.Errorf("accessing image: %w", err)
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, tlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, noTlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -176,7 +176,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 			}
 			digest := ref.Context().Digest(d.String())
 
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, tlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, noTlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -190,7 +190,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts,
-	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool, recursive bool, tlogUpload bool,
+	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool, recursive bool, noTlogUpload bool,
 	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
@@ -209,7 +209,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	if sv.Cert != nil {
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
-	if ShouldUploadToTlog(ctx, digest, force, tlogUpload, ko.RekorURL) {
+	if ShouldUploadToTlog(ctx, digest, force, noTlogUpload, ko.RekorURL) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err

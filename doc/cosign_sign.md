@@ -52,7 +52,7 @@ cosign sign [flags]
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
 
   # sign a container image and not upload transparency log
-  cosign sign --key cosign.key --tlog_upload=false <IMAGE>
+  cosign sign --key cosign.key --no_tlog_upload=true <IMAGE>
 ```
 
 ### Options
@@ -71,6 +71,7 @@ cosign sign [flags]
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --no_tlog_upload                                                                           whether to not upload the transparency log
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           [EXPERIMENTAL] Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers                                                           [EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read
@@ -84,7 +85,6 @@ cosign sign [flags]
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --tlog_upload                                                                              whether to upload the transparency log (default true)
       --upload                                                                                   whether to upload the signature (default true)
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
