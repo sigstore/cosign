@@ -72,7 +72,7 @@ func Sign() *cobra.Command {
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
 
   # sign a container image and not upload transparency log
-  cosign sign --key cosign.key --no_tlog_upload=true <IMAGE>`,
+  cosign sign --key cosign.key --no-tlog-upload=true <IMAGE>`,
 
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

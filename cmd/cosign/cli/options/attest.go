@@ -77,6 +77,6 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
 
-	cmd.Flags().BoolVar(&o.NoTlogUpload, "no_tlog_upload", false,
+	cmd.Flags().BoolVar(&o.NoTlogUpload, "no-tlog-upload", false,
 		"whether to not upload the transparency log")
 }
