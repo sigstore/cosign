@@ -71,10 +71,10 @@ type DB struct {
 }
 
 type Scanner struct {
-	URI     string                 `json:"uri"`
-	Version string                 `json:"version"`
-	DB      DB                     `json:"db"`
-	Result  map[string]interface{} `json:"result"`
+	URI     string      `json:"uri"`
+	Version string      `json:"version"`
+	DB      DB          `json:"db"`
+	Result  interface{} `json:"result"`
 }
 
 type Metadata struct {
