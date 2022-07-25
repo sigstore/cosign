@@ -26,7 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"knative.dev/pkg/pool"
+	"golang.org/x/sync/errgroup"
 )
 
 type SignedPayload struct {
@@ -78,11 +78,12 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 		return nil, fmt.Errorf("no signatures associated with %v: %w", ref, err)
 	}
 
-	g := pool.New(runtime.NumCPU())
 	signatures := make([]SignedPayload, len(l))
+	var g errgroup.Group
+	g.SetLimit(runtime.NumCPU())
 	for i, sig := range l {
 		i, sig := i, sig
-		g.Go(func() (err error) {
+		g.Go(func() error {
 			signatures[i].Payload, err = sig.Payload()
 			if err != nil {
 				return err
@@ -128,17 +129,14 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 		return nil, fmt.Errorf("no attestations associated with %v: %w", ref, err)
 	}
 
-	g := pool.New(runtime.NumCPU())
 	attestations := make([]AttestationPayload, len(l))
+	var g errgroup.Group
+	g.SetLimit(runtime.NumCPU())
 	for i, att := range l {
 		i, att := i, att
-		g.Go(func() (err error) {
+		g.Go(func() error {
 			attestPayload, _ := att.Payload()
-			err = json.Unmarshal(attestPayload, &attestations[i])
-			if err != nil {
-				return err
-			}
-			return err
+			return json.Unmarshal(attestPayload, &attestations[i])
 		})
 	}
 	if err := g.Wait(); err != nil {
