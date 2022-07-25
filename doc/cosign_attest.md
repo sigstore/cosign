@@ -50,6 +50,7 @@ cosign attest [flags]
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --no-tlog-upload                                                                           whether to not upload the transparency log
       --no-upload                                                                                do not upload the generated attestation
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           [EXPERIMENTAL] Path to file containing OIDC client secret for application
