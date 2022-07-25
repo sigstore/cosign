@@ -75,7 +75,7 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 		return nil, fmt.Errorf("fetching signatures: %w", err)
 	}
 	if len(l) == 0 {
-		return nil, fmt.Errorf("no signatures associated with %v: %w", ref, err)
+		return nil, fmt.Errorf("no signatures associated with %s", ref)
 	}
 
 	g := pool.New(runtime.NumCPU())
@@ -125,7 +125,7 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 		return nil, fmt.Errorf("fetching attestations: %w", err)
 	}
 	if len(l) == 0 {
-		return nil, fmt.Errorf("no attestations associated with %v: %w", ref, err)
+		return nil, fmt.Errorf("no attestations associated with %s", ref)
 	}
 
 	g := pool.New(runtime.NumCPU())
