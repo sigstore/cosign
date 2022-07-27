@@ -43,7 +43,7 @@ jobs:
           check-latest: true
 
       # will use the latest release available for ko
-      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+      - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
 
       - name: Set up Cloud SDK
         uses: google-github-actions/auth@ceee102ec2387dd9e844e01b530ccd4ec87ce955 # v0.8.0
