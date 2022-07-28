@@ -40,9 +40,12 @@ func AppendSignatures(base oci.Signatures, sigs ...oci.Signature) (oci.Signature
 	}
 
 	img, err := mutate.Append(base, adds...)
+	if err != nil {
+		return nil, err
+	}
 
 	// Set the Created date to time of execution
-	img, _ = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
+	img, err = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
 	if err != nil {
 		return nil, err
 	}
