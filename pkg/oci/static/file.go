@@ -42,14 +42,12 @@ func NewFile(payload []byte, opts ...Option) (oci.File, error) {
 	img, err := mutate.Append(base, mutate.Addendum{
 		Layer: layer,
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
 	// Set the Created date to time of execution
 	img, err = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
-
 	if err != nil {
 		return nil, err
 	}
