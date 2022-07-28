@@ -120,4 +120,14 @@ func TestNewFile(t *testing.T) {
 			t.Errorf("Payload() = %s, wanted %s", got, want)
 		}
 	})
+
+	t.Run("check date", func(t *testing.T) {
+		fileCfg, err := file.ConfigFile()
+		if err != nil {
+			t.Fatalf("FileCfg() = %v", err)
+		}
+		if fileCfg.Created.Time.IsZero() {
+			t.Errorf("Date of Signature was Zero")
+		}
+	})
 }

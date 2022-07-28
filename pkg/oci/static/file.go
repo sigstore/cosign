@@ -17,7 +17,6 @@ package static
 
 import (
 	"io"
-	"log"
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -44,13 +43,8 @@ func NewFile(payload []byte, opts ...Option) (oci.File, error) {
 		Layer: layer,
 	})
 
-	imgCfg, _ := img.ConfigFile()
-
 	// Set the Created date to time of execution
-	if imgCfg.Created.Time.IsZero() {
-		log.Println("Signed Entry Date was Zero, Setting to current time")
-		img, err = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
-	}
+	img, err = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
 
 	if err != nil {
 		return nil, err

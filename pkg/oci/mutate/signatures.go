@@ -16,7 +16,6 @@
 package mutate
 
 import (
-	"log"
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -42,13 +41,8 @@ func AppendSignatures(base oci.Signatures, sigs ...oci.Signature) (oci.Signature
 
 	img, err := mutate.Append(base, adds...)
 
-	imgCfg, _ := img.ConfigFile()
-
 	// Set the Created date to time of execution
-	if imgCfg.Created.Time.IsZero() {
-		log.Println("Signed Entry Date was Zero, Setting to current time")
-		img, _ = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
-	}
+	img, _ = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
 
 	if err != nil {
 		return nil, err
