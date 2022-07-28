@@ -20,7 +20,7 @@ jobs:
       security-events: write
       actions: read
       contents: read
-
+      id-token: write
     steps:
       - name: "Checkout code"
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
@@ -28,7 +28,7 @@ jobs:
           persist-credentials: false
 
       - name: "Run analysis"
-        uses: ossf/scorecard-action@ce330fde6b1a5c9c75b417e7efc510b822a35564
+        uses: ossf/scorecard-action@3155d134e59d8f47261b1ae9d143034c69572227 # v2.0.0-beta.1
         with:
           results_file: results.sarif
           results_format: sarif
