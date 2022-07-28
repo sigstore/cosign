@@ -17,7 +17,6 @@ package mutate
 
 import (
 	"testing"
-	"time"
 
 	"github.com/sigstore/cosign/pkg/oci/empty"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -72,8 +71,9 @@ func TestAppendSignatures(t *testing.T) {
 		t.Errorf("len(Get()) = %d, wanted %d", got, want)
 	}
 
-	testCfg, _ := threeSig.ConfigFile()
-	if testCfg.Created.Time.IsZero() {
-		t.Errorf("Date of Signature was Zero. Should be %s", time.Now())
+	if testCfg, err := threeSig.ConfigFile(); err != nil {
+		t.Fatalf("Get() = %v", err)
+	} else if testCfg.Created.Time.IsZero() {
+		t.Errorf("Date of Signature was Zero")
 	}
 }
