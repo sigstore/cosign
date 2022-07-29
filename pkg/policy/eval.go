@@ -21,6 +21,7 @@ import (
 	"log"
 
 	"cuelang.org/go/cue/cuecontext"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
 )
 
@@ -36,12 +37,12 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
 		if cueValidationErr != nil {
-			return fmt.Errorf("failed evaluating cue policy for %s : %s", name, cueValidationErr.Error()) // nolint
+			return cosign.NewVerificationError("failed evaluating cue policy for %s: %v", name, cueValidationErr)
 		}
 	case "rego":
 		regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
 		if regoValidationErr != nil {
-			return fmt.Errorf("failed evaluating rego policy for type %s: %s", name, regoValidationErr.Error()) // nolint
+			return cosign.NewVerificationError("failed evaluating rego policy for type %s: %s", name, regoValidationErr)
 		}
 	default:
 		return fmt.Errorf("sorry Type %s is not supported yet", policyType)
