@@ -46,13 +46,13 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 
 func attachAttestation(remoteOpts []ociremote.Option, signedPayload, imageRef string) error {
 	fmt.Fprintf(os.Stderr, "Using payload from: %s", signedPayload)
-	attestation, err := os.Open(signedPayload)
+	attestationFile, err := os.Open(signedPayload)
 	if err != nil {
 		return err
 	}
 
 	env := ssldsse.Envelope{}
-	decoder := json.NewDecoder(attestation)
+	decoder := json.NewDecoder(attestationFile)
 	for decoder.More() {
 		if err := decoder.Decode(&env); err != nil {
 			return err

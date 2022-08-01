@@ -9,10 +9,15 @@ cosign attach attestation [flags]
 ### Examples
 
 ```
-  cosign attach attestation --attestation <payload path> <image uri>
+  cosign attach attestation --attestation <attestation file path> <image uri>
 
-  # attach multiple attestations to a container image
-  cosign attach attestation --attestation <payload path> --attestation <payload path> <image uri>
+  # attach attestations from multiple files to a container image
+  cosign attach attestation --attestation <attestation file path> --attestation <attestation file path> <image uri>
+
+  # attach attestation from bundle files in form of JSONLines to a container image
+  # https://github.com/in-toto/attestation/blob/main/spec/bundle.md
+  cosign attach attestation --attestation <attestation bundle file path> <image uri>
+
 ```
 
 ### Options
