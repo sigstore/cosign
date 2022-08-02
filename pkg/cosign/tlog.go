@@ -26,7 +26,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sigstore/rekor/pkg/types"
-	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/intoto"
+	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"os"
 	"strings"
 
@@ -64,8 +65,6 @@ const (
 	// TODO(vaikas): Implement storing state like Rekor does so that if tree
 	// state ever changes, it will make lots of noise.
 	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
-	// define constants for the proposed entry dynamic spec mapping
-	intotoProposedEntryKey = "intoto"
 )
 
 // getLogID generates a SHA256 hash of a DER-encoded public key.
@@ -79,7 +78,7 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 }
 
 func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.ProposedEntry, error) {
-	e, err := types.NewProposedEntry(ctx, intotoProposedEntryKey, "", types.ArtifactProperties{
+	e, err := types.NewProposedEntry(ctx, intoto.KIND, intoto_v001.APIVERSION, types.ArtifactProperties{
 		ArtifactBytes:  signature,
 		PublicKeyBytes: pubKey,
 	})
