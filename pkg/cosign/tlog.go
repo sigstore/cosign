@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sigstore/rekor/pkg/types"
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"os"
 	"strings"
 
@@ -63,6 +64,8 @@ const (
 	// TODO(vaikas): Implement storing state like Rekor does so that if tree
 	// state ever changes, it will make lots of noise.
 	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
+	// define constants for the proposed entry dynamic spec mapping
+	intotoProposedEntryKey = "intoto"
 )
 
 // getLogID generates a SHA256 hash of a DER-encoded public key.
@@ -73,6 +76,18 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 	}
 	digest := sha256.Sum256(pubBytes)
 	return hex.EncodeToString(digest[:]), nil
+}
+
+func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.ProposedEntry, error) {
+	e, err := types.NewProposedEntry(ctx, intotoProposedEntryKey, "", types.ArtifactProperties{
+		ArtifactBytes:  signature,
+		PublicKeyBytes: pubKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return e, err
 }
 
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
@@ -164,10 +179,7 @@ func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature, paylo
 
 // TLogUploadInTotoAttestation will upload and in-toto entry for the signature and public key to the transparency log.
 func TLogUploadInTotoAttestation(ctx context.Context, rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
-	e, err := types.NewProposedEntry(context.Background(), "intoto", "0.0.1", types.ArtifactProperties{
-		ArtifactBytes:  signature,
-		PublicKeyBytes: pemBytes,
-	})
+	e, err := intotoEntry(ctx, signature, pemBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -277,14 +289,11 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 	// The fact that there's no signature (or empty rather), implies
 	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
-		entry, err := types.NewProposedEntry(context.Background(), "intoto", "0.0.1", types.ArtifactProperties{
-			ArtifactBytes:  signature,
-			PublicKeyBytes: pubKey,
-		})
+		e, err := intotoEntry(context.Background(), signature, pubKey)
 		if err != nil {
 			return nil, err
 		}
-		proposedEntry = []models.ProposedEntry{entry}
+		proposedEntry = []models.ProposedEntry{e}
 	} else {
 		re := rekorEntry(payload, signature, pubKey)
 		entry := &models.Hashedrekord{
