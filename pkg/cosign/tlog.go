@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/sigstore/rekor/pkg/types"
 	"os"
 	"strings"
 
@@ -164,12 +165,15 @@ func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature, paylo
 
 // TLogUploadInTotoAttestation will upload and in-toto entry for the signature and public key to the transparency log.
 func TLogUploadInTotoAttestation(ctx context.Context, rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
-	e := intotoEntry(signature, pemBytes)
-	returnVal := models.Intoto{
-		APIVersion: swag.String(e.APIVersion()),
-		Spec:       e.IntotoObj,
+	e, err := types.NewProposedEntry(context.Background(), "intoto", "0.0.1", types.ArtifactProperties{
+		ArtifactBytes:  signature,
+		PublicKeyBytes: pemBytes,
+	})
+	if err != nil {
+		return nil, err
 	}
-	return doUpload(ctx, rekorClient, &returnVal)
+
+	return doUpload(ctx, rekorClient, e)
 }
 
 func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEntryAnon, error) {
