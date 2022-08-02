@@ -38,6 +38,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/tuf"
@@ -154,22 +155,27 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
 func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
-	re := rekorEntry(payload, signature, pemBytes)
-	returnVal := models.Hashedrekord{
-		APIVersion: swag.String(re.APIVersion()),
-		Spec:       re.HashedRekordObj,
+	e, err := types.NewProposedEntry(context.Background(), "intoto", "0.0.1", types.ArtifactProperties{
+		ArtifactBytes:  signature,
+		PublicKeyBytes: pemBytes,
+	})
+	if err != nil {
+		return nil, err
 	}
-	return doUpload(ctx, rekorClient, &returnVal)
+	return doUpload(ctx, rekorClient, e)
 }
 
 // TLogUploadInTotoAttestation will upload and in-toto entry for the signature and public key to the transparency log.
 func TLogUploadInTotoAttestation(ctx context.Context, rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
-	e := intotoEntry(signature, pemBytes)
-	returnVal := models.Intoto{
-		APIVersion: swag.String(e.APIVersion()),
-		Spec:       e.IntotoObj,
+	e, err := types.NewProposedEntry(context.Background(), "hashedrekord", "0.0.1", types.ArtifactProperties{
+		ArtifactBytes:  signature,
+		PublicKeyBytes: pemBytes,
+	})
+	if err != nil {
+		return nil, err
 	}
-	return doUpload(ctx, rekorClient, &returnVal)
+
+	return doUpload(ctx, rekorClient, e)
 }
 
 func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEntryAnon, error) {
