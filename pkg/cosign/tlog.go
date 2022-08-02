@@ -40,7 +40,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
-	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
@@ -203,18 +202,6 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 	return nil, errors.New("bad response from server")
 }
 
-func intotoEntry(signature, pubKey []byte) intoto_v001.V001Entry {
-	pub := strfmt.Base64(pubKey)
-	return intoto_v001.V001Entry{
-		IntotoObj: models.IntotoV001Schema{
-			Content: &models.IntotoV001SchemaContent{
-				Envelope: string(signature),
-			},
-			PublicKey: &pub,
-		},
-	}
-}
-
 func rekorEntry(payload, signature, pubKey []byte) hashedrekord_v001.V001Entry {
 	// TODO: Signatures created on a digest using a hash algorithm other than SHA256 will fail
 	// upload right now. Plumb information on the hash algorithm used when signing from the
@@ -290,10 +277,12 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 	// The fact that there's no signature (or empty rather), implies
 	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
-		te := intotoEntry(payload, pubKey)
-		entry := &models.Intoto{
-			APIVersion: swag.String(te.APIVersion()),
-			Spec:       te.IntotoObj,
+		entry, err := types.NewProposedEntry(context.Background(), "intoto", "0.0.1", types.ArtifactProperties{
+			ArtifactBytes:  signature,
+			PublicKeyBytes: pubKey,
+		})
+		if err != nil {
+			return nil, err
 		}
 		proposedEntry = []models.ProposedEntry{entry}
 	} else {
