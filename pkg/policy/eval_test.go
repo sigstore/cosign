@@ -75,7 +75,41 @@ const (
 		}
 	  }`
 
-	cipAttestation = "{\"authorityMatches\":{\"keyatt\":{\"signatures\":null,\"attestations\":{\"vuln-key\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"keysignature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keylessatt\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}}}}"
+	cipAttestation = `{
+		"authorityMatches": {
+		  "keyatt": {
+			"signatures": null,
+			"attestations": {
+			  "vuln-key": [
+				{
+				  "subject": "PLACEHOLDER",
+				  "issuer": "PLACEHOLDER"
+				}
+			  ]
+			}
+		  },
+		  "keysignature": {
+			"signatures": [
+			  {
+				"subject": "PLACEHOLDER",
+				"issuer": "PLACEHOLDER"
+			  }
+			],
+			"attestations": null
+		  },
+		  "keylessatt": {
+			"signatures": null,
+			"attestations": {
+			  "custom-keyless": [
+				{
+				  "subject": "PLACEHOLDER",
+				  "issuer": "PLACEHOLDER"
+				}
+			  ]
+			}
+		  }
+		}
+	  }`
 
 	cipAttestationMissingAttestations = `{
 		"authorityMatches": {
@@ -107,10 +141,12 @@ const (
 			  }
 			],
 			"attestations": null
-		  }
+		  },
 		}
 	  }`
 
+	// This cipPolicy should reject the above but clearly it's wrong and I
+	// don't understand enough to know what's wrong with it.
 	cipPolicy = `package sigstore
 	import (
 	  "list"
