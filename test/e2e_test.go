@@ -1001,7 +1001,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Now attest the image
 	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", false, 30*time.Second, false), t)
+		"slsaprovenance", false, 30*time.Second, false), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()
