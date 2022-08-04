@@ -34,6 +34,10 @@ For Homebrew, Arch, Nix, GitHub Action, and Kubernetes installs see the [install
 
 For Linux and macOS binaries see the [GitHub release assets](https://github.com/sigstore/cosign/releases/latest).
 
+
+Kick testing
+
+
 ## Developer Installation
 
 If you have Go 1.17+, you can setup a development environment:
