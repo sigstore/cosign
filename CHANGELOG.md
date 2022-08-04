@@ -1,5 +1,7 @@
 # v1.10.1
 
+**Note: This release comes with a fix for CVE-2022-35929 described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-vjxv-45g9-9296). Please upgrade to this release ASAP**
+
 ## Enhancements
 * update cross-builder to go1.18.5 and cosign image to 1.10.0 (#2119)
 * feat: attach: attestation: allow passing multiple payloads (#2085)
