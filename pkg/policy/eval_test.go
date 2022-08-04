@@ -76,6 +76,71 @@ const (
 	  }`
 
 	cipAttestation = "{\"authorityMatches\":{\"keyatt\":{\"signatures\":null,\"attestations\":{\"vuln-key\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}},\"keysignature\":{\"signatures\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}],\"attestations\":null},\"keylessatt\":{\"signatures\":null,\"attestations\":{\"custom-keyless\":[{\"subject\":\"PLACEHOLDER\",\"issuer\":\"PLACEHOLDER\"}]}}}}"
+
+	cipAttestationMissingAttestations = `{
+		"authorityMatches": {
+		  "keyatt": {
+			"signatures": null,
+			"attestations": {
+			  "custom-match-predicate": [
+				{
+				  "subject": "",
+				  "issuer": ""
+				}
+			  ]
+			}
+		  },
+		  "keylesssignature": {
+			"signatures": [
+			  {
+				"subject": "https://kubernetes.io/namespaces/default/serviceaccounts/default",
+				"issuer": "https://kubernetes.default.svc"
+			  }
+			],
+			"attestations": null
+		  },
+		  "keysignature": {
+			"signatures": [
+			  {
+				"subject": "",
+				"issuer": ""
+			  }
+			],
+			"attestations": null
+		  }
+		}
+	  }`
+
+	cipPolicy = `package sigstore
+	import (
+	  "list"
+	  "strings"
+	  "struct"
+	)
+
+	authorityMatches: {
+	  keyatt: {
+		attestations: struct.MaxFields(1) & struct.MinFields(1)
+	  },
+	  keysignature: {
+		signatures: list.MaxItems(1) & list.MinItems(1)
+	  },
+	  keylessatt: {
+		attestations: {
+		  vulnkeyless: [...{
+			subject: string
+			if subject != "https://kubernetes.io/namespaces/default/serviceaccounts/default" {
+				  expectedError: "no error",
+				  err: strings.Join(["Error: subject does not match", subject], " ")
+				  expectedError: err
+			}
+		  }]
+		}
+	  }
+	  keylesssignature: {
+		signatures: list.MaxItems(1) & list.MinItems(1)
+	  }
+	}`
 )
 
 func TestEvalPolicy(t *testing.T) {
@@ -167,7 +232,15 @@ func TestEvalPolicy(t *testing.T) {
 		  keylesssignature: {
 			signatures: list.MaxItems(1) & list.MinItems(1)
 		  }
-		}`}, {
+		}`,
+	}, {
+		name:       "cluster image policy main policy with no attestations, fails",
+		json:       cipAttestationMissingAttestations,
+		policyType: "cue",
+		wantErr:    true,
+		wantErrSub: `failed evaluating cue policy for cluster image policy main policy, fails: failed to evaluate the policy with error: authorityMatches.keylessattMinAttestations: conflicting values 2 and "Error" (mismatched types int and string)`,
+		policyFile: cipPolicy,
+	}, {
 		name:       "Rego cluster image policy main policy, checks out",
 		json:       cipAttestation,
 		policyType: "rego",
@@ -181,14 +254,13 @@ func TestEvalPolicy(t *testing.T) {
 				keySignature := input.authorityMatches.keysignature.signatures
 				count(keySignature) == 1
 			}`,
-	},
-		{
-			name:       "Rego cluster image policy main policy, fails",
-			json:       cipAttestation,
-			policyType: "rego",
-			wantErr:    true,
-			wantErrSub: `failed evaluating rego policy for type Rego cluster image policy main policy, fails: policy is not compliant for query 'isCompliant = data.sigstore.isCompliant'`,
-			policyFile: `package sigstore
+	}, {
+		name:       "Rego cluster image policy main policy, fails",
+		json:       cipAttestation,
+		policyType: "rego",
+		wantErr:    true,
+		wantErrSub: `failed evaluating rego policy for type Rego cluster image policy main policy, fails: policy is not compliant for query 'isCompliant = data.sigstore.isCompliant'`,
+		policyFile: `package sigstore
 			default isCompliant = false
 			isCompliant {
 			    attestationsKeylessATT := input.authorityMatches.keylessatt.attestations
@@ -198,19 +270,19 @@ func TestEvalPolicy(t *testing.T) {
 				keySignature := input.authorityMatches.keysignature.signatures
 				count(keySignature) == 1
 			}`,
-		}}
+	}, {}}
 	for _, tc := range tests {
 		ctx := context.Background()
 		err := EvaluatePolicyAgainstJSON(ctx, tc.name, tc.policyType, tc.policyFile, []byte(tc.json))
 		if tc.wantErr {
 			if err == nil {
-				t.Errorf("Did not get an error, wanted %s", tc.wantErrSub)
+				t.Errorf("%q did not get an error, wanted %s", tc.name, tc.wantErrSub)
 			} else if !strings.Contains(err.Error(), tc.wantErrSub) {
-				t.Errorf("Unexpected error, want: %s got: %s", tc.wantErrSub, err.Error())
+				t.Errorf("%q unexpected error, want: %s got: %s", tc.name, tc.wantErrSub, err.Error())
 			}
 		} else {
 			if !tc.wantErr && err != nil {
-				t.Errorf("Unexpected error, wanted none, got: %s", err.Error())
+				t.Errorf("%q unexpected error, wanted none, got: %s", tc.name, err.Error())
 			}
 		}
 	}
