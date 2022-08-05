@@ -57,11 +57,12 @@ type RekorPubKey struct {
 
 const (
 	// If specified, you can specify an oob Public Key that Rekor uses using
-	// this ENV variable. This ENV var is only for testing purposes.
+	// this ENV variable.
 	altRekorPublicKey = "SIGSTORE_REKOR_PUBLIC_KEY"
 	// Add Rekor API Public Key
 	// If specified, will fetch the Rekor Public Key from the specified Rekor
-	// server and add it to RekorPubKeys.
+	// server and add it to RekorPubKeys. This ENV var is only for testing
+	// purposes, as users should distribute keys out of band.
 	// TODO(vaikas): Implement storing state like Rekor does so that if tree
 	// state ever changes, it will make lots of noise.
 	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
@@ -104,7 +105,6 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 	altRekorPub := os.Getenv(altRekorPublicKey)
 
 	if altRekorPub != "" {
-		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Using a non-standard public key for Rekor: %s\n", altRekorPublicKey, altRekorPub)
 		raw, err := os.ReadFile(altRekorPub)
 		if err != nil {
 			return nil, fmt.Errorf("error reading alternate Rekor public key file: %w", err)
@@ -144,6 +144,7 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 	// additionally fetch it here.
 	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor)
 	if addRekorPublic != "" && rekorClient != nil {
+		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Fetching public key from Rekor API directly\n", addRekorPublicKeyFromRekor)
 		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
 		if err != nil {
 			return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)

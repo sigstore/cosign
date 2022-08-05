@@ -1,3 +1,53 @@
+# v1.10.1
+
+**Note: This release comes with a fix for CVE-2022-35929 described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-vjxv-45g9-9296). Please upgrade to this release ASAP**
+
+## Enhancements
+* update cross-builder to go1.18.5 and cosign image to 1.10.0 (#2119)
+* feat: attach: attestation: allow passing multiple payloads (#2085)
+* Resolves #522 set Created date to time of execution (#2108)
+* Fix field names in the vulnerability attestation (#2099)
+* Change Result in Vulnerability Attestation to interface{} (#2096)
+* Improve error message when no sigs/atts are found for an image (#2101)
+* add flag to allow skipping upload to transparency log (#2089)
+
+## Documention
+* chore: fix documentation and warning on using untrusted rekor key (#2124)
+* Enable Scorecard badge (#2109)
+
+## Bug Fixes
+* Merge pull request from GHSA-vjxv-45g9-9296
+* Correct the type used for attest (#2128)
+
+## Others
+* Bump mikefarah/yq from 4.26.1 to 4.27.2 (#2116)
+* Bump github.com/open-policy-agent/opa from 0.42.2 to 0.43.0 (#2115)
+* Bump github.com/xanzy/go-gitlab from 0.69.0 to 0.70.0 (#2120)
+* Bump google.golang.org/api from 0.90.0 to 0.91.0 (#2125)
+* Bump google.golang.org/api from 0.89.0 to 0.90.0 (#2111)
+* Bump github/codeql-action from 2.1.16 to 2.1.17 (#2112)
+* Bump google.golang.org/protobuf from 1.28.0 to 1.28.1 (#2110)
+* Bump google.golang.org/api from 0.88.0 to 0.89.0 (#2106)
+* Bump imjasonh/setup-ko from 0.4 to 0.5 (#2107)
+* Introduce a custom error type to classify errors. (#2114)
+* Bump github.com/hashicorp/go-hclog from 1.2.1 to 1.2.2 (#2103)
+* remove style jobs and cleanup makefile gofmt and goimports are running already with golangci-lint (#2105)
+* Bump sigstore/cosign-installer from 2.4.1 to 2.5.0 (#2100)
+* Remove knative/pkg deps (#2092)
+
+
+## Contributors
+* Azeem Shaikh
+* Carlos Tadeu Panato Junior
+* Furkan Türkal
+* Jason Hall
+* Kenny Leung
+* Matt Moore
+* Teppei Fukuda
+* Tobias Trabelsi
+* asraa
+* saso
+
 # v1.10.0
 
 ## Enhancements
