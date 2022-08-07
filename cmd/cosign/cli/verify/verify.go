@@ -160,11 +160,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return err
 		}
 		if c.CertChain == "" {
-			err = cosign.CheckCertificatePolicy(cert, co)
+			// If no certChain is passed, the Fulcio root certificate will be used
+			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
-				return err
+				return fmt.Errorf("getting Fulcio roots: %w", err)
 			}
-			pubKey, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			}
+			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
 				return err
 			}

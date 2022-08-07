@@ -17,7 +17,6 @@ package verify
 
 import (
 	"context"
-	"crypto"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,7 +27,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
 	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -139,11 +137,16 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("loading certificate from reference: %w", err)
 		}
 		if c.CertChain == "" {
-			err = cosign.CheckCertificatePolicy(cert, co)
+			// If no certChain is passed, the Fulcio root certificate will be used
+			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
-				return err
+				return fmt.Errorf("getting Fulcio roots: %w", err)
 			}
-			co.SigVerifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			}
+			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
 				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
