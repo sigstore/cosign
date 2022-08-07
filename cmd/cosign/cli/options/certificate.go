@@ -37,7 +37,7 @@ var _ Interface = (*RekorOptions)(nil)
 // AddFlags implements Interface
 func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
-		"path to the public certificate")
+		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
 
 	cmd.Flags().StringVar(&o.CertEmail, "certificate-email", "",
 		"the email expected in a valid Fulcio certificate")

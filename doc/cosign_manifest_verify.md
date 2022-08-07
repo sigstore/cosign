@@ -51,7 +51,7 @@ cosign manifest verify [flags]
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment string                                                                        related image attachment to sign (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
-      --certificate string                                                                       path to the public certificate
+      --certificate string                                                                       path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.
       --certificate-chain string                                                                 path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate
       --certificate-email string                                                                 the email expected in a valid Fulcio certificate
       --certificate-github-workflow-name string                                                  contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
