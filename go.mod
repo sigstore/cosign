@@ -14,7 +14,7 @@ require (
 	github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936
 	github.com/go-openapi/runtime v0.24.1
 	github.com/go-openapi/strfmt v0.21.3
-	github.com/go-openapi/swag v0.21.1
+	github.com/go-openapi/swag v0.22.0
 	github.com/go-piv/piv-go v1.10.0
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
