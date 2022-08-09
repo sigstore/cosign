@@ -444,6 +444,22 @@ $ gcr.io/dlorenc-vmtest2/demo -> gcr.io/my-new-repo/demo:sha256-DIGEST.sig
 ```
 So the signature for `gcr.io/dlorenc-vmtest2/demo` will be stored in `gcr.io/my-new-repo/demo:sha256-DIGEST.sig`.
 
+Note: different registries might expect different formats for the "repository."
+
+* To use [GCR](https://cloud.google.com/container-registry), a registry name
+  like `gcr.io/$REPO` is sufficient, as in the example above.
+* To use [Artifact Registry](https://cloud.google.com/artifact-registry),
+  specify a full image name like
+  `$LOCATION-docker.pkg.dev/$PROJECT/$REPO/$STORAGE_IMAGE`, not just a
+  repository. For example,
+  ```
+  COSIGN_REPOSITORY=us-docker.pkg.dev/my-new-repo/demo
+  gcr.io/dlorenc-vmtest2/demo --> us-docker.pkg.dev/my-new-repo/demo:sha256-DIGEST.sig
+  ```
+  where the `sha256-DIGEST` will match the digest for
+  `gcr.io/dlorenc-vmtest2/demo`. Specifying just a repo like
+  `$LOCATION-docker.pkg.dev/$PROJECT/$REPO` will not work in Artifact Registry.
+
 
 ## Signature Specification
 
