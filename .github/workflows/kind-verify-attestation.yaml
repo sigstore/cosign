@@ -35,7 +35,6 @@ jobs:
         - v1.24.x
 
     env:
-      KNATIVE_VERSION: "1.6.0"
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
       SCAFFOLDING_RELEASE_VERSION: "v0.4.2"
       GO111MODULE: on
@@ -66,6 +65,7 @@ jobs:
       with:
         legacy-variables: "false"
         k8s-version: ${{ matrix.k8s-version }}
+        version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
     - name: Create sample image - demoimage
       run: |
