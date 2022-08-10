@@ -32,21 +32,15 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.22.x
-        # Try without this one now, might have problems with job restartings
-        # may require upstream changes.
-        - v1.23.x
         - v1.24.x
 
     env:
-      KNATIVE_VERSION: "1.5.0"
+      KNATIVE_VERSION: "1.6.0"
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.3.0"
+      SCAFFOLDING_RELEASE_VERSION: "v0.4.2"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
-      # Trust the custom Rekor API endpoint for fetching the Public Key from it.
-      SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY: "true"
       # We are only testing keyless here, so set it.
       COSIGN_EXPERIMENTAL: "true"
 
@@ -67,8 +61,11 @@ jobs:
       run: |
         make cosign
 
-    - name: Install cluster + cosign
+    - name: Install cluster + sigstore
       uses: sigstore/scaffolding/actions/setup@main
+      with:
+        legacy-variables: "false"
+        k8s-version: ${{ matrix.k8s-version }}
 
     - name: Create sample image - demoimage
       run: |
@@ -85,6 +82,10 @@ jobs:
         echo "demoimage=$demoimage" >> $GITHUB_ENV
         echo Created image $demoimage
         popd
+
+    - name: Initialize with our custom TUF root
+      TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url})
+      ./cosign initialize --mirror $TUF_MIRROR --root ./root.json
 
     - name: Sign demoimage with cosign
       run: |
