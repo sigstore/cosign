@@ -84,7 +84,7 @@ jobs:
         popd
 
     - name: Initialize with our custom TUF root
-      TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url})
+      TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}'')
       ./cosign initialize --mirror $TUF_MIRROR --root ./root.json
 
     - name: Sign demoimage with cosign
