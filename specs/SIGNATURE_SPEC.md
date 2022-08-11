@@ -65,6 +65,8 @@ Ej6T/GLK6XJSB28haSPRWB7k
   This OPTIONAL property contains a PEM-encoded, DER-formatted, ASN.1 x509 certificate chain.
   The `certificate` property MUST be present if this property is present.
   This chain MAY be used by implementations to verify the `certificate` property.
+  Clients MUST validate that any certificates in the chain that are self-signed
+  or are expected to be trust anchors with an out-of-band mechanism.
 
   Example `chain`:
 
