@@ -56,7 +56,13 @@ func uploadBlob() *cobra.Command {
   cosign upload blob -f foo:MYOS/MYPLATFORM <IMAGE>
 
   # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting the os fields
-  cosign upload blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>`,
+  cosign upload blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
+  
+  # upload a blob named foo to the location specified by <IMAGE>, setting annotations mykey=myvalue.
+  cosign upload blob -a mykey=myvalue -f foo <IMAGE>
+
+  # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting annotations
+  cosign upload blob -a mykey=myvalue -a myotherkey="my other value" -f foo-darwin:darwin -f foo-linux:linux <IMAGE>`,
 		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(o.Files.Files) < 1 {
@@ -70,7 +76,7 @@ func uploadBlob() *cobra.Command {
 				return err
 			}
 
-			return upload.BlobCmd(cmd.Context(), o.Registry, files, o.ContentType, args[0])
+			return upload.BlobCmd(cmd.Context(), o.Registry, files, o.Annotations, o.ContentType, args[0])
 		},
 	}
 

@@ -97,7 +97,7 @@ func DefaultMediaTypeGetter(b []byte) types.MediaType {
 	return types.MediaType(strings.Split(http.DetectContentType(b), ";")[0])
 }
 
-func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remoteOpts ...remote.Option) (name.Digest, error) {
+func UploadFiles(ref name.Reference, files []File, annotations map[string]string, getMt MediaTypeGetter, remoteOpts ...remote.Option) (name.Digest, error) {
 	var lastHash v1.Hash
 	var idx v1.ImageIndex = empty.Index
 
@@ -113,11 +113,21 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 		if err != nil {
 			return name.Digest{}, err
 		}
+
 		lastHash, err = img.Digest()
 		if err != nil {
 			return name.Digest{}, err
 		}
-		if err := remote.Write(ref, img, remoteOpts...); err != nil {
+
+		//  cast img to a v1.image
+		v1Img, ok := img.(v1.Image)
+		if !ok {
+			return name.Digest{}, fmt.Errorf("unable to cast image to v1.Image")
+		}
+		if annotations != nil {
+			v1Img = mutate.Annotations(v1Img, annotations).(v1.Image)
+		}
+		if err := remote.Write(ref, v1Img, remoteOpts...); err != nil {
 			return name.Digest{}, err
 		}
 		l, err := img.Layers()
@@ -128,8 +138,10 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 		if err != nil {
 			return name.Digest{}, err
 		}
+
 		blobURL := ref.Context().Registry.RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/" + layerHash.String()
 		fmt.Fprintf(os.Stderr, "File [%s] is available directly at [%s]\n", f.Path(), blobURL)
+
 		if f.Platform() != nil {
 			idx = mutate.AppendManifests(idx, mutate.IndexAddendum{
 				Add: img,
@@ -141,6 +153,9 @@ func UploadFiles(ref name.Reference, files []File, getMt MediaTypeGetter, remote
 	}
 
 	if len(files) > 1 {
+		if annotations != nil {
+			idx = mutate.Annotations(idx, annotations).(v1.ImageIndex)
+		}
 		err := remote.WriteIndex(ref, idx, remoteOpts...)
 		if err != nil {
 			return name.Digest{}, err
