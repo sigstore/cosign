@@ -79,15 +79,10 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 }
 
 func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.ProposedEntry, error) {
-	e, err := types.NewProposedEntry(ctx, intoto.KIND, intoto_v001.APIVERSION, types.ArtifactProperties{
+	return types.NewProposedEntry(ctx, intoto.KIND, intoto_v001.APIVERSION, types.ArtifactProperties{
 		ArtifactBytes:  signature,
 		PublicKeyBytes: pubKey,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return e, err
 }
 
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
