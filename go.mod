@@ -2,6 +2,8 @@ module github.com/sigstore/cosign
 
 go 1.18
 
+replace sigs.k8s.io/release-utils => sigs.k8s.io/release-utils v0.6.0
+
 require (
 	cuelang.org/go v0.4.3
 	github.com/ThalesIgnite/crypto11 v1.2.5
