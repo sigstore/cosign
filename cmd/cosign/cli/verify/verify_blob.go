@@ -362,7 +362,7 @@ func verifyRekorEntry(ctx context.Context, ko options.KeyOpts, e *models.LogEntr
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %s index: %d\n", hex.EncodeToString(uuid), *e.Verification.InclusionProof.LogIndex)
+	fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %s index: %d\n", hex.EncodeToString(uuid), *e.LogIndex)
 	if cert == nil {
 		return nil
 	}
