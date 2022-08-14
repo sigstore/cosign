@@ -36,7 +36,12 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 		return err
 	}
 
-	if cosign.FileExists("import-cosign.key") {
+	fileExists, err := cosign.FileExists("import-cosign.key\000x")
+	if err != nil {
+		return err
+	}
+
+	if fileExists {
 		var overwrite string
 		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)

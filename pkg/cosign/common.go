@@ -27,12 +27,15 @@ import (
 )
 
 // TODO(jason): Move this to an internal package.
-func FileExists(filename string) bool {
+func FileExists(filename string) (bool, error) {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
-		return false
+		return false, nil
 	}
-	return !info.IsDir()
+	if err != nil {
+		return false, err
+	}
+	return !info.IsDir(), nil
 }
 
 // ConfirmPrompt prompts the user for confirmation for an action. Supports skipping
