@@ -23,7 +23,7 @@ on:
 permissions: read-all
 
 env:
-  GO_VERSION: 1.17
+  GO_VERSION: 1.18
 
 jobs:
   unit-tests:
@@ -60,12 +60,18 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
       - name: Run Go tests
+        env:
+          # See #2091 for the issue describing this temp workaround.
+          GODEBUG: x509sha1=1
         run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
         uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # v2.1.0
         with:
           env_vars: OS
       - name: Run Go tests w/ `-race`
+        env:
+          # See #2091 for the issue describing this temp workaround.
+          GODEBUG: x509sha1=1
         if: ${{ runner.os == 'Linux' }}
         run: go test -race $(go list ./... | grep -v third_party/)
 
@@ -103,6 +109,9 @@ jobs:
           kind create cluster
 
       - name: Run end-to-end tests
+        env:
+          # See #2091 for the issue describing this temp workaround.
+          GODEBUG: x509sha1=1
         run: ./test/e2e_test.sh
 
       - name: Collect diagnostics
