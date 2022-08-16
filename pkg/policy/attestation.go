@@ -39,8 +39,9 @@ import (
 // match the attestation.
 func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifiedAttestation oci.Signature) ([]byte, error) {
 	// Check the predicate up front, no point in wasting time if it's invalid.
-	predicateURI, ok := options.PredicateTypeMap[predicateType]
-	if !ok {
+	predicateURI, err := options.ParsePredicateType(predicateType)
+
+	if err != nil {
 		return nil, fmt.Errorf("invalid predicate type: %s", predicateType)
 	}
 
@@ -132,7 +133,11 @@ func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifie
 			return nil, fmt.Errorf("marshaling CosignVulnStatement: %w", err)
 		}
 	default:
-		return nil, fmt.Errorf("unsupported predicate type: %s", predicateType)
+		// Valid URI type reaches here.
+		payload, err = json.Marshal(statement)
+		if err != nil {
+			return nil, fmt.Errorf("generating Statement: %w", err)
+		}
 	}
 	return payload, nil
 }
