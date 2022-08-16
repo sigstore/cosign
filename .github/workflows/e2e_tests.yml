@@ -16,7 +16,11 @@
 name: e2e-tests
 
 # Run on every push, and allow it to be run manually.
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
 
 permissions: read-all
 
