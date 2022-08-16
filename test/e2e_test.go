@@ -243,12 +243,33 @@ func TestAttestVerifyCycloneDXJSON(t *testing.T) {
 	)
 }
 
+func TestAttestVerifyURI(t *testing.T) {
+	attestationBytes, err := os.ReadFile("./testdata/test-result.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestVerify(t,
+		"https://example.com/TestResult/v1",
+		string(attestationBytes),
+		`predicate: passed: true`,
+		`predicate: passed: false"`,
+	)
+}
+
 func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue string) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
 
-	imgName := path.Join(repo, fmt.Sprintf("cosign-attest-%s-e2e-image", predicateType))
+	var imgName, attestationPath string
+	if _, err := url.ParseRequestURI(predicateType); err == nil {
+		// If the predicate type is URI, it cannot be included as image name and path.
+		imgName = path.Join(repo, "cosign-attest-uri-e2e-image")
+		attestationPath = filepath.Join(td, "cosign-attest-uri-e2e-attestation")
+	} else {
+		imgName = path.Join(repo, fmt.Sprintf("cosign-attest-%s-e2e-image", predicateType))
+		attestationPath = filepath.Join(td, fmt.Sprintf("cosign-attest-%s-e2e-attestation", predicateType))
+	}
 
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
@@ -265,7 +286,6 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	// Fail case when using without type and policy flag
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
-	attestationPath := filepath.Join(td, fmt.Sprintf("cosign-attest-%s-e2e-attestation", predicateType))
 	if err := os.WriteFile(attestationPath, []byte(attestation), 0600); err != nil {
 		t.Fatal(err)
 	}
