@@ -96,8 +96,7 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 	c := &realConnector{}
 	switch flow {
 	case flowDevice:
-		c.flow = oauthflow.NewDeviceFlowTokenGetter(
-			oidcIssuer, oauthflow.SigstoreDeviceURL, oauthflow.SigstoreTokenURL)
+		c.flow = oauthflow.NewDeviceFlowTokenGetterForIssuer(oidcIssuer)
 	case flowNormal:
 		c.flow = oauthflow.DefaultIDTokenGetter
 	case flowToken:
