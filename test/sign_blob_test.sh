@@ -78,4 +78,4 @@ curl -X POST https://rekor.sigstore.dev/api/v1/log/entries -H 'Content-Type: app
 
 # Verifying should still work
 echo "Verifying ..."
-$COSIGN_CLI verify-blob --signature "$SIG_FILE" --cert "$CERT_FILE" "$BLOB"
+$COSIGN_CLI verify-blob --signature "$SIG_FILE" --cert "$CERT_FILE" --certificate-chain "$CERT_FILE" "$BLOB"
