@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/go-openapi/strfmt"
@@ -67,6 +68,10 @@ const (
 	// state ever changes, it will make lots of noise.
 	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
 )
+
+const treeIDHexStringLen = 16
+const uuidHexStringLen = 64
+const entryIDHexStringLen = treeIDHexStringLen + uuidHexStringLen
 
 // getLogID generates a SHA256 hash of a DER-encoded public key.
 func getLogID(pub crypto.PublicKey) (string, error) {
@@ -240,32 +245,108 @@ func ComputeLeafHash(e *models.LogEntryAnon) ([]byte, error) {
 	return rfc6962.DefaultHasher.HashLeaf(entryBytes), nil
 }
 
-func verifyUUID(uuid string, e models.LogEntryAnon) error {
-	entryUUID, _ := hex.DecodeString(uuid)
+func getUUID(entryUUID string) (string, error) {
+	switch len(entryUUID) {
+	case uuidHexStringLen:
+		if _, err := hex.DecodeString(entryUUID); err != nil {
+			return "", fmt.Errorf("uuid %v is not a valid hex string: %w", entryUUID, err)
+		}
+		return entryUUID, nil
+	case entryIDHexStringLen:
+		uid := entryUUID[len(entryUUID)-uuidHexStringLen:]
+		return getUUID(uid)
+	default:
+		return "", fmt.Errorf("invalid ID len %v for %v", len(entryUUID), entryUUID)
+	}
+}
+
+func getTreeUUID(entryUUID string) (string, error) {
+	switch len(entryUUID) {
+	case uuidHexStringLen:
+		// No Tree ID provided
+		return "", nil
+	case entryIDHexStringLen:
+		tid := entryUUID[:treeIDHexStringLen]
+		return getTreeUUID(tid)
+	case treeIDHexStringLen:
+		// Check that it's a valid int64 in hex (base 16)
+		i, err := strconv.ParseInt(entryUUID, 16, 64)
+		if err != nil {
+			return "", fmt.Errorf("could not convert treeID %v to int64: %w", entryUUID, err)
+		}
+		// Check for invalid TreeID values
+		if i == 0 {
+			return "", fmt.Errorf("0 is not a valid TreeID")
+		}
+		return entryUUID, nil
+	default:
+		return "", fmt.Errorf("invalid ID len %v for %v", len(entryUUID), entryUUID)
+	}
+}
+
+// Validates UUID and also TreeID if present.
+func isExpectedResponseUUID(requestEntryUUID string, responseEntryUUID string, treeid string) error {
+	// Comparare UUIDs
+	requestUUID, err := getUUID(requestEntryUUID)
+	if err != nil {
+		return err
+	}
+	responseUUID, err := getUUID(responseEntryUUID)
+	if err != nil {
+		return err
+	}
+	if requestUUID != responseUUID {
+		return fmt.Errorf("expected EntryUUID %s got UUID %s", requestEntryUUID, responseEntryUUID)
+	}
+	// Compare tree ID if it is in the request.
+	requestTreeID, err := getTreeUUID(requestEntryUUID)
+	if err != nil {
+		return err
+	}
+	if requestTreeID != "" {
+		tid, err := getTreeUUID(treeid)
+		if err != nil {
+			return err
+		}
+		if requestTreeID != tid {
+			return fmt.Errorf("expected EntryUUID %s got UUID %s from Tree %s", requestEntryUUID, responseEntryUUID, treeid)
+		}
+	}
+	return nil
+}
+
+func verifyUUID(entryUUID string, e models.LogEntryAnon) error {
+	// Verify and get the UUID.
+	uid, err := getUUID(entryUUID)
+	if err != nil {
+		return err
+	}
+	uuid, _ := hex.DecodeString(uid)
 
 	// Verify leaf hash matches hash of the entry body.
 	computedLeafHash, err := ComputeLeafHash(&e)
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(computedLeafHash, entryUUID) {
-		return fmt.Errorf("computed leaf hash did not match entry UUID")
+	if !bytes.Equal(computedLeafHash, uuid) {
+		return fmt.Errorf("computed leaf hash did not match UUID")
 	}
 	return nil
 }
 
-func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
+func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, entryUUID string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
-	params.SetEntryUUID(uuid)
+	params.SetEntryUUID(entryUUID)
 	resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
 	if err != nil {
 		return nil, err
 	}
 	for k, e := range resp.Payload {
-		// Check that body hash matches UUID
-		if k != uuid {
-			return nil, fmt.Errorf("unexpected entry returned from rekor server")
+		// Validate that request EntryUUID matches the response UUID and response Tree ID
+		if err := isExpectedResponseUUID(entryUUID, k, *e.LogID); err != nil {
+			return nil, fmt.Errorf("unexpected entry returned from rekor server: %w", err)
 		}
+		// Check that body hash matches UUID
 		if err := verifyUUID(k, e); err != nil {
 			return nil, err
 		}
