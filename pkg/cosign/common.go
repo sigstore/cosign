@@ -26,15 +26,6 @@ import (
 	"golang.org/x/term"
 )
 
-// TODO(jason): Move this to an internal package.
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
 // ConfirmPrompt prompts the user for confirmation for an action. Supports skipping
 // the confirmation prompt when skipConfirmation is set.
 // TODO(jason): Move this to an internal package.
