@@ -39,7 +39,7 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 
 	fileExists, err := icos.FileExists("import-cosign.key")
 	if err != nil {
-		return fmt.Errorf("error checking if import-cosign.key exists: %w", err)
+		return fmt.Errorf("failed checking if import-cosign.key exists: %w", err)
 	}
 
 	if fileExists {
