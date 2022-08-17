@@ -112,6 +112,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(VerifyAttestation())
 	cmd.AddCommand(VerifyBlob())
 	cmd.AddCommand(Triangulate())
+	cmd.AddCommand(Env())
 	cmd.AddCommand(version.WithFont("starwars"))
 
 	cmd.AddCommand(cranecmd.NewCmdAuthLogin("cosign"))
