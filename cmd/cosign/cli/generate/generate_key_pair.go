@@ -18,16 +18,17 @@ package generate
 import (
 	"context"
 	"crypto"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/git"
 	"github.com/sigstore/cosign/pkg/cosign/git/github"
 	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
 
+	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -85,9 +86,9 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		return err
 	}
 
-	fileExists, err := cosign.FileExists("cosign.key")
+	fileExists, err := icos.FileExists("cosign.key")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error checking if cosign.key exists")
 	}
 
 	if fileExists {

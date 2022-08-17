@@ -21,6 +21,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/pkg/errors"
+	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
@@ -36,9 +38,9 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 		return err
 	}
 
-	fileExists, err := cosign.FileExists("import-cosign.key\000x")
+	fileExists, err := icos.FileExists("import-cosign.key")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error checking if import-cosign.key exists")
 	}
 
 	if fileExists {
