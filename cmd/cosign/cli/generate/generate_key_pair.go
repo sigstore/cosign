@@ -88,7 +88,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 
 	fileExists, err := icos.FileExists("cosign.key")
 	if err != nil {
-		return errors.Wrap(err, "error checking if cosign.key exists")
+		return fmt.Errorf("error checking if cosign.key exists: %w", err)
 	}
 
 	if fileExists {
