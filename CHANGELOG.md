@@ -1,52 +1,118 @@
+# v1.11.0
+
+## Enhancements
+
+* use updated device flow logic with PKCE (https://github.com/sigstore/cosign/pull/2163)
+
+## Bug Fixes
+
+* fix panic when os.Stat returns an error besides ErrNotExists (https://github.com/sigstore/cosign/pull/2162)
+* fix: add env cmd to root (https://github.com/sigstore/cosign/pull/2171)
+* fix: rekor get tlog entry with uuid (https://github.com/sigstore/cosign/pull/2058)
+* fix oidc post-merge job (https://github.com/sigstore/cosign/pull/2164)
+* fix handling of verify-attestation types for URIs (https://github.com/sigstore/cosign/pull/2159)
+* fix: adds envelope hash to in-toto entries in tlog entry creation (https://github.com/sigstore/cosign/pull/2118)
+* fix: fix blob verification output (https://github.com/sigstore/cosign/pull/2157)
+* Verify the certificate chain against the Fulcio root trust by default (https://github.com/sigstore/cosign/pull/2139)
+
+## Documention
+
+* docs: clarify wording in spec about usage of certificate chain (https://github.com/sigstore/cosign/pull/2152)
+* Add notes to clarify registry use. (https://github.com/sigstore/cosign/pull/2145)
+
+## Others
+
+* Bump github.com/go-openapi/swag from 0.22.0 to 0.22.1 (https://github.com/sigstore/cosign/pull/2167)
+* Bump sigstore/cosign-installer from 2.5.0 to 2.5.1 (https://github.com/sigstore/cosign/pull/2168)
+* update e2e job to run only when push to main (https://github.com/sigstore/cosign/pull/2169)
+* Remove third_party (https://github.com/sigstore/cosign/pull/2166)
+* bump to scaffolding v0.4.4 (https://github.com/sigstore/cosign/pull/2165)
+* Bump sigs.k8s.io/release-utils from 0.6.0 to 0.7.3 (https://github.com/sigstore/cosign/pull/2102)
+* Run tests using Go 1.18 (https://github.com/sigstore/cosign/pull/2093)
+* Bump actions/github-script from 6.1.0 to 6.1.1 (https://github.com/sigstore/cosign/pull/2156)
+* Bump go.uber.org/atomic from 1.9.0 to 1.10.0 (https://github.com/sigstore/cosign/pull/2155)
+* Bump github.com/xanzy/go-gitlab from 0.71.0 to 0.72.0 (https://github.com/sigstore/cosign/pull/2148)
+* Bump tests to use scaffolding-0.4.3. (https://github.com/sigstore/cosign/pull/2153)
+* Bump google.golang.org/api from 0.91.0 to 0.92.0 (https://github.com/sigstore/cosign/pull/2150)
+* Bump actions/cache from 3.0.6 to 3.0.7 (https://github.com/sigstore/cosign/pull/2151)
+* Use TUF from scaffolding for validating cosign. (https://github.com/sigstore/cosign/pull/2146)
+* Bump github.com/hashicorp/go-secure-stdlib/parseutil from 0.1.6 to 0.1.7 (https://github.com/sigstore/cosign/pull/2141)
+* Bump github.com/go-openapi/swag from 0.21.1 to 0.22.0 (https://github.com/sigstore/cosign/pull/2140)
+* Bump github.com/xanzy/go-gitlab from 0.70.0 to 0.71.0 (https://github.com/sigstore/cosign/pull/2142)
+* Bump actions/cache from 3.0.5 to 3.0.6 (https://github.com/sigstore/cosign/pull/2136)
+* Bump github.com/go-piv/piv-go from 1.9.0 to 1.10.0 (https://github.com/sigstore/cosign/pull/2135)
+* Bump github/codeql-action from 2.1.17 to 2.1.18 (https://github.com/sigstore/cosign/pull/2129)
+* Update CHANGELOG for 1.10.1 release (https://github.com/sigstore/cosign/pull/2130)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* David Bendory (@bendory)
+* Jason Hall (@imjasonh)
+* Kazuma Watanabe (@wata727)
+* Matt Moore (@mattmoor)
+* Noah Kreiger (@nkreiger)
+* Priya Wadhwa (@priyawadhwa)
+* Samsondeen (@dsa0x)
+* Ville Aikas (@vaikas)
+* saso (@otms61)
+
 # v1.10.1
 
 **Note: This release comes with a fix for CVE-2022-35929 described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-vjxv-45g9-9296). Please upgrade to this release ASAP**
 
 ## Enhancements
-* update cross-builder to go1.18.5 and cosign image to 1.10.0 (#2119)
-* feat: attach: attestation: allow passing multiple payloads (#2085)
-* Resolves #522 set Created date to time of execution (#2108)
-* Fix field names in the vulnerability attestation (#2099)
-* Change Result in Vulnerability Attestation to interface{} (#2096)
-* Improve error message when no sigs/atts are found for an image (#2101)
-* add flag to allow skipping upload to transparency log (#2089)
+
+* update cross-builder to go1.18.5 and cosign image to 1.10.0 (https://github.com/sigstore/cosign/pull/2119)
+* feat: attach: attestation: allow passing multiple payloads (https://github.com/sigstore/cosign/pull/2085)
+* Resolves #522 set Created date to time of execution (https://github.com/sigstore/cosign/pull/2108)
+* Fix field names in the vulnerability attestation (https://github.com/sigstore/cosign/pull/2099)
+* Change Result in Vulnerability Attestation to interface{} (https://github.com/sigstore/cosign/pull/2096)
+* Improve error message when no sigs/atts are found for an image (https://github.com/sigstore/cosign/pull/2101)
+* add flag to allow skipping upload to transparency log (https://github.com/sigstore/cosign/pull/2089)
 
 ## Documention
-* chore: fix documentation and warning on using untrusted rekor key (#2124)
-* Enable Scorecard badge (#2109)
+
+* chore: fix documentation and warning on using untrusted rekor key (https://github.com/sigstore/cosign/pull/2124)
+* Enable Scorecard badge (https://github.com/sigstore/cosign/pull/2109)
 
 ## Bug Fixes
+
 * Merge pull request from GHSA-vjxv-45g9-9296
-* Correct the type used for attest (#2128)
+* Correct the type used for attest (https://github.com/sigstore/cosign/pull/2128)
 
 ## Others
-* Bump mikefarah/yq from 4.26.1 to 4.27.2 (#2116)
-* Bump github.com/open-policy-agent/opa from 0.42.2 to 0.43.0 (#2115)
-* Bump github.com/xanzy/go-gitlab from 0.69.0 to 0.70.0 (#2120)
-* Bump google.golang.org/api from 0.90.0 to 0.91.0 (#2125)
-* Bump google.golang.org/api from 0.89.0 to 0.90.0 (#2111)
-* Bump github/codeql-action from 2.1.16 to 2.1.17 (#2112)
-* Bump google.golang.org/protobuf from 1.28.0 to 1.28.1 (#2110)
-* Bump google.golang.org/api from 0.88.0 to 0.89.0 (#2106)
-* Bump imjasonh/setup-ko from 0.4 to 0.5 (#2107)
-* Introduce a custom error type to classify errors. (#2114)
-* Bump github.com/hashicorp/go-hclog from 1.2.1 to 1.2.2 (#2103)
-* remove style jobs and cleanup makefile gofmt and goimports are running already with golangci-lint (#2105)
-* Bump sigstore/cosign-installer from 2.4.1 to 2.5.0 (#2100)
-* Remove knative/pkg deps (#2092)
 
+* Bump mikefarah/yq from 4.26.1 to 4.27.2 (https://github.com/sigstore/cosign/pull/2116)
+* Bump github.com/open-policy-agent/opa from 0.42.2 to 0.43.0 (https://github.com/sigstore/cosign/pull/2115)
+* Bump github.com/xanzy/go-gitlab from 0.69.0 to 0.70.0 (https://github.com/sigstore/cosign/pull/2120)
+* Bump google.golang.org/api from 0.90.0 to 0.91.0 (https://github.com/sigstore/cosign/pull/2125)
+* Bump google.golang.org/api from 0.89.0 to 0.90.0 (https://github.com/sigstore/cosign/pull/2111)
+* Bump github/codeql-action from 2.1.16 to 2.1.17 (https://github.com/sigstore/cosign/pull/2112)
+* Bump google.golang.org/protobuf from 1.28.0 to 1.28.1 (https://github.com/sigstore/cosign/pull/2110)
+* Bump google.golang.org/api from 0.88.0 to 0.89.0 (https://github.com/sigstore/cosign/pull/2106)
+* Bump imjasonh/setup-ko from 0.4 to 0.5 (https://github.com/sigstore/cosign/pull/2107)
+* Introduce a custom error type to classify errors. (https://github.com/sigstore/cosign/pull/2114)
+* Bump github.com/hashicorp/go-hclog from 1.2.1 to 1.2.2 (https://github.com/sigstore/cosign/pull/2103)
+* remove style jobs and cleanup makefile gofmt and goimports are running already with golangci-lint (https://github.com/sigstore/cosign/pull/2105)
+* Bump sigstore/cosign-installer from 2.4.1 to 2.5.0 (https://github.com/sigstore/cosign/pull/2100)
+* Remove knative/pkg deps (https://github.com/sigstore/cosign/pull/2092)
 
 ## Contributors
-* Azeem Shaikh
-* Carlos Tadeu Panato Junior
-* Furkan Türkal
-* Jason Hall
-* Kenny Leung
-* Matt Moore
-* Teppei Fukuda
-* Tobias Trabelsi
-* asraa
-* saso
+
+* Asra Ali (@asraa)
+* Azeem Shaikh (@azeemshaikh38)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Furkan Türkal (@Dentrax)
+* Jason Hall (@imjasonh)
+* Kenny Leung (@k4leung4)
+* Matt Moore (@mattmoor)
+* Teppei Fukuda (@knqyf263)
+* Tobias Trabelsi (@Lerentis)
+* saso (@otms61)
 
 # v1.10.0
 
