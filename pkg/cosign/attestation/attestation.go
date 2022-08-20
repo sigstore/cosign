@@ -34,9 +34,6 @@ const (
 
 	// CosignVulnProvenanceV01 specifies the type of VulnerabilityScan Predicate
 	CosignVulnProvenanceV01 = "cosign.sigstore.dev/attestation/vuln/v1"
-
-	// PredicateCycloneDX represents a SBOM using the CycloneDX standard.
-	PredicateCycloneDX = "https://cyclonedx.org/schema"
 )
 
 // CosignPredicate specifies the format of the Custom Predicate.
@@ -61,12 +58,6 @@ type CosignVulnStatement struct {
 	Predicate CosignVulnPredicate `json:"predicate"`
 }
 
-// TODO: upstream to in-toto
-type CycloneDXStatement struct {
-	in_toto.StatementHeader
-	Predicate interface{} `json:"predicate"`
-}
-
 type Invocation struct {
 	Parameters interface{} `json:"parameters"`
 	URI        string      `json:"uri"`
@@ -80,10 +71,10 @@ type DB struct {
 }
 
 type Scanner struct {
-	URI     string                 `json:"uri"`
-	Version string                 `json:"version"`
-	DB      DB                     `json:"db"`
-	Result  map[string]interface{} `json:"result"`
+	URI     string      `json:"uri"`
+	Version string      `json:"version"`
+	DB      DB          `json:"db"`
+	Result  interface{} `json:"result"`
 }
 
 type Metadata struct {
@@ -262,7 +253,7 @@ func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (
 		return nil, err
 	}
 	return in_toto.SPDXStatement{
-		StatementHeader: generateStatementHeader(digest, repo, PredicateCycloneDX),
+		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateCycloneDX),
 		Predicate: CosignPredicate{
 			Data: data,
 		},

@@ -32,43 +32,40 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.21.x
-        - v1.22.x
-        # Try without this one now, might have problems with job restartings
-        # may require upstream changes.
-        #- v1.23.x
+        - v1.24.x
 
     env:
-      KNATIVE_VERSION: "1.1.0"
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.2.2"
+      SCAFFOLDING_RELEASE_VERSION: "v0.4.5"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
-      # Trust the custom Rekor API endpoint for fetching the Public Key from it.
-      SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY: "true"
       # We are only testing keyless here, so set it.
       COSIGN_EXPERIMENTAL: "true"
 
     steps:
     - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
-    - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v2.2.0
+    - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.2.0
       with:
-        go-version: '1.17'
+        go-version: '1.18'
         check-latest: true
 
     # will use the latest release available for ko
-    - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+    - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
 
     - name: Install yq
-      uses: mikefarah/yq@b669844ef72b8e0ebc1844a611bf56a5331aeb31 # v4.25.1
+      uses: mikefarah/yq@1c7dc0e88aad311c89889bc5ce5d8f96931a1bd0 # v4.25.1
 
     - name: build cosign
       run: |
         make cosign
 
-    - name: Install cluster + cosign
+    - name: Install cluster + sigstore
       uses: sigstore/scaffolding/actions/setup@main
+      with:
+        legacy-variables: "false"
+        k8s-version: ${{ matrix.k8s-version }}
+        version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
     - name: Create sample image - demoimage
       run: |
@@ -85,6 +82,11 @@ jobs:
         echo "demoimage=$demoimage" >> $GITHUB_ENV
         echo Created image $demoimage
         popd
+
+    - name: Initialize with our custom TUF root
+      run: |
+        TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}')
+        ./cosign initialize --mirror $TUF_MIRROR --root ./root.json
 
     - name: Sign demoimage with cosign
       run: |

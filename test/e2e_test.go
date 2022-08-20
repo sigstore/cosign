@@ -131,7 +131,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Now sign the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -142,7 +142,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Sign the image with an annotation
 	annotations := map[string]interface{}{"foo": "bar"}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, annotations, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, annotations, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
@@ -166,7 +166,7 @@ func TestSignVerifyClean(t *testing.T) {
 
 	// Now sign the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -195,7 +195,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	// Now sign the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -212,8 +212,8 @@ func TestAttestVerify(t *testing.T) {
 	attestVerify(t,
 		"slsaprovenance",
 		`{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`,
-		`builder: id: "1"`,
-		`builder: id: "2"`,
+		`predicate: builder: id: "2"`,
+		`predicate: builder: id: "1"`,
 	)
 }
 
@@ -225,8 +225,8 @@ func TestAttestVerifySPDXJSON(t *testing.T) {
 	attestVerify(t,
 		"spdxjson",
 		string(attestationBytes),
-		`Data: spdxVersion: "SPDX-9.9"`,
-		`Data: spdxVersion: "SPDX-2.2"`,
+		`predicate: Data: spdxVersion: "SPDX-2.2"`,
+		`predicate: Data: spdxVersion: "SPDX-9.9"`,
 	)
 }
 
@@ -238,8 +238,21 @@ func TestAttestVerifyCycloneDXJSON(t *testing.T) {
 	attestVerify(t,
 		"cyclonedx",
 		string(attestationBytes),
-		`Data: specVersion: "7.7"`,
-		`Data: specVersion: "1.4"`,
+		`predicate: Data: specVersion: "1.4"`,
+		`predicate: Data: specVersion: "7.7"`,
+	)
+}
+
+func TestAttestVerifyURI(t *testing.T) {
+	attestationBytes, err := os.ReadFile("./testdata/test-result.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestVerify(t,
+		"https://example.com/TestResult/v1",
+		string(attestationBytes),
+		`predicate: passed: true`,
+		`predicate: passed: false"`,
 	)
 }
 
@@ -248,7 +261,15 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	defer stop()
 	td := t.TempDir()
 
-	imgName := path.Join(repo, fmt.Sprintf("cosign-attest-%s-e2e-image", predicateType))
+	var imgName, attestationPath string
+	if _, err := url.ParseRequestURI(predicateType); err == nil {
+		// If the predicate type is URI, it cannot be included as image name and path.
+		imgName = path.Join(repo, "cosign-attest-uri-e2e-image")
+		attestationPath = filepath.Join(td, "cosign-attest-uri-e2e-attestation")
+	} else {
+		imgName = path.Join(repo, fmt.Sprintf("cosign-attest-%s-e2e-image", predicateType))
+		attestationPath = filepath.Join(td, fmt.Sprintf("cosign-attest-%s-e2e-attestation", predicateType))
+	}
 
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
@@ -265,7 +286,6 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	// Fail case when using without type and policy flag
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
-	attestationPath := filepath.Join(td, fmt.Sprintf("cosign-attest-%s-e2e-attestation", predicateType))
 	if err := os.WriteFile(attestationPath, []byte(attestation), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +293,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, attestationPath, false,
-		predicateType, false, 30*time.Second), t)
+		predicateType, false, 30*time.Second, false), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -284,6 +304,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	if err := os.WriteFile(policyPath, []byte(badCue), 0600); err != nil {
 		t.Fatal(err)
 	}
+	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
 	// Success case
 	if err := os.WriteFile(policyPath, []byte(goodCue), 0600); err != nil {
@@ -295,11 +316,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 }
 
-func TestAttestationReplace(t *testing.T) {
-	// This test is currently failing, see https://github.com/sigstore/cosign/issues/1378
-	// The replace option for attest does not appear to work on random.Image() generated images
-	t.Skip()
-
+func TestAttestationReplaceCreate(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -320,17 +337,6 @@ func TestAttestationReplace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Attest once with with replace=false creating an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second), t)
-	// Attest again with replace=true, replacing the previous attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second), t)
-	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", true, 30*time.Second), t)
-
-	// Download and count the attestations
 	ref, err := name.ParseReference(imgName)
 	if err != nil {
 		t.Fatal(err)
@@ -340,12 +346,89 @@ func TestAttestationReplace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Attest with replace=true to create an attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"slsaprovenance", true, 30*time.Second, false), t)
+
+	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+}
+
+func TestAttestationReplace(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-replace-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest once with replace=false creating an attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"slsaprovenance", false, 30*time.Second, false), t)
+
+	// Download and count the attestations
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+
+	// Attest again with replace=true, replacing the previous attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"slsaprovenance", true, 30*time.Second, false), t)
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+
+	// Download and count the attestations
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+
+	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
+	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
+		"custom", true, 30*time.Second, false), t)
+
+	// Download and count the attestations
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(attestations) != 2 {
-		t.Fatal(fmt.Errorf("Expected len(attestations) == 2, got %d", len(attestations)))
+		t.Fatal(fmt.Errorf("expected len(attestations) == 2, got %d", len(attestations)))
 	}
 }
 
@@ -371,7 +454,7 @@ func TestRekorBundle(t *testing.T) {
 	}
 
 	// Sign the image
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 	// Make sure verify works
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
@@ -401,14 +484,14 @@ func TestDuplicateSign(t *testing.T) {
 
 	// Now sign the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
 	// Signing again should work just fine...
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
 	must(err, t)
@@ -504,14 +587,14 @@ func TestMultipleSignatures(t *testing.T) {
 
 	// Now sign the image with one key
 	ko := options.KeyOpts{KeyRef: priv1, PassFunc: passFunc}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil, ""), t)
 	mustErr(verify(pub2, imgName, true, nil, ""), t)
 
 	// Now sign with the other key too
 	ko.KeyRef = priv2
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil, ""), t)
@@ -893,7 +976,7 @@ func TestSaveLoad(t *testing.T) {
 			ctx := context.Background()
 			// Now sign the image and verify it
 			ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-			must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+			must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 			must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 			// save the image to a temp dir
@@ -926,11 +1009,11 @@ func TestSaveLoadAttestation(t *testing.T) {
 	ctx := context.Background()
 	// Now sign the image and verify it
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// now, append an attestation to the image
-	slsaAttestation := `{ "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
 	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
 		t.Fatal(err)
@@ -939,7 +1022,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Now attest the image
 	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", false, 30*time.Second), t)
+		"slsaprovenance", false, 30*time.Second, false), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()
@@ -957,7 +1040,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	verifyAttestation.PredicateType = "slsaprovenance"
 	verifyAttestation.Policies = []string{policyPath}
 	// Success case (remote)
-	cuePolicy := `builder: id: "2"`
+	cuePolicy := `predicate: builder: id: "2"`
 	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -1020,7 +1103,7 @@ func TestAttachSBOM(t *testing.T) {
 
 	// Now sign the sbom with one key
 	ko1 := options.KeyOpts{KeyRef: privKeyPath1, PassFunc: passFunc}
-	must(sign.SignCmd(ro, ko1, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "sbom"), t)
+	must(sign.SignCmd(ro, ko1, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "sbom", false), t)
 
 	// Now verify should work with that one, but not the other
 	must(verify(pubKeyPath1, imgName, true, nil, "sbom"), t)
@@ -1057,7 +1140,7 @@ func TestTlog(t *testing.T) {
 		PassFunc: passFunc,
 		RekorURL: rekorURL,
 	}
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -1069,9 +1152,47 @@ func TestTlog(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Sign again with the tlog env var on
-	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
 	// And now verify works!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
+func TestNoTlog(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	// Verify should fail at first
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Now sign the image without the tlog
+	ko := options.KeyOpts{
+		KeyRef:   privKeyPath,
+		PassFunc: passFunc,
+		RekorURL: rekorURL,
+	}
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", false), t)
+
+	// Now verify should work!
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Now we turn on the tlog!
+	defer setenv(t, options.ExperimentalEnv, "1")()
+
+	// Verify shouldn't work since we haven't put anything in it yet.
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Sign again with the tlog env var on with option to not upload tlog
+	must(sign.SignCmd(ro, ko, options.RegistryOptions{}, nil, []string{imgName}, "", "", true, "", "", "", false, false, "", true), t)
+	// And verify it still fails.
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestGetPublicKeyCustomOut(t *testing.T) {
@@ -1233,7 +1354,7 @@ func TestInvalidBundle(t *testing.T) {
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	regOpts := options.RegistryOptions{}
 
-	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img1}, "", "", true, "", "", "", true, false, ""), t)
+	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img1}, "", "", true, "", "", "", true, false, "", true), t)
 	// verify image1
 	must(verify(pubKeyPath, img1, true, nil, ""), t)
 	// extract the bundle from image1
@@ -1258,7 +1379,7 @@ func TestInvalidBundle(t *testing.T) {
 	img2 := path.Join(regName, "unrelated")
 	imgRef2, _, cleanup := mkimage(t, img2)
 	defer cleanup()
-	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img2}, "", "", true, "", "", "", false, false, ""), t)
+	must(sign.SignCmd(ro, ko, regOpts, nil, []string{img2}, "", "", true, "", "", "", false, false, "", true), t)
 	must(verify(pubKeyPath, img2, true, nil, ""), t)
 
 	si2, err := ociremote.SignedEntity(imgRef2, remoteOpts)

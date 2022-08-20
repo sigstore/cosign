@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/go-openapi/strfmt"
@@ -38,7 +39,9 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/intoto"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
@@ -59,11 +62,16 @@ const (
 	altRekorPublicKey = "SIGSTORE_REKOR_PUBLIC_KEY"
 	// Add Rekor API Public Key
 	// If specified, will fetch the Rekor Public Key from the specified Rekor
-	// server and add it to RekorPubKeys.
+	// server and add it to RekorPubKeys. This ENV var is only for testing
+	// purposes, as users should distribute keys out of band.
 	// TODO(vaikas): Implement storing state like Rekor does so that if tree
 	// state ever changes, it will make lots of noise.
 	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
 )
+
+const treeIDHexStringLen = 16
+const uuidHexStringLen = 64
+const entryIDHexStringLen = treeIDHexStringLen + uuidHexStringLen
 
 // getLogID generates a SHA256 hash of a DER-encoded public key.
 func getLogID(pub crypto.PublicKey) (string, error) {
@@ -73,6 +81,13 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 	}
 	digest := sha256.Sum256(pubBytes)
 	return hex.EncodeToString(digest[:]), nil
+}
+
+func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.ProposedEntry, error) {
+	return types.NewProposedEntry(ctx, intoto.KIND, intoto_v001.APIVERSION, types.ArtifactProperties{
+		ArtifactBytes:  signature,
+		PublicKeyBytes: pubKey,
+	})
 }
 
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
@@ -90,7 +105,6 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 	altRekorPub := os.Getenv(altRekorPublicKey)
 
 	if altRekorPub != "" {
-		fmt.Fprintf(os.Stderr, "**Warning** Using a non-standard public key for Rekor: %s\n", altRekorPub)
 		raw, err := os.ReadFile(altRekorPub)
 		if err != nil {
 			return nil, fmt.Errorf("error reading alternate Rekor public key file: %w", err)
@@ -130,6 +144,7 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 	// additionally fetch it here.
 	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor)
 	if addRekorPublic != "" && rekorClient != nil {
+		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Fetching public key from Rekor API directly\n", addRekorPublicKeyFromRekor)
 		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
 		if err != nil {
 			return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)
@@ -164,12 +179,12 @@ func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature, paylo
 
 // TLogUploadInTotoAttestation will upload and in-toto entry for the signature and public key to the transparency log.
 func TLogUploadInTotoAttestation(ctx context.Context, rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
-	e := intotoEntry(signature, pemBytes)
-	returnVal := models.Intoto{
-		APIVersion: swag.String(e.APIVersion()),
-		Spec:       e.IntotoObj,
+	e, err := intotoEntry(ctx, signature, pemBytes)
+	if err != nil {
+		return nil, err
 	}
-	return doUpload(ctx, rekorClient, &returnVal)
+
+	return doUpload(ctx, rekorClient, e)
 }
 
 func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEntryAnon, error) {
@@ -197,18 +212,6 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 		return &p, nil
 	}
 	return nil, errors.New("bad response from server")
-}
-
-func intotoEntry(signature, pubKey []byte) intoto_v001.V001Entry {
-	pub := strfmt.Base64(pubKey)
-	return intoto_v001.V001Entry{
-		IntotoObj: models.IntotoV001Schema{
-			Content: &models.IntotoV001SchemaContent{
-				Envelope: string(signature),
-			},
-			PublicKey: &pub,
-		},
-	}
 }
 
 func rekorEntry(payload, signature, pubKey []byte) hashedrekord_v001.V001Entry {
@@ -242,32 +245,108 @@ func ComputeLeafHash(e *models.LogEntryAnon) ([]byte, error) {
 	return rfc6962.DefaultHasher.HashLeaf(entryBytes), nil
 }
 
-func verifyUUID(uuid string, e models.LogEntryAnon) error {
-	entryUUID, _ := hex.DecodeString(uuid)
+func getUUID(entryUUID string) (string, error) {
+	switch len(entryUUID) {
+	case uuidHexStringLen:
+		if _, err := hex.DecodeString(entryUUID); err != nil {
+			return "", fmt.Errorf("uuid %v is not a valid hex string: %w", entryUUID, err)
+		}
+		return entryUUID, nil
+	case entryIDHexStringLen:
+		uid := entryUUID[len(entryUUID)-uuidHexStringLen:]
+		return getUUID(uid)
+	default:
+		return "", fmt.Errorf("invalid ID len %v for %v", len(entryUUID), entryUUID)
+	}
+}
+
+func getTreeUUID(entryUUID string) (string, error) {
+	switch len(entryUUID) {
+	case uuidHexStringLen:
+		// No Tree ID provided
+		return "", nil
+	case entryIDHexStringLen:
+		tid := entryUUID[:treeIDHexStringLen]
+		return getTreeUUID(tid)
+	case treeIDHexStringLen:
+		// Check that it's a valid int64 in hex (base 16)
+		i, err := strconv.ParseInt(entryUUID, 16, 64)
+		if err != nil {
+			return "", fmt.Errorf("could not convert treeID %v to int64: %w", entryUUID, err)
+		}
+		// Check for invalid TreeID values
+		if i == 0 {
+			return "", fmt.Errorf("0 is not a valid TreeID")
+		}
+		return entryUUID, nil
+	default:
+		return "", fmt.Errorf("invalid ID len %v for %v", len(entryUUID), entryUUID)
+	}
+}
+
+// Validates UUID and also TreeID if present.
+func isExpectedResponseUUID(requestEntryUUID string, responseEntryUUID string, treeid string) error {
+	// Comparare UUIDs
+	requestUUID, err := getUUID(requestEntryUUID)
+	if err != nil {
+		return err
+	}
+	responseUUID, err := getUUID(responseEntryUUID)
+	if err != nil {
+		return err
+	}
+	if requestUUID != responseUUID {
+		return fmt.Errorf("expected EntryUUID %s got UUID %s", requestEntryUUID, responseEntryUUID)
+	}
+	// Compare tree ID if it is in the request.
+	requestTreeID, err := getTreeUUID(requestEntryUUID)
+	if err != nil {
+		return err
+	}
+	if requestTreeID != "" {
+		tid, err := getTreeUUID(treeid)
+		if err != nil {
+			return err
+		}
+		if requestTreeID != tid {
+			return fmt.Errorf("expected EntryUUID %s got UUID %s from Tree %s", requestEntryUUID, responseEntryUUID, treeid)
+		}
+	}
+	return nil
+}
+
+func verifyUUID(entryUUID string, e models.LogEntryAnon) error {
+	// Verify and get the UUID.
+	uid, err := getUUID(entryUUID)
+	if err != nil {
+		return err
+	}
+	uuid, _ := hex.DecodeString(uid)
 
 	// Verify leaf hash matches hash of the entry body.
 	computedLeafHash, err := ComputeLeafHash(&e)
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(computedLeafHash, entryUUID) {
-		return fmt.Errorf("computed leaf hash did not match entry UUID")
+	if !bytes.Equal(computedLeafHash, uuid) {
+		return fmt.Errorf("computed leaf hash did not match UUID")
 	}
 	return nil
 }
 
-func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
+func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, entryUUID string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
-	params.SetEntryUUID(uuid)
+	params.SetEntryUUID(entryUUID)
 	resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
 	if err != nil {
 		return nil, err
 	}
 	for k, e := range resp.Payload {
-		// Check that body hash matches UUID
-		if k != uuid {
-			return nil, fmt.Errorf("unexpected entry returned from rekor server")
+		// Validate that request EntryUUID matches the response UUID and response Tree ID
+		if err := isExpectedResponseUUID(entryUUID, k, *e.LogID); err != nil {
+			return nil, fmt.Errorf("unexpected entry returned from rekor server: %w", err)
 		}
+		// Check that body hash matches UUID
 		if err := verifyUUID(k, e); err != nil {
 			return nil, err
 		}
@@ -286,12 +365,11 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 	// The fact that there's no signature (or empty rather), implies
 	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
-		te := intotoEntry(payload, pubKey)
-		entry := &models.Intoto{
-			APIVersion: swag.String(te.APIVersion()),
-			Spec:       te.IntotoObj,
+		e, err := intotoEntry(context.Background(), signature, pubKey)
+		if err != nil {
+			return nil, err
 		}
-		proposedEntry = []models.ProposedEntry{entry}
+		proposedEntry = []models.ProposedEntry{e}
 	} else {
 		re := rekorEntry(payload, signature, pubKey)
 		entry := &models.Hashedrekord{

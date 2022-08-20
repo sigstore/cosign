@@ -149,7 +149,7 @@ func TestEvalPolicy(t *testing.T) {
 		json:       cipAttestation,
 		policyType: "cue",
 		wantErr:    true,
-		wantErrSub: `failed evaluating cue policy for cluster image policy main policy, fails : failed to evaluate the policy with error: authorityMatches.keylessattMinAttestations: conflicting values 2 and "Error" (mismatched types int and string)`,
+		wantErrSub: `failed evaluating cue policy for cluster image policy main policy, fails: failed to evaluate the policy with error: authorityMatches.keylessattMinAttestations: conflicting values 2 and "Error" (mismatched types int and string)`,
 		policyFile: `package sigstore
 		import "struct"
 		import "list"

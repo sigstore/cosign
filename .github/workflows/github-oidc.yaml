@@ -36,14 +36,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
-      - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v2.2.0
+      - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.2.0
         with:
-          go-version: '1.17'
+          go-version: '1.18'
           check-latest: true
+          cache: true
 
       # Install tools.
-      - uses: sigstore/cosign-installer@7e0881f8fe90b25e305bbf0309761e9314607e25 # v2.3.0
-      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+      - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
+
+      - name: build cosign from the HEAD
+        run: |
+          make cosign
+          ./cosign version
 
       - name: Build and sign a container image
         run: |
@@ -54,5 +59,4 @@ jobs:
       - name: Build and sign a blob
         run: |
           set -e
-          make cosign
           make sign-blob-experimental

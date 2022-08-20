@@ -17,7 +17,6 @@ package verify
 
 import (
 	"context"
-	"crypto"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,7 +27,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
 	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -139,11 +137,16 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("loading certificate from reference: %w", err)
 		}
 		if c.CertChain == "" {
-			err = cosign.CheckCertificatePolicy(cert, co)
+			// If no certChain is passed, the Fulcio root certificate will be used
+			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
-				return err
+				return fmt.Errorf("getting Fulcio roots: %w", err)
 			}
-			co.SigVerifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			}
+			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
 				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
@@ -201,6 +204,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 		}
 
+		var checked []oci.Signature
 		var validationErrors []error
 		for _, vp := range verified {
 			payload, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, vp)
@@ -217,6 +221,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				cueValidationErr := cue.ValidateJSON(payload, cuePolicies)
 				if cueValidationErr != nil {
 					validationErrors = append(validationErrors, cueValidationErr)
+					continue
 				}
 			}
 
@@ -225,8 +230,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				regoValidationErrs := rego.ValidateJSON(payload, regoPolicies)
 				if len(regoValidationErrs) > 0 {
 					validationErrors = append(validationErrors, regoValidationErrs...)
+					continue
 				}
 			}
+
+			checked = append(checked, vp)
 		}
 
 		if len(validationErrors) > 0 {
@@ -237,10 +245,14 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("%d validation errors occurred", len(validationErrors))
 		}
 
+		if len(checked) == 0 {
+			return fmt.Errorf("none of the attestations matched the predicate type: %s", c.PredicateType)
+		}
+
 		// TODO: add CUE validation report to `PrintVerificationHeader`.
 		PrintVerificationHeader(imageRef, co, bundleVerified, fulcioVerified)
 		// The attestations are always JSON, so use the raw "text" mode for outputting them instead of conversion
-		PrintVerification(imageRef, verified, "text")
+		PrintVerification(imageRef, checked, "text")
 	}
 
 	return nil

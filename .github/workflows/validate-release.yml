@@ -39,11 +39,11 @@ jobs:
       statuses: none
 
     env:
-      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.17.11-0@sha256:b0c3083b0a420ff649d5a5bfd7e0a96719ab0a7b3f99a049a4950d836a72637a
-      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.8.0@sha256:12b4d428529654c95a7550a936cbb5c6fe93a046ea7454676cb6fb0ce566d78c
+      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.18.5-1@sha256:7dda2158ee68f0e4f53ca9bdf3971b2db01084dad4bdc775391e5f3bf40056a5
+      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.10.1@sha256:9377edd13ae515dcb97c15052e577a2cbce098f36b0361bdb2348e3bdd8fe536
 
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b #v2.4.0
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
       - name: Check Signature
         run: |

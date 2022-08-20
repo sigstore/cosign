@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,23 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fulcio_test
+package cli
 
 import (
+	"os"
 	"testing"
 
-	"github.com/depcheck-test/depcheck-test/depcheck"
+	"github.com/google/go-cmp/cmp"
 )
 
-func TestNoDeps(t *testing.T) {
-	depcheck.AssertNoDependency(t, map[string][]string{
-		"github.com/sigstore/cosign/cmd/cosign/cli/fulcio": {
-			// Avoid pulling in a variety of things that are massive dependencies.
-			"github.com/google/trillian",
-			"github.com/envoyproxy/go-control-plane",
-			"github.com/gogo/protobuf/protoc-gen-gogo",
-			"github.com/grpc-ecosystem/go-grpc-middleware",
-			"github.com/jhump/protoreflect",
-		},
-	})
+func TestGetEnv(t *testing.T) {
+	os.Setenv("COSIGN_EXPERIMENTAL", "foo")
+	os.Setenv("TUF_ROOT", "bar")
+	got := getEnv()
+	want := []string{
+		"COSIGN_EXPERIMENTAL=foo",
+		"TUF_ROOT=bar",
+	}
+
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error(diff)
+	}
 }

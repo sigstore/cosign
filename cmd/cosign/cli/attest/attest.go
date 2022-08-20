@@ -37,7 +37,6 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
-	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -48,16 +47,9 @@ import (
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
 func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
-	var rekorBytes []byte
-	// Upload the cert or the public key, depending on what we have
-	if sv.Cert != nil {
-		rekorBytes = sv.Cert
-	} else {
-		pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-		if err != nil {
-			return nil, err
-		}
-		rekorBytes = pemBytes
+	rekorBytes, err := sv.Bytes(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	rekorClient, err := rekor.NewClient(rekorURL)
@@ -74,7 +66,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 
 //nolint
 func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string, certChainPath string,
-	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration) error {
+	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, noTlogUpload bool) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -161,7 +153,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	}
 
 	// Check whether we should be uploading to the transparency log
-	if sign.ShouldUploadToTlog(ctx, digest, force, ko.RekorURL) {
+	if sign.ShouldUploadToTlog(ctx, digest, force, noTlogUpload, ko.RekorURL) {
 		bundle, err := uploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})

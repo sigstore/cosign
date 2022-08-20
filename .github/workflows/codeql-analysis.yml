@@ -42,7 +42,7 @@ jobs:
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
 
     - name: Utilize Go Module Cache
-      uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.3
+      uses: actions/cache@a7c34adf76222e77931dedbf4a45b2e4648ced19 # v3.0.3
       with:
         path: |
           ~/go/pkg/mod
@@ -52,14 +52,14 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Set correct version of Golang to use during CodeQL run
-      uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v2.1.5
+      uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.1.5
       with:
-        go-version: '1.17'
+        go-version: '1.18'
         check-latest: true
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@3f62b754e23e0dd60f91b744033e1dc1654c0ec6 # v2.1.14
+      uses: github/codeql-action/init@f5d217be74900c6ac8fbbe53f3c10376ba4e64da # v2.1.18
       with:
         languages: ${{ matrix.language }}
 
@@ -67,4 +67,4 @@ jobs:
       run: make cosign
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@3f62b754e23e0dd60f91b744033e1dc1654c0ec6 # v2.1.14
+      uses: github/codeql-action/analyze@f5d217be74900c6ac8fbbe53f3c10376ba4e64da # v2.1.18
