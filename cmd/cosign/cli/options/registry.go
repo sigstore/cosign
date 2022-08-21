@@ -17,7 +17,7 @@ package options
 import (
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
@@ -83,7 +83,7 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 		kc := authn.NewMultiKeychain(
 			authn.DefaultKeychain,
 			google.Keychain,
-			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(ioutil.Discard))),
+			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard))),
 			authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
 			github.Keychain,
 		)

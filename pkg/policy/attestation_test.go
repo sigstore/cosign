@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+  "os"
 	"strings"
 	"testing"
 
@@ -168,7 +168,7 @@ func checkPredicateType(t *testing.T, want, got string) {
 
 func readAttestationFromTestFile(t *testing.T, dir, name string) []byte {
 	t.Helper()
-	b, err := ioutil.ReadFile(fmt.Sprintf("testdata/%s/%s", dir, name))
+	b, err := os.ReadFile(fmt.Sprintf("testdata/%s/%s", dir, name))
 	if err != nil {
 		t.Fatalf("Failed to read file : %s ReadFile() = %s", name, err)
 	}
@@ -176,7 +176,7 @@ func readAttestationFromTestFile(t *testing.T, dir, name string) []byte {
 }
 
 func getDirFiles(t *testing.T, dir string) []string {
-	files, err := ioutil.ReadDir(fmt.Sprintf("testdata/%s", dir))
+	files, err := os.ReadDir(fmt.Sprintf("testdata/%s", dir))
 	if err != nil {
 		t.Fatalf("Failed to read dir : %s ReadFile() = %s", dir, err)
 	}
