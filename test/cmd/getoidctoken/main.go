@@ -16,9 +16,9 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/kelseyhightower/envconfig"
 )
