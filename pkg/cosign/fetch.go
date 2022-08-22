@@ -20,7 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -148,7 +148,7 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 
 // FetchLocalSignedPayloadFromPath fetches a local signed payload from a path to a file
 func FetchLocalSignedPayloadFromPath(path string) (*LocalSignedPayload, error) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}

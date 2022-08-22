@@ -17,7 +17,7 @@ package verify
 import (
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -80,7 +80,7 @@ func TestSignaturesBundle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(fp, contents, 0644); err != nil {
+	if err := os.WriteFile(fp, contents, 0644); err != nil {
 		t.Fatal(err)
 	}
 

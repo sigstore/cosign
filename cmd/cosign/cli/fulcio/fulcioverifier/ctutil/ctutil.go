@@ -52,26 +52,26 @@ func LeafHashB64(chain []*x509.Certificate, sct *ct.SignedCertificateTimestamp, 
 //
 // This function can be used with three different types of leaf certificate:
 //   - X.509 Certificate:
-//       If using this function to calculate the leaf hash for a normal X.509
-//       certificate then it is enough to just provide the end entity
-//       certificate in chain. This case assumes that the SCT being provided is
-//       not embedded within the leaf certificate provided, i.e. the certificate
-//       is what was submitted to the Certificate Transparency Log in order to
-//       obtain the SCT.  For this case, set embedded to false.
+//     If using this function to calculate the leaf hash for a normal X.509
+//     certificate then it is enough to just provide the end entity
+//     certificate in chain. This case assumes that the SCT being provided is
+//     not embedded within the leaf certificate provided, i.e. the certificate
+//     is what was submitted to the Certificate Transparency Log in order to
+//     obtain the SCT.  For this case, set embedded to false.
 //   - Precertificate:
-//       If using this function to calculate the leaf hash for a precertificate
-//       then the issuing certificate must also be provided in chain.  The
-//       precertificate should be at chain[0], and its issuer at chain[1].  For
-//       this case, set embedded to false.
+//     If using this function to calculate the leaf hash for a precertificate
+//     then the issuing certificate must also be provided in chain.  The
+//     precertificate should be at chain[0], and its issuer at chain[1].  For
+//     this case, set embedded to false.
 //   - X.509 Certificate containing the SCT embedded within it:
-//       If using this function to calculate the leaf hash for a certificate
-//       where the SCT provided is embedded within the certificate you
-//       are providing at chain[0], set embedded to true.  LeafHash will
-//       calculate the leaf hash by building the corresponding precertificate.
-//       LeafHash will return an error if the provided SCT cannot be found
-//       embedded within chain[0].  As with the precertificate case, the issuing
-//       certificate must also be provided in chain.  The certificate containing
-//       the embedded SCT should be at chain[0], and its issuer at chain[1].
+//     If using this function to calculate the leaf hash for a certificate
+//     where the SCT provided is embedded within the certificate you
+//     are providing at chain[0], set embedded to true.  LeafHash will
+//     calculate the leaf hash by building the corresponding precertificate.
+//     LeafHash will return an error if the provided SCT cannot be found
+//     embedded within chain[0].  As with the precertificate case, the issuing
+//     certificate must also be provided in chain.  The certificate containing
+//     the embedded SCT should be at chain[0], and its issuer at chain[1].
 //
 // Note: LeafHash doesn't check that the provided SCT verifies for the given
 // chain.  It simply calculates what the leaf hash would be for the given
@@ -91,25 +91,25 @@ func LeafHash(chain []*x509.Certificate, sct *ct.SignedCertificateTimestamp, emb
 //
 // This function can be used with three different types of leaf certificate:
 //   - X.509 Certificate:
-//       If using this function to verify an SCT for a normal X.509 certificate
-//       then it is enough to just provide the end entity certificate in chain.
-//       This case assumes that the SCT being provided is not embedded within
-//       the leaf certificate provided, i.e. the certificate is what was
-//       submitted to the Certificate Transparency Log in order to obtain the
-//       SCT.  For this case, set embedded to false.
+//     If using this function to verify an SCT for a normal X.509 certificate
+//     then it is enough to just provide the end entity certificate in chain.
+//     This case assumes that the SCT being provided is not embedded within
+//     the leaf certificate provided, i.e. the certificate is what was
+//     submitted to the Certificate Transparency Log in order to obtain the
+//     SCT.  For this case, set embedded to false.
 //   - Precertificate:
-//       If using this function to verify an SCT for a precertificate then the
-//       issuing certificate must also be provided in chain.  The precertificate
-//       should be at chain[0], and its issuer at chain[1].  For this case, set
-//       embedded to false.
+//     If using this function to verify an SCT for a precertificate then the
+//     issuing certificate must also be provided in chain.  The precertificate
+//     should be at chain[0], and its issuer at chain[1].  For this case, set
+//     embedded to false.
 //   - X.509 Certificate containing the SCT embedded within it:
-//       If the SCT you wish to verify is embedded within the certificate you
-//       are providing at chain[0], set embedded to true.  VerifySCT will
-//       verify the provided SCT by building the corresponding precertificate.
-//       VerifySCT will return an error if the provided SCT cannot be found
-//       embedded within chain[0].  As with the precertificate case, the issuing
-//       certificate must also be provided in chain.  The certificate containing
-//       the embedded SCT should be at chain[0], and its issuer at chain[1].
+//     If the SCT you wish to verify is embedded within the certificate you
+//     are providing at chain[0], set embedded to true.  VerifySCT will
+//     verify the provided SCT by building the corresponding precertificate.
+//     VerifySCT will return an error if the provided SCT cannot be found
+//     embedded within chain[0].  As with the precertificate case, the issuing
+//     certificate must also be provided in chain.  The certificate containing
+//     the embedded SCT should be at chain[0], and its issuer at chain[1].
 func VerifySCT(pubKey crypto.PublicKey, chain []*x509.Certificate, sct *ct.SignedCertificateTimestamp, embedded bool) error {
 	s, err := ct.NewSignatureVerifier(pubKey)
 	if err != nil {
@@ -126,25 +126,25 @@ func VerifySCT(pubKey crypto.PublicKey, chain []*x509.Certificate, sct *ct.Signe
 //
 // This function can be used with three different types of leaf certificate:
 //   - X.509 Certificate:
-//       If using this function to verify an SCT for a normal X.509 certificate
-//       then it is enough to just provide the end entity certificate in chain.
-//       This case assumes that the SCT being provided is not embedded within
-//       the leaf certificate provided, i.e. the certificate is what was
-//       submitted to the Certificate Transparency Log in order to obtain the
-//       SCT.  For this case, set embedded to false.
+//     If using this function to verify an SCT for a normal X.509 certificate
+//     then it is enough to just provide the end entity certificate in chain.
+//     This case assumes that the SCT being provided is not embedded within
+//     the leaf certificate provided, i.e. the certificate is what was
+//     submitted to the Certificate Transparency Log in order to obtain the
+//     SCT.  For this case, set embedded to false.
 //   - Precertificate:
-//       If using this function to verify an SCT for a precertificate then the
-//       issuing certificate must also be provided in chain.  The precertificate
-//       should be at chain[0], and its issuer at chain[1].  For this case, set
-//       embedded to false.
+//     If using this function to verify an SCT for a precertificate then the
+//     issuing certificate must also be provided in chain.  The precertificate
+//     should be at chain[0], and its issuer at chain[1].  For this case, set
+//     embedded to false.
 //   - X.509 Certificate containing the SCT embedded within it:
-//       If the SCT you wish to verify is embedded within the certificate you
-//       are providing at chain[0], set embedded to true.  VerifySCT will
-//       verify the provided SCT by building the corresponding precertificate.
-//       VerifySCT will return an error if the provided SCT cannot be found
-//       embedded within chain[0].  As with the precertificate case, the issuing
-//       certificate must also be provided in chain.  The certificate containing
-//       the embedded SCT should be at chain[0], and its issuer at chain[1].
+//     If the SCT you wish to verify is embedded within the certificate you
+//     are providing at chain[0], set embedded to true.  VerifySCT will
+//     verify the provided SCT by building the corresponding precertificate.
+//     VerifySCT will return an error if the provided SCT cannot be found
+//     embedded within chain[0].  As with the precertificate case, the issuing
+//     certificate must also be provided in chain.  The certificate containing
+//     the embedded SCT should be at chain[0], and its issuer at chain[1].
 func VerifySCTWithVerifier(sv *ct.SignatureVerifier, chain []*x509.Certificate, sct *ct.SignedCertificateTimestamp, embedded bool) error {
 	if sv == nil {
 		return errors.New("ct.SignatureVerifier is nil")

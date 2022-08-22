@@ -16,9 +16,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -33,7 +33,7 @@ func tokenWriter(filename string) func(http.ResponseWriter, *http.Request) {
 	}
 }
 func getToken(tokenFile string, w http.ResponseWriter, _ *http.Request) {
-	content, err := ioutil.ReadFile(tokenFile)
+	content, err := os.ReadFile(tokenFile)
 	if err != nil {
 		log.Print("failed to read token file", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
