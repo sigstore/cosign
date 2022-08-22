@@ -215,7 +215,6 @@ func TestUploadFiles(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func checkPlatform(t *testing.T, ref name.Reference, p *v1.Platform) bool {
@@ -272,11 +271,12 @@ func checkIndex(t *testing.T, ref name.Reference) bool {
 
 func checkAnnotations(t *testing.T, ref name.Reference, annotations map[string]string) bool {
 	t.Helper()
-	var found bool = false
+	var found bool
 	d, err := remote.Get(ref)
 	if err != nil {
 		t.Fatalf("Get() = %v", err)
 	}
+
 	if d.MediaType.IsIndex() {
 		idx, err := remote.Index(ref)
 		if err != nil {
@@ -286,7 +286,7 @@ func checkAnnotations(t *testing.T, ref name.Reference, annotations map[string]s
 		if err != nil {
 			t.Fatalf("IndexManifest() = %v", err)
 		}
-		for annotationsKey, _ := range annotations {
+		for annotationsKey := range annotations {
 			_, ok := m.Annotations[annotationsKey]
 			if ok {
 				found = true
@@ -301,7 +301,7 @@ func checkAnnotations(t *testing.T, ref name.Reference, annotations map[string]s
 			t.Fatalf("Image() = %v", err)
 		}
 		m, _ := i.Manifest()
-		for annotationsKey, _ := range annotations {
+		for annotationsKey := range annotations {
 			_, ok := m.Annotations[annotationsKey]
 			if ok {
 				found = true
@@ -309,6 +309,5 @@ func checkAnnotations(t *testing.T, ref name.Reference, annotations map[string]s
 		}
 		return found
 	}
-
 	return false
 }
