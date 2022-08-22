@@ -26,6 +26,7 @@ import (
 
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 )
 
 var (
@@ -118,6 +119,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(cranecmd.NewCmdAuthLogin("cosign"))
 
 	cmd.SetGlobalNormalizationFunc(normalizeCertificateFlags)
+	cmd.AddCommand(cobracompletefig.CreateCompletionSpecCommand())
 
 	return cmd
 }
