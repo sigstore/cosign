@@ -57,7 +57,7 @@ func uploadBlob() *cobra.Command {
 
   # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting the os fields
   cosign upload blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
-  
+
   # upload a blob named foo to the location specified by <IMAGE>, setting annotations mykey=myvalue.
   cosign upload blob -a mykey=myvalue -f foo <IMAGE>
 

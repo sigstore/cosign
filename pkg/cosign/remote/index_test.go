@@ -254,7 +254,6 @@ func checkPlatform(t *testing.T, ref name.Reference, p *v1.Platform) bool {
 		}
 	}
 	return false
-
 }
 
 func checkIndex(t *testing.T, ref name.Reference) bool {
