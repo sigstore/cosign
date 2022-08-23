@@ -86,7 +86,7 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 			google.Keychain,
 			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard))),
 			authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
-			authn.NewKeychainFromHelper(alibabaacr.NewACRHelper().WithLoggerOut(ioutil.Discard)),
+			authn.NewKeychainFromHelper(alibabaacr.NewACRHelper().WithLoggerOut(io.Discard)),
 			github.Keychain,
 		)
 		opts = append(opts, remote.WithAuthFromKeychain(kc))
