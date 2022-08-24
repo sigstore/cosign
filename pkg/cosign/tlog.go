@@ -365,7 +365,7 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 	// The fact that there's no signature (or empty rather), implies
 	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
-		e, err := intotoEntry(context.Background(), signature, pubKey)
+		e, err := intotoEntry(context.Background(), payload, pubKey)
 		if err != nil {
 			return nil, err
 		}
