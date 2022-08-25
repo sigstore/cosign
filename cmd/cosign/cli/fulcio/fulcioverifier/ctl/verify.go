@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -87,7 +86,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 			return err
 		}
 		for _, t := range targets {
-			pub, err := getPublicKey(t.Target)
+			pub, err := cryptoutils.UnmarshalPEMToPublicKey(t.Target)
 			if err != nil {
 				return err
 			}
@@ -103,7 +102,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 		if err != nil {
 			return fmt.Errorf("error reading alternate public key file")
 		}
-		pubKey, err := getPublicKey(raw)
+		pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
 		if err != nil {
 			return fmt.Errorf("error parsing alternate public key from the file")
 		}
@@ -195,29 +194,4 @@ func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate) error {
 		return err
 	}
 	return VerifySCT(ctx, certPEM, chainPEM, []byte{})
-}
-
-// Given a byte array, try to construct a public key from it.
-// Supports PEM encoded public keys, falling back to DER. Supports
-// PKIX and PKCS1 encoded keys.
-func getPublicKey(in []byte) (crypto.PublicKey, error) {
-	var pubKey crypto.PublicKey
-	var err error
-	var derBytes []byte
-	pemBlock, _ := pem.Decode(in)
-	if pemBlock == nil {
-		fmt.Fprintf(os.Stderr, "Failed to decode non-standard public key for verifying SCT using PEM decode, trying as DER")
-		derBytes = in
-	} else {
-		derBytes = pemBlock.Bytes
-	}
-	pubKey, err = x509.ParsePKIXPublicKey(derBytes)
-	if err != nil {
-		// Try using the PKCS1 before giving up.
-		pubKey, err = x509.ParsePKCS1PublicKey(derBytes)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse CT log public key: %w", err)
-		}
-	}
-	return pubKey, nil
 }

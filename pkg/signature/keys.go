@@ -78,14 +78,13 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.SignerVerifier, erro
 	return cosign.LoadPrivateKey(kb, pass)
 }
 
-// LoadPublicKeyRaw loads a verifier from a raw public key passed in
+// LoadPublicKeyRaw loads a verifier from a PEM-encoded public key
 func LoadPublicKeyRaw(raw []byte, hashAlgorithm crypto.Hash) (signature.Verifier, error) {
-	// PEM encoded file.
-	ed, err := cosign.PemToECDSAKey(raw)
+	pub, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
 	if err != nil {
-		return nil, fmt.Errorf("pem to ecdsa: %w", err)
+		return nil, err
 	}
-	return signature.LoadECDSAVerifier(ed, hashAlgorithm)
+	return signature.LoadVerifier(pub, hashAlgorithm)
 }
 
 func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
