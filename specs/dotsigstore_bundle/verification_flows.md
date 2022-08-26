@@ -1,7 +1,10 @@
 # Purpose
 
 Enumerate the cosign verification use-cases with various keyed/keyless
-modes and TUF configurations.
+modes and TUF configurations. Scneraios with different Rekor/Fulcio
+instances (e.g. local, staging, corporate etc) are not explicitly
+listed, as via the correct command line parameter, the client should
+be able to figure out which keys to load in the TUF repository.
 
 | Case | Keytype | Rekor entry | Root CA | Key status | Verification |
 |-------------|---------|-------------|---------|------------|--------------|
@@ -20,8 +23,8 @@ modes and TUF configurations.
 ## Notes on verification
 
 The `cosign verify-blob` command already accepts a set of parameters
-that are related to this extended bundle proposal. Some reasoning on
-potential changes to the parameters:
+that are related to this extended bundle proposal. Some proposed
+changes to the parameters:
 
 | Command | Description |
 |---------|-------------|
