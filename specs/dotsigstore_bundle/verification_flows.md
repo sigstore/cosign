@@ -5,7 +5,7 @@ modes and TUF configurations.
 
 | Description | Keytype | Rekor entry | Root CA | Key status | Verification |
 |-------------|---------|-------------|---------|------------|--------------|
-| #1   | Keyless | Yes         | Fulcio  | Valid      | Pass |
+| #1   | Keyless | Yes         | Fulcio  | Valid      | :white_check_mark:  |
 | #2   | User provided | No | N/A | N/A: Verifier provides a set of accepted keys | Pass |
 | #2.1 | User provided | Yes | N/A | Not known by verifier | Fail |
 | #3.1 | Keyless | Yes | Fulcio | Rekor key valid during signature generation, but new Rekor key published since then. | Pass |
