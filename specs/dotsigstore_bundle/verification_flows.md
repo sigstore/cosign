@@ -6,7 +6,7 @@ instances (e.g. local, staging, corporate etc) are not explicitly
 listed, as via the correct command line parameter, the client should
 be able to figure out which keys to load in the TUF repository.
 
-| Case | Keytype | Rekor entry | Root CA | Key status | Verification |
+| Case | Keytype | Rekor entry | Root CA | Key status | Verification passes |
 |-------------|---------|-------------|---------|------------|--------------|
 | #1   | Keyless | Yes         | Fulcio  | Valid      | :white_check_mark:  |
 | #2   | User provided | No | N/A | N/A: Verifier provides a set of accepted keys | :white_check_mark: |
