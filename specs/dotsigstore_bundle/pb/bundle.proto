@@ -1,0 +1,78 @@
+syntax = "proto3";
+package sigstore;
+
+// https://raw.githubusercontent.com/secure-systems-lab/dsse/9c813476bd36de70a5738c72e784f123ecea16af/envelope.proto
+import "envelope.proto";
+
+option go_package = "github.com/sigstore/xxx/bundle";
+
+enum HashAlgorithm {
+        SHA2_224 = 0;
+        SHA2_256 = 1;
+        SHA2_384 = 2;
+        SHA2_512 = 3;
+        SHA2_512_224 = 4;
+        SHA2_512_256 = 5;
+}
+
+message AttestationBlob {
+        // In JSON encoding this shall be base64 encoded.
+        bytes payload_hash = 1;
+        HashAlgorithm algorithm = 2;
+        // In JSON encoding this shall be base64 encoded.
+        bytes signature = 3;
+}
+
+// RekorEntry is a separate type, that now can easily be created from the
+// existing response from Rekor.
+// Future iterations could rely on Rekor returning the minimal set of
+// attributes (excluding the payload) that are required for verifying the
+// SET.
+message RekorEntry {
+        int64 log_index = 1;
+        string log_id = 2;
+        // Even if kind can be derived from the attestation type it's kept
+        // as this struct could be automatically created by the sigstore
+        // library based on the response from Rekor. Also during verification
+        // this struct can be passed to the library for Rekor entry
+        // reconstruction. By duplicating the kind here we would so minimize
+        // any possibility of error due to attestation/kind matching logic,
+        // as that logic must be hard-coded in the client. With this construct
+        // it's only determined during publish to Rekor.
+        string kind = 3;
+        string version = 4;
+        string signed_entry_timestamp = 5;
+        int64 integrated_time = 6;
+}
+
+message PublicKey {
+        // Optional unauthenticated hint on which key to use.
+        string key_id = 1;
+}
+
+message X509Cert {
+        // PEM encoded certificate.
+        string certificate = 1;
+        // PEM encoded certificate chain.
+        string chain = 2;
+}
+
+message Bundle {
+        // application/vnd.dev.sigstore.bundle.v1+json
+        string media_type = 1;
+        optional RekorEntry rekor_entry = 2;
+        // During JSON serialization, the attribute 'verification_material'
+        // will not be present. Clients must test for the presence of
+        // either 'public_key' or 'x509Cert'
+        oneof verification_material {
+                PublicKey public_key = 3;
+                X509Cert x509_cert = 4;
+        }
+        // During JSON serialization, the attribute 'attestation'
+        // will not be present. Clients must test for the presence of
+        // either 'blob' or 'dsse'
+        oneof attestation {
+                AttestationBlob blob = 5;
+                io.intoto.Envelope dsse = 6;
+        }
+}

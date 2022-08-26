@@ -1,0 +1,38 @@
+// https://raw.githubusercontent.com/secure-systems-lab/dsse/9c813476bd36de70a5738c72e784f123ecea16af/envelope.proto
+syntax = "proto3";
+
+package io.intoto;
+
+option go_package = "github.com/secure-systems-lab/dsse";
+
+// An authenticated message of arbitrary type.
+message Envelope {
+  // Message to be signed. (In JSON, this is encoded as base64.)
+  // REQUIRED.
+  bytes payload = 1;
+
+  // String unambiguously identifying how to interpret payload.
+  // REQUIRED.
+  string payloadType = 2;
+
+  // Signature over:
+  //     PAE(type, body)
+  // Where PAE is defined as:
+  // PAE(type, body) = "DSSEv1" + SP + LEN(type) + SP + type + SP + LEN(body) + SP + body
+  // +               = concatenation
+  // SP              = ASCII space [0x20]
+  // "DSSEv1"        = ASCII [0x44, 0x53, 0x53, 0x45, 0x76, 0x31]
+  // LEN(s)          = ASCII decimal encoding of the byte length of s, with no leading zeros
+  // REQUIRED (length >= 1).
+  repeated Signature signatures = 3;
+}
+
+message Signature {
+  // Signature itself. (In JSON, this is encoded as base64.)
+  // REQUIRED.
+  bytes sig = 1;
+
+  // *Unauthenticated* hint identifying which public key was used.
+  // OPTIONAL.
+  string keyid = 2;
+}

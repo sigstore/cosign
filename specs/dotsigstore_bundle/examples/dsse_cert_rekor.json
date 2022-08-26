@@ -1,0 +1,24 @@
+{
+  "mediaType": "application/vnd.dev.sigstore.bundle.v1+json",
+  "rekorEntry": {
+    "logIndex": "123",
+    "logId": "logid-123",
+    "kind": "intoto",
+    "version": "v0.0.1",
+    "signedEntryTimestamp": "SET",
+    "integratedTime": "1661340393"
+  },
+  "x509Cert": {
+    "certificate": "PEM Encoded string",
+    "chain": "PEM Encoded string"
+  },
+  "dsse": {
+    "payload": "eyJrZXkiOiJ2YWx1ZSJ9",
+    "payloadType": "application/vnd.in-toto+json",
+    "signatures": [
+      {
+        "sig": "aGVq"
+      }
+    ]
+  }
+}

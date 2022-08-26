@@ -1,0 +1,11 @@
+{
+  "mediaType": "application/vnd.dev.sigstore.bundle.v1+json",
+  "publicKey": {
+    "keyId": "hint"
+  },
+  "blob": {
+    "payloadHash": "aGFzaA==",
+    "algorithm": "SHA2_256",
+    "signature": "aGVq"
+  }
+}

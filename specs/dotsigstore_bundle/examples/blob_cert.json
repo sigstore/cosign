@@ -1,0 +1,12 @@
+{
+  "mediaType": "application/vnd.dev.sigstore.bundle.v1+json",
+  "x509Cert": {
+    "certificate": "PEM Encoded string",
+    "chain": "PEM Encoded string"
+  },
+  "blob": {
+    "payloadHash": "aGFzaA==",
+    "algorithm": "SHA2_256",
+    "signature": "aGVq"
+  }
+}
