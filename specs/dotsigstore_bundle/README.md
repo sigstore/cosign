@@ -20,3 +20,5 @@ and some example JSON encodings.
 
 In [verification_flows.md](verification_flows.md) some test cases are
 discussed, to ensure that the functionality works as expected.
+
+Pseudo-code for an example verifier is located [here](verifier.go).
