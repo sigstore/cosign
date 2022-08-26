@@ -23,8 +23,10 @@ message AttestationBlob {
         bytes signature = 3;
 }
 
-// RekorEntry is a separate type, that now can easily be created from the
-// existing response from Rekor.
+// RekorEntry is a separate type, capturing all the details required
+// from Rekor to reconstruct an entry, given that the payload is provided
+// via other means.
+// This type can easily be created from the existing response from Rekor.
 // Future iterations could rely on Rekor returning the minimal set of
 // attributes (excluding the payload) that are required for verifying the
 // SET.
@@ -47,6 +49,8 @@ message RekorEntry {
 
 message PublicKey {
         // Optional unauthenticated hint on which key to use.
+        // If a DSSE envelope is signed, at least one of the signatures
+        // MUST have a signature with the same key id.
         string key_id = 1;
 }
 
@@ -58,21 +62,21 @@ message X509Cert {
 }
 
 message Bundle {
-        // application/vnd.dev.sigstore.bundle.v1+json
+        // MUST be application/vnd.dev.sigstore.bundle.v1+json
         string media_type = 1;
         optional RekorEntry rekor_entry = 2;
         // During JSON serialization, the attribute 'verification_material'
         // will not be present. Clients must test for the presence of
-        // either 'public_key' or 'x509Cert'
+        // either 'public_key' or 'x509Cert'.
         oneof verification_material {
                 PublicKey public_key = 3;
                 X509Cert x509_cert = 4;
         }
         // During JSON serialization, the attribute 'attestation'
         // will not be present. Clients must test for the presence of
-        // either 'blob' or 'dsse'
+        // either 'attestationBlob' or 'attestationDsse'.
         oneof attestation {
-                AttestationBlob blob = 5;
-                io.intoto.Envelope dsse = 6;
+                AttestationBlob attestation_blob = 5;
+                io.intoto.Envelope attestation_dsse = 6;
         }
 }

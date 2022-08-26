@@ -12,7 +12,7 @@
     "certificate": "PEM Encoded string",
     "chain": "PEM Encoded string"
   },
-  "dsse": {
+  "attestationDsse": {
     "payload": "eyJrZXkiOiJ2YWx1ZSJ9",
     "payloadType": "application/vnd.in-toto+json",
     "signatures": [

@@ -3,7 +3,7 @@
   "publicKey": {
     "keyId": "hint"
   },
-  "blob": {
+  "attestationBlob": {
     "payloadHash": "aGFzaA==",
     "algorithm": "SHA2_256",
     "signature": "aGVq"

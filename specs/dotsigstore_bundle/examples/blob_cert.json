@@ -4,7 +4,7 @@
     "certificate": "PEM Encoded string",
     "chain": "PEM Encoded string"
   },
-  "blob": {
+  "attestationBlob": {
     "payloadHash": "aGFzaA==",
     "algorithm": "SHA2_256",
     "signature": "aGVq"
