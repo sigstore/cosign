@@ -44,6 +44,8 @@ message RekorEntry {
         string kind = 3;
         string version = 4;
         string signed_entry_timestamp = 5;
+        // Note that this will be encoded as a string in JSON:
+        // https://developers.google.com/protocol-buffers/docs/proto3#json
         int64 integrated_time = 6;
 }
 
