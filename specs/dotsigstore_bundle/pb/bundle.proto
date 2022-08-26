@@ -69,7 +69,7 @@ message Bundle {
         optional RekorEntry rekor_entry = 2;
         // During JSON serialization, the attribute 'verification_material'
         // will not be present. Clients must test for the presence of
-        // either 'public_key' or 'x509Cert'.
+        // either 'publicKey' or 'x509Cert'.
         oneof verification_material {
                 PublicKey public_key = 3;
                 X509Cert x509_cert = 4;
