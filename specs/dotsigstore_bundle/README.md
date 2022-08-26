@@ -13,7 +13,7 @@ imminent need. Getting agreement on this would so enable a solid
 foundation from where the discussion can continue, covering more
 functionality and possible simplifications on the Rekor side.
 
-Included are formal definitions of the bundle format (protobuf),
+Included are formal [definitions](pb/) of the bundle format (protobuf),
 relying on the DSSE protobuf
 [definition](https://github.com/secure-systems-lab/dsse/blob/9c813476bd36de70a5738c72e784f123ecea16af/envelope.proto),
 and some example JSON encodings.
