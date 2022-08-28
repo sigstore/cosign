@@ -37,5 +37,5 @@ fi
 
 echo "Signing cosign images using Keyless..."
 
-$COSIGN_CLI sign -a sha="$GIT_HASH" -a run_id="$GITHUB_RUN_ID" -a run_attempt="$GITHUB_RUN_ATTEMPT" "$(cat cosignImagerefs)"
-$COSIGN_CLI sign -a sha="$GIT_HASH" -a run_id="$GITHUB_RUN_ID" -a run_attempt="$GITHUB_RUN_ATTEMPT" "$(cat sgetImagerefs)"
+$COSIGN_CLI sign -y -a sha="$GIT_HASH" -a run_id="$GITHUB_RUN_ID" -a run_attempt="$GITHUB_RUN_ATTEMPT" $(cat cosignImagerefs)
+$COSIGN_CLI sign -y -a sha="$GIT_HASH" -a run_id="$GITHUB_RUN_ID" -a run_attempt="$GITHUB_RUN_ATTEMPT" $(cat sgetImagerefs)
