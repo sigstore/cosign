@@ -109,7 +109,7 @@ func UploadFiles(ref name.Reference, files []File, annotations map[string]string
 		mt := getMt(b)
 		fmt.Fprintf(os.Stderr, "Uploading file from [%s] to [%s] with media type [%s]\n", f.Path(), ref.Name(), mt)
 
-		img, err := static.NewFile(b, static.WithLayerMediaType(mt))
+		img, err := static.NewFile(b, static.WithLayerMediaType(mt), static.WithAnnotations(annotations))
 		if err != nil {
 			return name.Digest{}, err
 		}
@@ -119,15 +119,7 @@ func UploadFiles(ref name.Reference, files []File, annotations map[string]string
 			return name.Digest{}, err
 		}
 
-		//  cast img to a v1.image
-		v1Img, ok := img.(v1.Image)
-		if !ok {
-			return name.Digest{}, fmt.Errorf("unable to cast image to v1.Image")
-		}
-		if annotations != nil {
-			v1Img = mutate.Annotations(v1Img, annotations).(v1.Image)
-		}
-		if err := remote.Write(ref, v1Img, remoteOpts...); err != nil {
+		if err := remote.Write(ref, img, remoteOpts...); err != nil {
 			return name.Digest{}, err
 		}
 		l, err := img.Layers()
