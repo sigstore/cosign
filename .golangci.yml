@@ -16,7 +16,7 @@
 linters:
   enable:
   - asciicheck
-  - deadcode
+  - unused
   - depguard
   - errcheck
   - errorlint
