@@ -54,7 +54,7 @@ jobs:
     - name: Set correct version of Golang to use during CodeQL run
       uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v2.1.5
       with:
-        go-version: '1.18'
+        go-version: '1.19'
         check-latest: true
 
     # Initializes the CodeQL tools for scanning.
