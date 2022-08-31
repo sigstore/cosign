@@ -51,7 +51,7 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 }
 
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
-func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
+func evaluateCue(_ context.Context, attestation []byte, evaluator string) error {
 	log.Printf("Evaluating attestation: %s", string(attestation))
 	log.Printf("Evaluator: %s", evaluator)
 
@@ -72,7 +72,7 @@ func evaluateCue(ctx context.Context, attestation []byte, evaluator string) erro
 }
 
 // evaluateRego evaluates a rego policy `evaluator` against `attestation`
-func evaluateRego(ctx context.Context, attestation []byte, evaluator string) error {
+func evaluateRego(_ context.Context, attestation []byte, evaluator string) error {
 	log.Printf("Evaluating attestation: %s", string(attestation))
 	log.Printf("Evaluating evaluator: %s", evaluator)
 
