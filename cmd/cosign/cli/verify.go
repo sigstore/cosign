@@ -16,8 +16,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -259,21 +257,31 @@ The blob may be specified as a path to a file or - for stdin.`,
 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ko := options.KeyOpts{
-				KeyRef:     o.Key,
-				Sk:         o.SecurityKey.Use,
-				Slot:       o.SecurityKey.Slot,
-				RekorURL:   o.Rekor.URL,
-				BundlePath: o.BundlePath,
+			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
+			if err != nil {
+				return err
 			}
-			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
-				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain,
-				o.Signature, args[0], o.CertVerify.CertGithubWorkflowTrigger, o.CertVerify.CertGithubWorkflowSha,
-				o.CertVerify.CertGithubWorkflowName, o.CertVerify.CertGithubWorkflowRepository, o.CertVerify.CertGithubWorkflowRef,
-				o.CertVerify.EnforceSCT); err != nil {
-				return fmt.Errorf("verifying blob %s: %w", args, err)
+			v := verify.VerifyBlobCommand{
+				KeyRef:                       o.Key,
+				CertRef:                      o.CertVerify.Cert,
+				CertEmail:                    o.CertVerify.CertEmail,
+				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				CertChain:                    o.CertVerify.CertChain,
+				EnforceSCT:                   o.CertVerify.EnforceSCT,
+				Sk:                           o.SecurityKey.Use,
+				Slot:                         o.SecurityKey.Slot,
+				RekorURL:                     o.Rekor.URL,
+				HashAlgorithm:                hashAlgorithm,
+				BundlePath:                   o.BundlePath,
+				SignatureRef:                 o.SignatureRef,
 			}
-			return nil
+
+			return v.Exec(cmd.Context(), args)
 		},
 	}
 

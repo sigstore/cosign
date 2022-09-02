@@ -109,14 +109,15 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 // VerifyBlobOptions is the top level wrapper for the `verify blob` command.
 type VerifyBlobOptions struct {
-	Key        string
-	Signature  string
-	BundlePath string
+	Key          string
+	SignatureRef string
+	BundlePath   string
 
-	SecurityKey SecurityKeyOptions
-	CertVerify  CertVerifyOptions
-	Rekor       RekorOptions
-	Registry    RegistryOptions
+	SecurityKey     SecurityKeyOptions
+	CertVerify      CertVerifyOptions
+	Rekor           RekorOptions
+	Registry        RegistryOptions
+	SignatureDigest SignatureDigestOptions
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)
@@ -127,11 +128,12 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.SignatureDigest.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 
-	cmd.Flags().StringVar(&o.Signature, "signature", "",
+	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
