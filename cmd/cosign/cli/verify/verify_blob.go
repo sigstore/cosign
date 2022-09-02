@@ -31,10 +31,10 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -117,6 +117,7 @@ func (c *VerifyBlobCommand) Exec(ctx context.Context, blobRefs []string) error {
 	var pubKey signature.Verifier
 	var cert *x509.Certificate
 	var chain []*x509.Certificate
+	var bundle *bundle.RekorBundle
 	switch {
 	case keyRef != "":
 		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
@@ -145,6 +146,7 @@ func (c *VerifyBlobCommand) Exec(ctx context.Context, blobRefs []string) error {
 		if b.Cert == "" {
 			return fmt.Errorf("bundle does not contain cert for verification, please provide public key")
 		}
+		bundle = b.Bundle
 		// cert can either be a cert or public key
 		certBytes := []byte(b.Cert)
 		if isb64(certBytes) {
@@ -206,7 +208,7 @@ func (c *VerifyBlobCommand) Exec(ctx context.Context, blobRefs []string) error {
 		return err
 	}
 
-	verified, bundleVerified, err := cosign.VerifyBlobSignature(ctx, blobBytes, cert, chain, b64sig, bundlePath, co)
+	verified, bundleVerified, err := cosign.VerifyBlobSignature(ctx, blobBytes, cert, chain, b64sig, bundle, co)
 	if err != nil {
 		return err
 	}

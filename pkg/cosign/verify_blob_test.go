@@ -1,0 +1,69 @@
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cosign
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"testing"
+
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+)
+
+func TestIsIntotoDSSEWithEnvelopes(t *testing.T) {
+	tts := []struct {
+		envelope     dsse.Envelope
+		isIntotoDSSE bool
+	}{
+		{
+			envelope: dsse.Envelope{
+				PayloadType: "application/vnd.in-toto+json",
+				Payload:     base64.StdEncoding.EncodeToString([]byte("This is a test")),
+				Signatures:  []dsse.Signature{},
+			},
+			isIntotoDSSE: true,
+		},
+	}
+	for _, tt := range tts {
+		envlopeBytes, _ := json.Marshal(tt.envelope)
+		got := isIntotoDSSE(envlopeBytes)
+		if got != tt.isIntotoDSSE {
+			t.Fatalf("unexpected envelope content")
+		}
+	}
+}
+
+func TestIsIntotoDSSEWithBytes(t *testing.T) {
+	tts := []struct {
+		envelope     []byte
+		isIntotoDSSE bool
+	}{
+		{
+			envelope:     []byte("This is no valid"),
+			isIntotoDSSE: false,
+		},
+		{
+			envelope:     []byte("MEUCIQDBmE1ZRFjUVic1hzukesJlmMFG1JqWWhcthnhawTeBNQIga3J9/WKsNlSZaySnl8V360bc2S8dIln2/qo186EfjHA="),
+			isIntotoDSSE: false,
+		},
+	}
+	for _, tt := range tts {
+		envlopeBytes, _ := json.Marshal(tt.envelope)
+		got := isIntotoDSSE(envlopeBytes)
+		if got != tt.isIntotoDSSE {
+			t.Fatalf("unexpected envelope content")
+		}
+	}
+}
