@@ -16,10 +16,15 @@ package signature
 
 import (
 	"context"
+	"crypto"
+	"errors"
 	"os"
 	"testing"
 
+	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
+	sigsignature "github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
 func generateKeyFile(t *testing.T, tmpDir string, pf cosign.PassFunc) (privFile, pubFile string) {
@@ -131,6 +136,28 @@ func TestSignerVerifierFromEnvVar(t *testing.T) {
 	defer os.Unsetenv("MY_ENV_VAR")
 	if _, err := SignerVerifierFromKeyRef(ctx, "env://MY_ENV_VAR", passFunc); err != nil {
 		t.Fatalf("SignerVerifierFromKeyRef returned error: %v", err)
+	}
+}
+
+func TestVerifierForKeyRefError(t *testing.T) {
+	kms.AddProvider("errorkms://", func(ctx context.Context, _ string, hf crypto.Hash, _ ...sigsignature.RPCOption) (kms.SignerVerifier, error) {
+		return nil, errors.New("bad")
+	})
+	var uerr *blob.UnrecognizedSchemeError
+
+	ctx := context.Background()
+	_, err := PublicKeyFromKeyRef(ctx, "errorkms://bad")
+	if err == nil {
+		t.Fatalf("PublicKeyFromKeyRef didn't return any error")
+	} else if errors.As(err, &uerr) {
+		t.Fatalf("PublicKeyFromKeyRef returned UnrecognizedSchemeError: %v", err)
+	}
+
+	_, err = PublicKeyFromKeyRef(ctx, "badscheme://bad")
+	if err == nil {
+		t.Fatalf("PublicKeyFromKeyRef didn't return any error")
+	} else if !errors.As(err, &uerr) {
+		t.Fatalf("PublicKeyFromKeyRef didn't return UnrecognizedSchemeError: %v", err)
 	}
 }
 

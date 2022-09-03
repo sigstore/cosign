@@ -43,9 +43,19 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 // verifier using the provided hash algorithm
 func VerifierForKeyRef(ctx context.Context, keyRef string, hashAlgorithm crypto.Hash) (verifier signature.Verifier, err error) {
 	// The key could be plaintext, in a file, at a URL, or in KMS.
-	if kmsKey, err := kms.Get(ctx, keyRef, hashAlgorithm); err == nil {
+	var perr *kms.ProviderNotFoundError
+	kmsKey, err := kms.Get(ctx, keyRef, hashAlgorithm)
+	switch {
+	case err == nil:
 		// KMS specified
 		return kmsKey, nil
+	case errors.As(err, &perr):
+		// We can ignore ProviderNotFoundError; that just means the keyRef
+		// didn't match any of the KMS schemes.
+	default:
+		// But other errors indicate something more insidious; pass those
+		// through.
+		return nil, err
 	}
 
 	raw, err := blob.LoadFileOrURL(keyRef)
