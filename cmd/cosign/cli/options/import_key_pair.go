@@ -31,4 +31,5 @@ var _ Interface = (*ImportKeyPairOptions)(nil)
 func (o *ImportKeyPairOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"import key pair to use for signing")
+	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
 }

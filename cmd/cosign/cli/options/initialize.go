@@ -35,4 +35,5 @@ func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Root, "root", "",
 		"path to trusted initial root. defaults to embedded root")
+	_ = cmd.Flags().SetAnnotation("root", cobra.BashCompSubdirsInDir, []string{})
 }
