@@ -208,7 +208,7 @@ func (c *VerifyBlobCommand) Exec(ctx context.Context, blobRefs []string) error {
 		return err
 	}
 
-	verified, bundleVerified, err := cosign.VerifyBlobSignature(ctx, blobBytes, cert, chain, b64sig, bundle, co)
+	verified, bundleVerified, err := cosign.VerifyBlobSignature(ctx, blobBytes, b64sig, bundle, co)
 	if err != nil {
 		return err
 	}

@@ -42,18 +42,14 @@ import (
 type blobSignature struct {
 	payload []byte
 	b64sig  string
-	cert    *x509.Certificate
-	chain   []*x509.Certificate
 	bundle  *bundle.RekorBundle
 	v1.Layer
 }
 
-func newBundleSignature(blobBytes []byte, b64sig string, cert *x509.Certificate, chain []*x509.Certificate, bundle *bundle.RekorBundle) (*blobSignature, error) {
+func newBundleSignature(blobBytes []byte, b64sig string, bundle *bundle.RekorBundle) (*blobSignature, error) {
 	return &blobSignature{
 		payload: blobBytes,
 		b64sig:  b64sig,
-		cert:    cert,
-		chain:   chain,
 		bundle:  bundle,
 	}, nil
 }
@@ -71,11 +67,11 @@ func (s *blobSignature) Base64Signature() (string, error) {
 }
 
 func (s *blobSignature) Cert() (*x509.Certificate, error) {
-	return s.cert, nil
+	return nil, errors.New("no cert in blobSignature")
 }
 
 func (s *blobSignature) Chain() ([]*x509.Certificate, error) {
-	return s.chain, nil
+	return nil, errors.New("no cert chain in blobSignature")
 }
 
 func (s *blobSignature) Bundle() (*bundle.RekorBundle, error) {
@@ -83,8 +79,8 @@ func (s *blobSignature) Bundle() (*bundle.RekorBundle, error) {
 }
 
 // VerifyBlobSignature verifies a signature
-func VerifyBlobSignature(ctx context.Context, blobBytes []byte, cert *x509.Certificate, chain []*x509.Certificate, b64sig string, bundle *bundle.RekorBundle, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
-	sig, err := newBundleSignature(blobBytes, b64sig, cert, chain, bundle)
+func VerifyBlobSignature(ctx context.Context, blobBytes []byte, b64sig string, bundle *bundle.RekorBundle, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	sig, err := newBundleSignature(blobBytes, b64sig, bundle)
 	if err != nil {
 		return checkedSignatures, bundleVerified, errors.Wrap(err, "failed to create bundle signature")
 	}
