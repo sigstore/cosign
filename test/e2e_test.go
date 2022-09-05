@@ -109,6 +109,21 @@ var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[st
 	return cmd.Exec(context.Background(), args)
 }
 
+var verifyBlob = func(keyRef, sigRef, blobRef, bundlePath string) error {
+	cmd := cliverify.VerifyBlobCommand{
+		KeyRef:        keyRef,
+		SignatureRef:  sigRef,
+		BundlePath:    bundlePath,
+		RekorURL:      rekorURL,
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
+	}
+
+	args := []string{blobRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
 var ro = &options.RootOptions{Timeout: options.DefaultTimeout}
 
 func TestSignVerify(t *testing.T) {
@@ -620,15 +635,9 @@ func TestSignBlob(t *testing.T) {
 
 	ctx := context.Background()
 
-	ko1 := options.KeyOpts{
-		KeyRef: pubKeyPath1,
-	}
-	ko2 := options.KeyOpts{
-		KeyRef: pubKeyPath2,
-	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "", "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "", "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	mustErr(verifyBlob(pubKeyPath1, "badsig", blob, ""), t)
+	mustErr(verifyBlob(pubKeyPath2, "badsig", blob, ""), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -640,8 +649,8 @@ func TestSignBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "", "", "", "", "", false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "", "", "", "", "", false), t)
+	must(verifyBlob(pubKeyPath1, string(sig), bp, ""), t)
+	mustErr(verifyBlob(pubKeyPath2, string(sig), bp, ""), t)
 }
 
 func TestSignBlobBundle(t *testing.T) {
@@ -661,12 +670,8 @@ func TestSignBlobBundle(t *testing.T) {
 
 	ctx := context.Background()
 
-	ko1 := options.KeyOpts{
-		KeyRef:     pubKeyPath1,
-		BundlePath: bundlePath,
-	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", "", blob, "", "", "", "", "", false), t)
+	mustErr(verifyBlob(pubKeyPath1, "", blob, bundlePath), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -679,7 +684,7 @@ func TestSignBlobBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", "", bp, "", "", "", "", "", false), t)
+	must(verifyBlob(pubKeyPath1, "", bp, bundlePath), t)
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, options.ExperimentalEnv, "1")()
@@ -689,7 +694,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", "", bp, "", "", "", "", "", false), t)
+	must(verifyBlob(pubKeyPath1, "", bp, bundlePath), t)
 }
 
 func TestGenerate(t *testing.T) {

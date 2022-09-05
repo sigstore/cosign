@@ -47,6 +47,12 @@ type blobSignature struct {
 }
 
 func newBundleSignature(blobBytes []byte, b64sig string, bundle *bundle.RekorBundle) (*blobSignature, error) {
+	if blobBytes == nil {
+		return nil, errors.New("blobBytes must be non nil")
+	}
+	if b64sig == "" {
+		return nil, errors.New("b64sig must be non empty string")
+	}
 	return &blobSignature{
 		payload: blobBytes,
 		b64sig:  b64sig,
