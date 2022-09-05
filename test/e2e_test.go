@@ -115,7 +115,6 @@ var verifyBlob = func(keyRef, sigRef, blobRef, bundlePath string) error {
 		SignatureRef:  sigRef,
 		BundlePath:    bundlePath,
 		RekorURL:      rekorURL,
-		Attachment:    attachment,
 		HashAlgorithm: crypto.SHA256,
 	}
 
@@ -633,8 +632,6 @@ func TestSignBlob(t *testing.T) {
 	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
 	_, _, pubKeyPath2 := keypair(t, td2)
 
-	ctx := context.Background()
-
 	// Verify should fail on a bad input
 	mustErr(verifyBlob(pubKeyPath1, "badsig", blob, ""), t)
 	mustErr(verifyBlob(pubKeyPath2, "badsig", blob, ""), t)
@@ -667,8 +664,6 @@ func TestSignBlobBundle(t *testing.T) {
 	}
 
 	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
-
-	ctx := context.Background()
 
 	// Verify should fail on a bad input
 	mustErr(verifyBlob(pubKeyPath1, "", blob, bundlePath), t)
