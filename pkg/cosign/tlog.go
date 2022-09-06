@@ -42,7 +42,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
-	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
@@ -84,7 +83,7 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 }
 
 func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.ProposedEntry, error) {
-	return types.NewProposedEntry(ctx, intoto.KIND, intoto_v001.APIVERSION, types.ArtifactProperties{
+	return types.NewProposedEntry(ctx, intoto.KIND, "", types.ArtifactProperties{
 		ArtifactBytes:  signature,
 		PublicKeyBytes: pubKey,
 	})
