@@ -101,7 +101,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
-      - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa 
       - name: setup kind cluster
         run: |
           # Used to test: cosign generate-key-pair k8s://...
