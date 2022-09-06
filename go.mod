@@ -29,7 +29,7 @@ require (
 	github.com/sigstore/sigstore v1.4.1-0.20220823190236-c645ceb9d075
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.12.0
+	github.com/spf13/viper v1.13.0
 	github.com/spiffe/go-spiffe/v2 v2.1.1
 	github.com/stretchr/testify v1.8.0
 	github.com/theupdateframework/go-tuf v0.3.1
@@ -217,7 +217,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -239,7 +239,7 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/subosito/gotenv v1.3.0 // indirect
+	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
