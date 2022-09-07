@@ -28,24 +28,26 @@ import (
 )
 
 const (
-	PredicateCustom    = "custom"
-	PredicateSLSA      = "slsaprovenance"
-	PredicateSPDX      = "spdx"
-	PredicateSPDXJSON  = "spdxjson"
-	PredicateCycloneDX = "cyclonedx"
-	PredicateLink      = "link"
-	PredicateVuln      = "vuln"
+	PredicateCustom       = "custom"
+	PredicateSLSA         = "slsaprovenance"
+	PredicateSPDX         = "spdx"
+	PredicateSPDXJSON     = "spdxjson"
+	PredicateCycloneDX    = "cyclonedx"
+	PredicateCycloneDXXML = "cyclonedxxml"
+	PredicateLink         = "link"
+	PredicateVuln         = "vuln"
 )
 
 // PredicateTypeMap is the mapping between the predicate `type` option to predicate URI.
 var PredicateTypeMap = map[string]string{
-	PredicateCustom:    attestation.CosignCustomProvenanceV01,
-	PredicateSLSA:      slsa.PredicateSLSAProvenance,
-	PredicateSPDX:      in_toto.PredicateSPDX,
-	PredicateSPDXJSON:  in_toto.PredicateSPDX,
-	PredicateCycloneDX: in_toto.PredicateCycloneDX,
-	PredicateLink:      in_toto.PredicateLinkV1,
-	PredicateVuln:      attestation.CosignVulnProvenanceV01,
+	PredicateCustom:       attestation.CosignCustomProvenanceV01,
+	PredicateSLSA:         slsa.PredicateSLSAProvenance,
+	PredicateSPDX:         in_toto.PredicateSPDX,
+	PredicateSPDXJSON:     in_toto.PredicateSPDX,
+	PredicateCycloneDX:    in_toto.PredicateCycloneDX,
+	PredicateCycloneDXXML: in_toto.PredicateCycloneDX,
+	PredicateLink:         in_toto.PredicateLinkV1,
+	PredicateVuln:         attestation.CosignVulnProvenanceV01,
 }
 
 // PredicateOptions is the wrapper for predicate related options.
@@ -58,7 +60,7 @@ var _ Interface = (*PredicateOptions)(nil)
 // AddFlags implements Interface
 func (o *PredicateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Type, "type", "custom",
-		"specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI")
+		"specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|cyclonedxxml|vuln|custom) or an URI")
 }
 
 // ParsePredicateType parses the predicate `type` flag passed into a predicate URI, or validates `type` is a valid URI.

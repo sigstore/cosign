@@ -17,6 +17,7 @@ package attestation
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"reflect"
@@ -115,6 +116,8 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, true)
 	case "cyclonedx":
 		return generateCycloneDXStatement(predicate, opts.Digest, opts.Repo)
+	case "cyclonedxxml":
+		return generateCycloneDXXMLStatement(predicate, opts.Digest, opts.Repo)
 	case "link":
 		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
 	case "vuln":
@@ -250,6 +253,19 @@ func generateSPDXStatement(rawPayload []byte, digest string, repo string, parseJ
 func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
 	var data interface{}
 	if err := json.Unmarshal(rawPayload, &data); err != nil {
+		return nil, err
+	}
+	return in_toto.SPDXStatement{
+		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateCycloneDX),
+		Predicate: CosignPredicate{
+			Data: data,
+		},
+	}, nil
+}
+
+func generateCycloneDXXMLStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
+	var data interface{}
+	if err := xml.Unmarshal(rawPayload, &data); err != nil {
 		return nil, err
 	}
 	return in_toto.SPDXStatement{
