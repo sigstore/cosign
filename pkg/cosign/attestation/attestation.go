@@ -26,6 +26,7 @@ import (
 
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 
+	cyclonexd "github.com/CycloneDX/cyclonedx-go"
 	"github.com/in-toto/in-toto-golang/in_toto"
 )
 
@@ -264,7 +265,7 @@ func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (
 }
 
 func generateCycloneDXXMLStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var data interface{}
+	var data cyclonexd.BOM
 	if err := xml.Unmarshal(rawPayload, &data); err != nil {
 		return nil, err
 	}
