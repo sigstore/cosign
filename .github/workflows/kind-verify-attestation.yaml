@@ -51,10 +51,10 @@ jobs:
         check-latest: true
 
     # will use the latest release available for ko
-    - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa 
+    - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
 
     - name: Install yq
-      uses: mikefarah/yq@3d11b0545dbc0712c2045dc9e8b6c95b298e824e # v4.25.1
+      uses: mikefarah/yq@9b6961875e10b058aeb482f263f26ca0f6b18eb8 # v4.27.5
 
     - name: build cosign
       run: |
