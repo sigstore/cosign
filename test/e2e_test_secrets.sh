@@ -118,8 +118,8 @@ if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblo
 ./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob2
 
 ./cosign sign-blob --key ${signing_key} --bundle bundle.sig myblob
-# expected to fail because the local bundle does not contain a rekor bundle
-if (./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob); then false; fi
+# passes when local bundle only contains the key and signature
+./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob
 
 ## sign and verify multiple blobs
 ./cosign sign-blob --key ${signing_key} myblob myblob2 > sigs
