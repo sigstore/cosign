@@ -5,33 +5,79 @@ package sigstore;
 import "envelope.proto";
 
 option go_package = "github.com/sigstore/xxx/bundle";
+option java_package = "com.github.sigstore.xxx.bundle";
 
+// Notes on versioning.
+// The primary message ('Bundle') MUST be versioned, by populating the
+// 'media_type' field. Semver-ish (only major/minor versions) scheme MUST
+// be used. The current version as specified by this file is:
+// application/vnd.dev.sigstore.bundle.v0.1+json
+// The semantic version is thus 'v0.1'.
+
+// Only a subset of the secure hash standard algorithms are supported.
+// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf for more
+// details.
 enum HashAlgorithm {
-        SHA2_224 = 0;
-        SHA2_256 = 1;
-        SHA2_384 = 2;
-        SHA2_512 = 3;
-        SHA2_512_224 = 4;
-        SHA2_512_256 = 5;
+        SHA2_256 = 0;
+        SHA2_512 = 1;
 }
 
-message AttestationBlob {
-        // In JSON encoding this shall be base64 encoded.
-        bytes payload_hash = 1;
-        HashAlgorithm algorithm = 2;
-        // In JSON encoding this shall be base64 encoded.
-        bytes signature = 3;
+// HashOutput captures a digest of a 'message' and the corresponding hash
+// algorithm used.
+message HashOutput {
+        HashAlgorithm algorithm = 1;
+        // This is the raw octets of the message digest as computed by
+        // the hash algorithm.
+        bytes digest = 2;
 }
 
-// RekorEntry is a separate type, capturing all the details required
+// MessageSignature stores the computed signature over a message's (generic
+// octet sequence) digest.
+message MessageSignature {
+        HashOutput payload_digest = 1;
+        bytes signature = 2;
+}
+
+// RekorKindVersion contains the entry's kind and api version.
+message RekorKindVersion {
+        // Kind is the type of entry being stored in the log.
+        // See here for a list: https://github.com/sigstore/rekor/tree/main/pkg/types
+        string kind = 3;
+        // The specific api version of the type.
+        string version = 4;
+}
+
+// InclusionProof is the proof returned from the transparency log. Can
+// be used for on line verification against the log.
+message InclusionProof {
+        // The index of the entry in the log.
+        int64 log_index = 1;
+        // The hash value stored at the root of the merkle tree at the time
+        // the proof was generated, hex encoded.
+        string root_hash = 2;
+        // The size of the merkle tree at the time the proof was generated.
+        int64 tree_size = 3;
+        // A list of hashes required to compute the inclusion proof, sorted
+        // in order from leaf to root. Each hash value is hex encoded.
+        repeated string hashes = 4;
+        // The signed tree head that the inclusion proof is based on. The
+        // signature is base64 encoded.
+        string checkpoint = 5;
+}
+
+// TransparencyLogEntry is a separate type, capturing all the details required
 // from Rekor to reconstruct an entry, given that the payload is provided
 // via other means.
 // This type can easily be created from the existing response from Rekor.
 // Future iterations could rely on Rekor returning the minimal set of
 // attributes (excluding the payload) that are required for verifying the
-// SET.
-message RekorEntry {
+// inclusion promise. The inclusion promise (called SignedEntryTimestamp
+// the response from Rekor) is similar to a Signed Certificate Timestamp
+// as described here https://www.rfc-editor.org/rfc/rfc9162#name-signed-certificate-timestam.
+message TransparencyLogEntry {
+        // The index of the entry in the log.
         int64 log_index = 1;
+        // The unique (binary) identifier of the log, as a hex-encoded string.
         string log_id = 2;
         // Even if kind can be derived from the attestation type it's kept
         // as this struct could be automatically created by the sigstore
@@ -41,44 +87,81 @@ message RekorEntry {
         // any possibility of error due to attestation/kind matching logic,
         // as that logic must be hard-coded in the client. With this construct
         // it's only determined during publish to Rekor.
-        string kind = 3;
-        string version = 4;
-        string signed_entry_timestamp = 5;
-        // Note that this will be encoded as a string in JSON:
-        // https://developers.google.com/protocol-buffers/docs/proto3#json
-        int64 integrated_time = 6;
+        RekorKindVersion kind_version = 3;
+        // The UNIX timestamp from the log when the entry was persisted.
+        int64 integrated_time = 4;
+        // The inclusion promise is calculated by Rekor. It's calculated as a
+        // signature over the persisted entry, the log ID, log index and the
+        // integration timestamp. The signature is base64 encoded.
+        // This is primarily used to verify the
+        // integration timestamp's value.
+        string inclusion_promise = 5;
+        // The inclusion proof can be used for online verification that the
+        // entry was appended to the log, and that the log has not been
+        // altered.
+        InclusionProof inclusion_proof = 6;
 }
 
-message PublicKey {
+// A list of base64 encoded RFC3161 signed timestamps.
+message SignedTimestamps {
+        repeated string signed_timestamps = 1;
+}
+
+// This message contains the transparency log entry (inclusion promise and
+// proof) and signed timestamps, provided by sigstore and/or the user.
+message TimestampedTransparencyLogEntry {
+        TransparencyLogEntry tlog_entry = 1;
+        SignedTimestamps timestamps = 2;
+}
+
+message VerificationData {
+        oneof data {
+                // This is the regular inclusion promise and proof, where
+                // the timestamp is coming from the transparency log
+                TransparencyLogEntry tlog_entry = 1;
+                // This is the regular inclusion promise and proof, where
+                // the timestamp is coming from both the transparency log,
+                // and RFC3161 timestamps provided by Sigstore and user.
+                TimestampedTransparencyLogEntry timestamped_tlog_entry = 2;
+                // A list of RFC3161 signed timestamps provided by the user.
+                // This can be used when the entry has not been stored on a
+                // transparency log.
+                SignedTimestamps timestamps = 4;
+        }
+}
+
+// PublicKeyIdentifier can be used to identify an (out of band) delivered
+// key, to verify a signature.
+message PublicKeyIdentifier {
         // Optional unauthenticated hint on which key to use.
-        // If a DSSE envelope is signed, at least one of the signatures
-        // MUST have a signature with the same key id.
-        string key_id = 1;
+        // The format of the hint must be agreed upon out of band by the
+        // signer and the verifiers, and so is not subject to this
+        // specification.
+        string hint = 1;
 }
 
-message X509Cert {
-        // PEM encoded certificate.
-        string certificate = 1;
-        // PEM encoded certificate chain.
-        string chain = 2;
+message X509Certificate {
+        // PEM encoded certificate(s), with indices 0 to n.
+        // For information on PEM encoding, see
+        // https://www.rfc-editor.org/rfc/rfc7468#section-2.
+        // The first certificate in the array
+        // must be the leaf certificate used for signing. Any intermediate
+        // certificates must be stored as offset 1 to n-1, and the root
+        // certificate at position n.
+        repeated string certificates = 1;
 }
 
 message Bundle {
-        // MUST be application/vnd.dev.sigstore.bundle.v1+json
+        // MUST be application/vnd.dev.sigstore.bundle.v0.1+json
+        // when encoded as JSON.
         string media_type = 1;
-        optional RekorEntry rekor_entry = 2;
-        // During JSON serialization, the attribute 'verification_material'
-        // will not be present. Clients must test for the presence of
-        // either 'publicKey' or 'x509Cert'.
+        optional VerificationData verification_data = 2;
         oneof verification_material {
-                PublicKey public_key = 3;
-                X509Cert x509_cert = 4;
+                PublicKeyIdentifier public_key = 3;
+                X509Certificate x509_certificate = 4;
         }
-        // During JSON serialization, the attribute 'attestation'
-        // will not be present. Clients must test for the presence of
-        // either 'attestationBlob' or 'attestationDsse'.
         oneof attestation {
-                AttestationBlob attestation_blob = 5;
+                MessageSignature message_signature = 5;
                 io.intoto.Envelope attestation_dsse = 6;
         }
 }
