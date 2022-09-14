@@ -1,3 +1,97 @@
+# v1.12.0
+
+**Note: This release comes with a fix for `CVE-2022-36056` described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-8gw7-4j42-w388). Please upgrade to this release ASAP**
+
+## Enhancements
+
+* Add deprecation warning for sget CLI and packages (https://github.com/sigstore/cosign/pull/2019)
+* feat: set annotations to generate additional bash completion information (https://github.com/sigstore/cosign/pull/2221)
+* feat: integrate Alibaba Cloud Container Registry cred helper (https://github.com/sigstore/cosign/pull/2008)
+* Support non-ECDSA key types for verify-blob (https://github.com/sigstore/cosign/pull/2203)
+
+## Bug Fixes
+
+* fix: fix secret test, non-experimental bundle should pass (https://github.com/sigstore/cosign/pull/2249)
+* Fix e2e test failure, add test for local bundle without rekor bundle (https://github.com/sigstore/cosign/pull/2248)
+* Clarify error when KMS provider fails to load (https://github.com/sigstore/cosign/pull/2220)
+
+## Others
+
+* Bump ossf/scorecard-action from 2.0.1 to 2.0.3 (https://github.com/sigstore/cosign/pull/2243)
+* update kind to use release v0.15.0 and some version comments (https://github.com/sigstore/cosign/pull/2246)
+* Bump sigstore/cosign-installer from 2.5.1 to 2.6.0 (https://github.com/sigstore/cosign/pull/2242)
+* Bump github.com/theupdateframework/go-tuf from 0.3.1 to 0.5.0 (https://github.com/sigstore/cosign/pull/2232)
+* update go builder to go1.19.1 (https://github.com/sigstore/cosign/pull/2241)
+* Bump ossf/scorecard-action from 2.0.0 to 2.0.1 (https://github.com/sigstore/cosign/pull/2238)
+* Bump mikefarah/yq from 4.27.3 to 4.27.5 (https://github.com/sigstore/cosign/pull/2239)
+* Bump github.com/open-policy-agent/opa from 0.43.0 to 0.44.0 (https://github.com/sigstore/cosign/pull/2234)
+* Bump ossf/scorecard-action from 2.0.0.pre.alpha.2 to 2.0.0 (https://github.com/sigstore/cosign/pull/2235)
+* Bump github.com/google/go-cmp from 0.5.8 to 0.5.9 (https://github.com/sigstore/cosign/pull/2233)
+* Bump google.golang.org/api from 0.94.0 to 0.95.0 (https://github.com/sigstore/cosign/pull/2229)
+* upgrade setup-ko to point to new repo (https://github.com/sigstore/cosign/pull/2225)
+* Bump github.com/spf13/viper from 1.12.0 to 1.13.0 (https://github.com/sigstore/cosign/pull/2224)
+* Bump google-github-actions/auth from 0.8.0 to 0.8.1 (https://github.com/sigstore/cosign/pull/2218)
+* Bump github/codeql-action from 2.1.21 to 2.1.22 (https://github.com/sigstore/cosign/pull/2217)
+* Upgrade to go1.19 (https://github.com/sigstore/cosign/pull/2213)
+* Bump mikefarah/yq from 4.27.2 to 4.27.3 (https://github.com/sigstore/cosign/pull/2206)
+* remove doubl quotes, looks like it is passing as a single string to cosign and not as an array (https://github.com/sigstore/cosign/pull/2205)
+* Bump actions/github-script from 6.1.1 to 6.2.0 (https://github.com/sigstore/cosign/pull/2207)
+* Bump github/codeql-action from 2.1.20 to 2.1.21 (https://github.com/sigstore/cosign/pull/2202)
+* use scaffolding v0.4.6. (https://github.com/sigstore/cosign/pull/2201)
+* Bump google.golang.org/api from 0.93.0 to 0.94.0 (https://github.com/sigstore/cosign/pull/2200)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Engin Diri (@dirien)
+* Hayden Blauzvern (@haydentherapper)
+* Huang Huang (@mozillazg)
+* Jason Hall (@imjasonh)
+* Priya Wadhwa (@priyawadhwa)
+* Ville Aikas (@vaikas)
+* Zack Newman (@znewman01)
+
+# v1.11.1
+
+## Enhancements
+
+* feat: Rework fig autocomplete command (https://github.com/sigstore/cosign/pull/2187)
+
+## Bug Fixes
+
+* fix: fix typo that caused attestation verification failure (https://github.com/sigstore/cosign/pull/2199)
+
+## Documention
+
+* add release cadence section in the readme (https://github.com/sigstore/cosign/pull/2179)
+
+## Others
+
+* Bump actions/cache from 3.0.7 to 3.0.8 (https://github.com/sigstore/cosign/pull/2192)
+* Bump actions/dependency-review-action from 2.0.4 to 2.1.0 (https://github.com/sigstore/cosign/pull/2185)
+* Bump actions/setup-go from 3.2.1 to 3.3.0 (https://github.com/sigstore/cosign/pull/2196)
+* Bump github.com/go-openapi/swag from 0.22.1 to 0.22.3 (https://github.com/sigstore/cosign/pull/2182)
+* Bump github.com/sigstore/fulcio from 0.5.2 to 0.5.3 (https://github.com/sigstore/cosign/pull/2190)
+* Bump github.com/sigstore/rekor from 0.10.0 to 0.11.0 (https://github.com/sigstore/cosign/pull/2181)
+* Bump github.com/xanzy/go-gitlab from 0.72.0 to 0.73.0 (https://github.com/sigstore/cosign/pull/2191)
+* Bump github.com/xanzy/go-gitlab from 0.73.0 to 0.73.1 (https://github.com/sigstore/cosign/pull/2195)
+* Bump github/codeql-action from 2.1.18 to 2.1.19 (https://github.com/sigstore/cosign/pull/2184)
+* Bump github/codeql-action from 2.1.19 to 2.1.20 (https://github.com/sigstore/cosign/pull/2193)
+* Bump google.golang.org/api from 0.92.0 to 0.93.0 (https://github.com/sigstore/cosign/pull/2183)
+* Update Scorecard action to v2:alpha (https://github.com/sigstore/cosign/pull/2177)
+* add stale workflow using the workflow template (https://github.com/sigstore/cosign/pull/2175)
+* bump fulcio dep to 0.5.2 (https://github.com/sigstore/cosign/pull/2176)
+* bump scaffold in tests to use release v0.4.5 (https://github.com/sigstore/cosign/pull/2180)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Azeem Shaikh (@azeemshaikh38)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Engin Diri (@dirien)
+* Kenny Leung (@k4leung4)
+
 # v1.11.0
 
 ## Enhancements
