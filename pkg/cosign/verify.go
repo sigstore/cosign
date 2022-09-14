@@ -992,7 +992,7 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	// verify the SET against the public key
 	hash := sha256.Sum256(canonicalized)
 	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
-		return &VerificationError{"unable to verify"}
+		return &VerificationError{"unable to verify SET"}
 	}
 	return nil
 }

@@ -23,6 +23,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -46,11 +47,13 @@ import (
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	rtypes "github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/stretchr/testify/require"
+	"github.com/transparency-dev/merkle/rfc6962"
 )
 
 type mockVerifier struct {
@@ -343,6 +346,40 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 	}
 }
 
+var (
+	lea = models.LogEntryAnon{
+		Attestation:    &models.LogEntryAnonAttestation{},
+		Body:           base64.StdEncoding.EncodeToString([]byte("asdf")),
+		IntegratedTime: new(int64),
+		LogID:          new(string),
+		LogIndex:       new(int64),
+		Verification: &models.LogEntryAnonVerification{
+			InclusionProof: &models.InclusionProof{
+				RootHash: new(string),
+				TreeSize: new(int64),
+				LogIndex: new(int64),
+			},
+		},
+	}
+	data = models.LogEntry{
+		uuid(lea): lea,
+	}
+)
+
+// uuid generates the UUID for the given LogEntry.
+// This is effectively a reimplementation of
+// pkg/cosign/tlog.go -> verifyUUID / ComputeLeafHash, but separated
+// to avoid a circular dependency.
+// TODO?: Perhaps we should refactor the tlog libraries into a separate
+// package?
+func uuid(e models.LogEntryAnon) string {
+	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	if err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(entryBytes))
+}
+
 // This test ensures that image signature validation fails properly if we are
 // using a SigVerifier with Rekor.
 // See https://github.com/sigstore/cosign/issues/1816 for more details.
@@ -361,7 +398,9 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	// tlog entry for the signature during validation (even though it does not
 	// match the underlying data / key)
 	mClient := new(client.Rekor)
-	mClient.Entries = &mock.EntriesClient{}
+	mClient.Entries = &mock.EntriesClient{
+		Entries: &data,
+	}
 
 	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		SigVerifier: sv,

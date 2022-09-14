@@ -69,7 +69,7 @@ func GenerateRootCa() (*x509.Certificate, *ecdsa.PrivateKey, error) {
 			CommonName:   "sigstore",
 			Organization: []string{"sigstore.dev"},
 		},
-		NotBefore:             time.Now().Add(-5 * time.Minute),
+		NotBefore:             time.Now().Add(-5 * time.Hour),
 		NotAfter:              time.Now().Add(5 * time.Hour),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
@@ -115,6 +115,34 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 	}
 
 	return cert, priv, nil
+}
+
+func GenerateLeafCertWithExpiration(subject string, oidcIssuer string, expiration time.Time,
+	priv *ecdsa.PrivateKey,
+	parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, error) {
+	certTemplate := &x509.Certificate{
+		SerialNumber:   big.NewInt(1),
+		EmailAddresses: []string{subject},
+		NotBefore:      expiration,
+		NotAfter:       expiration.Add(10 * time.Minute),
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		IsCA:           false,
+		ExtraExtensions: []pkix.Extension{{
+			// OID for OIDC Issuer extension
+			Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
+			Critical: false,
+			Value:    []byte(oidcIssuer),
+		},
+		},
+	}
+
+	cert, err := createCertificate(certTemplate, parentTemplate, &priv.PublicKey, parentPriv)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }
 
 func GenerateLeafCert(subject string, oidcIssuer string, parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
