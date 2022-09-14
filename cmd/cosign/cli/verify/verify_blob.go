@@ -72,6 +72,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 	certGithubWorkflowRepository,
 	certGithubWorkflowRef string, enforceSCT bool) error {
 	var cert *x509.Certificate
+	var bundle *bundle.RekorBundle
 
 	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() && ko.BundlePath == "" {
 		return &options.PubKeyParseError{}
@@ -178,13 +179,11 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
 		} else {
 			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
-			if err != nil {
-				return err
-			}
 		}
 		if err != nil {
 			return err
 		}
+		bundle = b.Bundle
 	// No certificate is provided: search by artifact sha in the TLOG.
 	case options.EnableExperimental():
 		uuids, err := cosign.FindTLogEntriesByPayload(ctx, co.RekorClient, blobBytes)
@@ -219,7 +218,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			}
 
 			if err := verifyBlob(ctx, co, blobBytes, sig, cert,
-				ko.BundlePath, tlogEntry); err == nil {
+				nil, tlogEntry); err == nil {
 				// We found a succesful Rekor entry!
 				fmt.Fprintln(os.Stderr, "Verified OK")
 				return nil
@@ -237,7 +236,7 @@ We recommend requesting the certificate/signature from the original signer of th
 	}
 
 	// Performs all blob verification.
-	if err := verifyBlob(ctx, co, blobBytes, sig, cert, ko.BundlePath, nil); err != nil {
+	if err := verifyBlob(ctx, co, blobBytes, sig, cert, bundle, nil); err != nil {
 		return err
 	}
 
@@ -258,7 +257,7 @@ We recommend requesting the certificate/signature from the original signer of th
 // clean up the args into CheckOpts or use KeyOpts here to resolve different KeyOpts.
 func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 	blobBytes []byte, sig string, cert *x509.Certificate,
-	bundlePath string, e *models.LogEntryAnon) error {
+	bundle *bundle.RekorBundle, e *models.LogEntryAnon) error {
 	if cert != nil {
 		// This would have already be done in the main entrypoint, but do this for robustness.
 		var err error
@@ -287,7 +286,7 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 	// 2. Checks for transparency log entry presence:
 	switch {
 	// a. We have a local bundle.
-	case bundlePath != "":
+	case bundle != nil:
 		var svBytes []byte
 		var err error
 		if cert != nil {
@@ -301,7 +300,7 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 				return fmt.Errorf("marshalling pubkey: %w", err)
 			}
 		}
-		bundle, err := verifyRekorBundle(ctx, bundlePath, co.RekorClient, blobBytes, sig, svBytes)
+		bundle, err := verifyRekorBundle(ctx, bundle, co.RekorClient, blobBytes, sig, svBytes)
 		if err != nil {
 			// Return when the provided bundle fails verification. (Do not fallback).
 			return err
@@ -433,17 +432,9 @@ func payloadBytes(blobRef string) ([]byte, error) {
 
 // TODO: RekorClient can be removed when SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY
 // is removed.
-func verifyRekorBundle(ctx context.Context, bundlePath string, rekorClient *client.Rekor,
+func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle, rekorClient *client.Rekor,
 	blobBytes []byte, sig string, pubKeyBytes []byte) (*bundle.RekorPayload, error) {
-	b, err := cosign.FetchLocalSignedPayloadFromPath(bundlePath)
-	if err != nil {
-		return nil, err
-	}
-	if b.Bundle == nil {
-		return nil, fmt.Errorf("rekor entry could not be extracted from local bundle")
-	}
-
-	if err := verifyBundleMatchesData(ctx, b.Bundle, blobBytes, pubKeyBytes, []byte(sig)); err != nil {
+	if err := verifyBundleMatchesData(ctx, bundle, blobBytes, pubKeyBytes, []byte(sig)); err != nil {
 		return nil, err
 	}
 
@@ -452,11 +443,11 @@ func verifyRekorBundle(ctx context.Context, bundlePath string, rekorClient *clie
 		return nil, fmt.Errorf("retrieving rekor public key: %w", err)
 	}
 
-	pubKey, ok := publicKeys[b.Bundle.Payload.LogID]
+	pubKey, ok := publicKeys[bundle.Payload.LogID]
 	if !ok {
 		return nil, errors.New("rekor log public key not found for payload")
 	}
-	err = cosign.VerifySET(b.Bundle.Payload, b.Bundle.SignedEntryTimestamp, pubKey.PubKey)
+	err = cosign.VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +455,7 @@ func verifyRekorBundle(ctx context.Context, bundlePath string, rekorClient *clie
 		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
-	return &b.Bundle.Payload, nil
+	return &bundle.Payload, nil
 }
 
 func verifyBundleMatchesData(ctx context.Context, bundle *bundle.RekorBundle, blobBytes, certBytes, sigBytes []byte) error {

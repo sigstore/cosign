@@ -294,7 +294,7 @@ func TestVerifyBlob(t *testing.T) {
 			sigVerifier:  signer,
 			experimental: false,
 			bundlePath:   makeLocalBundleWithoutRekorBundle(t, []byte(blobSignature), pubKeyBytes),
-			shouldErr:    true,
+			shouldErr:    false,
 		},
 		{
 			name:         "valid signature with public key - bad bundle SET",
@@ -541,7 +541,13 @@ func TestVerifyBlob(t *testing.T) {
 				co.RekorClient = &mClient
 			}
 
-			err := verifyBlob(ctx, co, tt.blob, tt.signature, tt.cert, tt.bundlePath, nil)
+			var bundle *bundle.RekorBundle
+			b, err := cosign.FetchLocalSignedPayloadFromPath(tt.bundlePath)
+			if err == nil && b.Bundle != nil {
+				bundle = b.Bundle
+			}
+
+			err = verifyBlob(ctx, co, tt.blob, tt.signature, tt.cert, bundle, nil)
 			if (err != nil) != tt.shouldErr {
 				t.Fatalf("verifyBlob()= %s, expected shouldErr=%t ", err, tt.shouldErr)
 			}
