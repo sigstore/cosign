@@ -110,13 +110,16 @@ echo "myblob2" > myblob2
 ./cosign sign-blob --key ${signing_key} myblob2 > myblob2.sig
 
 ./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob
+# expected to fail because signature mismatch
 if (./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob2); then false; fi
 
+# expected to fail because signature mismatch
 if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob); then false; fi
 ./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob2
 
 ./cosign sign-blob --key ${signing_key} --bundle bundle.sig myblob
-./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob
+# expected to fail because the local bundle does not contain a rekor bundle
+if (./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob); then false; fi
 
 ## sign and verify multiple blobs
 ./cosign sign-blob --key ${signing_key} myblob myblob2 > sigs
