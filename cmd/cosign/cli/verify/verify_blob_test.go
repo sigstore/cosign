@@ -288,6 +288,15 @@ func TestVerifyBlob(t *testing.T) {
 			shouldErr: false,
 		},
 		{
+			name:         "valid signature with public key - bundle without rekor bundle fails",
+			blob:         blobBytes,
+			signature:    blobSignature,
+			sigVerifier:  signer,
+			experimental: false,
+			bundlePath:   makeLocalBundleWithoutRekorBundle(t, []byte(blobSignature), pubKeyBytes),
+			shouldErr:    false,
+		},
+		{
 			name:         "valid signature with public key - bad bundle SET",
 			blob:         blobBytes,
 			signature:    blobSignature,
@@ -532,7 +541,13 @@ func TestVerifyBlob(t *testing.T) {
 				co.RekorClient = &mClient
 			}
 
-			err := verifyBlob(ctx, co, tt.blob, tt.signature, tt.cert, tt.bundlePath, nil)
+			var bundle *bundle.RekorBundle
+			b, err := cosign.FetchLocalSignedPayloadFromPath(tt.bundlePath)
+			if err == nil && b.Bundle != nil {
+				bundle = b.Bundle
+			}
+
+			err = verifyBlob(ctx, co, tt.blob, tt.signature, tt.cert, bundle, nil)
 			if (err != nil) != tt.shouldErr {
 				t.Fatalf("verifyBlob()= %s, expected shouldErr=%t ", err, tt.shouldErr)
 			}
@@ -633,6 +648,26 @@ func makeLocalBundle(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 			},
 			SignedEntryTimestamp: e.Verification.SignedEntryTimestamp,
 		},
+	}
+
+	// Write bundle to disk
+	jsonBundle, err := json.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(td, "bundle.sig")
+	if err := os.WriteFile(bundlePath, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return bundlePath
+}
+
+func makeLocalBundleWithoutRekorBundle(t *testing.T, sig []byte, svBytes []byte) string {
+	td := t.TempDir()
+
+	b := cosign.LocalSignedPayload{
+		Base64Signature: base64.StdEncoding.EncodeToString(sig),
+		Cert:            string(svBytes),
 	}
 
 	// Write bundle to disk
