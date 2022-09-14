@@ -17,6 +17,14 @@ name: CI-Container-Build
 
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches:
       - main
       - release-*
@@ -35,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
 
-      - uses: sigstore/cosign-installer@f3c664df7af409cb4873aa5068053ba9d61a57b6 # v2.6.0
+      - uses: sigstore/cosign-installer@b3413d484cc23cf8778c3d2aa361568d4eb54679 # v2.3.0
 
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v2.2.0
         with:
@@ -43,7 +51,7 @@ jobs:
           check-latest: true
 
       # will use the latest release available for ko
-      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa 
 
       - name: Set up Cloud SDK
         uses: google-github-actions/auth@dac4e13deb3640f22e3ffe758fd3f95e6e89f712 # v0.8.1
