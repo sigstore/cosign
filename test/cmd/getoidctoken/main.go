@@ -55,9 +55,10 @@ func main() {
 	http.HandleFunc("/", tokenWriter(env.FileName))
 
 	srv := &http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:              ":8080",
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	if err := srv.ListenAndServe(); err != nil {

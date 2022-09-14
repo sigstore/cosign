@@ -413,7 +413,6 @@ func signatures(sigRef string, bundlePath string) (string, error) {
 		sig = string(sigBytes)
 	} else {
 		sig = string(targetSig)
-		b64sig = base64.StdEncoding.EncodeToString(targetSig)
 	}
 	return sig, nil
 }
@@ -495,7 +494,7 @@ func verifyBundleMatchesData(ctx context.Context, bundle *bundle.RekorBundle, bl
 		}
 		if err := compareBase64Strings(e.RekordObj.Signature.Content.String(),
 			t.RekordObj.Signature.Content.String()); err != nil {
-			return fmt.Errorf("rekord signature does not match bundle %s", err)
+			return fmt.Errorf("rekord signature does not match bundle %w", err)
 		}
 		if err := compareBase64Strings(e.RekordObj.Signature.PublicKey.Content.String(),
 			t.RekordObj.Signature.PublicKey.Content.String()); err != nil {
@@ -508,7 +507,7 @@ func verifyBundleMatchesData(ctx context.Context, bundle *bundle.RekorBundle, bl
 		}
 		if err := compareBase64Strings(e.HashedRekordObj.Signature.Content.String(),
 			t.HashedRekordObj.Signature.Content.String()); err != nil {
-			return fmt.Errorf("hashedRekord signature does not match bundle %s", err)
+			return fmt.Errorf("hashedRekord signature does not match bundle %w", err)
 		}
 		if err := compareBase64Strings(e.HashedRekordObj.Signature.PublicKey.Content.String(),
 			t.HashedRekordObj.Signature.PublicKey.Content.String()); err != nil {
