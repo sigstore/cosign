@@ -225,7 +225,7 @@ func TestVerifyBlob(t *testing.T) {
 	t.Setenv("SIGSTORE_REKOR_PUBLIC_KEY", tmpRekorPubFile.Name())
 
 	var makeSignature = func(blob []byte) string {
-		sig, err := signer.SignMessage(bytes.NewReader([]byte(blob)))
+		sig, err := signer.SignMessage(bytes.NewReader(blob))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -571,7 +571,7 @@ func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 
 	integratedTime := time.Now()
 	certs, _ := cryptoutils.UnmarshalCertificatesFromPEM(svBytes)
-	if certs != nil && len(certs) > 0 {
+	if len(certs) > 0 {
 		if expiryValid {
 			integratedTime = certs[0].NotAfter.Add(-time.Second)
 		} else {
@@ -948,7 +948,7 @@ func newKeylessStack(t *testing.T) *keylessStack {
 	return stack
 }
 
-func (s *keylessStack) genLeafCert(t *testing.T, subject string, issuer string) (*x509.Certificate, *ecdsa.PrivateKey, []byte, *signature.ECDSASignerVerifier) {
+func (s *keylessStack) genLeafCert(t *testing.T, subject, issuer string) (*x509.Certificate, *ecdsa.PrivateKey, []byte, *signature.ECDSASignerVerifier) { //nolint: unparam
 	cert, priv, _ := test.GenerateLeafCert(subject, issuer, s.subCert, s.subPriv)
 	pemCert, _ := cryptoutils.MarshalCertificateToPEM(cert)
 	signer, err := signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
@@ -1046,7 +1046,7 @@ func genRekorEntry(t *testing.T, kind, version string, artifact []byte, cert []b
 	return base64.StdEncoding.EncodeToString(entryBytes)
 }
 
-func createBundle(t *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string) *cosign.LocalSignedPayload {
+func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string) *cosign.LocalSignedPayload {
 	// Create bundle with:
 	// * Blob signature
 	// * Signing certificate
@@ -1093,7 +1093,7 @@ func createEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBy
 	return types.NewEntry(proposedEntry)
 }
 
-func writeBundleFile(t *testing.T, td string, b *cosign.LocalSignedPayload, name string) string {
+func writeBundleFile(t *testing.T, td string, b *cosign.LocalSignedPayload, name string) string { //nolint: unparam
 	// Write bundle to disk
 	jsonBundle, err := json.Marshal(b)
 	if err != nil {
