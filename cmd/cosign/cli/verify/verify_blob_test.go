@@ -1038,7 +1038,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 	keyless := newKeylessStack(t)
 	// Change the keyless stack.
 	_ = newKeylessStack(t)
-	t.Run("Invalid certificate root explicit certRef", func(t *testing.T) {
+	t.Run("Invalid certificate root when specifying cert via certRef", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
@@ -1077,7 +1077,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			t.Fatalf("expected error with invalid root CA, got %v", err)
 		}
 	})
-	t.Run("Invalid certificate root explicit bundle", func(t *testing.T) {
+	t.Run("Invalid certificate root when specifying cert in bundle", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
