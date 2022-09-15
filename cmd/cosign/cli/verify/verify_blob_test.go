@@ -955,7 +955,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatalf("expected error with mismatched issuer, got %v", err)
 		}
 	})
-	t.Run("Intermediate root not explicit in non-experimental mode", func(t *testing.T) {
+	t.Run("Implicit Fulcio chain with bundle in non-experimental mode", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
@@ -994,7 +994,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatalf("expected success without specifying the intermediates, got %v", err)
 		}
 	})
-	t.Run("Intermediate root explicit in non-experimental mode", func(t *testing.T) {
+	t.Run("Explicit Fulcio chain with bundle in non-experimental mode", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
