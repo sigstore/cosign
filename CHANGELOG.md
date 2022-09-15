@@ -2,12 +2,15 @@
 
 **Note: This release comes with a fix for `CVE-2022-36056` described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-8gw7-4j42-w388). Please upgrade to this release ASAP**
 
+
 ## Enhancements
 
 * Add deprecation warning for sget CLI and packages (https://github.com/sigstore/cosign/pull/2019)
 * feat: set annotations to generate additional bash completion information (https://github.com/sigstore/cosign/pull/2221)
 * feat: integrate Alibaba Cloud Container Registry cred helper (https://github.com/sigstore/cosign/pull/2008)
 * Support non-ECDSA key types for verify-blob (https://github.com/sigstore/cosign/pull/2203)
+* Bump github.com/theupdateframework/go-tuf from 0.3.1 to 0.5.0 (https://github.com/sigstore/cosign/pull/2232)
+    * feat: Add support for verifying ECDSA PEM-encoded keys. Continues deprecated hex-encoded keys for backward compatibility
 
 ## Bug Fixes
 
@@ -17,26 +20,17 @@
 
 ## Others
 
-* Bump ossf/scorecard-action from 2.0.1 to 2.0.3 (https://github.com/sigstore/cosign/pull/2243)
 * update kind to use release v0.15.0 and some version comments (https://github.com/sigstore/cosign/pull/2246)
-* Bump sigstore/cosign-installer from 2.5.1 to 2.6.0 (https://github.com/sigstore/cosign/pull/2242)
 * Bump github.com/theupdateframework/go-tuf from 0.3.1 to 0.5.0 (https://github.com/sigstore/cosign/pull/2232)
 * update go builder to go1.19.1 (https://github.com/sigstore/cosign/pull/2241)
-* Bump ossf/scorecard-action from 2.0.0 to 2.0.1 (https://github.com/sigstore/cosign/pull/2238)
 * Bump mikefarah/yq from 4.27.3 to 4.27.5 (https://github.com/sigstore/cosign/pull/2239)
 * Bump github.com/open-policy-agent/opa from 0.43.0 to 0.44.0 (https://github.com/sigstore/cosign/pull/2234)
-* Bump ossf/scorecard-action from 2.0.0.pre.alpha.2 to 2.0.0 (https://github.com/sigstore/cosign/pull/2235)
 * Bump github.com/google/go-cmp from 0.5.8 to 0.5.9 (https://github.com/sigstore/cosign/pull/2233)
 * Bump google.golang.org/api from 0.94.0 to 0.95.0 (https://github.com/sigstore/cosign/pull/2229)
 * upgrade setup-ko to point to new repo (https://github.com/sigstore/cosign/pull/2225)
 * Bump github.com/spf13/viper from 1.12.0 to 1.13.0 (https://github.com/sigstore/cosign/pull/2224)
-* Bump google-github-actions/auth from 0.8.0 to 0.8.1 (https://github.com/sigstore/cosign/pull/2218)
-* Bump github/codeql-action from 2.1.21 to 2.1.22 (https://github.com/sigstore/cosign/pull/2217)
 * Upgrade to go1.19 (https://github.com/sigstore/cosign/pull/2213)
-* Bump mikefarah/yq from 4.27.2 to 4.27.3 (https://github.com/sigstore/cosign/pull/2206)
 * remove doubl quotes, looks like it is passing as a single string to cosign and not as an array (https://github.com/sigstore/cosign/pull/2205)
-* Bump actions/github-script from 6.1.1 to 6.2.0 (https://github.com/sigstore/cosign/pull/2207)
-* Bump github/codeql-action from 2.1.20 to 2.1.21 (https://github.com/sigstore/cosign/pull/2202)
 * use scaffolding v0.4.6. (https://github.com/sigstore/cosign/pull/2201)
 * Bump google.golang.org/api from 0.93.0 to 0.94.0 (https://github.com/sigstore/cosign/pull/2200)
 
