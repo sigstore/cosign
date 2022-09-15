@@ -107,7 +107,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			co.RekorClient = rekorClient
 		}
 	}
-	if certRef == "" || options.EnableExperimental() {
+	if options.EnableExperimental() {
 		co.RootCerts, err = fulcio.GetRoots()
 		if err != nil {
 			return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -145,6 +145,14 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			return err
 		}
 		if certChain == "" {
+			co.RootCerts, err = fulcio.GetRoots()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio roots: %w", err)
+			}
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			}
 			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
 				return err
@@ -178,10 +186,20 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			// check if cert is actually a public key
 			co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
 		} else {
+			if certChain == "" {
+				co.RootCerts, err = fulcio.GetRoots()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio roots: %w", err)
+				}
+				co.IntermediateCerts, err = fulcio.GetIntermediates()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio intermediates: %w", err)
+				}
+			}
 			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("loading verifier from bundle: %w", err)
 		}
 		bundle = b.Bundle
 	// No certificate is provided: search by artifact sha in the TLOG.
