@@ -14,7 +14,6 @@
 # limitations under the License.
 
 name: e2e-with-binary
-
 # Run on every push, and allow it to be run manually.
 on:
   push:
