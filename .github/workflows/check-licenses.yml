@@ -1,0 +1,45 @@
+name: OSS Licenses
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+
+jobs:
+  oss-licenses:
+    name: Third-Party Licenses
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
+
+    - name: Install Go
+      uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v2.2.0
+      with:
+        go-version: '1.19'
+        check-latest: true
+
+    - name: Go caches
+      uses: actions/cache@fd5de65bc895cf536527842281bea11763fefd77 # v3.0.3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ github.job }}-${{ runner.os }}-go-
+
+    - name: Install go-licenses
+      run: go install github.com/google/go-licenses@v1.3.1
+
+    - name: Check third-party licenses
+      run: |
+        go-licenses save ./... --save_path LICENSES/vendor/ --force
+        git_status="$(git status --porcelain)"
+        if [[ ${git_status} ]]; then
+            echo -e 'Third-party licenses are out-of-date. Please run `go-licenses save`\n'
+            echo "${git_status}"
+            exit 1
+        fi
