@@ -550,7 +550,7 @@ func verifyBundleMatchesData(ctx context.Context, bundle *bundle.RekorBundle, bl
 
 func reconstructCanonicalizedEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBytes, sigBytes []byte) (types.EntryImpl, error) {
 	props := types.ArtifactProperties{
-		PublicKeyBytes: certBytes,
+		PublicKeyBytes: [][]byte{certBytes},
 		PKIFormat:      string(pki.X509),
 	}
 	switch kind {
@@ -570,11 +570,13 @@ func reconstructCanonicalizedEntry(ctx context.Context, kind, apiVersion string,
 	if err != nil {
 		return nil, err
 	}
-	entry, err := types.NewEntry(proposedEntry)
+
+	eimpl, err := types.CreateVersionedEntry(proposedEntry)
 	if err != nil {
 		return nil, err
 	}
-	can, err := entry.Canonicalize(ctx)
+
+	can, err := types.CanonicalizeEntry(ctx, eimpl)
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +584,13 @@ func reconstructCanonicalizedEntry(ctx context.Context, kind, apiVersion string,
 	if err != nil {
 		return nil, err
 	}
-	return types.NewEntry(proposedEntryCan)
+
+	eimpl, err = types.UnmarshalEntry(proposedEntryCan)
+	if err != nil {
+		return nil, err
+	}
+
+	return eimpl, nil
 }
 
 // unmarshalEntryImpl decodes the base64-encoded entry to a specific entry type (types.EntryImpl).
@@ -597,7 +605,7 @@ func unmarshalEntryImpl(e string) (types.EntryImpl, string, string, error) {
 		return nil, "", "", err
 	}
 
-	entry, err := types.NewEntry(pe)
+	entry, err := types.UnmarshalEntry(pe)
 	if err != nil {
 		return nil, "", "", err
 	}

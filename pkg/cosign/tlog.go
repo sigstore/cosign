@@ -84,9 +84,17 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 }
 
 func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.ProposedEntry, error) {
+	var pubKeyBytes [][]byte
+
+	if len(pubKey) == 0 {
+		return nil, errors.New("none of the Rekor public keys have been found")
+	}
+
+	pubKeyBytes = append(pubKeyBytes, pubKey)
+
 	return types.NewProposedEntry(ctx, intoto.KIND, intoto_v001.APIVERSION, types.ArtifactProperties{
 		ArtifactBytes:  signature,
-		PublicKeyBytes: pubKey,
+		PublicKeyBytes: pubKeyBytes,
 	})
 }
 
