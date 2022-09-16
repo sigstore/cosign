@@ -31,10 +31,20 @@ message HashOutput {
         bytes digest = 2;
 }
 
-// MessageSignature stores the computed signature over a message's (generic
-// octet sequence) digest.
+// MessageSignature stores the computed signature over a message
+// (generic octet sequence).
 message MessageSignature {
-        HashOutput payload_digest = 1;
+        // Message digest can be used to identify the artifact.
+        HashOutput message_digest = 1;
+        // The raw bytes as returned from the signature algorithm.
+        // The signature algorithm (and so the format of the signature bytes)
+        // are determined by the contents of the 'verification_material',
+        // either a key-pair or a certificate. The certificate contains
+        // the required information on the signature algorithm. When a
+        // key-pair is used algorithm SHOULD be communicated out-of-band,
+        // the public key identifier hint MAY be used to indicate this, but
+        // implementors should be careful as this can lead to confusion
+        // attacks (don't let an adversary choose key-pairs or algorithm).
         bytes signature = 2;
 }
 
@@ -60,8 +70,14 @@ message InclusionProof {
         // A list of hashes required to compute the inclusion proof, sorted
         // in order from leaf to root. Each hash value is hex encoded.
         repeated string hashes = 4;
-        // The signed tree head that the inclusion proof is based on. The
-        // signature is base64 encoded.
+        // The checkpoint contains a signature of the tree head (root hash),
+        // size of the tree, the transparency log's unique identifier
+        // (log ID), hostname and the current time.
+        // The result is a string, consisting of the textual representation
+        // of the values signed, and the base64 encoded signature. The exact
+        // details are listed here https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go#L114.
+        // The signature has the same format as
+        // TransparencyLogEntry.inclusion_proof. See below for more details.
         string checkpoint = 5;
 }
 
@@ -79,20 +95,22 @@ message TransparencyLogEntry {
         int64 log_index = 1;
         // The unique (binary) identifier of the log, as a hex-encoded string.
         string log_id = 2;
-        // Even if kind can be derived from the attestation type it's kept
-        // as this struct could be automatically created by the sigstore
-        // library based on the response from Rekor. Also during verification
-        // this struct can be passed to the library for Rekor entry
-        // reconstruction. By duplicating the kind here we would so minimize
-        // any possibility of error due to attestation/kind matching logic,
-        // as that logic must be hard-coded in the client. With this construct
-        // it's only determined during publish to Rekor.
+        // The kind (type) and version of the object associated with this
+        // entry. These values are required to construct the entry during
+        // verification.
         RekorKindVersion kind_version = 3;
         // The UNIX timestamp from the log when the entry was persisted.
         int64 integrated_time = 4;
         // The inclusion promise is calculated by Rekor. It's calculated as a
         // signature over the persisted entry, the log ID, log index and the
         // integration timestamp. The signature is base64 encoded.
+        // The format of the signature depends on the transparency log's
+        // public key (can be retrieved via an API call). If the signature
+        // algorithm requires a hash function and/or a signature scheme (e.g.
+        // RSA) those has to be retrieved out-of-band from the log's
+        // operators.
+        // This issue https://github.com/sigstore/rekor/issues/1056 requests
+        // those details to be available via the log's API.
         // This is primarily used to verify the
         // integration timestamp's value.
         string inclusion_promise = 5;
@@ -102,32 +120,27 @@ message TransparencyLogEntry {
         InclusionProof inclusion_proof = 6;
 }
 
-// A list of base64 encoded RFC3161 signed timestamps.
-message SignedTimestamps {
-        repeated string signed_timestamps = 1;
+// This message holds a RFC 3161 timestamp.
+message SignedTimestamp {
+        // Signed timestamp is the DER encoded TSTInfo.
+        // See https://www.rfc-editor.org/rfc/rfc3161.html#section-2.4.2
+        string signed_timestamp = 1;
 }
 
-// This message contains the transparency log entry (inclusion promise and
-// proof) and signed timestamps, provided by sigstore and/or the user.
-message TimestampedTransparencyLogEntry {
-        TransparencyLogEntry tlog_entry = 1;
-        SignedTimestamps timestamps = 2;
-}
-
-message VerificationData {
-        oneof data {
-                // This is the regular inclusion promise and proof, where
-                // the timestamp is coming from the transparency log
-                TransparencyLogEntry tlog_entry = 1;
-                // This is the regular inclusion promise and proof, where
-                // the timestamp is coming from both the transparency log,
-                // and RFC3161 timestamps provided by Sigstore and user.
-                TimestampedTransparencyLogEntry timestamped_tlog_entry = 2;
-                // A list of RFC3161 signed timestamps provided by the user.
-                // This can be used when the entry has not been stored on a
-                // transparency log.
-                SignedTimestamps timestamps = 4;
-        }
+// This message holds different constructs that captures the timestamp
+// of the time the signature was generated.
+// As this message can be either empty (no timestamps), or a combination of
+// an arbitrarily number of transparency log entries and signed timestamps,
+// it is the client's responsibility implement any required verification
+// policies.
+message TimestampVerificationData {
+        // This is the regular inclusion promise and proof, where
+        // the timestamp is coming from the transparency log.
+        repeated TransparencyLogEntry tlog_entries = 1;
+        // A list of RFC3161 signed timestamps provided by the user.
+        // This can be used when the entry has not been stored on a
+        // transparency log.
+        repeated SignedTimestamp timestamps = 2;
 }
 
 // PublicKeyIdentifier can be used to identify an (out of band) delivered
@@ -140,7 +153,7 @@ message PublicKeyIdentifier {
         string hint = 1;
 }
 
-message X509Certificate {
+message X509CertificateChain {
         // PEM encoded certificate(s), with indices 0 to n.
         // For information on PEM encoding, see
         // https://www.rfc-editor.org/rfc/rfc7468#section-2.
@@ -155,10 +168,10 @@ message Bundle {
         // MUST be application/vnd.dev.sigstore.bundle.v0.1+json
         // when encoded as JSON.
         string media_type = 1;
-        optional VerificationData verification_data = 2;
+        TimestampVerificationData timestamp_verification_data = 2;
         oneof verification_material {
                 PublicKeyIdentifier public_key = 3;
-                X509Certificate x509_certificate = 4;
+                X509CertificateChain x509_certificate_chain = 4;
         }
         oneof attestation {
                 MessageSignature message_signature = 5;
