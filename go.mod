@@ -25,8 +25,8 @@ require (
 	github.com/open-policy-agent/opa v0.44.0
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
 	github.com/sigstore/fulcio v0.5.3
-	github.com/sigstore/rekor v0.12.0
-	github.com/sigstore/sigstore v1.4.1-0.20220908204944-ec922cf4f1c2
+	github.com/sigstore/rekor v0.12.1-0.20220915152154-4bb6f441c1b2
+	github.com/sigstore/sigstore v1.4.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
@@ -113,7 +113,7 @@ require (
 	github.com/cockroachdb/apd/v2 v2.0.1 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.12.0 // indirect
-	github.com/coreos/go-oidc/v3 v3.3.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.4.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
