@@ -1,0 +1,5 @@
+acme>=1.0
+cryptography>=0.7
+PyOpenSSL
+requests
+codespell

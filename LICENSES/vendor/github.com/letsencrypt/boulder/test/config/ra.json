@@ -1,0 +1,140 @@
+{
+  "ra": {
+    "rateLimitPoliciesFilename": "test/rate-limit-policies.yml",
+    "maxContactsPerRegistration": 3,
+    "debugAddr": ":8002",
+    "hostnamePolicyFile": "test/hostname-policy.yaml",
+    "maxNames": 100,
+    "reuseValidAuthz": true,
+    "authorizationLifetimeDays": 30,
+    "pendingAuthorizationLifetimeDays": 7,
+    "goodkey": {
+      "weakKeyFile": "test/example-weak-keys.json",
+      "blockedKeyFile": "test/example-blocked-keys.yaml",
+      "fermatRounds": 100
+    },
+    "orderLifetime": "168h",
+    "issuerCerts": [
+      "/hierarchy/intermediate-cert-rsa-a.pem",
+      "/hierarchy/intermediate-cert-rsa-b.pem",
+      "/hierarchy/intermediate-cert-ecdsa-a.pem"
+    ],
+    "tls": {
+      "caCertFile": "test/grpc-creds/minica.pem",
+      "certFile": "test/grpc-creds/ra.boulder/cert.pem",
+      "keyFile": "test/grpc-creds/ra.boulder/key.pem"
+    },
+    "vaService": {
+      "serverAddress": "va.boulder:9092",
+      "timeout": "20s"
+    },
+    "caService": {
+      "serverAddress": "ca.boulder:9093",
+      "timeout": "15s"
+    },
+    "publisherService": {
+      "serverAddress": "publisher.boulder:9091",
+      "timeout": "300s"
+    },
+    "saService": {
+      "serverAddress": "sa.boulder:9095",
+      "timeout": "15s"
+    },
+    "akamaiPurgerService": {
+      "serverAddress": "akamai-purger.boulder:9099",
+      "timeout": "15s"
+    },
+    "grpc": {
+      "maxConnectionAge": "30s",
+      "address": ":9094",
+      "clientNames": [
+        "admin-revoker.boulder",
+        "bad-key-revoker.boulder",
+        "health-checker.boulder",
+        "wfe.boulder"
+      ]
+    },
+    "features": {
+      "StoreRevokerInfo": true,
+      "RestrictRSAKeySizes": true,
+      "StreamlineOrderAndAuthzs": true
+    },
+    "CTLogGroups2": [
+      {
+        "name": "a",
+        "stagger": "500ms",
+        "logs": [
+          {
+            "uri": "http://boulder:4500",
+            "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEYggOxPnPkzKBIhTacSYoIfnSL2jPugcbUKx83vFMvk5gKAz/AGe87w20riuPwEGn229hKVbEKHFB61NIqNHC3Q==",
+            "submitFinalCert": false
+          },
+          {
+            "uri": "http://boulder:4501",
+            "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKtnFevaXV/kB8dmhCNZHmxKVLcHX1plaAsY9LrKilhYxdmQZiu36LvAvosTsqMVqRK9a96nC8VaxAdaHUbM8EA==",
+            "submitFinalCert": false
+          }
+        ]
+      },
+      {
+        "name": "b",
+        "stagger": "500ms",
+        "logs": [
+          {
+            "uri": "http://boulder:4510",
+            "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyw1HymhJkuxSIgt3gqW3sVXqMqB3EFsXcMfPFo0vYwjNiRmCJDXKsR0Flp7MAK+wc3X/7Hpc8liUbMhPet7tEA==",
+            "submitFinalCert": true
+          },
+          {
+            "name": "temporal test set",
+            "shards": [
+              {
+                "uri": "http://boulder:4511",
+                "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFRu37ZRLg8lT4rVQwMwh4oAOpXb4Sx+9hgQ+JFCjmAv3oDV+sDOMsC7hULkGTn+LB5L1SRo/XIY4Kw5V+nFXgg==",
+                "windowStart": "2006-01-02T15:04:05Z",
+                "windowEnd": "2017-01-02T15:04:05Z"
+              },
+              {
+                "uri": "http://boulder:4511",
+                "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFRu37ZRLg8lT4rVQwMwh4oAOpXb4Sx+9hgQ+JFCjmAv3oDV+sDOMsC7hULkGTn+LB5L1SRo/XIY4Kw5V+nFXgg==",
+                "windowStart": "2017-01-02T15:04:05Z",
+                "windowEnd": "2022-01-02T15:04:05Z"
+              },
+              {
+                "uri": "http://boulder:4511",
+                "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFRu37ZRLg8lT4rVQwMwh4oAOpXb4Sx+9hgQ+JFCjmAv3oDV+sDOMsC7hULkGTn+LB5L1SRo/XIY4Kw5V+nFXgg==",
+                "windowStart": "2022-01-02T15:04:05Z",
+                "windowEnd": "2050-01-02T15:04:05Z"
+              }
+            ],
+            "submitFinalCert": true
+          }
+        ]
+      }
+    ],
+    "InformationalCTLogs": [
+      {
+        "uri": "http://boulder:4512",
+        "key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFRu37ZRLg8lT4rVQwMwh4oAOpXb4Sx+9hgQ+JFCjmAv3oDV+sDOMsC7hULkGTn+LB5L1SRo/XIY4Kw5V+nFXgg==",
+        "submitFinalCert": true
+      }
+    ]
+  },
+
+  "pa": {
+    "challenges": {
+      "http-01": true,
+      "dns-01": true,
+      "tls-alpn-01": true
+    }
+  },
+
+  "syslog": {
+    "stdoutlevel": 6,
+    "sysloglevel": 6
+  },
+  "beeline": {
+      "mute": true,
+      "dataset": "Test"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "ocspResponder": {
+    "db": {
+      "dbConnectFile": "test/secrets/ocsp_responder_dburl",
+      "maxOpenConns": 10
+    },
+    "path": "/",
+    "listenAddress": "0.0.0.0:4002",
+    "issuerCerts": [
+      "/hierarchy/intermediate-cert-rsa-a.pem",
+      "/hierarchy/intermediate-cert-rsa-b.pem",
+      "/hierarchy/intermediate-cert-ecdsa-a.pem"
+    ],
+    "timeout": "4.9s",
+    "shutdownStopTimeout": "10s",
+    "debugAddr": ":8005",
+    "requiredSerialPrefixes": ["ff"]
+  },
+
+  "syslog": {
+   "stdoutlevel": 6,
+   "sysloglevel": 6
+ },
+  "beeline": {
+      "mute": true,
+      "dataset": "Test"
+ }
+}

@@ -1,0 +1,35 @@
+{
+  "crlUpdater": {
+    "debugAddr": ":8021",
+    "tls": {
+      "caCertFile": "test/grpc-creds/minica.pem",
+      "certFile": "test/grpc-creds/crl-updater.boulder/cert.pem",
+      "keyFile": "test/grpc-creds/crl-updater.boulder/key.pem"
+    },
+    "crlGeneratorService": {
+      "serverAddress": "ca.boulder:9106",
+      "timeout": "15s"
+    },
+    "saService": {
+      "serverAddress": "sa.boulder:9095",
+      "timeout": "15s"
+    },
+    "issuerCerts": [
+      "/hierarchy/intermediate-cert-rsa-a.pem",
+      "/hierarchy/intermediate-cert-rsa-b.pem",
+      "/hierarchy/intermediate-cert-ecdsa-a.pem"
+    ],
+    "numShards": 10,
+    "certificateLifetime": "2160h",
+    "updatePeriod": "6h",
+    "maxParallelism": 10
+  },
+
+  "syslog": {
+    "stdoutlevel": 6,
+    "sysloglevel": 6
+  },
+  "beeline": {
+    "mute": true
+  }
+}

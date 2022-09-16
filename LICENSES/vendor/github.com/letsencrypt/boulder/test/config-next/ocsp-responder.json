@@ -1,0 +1,57 @@
+{
+  "ocspResponder": {
+    "db": {
+      "dbConnectFile": "test/secrets/ocsp_responder_dburl",
+      "maxOpenConns": 10
+    },
+    "redis": {
+      "username": "ocsp-responder",
+      "passwordFile": "test/secrets/ocsp_responder_redis_password",
+      "addrs": [
+        "10.33.33.7:4218"
+      ],
+      "timeout": "5s",
+      "poolSize": 100,
+      "routeRandomly": true,
+      "tls": {
+        "caCertFile": "test/redis-tls/minica.pem",
+        "certFile": "test/redis-tls/boulder/cert.pem",
+        "keyFile": "test/redis-tls/boulder/key.pem"
+      }
+    },
+    "tls": {
+      "caCertFile": "test/grpc-creds/minica.pem",
+      "certFile": "test/grpc-creds/ocsp-responder.boulder/cert.pem",
+      "keyFile": "test/grpc-creds/ocsp-responder.boulder/key.pem"
+    },
+    "raService": {
+      "serverAddress": "ra.boulder:9094",
+      "timeout": "15s"
+    },
+    "path": "/",
+    "listenAddress": "0.0.0.0:4002",
+    "issuerCerts": [
+      "/hierarchy/intermediate-cert-rsa-a.pem",
+      "/hierarchy/intermediate-cert-rsa-b.pem",
+      "/hierarchy/intermediate-cert-ecdsa-a.pem"
+    ],
+    "expectedFreshness": "61h",
+    "liveSigningPeriod": "60h",
+    "timeout": "4.9s",
+    "shutdownStopTimeout": "10s",
+    "debugAddr": ":8005",
+    "requiredSerialPrefixes": ["ff"],
+    "features": {
+      "ROCSPStage1": true
+    }
+  },
+
+  "syslog": {
+   "stdoutlevel": 6,
+   "sysloglevel": 6
+ },
+ "beeline": {
+    "mute": true,
+    "dataset": "Test"
+ }
+}

@@ -1,0 +1,23 @@
+{
+  "syslog": {
+    "stdoutLevel": 7
+  },
+  "beeline": {
+      "mute": true,
+      "dataset": "Test"
+  },
+  "debugAddr": ":8016",
+  "files": [
+    "/var/log/akamai-purger.log",
+    "/var/log/boulder-ca.log",
+    "/var/log/boulder-publisher.log",
+    "/var/log/boulder-ra.log",
+    "/var/log/boulder-sa.log",
+    "/var/log/boulder-va.log",
+    "/var/log/boulder-wfe2.log",
+    "/var/log/boulder-wfe.log",
+    "/var/log/nonce-service.log",
+    "/var/log/ocsp-responder.log",
+    "/var/log/ocsp-updater.log"
+  ]
+}

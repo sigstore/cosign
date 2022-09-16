@@ -1,0 +1,10 @@
+test:
+  driver: mysql
+  open: root@tcp(boulder-mysql:3306)/boulder_sa_test
+integration:
+  driver: mysql
+  open: root@tcp(boulder-mysql:3306)/boulder_sa_integration
+# what goose uses by default, even during migration creation
+development:
+  driver: mysql
+  open: root@tcp(boulder-mysql:3306)/boulder_sa_integration

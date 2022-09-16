@@ -1,0 +1,65 @@
+# Build the Boulder Debian package on every PR, push to main, and tag push. On
+# tag pushes, additionally create a GitHub release and with the resulting Debian
+# package.
+name: Build release
+on:
+  push:
+    tags:
+      - release-*
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-release:
+    strategy:
+      fail-fast: false
+      matrix:
+        GO_VERSION:
+          - 1.18.1
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      # This step will create an output called `filename` which contains the
+      # path of the produced .deb file.
+      - name: Build .deb
+        id: build
+        env:
+          GO_VERSION: ${{ matrix.GO_VERSION }}
+        run: ./tools/make-deb.sh
+
+      # Because each copy of this job (one for each entry in the matrix) uploads
+      # to the same artifact name, all of the files will live side-by-side in
+      # the same artifact, and can be downloaded as a single unit.
+      - name: Upload .deb
+        uses: actions/upload-artifact@v3
+        with:
+          name: boulder_debs
+          path: ${{ steps.build.outputs.filename }}
+
+  push-release:
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    needs: build-release
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    steps:
+      # This downloads every artifact uploaded by the matrix jobs above,
+      # directly into the current pwd.
+      - name: Download .debs
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: boulder_debs
+
+      # We have to pass the -R flag here because this job skipped checkout.
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # https://cli.github.com/manual/gh_release_create
+        run: gh release -R ${{ github.repository }} create "${GITHUB_REF_NAME}" boulder*.deb

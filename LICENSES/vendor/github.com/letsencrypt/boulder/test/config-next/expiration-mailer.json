@@ -1,0 +1,41 @@
+{
+  "mailer": {
+    "server": "localhost",
+    "port": "9380",
+    "username": "cert-manager@example.com",
+    "from": "Expiry bot <test@example.com>",
+    "passwordFile": "test/secrets/smtp_password",
+    "db": {
+      "dbConnectFile": "test/secrets/mailer_dburl",
+      "maxOpenConns": 10
+    },
+    "certLimit": 100000,
+    "nagTimes": ["480h", "240h"],
+    "emailTemplate": "test/config-next/expiration-mailer.gotmpl",
+    "debugAddr": ":8008",
+    "parallelSends": 10,
+    "tls": {
+      "caCertFile": "test/grpc-creds/minica.pem",
+      "certFile": "test/grpc-creds/expiration-mailer.boulder/cert.pem",
+      "keyFile": "test/grpc-creds/expiration-mailer.boulder/key.pem"
+    },
+    "saService": {
+      "serverAddress": "sa.boulder:9095",
+      "timeout": "15s"
+    },
+    "SMTPTrustedRootFile": "test/mail-test-srv/minica.pem",
+    "frequency": "1h",
+    "features": {
+      "ExpirationMailerDontLookTwice": true
+    }
+  },
+
+  "syslog": {
+    "stdoutlevel": 6,
+    "sysloglevel": 6
+  },
+  "beeline": {
+      "mute": true,
+      "dataset": "Test"
+  }
+}
