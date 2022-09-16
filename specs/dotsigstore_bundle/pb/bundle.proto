@@ -175,8 +175,12 @@ message Bundle {
                 PublicKeyIdentifier public_key = 3;
                 X509CertificateChain x509_certificate_chain = 4;
         }
-        oneof attestation {
+        oneof content {
                 MessageSignature message_signature = 5;
-                io.intoto.Envelope attestation_dsse = 6;
+                // A DSSE envelope can contain arbitrary payloads.
+                // Verifiers must verify that the payload type a supported or
+                // expected type. This is part of the DSSE protocol which
+                // is defined here https://github.com/secure-systems-lab/dsse/blob/master/protocol.md
+                io.intoto.Envelope dsse = 6;
         }
 }
