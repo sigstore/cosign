@@ -15,6 +15,14 @@
 name: Test GitHub OIDC
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches: [ 'main', 'release-*' ]
   schedule:
     - cron: '0 1 * * *' # 1AM UTC

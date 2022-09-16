@@ -18,6 +18,14 @@ name: e2e-tests
 # Run on every push, and allow it to be run manually.
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches:
       - "main"
   workflow_dispatch:
