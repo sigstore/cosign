@@ -2,6 +2,12 @@
 
 **Note: This release comes with a fix for `CVE-2022-36056` described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-8gw7-4j42-w388). Please upgrade to this release ASAP**
 
+> # Highlights
+> **BREAKING:** The fix for [GHSA-GHSA-8gw7-4j42-w388](https://github.com/sigstore/cosign/security/advisories/GHSA-8gw7-4j42-w388) (CVE-2022-36056) means that some `verify-blob` commands that used to work may not anymore. In particular:
+> - When using `verify-blob` with signatures created with keyless mode, we require either `COSIGN_EXPERIMENTAL=1` or a valid Rekor bundle for offline verification passed with `--bundle`.
+>
+> If you upgrade and encounter other issues, please read the advisory in full; your prior checks may have been passing inappropriately.
+
 
 ## Enhancements
 
