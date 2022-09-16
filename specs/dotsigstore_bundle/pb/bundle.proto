@@ -102,8 +102,10 @@ message TransparencyLogEntry {
         // The UNIX timestamp from the log when the entry was persisted.
         int64 integrated_time = 4;
         // The inclusion promise is calculated by Rekor. It's calculated as a
-        // signature over the persisted entry, the log ID, log index and the
-        // integration timestamp. The signature is base64 encoded.
+        // signature over a canonical JSON serialization of the persisted
+        // entry, the log ID, log index and the integration timestamp.
+        // See https://github.com/sigstore/rekor/blob/main/pkg/api/entries.go#L54
+        // The signature is base64 encoded.
         // The format of the signature depends on the transparency log's
         // public key (can be retrieved via an API call). If the signature
         // algorithm requires a hash function and/or a signature scheme (e.g.
