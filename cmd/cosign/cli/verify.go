@@ -218,13 +218,10 @@ You may specify either a key, a certificate or a kms reference to verify against
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file or - for stdin.`,
-		Example: `  cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--cert <cert>) --signature <sig> <blob>
+		Example: ` cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--certificate <cert>) --signature <sig> <blob>
 
   # Verify a simple blob and message
-  cosign verify-blob --key cosign.pub --signature sig msg
-
-  # Verify a simple blob with remote signature URL, both http and https schemes are supported
-  cosign verify-blob --key cosign.pub --signature http://host/my.sig
+  cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
@@ -232,8 +229,8 @@ The blob may be specified as a path to a file or - for stdin.`,
   # verify a signature with public key provided by URL
   cosign verify-blob --key https://host.for/<FILE> --signature $sig msg
 
-  # Verify a signature against a payload from another process using process redirection
-  cosign verify-blob --key cosign.pub --signature $sig <(git rev-parse HEAD)
+  # verify a signature with signature and key provided by URL
+  cosign verify-blob --key https://host.for/<FILE> --signature https://example.com/<SIG>
 
   # Verify a signature against Azure Key Vault
   cosign verify-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --signature $sig <blob>
@@ -254,7 +251,7 @@ The blob may be specified as a path to a file or - for stdin.`,
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 
   # Verify a signature against a certificate
-  cosign verify-blob --cert <cert> --signature $sig <blob>
+  COSIGN_EXPERIMENTAL=1 cosign verify-blob --certificate <cert> --signature $sig <blob>
 `,
 
 		Args: cobra.ExactArgs(1),
