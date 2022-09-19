@@ -73,9 +73,9 @@ message InclusionProof {
         // The checkpoint contains a signature of the tree head (root hash),
         // size of the tree, the transparency log's unique identifier
         // (log ID), hostname and the current time.
-        // The result is a string, consisting of the textual representation
-        // of the values signed, and the base64 encoded signature. The exact
-        // details are listed here https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go#L114.
+        // The result is a string, the format is described here
+        // https://github.com/transparency-dev/formats/blob/main/log/README.md
+        // The details are here https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go#L114.
         // The signature has the same format as
         // TransparencyLogEntry.inclusion_proof. See below for more details.
         string checkpoint = 5;
@@ -123,7 +123,7 @@ message TransparencyLogEntry {
 }
 
 // This message holds a RFC 3161 timestamp.
-message SignedTimestamp {
+message RFC3161SignedTimestamp {
         // Signed timestamp is the DER encoded TSTInfo.
         // See https://www.rfc-editor.org/rfc/rfc3161.html#section-2.4.2
         string signed_timestamp = 1;
@@ -142,7 +142,7 @@ message TimestampVerificationData {
         // A list of RFC3161 signed timestamps provided by the user.
         // This can be used when the entry has not been stored on a
         // transparency log.
-        repeated SignedTimestamp timestamps = 2;
+        repeated RFC3161SignedTimestamp rfc3161_timestamps = 2;
 }
 
 // PublicKeyIdentifier can be used to identify an (out of band) delivered
