@@ -17,6 +17,14 @@ name: CI-Tests
 on:
   workflow_dispatch:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches: ['main', 'release-*']
   pull_request:
 

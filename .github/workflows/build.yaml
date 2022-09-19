@@ -17,6 +17,14 @@ name: CI-Container-Build
 
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches:
       - main
       - release-*

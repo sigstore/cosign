@@ -14,10 +14,17 @@
 # limitations under the License.
 
 name: e2e-with-binary
-
 # Run on every push, and allow it to be run manually.
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches: [ 'main' ]
   workflow_dispatch:
 
