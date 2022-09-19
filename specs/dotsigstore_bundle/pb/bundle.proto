@@ -107,19 +107,17 @@ message TransparencyLogEntry {
         // See https://github.com/sigstore/rekor/blob/main/pkg/api/entries.go#L54
         // The signature is base64 encoded.
         // The format of the signature depends on the transparency log's
-        // public key (can be retrieved via an API call). If the signature
-        // algorithm requires a hash function and/or a signature scheme (e.g.
-        // RSA) those has to be retrieved out-of-band from the log's
-        // operators.
-        // This issue https://github.com/sigstore/rekor/issues/1056 requests
-        // those details to be available via the log's API.
+        // public key. If the signature algorithm requires a hash function
+        // and/or a signature scheme (e.g. RSA) those has to be retrieved
+        // out-of-band from the log's operators, together with the public
+        // key.
         // This is primarily used to verify the
         // integration timestamp's value.
         string inclusion_promise = 5;
         // The inclusion proof can be used for online verification that the
         // entry was appended to the log, and that the log has not been
         // altered.
-        InclusionProof inclusion_proof = 6;
+        optional InclusionProof inclusion_proof = 6;
 }
 
 // This message holds a RFC 3161 timestamp.
