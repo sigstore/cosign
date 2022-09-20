@@ -59,7 +59,8 @@ func GetIntermediates() (*x509.CertPool, error) {
 
 func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 	rootPool := x509.NewCertPool()
-	intermediatePool := x509.NewCertPool()
+	// intermediatePool should be nil if no intermediates are found
+	var intermediatePool *x509.CertPool
 
 	rootEnv := os.Getenv(altRoot)
 	if rootEnv != "" {
@@ -76,6 +77,9 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 			if bytes.Equal(cert.RawSubject, cert.RawIssuer) {
 				rootPool.AddCert(cert)
 			} else {
+				if intermediatePool == nil {
+					intermediatePool = x509.NewCertPool()
+				}
 				intermediatePool.AddCert(cert)
 			}
 		}
