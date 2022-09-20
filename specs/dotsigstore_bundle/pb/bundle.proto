@@ -39,12 +39,11 @@ message MessageSignature {
         // The raw bytes as returned from the signature algorithm.
         // The signature algorithm (and so the format of the signature bytes)
         // are determined by the contents of the 'verification_material',
-        // either a key-pair or a certificate. The certificate contains
-        // the required information on the signature algorithm. When a
-        // key-pair is used algorithm SHOULD be communicated out-of-band,
-        // the public key identifier hint MAY be used to indicate this, but
-        // implementors should be careful as this can lead to confusion
-        // attacks (don't let an adversary choose key-pairs or algorithm).
+        // either a key-pair or a certificate. If using a certificate, the
+        // certificate contains the required information on the signature
+        // algorithm.
+        // When using a key pair, the algorithm MUST be part of the public
+        // key, which MUST be communicated out-of-band.
         bytes signature = 2;
 }
 
