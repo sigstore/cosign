@@ -261,22 +261,22 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 				}
 
 				if githubWorkflowTrigger := ce.GetCertExtensionGithubWorkflowTrigger(); githubWorkflowTrigger != "" {
-					fmt.Fprintln(os.Stderr, "Certificate extension GitHub Workflow Trigger:", githubWorkflowTrigger)
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Trigger:", githubWorkflowTrigger)
 				}
 
 				if githubWorkflowSha := ce.GetExtensionGithubWorkflowSha(); githubWorkflowSha != "" {
-					fmt.Fprintln(os.Stderr, "Certificate extension GitHub Workflow SHA:", githubWorkflowSha)
+					fmt.Fprintln(os.Stderr, "GitHub Workflow SHA:", githubWorkflowSha)
 				}
 				if githubWorkflowName := ce.GetCertExtensionGithubWorkflowName(); githubWorkflowName != "" {
-					fmt.Fprintln(os.Stderr, "Certificate extension GitHub Workflow Name:", githubWorkflowName)
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Name:", githubWorkflowName)
 				}
 
 				if githubWorkflowRepository := ce.GetCertExtensionGithubWorkflowRepository(); githubWorkflowRepository != "" {
-					fmt.Fprintln(os.Stderr, "Certificate extension GitHub Workflow Trigger", githubWorkflowRepository)
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Trigger", githubWorkflowRepository)
 				}
 
 				if githubWorkflowRef := ce.GetCertExtensionGithubWorkflowRef(); githubWorkflowRef != "" {
-					fmt.Fprintln(os.Stderr, "Certificate extension GitHub Workflow Ref:", githubWorkflowRef)
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Ref:", githubWorkflowRef)
 				}
 			}
 
@@ -311,23 +311,29 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 				ss.Optional["Subject"] = sigs.CertSubject(cert)
 				if issuerURL := ce.GetIssuer(); issuerURL != "" {
 					ss.Optional["Issuer"] = issuerURL
+					ss.Optional[cosign.CertExtensionOIDCIssuer] = issuerURL
 				}
 				if githubWorkflowTrigger := ce.GetCertExtensionGithubWorkflowTrigger(); githubWorkflowTrigger != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowTrigger]] = githubWorkflowTrigger
 					ss.Optional[cosign.CertExtensionGithubWorkflowTrigger] = githubWorkflowTrigger
 				}
 
 				if githubWorkflowSha := ce.GetExtensionGithubWorkflowSha(); githubWorkflowSha != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowSha]] = githubWorkflowSha
 					ss.Optional[cosign.CertExtensionGithubWorkflowSha] = githubWorkflowSha
 				}
 				if githubWorkflowName := ce.GetCertExtensionGithubWorkflowName(); githubWorkflowName != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowName]] = githubWorkflowName
 					ss.Optional[cosign.CertExtensionGithubWorkflowName] = githubWorkflowName
 				}
 
 				if githubWorkflowRepository := ce.GetCertExtensionGithubWorkflowRepository(); githubWorkflowRepository != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowRepository]] = githubWorkflowRepository
 					ss.Optional[cosign.CertExtensionGithubWorkflowRepository] = githubWorkflowRepository
 				}
 
 				if githubWorkflowRef := ce.GetCertExtensionGithubWorkflowRef(); githubWorkflowRef != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowRef]] = githubWorkflowRef
 					ss.Optional[cosign.CertExtensionGithubWorkflowRef] = githubWorkflowRef
 				}
 			}
