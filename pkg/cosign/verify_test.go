@@ -240,7 +240,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 
 	// Create a fake bundle
 	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
-	entry, _ := rtypes.NewEntry(pe[0])
+	entry, _ := rtypes.UnmarshalEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
 

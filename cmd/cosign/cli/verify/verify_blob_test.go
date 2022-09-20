@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/swag"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -567,13 +568,13 @@ func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	pe, err := hashedrekord.CreateFromArtifactProperties(ctx, types.ArtifactProperties{
 		ArtifactHash:   hex.EncodeToString(h[:]),
 		SignatureBytes: sig,
-		PublicKeyBytes: svBytes,
+		PublicKeyBytes: [][]byte{svBytes},
 		PKIFormat:      "x509",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := types.NewEntry(pe)
+	entry, err := types.UnmarshalEntry(pe)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -818,7 +819,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		sig := signedPayload
 
 		// Create bundle
-		entry := genRekorEntry(t, intoto.KIND, intoto.New().DefaultVersion(), signedPayload, leafPemCert, sig)
+		entry := genRekorEntry(t, intoto.KIND, "0.0.1", signedPayload, leafPemCert, sig)
 		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
@@ -1263,7 +1264,7 @@ func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integr
 
 func createEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBytes, sigBytes []byte) (types.EntryImpl, error) {
 	props := types.ArtifactProperties{
-		PublicKeyBytes: certBytes,
+		PublicKeyBytes: [][]byte{certBytes},
 		PKIFormat:      string(pki.X509),
 	}
 	switch kind {
@@ -1283,7 +1284,21 @@ func createEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBy
 	if err != nil {
 		return nil, err
 	}
-	return types.NewEntry(proposedEntry)
+	eimpl, err := types.CreateVersionedEntry(proposedEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	can, err := types.CanonicalizeEntry(ctx, eimpl)
+	if err != nil {
+		return nil, err
+	}
+	proposedEntryCan, err := models.UnmarshalProposedEntry(bytes.NewReader(can), runtime.JSONConsumer())
+	if err != nil {
+		return nil, err
+	}
+
+	return types.UnmarshalEntry(proposedEntryCan)
 }
 
 func writeBundleFile(t *testing.T, td string, b *cosign.LocalSignedPayload, name string) string { //nolint: unparam
