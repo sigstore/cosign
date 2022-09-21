@@ -1,3 +1,25 @@
+# v1.12.1
+
+> # Highlights
+> * Pulls Fulcio root and intermediate when `--certificate-chain` is not passed into `verify-blob`. The v1.12.0 release introduced a regression: when `COSIGN_EXPERIMENTAL` was not set, cosign `verify-blob` would check a` --certificate` (without a `--certificate-chain` provided) against the operating system root CA bundle. In this release, Cosign checks the certificate against Fulcio's CA root instead (restoring the earlier behavior).
+
+## Bug Fixes
+
+* fix: fixing breaking changes in  rekor v1.12.0 upgrade (https://github.com/sigstore/cosign/pull/2260)
+* Fixed bug where intermediate certificates were not automatically read from the OCI chain annotation (https://github.com/sigstore/cosign/pull/2244)
+* fix: add COSIGN_EXPERIMENTAL=1 for verify-blob (https://github.com/sigstore/cosign/pull/2254)
+* fix: fix cert chain validation for verify-blob in non-experimental mode (https://github.com/sigstore/cosign/pull/2256)
+* fix: fix secret test, non-experimental bundle should pass (https://github.com/sigstore/cosign/pull/2249)
+* Fix e2e test failure, add test for local bundle without rekor bundle (https://github.com/sigstore/cosign/pull/2248)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* n3k0m4 (@n3k0m4)
+
 # v1.12.0
 
 **Note: This release comes with a fix for `CVE-2022-36056` described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-8gw7-4j42-w388). Please upgrade to this release ASAP**
