@@ -178,6 +178,6 @@ message Bundle {
                 // Verifiers must verify that the payload type a supported or
                 // expected type. This is part of the DSSE protocol which
                 // is defined here https://github.com/secure-systems-lab/dsse/blob/master/protocol.md
-                io.intoto.Envelope dsse = 6;
+                io.intoto.Envelope dsse_envelope = 6;
         }
 }
