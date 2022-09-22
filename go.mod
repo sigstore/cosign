@@ -40,7 +40,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
-	google.golang.org/api v0.96.0
+	google.golang.org/api v0.97.0
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v0.23.5
