@@ -525,6 +525,138 @@ func TestValidateAndUnpackCertWithoutRequiredSCT(t *testing.T) {
 	require.Contains(t, err.Error(), "certificate does not include required embedded SCT")
 }
 
+func TestValidateAndUnpackCertSuccessWithDnsSan(t *testing.T) {
+	subject := "example.com"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithSubjectAlternateNames(
+		[]string{subject}, /* dnsNames */
+		nil,               /* emailAddresses */
+		nil,               /* ipAddresses */
+		nil,               /* uris */
+		oidcIssuer,        /* oidcIssuer */
+		rootCert,
+		rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertIdentity:   subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertSuccessWithEmailSan(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithSubjectAlternateNames(
+		nil,               /* dnsNames */
+		[]string{subject}, /* emailAddresses */
+		nil,               /* ipAddresses */
+		nil,               /* uris */
+		oidcIssuer,        /* oidcIssuer */
+		rootCert,
+		rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertIdentity:   subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertSuccessWithIpAddressSan(t *testing.T) {
+	subject := "127.0.0.1"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithSubjectAlternateNames(
+		nil,                            /* dnsNames */
+		nil,                            /* emailAddresses */
+		[]net.IP{net.ParseIP(subject)}, /* ipAddresses */
+		nil,                            /* uris */
+		oidcIssuer,                     /* oidcIssuer */
+		rootCert,
+		rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertIdentity:   subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertSuccessWithUriSan(t *testing.T) {
+	subject, _ := url.Parse("scheme://userinfo@host")
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithSubjectAlternateNames(
+		nil,                 /* dnsNames */
+		nil,                 /* emailAddresses */
+		nil,                 /* ipAddresses */
+		[]*url.URL{subject}, /* uris */
+		oidcIssuer,          /* oidcIssuer */
+		rootCert,
+		rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertIdentity:   "scheme://userinfo@host",
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
+}
+
 func TestValidateAndUnpackCertInvalidRoot(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"
@@ -586,9 +718,9 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
-	require.Contains(t, err.Error(), "expected email not found in certificate")
+	require.Contains(t, err.Error(), "expected identity not found in certificate")
 	err = CheckCertificatePolicy(leafCert, co)
-	require.Contains(t, err.Error(), "expected email not found in certificate")
+	require.Contains(t, err.Error(), "expected identity not found in certificate")
 }
 
 func TestValidateAndUnpackCertInvalidGithubWorkflowTrigger(t *testing.T) {

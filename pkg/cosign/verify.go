@@ -91,6 +91,8 @@ type CheckOpts struct {
 	IntermediateCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
+	// CertIdentity is the identity expected for a certificate to be valid.
+	CertIdentity string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertOidcIssuer string
 
@@ -217,17 +219,9 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 // the expected values.
 func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	ce := CertExtensions{Cert: cert}
-	if co.CertEmail != "" {
-		emailVerified := false
-		for _, em := range cert.EmailAddresses {
-			if co.CertEmail == em {
-				emailVerified = true
-				break
-			}
-		}
-		if !emailVerified {
-			return &VerificationError{"expected email not found in certificate"}
-		}
+
+	if err := validateCertIdentity(cert, co); err != nil {
+		return err
 	}
 
 	if err := validateCertExtensions(ce, co); err != nil {
@@ -328,6 +322,35 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 		}
 	}
 	return nil
+}
+
+func validateCertIdentity(cert *x509.Certificate, co *CheckOpts) error {
+	// TODO: Make it mandatory to include one of these options.
+	if co.CertEmail == "" && co.CertIdentity == "" {
+		return nil
+	}
+
+	for _, dns := range cert.DNSNames {
+		if co.CertIdentity == dns {
+			return nil
+		}
+	}
+	for _, em := range cert.EmailAddresses {
+		if co.CertIdentity == em || co.CertEmail == em {
+			return nil
+		}
+	}
+	for _, ip := range cert.IPAddresses {
+		if co.CertIdentity == ip.String() {
+			return nil
+		}
+	}
+	for _, uri := range cert.URIs {
+		if co.CertIdentity == uri.String() {
+			return nil
+		}
+	}
+	return &VerificationError{"expected identity not found in certificate"}
 }
 
 // getSubjectAlternateNames returns all of the following for a Certificate.

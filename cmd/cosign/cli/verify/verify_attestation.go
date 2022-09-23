@@ -46,6 +46,7 @@ type VerifyAttestationCommand struct {
 	KeyRef                       string
 	CertRef                      string
 	CertEmail                    string
+	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
@@ -80,6 +81,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
 		CertEmail:                    c.CertEmail,
+		CertIdentity:                 c.CertIdentity,
 		CertOidcIssuer:               c.CertOidcIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,

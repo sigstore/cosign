@@ -710,6 +710,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -754,6 +755,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -792,6 +794,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -830,6 +833,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -868,6 +872,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -906,6 +911,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",                    /*certRef*/ // Cert is fetched from bundle
 			"invalid@example.com", /*certEmail*/
+			"",                    /*certIdentity*/
 			issuer,                /*certOidcIssuer*/
 			"",                    /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",                    /*sigRef*/    // Sig is fetched from bundle
@@ -914,7 +920,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			"", "", "", "", "",
 			// GitHub identity flags end
 			false /*enforceSCT*/)
-		if err == nil || !strings.Contains(err.Error(), "expected email not found in certificate") {
+		if err == nil || !strings.Contains(err.Error(), "expected identity not found in certificate") {
 			t.Fatalf("expected error with mismatched identity, got %v", err)
 		}
 	})
@@ -944,6 +950,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",        /*certRef*/ // Cert is fetched from bundle
 			identity,  /*certEmail*/
+			"",        /*certIdentity*/
 			"invalid", /*certOidcIssuer*/
 			"",        /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",        /*sigRef*/    // Sig is fetched from bundle
@@ -983,6 +990,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			certPath, /*certRef*/
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -1021,6 +1029,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",                              /*certRef*/
 			identity,                        /*certEmail*/
+			"",                              /*certIdentity*/
 			issuer,                          /*certOidcIssuer*/
 			os.Getenv("SIGSTORE_ROOT_FILE"), /*certChain*/
 			"",                              /*sigRef*/ // Sig is fetched from bundle
@@ -1066,6 +1075,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			certPath, /*certRef*/
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -1104,6 +1114,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Fetched from bundle
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle

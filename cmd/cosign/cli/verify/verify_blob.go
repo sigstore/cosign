@@ -66,7 +66,7 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
+func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, certIdentity,
 	certOidcIssuer, certChain, sigRef, blobRef, certGithubWorkflowTrigger, certGithubWorkflowSha,
 	certGithubWorkflowName,
 	certGithubWorkflowRepository,
@@ -90,6 +90,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 
 	co := &cosign.CheckOpts{
 		CertEmail:                    certEmail,
+		CertIdentity:                 certIdentity,
 		CertOidcIssuer:               certOidcIssuer,
 		CertGithubWorkflowTrigger:    certGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        certGithubWorkflowSha,
