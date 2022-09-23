@@ -22,6 +22,7 @@ import (
 type CertVerifyOptions struct {
 	Cert                         string
 	CertEmail                    string
+	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
@@ -42,6 +43,9 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.CertEmail, "certificate-email", "",
 		"the email expected in a valid Fulcio certificate")
+
+	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
+		"the identity expected in a valid Fulcio certificate")
 
 	cmd.Flags().StringVar(&o.CertOidcIssuer, "certificate-oidc-issuer", "",
 		"the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth")

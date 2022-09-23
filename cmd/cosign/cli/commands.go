@@ -45,6 +45,8 @@ func normalizeCertificateFlags(_ *pflag.FlagSet, name string) pflag.NormalizedNa
 		name = "certificate-oidc-issuer"
 	case "output-cert":
 		name = "output-certificate"
+	case "cert-identity":
+		name = "certificate-identity"
 	}
 	return pflag.NormalizedName(name)
 }
