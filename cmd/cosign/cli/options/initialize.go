@@ -31,7 +31,7 @@ var _ Interface = (*InitializeOptions)(nil)
 // AddFlags implements Interface
 func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Mirror, "mirror", tuf.DefaultRemoteRoot,
-		"GCS bucket to a SigStore TUF repository or HTTP(S) base URL")
+		"GCS bucket to a SigStore TUF repository, or HTTP(S) base URL, or file:/// for local filestore remote (air-gap)")
 
 	cmd.Flags().StringVar(&o.Root, "root", "",
 		"path to trusted initial root. defaults to embedded root")
