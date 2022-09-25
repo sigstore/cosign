@@ -242,6 +242,19 @@ func TestAttestVerifySPDXJSON(t *testing.T) {
 	)
 }
 
+func TestAttestVerifyCycloneDXXML(t *testing.T) {
+	attestationBytes, err := os.ReadFile("./testdata/bom-go-mod.cyclonedx.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestVerify(t,
+		"cyclonedxxml",
+		string(attestationBytes),
+		`predicate: Data: specVersion: "1.4"`,
+		`predicate: Data: specVersion: "7.7"`,
+	)
+}
+
 func TestAttestVerifyCycloneDXJSON(t *testing.T) {
 	attestationBytes, err := os.ReadFile("./testdata/bom-go-mod.cyclonedx.json")
 	if err != nil {

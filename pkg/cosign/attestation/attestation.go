@@ -265,7 +265,7 @@ func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (
 }
 
 func generateCycloneDXXMLStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var data cyclonexd.BOM
+	data := cyclonexd.NewBOM()
 	if err := xml.Unmarshal(rawPayload, &data); err != nil {
 		return nil, err
 	}
