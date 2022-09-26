@@ -62,10 +62,10 @@ cosign attest [flags]
       --predicate string                                                                         path to the predicate file.
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --replace                                                                                  
+      --replace
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
+      --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|cyclonedxxml|vuln|custom) or an URI (default "custom")
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 
