@@ -45,7 +45,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 		"the email expected in a valid Fulcio certificate")
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
-		"the identity expected in a valid Fulcio certificate")
+		"the identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs.")
 
 	cmd.Flags().StringVar(&o.CertOidcIssuer, "certificate-oidc-issuer", "",
 		"the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth")
