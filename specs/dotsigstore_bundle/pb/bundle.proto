@@ -123,6 +123,10 @@ message TransparencyLogEntry {
 message RFC3161SignedTimestamp {
         // Signed timestamp is the DER encoded TSTInfo.
         // See https://www.rfc-editor.org/rfc/rfc3161.html#section-2.4.2
+        // Clients MUST verify the hashed message in the message imprint
+        // against the artifact. Note that the message hash algorithm may
+        // differ from the one in message signature, or the subject of the
+        // DSSE envelope.
         string signed_timestamp = 1;
 }
 
