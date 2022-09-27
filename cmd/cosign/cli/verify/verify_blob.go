@@ -166,7 +166,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			}
 			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
-				return err
+				return fmt.Errorf("verifying certRef with certChain: %w", err)
 			}
 		}
 	case ko.BundlePath != "":
@@ -197,6 +197,9 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 					return fmt.Errorf("getting Fulcio intermediates: %w", err)
 				}
 				co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
+				if err != nil {
+					return fmt.Errorf("verifying certificate from bundle: %w", err)
+				}
 			} else {
 				// Verify certificate with chain
 				chain, err := loadCertChainFromFileOrURL(certChain)
@@ -205,7 +208,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 				}
 				co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 				if err != nil {
-					return fmt.Errorf("verifying certificate with chain: %w", err)
+					return fmt.Errorf("verifying certificate from bundle with chain: %w", err)
 				}
 			}
 		}

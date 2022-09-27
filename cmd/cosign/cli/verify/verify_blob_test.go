@@ -1078,7 +1078,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			"", "", "", "", "",
 			// GitHub identity flags end
 			false /*enforceSCT*/)
-		if err == nil || !strings.Contains(err.Error(), "verifying certificate with chain: x509: certificate signed by unknown authority") {
+		if err == nil || !strings.Contains(err.Error(), "verifying certificate from bundle with chain: x509: certificate signed by unknown authority") {
 			t.Fatalf("expected error with mismatched root, got %v", err)
 		}
 	})
