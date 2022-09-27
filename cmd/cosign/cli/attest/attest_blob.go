@@ -157,12 +157,15 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 		fmt.Printf("Bundle wrote in the file %s\n", ko.BundlePath)
 	}
 
-	if certPath != "" && len(rekorBytes) > 0 {
-		bts := rekorBytes
-		if err := os.WriteFile(certPath, bts, 0600); err != nil {
-			return fmt.Errorf("create certificate file: %w", err)
-		}
-		fmt.Printf("Certificate wrote in the file %s\n", certPath)
+	// Print signature and certificate
+	// TODO: Write the signature and certificate to file if specified via flag
+	fmt.Println("Signature:")
+	sig = []byte(base64.StdEncoding.EncodeToString(sig))
+	fmt.Println(string(sig))
+
+	if rekorBytes != nil {
+		fmt.Println("Cert:")
+		fmt.Println(string(rekorBytes))
 	}
 
 	return nil
