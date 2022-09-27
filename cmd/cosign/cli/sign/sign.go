@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
@@ -44,6 +46,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/oci"
+	ociempty "github.com/sigstore/cosign/pkg/oci/empty"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/walk"
@@ -152,10 +155,23 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 		}
 
 		if digest, ok := ref.(name.Digest); ok && !recursive {
-			se, err := ociremote.SignedEntity(ref, opts...)
-			if err != nil {
-				return fmt.Errorf("accessing image: %w", err)
+			var se oci.SignedEntity
+
+			_, err := remote.Head(digest)
+			var te *transport.Error
+			if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
+				emptyimg, err := ociempty.SignedImage(ref)
+				if err != nil {
+					return fmt.Errorf("accessing image: %w", err)
+				}
+				se = emptyimg
+			} else {
+				se, err = ociremote.SignedEntity(ref)
+				if err != nil {
+					return fmt.Errorf("accessing image: %w", err)
+				}
 			}
+
 			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, noTlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
