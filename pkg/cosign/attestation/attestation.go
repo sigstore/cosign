@@ -26,7 +26,6 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -72,10 +71,10 @@ type DB struct {
 }
 
 type Scanner struct {
-	URI     string                 `json:"uri"`
-	Version string                 `json:"version"`
-	DB      DB                     `json:"db"`
-	Result  map[string]interface{} `json:"result"`
+	URI     string      `json:"uri"`
+	Version string      `json:"version"`
+	DB      DB          `json:"db"`
+	Result  interface{} `json:"result"`
 }
 
 type Metadata struct {
@@ -100,7 +99,7 @@ type GenerateOpts struct {
 }
 
 // GenerateStatement returns an in-toto statement based on the provided
-// predicate type (custom|slsaprovenance|spdx|link).
+// predicate type (custom|slsaprovenance|spdx|spdxjson|cyclonedx|link).
 func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	predicate, err := io.ReadAll(opts.Predicate)
 	if err != nil {
@@ -111,7 +110,11 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	case "slsaprovenance":
 		return generateSLSAProvenanceStatement(predicate, opts.Digest, opts.Repo)
 	case "spdx":
-		return generateSPDXStatement(predicate, opts.Digest, opts.Repo)
+		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, false)
+	case "spdxjson":
+		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, true)
+	case "cyclonedx":
+		return generateCycloneDXStatement(predicate, opts.Digest, opts.Repo)
 	case "link":
 		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
 	case "vuln":
@@ -189,7 +192,7 @@ func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (i
 
 	var result map[string]interface{}
 	if err := json.Unmarshal(rawPayload, &result); err != nil {
-		return nil, errors.Wrapf(err, "invalid JSON payload for predicate type %s", customType)
+		return nil, fmt.Errorf("invalid JSON payload for predicate type %s: %w", customType, err)
 	}
 
 	return result, nil
@@ -203,7 +206,7 @@ func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo stri
 	}
 	err = json.Unmarshal(rawPayload, &predicate)
 	if err != nil {
-		return "", errors.Wrap(err, "unmarshal Provenance predicate")
+		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
 	}
 	return in_toto.ProvenanceStatement{
 		StatementHeader: generateStatementHeader(digest, repo, slsa.PredicateSLSAProvenance),
@@ -219,7 +222,7 @@ func generateLinkStatement(rawPayload []byte, digest string, repo string) (inter
 	}
 	err = json.Unmarshal(rawPayload, &link)
 	if err != nil {
-		return "", errors.Wrap(err, "unmarshal Link statement")
+		return "", fmt.Errorf("unmarshal Link statement: %w", err)
 	}
 	return in_toto.LinkStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateLinkV1),
@@ -227,11 +230,32 @@ func generateLinkStatement(rawPayload []byte, digest string, repo string) (inter
 	}, nil
 }
 
-func generateSPDXStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
+func generateSPDXStatement(rawPayload []byte, digest string, repo string, parseJSON bool) (interface{}, error) {
+	var data interface{}
+	if parseJSON {
+		if err := json.Unmarshal(rawPayload, &data); err != nil {
+			return nil, err
+		}
+	} else {
+		data = string(rawPayload)
+	}
 	return in_toto.SPDXStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateSPDX),
 		Predicate: CosignPredicate{
-			Data: string(rawPayload),
+			Data: data,
+		},
+	}, nil
+}
+
+func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
+	var data interface{}
+	if err := json.Unmarshal(rawPayload, &data); err != nil {
+		return nil, err
+	}
+	return in_toto.SPDXStatement{
+		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateCycloneDX),
+		Predicate: CosignPredicate{
+			Data: data,
 		},
 	}, nil
 }

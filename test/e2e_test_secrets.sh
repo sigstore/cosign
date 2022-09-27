@@ -46,7 +46,7 @@ img_copy="${img}/copy"
 crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; done
 multiarch_img="${TEST_INSTANCE_REPO}/multiarch-test"
 crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${tag}" ; done
-crane cp gcr.io/distroless/base $multiarch_img
+crane cp ghcr.io/distroless/alpine-base $multiarch_img
 
 # `initialize`
 ./cosign initialize
@@ -110,12 +110,15 @@ echo "myblob2" > myblob2
 ./cosign sign-blob --key ${signing_key} myblob2 > myblob2.sig
 
 ./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob
+# expected to fail because signature mismatch
 if (./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob2); then false; fi
 
+# expected to fail because signature mismatch
 if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob); then false; fi
 ./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob2
 
 ./cosign sign-blob --key ${signing_key} --bundle bundle.sig myblob
+# passes when local bundle only contains the key and signature
 ./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob
 
 ## sign and verify multiple blobs

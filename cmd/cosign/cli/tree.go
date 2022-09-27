@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -47,12 +46,6 @@ func Tree() *cobra.Command {
 	return cmd
 }
 
-const (
-	SignatureTagSuffix   = ".sig"
-	SBOMTagSuffix        = ".sbom"
-	AttestationTagSuffix = ".att"
-)
-
 func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
 	scsaMap := map[name.Tag][]v1.Layer{}
 	ref, err := name.ParseReference(imageRef)
@@ -71,58 +64,53 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 		return err
 	}
 
-	registryClientOpts := regOpts.GetRegistryClientOpts(ctx)
-
-	attRef, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
+	attRef, err := ociremote.AttestationTag(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
 
 	atts, err := simg.Attestations()
-	var attLayers []v1.Layer
 	if err == nil {
 		layers, err := atts.Layers()
 		if err != nil {
 			return err
 		}
-		attLayers = append(attLayers, layers...)
+		if len(layers) > 0 {
+			scsaMap[attRef] = layers
+		}
 	}
 
-	scsaMap[attRef] = attLayers
-
-	sigRef, err := ociremote.SignatureTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
+	sigRef, err := ociremote.SignatureTag(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
 
 	sigs, err := simg.Signatures()
-	var sigLayers []v1.Layer
 	if err == nil {
 		layers, err := sigs.Layers()
 		if err != nil {
 			return err
 		}
-		sigLayers = append(sigLayers, layers...)
+		if len(layers) > 0 {
+			scsaMap[sigRef] = layers
+		}
 	}
 
-	scsaMap[sigRef] = sigLayers
-
-	sbomRef, err := ociremote.SBOMTag(ref, ociremote.WithRemoteOptions(registryClientOpts...))
+	sbomRef, err := ociremote.SBOMTag(ref, remoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	sbombs, err := simg.Attachment("sbom")
-	var sbomLayers []v1.Layer
+	sbombs, err := simg.Attachment(ociremote.SBOMTagSuffix)
 	if err == nil {
 		layers, err := sbombs.Layers()
 		if err != nil {
 			return err
 		}
-		sbomLayers = append(sbomLayers, layers...)
+		if len(layers) > 0 {
+			scsaMap[sbomRef] = layers
+		}
 	}
-
-	scsaMap[sbomRef] = sbomLayers
 
 	if len(scsaMap) == 0 {
 		fmt.Fprintf(os.Stdout, "No Supply Chain Security Related Artifacts artifacts found for image %s\n, start creating one with simply running"+
@@ -131,12 +119,12 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 	}
 
 	for t, k := range scsaMap {
-		switch {
-		case strings.HasSuffix(t.TagStr(), SignatureTagSuffix):
+		switch t {
+		case sigRef:
 			fmt.Fprintf(os.Stdout, "└── 🔐 Signatures for an image tag: %s\n", t.String())
-		case strings.HasSuffix(t.TagStr(), SBOMTagSuffix):
+		case sbomRef:
 			fmt.Fprintf(os.Stdout, "└── 📦 SBOMs for an image tag: %s\n", t.String())
-		case strings.HasSuffix(t.TagStr(), AttestationTagSuffix):
+		case attRef:
 			fmt.Fprintf(os.Stdout, "└── 💾 Attestations for an image tag: %s\n", t.String())
 		}
 

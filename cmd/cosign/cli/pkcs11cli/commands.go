@@ -20,6 +20,7 @@ package pkcs11cli
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -27,7 +28,6 @@ import (
 	"syscall"
 
 	"github.com/miekg/pkcs11"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"golang.org/x/term"
 )
@@ -57,7 +57,7 @@ func GetTokens(_ context.Context, modulePath string) ([]Token, error) {
 	}
 	err := p.Initialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "initialize PKCS11 module")
+		return nil, fmt.Errorf("initialize PKCS11 module: %w", err)
 	}
 	defer p.Destroy()
 	defer p.Finalize()
@@ -65,7 +65,7 @@ func GetTokens(_ context.Context, modulePath string) ([]Token, error) {
 	// Get list of all slots with a token, and get info of each.
 	slots, err := p.GetSlotList(true)
 	if err != nil {
-		return nil, errors.Wrap(err, "get slot list")
+		return nil, fmt.Errorf("get slot list: %w", err)
 	}
 	for _, slot := range slots {
 		tokenInfo, err := p.GetTokenInfo(slot)
@@ -92,7 +92,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 	}
 	err := ctx.Initialize()
 	if err != nil {
-		return nil, errors.Wrap(err, "initialize PKCS11 module")
+		return nil, fmt.Errorf("initialize PKCS11 module: %w", err)
 	}
 	defer ctx.Destroy()
 	defer ctx.Finalize()
@@ -101,7 +101,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 	var tokenInfo pkcs11.TokenInfo
 	tokenInfo, err = ctx.GetTokenInfo(uint(slotID))
 	if err != nil {
-		return nil, errors.Wrap(err, "get token info")
+		return nil, fmt.Errorf("get token info: %w", err)
 	}
 
 	// If pin was not given, check COSIGN_PKCS11_PIN environment variable.
@@ -117,7 +117,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 				// nolint:unconvert
 				b, err := term.ReadPassword(int(syscall.Stdin))
 				if err != nil {
-					return nil, errors.Wrap(err, "get pin")
+					return nil, fmt.Errorf("get pin: %w", err)
 				}
 				pin = string(b)
 			}
@@ -127,14 +127,14 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 	// Open a new session to the token.
 	session, err := ctx.OpenSession(slotID, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
-		return nil, errors.Wrap(err, "open session")
+		return nil, fmt.Errorf("open session: %w", err)
 	}
 	defer ctx.CloseSession(session)
 
 	// Login user.
 	err = ctx.Login(session, pkcs11.CKU_USER, pin)
 	if err != nil {
-		return nil, errors.Wrap(err, "login")
+		return nil, fmt.Errorf("login: %w", err)
 	}
 	defer ctx.Logout(session)
 
@@ -145,22 +145,22 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
 	}
 	if err = ctx.FindObjectsInit(session, findAttributes); err != nil {
-		return nil, errors.Wrap(err, "init find objects")
+		return nil, fmt.Errorf("init find objects: %w", err)
 	}
 	newhandles, _, err := ctx.FindObjects(session, maxHandlePerFind)
 	if err != nil {
-		return nil, errors.Wrap(err, "find objects")
+		return nil, fmt.Errorf("find objects: %w", err)
 	}
 	for len(newhandles) > 0 {
 		handles = append(handles, newhandles...)
 		newhandles, _, err = ctx.FindObjects(session, maxHandlePerFind)
 		if err != nil {
-			return nil, errors.Wrap(err, "find objects")
+			return nil, fmt.Errorf("find objects: %w", err)
 		}
 	}
 	err = ctx.FindObjectsFinal(session)
 	if err != nil {
-		return nil, errors.Wrap(err, "finalize find objects")
+		return nil, fmt.Errorf("finalize find objects: %w", err)
 	}
 
 	// For each private key, get key label and key id then construct uri.
@@ -172,7 +172,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
 		}
 		if attributes, err = ctx.GetAttributeValue(session, handle, attributes); err != nil {
-			return nil, errors.Wrap(err, "get attributes")
+			return nil, fmt.Errorf("get attributes: %w", err)
 		}
 		keyID := attributes[0].Value
 		keyLabel := attributes[1].Value
@@ -187,7 +187,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 		pkcs11Uri := pkcs11key.NewPkcs11UriConfigFromInput(modulePath, &slotIDInt, tokenInfo.Label, keyLabel, keyID, pin)
 		pkcs11UriStr, err := pkcs11Uri.Construct()
 		if err != nil {
-			return nil, errors.Wrap(err, "construct pkcs11 uri")
+			return nil, fmt.Errorf("construct pkcs11 uri: %w", err)
 		}
 
 		if keyLabel != nil && len(keyLabel) != 0 {
@@ -204,7 +204,6 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 }
 
 func ListTokensCmd(ctx context.Context, modulePath string) error {
-
 	tokens, err := GetTokens(ctx, modulePath)
 	if err != nil {
 		return err
@@ -223,7 +222,6 @@ func ListTokensCmd(ctx context.Context, modulePath string) error {
 }
 
 func ListKeysUrisCmd(ctx context.Context, modulePath string, slotID uint, pin string) error {
-
 	keysInfo, err := GetKeysInfo(ctx, modulePath, slotID, pin)
 	if err != nil {
 		return err

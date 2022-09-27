@@ -17,9 +17,10 @@ package cli
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/layout"
@@ -48,18 +49,18 @@ func Save() *cobra.Command {
 func SaveCmd(ctx context.Context, opts options.SaveOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
-		return errors.Wrapf(err, "parsing image name %s", imageRef)
+		return fmt.Errorf("parsing image name %s: %w", imageRef, err)
 	}
 
 	se, err := ociremote.SignedEntity(ref)
 	if err != nil {
-		return errors.Wrap(err, "signed entity")
+		return fmt.Errorf("signed entity: %w", err)
 	}
 
 	if _, ok := se.(oci.SignedImage); ok {
 		si, err := ociremote.SignedImage(ref)
 		if err != nil {
-			return errors.Wrap(err, "getting signed image")
+			return fmt.Errorf("getting signed image: %w", err)
 		}
 		return layout.WriteSignedImage(opts.Directory, si)
 	}
@@ -67,7 +68,7 @@ func SaveCmd(ctx context.Context, opts options.SaveOptions, imageRef string) err
 	if _, ok := se.(oci.SignedImageIndex); ok {
 		sii, err := ociremote.SignedImageIndex(ref)
 		if err != nil {
-			return errors.Wrap(err, "getting signed image index")
+			return fmt.Errorf("getting signed image index: %w", err)
 		}
 		return layout.WriteSignedImageIndex(opts.Directory, sii)
 	}

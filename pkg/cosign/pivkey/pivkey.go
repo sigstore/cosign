@@ -25,13 +25,13 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"syscall"
 
 	"github.com/go-piv/piv-go/piv"
-	"github.com/pkg/errors"
 	"golang.org/x/term"
 
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -72,7 +72,7 @@ func GetKey() (*Key, error) {
 func GetKeyWithSlot(slot string) (*Key, error) {
 	card, err := GetKey()
 	if err != nil {
-		return nil, errors.Wrap(err, "open key")
+		return nil, fmt.Errorf("open key: %w", err)
 	}
 
 	card.slot = SlotForName(slot)
@@ -168,17 +168,17 @@ func (k *Key) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, er
 func (k *Key) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
 	sig, err := io.ReadAll(signature)
 	if err != nil {
-		return errors.Wrap(err, "read signature")
+		return fmt.Errorf("read signature: %w", err)
 	}
 	msg, err := io.ReadAll(message)
 	if err != nil {
-		return errors.Wrap(err, "read message")
+		return fmt.Errorf("read message: %w", err)
 	}
 	digest := sha256.Sum256(msg)
 
 	att, err := k.Attest()
 	if err != nil {
-		return errors.Wrap(err, "get attestation")
+		return fmt.Errorf("get attestation: %w", err)
 	}
 	switch kt := att.PublicKey.(type) {
 	case *ecdsa.PublicKey:

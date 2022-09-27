@@ -50,14 +50,12 @@ func Clean() *cobra.Command {
 }
 
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string, force bool) error {
-	if !force {
-		ok, err := cosign.ConfirmPrompt(prompt(cleanType))
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return nil
-		}
+	ok, err := cosign.ConfirmPrompt(prompt(cleanType), force)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
 	}
 
 	ref, err := name.ParseReference(imageRef)

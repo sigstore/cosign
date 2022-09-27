@@ -2,7 +2,7 @@
 
 The `cosign` command line tool optionally supports hardware tokens for signing and key management.
 This support is enabled through the [PIV protocol](https://csrc.nist.gov/projects/piv/piv-standards-and-supporting-documentation)
-and the [go-piv](https://github.com/go-piv/piv-go) library, which is not included in the standard release. Use [`make cosign-pivkey`](https://github.com/sigstore/cosign/blob/a8d1cc1132d4a019a62ff515b9375c8c5b98a5c5/Makefile#L52), or `go build -tags=pivkey`, to build `cosign` with support for hardware tokens.
+and the [go-piv](https://github.com/go-piv/piv-go) library, which is not included in the standard release. Use `make cosign-pivkey-pkcs11key`, or `go build -tags=pivkey,pkcs11key ./cmd/cosign`, to build `cosign` with support for hardware tokens.
 
 ---
 **NOTE**
@@ -18,7 +18,7 @@ We recommend using an application provided by your hardware vendor to manage key
 
 ### Setup
 
-To get started, insert a key to your computer and run the `cosign generate-key` command.
+To get started, insert a key to your computer and run the `cosign piv-tool generate-key` command.
 We recommend using the `--random-management-key=true` flag.
 
 This command generates a cryptographically-random management key and configures the device to use it.

@@ -17,11 +17,11 @@ package gitlab
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/xanzy/go-gitlab"
 )
@@ -39,7 +39,7 @@ func New() *Gl {
 func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
 	keys, err := cosign.GenerateKeyPair(pf)
 	if err != nil {
-		return errors.Wrap(err, "generating key pair")
+		return fmt.Errorf("generating key pair: %w", err)
 	}
 
 	token, tokenExists := os.LookupEnv("GITLAB_TOKEN")
@@ -52,12 +52,12 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	if url, baseURLExists := os.LookupEnv("GITLAB_HOST"); baseURLExists {
 		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
 		if err != nil {
-			return errors.Wrap(err, "could not create GitLab client")
+			return fmt.Errorf("could not create GitLab client: %w", err)
 		}
 	} else {
 		client, err = gitlab.NewClient(token)
 		if err != nil {
-			return errors.Wrap(err, "could not create GitLab client")
+			return fmt.Errorf("could not create GitLab client: %w", err)
 		}
 	}
 
@@ -70,12 +70,12 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		EnvironmentScope: gitlab.String("*"),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" variable")
+		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
 	}
 
 	if passwordResp.StatusCode < 200 && passwordResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(passwordResp.Body)
-		return errors.Errorf("%s", bodyBytes)
+		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	fmt.Fprintln(os.Stderr, "Password written to \"COSIGN_PASSWORD\" variable")
@@ -88,12 +88,12 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		Masked:       gitlab.Bool(false),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" variable")
+		return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" variable: %w", err)
 	}
 
 	if privateKeyResp.StatusCode < 200 && privateKeyResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(privateKeyResp.Body)
-		return errors.Errorf("%s", bodyBytes)
+		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	fmt.Fprintln(os.Stderr, "Private key written to \"COSIGN_PRIVATE_KEY\" variable")
@@ -106,12 +106,12 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		Masked:       gitlab.Bool(false),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PUBLIC_KEY\" variable")
+		return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" variable: %w", err)
 	}
 
 	if publicKeyResp.StatusCode < 200 && publicKeyResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(publicKeyResp.Body)
-		return errors.Errorf("%s", bodyBytes)
+		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	fmt.Fprintln(os.Stderr, "Public key written to \"COSIGN_PUBLIC_KEY\" variable")
@@ -136,25 +136,25 @@ func (g *Gl) GetSecret(ctx context.Context, ref string, key string) (string, err
 	if url, baseURLExists := os.LookupEnv("GITLAB_HOST"); baseURLExists {
 		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
 		if err != nil {
-			return varPubKeyValue, errors.Wrap(err, "could not create GitLab client")
+			return varPubKeyValue, fmt.Errorf("could not create GitLab client): %w", err)
 		}
 	} else {
 		client, err = gitlab.NewClient(token)
 		if err != nil {
-			return varPubKeyValue, errors.Wrap(err, "could not create GitLab client")
+			return varPubKeyValue, fmt.Errorf("could not create GitLab client: %w", err)
 		}
 	}
 
 	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, key, nil)
 	if err != nil {
-		return varPubKeyValue, errors.Wrap(err, "could not retrieve \"COSIGN_PUBLIC_KEY\" variable")
+		return varPubKeyValue, fmt.Errorf("could not retrieve \"COSIGN_PUBLIC_KEY\" variable: %w", err)
 	}
 
 	varPubKeyValue = varPubKey.Value
 
 	if pubKeyResp.StatusCode < 200 && pubKeyResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(pubKeyResp.Body)
-		return varPubKeyValue, errors.Errorf("%s", bodyBytes)
+		return varPubKeyValue, fmt.Errorf("%s", bodyBytes)
 	}
 
 	return varPubKeyValue, nil

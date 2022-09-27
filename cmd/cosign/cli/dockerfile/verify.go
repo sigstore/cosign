@@ -17,13 +17,12 @@ package dockerfile
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )

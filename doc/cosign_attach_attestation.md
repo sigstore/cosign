@@ -9,7 +9,15 @@ cosign attach attestation [flags]
 ### Examples
 
 ```
-  cosign attach attestation <image uri>
+  cosign attach attestation --attestation <attestation file path> <image uri>
+
+  # attach attestations from multiple files to a container image
+  cosign attach attestation --attestation <attestation file path> --attestation <attestation file path> <image uri>
+
+  # attach attestation from bundle files in form of JSONLines to a container image
+  # https://github.com/in-toto/attestation/blob/main/spec/bundle.md
+  cosign attach attestation --attestation <attestation bundle file path> <image uri>
+
 ```
 
 ### Options
@@ -17,7 +25,7 @@ cosign attach attestation [flags]
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
-      --attestation string                                                                       path to the attestation envelope
+      --attestation stringArray                                                                  path to the attestation envelope
   -h, --help                                                                                     help for attestation
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
 ```

@@ -20,8 +20,6 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-GOFILES ?= $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-
 # Set version variables for LDFLAGS
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
@@ -57,7 +55,6 @@ GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
 KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
 GHCR_PREFIX ?= ghcr.io/sigstore/cosign
-COSIGNED_YAML ?= cosign-$(GIT_TAG).yaml
 LATEST_TAG ?=
 
 .PHONY: all lint test clean cosign cross
@@ -73,32 +70,11 @@ log-%:
 				printf "\033[36m==> %s\033[0m\n", $$2 \
 			}'
 
-.PHONY: checkfmt
-checkfmt: SHELL := /usr/bin/env bash
-checkfmt: ## Check formatting of all go files
-	@ $(MAKE) --no-print-directory log-$@
- 	$(shell test -z "$(shell gofmt -l $(GOFILES) | tee /dev/stderr)")
- 	$(shell test -z "$(shell goimports -l $(GOFILES) | tee /dev/stderr)")
-
-.PHONY: fmt
-fmt: ## Format all go files
-	@ $(MAKE) --no-print-directory log-$@
-	goimports -w $(GOFILES)
-
 cosign: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
 
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 go build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
-
-## Build cosigned binary
-.PHONY: cosigned
-cosigned: policy-webhook
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/webhook
-
-.PHONY: policy-webhook
-policy-webhook: ## Build the policy webhook binary
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/policy_webhook
 
 .PHONY: sget
 sget: ## Build sget binary
@@ -118,7 +94,7 @@ cross:
 golangci-lint:
 	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2 ;\
 
 lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
@@ -128,10 +104,8 @@ test:
 
 clean:
 	rm -rf cosign
-	rm -rf cosigned
 	rm -rf sget
 	rm -rf dist/
-
 
 KOCACHE_PATH=/tmp/ko
 ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url="https://raw.githubusercontent.com/sigstore/cosign/main/README.md" \
@@ -151,7 +125,7 @@ endef
 # ko build
 ##########
 .PHONY: ko
-ko: ko-cosign ko-sget ko-cosigned
+ko: ko-cosign ko-sget
 
 .PHONY: ko-cosign
 ko-cosign:
@@ -171,21 +145,6 @@ ko-sget:
 		--image-refs sgetImagerefs \
 		github.com/sigstore/cosign/cmd/sget
 
-.PHONY: ko-cosigned
-ko-cosigned: kustomize-cosigned ko-policy-webhook
-	# cosigned
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/cosigned ko resolve --bare \
-		--platform=$(COSIGNED_ARCHS) --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
-		--image-refs cosignedImagerefs --filename config/webhook.yaml >> $(COSIGNED_YAML)
-
-ko-policy-webhook:
-	# policy_webhook
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) KO_DOCKER_REPO=$(KO_PREFIX)/policy-webhook ko resolve --bare \
-		--platform=$(COSIGNED_ARCHS) --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
-		--image-refs policyImagerefs --filename config/policy-webhook.yaml >> $(COSIGNED_YAML)
-
 .PHONY: ko-local
 ko-local:
 	$(create_kocache_path)
@@ -194,27 +153,6 @@ ko-local:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
-
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
-		$(ARTIFACT_HUB_LABELS) \
-		github.com/sigstore/cosign/cmd/cosign/webhook
-
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
-		$(ARTIFACT_HUB_LABELS) \
-		github.com/sigstore/cosign/cmd/cosign/policy_webhook
-
-.PHONY: ko-apply
-ko-apply:
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -Bf config/
-
-
-.PHONY: kustomize-cosigned
-kustomize-cosigned:
-	kustomize build config/ > $(COSIGNED_YAML)
 
 ##################
 # help

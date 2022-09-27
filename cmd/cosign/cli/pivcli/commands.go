@@ -206,12 +206,12 @@ func GenerateKeyCmd(ctx context.Context, managementKey string, randomKey bool, s
 		return flag.ErrHelp
 	}
 
-	pinPolicy := pivkey.PINPolicyForName(pinPolicyArg, *slot)
+	pinPolicy := pivkey.PINPolicyForName(strings.ToLower(pinPolicyArg), *slot)
 	if pinPolicy < 0 {
 		return flag.ErrHelp
 	}
 
-	touchPolicy := pivkey.TouchPolicyForName(pinPolicyArg, *slot)
+	touchPolicy := pivkey.TouchPolicyForName(strings.ToLower(touchPolicyArg), *slot)
 	if touchPolicy < 0 {
 		return flag.ErrHelp
 	}

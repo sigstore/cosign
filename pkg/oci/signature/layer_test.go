@@ -18,6 +18,7 @@ package signature
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -25,7 +26,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 )
 

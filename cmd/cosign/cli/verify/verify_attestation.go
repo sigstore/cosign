@@ -17,18 +17,16 @@ package verify
 
 import (
 	"context"
-	"crypto"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/cosign/rego"
 	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -44,20 +42,25 @@ import (
 // nolint
 type VerifyAttestationCommand struct {
 	options.RegistryOptions
-	CheckClaims    bool
-	KeyRef         string
-	CertRef        string
-	CertEmail      string
-	CertOidcIssuer string
-	CertChain      string
-	EnforceSCT     bool
-	Sk             bool
-	Slot           string
-	Output         string
-	RekorURL       string
-	PredicateType  string
-	Policies       []string
-	LocalImage     bool
+	CheckClaims                  bool
+	KeyRef                       string
+	CertRef                      string
+	CertEmail                    string
+	CertOidcIssuer               string
+	CertGithubWorkflowTrigger    string
+	CertGithubWorkflowSha        string
+	CertGithubWorkflowName       string
+	CertGithubWorkflowRepository string
+	CertGithubWorkflowRef        string
+	CertChain                    string
+	EnforceSCT                   bool
+	Sk                           bool
+	Slot                         string
+	Output                       string
+	RekorURL                     string
+	PredicateType                string
+	Policies                     []string
+	LocalImage                   bool
 }
 
 // Exec runs the verification command
@@ -72,13 +75,18 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
-		return errors.Wrap(err, "constructing client options")
+		return fmt.Errorf("constructing client options: %w", err)
 	}
 	co := &cosign.CheckOpts{
-		RegistryClientOpts: ociremoteOpts,
-		CertEmail:          c.CertEmail,
-		CertOidcIssuer:     c.CertOidcIssuer,
-		EnforceSCT:         c.EnforceSCT,
+		RegistryClientOpts:           ociremoteOpts,
+		CertEmail:                    c.CertEmail,
+		CertOidcIssuer:               c.CertOidcIssuer,
+		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
+		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
+		CertGithubWorkflowName:       c.CertGithubWorkflowName,
+		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
+		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
+		EnforceSCT:                   c.EnforceSCT,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
@@ -87,11 +95,18 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
-				return errors.Wrap(err, "creating Rekor client")
+				return fmt.Errorf("creating Rekor client: %w", err)
 			}
 			co.RekorClient = rekorClient
 		}
-		co.RootCerts = fulcio.GetRoots()
+		co.RootCerts, err = fulcio.GetRoots()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio roots: %w", err)
+		}
+		co.IntermediateCerts, err = fulcio.GetIntermediates()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		}
 	}
 	keyRef := c.KeyRef
 
@@ -100,7 +115,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	case keyRef != "":
 		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
-			return errors.Wrap(err, "loading public key")
+			return fmt.Errorf("loading public key: %w", err)
 		}
 		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
 		if ok {
@@ -109,22 +124,31 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	case c.Sk:
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
-			return errors.Wrap(err, "opening piv token")
+			return fmt.Errorf("opening piv token: %w", err)
 		}
 		defer sk.Close()
 		co.SigVerifier, err = sk.Verifier()
 		if err != nil {
-			return errors.Wrap(err, "initializing piv token verifier")
+			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case c.CertRef != "":
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
-			return errors.Wrap(err, "loading certificate from reference")
+			return fmt.Errorf("loading certificate from reference: %w", err)
 		}
 		if c.CertChain == "" {
-			co.SigVerifier, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+			// If no certChain is passed, the Fulcio root certificate will be used
+			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
-				return errors.Wrap(err, "creating certificate verifier")
+				return fmt.Errorf("getting Fulcio roots: %w", err)
+			}
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			}
+			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
+			if err != nil {
+				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
 		} else {
 			// Verify certificate with chain
@@ -134,7 +158,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
-				return errors.Wrap(err, "creating certificate verifier")
+				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
 		}
 	}
@@ -180,11 +204,12 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 		}
 
+		var checked []oci.Signature
 		var validationErrors []error
 		for _, vp := range verified {
 			payload, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, vp)
 			if err != nil {
-				return errors.Wrap(err, "converting to consumable policy validation")
+				return fmt.Errorf("converting to consumable policy validation: %w", err)
 			}
 			if len(payload) == 0 {
 				// This is not the predicate type we're looking for.
@@ -196,6 +221,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				cueValidationErr := cue.ValidateJSON(payload, cuePolicies)
 				if cueValidationErr != nil {
 					validationErrors = append(validationErrors, cueValidationErr)
+					continue
 				}
 			}
 
@@ -204,8 +230,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				regoValidationErrs := rego.ValidateJSON(payload, regoPolicies)
 				if len(regoValidationErrs) > 0 {
 					validationErrors = append(validationErrors, regoValidationErrs...)
+					continue
 				}
 			}
+
+			checked = append(checked, vp)
 		}
 
 		if len(validationErrors) > 0 {
@@ -216,10 +245,14 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("%d validation errors occurred", len(validationErrors))
 		}
 
+		if len(checked) == 0 {
+			return fmt.Errorf("none of the attestations matched the predicate type: %s", c.PredicateType)
+		}
+
 		// TODO: add CUE validation report to `PrintVerificationHeader`.
 		PrintVerificationHeader(imageRef, co, bundleVerified, fulcioVerified)
 		// The attestations are always JSON, so use the raw "text" mode for outputting them instead of conversion
-		PrintVerification(imageRef, verified, "text")
+		PrintVerification(imageRef, checked, "text")
 	}
 
 	return nil

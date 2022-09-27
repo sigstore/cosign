@@ -17,6 +17,7 @@ package options
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/spf13/cobra"
@@ -60,6 +61,7 @@ func (o *AttachSBOMOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SBOM, "sbom", "",
 		"path to the sbom, or {-} for stdin")
+	_ = cmd.Flags().SetAnnotation("sbom", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().StringVar(&o.SBOMType, "type", "spdx",
 		"type of sbom (spdx|cyclonedx|syft)")
@@ -69,12 +71,16 @@ func (o *AttachSBOMOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
+	var looksLikeJSON bool
+	if strings.HasSuffix(o.SBOM, ".json") {
+		looksLikeJSON = true
+	}
 	switch o.SBOMType {
 	case "cyclonedx":
 		if o.SBOMInputFormat != "" && o.SBOMInputFormat != ctypes.XMLInputFormat && o.SBOMInputFormat != ctypes.JSONInputFormat {
 			return "invalid", fmt.Errorf("invalid SBOM input format: %q, expected (json|xml)", o.SBOMInputFormat)
 		}
-		if o.SBOMInputFormat == ctypes.JSONInputFormat {
+		if o.SBOMInputFormat == ctypes.JSONInputFormat || looksLikeJSON {
 			return ctypes.CycloneDXJSONMediaType, nil
 		}
 		return ctypes.CycloneDXXMLMediaType, nil
@@ -83,7 +89,7 @@ func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
 		if o.SBOMInputFormat != "" && o.SBOMInputFormat != ctypes.TextInputFormat && o.SBOMInputFormat != ctypes.JSONInputFormat {
 			return "invalid", fmt.Errorf("invalid SBOM input format: %q, expected (json|text)", o.SBOMInputFormat)
 		}
-		if o.SBOMInputFormat == ctypes.JSONInputFormat {
+		if o.SBOMInputFormat == ctypes.JSONInputFormat || looksLikeJSON {
 			return ctypes.SPDXJSONMediaType, nil
 		}
 		return ctypes.SPDXMediaType, nil
@@ -99,14 +105,14 @@ func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
 
 // AttachAttestationOptions is the top level wrapper for the attach attestation command.
 type AttachAttestationOptions struct {
-	Attestation string
-	Registry    RegistryOptions
+	Attestations []string
+	Registry     RegistryOptions
 }
 
 // AddFlags implements Interface
 func (o *AttachAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
-	cmd.Flags().StringVar(&o.Attestation, "attestation", "",
+	cmd.Flags().StringArrayVarP(&o.Attestations, "attestation", "", nil,
 		"path to the attestation envelope")
 }

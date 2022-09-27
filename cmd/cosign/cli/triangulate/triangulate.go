@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
@@ -34,7 +33,7 @@ func MungeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef str
 
 	ociremoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
-		return errors.Wrap(err, "constructing client options")
+		return fmt.Errorf("constructing client options: %w", err)
 	}
 
 	var dstRef name.Tag

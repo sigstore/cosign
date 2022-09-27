@@ -16,13 +16,13 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 )
 
 func Attest() *cobra.Command {
@@ -63,7 +63,7 @@ func Attest() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
@@ -76,11 +76,13 @@ func Attest() *cobra.Command {
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCProvider:             o.OIDC.Provider,
+				SkipConfirmation:         o.SkipConfirmation,
 			}
 			for _, img := range args {
 				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
-					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout); err != nil {
-					return errors.Wrapf(err, "signing %s", img)
+					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout, o.NoTlogUpload); err != nil {
+					return fmt.Errorf("signing %s: %w", img, err)
 				}
 			}
 			return nil

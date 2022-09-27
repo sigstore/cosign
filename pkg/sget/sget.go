@@ -13,16 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Deprecated: This package is deprecated and will be removed in a future release.
 package sget
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -90,7 +92,14 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		// was performed so we don't need to use this fragile logic here.
 		fulcioVerified := (co.SigVerifier == nil)
 
-		co.RootCerts = fulcio.GetRoots()
+		co.RootCerts, err = fulcio.GetRoots()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio roots: %w", err)
+		}
+		co.IntermediateCerts, err = fulcio.GetIntermediates()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		}
 
 		sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 		if err != nil {

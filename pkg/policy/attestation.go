@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/oci"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -40,8 +39,9 @@ import (
 // match the attestation.
 func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifiedAttestation oci.Signature) ([]byte, error) {
 	// Check the predicate up front, no point in wasting time if it's invalid.
-	predicateURI, ok := options.PredicateTypeMap[predicateType]
-	if !ok {
+	predicateURI, err := options.ParsePredicateType(predicateType)
+
+	if err != nil {
 		return nil, fmt.Errorf("invalid predicate type: %s", predicateType)
 	}
 
@@ -49,19 +49,19 @@ func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifie
 
 	p, err := verifiedAttestation.Payload()
 	if err != nil {
-		return nil, errors.Wrap(err, "getting payload")
+		return nil, fmt.Errorf("getting payload: %w", err)
 	}
 
 	err = json.Unmarshal(p, &payloadData)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshaling payload data")
+		return nil, fmt.Errorf("unmarshaling payload data")
 	}
 
 	var decodedPayload []byte
 	if val, ok := payloadData["payload"]; ok {
 		decodedPayload, err = base64.StdEncoding.DecodeString(val.(string))
 		if err != nil {
-			return nil, errors.Wrap(err, "decoding payload")
+			return nil, fmt.Errorf("decoding payload: %w", err)
 		}
 	} else {
 		return nil, fmt.Errorf("could not find payload in payload data")
@@ -85,46 +85,59 @@ func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifie
 	case options.PredicateCustom:
 		payload, err = json.Marshal(statement)
 		if err != nil {
-			return nil, errors.Wrap(err, "generating CosignStatement")
+			return nil, fmt.Errorf("generating CosignStatement: %w", err)
 		}
 	case options.PredicateLink:
 		var linkStatement in_toto.LinkStatement
 		if err := json.Unmarshal(decodedPayload, &linkStatement); err != nil {
-			return nil, errors.Wrap(err, "unmarshaling LinkStatement")
+			return nil, fmt.Errorf("unmarshaling LinkStatement: %w", err)
 		}
 		payload, err = json.Marshal(linkStatement)
 		if err != nil {
-			return nil, errors.Wrap(err, "marshaling LinkStatement")
+			return nil, fmt.Errorf("marshaling LinkStatement: %w", err)
 		}
 	case options.PredicateSLSA:
 		var slsaProvenanceStatement in_toto.ProvenanceStatement
 		if err := json.Unmarshal(decodedPayload, &slsaProvenanceStatement); err != nil {
-			return nil, errors.Wrap(err, "unmarshaling ProvenanceStatement")
+			return nil, fmt.Errorf("unmarshaling ProvenanceStatement): %w", err)
 		}
 		payload, err = json.Marshal(slsaProvenanceStatement)
 		if err != nil {
-			return nil, errors.Wrap(err, "marshaling ProvenanceStatement")
+			return nil, fmt.Errorf("marshaling ProvenanceStatement: %w", err)
 		}
-	case options.PredicateSPDX:
+	case options.PredicateSPDX, options.PredicateSPDXJSON:
 		var spdxStatement in_toto.SPDXStatement
 		if err := json.Unmarshal(decodedPayload, &spdxStatement); err != nil {
-			return nil, errors.Wrap(err, "unmarshaling SPDXStatement")
+			return nil, fmt.Errorf("unmarshaling SPDXStatement: %w", err)
 		}
 		payload, err = json.Marshal(spdxStatement)
 		if err != nil {
-			return nil, errors.Wrap(err, "marshaling SPDXStatement")
+			return nil, fmt.Errorf("marshaling SPDXStatement: %w", err)
+		}
+	case options.PredicateCycloneDX:
+		var cyclonedxStatement in_toto.CycloneDXStatement
+		if err := json.Unmarshal(decodedPayload, &cyclonedxStatement); err != nil {
+			return nil, fmt.Errorf("unmarshaling CycloneDXStatement: %w", err)
+		}
+		payload, err = json.Marshal(cyclonedxStatement)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling CycloneDXStatement: %w", err)
 		}
 	case options.PredicateVuln:
 		var vulnStatement attestation.CosignVulnStatement
 		if err := json.Unmarshal(decodedPayload, &vulnStatement); err != nil {
-			return nil, errors.Wrap(err, "unmarshaling CosignVulnStatement")
+			return nil, fmt.Errorf("unmarshaling CosignVulnStatement: %w", err)
 		}
 		payload, err = json.Marshal(vulnStatement)
 		if err != nil {
-			return nil, errors.Wrap(err, "marshaling CosignVulnStatement")
+			return nil, fmt.Errorf("marshaling CosignVulnStatement: %w", err)
 		}
 	default:
-		return nil, fmt.Errorf("unsupported predicate type: %s", predicateType)
+		// Valid URI type reaches here.
+		payload, err = json.Marshal(statement)
+		if err != nil {
+			return nil, fmt.Errorf("generating Statement: %w", err)
+		}
 	}
 	return payload, nil
 }

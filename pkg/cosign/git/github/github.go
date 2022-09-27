@@ -18,14 +18,15 @@ package github
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v42/github"
-	"github.com/pkg/errors"
+	"github.com/google/go-github/v45/github"
+	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/oauth2"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -42,11 +43,6 @@ func New() *Gh {
 }
 
 func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
-	keys, err := cosign.GenerateKeyPair(pf)
-	if err != nil {
-		return errors.Wrap(err, "generating key pair")
-	}
-
 	var httpClient *http.Client
 	if token, ok := os.LookupEnv("GITHUB_TOKEN"); ok {
 		ts := oauth2.StaticTokenSource(
@@ -54,9 +50,14 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		)
 		httpClient = oauth2.NewClient(ctx, ts)
 	} else {
-		return errors.New("could not find \"GITHUB_TOKEN\" env variable")
+		return errors.New("could not find \"GITHUB_TOKEN\" environment variable")
 	}
 	client := github.NewClient(httpClient)
+
+	keys, err := cosign.GenerateKeyPair(pf)
+	if err != nil {
+		return fmt.Errorf("generating key pair: %w", err)
+	}
 
 	split := strings.Split(ref, "/")
 	if len(split) < 2 {
@@ -66,7 +67,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	key, getRepoPubKeyResp, err := client.Actions.GetRepoPublicKey(ctx, owner, repo)
 	if err != nil {
-		return errors.Wrap(err, "could not get repository public key")
+		return fmt.Errorf("could not get repository public key: %w", err)
 	}
 
 	if getRepoPubKeyResp.StatusCode < 200 && getRepoPubKeyResp.StatusCode >= 300 {
@@ -74,15 +75,14 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
-	passwordSecretEnv := &github.EncryptedSecret{
-		Name:           "COSIGN_PASSWORD",
-		KeyID:          key.GetKeyID(),
-		EncryptedValue: base64.StdEncoding.EncodeToString(keys.Password()),
+	encryptedCosignPasswd, err := encryptSecretWithPublicKey(key, "COSIGN_PASSWORD", keys.Password())
+	if err != nil {
+		return fmt.Errorf("could not encrypt the secret: %w", err)
 	}
 
-	passwordSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, passwordSecretEnv)
+	passwordSecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, encryptedCosignPasswd)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PASSWORD\" github actions secret")
+		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" github actions secret: %w", err)
 	}
 
 	if passwordSecretEnvResp.StatusCode < 200 && passwordSecretEnvResp.StatusCode >= 300 {
@@ -92,15 +92,14 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	fmt.Fprintln(os.Stderr, "Password written to COSIGN_PASSWORD github actions secret")
 
-	privateKeySecretEnv := &github.EncryptedSecret{
-		Name:           "COSIGN_PRIVATE_KEY",
-		KeyID:          key.GetKeyID(),
-		EncryptedValue: base64.StdEncoding.EncodeToString(keys.PrivateBytes),
+	encryptedCosignPrivKey, err := encryptSecretWithPublicKey(key, "COSIGN_PRIVATE_KEY", keys.PrivateBytes)
+	if err != nil {
+		return fmt.Errorf("could not encrypt the secret: %w", err)
 	}
 
-	privateKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, privateKeySecretEnv)
+	privateKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, encryptedCosignPrivKey)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PRIVATE_KEY\" github actions secret")
+		return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" github actions secret: %w", err)
 	}
 
 	if privateKeySecretEnvResp.StatusCode < 200 && privateKeySecretEnvResp.StatusCode >= 300 {
@@ -110,15 +109,14 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 	fmt.Fprintln(os.Stderr, "Private key written to COSIGN_PRIVATE_KEY github actions secret")
 
-	publicKeySecretEnv := &github.EncryptedSecret{
-		Name:           "COSIGN_PUBLIC_KEY",
-		KeyID:          key.GetKeyID(),
-		EncryptedValue: base64.StdEncoding.EncodeToString(keys.PublicBytes),
+	encryptedCosignPubKey, err := encryptSecretWithPublicKey(key, "COSIGN_PUBLIC_KEY", keys.PublicBytes)
+	if err != nil {
+		return fmt.Errorf("could not encrypt the secret: %w", err)
 	}
 
-	publicKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, publicKeySecretEnv)
+	publicKeySecretEnvResp, err := client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, encryptedCosignPubKey)
 	if err != nil {
-		return errors.Wrap(err, "could not create \"COSIGN_PUBLIC_KEY\" github actions secret")
+		return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" github actions secret: %w", err)
 	}
 
 	if publicKeySecretEnvResp.StatusCode < 200 && publicKeySecretEnvResp.StatusCode >= 300 {
@@ -139,4 +137,30 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 // NOTE: GetSecret is not implemented for GitHub
 func (g *Gh) GetSecret(ctx context.Context, ref string, key string) (string, error) {
 	return "", nil
+}
+
+func encryptSecretWithPublicKey(publicKey *github.PublicKey, secretName string, secretValue []byte) (*github.EncryptedSecret, error) {
+	decodedPubKey, err := base64.StdEncoding.DecodeString(publicKey.GetKey())
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode public key: %w", err)
+	}
+	var peersPubKey [32]byte
+	copy(peersPubKey[:], decodedPubKey[0:32])
+
+	var rand io.Reader
+
+	eBody, err := box.SealAnonymous(nil, secretValue, &peersPubKey, rand)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt body: %w", err)
+	}
+
+	encryptedString := base64.StdEncoding.EncodeToString(eBody)
+	keyID := publicKey.GetKeyID()
+	encryptedSecret := &github.EncryptedSecret{
+		Name:           secretName,
+		KeyID:          keyID,
+		EncryptedValue: encryptedString,
+	}
+
+	return encryptedSecret, nil
 }

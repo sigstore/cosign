@@ -1,7 +1,6 @@
 # Keyless Signatures
 
-The full design document for this can be found [here](https://docs.google.com/document/d/189w4Fp1GEA1b2P633HyqTwtcWFNTu_Af4meolMa_1_8/edit?resourcekey=0-QoqNqcHXvSuPnMUdn8RGOQ#heading=h.2mtrw7byet02)
-(join sigstore-dev@googlegroups.com for access).
+The full design document for this can be found [here](https://docs.google.com/document/d/1461lQUoVqbhCve7PuKNf-2_NfpjrzBG5tFohuMVTuK4/edit#).
 
 This document explains how the `keyless` signatures work in `cosign`.
 Try it out!
@@ -115,6 +114,43 @@ Signature timestamps are checked in the [rekor](https://github.com/sigstore/reko
 * Other timestamps: We should allow for other timestamp attestations, including attached [RFC3161](https://www.ietf.org/rfc/rfc3161.txt) signatures.
 * Probably a lot more: This is very experimental.
 * More OIDC providers: Obvious.
+
+## Public Staging Environment
+
+
+There is a public staging environment that is running Fulcio, Rekor and OIDC issuer.
+
+**NOTE** The staging environment provides no SLO guarantees nor the same protection of the root key material for TUF. This environment is meant for development and testing only, PLEASE do not use for production purposes.
+
+The endpoints are as follows:
+
+* https://fulcio.sigstage.dev
+* https://rekor.sigstage.dev
+* https://oauth2.sigstage.dev/auth
+
+These instances are operated and maintained in the same manner as the public production environment for Sigstore.
+
+### Usage
+
+To use this instance, follow the steps below:
+
+1. `rm -r ~/.sigstore`
+1. `gsutil cp -r gs://tuf-root-staging/root.json .`
+1. `cd tuf-root-staging`
+1. `cosign initialize --mirror=tuf-root-staging --root=root.json`
+1. `COSIGN_EXPERIMENTAL=1 cosign sign --oidc-issuer "https://oauth2.sigstage.dev/auth" --fulcio-url "https://fulcio.sigstage.dev" --rekor-url "https://rekor.sigstage.dev" ${IMAGE}`
+1. `COSIGN_EXPERIMENTAL=1 cosign verify --rekor-url "https://rekor.sigstage.dev" ${IMAGE}`
+
+* Steps 1-4 configures your local environment to use the staging keys and certificates.
+* Step 5 specify the staging environment with flags needed for signing.
+* Step 6 specify the staging environment with flags needed for verifying.
+
+#### Revert back to Production
+
+We need to clear the local TUF root data and re-initialize with the default production TUF root data.
+
+1. `rm -r ~/.sigstore`
+1. `cosign initialize`
 
 ## Custom Infrastructure
 

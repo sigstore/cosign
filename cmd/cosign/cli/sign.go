@@ -17,8 +17,8 @@ package cli
 
 import (
 	"flag"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
@@ -47,6 +47,9 @@ func Sign() *cobra.Command {
   # sign a container image and add annotations
   cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE>
 
+  # sign a container image with a key stored in an environment variable
+  cosign sign --key env://[ENV_VAR] <IMAGE>
+
   # sign a container image with a key pair stored in Azure Key Vault
   cosign sign --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
 
@@ -66,7 +69,11 @@ func Sign() *cobra.Command {
   cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
   # sign a container in a registry which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image`,
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
+
+  # sign a container image and not upload transparency log
+  cosign sign --key cosign.key --no-tlog-upload=true <IMAGE>`,
+
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch o.Attachment {
@@ -79,7 +86,7 @@ func Sign() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
@@ -92,17 +99,20 @@ func Sign() *cobra.Command {
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
+				OIDCProvider:             o.OIDC.Provider,
+				SkipConfirmation:         o.SkipConfirmation,
 			}
 			annotationsMap, err := o.AnnotationsMap()
 			if err != nil {
 				return err
 			}
 			if err := sign.SignCmd(ro, ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.CertChain, o.Upload,
-				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment); err != nil {
+				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment, o.NoTlogUpload); err != nil {
 				if o.Attachment == "" {
-					return errors.Wrapf(err, "signing %v", args)
+					return fmt.Errorf("signing %v: %w", args, err)
 				}
-				return errors.Wrapf(err, "signing attachment %s for image %v", o.Attachment, args)
+				return fmt.Errorf("signing attachment %s for image %v: %w", o.Attachment, args, err)
 			}
 			return nil
 		},

@@ -22,12 +22,12 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -48,22 +48,27 @@ import (
 // nolint
 type VerifyCommand struct {
 	options.RegistryOptions
-	CheckClaims    bool
-	KeyRef         string
-	CertRef        string
-	CertEmail      string
-	CertOidcIssuer string
-	CertChain      string
-	EnforceSCT     bool
-	Sk             bool
-	Slot           string
-	Output         string
-	RekorURL       string
-	Attachment     string
-	Annotations    sigs.AnnotationsMap
-	SignatureRef   string
-	HashAlgorithm  crypto.Hash
-	LocalImage     bool
+	CheckClaims                  bool
+	KeyRef                       string
+	CertRef                      string
+	CertEmail                    string
+	CertOidcIssuer               string
+	CertGithubWorkflowTrigger    string
+	CertGithubWorkflowSha        string
+	CertGithubWorkflowName       string
+	CertGithubWorkflowRepository string
+	CertGithubWorkflowRef        string
+	CertChain                    string
+	EnforceSCT                   bool
+	Sk                           bool
+	Slot                         string
+	Output                       string
+	RekorURL                     string
+	Attachment                   string
+	Annotations                  sigs.AnnotationsMap
+	SignatureRef                 string
+	HashAlgorithm                crypto.Hash
+	LocalImage                   bool
 }
 
 // Exec runs the verification command
@@ -89,15 +94,20 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
-		return errors.Wrap(err, "constructing client options")
+		return fmt.Errorf("constructing client options: %w", err)
 	}
 	co := &cosign.CheckOpts{
-		Annotations:        c.Annotations.Annotations,
-		RegistryClientOpts: ociremoteOpts,
-		CertEmail:          c.CertEmail,
-		CertOidcIssuer:     c.CertOidcIssuer,
-		EnforceSCT:         c.EnforceSCT,
-		SignatureRef:       c.SignatureRef,
+		Annotations:                  c.Annotations.Annotations,
+		RegistryClientOpts:           ociremoteOpts,
+		CertEmail:                    c.CertEmail,
+		CertOidcIssuer:               c.CertOidcIssuer,
+		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
+		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
+		CertGithubWorkflowName:       c.CertGithubWorkflowName,
+		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
+		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
+		EnforceSCT:                   c.EnforceSCT,
+		SignatureRef:                 c.SignatureRef,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
@@ -106,11 +116,18 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
-				return errors.Wrap(err, "creating Rekor client")
+				return fmt.Errorf("creating Rekor client: %w", err)
 			}
 			co.RekorClient = rekorClient
 		}
-		co.RootCerts = fulcio.GetRoots()
+		co.RootCerts, err = fulcio.GetRoots()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio roots: %w", err)
+		}
+		co.IntermediateCerts, err = fulcio.GetIntermediates()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		}
 	}
 	keyRef := c.KeyRef
 	certRef := c.CertRef
@@ -121,7 +138,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	case keyRef != "":
 		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
 		if err != nil {
-			return errors.Wrap(err, "loading public key")
+			return fmt.Errorf("loading public key: %w", err)
 		}
 		pkcs11Key, ok := pubKey.(*pkcs11key.Key)
 		if ok {
@@ -130,12 +147,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	case c.Sk:
 		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
-			return errors.Wrap(err, "opening piv token")
+			return fmt.Errorf("opening piv token: %w", err)
 		}
 		defer sk.Close()
 		pubKey, err = sk.Verifier()
 		if err != nil {
-			return errors.Wrap(err, "initializing piv token verifier")
+			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case certRef != "":
 		cert, err := loadCertFromFileOrURL(c.CertRef)
@@ -143,7 +160,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return err
 		}
 		if c.CertChain == "" {
-			pubKey, err = signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+			// If no certChain is passed, the Fulcio root certificate will be used
+			co.RootCerts, err = fulcio.GetRoots()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio roots: %w", err)
+			}
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			}
+			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
 				return err
 			}
@@ -179,11 +205,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		} else {
 			ref, err := name.ParseReference(img)
 			if err != nil {
-				return errors.Wrap(err, "parsing reference")
+				return fmt.Errorf("parsing reference: %w", err)
 			}
 			ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
 			if err != nil {
-				return errors.Wrapf(err, "resolving attachment type %s for image %s", c.Attachment, img)
+				return fmt.Errorf("resolving attachment type %s for image %s: %w", c.Attachment, img, err)
 			}
 
 			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
@@ -228,9 +254,29 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 	case "text":
 		for _, sig := range verified {
 			if cert, err := sig.Cert(); err == nil && cert != nil {
+				ce := cosign.CertExtensions{Cert: cert}
 				fmt.Fprintln(os.Stderr, "Certificate subject: ", sigs.CertSubject(cert))
-				if issuerURL := sigs.CertIssuerExtension(cert); issuerURL != "" {
+				if issuerURL := ce.GetIssuer(); issuerURL != "" {
 					fmt.Fprintln(os.Stderr, "Certificate issuer URL: ", issuerURL)
+				}
+
+				if githubWorkflowTrigger := ce.GetCertExtensionGithubWorkflowTrigger(); githubWorkflowTrigger != "" {
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Trigger:", githubWorkflowTrigger)
+				}
+
+				if githubWorkflowSha := ce.GetExtensionGithubWorkflowSha(); githubWorkflowSha != "" {
+					fmt.Fprintln(os.Stderr, "GitHub Workflow SHA:", githubWorkflowSha)
+				}
+				if githubWorkflowName := ce.GetCertExtensionGithubWorkflowName(); githubWorkflowName != "" {
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Name:", githubWorkflowName)
+				}
+
+				if githubWorkflowRepository := ce.GetCertExtensionGithubWorkflowRepository(); githubWorkflowRepository != "" {
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Trigger", githubWorkflowRepository)
+				}
+
+				if githubWorkflowRef := ce.GetCertExtensionGithubWorkflowRef(); githubWorkflowRef != "" {
+					fmt.Fprintln(os.Stderr, "GitHub Workflow Ref:", githubWorkflowRef)
 				}
 			}
 
@@ -258,12 +304,37 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 			}
 
 			if cert, err := sig.Cert(); err == nil && cert != nil {
+				ce := cosign.CertExtensions{Cert: cert}
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
 				ss.Optional["Subject"] = sigs.CertSubject(cert)
-				if issuerURL := sigs.CertIssuerExtension(cert); issuerURL != "" {
+				if issuerURL := ce.GetIssuer(); issuerURL != "" {
 					ss.Optional["Issuer"] = issuerURL
+					ss.Optional[cosign.CertExtensionOIDCIssuer] = issuerURL
+				}
+				if githubWorkflowTrigger := ce.GetCertExtensionGithubWorkflowTrigger(); githubWorkflowTrigger != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowTrigger]] = githubWorkflowTrigger
+					ss.Optional[cosign.CertExtensionGithubWorkflowTrigger] = githubWorkflowTrigger
+				}
+
+				if githubWorkflowSha := ce.GetExtensionGithubWorkflowSha(); githubWorkflowSha != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowSha]] = githubWorkflowSha
+					ss.Optional[cosign.CertExtensionGithubWorkflowSha] = githubWorkflowSha
+				}
+				if githubWorkflowName := ce.GetCertExtensionGithubWorkflowName(); githubWorkflowName != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowName]] = githubWorkflowName
+					ss.Optional[cosign.CertExtensionGithubWorkflowName] = githubWorkflowName
+				}
+
+				if githubWorkflowRepository := ce.GetCertExtensionGithubWorkflowRepository(); githubWorkflowRepository != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowRepository]] = githubWorkflowRepository
+					ss.Optional[cosign.CertExtensionGithubWorkflowRepository] = githubWorkflowRepository
+				}
+
+				if githubWorkflowRef := ce.GetCertExtensionGithubWorkflowRef(); githubWorkflowRef != "" {
+					ss.Optional[cosign.CertExtensionMap[cosign.CertExtensionGithubWorkflowRef]] = githubWorkflowRef
+					ss.Optional[cosign.CertExtensionGithubWorkflowRef] = githubWorkflowRef
 				}
 			}
 			if bundle, err := sig.Bundle(); err == nil && bundle != nil {

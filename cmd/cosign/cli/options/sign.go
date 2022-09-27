@@ -32,6 +32,8 @@ type SignOptions struct {
 	Force             bool
 	Recursive         bool
 	Attachment        string
+	SkipConfirmation  bool
+	NoTlogUpload      bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -54,27 +56,33 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
+	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
 
-	cmd.Flags().StringVar(&o.Cert, "cert", "",
+	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the X.509 certificate in PEM format to include in the OCI Signature")
+	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
 
-	cmd.Flags().StringVar(&o.CertChain, "cert-chain", "",
+	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Included in the OCI Signature")
+	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
 
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")
 
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
+	_ = cmd.Flags().SetAnnotation("output-signature", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
+	_ = cmd.Flags().SetAnnotation("output-certificate", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
+	_ = cmd.Flags().SetAnnotation("payload", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().BoolVarP(&o.Force, "force", "f", false,
 		"skip warnings and confirmations")
@@ -84,4 +92,10 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"related image attachment to sign (sbom), default none")
+
+	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
+		"skip confirmation prompts for non-destructive operations")
+
+	cmd.Flags().BoolVar(&o.NoTlogUpload, "no-tlog-upload", false,
+		"whether to not upload the transparency log")
 }

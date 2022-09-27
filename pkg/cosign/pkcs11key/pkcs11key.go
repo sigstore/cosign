@@ -25,6 +25,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -33,7 +34,6 @@ import (
 
 	"github.com/ThalesIgnite/crypto11"
 	"github.com/miekg/pkcs11"
-	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/term"
 )
@@ -72,7 +72,7 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 	}
 	info, err := os.Stat(config.ModulePath)
 	if err != nil {
-		return nil, errors.Wrap(err, "access modulePath")
+		return nil, fmt.Errorf("access modulePath: %w", err)
 	}
 	if !info.Mode().IsRegular() {
 		return nil, errors.New("modulePath does not point to a regular file")
@@ -93,7 +93,7 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 				}
 				err := p.Initialize()
 				if err != nil {
-					return errors.Wrap(err, "initialize PKCS11 module")
+					return fmt.Errorf("initialize PKCS11 module: %w", err)
 				}
 				defer p.Destroy()
 				defer p.Finalize()
@@ -103,18 +103,18 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 				if config.SlotID != nil {
 					tokenInfo, err = p.GetTokenInfo(uint(*config.SlotID))
 					if err != nil {
-						return errors.Wrap(err, "get token info")
+						return fmt.Errorf("get token info: %w", err)
 					}
 				} else {
 					slots, err := p.GetSlotList(true)
 					if err != nil {
-						return errors.Wrap(err, "get slot list of PKCS11 module")
+						return fmt.Errorf("get slot list of PKCS11 module: %w", err)
 					}
 
 					for _, slot := range slots {
 						currentTokenInfo, err := p.GetTokenInfo(slot)
 						if err != nil {
-							return errors.Wrap(err, "get token info")
+							return fmt.Errorf("get token info: %w", err)
 						}
 						if currentTokenInfo.Label == config.TokenLabel {
 							tokenInfo = currentTokenInfo
@@ -134,7 +134,7 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 					// nolint:unconvert
 					b, err := term.ReadPassword(int(syscall.Stdin))
 					if err != nil {
-						return errors.Wrap(err, "get pin")
+						return fmt.Errorf("get pin: %w", err)
 					}
 					conf.Pin = string(b)
 				}
@@ -196,11 +196,11 @@ func (k *Key) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, er
 func (k *Key) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
 	sig, err := io.ReadAll(signature)
 	if err != nil {
-		return errors.Wrap(err, "read signature")
+		return fmt.Errorf("read signature: %w", err)
 	}
 	msg, err := io.ReadAll(message)
 	if err != nil {
-		return errors.Wrap(err, "read message")
+		return fmt.Errorf("read message: %w", err)
 	}
 	digest := sha256.Sum256(msg)
 

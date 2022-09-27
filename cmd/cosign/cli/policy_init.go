@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/mail"
@@ -31,7 +32,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
@@ -40,10 +40,10 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
-	"github.com/sigstore/cosign/pkg/sget"
+	"github.com/sigstore/cosign/pkg/sget" //nolint:staticcheck
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
 )
 
@@ -135,7 +135,7 @@ func initPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to %s", outfile)
+					return fmt.Errorf("error writing to %s: %w", outfile, err)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")
@@ -179,7 +179,7 @@ func signPolicy() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sv, err := sign.SignerFromKeyOpts(ctx, "", "", sign.KeyOpts{
+			sv, err := sign.SignerFromKeyOpts(ctx, "", "", options.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
@@ -188,6 +188,8 @@ func signPolicy() *cobra.Command {
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCProvider:             o.OIDC.Provider,
+				SkipConfirmation:         o.SkipConfirmation,
 			})
 			if err != nil {
 				return err
@@ -202,7 +204,8 @@ func signPolicy() *cobra.Command {
 				return errors.New("error decoding certificate")
 			}
 			signerEmail := sigs.CertSubject(certs[0])
-			signerIssuer := sigs.CertIssuerExtension(certs[0])
+			ce := cosign.CertExtensions{Cert: certs[0]}
+			signerIssuer := ce.GetIssuer()
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
@@ -226,24 +229,24 @@ func signPolicy() *cobra.Command {
 
 			result := &bytes.Buffer{}
 			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
-				return errors.Wrap(err, "error getting result")
+				return fmt.Errorf("error getting result: %w", err)
 			}
 			b, err := io.ReadAll(result)
 			if err != nil {
-				return errors.Wrap(err, "error reading bytes from root.json")
+				return fmt.Errorf("error reading bytes from root.json: %w", err)
 			}
 
 			// Unmarshal policy and verify that Fulcio signer email is in the trusted
 			signed := &tuf.Signed{}
 			if err := json.Unmarshal(b, signed); err != nil {
-				return errors.Wrap(err, "unmarshalling signed root policy")
+				return fmt.Errorf("unmarshalling signed root policy: %w", err)
 			}
 
 			// Create and add signature
 			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
 			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(ctx))
 			if err != nil {
-				return errors.Wrap(err, "error occurred while during artifact signing")
+				return fmt.Errorf("error occurred while during artifact signing): %w", err)
 			}
 			signature := tuf.Signature{
 				Signature: base64.StdEncoding.EncodeToString(sig),
@@ -279,7 +282,7 @@ func signPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to %s", outfile)
+					return fmt.Errorf("error writing to %s: %w", outfile, err)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")

@@ -47,6 +47,7 @@ func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oaut
 type testClient struct {
 	payload  fulciopb.SigningCertificate
 	rootResp fulciopb.TrustBundle
+	config   fulciopb.Configuration
 	err      error
 }
 
@@ -58,6 +59,10 @@ func (p *testClient) CreateSigningCertificate(_ context.Context, _ *fulciopb.Cre
 
 func (p *testClient) GetTrustBundle(_ context.Context, _ *fulciopb.GetTrustBundleRequest, _ ...grpc.CallOption) (*fulciopb.TrustBundle, error) {
 	return &p.rootResp, p.err
+}
+
+func (p *testClient) GetConfiguration(_ context.Context, _ *fulciopb.GetConfigurationRequest, _ ...grpc.CallOption) (*fulciopb.Configuration, error) {
+	return &p.config, p.err
 }
 
 func TestGetCertForOauthID(t *testing.T) {

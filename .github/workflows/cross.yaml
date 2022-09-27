@@ -1,5 +1,13 @@
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches:
       - main
       - release-*
@@ -29,11 +37,12 @@ jobs:
             COSIGN_PASSWORD: COSIGN_PASSWORD
     steps:
       - name: Install Go
-        uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v2.2.0
+        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v2.2.0
         with:
-          go-version: '1.17.x'
+          go-version: '1.19'
+          check-latest: true
       - name: Checkout code
-        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v2.4.0
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
       - name: build cosign
         run: |
           make cosign && mv ./cosign ./${{matrix.COSIGN_TARGET}}
@@ -60,7 +69,7 @@ jobs:
           ./${{matrix.COSIGN_TARGET}} verify-blob --key ./.github/workflows/cosign-test.pub --signature ${{matrix.SGET_TARGET}}.sig ./${{matrix.SGET_TARGET}}
       - name: Upload artifacts
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535 # v2.3.1
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v2.3.1
         with:
           name: artifacts
           path: |

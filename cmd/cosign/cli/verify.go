@@ -16,11 +16,11 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )
 
@@ -62,6 +62,9 @@ against the transparency log.`,
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
 
+  # verify image with a key stored in an environment variable
+  cosign verify --key env://[ENV_VAR] <IMAGE>
+
   # verify image with public key stored in Google Cloud KMS
   cosign verify --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <IMAGE>
 
@@ -90,23 +93,28 @@ against the transparency log.`,
 			}
 
 			v := verify.VerifyCommand{
-				RegistryOptions: o.Registry,
-				CheckClaims:     o.CheckClaims,
-				KeyRef:          o.Key,
-				CertRef:         o.CertVerify.Cert,
-				CertEmail:       o.CertVerify.CertEmail,
-				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
-				CertChain:       o.CertVerify.CertChain,
-				EnforceSCT:      o.CertVerify.EnforceSCT,
-				Sk:              o.SecurityKey.Use,
-				Slot:            o.SecurityKey.Slot,
-				Output:          o.Output,
-				RekorURL:        o.Rekor.URL,
-				Attachment:      o.Attachment,
-				Annotations:     annotations,
-				HashAlgorithm:   hashAlgorithm,
-				SignatureRef:    o.SignatureRef,
-				LocalImage:      o.LocalImage,
+				RegistryOptions:              o.Registry,
+				CheckClaims:                  o.CheckClaims,
+				KeyRef:                       o.Key,
+				CertRef:                      o.CertVerify.Cert,
+				CertEmail:                    o.CertVerify.CertEmail,
+				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				CertChain:                    o.CertVerify.CertChain,
+				EnforceSCT:                   o.CertVerify.EnforceSCT,
+				Sk:                           o.SecurityKey.Use,
+				Slot:                         o.SecurityKey.Slot,
+				Output:                       o.Output,
+				RekorURL:                     o.Rekor.URL,
+				Attachment:                   o.Attachment,
+				Annotations:                  annotations,
+				HashAlgorithm:                hashAlgorithm,
+				SignatureRef:                 o.SignatureRef,
+				LocalImage:                   o.LocalImage,
 			}
 
 			return v.Exec(cmd.Context(), args)
@@ -169,21 +177,26 @@ against the transparency log.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := verify.VerifyAttestationCommand{
-				RegistryOptions: o.Registry,
-				CheckClaims:     o.CheckClaims,
-				CertRef:         o.CertVerify.Cert,
-				CertEmail:       o.CertVerify.CertEmail,
-				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
-				CertChain:       o.CertVerify.CertChain,
-				EnforceSCT:      o.CertVerify.EnforceSCT,
-				KeyRef:          o.Key,
-				Sk:              o.SecurityKey.Use,
-				Slot:            o.SecurityKey.Slot,
-				Output:          o.Output,
-				RekorURL:        o.Rekor.URL,
-				PredicateType:   o.Predicate.Type,
-				Policies:        o.Policies,
-				LocalImage:      o.LocalImage,
+				RegistryOptions:              o.Registry,
+				CheckClaims:                  o.CheckClaims,
+				CertRef:                      o.CertVerify.Cert,
+				CertEmail:                    o.CertVerify.CertEmail,
+				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
+				CertChain:                    o.CertVerify.CertChain,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				EnforceSCT:                   o.CertVerify.EnforceSCT,
+				KeyRef:                       o.Key,
+				Sk:                           o.SecurityKey.Use,
+				Slot:                         o.SecurityKey.Slot,
+				Output:                       o.Output,
+				RekorURL:                     o.Rekor.URL,
+				PredicateType:                o.Predicate.Type,
+				Policies:                     o.Policies,
+				LocalImage:                   o.LocalImage,
 			}
 			return v.Exec(cmd.Context(), args)
 		},
@@ -205,13 +218,10 @@ You may specify either a key, a certificate or a kms reference to verify against
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file or - for stdin.`,
-		Example: `  cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--cert <cert>) --signature <sig> <blob>
+		Example: ` cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--certificate <cert>) --signature <sig> <blob>
 
   # Verify a simple blob and message
-  cosign verify-blob --key cosign.pub --signature sig msg
-
-  # Verify a simple blob with remote signature URL, both http and https schemes are supported
-  cosign verify-blob --key cosign.pub --signature http://host/my.sig
+  cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
@@ -219,8 +229,8 @@ The blob may be specified as a path to a file or - for stdin.`,
   # verify a signature with public key provided by URL
   cosign verify-blob --key https://host.for/<FILE> --signature $sig msg
 
-  # Verify a signature against a payload from another process using process redirection
-  cosign verify-blob --key cosign.pub --signature $sig <(git rev-parse HEAD)
+  # verify a signature with signature and key provided by URL
+  cosign verify-blob --key https://host.for/<FILE> --signature https://example.com/<SIG>
 
   # Verify a signature against Azure Key Vault
   cosign verify-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --signature $sig <blob>
@@ -241,12 +251,12 @@ The blob may be specified as a path to a file or - for stdin.`,
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 
   # Verify a signature against a certificate
-  cosign verify-blob --cert <cert> --signature $sig <blob>
+  COSIGN_EXPERIMENTAL=1 cosign verify-blob --certificate <cert> --signature $sig <blob>
 `,
 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:     o.Key,
 				Sk:         o.SecurityKey.Use,
 				Slot:       o.SecurityKey.Slot,
@@ -255,8 +265,10 @@ The blob may be specified as a path to a file or - for stdin.`,
 			}
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
 				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain,
-				o.Signature, args[0], o.CertVerify.EnforceSCT); err != nil {
-				return errors.Wrapf(err, "verifying blob %s", args)
+				o.Signature, args[0], o.CertVerify.CertGithubWorkflowTrigger, o.CertVerify.CertGithubWorkflowSha,
+				o.CertVerify.CertGithubWorkflowName, o.CertVerify.CertGithubWorkflowRepository, o.CertVerify.CertGithubWorkflowRef,
+				o.CertVerify.EnforceSCT); err != nil {
+				return fmt.Errorf("verifying blob %s: %w", args, err)
 			}
 			return nil
 		},

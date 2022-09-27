@@ -9,6 +9,7 @@ Container Signing, Verification and Storage in an OCI registry.
 [![Go Report Card](https://goreportcard.com/badge/github.com/sigstore/cosign)](https://goreportcard.com/report/github.com/sigstore/cosign)
 [![e2e-tests](https://github.com/sigstore/cosign/actions/workflows/e2e_tests.yml/badge.svg)](https://github.com/sigstore/cosign/actions/workflows/e2e_tests.yml)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/5715/badge)](https://bestpractices.coreinfrastructure.org/projects/5715)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/sigstore/cosign/badge)](https://api.securityscorecards.dev/projects/github.com/sigstore/cosign)
 
 Cosign aims to make signatures **invisible infrastructure**.
 
@@ -41,6 +42,19 @@ If you have Go 1.17+, you can setup a development environment:
     $ cd cosign
     $ go install ./cmd/cosign
     $ $(go env GOPATH)/bin/cosign
+
+## Dockerfile
+
+Here is how to install and use cosign inside a Dockerfile through the gcr.io/projectsigstore/cosign image:
+
+```shell
+FROM gcr.io/projectsigstore/cosign:v1.9.0 as cosign-bin
+
+# Source: https://github.com/distroless/static
+FROM ghcr.io/distroless/static:latest
+COPY --from=cosign-bin /ko-app/cosign /usr/local/bin/cosign
+ENTRYPOINT [ "cosign" ]
+```
 
 ## Quick Start
 
@@ -117,6 +131,7 @@ This core set includes:
   * Tekton Bundles
   * Helm Charts
   * WASM modules
+  * eBPF modules
   * (probably anything else, feel free to add things to this list)
 * Text files and other binary blobs, using `cosign sign-blob`
 
@@ -180,6 +195,7 @@ $ cosign sign --key cosign.key gcr.io/dlorenc-vmtest2/artifact
 Enter password for private key:
 Pushing signature to: gcr.io/dlorenc-vmtest2/artifact:sha256-3f612a4520b2c245d620d0cca029f1173f6bea76819dde8543f5b799ea3c696c.sig
 ```
+
 #### sget
 
 We also include the `sget` command for safer, automatic verification of signatures and integration with our binary transparency log, Rekor.
@@ -252,6 +268,31 @@ Enter password for private key:
 tlog entry created with index: 5198
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812.sig
 ```
+#### eBPF
+
+[eBPF](https://ebpf.io) modules can also be stored in an OCI registry, using this [specification](https://github.com/solo-io/bumblebee/tree/main/spec).
+
+The image below was built using the `bee` tool. More information can be found [here](https://github.com/solo-io/bumblebee/)
+
+Cosign can then sign these images as they can any other OCI image.
+
+```shell
+$ bee build ./examples/tcpconnect/tcpconnect.c localhost:5000/tcpconnect:test
+$ bee push localhost:5000/tcpconnect:test
+$ cosign sign  --key cosign.key localhost:5000/tcpconnect:test
+Enter password for private key:
+Pushing signature to: localhost:5000/tcpconnect
+$ cosign verify --key cosign.pub localhost:5000/tcpconnect:test
+cosign verify --key pubkey.pem localhost:5001/tcpconnect:test
+
+Verification for localhost:5000/tcpconnect:test --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+
+[{"critical":{"identity":{"docker-reference":"localhost:5000/tcpconnect"},"image":{"docker-manifest-digest":"sha256:7a91c50d922925f152fec96ed1d84b7bc6b2079c169d68826f6cf307f22d40e6"},"type":"cosign container image signature"},"optional":null}]
+
+```
 
 #### In-Toto Attestations
 
@@ -306,8 +347,11 @@ Today, `cosign` has been tested and works against the following registries:
 * Alibaba Cloud Container Registry
 * Red Hat Quay Container Registry 3.6+ / Red Hat quay.io
 * Elastic Container Registry
+* IBM Cloud Container Registry
+* Cloudsmith Container Registry
 
 We aim for wide registry support. To `sign` images in registries which do not yet fully support [OCI media types](https://github.com/sigstore/cosign/blob/main/SPEC.md#object-types), one may need to use `COSIGN_DOCKER_MEDIA_TYPES` to fall back to legacy equivalents. For example:
+
 ```shell
 COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
 ```
@@ -373,11 +417,11 @@ That looks like:
     }
 }
 ```
+
 **Note:** This can be generated for an image reference using `cosign generate <image>`.
 
 I'm happy to switch this format to something else if it makes sense.
 See https://github.com/notaryproject/nv2/issues/40 for one option.
-
 
 #### Registry Details
 
@@ -393,15 +437,36 @@ To add a signature, clients orchestrate a "read-append-write" operation, so the 
 will win in the case of contention.
 
 ##### Specifying Registry
+
 `cosign` will default to storing signatures in the same repo as the image it is signing.
 To specify a different repo for signatures, you can set the `COSIGN_REPOSITORY` environment variable.
 
 This will replace the repo in the provided image like this:
-```
+
+```shell
 $ export COSIGN_REPOSITORY=gcr.io/my-new-repo
 $ gcr.io/dlorenc-vmtest2/demo -> gcr.io/my-new-repo/demo:sha256-DIGEST.sig
 ```
+
 So the signature for `gcr.io/dlorenc-vmtest2/demo` will be stored in `gcr.io/my-new-repo/demo:sha256-DIGEST.sig`.
+
+Note: different registries might expect different formats for the "repository."
+
+* To use [GCR](https://cloud.google.com/container-registry), a registry name
+  like `gcr.io/$REPO` is sufficient, as in the example above.
+* To use [Artifact Registry](https://cloud.google.com/artifact-registry),
+  specify a full image name like
+  `$LOCATION-docker.pkg.dev/$PROJECT/$REPO/$STORAGE_IMAGE`, not just a
+  repository. For example,
+
+  ```shell
+  COSIGN_REPOSITORY=us-docker.pkg.dev/my-new-repo/demo
+  gcr.io/dlorenc-vmtest2/demo --> us-docker.pkg.dev/my-new-repo/demo:sha256-DIGEST.sig
+  ```
+
+  where the `sha256-DIGEST` will match the digest for
+  `gcr.io/dlorenc-vmtest2/demo`. Specifying just a repo like
+  `$LOCATION-docker.pkg.dev/$PROJECT/$REPO` will not work in Artifact Registry.
 
 
 ## Signature Specification
@@ -414,7 +479,7 @@ The keys encrypted under a password using scrypt as a KDF and nacl/secretbox for
 
 They have a PEM header of `ENCRYPTED COSIGN PRIVATE KEY`:
 
-```
+```shell
 -----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----
 ...
 -----END ENCRYPTED COSIGN PRIVATE KEY-----
@@ -719,6 +784,13 @@ $ crane manifest dlorenc/demo@sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa2
   ]
 }
 ```
+
+## Release Cadence
+
+We are intending to move to a monthly cadence for minor releases.
+Minor releases will be published around the beginning of the month.
+We may cut a patch release instead, if the changes are small enough not to warrant a minor release.
+We will also cut patch releases periodically as needed to address bugs.
 
 ## Security
 

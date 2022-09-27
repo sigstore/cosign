@@ -54,4 +54,5 @@ func (o *FilesOptions) String() string {
 func (o *FilesOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSliceVarP(&o.Files, "files", "f", nil,
 		"<filepath>:[platform/arch]")
+	_ = cmd.Flags().SetAnnotation("files", cobra.BashCompFilenameExt, []string{})
 }

@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
@@ -68,7 +67,7 @@ func SignBlob() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
@@ -81,7 +80,9 @@ func SignBlob() *cobra.Command {
 				OIDCClientID:             o.OIDC.ClientID,
 				OIDCClientSecret:         oidcClientSecret,
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 				BundlePath:               o.BundlePath,
+				SkipConfirmation:         o.SkipConfirmation,
 			}
 			for _, blob := range args {
 				// TODO: remove when the output flag has been deprecated
@@ -90,7 +91,7 @@ func SignBlob() *cobra.Command {
 					o.OutputSignature = o.Output
 				}
 				if _, err := sign.SignBlobCmd(ro, ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate); err != nil {
-					return errors.Wrapf(err, "signing %s", blob)
+					return fmt.Errorf("signing %s: %w", blob, err)
 				}
 			}
 			return nil

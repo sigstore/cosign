@@ -21,13 +21,15 @@ import (
 
 // AttestOptions is the top level wrapper for the attest command.
 type AttestOptions struct {
-	Key       string
-	Cert      string
-	CertChain string
-	NoUpload  bool
-	Force     bool
-	Recursive bool
-	Replace   bool
+	Key              string
+	Cert             string
+	CertChain        string
+	NoUpload         bool
+	Force            bool
+	Recursive        bool
+	Replace          bool
+	SkipConfirmation bool
+	NoTlogUpload     bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -50,15 +52,18 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
+	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{"key"})
 
-	cmd.Flags().StringVar(&o.Cert, "cert", "",
+	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the X.509 certificate in PEM format to include in the OCI Signature")
+	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
 
-	cmd.Flags().StringVar(&o.CertChain, "cert-chain", "",
+	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Included in the OCI Signature")
+	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
 
 	cmd.Flags().BoolVar(&o.NoUpload, "no-upload", false,
 		"do not upload the generated attestation")
@@ -71,4 +76,10 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&o.Replace, "replace", "", false,
 		"")
+
+	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
+		"skip confirmation prompts for non-destructive operations")
+
+	cmd.Flags().BoolVar(&o.NoTlogUpload, "no-tlog-upload", false,
+		"whether to not upload the transparency log")
 }

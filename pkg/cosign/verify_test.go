@@ -23,8 +23,10 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"io"
 	"net"
 	"net/url"
@@ -38,19 +40,20 @@ import (
 	"github.com/google/certificate-transparency-go/testdata"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/pkg/apis/cosigned/v1alpha1"
+	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	ctuf "github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
+	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	rtypes "github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/stretchr/testify/require"
+	"github.com/transparency-dev/merkle/rfc6962"
 )
 
 type mockVerifier struct {
@@ -216,11 +219,6 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating signer: %v", err)
 	}
-	testSigstoreRoot := ctuf.TestSigstoreRoot{
-		Rekor:             sv,
-		FulcioCertificate: rootCert,
-	}
-	_, _ = ctuf.NewSigstoreTufRepo(t, testSigstoreRoot)
 
 	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
 	pemLeaf := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw}))
@@ -234,19 +232,21 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 
 	// Create a fake bundle
 	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, []byte(pemLeaf))
-	entry, _ := rtypes.NewEntry(pe[0])
+	entry, _ := rtypes.UnmarshalEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
 
 	opts := []static.Option{static.WithCertChain(pemLeaf, []string{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
 
+	// TODO(asraa): Re-enable passing test when Rekor public keys can be set in CheckOpts,
+	// instead of relying on the singleton TUF instance.
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
-	if err != nil {
-		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
+	if err == nil {
+		t.Fatalf("expected error due to custom Rekor public key")
 	}
-	if verified == false {
-		t.Fatalf("expected verified=true, got verified=false")
+	if verified == true {
+		t.Fatalf("expected verified=false, got verified=true")
 	}
 }
 
@@ -302,6 +302,113 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	}
 }
 
+func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	otherSubCert, _, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+	subPool := x509.NewCertPool()
+	// Load in different sub cert so the chain doesn't verify
+	rootPool.AddCert(otherSubCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(string(pemLeaf), []string{string(pemSub), string(pemRoot)}))
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IntermediateCerts: subPool})
+	if err == nil {
+		t.Fatal("expected error while verifying signature")
+	}
+	if !strings.Contains(err.Error(), "certificate signed by unknown authority") {
+		t.Fatal("expected error while verifying signature")
+	}
+	// TODO: Create fake bundle and test verification
+	if verified == true {
+		t.Fatalf("expected verified=false, got verified=true")
+	}
+}
+
+var (
+	lea = models.LogEntryAnon{
+		Attestation:    &models.LogEntryAnonAttestation{},
+		Body:           base64.StdEncoding.EncodeToString([]byte("asdf")),
+		IntegratedTime: new(int64),
+		LogID:          new(string),
+		LogIndex:       new(int64),
+		Verification: &models.LogEntryAnonVerification{
+			InclusionProof: &models.InclusionProof{
+				RootHash: new(string),
+				TreeSize: new(int64),
+				LogIndex: new(int64),
+			},
+		},
+	}
+	data = models.LogEntry{
+		uuid(lea): lea,
+	}
+)
+
+// uuid generates the UUID for the given LogEntry.
+// This is effectively a reimplementation of
+// pkg/cosign/tlog.go -> verifyUUID / ComputeLeafHash, but separated
+// to avoid a circular dependency.
+// TODO?: Perhaps we should refactor the tlog libraries into a separate
+// package?
+func uuid(e models.LogEntryAnon) string {
+	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	if err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(entryBytes))
+}
+
+// This test ensures that image signature validation fails properly if we are
+// using a SigVerifier with Rekor.
+// See https://github.com/sigstore/cosign/issues/1816 for more details.
+func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
+	sv, privKey, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatalf("error generating verifier: %v", err)
+	}
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	sig, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(sig))
+
+	// Add a fake rekor client - this makes it look like there's a matching
+	// tlog entry for the signature during validation (even though it does not
+	// match the underlying data / key)
+	mClient := new(client.Rekor)
+	mClient.Entries = &mock.EntriesClient{
+		Entries: &data,
+	}
+
+	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
+		SigVerifier: sv,
+		RekorClient: mClient,
+	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
+		// TODO(wlynch): This is a weak test, since this is really failing because
+		// there is no inclusion proof for the Rekor entry rather than failing to
+		// validate the Rekor public key itself. At the very least this ensures
+		// that we're hitting tlog validation during signature checking,
+		// but we should look into improving this once there is an in-memory
+		// Rekor client that is capable of performing inclusion proof validation
+		// in unit tests.
+		t.Fatal("expected error while verifying signature")
+	}
+}
+
 func TestValidateAndUnpackCertSuccess(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"
@@ -322,6 +429,10 @@ func TestValidateAndUnpackCertSuccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
 }
 
 func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
@@ -341,6 +452,10 @@ func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
 }
 
@@ -442,6 +557,8 @@ func TestValidateAndUnpackCertInvalidOidcIssuer(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
 }
 
 func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
@@ -462,6 +579,128 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected email not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected email not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowTrigger(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowTrigger := "myTrigger"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, githubWorkFlowTrigger, "", "", "", "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:                 rootPool,
+		CertEmail:                 subject,
+		CertGithubWorkflowTrigger: "otherTrigger",
+		CertOidcIssuer:            oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Trigger not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Trigger not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowSHA(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowSha := "mySHA"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", githubWorkFlowSha, "", "", "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:             rootPool,
+		CertEmail:             subject,
+		CertGithubWorkflowSha: "otherSHA",
+		CertOidcIssuer:        oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow SHA not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow SHA not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowName(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowName := "myName"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", "", githubWorkFlowName, "", "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:              rootPool,
+		CertEmail:              subject,
+		CertGithubWorkflowName: "otherName",
+		CertOidcIssuer:         oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Name not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Name not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowRepository(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowRepository := "myRepository"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", "", "", githubWorkFlowRepository, "", rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:                    rootPool,
+		CertEmail:                    subject,
+		CertGithubWorkflowRepository: "otherRepository",
+		CertOidcIssuer:               oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Repository not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Repository not found in certificate")
+}
+
+func TestValidateAndUnpackCertInvalidGithubWorkflowRef(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	githubWorkFlowRef := "myRef"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCertWithGitHubOIDs(subject, oidcIssuer, "", "", "", "", githubWorkFlowRef, rootCert, rootKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:             rootPool,
+		CertEmail:             subject,
+		CertGithubWorkflowRef: "otherRef",
+		CertOidcIssuer:        oidcIssuer,
+	}
+
+	_, err := ValidateAndUnpackCert(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Ref not found in certificate")
+	err = CheckCertificatePolicy(leafCert, co)
+	require.Contains(t, err.Error(), "expected GitHub Workflow Ref not found in certificate")
 }
 
 func TestValidateAndUnpackCertWithChainSuccess(t *testing.T) {
@@ -550,7 +789,7 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 	oidcIssuer := "https://accounts.google.com"
 
 	tests := []struct {
-		identities       []v1alpha1.Identity
+		identities       []Identity
 		wantErrSubstring string
 		dnsNames         []string
 		emailAddresses   []string
@@ -558,49 +797,45 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 		uris             []*url.URL
 	}{
 		{identities: nil /* No matches required, checks out */},
-		{identities: []v1alpha1.Identity{ // Strict match on both
+		{identities: []Identity{ // Strict match on both
 			{Subject: emailSubject, Issuer: oidcIssuer}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // just issuer
+			emailAddresses: []string{emailSubject}},
+		{identities: []Identity{ // just issuer
 			{Issuer: oidcIssuer}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // just subject
+			emailAddresses: []string{emailSubject}},
+		{identities: []Identity{ // just subject
 			{Subject: emailSubject}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // mis-match
+			emailAddresses: []string{emailSubject}},
+		{identities: []Identity{ // mis-match
 			{Subject: "wrongsubject", Issuer: oidcIssuer},
 			{Subject: emailSubject, Issuer: "wrongissuer"}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: "none of the expected identities matched"},
-		{identities: []v1alpha1.Identity{ // one good identity, other does not match
+		{identities: []Identity{ // one good identity, other does not match
 			{Subject: "wrongsubject", Issuer: "wrongissuer"},
 			{Subject: emailSubject, Issuer: oidcIssuer}},
-			emailAddresses:   []string{emailSubject},
-			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // illegal regex for subject
-			{Subject: "****", Issuer: oidcIssuer}},
+			emailAddresses: []string{emailSubject}},
+		{identities: []Identity{ // illegal regex for subject
+			{SubjectRegExp: "****", Issuer: oidcIssuer}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: "malformed subject in identity"},
-		{identities: []v1alpha1.Identity{ // illegal regex for issuer
-			{Subject: emailSubject, Issuer: "****"}},
+		{identities: []Identity{ // illegal regex for issuer
+			{Subject: emailSubject, IssuerRegExp: "****"}},
 			wantErrSubstring: "malformed issuer in identity"},
-		{identities: []v1alpha1.Identity{ // regex matches
-			{Subject: ".*example.com", Issuer: ".*accounts.google.*"}},
+		{identities: []Identity{ // regex matches
+			{SubjectRegExp: ".*example.com", IssuerRegExp: ".*accounts.google.*"}},
 			emailAddresses:   []string{emailSubject},
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // regex matches dnsNames
-			{Subject: ".*ubject.example.com", Issuer: ".*accounts.google.*"}},
+		{identities: []Identity{ // regex matches dnsNames
+			{SubjectRegExp: ".*ubject.example.com", IssuerRegExp: ".*accounts.google.*"}},
 			dnsNames:         dnsSubjects,
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // regex matches ip
-			{Subject: "1.2.3.*", Issuer: ".*accounts.google.*"}},
+		{identities: []Identity{ // regex matches ip
+			{SubjectRegExp: "1.2.3.*", IssuerRegExp: ".*accounts.google.*"}},
 			ipAddresses:      ipSubjects,
 			wantErrSubstring: ""},
-		{identities: []v1alpha1.Identity{ // regex matches urls
-			{Subject: ".*url.examp.*", Issuer: ".*accounts.google.*"}},
+		{identities: []Identity{ // regex matches urls
+			{SubjectRegExp: ".*url.examp.*", IssuerRegExp: ".*accounts.google.*"}},
 			uris:             uriSubjects,
 			wantErrSubstring: ""},
 	}
@@ -616,6 +851,17 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 			Identities: tc.identities,
 		}
 		_, err := ValidateAndUnpackCert(leafCert, co)
+		if err == nil && tc.wantErrSubstring != "" {
+			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
+		} else if err != nil {
+			if tc.wantErrSubstring == "" {
+				t.Errorf("Did not expect an error, got err = %v", err)
+			} else if !strings.Contains(err.Error(), tc.wantErrSubstring) {
+				t.Errorf("Did not get the expected error %s, got err = %v", tc.wantErrSubstring, err)
+			}
+		}
+		// Test CheckCertificatePolicy
+		err = CheckCertificatePolicy(leafCert, co)
 		if err == nil && tc.wantErrSubstring != "" {
 			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
 		} else if err != nil {

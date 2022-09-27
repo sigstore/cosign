@@ -110,7 +110,7 @@ func generateCertificateFiles(t *testing.T, tmpDir string, pf cosign.PassFunc) (
 func TestSignCmdLocalKeyAndSk(t *testing.T) {
 	ro := &options.RootOptions{Timeout: options.DefaultTimeout}
 
-	for _, ko := range []KeyOpts{
+	for _, ko := range []options.KeyOpts{
 		// local and sk keys
 		{
 			KeyRef:   "testLocalPath",
@@ -118,7 +118,7 @@ func TestSignCmdLocalKeyAndSk(t *testing.T) {
 			Sk:       true,
 		},
 	} {
-		err := SignCmd(ro, ko, options.RegistryOptions{}, nil, nil, "", "", false, "", "", "", false, false, "")
+		err := SignCmd(ro, ko, options.RegistryOptions{}, nil, nil, "", "", false, "", "", "", false, false, "", false)
 		if (errors.Is(err, &options.KeyParseError{}) == false) {
 			t.Fatal("expected KeyParseError")
 		}

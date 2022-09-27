@@ -29,6 +29,12 @@ import (
 // * Queries for a single value.
 const QUERY = "data.signature.allow"
 
+// CosignRegoPackageName defines the expected package name of a provided rego module
+const CosignRegoPackageName = "sigstore"
+
+// CosignEvaluationRule defines the expected evaluation role of a provided rego module
+const CosignEvaluationRule = "isCompliant"
+
 func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 	ctx := context.Background()
 
@@ -72,4 +78,42 @@ func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 		errs = append(errs, fmt.Errorf("result is undefined for query '%s'", QUERY))
 	}
 	return errs
+}
+
+// ValidateJSONWithModuleInput takes the body of the results to evaluate and the defined module
+// in a policy to validate against the input data
+func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) error {
+	ctx := context.Background()
+	query := fmt.Sprintf("%s = data.%s.%s", CosignEvaluationRule, CosignRegoPackageName, CosignEvaluationRule)
+	module := fmt.Sprintf("%s.rego", CosignRegoPackageName)
+
+	r := rego.New(
+		rego.Query(query),
+		rego.Module(module, moduleInput))
+
+	evalQuery, err := r.PrepareForEval(ctx)
+	if err != nil {
+		return err
+	}
+
+	var input interface{}
+	dec := json.NewDecoder(bytes.NewBuffer(jsonBody))
+	dec.UseNumber()
+	if err := dec.Decode(&input); err != nil {
+		return err
+	}
+
+	rs, err := evalQuery.Eval(ctx, rego.EvalInput(input))
+	if err != nil {
+		return err
+	}
+
+	for _, result := range rs {
+		isCompliant, ok := result.Bindings[CosignEvaluationRule].(bool)
+		if ok && isCompliant {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("policy is not compliant for query '%s'", query)
 }

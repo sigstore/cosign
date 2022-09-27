@@ -16,7 +16,7 @@
 package options
 
 import (
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
 )
 
@@ -35,4 +35,5 @@ func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Root, "root", "",
 		"path to trusted initial root. defaults to embedded root")
+	_ = cmd.Flags().SetAnnotation("root", cobra.BashCompSubdirsInDir, []string{})
 }

@@ -49,6 +49,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
+	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")

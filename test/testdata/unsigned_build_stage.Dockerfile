@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/base
+FROM ghcr.io/distroless/alpine-base
 
 # blah blah
 
@@ -21,4 +21,4 @@ FROM ubuntu
 
 # blah blah
 
-FROM gcr.io/distroless/static
+FROM ghcr.io/distroless/static
