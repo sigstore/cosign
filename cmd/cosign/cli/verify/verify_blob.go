@@ -204,6 +204,9 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 					return err
 				}
 				co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+				if err != nil {
+					return fmt.Errorf("verifying certificate with chain: %w", err)
+				}
 			}
 		}
 		if err != nil {
