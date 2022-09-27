@@ -84,6 +84,7 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 	for i, sig := range l {
 		i, sig := i, sig
 		g.Go(func() error {
+			var err error
 			signatures[i].Payload, err = sig.Payload()
 			if err != nil {
 				return err
