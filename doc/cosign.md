@@ -15,6 +15,7 @@ A tool for Container Signing, Verification and Storage in an OCI registry.
 
 * [cosign attach](cosign_attach.md)	 - Provides utilities for attaching artifacts to other artifacts in a registry
 * [cosign attest](cosign_attest.md)	 - Attest the supplied container image.
+* [cosign attest-blob](cosign_attest-blob.md)	 - Attest the supplied blob.
 * [cosign clean](cosign_clean.md)	 - Remove all signatures from an image.
 * [cosign completion](cosign_completion.md)	 - Generate completion script
 * [cosign copy](cosign_copy.md)	 - Copy the supplied container image and signatures.
