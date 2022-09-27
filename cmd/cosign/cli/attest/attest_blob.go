@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -16,18 +17,18 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
-	"github.com/sigstore/cosign/pkg/oci/static"
+	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/types"
-	"github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// nolint
 func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
@@ -42,6 +43,7 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 
 	var artifact []byte
 	var hexDigest string
+	var rekorBytes []byte
 	var err error
 
 	if artifactHash == "" {
@@ -53,10 +55,6 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 		}
 		if err != nil {
 			return err
-		} else if timeout != 0 {
-			var cancelFn context.CancelFunc
-			ctx, cancelFn = context.WithTimeout(ctx, timeout)
-			defer cancelFn()
 		}
 	}
 
@@ -65,14 +63,6 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 		return errors.Wrap(err, "getting signer")
 	}
 	defer sv.Close()
-	//pub, err := sv.PublicKey()
-	if err != nil {
-		return err
-	}
-	/*pem, err := cryptoutils.MarshalPublicKeyToPEM(pub)
-	if err != nil {
-		return errors.Wrap(err, "key to pem")
-	}*/
 
 	if timeout != 0 {
 		var cancelFn context.CancelFunc
@@ -114,40 +104,52 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 	if err != nil {
 		return err
 	}
-	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
 
-	if noUpload {
-		fmt.Println(string(signedPayload))
-		return nil
-	}
-
-	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-	if sv.Cert != nil {
-		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
-	}
-
 	// Check whether we should be uploading to the transparency log
+	signedPayload := cosign.LocalSignedPayload{}
 	if options.EnableExperimental() {
-		fmt.Println("Uploading to Rekor")
-		/*r, err := rc.GetRekorClient(ko.RekorURL)
-		if err != nil {
-			return err
-		}*/
-		_, err := uploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
-		})
+		rekorBytes, err := sv.Bytes(ctx)
 		if err != nil {
 			return err
 		}
-		/*l, err := cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, pem)
+		rekorClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
-		}*/
-
-		//fmt.Fprintln(os.Stderr, "Log id:", *bundle.LogIndex)
+		}
+		entry, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+		signedPayload.Bundle = cbundle.EntryToBundle(entry)
 	}
-	return err
+
+	// if bundle is specified, just do that and ignore the rest
+	if ko.BundlePath != "" {
+		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+
+		contents, err := json.Marshal(signedPayload)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+			return fmt.Errorf("create bundle file: %w", err)
+		}
+		fmt.Printf("Bundle wrote in the file %s\n", ko.BundlePath)
+	}
+
+	if certPath != "" && len(rekorBytes) > 0 {
+		bts := rekorBytes
+		if err := os.WriteFile(certPath, bts, 0600); err != nil {
+			return fmt.Errorf("create certificate file: %w", err)
+		}
+		fmt.Printf("Certificate wrote in the file %s\n", certPath)
+	}
+
+	return nil
 }
