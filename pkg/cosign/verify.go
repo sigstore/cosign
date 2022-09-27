@@ -118,19 +118,6 @@ type CheckOpts struct {
 	Identities []Identity
 }
 
-func getSignedEntity(signedImgRef name.Reference, regClientOpts []ociremote.Option) (oci.SignedEntity, v1.Hash, error) {
-	se, err := ociremote.SignedEntity(signedImgRef, regClientOpts...)
-	if err != nil {
-		return nil, v1.Hash{}, err
-	}
-	// Both of the SignedEntity types implement Digest()
-	h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
-	if err != nil {
-		return nil, v1.Hash{}, err
-	}
-	return se, h, nil
-}
-
 func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oci.Signature) error {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
@@ -427,9 +414,13 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		return nil, false, errors.New("one of verifier or root certs is required")
 	}
 
-	// TODO(mattmoor): We could implement recursive verification if we just wrapped
-	// most of the logic below here in a call to mutate.Map
-	se, h, err := getSignedEntity(signedImgRef, co.RegistryClientOpts)
+	// This is a carefully optimized sequence for fetching the signatures of the
+	// entity that minimizes registry requests when supplied with a digest input
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	h, err := v1.NewHash(digest.Identifier())
 	if err != nil {
 		return nil, false, err
 	}
@@ -437,7 +428,11 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 	var sigs oci.Signatures
 	sigRef := co.SignatureRef
 	if sigRef == "" {
-		sigs, err = se.Signatures()
+		st, err := ociremote.SignatureTag(digest, co.RegistryClientOpts...)
+		if err != nil {
+			return nil, false, err
+		}
+		sigs, err = ociremote.Signatures(st, co.RegistryClientOpts...)
 		if err != nil {
 			return nil, false, err
 		}
@@ -625,7 +620,7 @@ func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *Check
 	}, nil
 }
 
-// VerifyAttestations does all the main cosign checks in a loop, returning the verified attestations.
+// VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
@@ -633,14 +628,22 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 		return nil, false, errors.New("one of verifier or root certs is required")
 	}
 
-	// TODO(mattmoor): We could implement recursive verification if we just wrapped
-	// most of the logic below here in a call to mutate.Map
-
-	se, h, err := getSignedEntity(signedImgRef, co.RegistryClientOpts)
+	// This is a carefully optimized sequence for fetching the attestations of
+	// the entity that minimizes registry requests when supplied with a digest
+	// input.
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, false, err
 	}
-	atts, err := se.Attestations()
+	h, err := v1.NewHash(digest.Identifier())
+	if err != nil {
+		return nil, false, err
+	}
+	st, err := ociremote.AttestationTag(digest, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	atts, err := ociremote.Signatures(st, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, false, err
 	}
