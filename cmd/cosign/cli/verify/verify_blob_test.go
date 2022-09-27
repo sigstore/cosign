@@ -1033,6 +1033,55 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatalf("expected success specifying the intermediates, got %v", err)
 		}
 	})
+	t.Run("Explicit Fulcio mismatched chain failure", func(t *testing.T) {
+		identity := "hello@foo.com"
+		issuer := "issuer"
+		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
+
+		// Create blob
+		blob := "someblob"
+
+		// Sign blob with private key
+		sig, err := signer.SignMessage(bytes.NewReader([]byte(blob)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create bundle
+		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
+		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
+		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
+
+		rootCert, _, _ := test.GenerateRootCa()
+		rootPemCert, _ := cryptoutils.MarshalCertificateToPEM(rootCert)
+		tmpChainFile, err := os.CreateTemp(t.TempDir(), "cosign_fulcio_root_*.cert")
+		if err != nil {
+			t.Fatalf("failed to create temp chain file: %v", err)
+		}
+		defer tmpChainFile.Close()
+		if _, err := tmpChainFile.Write(rootPemCert); err != nil {
+			t.Fatalf("failed to write chain file: %v", err)
+		}
+
+		// Verify command
+		err = VerifyBlobCmd(context.Background(),
+			options.KeyOpts{BundlePath: bundlePath},
+			"",                  /*certRef*/
+			identity,            /*certEmail*/
+			issuer,              /*certOidcIssuer*/
+			tmpChainFile.Name(), /*certChain*/
+			"",                  /*sigRef*/ // Sig is fetched from bundle
+			blobPath,            /*blobRef*/
+			// GitHub identity flags start
+			"", "", "", "", "",
+			// GitHub identity flags end
+			false /*enforceSCT*/)
+		if err == nil || !strings.Contains(err.Error(), "verifying certificate from bundle with chain: x509: certificate signed by unknown authority") {
+			t.Fatalf("expected error with mismatched root, got %v", err)
+		}
+	})
 }
 
 func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
