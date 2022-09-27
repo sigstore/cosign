@@ -501,6 +501,11 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	validationErrs := []string{}
 
 	for _, sig := range sl {
+		sig, err := static.Copy(sig)
+		if err != nil {
+			validationErrs = append(validationErrs, err.Error())
+			continue
+		}
 		verified, err := VerifyImageSignature(ctx, sig, h, co)
 		bundleVerified = bundleVerified || verified
 		if err != nil {
@@ -705,6 +710,11 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 
 	validationErrs := []string{}
 	for _, att := range sl {
+		att, err := static.Copy(att)
+		if err != nil {
+			validationErrs = append(validationErrs, err.Error())
+			continue
+		}
 		if err := func(att oci.Signature) error {
 			verifier := co.SigVerifier
 			if verifier == nil {
