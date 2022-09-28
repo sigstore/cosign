@@ -17,12 +17,16 @@ package signature
 import (
 	"context"
 	"crypto"
+	"crypto/x509/pkix"
 	"errors"
+	"net"
+	"net/url"
 	"os"
 	"testing"
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/test"
 	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
@@ -164,5 +168,34 @@ func TestVerifierForKeyRefError(t *testing.T) {
 func pass(s string) cosign.PassFunc {
 	return func(_ bool) ([]byte, error) {
 		return []byte(s), nil
+	}
+}
+
+func TestCertSubject(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+
+	// generate with OtherName, which will override other SANs
+	ext, err := cosign.MarshalSANS("subject-othername", true)
+	if err != nil {
+		t.Fatalf("error marshalling SANs: %v", err)
+	}
+	exts := []pkix.Extension{*ext}
+	leafCert, _, _ := test.GenerateLeafCert("unused", "oidc-issuer", subCert, subKey, exts...)
+	if otherName := CertSubject(leafCert); otherName != "subject-othername" {
+		t.Fatalf("unexpected otherName, got %s", otherName)
+	}
+
+	// generate with email
+	leafCert, _, _ = test.GenerateLeafCert("subject-email", "oidc-issuer", subCert, subKey)
+	if email := CertSubject(leafCert); email != "subject-email" {
+		t.Fatalf("unexpected email address, got %s", email)
+	}
+
+	// generate with URI
+	uri, _ := url.Parse("spiffe://domain/user")
+	leafCert, _, _ = test.GenerateLeafCertWithSubjectAlternateNames([]string{}, []string{}, []net.IP{}, []*url.URL{uri}, "oidc-issuer", subCert, subKey)
+	if uri := CertSubject(leafCert); uri != "spiffe://domain/user" {
+		t.Fatalf("unexpected URI, got %s", uri)
 	}
 }

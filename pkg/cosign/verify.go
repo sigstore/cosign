@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -167,6 +168,20 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
+	}
+
+	// Handle certificates where the Subject Alternative Name is not set to a supported
+	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
+	// or URIs as SANs. Fulcio can issue a certificate with an OtherName GeneralName, so
+	// remove the unhandled critical SAN extension before verifying.
+	if len(cert.UnhandledCriticalExtensions) > 0 {
+		var unhandledExts []asn1.ObjectIdentifier
+		for _, oid := range cert.UnhandledCriticalExtensions {
+			if !oid.Equal(asn1.ObjectIdentifier{2, 5, 29, 17}) {
+				unhandledExts = append(unhandledExts, oid)
+			}
+		}
+		cert.UnhandledCriticalExtensions = unhandledExts
 	}
 
 	// Now verify the cert, then the signature.
@@ -331,6 +346,10 @@ func getSubjectAlternateNames(cert *x509.Certificate) []string {
 	}
 	for _, uri := range cert.URIs {
 		sans = append(sans, uri.String())
+	}
+	otherName, _ := UnmarshalSANS(cert.Extensions)
+	if len(otherName) > 0 {
+		sans = append(sans, otherName)
 	}
 	return sans
 }

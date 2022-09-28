@@ -242,5 +242,9 @@ func CertSubject(c *x509.Certificate) string {
 	case c.URIs != nil:
 		return c.URIs[0].String()
 	}
+	otherName, _ := cosign.UnmarshalSANS(c.Extensions)
+	if len(otherName) > 0 {
+		return otherName
+	}
 	return ""
 }
