@@ -174,7 +174,7 @@ func UnmarshalSANS(exts []pkix.Extension) (string, error) {
 			var other OtherName
 			_, err := asn1.UnmarshalWithParams(v.FullBytes, &other, "tag:0")
 			if err != nil {
-				return "", fmt.Errorf("could not parse requested OtherName SAN: %v", err)
+				return "", fmt.Errorf("could not parse requested OtherName SAN: %w", err)
 			}
 			if !other.ID.Equal(OIDOtherName) {
 				return "", fmt.Errorf("unexpected OID for OtherName, expected %v, got %v", OIDOtherName, other.ID)
