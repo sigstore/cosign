@@ -11,8 +11,8 @@ option java_package = "com.github.sigstore.xxx.bundle";
 // The primary message ('Bundle') MUST be versioned, by populating the
 // 'media_type' field. Semver-ish (only major/minor versions) scheme MUST
 // be used. The current version as specified by this file is:
-// application/vnd.dev.sigstore.bundle.v0.1+json
-// The semantic version is thus 'v0.1'.
+// application/vnd.dev.sigstore.bundle+json;version=0.1
+// The semantic version is thus '0.1'.
 
 // Only a subset of the secure hash standard algorithms are supported.
 // See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf for more
@@ -168,7 +168,7 @@ message X509CertificateChain {
 }
 
 message Bundle {
-        // MUST be application/vnd.dev.sigstore.bundle.v0.1+json
+        // MUST be application/vnd.dev.sigstore.bundle+json;version=0.1
         // when encoded as JSON.
         string media_type = 1;
         TimestampVerificationData timestamp_verification_data = 2;
