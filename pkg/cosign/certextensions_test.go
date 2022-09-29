@@ -67,18 +67,18 @@ func TestCertExtensions(t *testing.T) {
 	}
 }
 
-func TestMarshalAndUnmarshalSANS(t *testing.T) {
+func TestMarshalAndUnmarshalOtherNameSAN(t *testing.T) {
 	otherName := "foo!example.com"
 	critical := true
 
-	ext, err := MarshalSANS(otherName, critical)
+	ext, err := MarshalOtherNameSAN(otherName, critical)
 	if err != nil {
-		t.Fatalf("unexpected error for MarshalSANs: %v", err)
+		t.Fatalf("unexpected error for MarshalOtherNameSAN: %v", err)
 	}
 	if ext.Critical != critical {
 		t.Fatalf("expected extension to be critical")
 	}
-	if !ext.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 17}) {
+	if !ext.Id.Equal(SANOID) {
 		t.Fatalf("expected extension's OID to be SANs OID")
 	}
 	// https://lapo.it/asn1js/#MCGgHwYKKwYBBAGDvzABB6ARDA9mb28hZXhhbXBsZS5jb20
@@ -99,16 +99,16 @@ func TestMarshalAndUnmarshalSANS(t *testing.T) {
 		t.Fatalf("unexpected ASN.1 encoding")
 	}
 
-	on, err := UnmarshalSANS([]pkix.Extension{*ext})
+	on, err := UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err != nil {
-		t.Fatalf("unexpected error for UnmarshalSANs: %v", err)
+		t.Fatalf("unexpected error for UnmarshalOtherNameSAN: %v", err)
 	}
 	if on != otherName {
 		t.Fatalf("unexpected OtherName, expected %s, got %s", otherName, on)
 	}
 }
 
-func TestUnmarshalSANsFailures(t *testing.T) {
+func TestUnmarshalOtherNameSANFailures(t *testing.T) {
 	var err error
 
 	// failure: no SANs extension
@@ -117,18 +117,18 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 		Critical: true,
 		Value:    []byte{},
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "no OtherName found") {
 		t.Fatalf("expected error finding no OtherName, got %v", err)
 	}
 
 	// failure: bad sequence
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    []byte{},
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "sequence truncated") {
 		t.Fatalf("expected error with invalid ASN.1, got %v", err)
 	}
@@ -136,11 +136,11 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 	// failure: extra data after valid sequence
 	b, _ := hex.DecodeString("3021a01f060a2b0601040183bf300107a0110c0f666f6f216578616d706c652e636f6d" + "30")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "trailing data after X.509 extension") {
 		t.Fatalf("expected error with extra data, got %v", err)
 	}
@@ -148,11 +148,11 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 	// failure: non-universal class (Change last two bits: 30 = 00110000 => 10110000 -> B0)
 	b, _ = hex.DecodeString("B021a01f060a2b0601040183bf300107a0110c0f666f6f216578616d706c652e636f6d")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "bad SAN sequence") {
 		t.Fatalf("expected error with non-universal class, got %v", err)
 	}
@@ -160,23 +160,23 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 	// failure: not compound sequence (Change 6th bit: 30 = 00110000 => 00010000 -> 10)
 	b, _ = hex.DecodeString("1021a01f060a2b0601040183bf300107a0110c0f666f6f216578616d706c652e636f6d")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "bad SAN sequence") {
 		t.Fatalf("expected error with non-compound sequence, got %v", err)
 	}
 
-	// failure: non-sequence tag (Change lower 5 bits: 30 = 00110000 => 00000010 -> 02)
-	b, _ = hex.DecodeString("0221a01f060a2b0601040183bf300107a0110c0f666f6f216578616d706c652e636f6d")
+	// failure: non-sequence tag (Change lower 5 bits: 30 = 00110000 => 00100010 -> 12)
+	b, _ = hex.DecodeString("1221a01f060a2b0601040183bf300107a0110c0f666f6f216578616d706c652e636f6d")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "bad SAN sequence") {
 		t.Fatalf("expected error with non-sequence tag, got %v", err)
 	}
@@ -184,11 +184,11 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 	// failure: no GeneralName with tag=0 (Change lower 5 bits of first sequence field: 3021a01f -> 3021a11f)
 	b, _ = hex.DecodeString("3021a11f060a2b0601040183bf300108a0110c0f666f6f216578616d706c652e636f6d")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "no OtherName found") {
 		t.Fatalf("expected error with no GeneralName, got %v", err)
 	}
@@ -196,11 +196,11 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 	// failure: invalid OtherName (Change tag of UTF8String field to 1: a0110c0f -> a1110c0f)
 	b, _ = hex.DecodeString("3021a01f060a2b0601040183bf300108a1110c0f666f6f216578616d706c652e636f6d")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "could not parse requested OtherName SAN") {
 		t.Fatalf("expected error with invalid OtherName, got %v", err)
 	}
@@ -208,11 +208,11 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 	// failure: OtherName has wrong OID (2b0601040183bf300107 -> 2b0601040183bf300108)
 	b, _ = hex.DecodeString("3021a01f060a2b0601040183bf300108a0110c0f666f6f216578616d706c652e636f6d")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "unexpected OID for OtherName") {
 		t.Fatalf("expected error with wrong OID, got %v", err)
 	}
@@ -220,11 +220,11 @@ func TestUnmarshalSANsFailures(t *testing.T) {
 	// failure: multiple OtherName fields (Increase sequence size from 0x21 -> 0x42, duplicate OtherName)
 	b, _ = hex.DecodeString("3042a01f060a2b0601040183bf300107a0110c0f666f6f216578616d706c652e636f6da01f060a2b0601040183bf300107a0110c0f666f6f216578616d706c652e636f6d")
 	ext = &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: true,
 		Value:    b,
 	}
-	_, err = UnmarshalSANS([]pkix.Extension{*ext})
+	_, err = UnmarshalOtherNameSAN([]pkix.Extension{*ext})
 	if err == nil || !strings.Contains(err.Error(), "expected only one OtherName") {
 		t.Fatalf("expected error with multiple OtherName fields, got %v", err)
 	}

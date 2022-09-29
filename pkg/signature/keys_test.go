@@ -176,7 +176,7 @@ func TestCertSubject(t *testing.T) {
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 
 	// generate with OtherName, which will override other SANs
-	ext, err := cosign.MarshalSANS("subject-othername", true)
+	ext, err := cosign.MarshalOtherNameSAN("subject-othername", true)
 	if err != nil {
 		t.Fatalf("error marshalling SANs: %v", err)
 	}

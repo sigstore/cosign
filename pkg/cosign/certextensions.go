@@ -46,6 +46,9 @@ var (
 		CertExtensionGithubWorkflowRepository: "githubWorkflowRepository",
 		CertExtensionGithubWorkflowRef:        "githubWorkflowRef",
 	}
+
+	// OID for Subject Alternative Name
+	SANOID = asn1.ObjectIdentifier{2, 5, 29, 17}
 )
 
 func (ce *CertExtensions) certExtensions() map[string]string {
@@ -105,7 +108,7 @@ type OtherName struct {
 	Value string `asn1:"utf8,explicit,tag:0"`
 }
 
-// MarshalSANS creates a Subject Alternative Name extension
+// MarshalOtherNameSAN creates a Subject Alternative Name extension
 // with an OtherName sequence. RFC 5280, 4.2.1.6:
 //
 // SubjectAltName ::= GeneralNames
@@ -114,8 +117,7 @@ type OtherName struct {
 //
 //	otherName                       [0]     OtherName,
 //	... }
-func MarshalSANS(name string, critical bool) (*pkix.Extension, error) {
-	var rawValues []asn1.RawValue
+func MarshalOtherNameSAN(name string, critical bool) (*pkix.Extension, error) {
 	o := OtherName{
 		ID:    OIDOtherName,
 		Value: name,
@@ -124,26 +126,25 @@ func MarshalSANS(name string, critical bool) (*pkix.Extension, error) {
 	if err != nil {
 		return nil, err
 	}
-	rawValues = append(rawValues, asn1.RawValue{FullBytes: bytes})
 
-	sans, err := asn1.Marshal(rawValues)
+	sans, err := asn1.Marshal([]asn1.RawValue{{FullBytes: bytes}})
 	if err != nil {
 		return nil, err
 	}
 	return &pkix.Extension{
-		Id:       asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id:       SANOID,
 		Critical: critical,
 		Value:    sans,
 	}, nil
 }
 
-// UnmarshalSANs extracts a UTF-8 string from the OtherName
+// UnmarshalOtherNameSAN extracts a UTF-8 string from the OtherName
 // field in the Subject Alternative Name extension.
-func UnmarshalSANS(exts []pkix.Extension) (string, error) {
+func UnmarshalOtherNameSAN(exts []pkix.Extension) (string, error) {
 	var otherNames []string
 
 	for _, e := range exts {
-		if !e.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 17}) {
+		if !e.Id.Equal(SANOID) {
 			continue
 		}
 
@@ -154,7 +155,7 @@ func UnmarshalSANS(exts []pkix.Extension) (string, error) {
 		} else if len(rest) != 0 {
 			return "", fmt.Errorf("trailing data after X.509 extension")
 		}
-		if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
+		if !seq.IsCompound || seq.Tag != asn1.TagSequence || seq.Class != asn1.ClassUniversal {
 			return "", asn1.StructuralError{Msg: "bad SAN sequence"}
 		}
 

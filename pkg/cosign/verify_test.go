@@ -861,7 +861,7 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 			leafCert, _, _ = test.GenerateLeafCertWithSubjectAlternateNames(tc.dnsNames, tc.emailAddresses, tc.ipAddresses, tc.uris, oidcIssuer, rootCert, rootKey)
 		} else {
 			// generate with OtherName, which will override other SANs
-			ext, err := MarshalSANS(tc.otherName, true)
+			ext, err := MarshalOtherNameSAN(tc.otherName, true)
 			if err != nil {
 				t.Fatalf("error marshalling SANs: %v", err)
 			}
@@ -994,7 +994,7 @@ func Test_getSubjectAltnernativeNames(t *testing.T) {
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 
 	// generate with OtherName, which will override other SANs
-	ext, err := MarshalSANS("subject-othername", true)
+	ext, err := MarshalOtherNameSAN("subject-othername", true)
 	if err != nil {
 		t.Fatalf("error marshalling SANs: %v", err)
 	}
