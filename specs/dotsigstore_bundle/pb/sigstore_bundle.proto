@@ -1,0 +1,70 @@
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package sigstore.bundle;
+
+// https://raw.githubusercontent.com/secure-systems-lab/dsse/9c813476bd36de70a5738c72e784f123ecea16af/envelope.proto
+import "envelope.proto";
+import "sigstore_common.proto";
+import "sigstore_rekor.proto";
+
+option go_package = "github.com/sigstore/proto/bundle";
+option java_package = "com.github.sigstore.proto.bundle";
+
+// Notes on versioning.
+// The primary message ('Bundle') MUST be versioned, by populating the
+// 'media_type' field. Semver-ish (only major/minor versions) scheme MUST
+// be used. The current version as specified by this file is:
+// application/vnd.dev.sigstore.bundle+json;version=0.1
+// The semantic version is thus '0.1'.
+
+// This message holds different constructs that captures the timestamp
+// of the time the signature was generated.
+// As this message can be either empty (no timestamps), or a combination of
+// an arbitrarily number of transparency log entries and signed timestamps,
+// it is the client's responsibility implement any required verification
+// policies.
+message TimestampVerificationData {
+        // This is the regular inclusion promise and proof, where
+        // the timestamp is coming from the transparency log.
+        repeated sigstore.rekor.TransparencyLogEntry tlog_entries = 1;
+        // A list of RFC3161 signed timestamps provided by the user.
+        // This can be used when the entry has not been stored on a
+        // transparency log.
+        // Clients MUST verify the hashed message in the message imprint
+        // against the artifact. Note that the message hash algorithm may
+        // differ from the one in message signature, or the subject of the
+        // DSSE envelope.
+        repeated sigstore.common.RFC3161SignedTimestamp rfc3161_timestamps = 2;
+}
+
+message Bundle {
+        // MUST be application/vnd.dev.sigstore.bundle+json;version=0.1
+        // when encoded as JSON.
+        string media_type = 1;
+        TimestampVerificationData timestamp_verification_data = 2;
+        oneof verification_material {
+                sigstore.common.PublicKeyIdentifier public_key = 3;
+                sigstore.common.X509CertificateChain x509_certificate_chain = 4;
+        }
+        oneof content {
+                sigstore.common.MessageSignature message_signature = 5;
+                // A DSSE envelope can contain arbitrary payloads.
+                // Verifiers must verify that the payload type a supported or
+                // expected type. This is part of the DSSE protocol which
+                // is defined here https://github.com/secure-systems-lab/dsse/blob/master/protocol.md
+                io.intoto.Envelope dsse_envelope = 6;
+        }
+}

@@ -1,0 +1,84 @@
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package sigstore.common;
+
+option go_package = "github.com/sigstore/proto/common";
+option java_package = "com.github.sigstore.proto.common";
+
+// This package defines commonl used message types within the Sigstore
+// community.
+
+// Only a subset of the secure hash standard algorithms are supported.
+// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf for more
+// details.
+enum HashAlgorithm {
+        SHA2_256 = 0;
+        SHA2_512 = 1;
+}
+
+// HashOutput captures a digest of a 'message' and the corresponding hash
+// algorithm used.
+message HashOutput {
+        HashAlgorithm algorithm = 1;
+        // This is the raw octets of the message digest as computed by
+        // the hash algorithm.
+        bytes digest = 2;
+}
+
+// MessageSignature stores the computed signature over a message
+// (generic octet sequence).
+message MessageSignature {
+        // Message digest can be used to identify the artifact.
+        HashOutput message_digest = 1;
+        // The raw bytes as returned from the signature algorithm.
+        // The signature algorithm (and so the format of the signature bytes)
+        // are determined by the contents of the 'verification_material',
+        // either a key-pair or a certificate. If using a certificate, the
+        // certificate contains the required information on the signature
+        // algorithm.
+        // When using a key pair, the algorithm MUST be part of the public
+        // key, which MUST be communicated out-of-band.
+        bytes signature = 2;
+}
+
+// This message holds a RFC 3161 timestamp.
+message RFC3161SignedTimestamp {
+        // Signed timestamp is the DER encoded TSTInfo.
+        // See https://www.rfc-editor.org/rfc/rfc3161.html#section-2.4.2
+        bytes signed_timestamp = 1;
+}
+
+
+// PublicKeyIdentifier can be used to identify an (out of band) delivered
+// key, to verify a signature.
+message PublicKeyIdentifier {
+        // Optional unauthenticated hint on which key to use.
+        // The format of the hint must be agreed upon out of band by the
+        // signer and the verifiers, and so is not subject to this
+        // specification.
+        string hint = 1;
+}
+
+message X509CertificateChain {
+        // PEM encoded certificate(s), with indices 0 to n.
+        // For information on PEM encoding, see
+        // https://www.rfc-editor.org/rfc/rfc7468#section-2.
+        // The first certificate in the array
+        // must be the leaf certificate used for signing. Any intermediate
+        // certificates must be stored as offset 1 to n-1, and the root
+        // certificate at position n.
+        repeated string certificates = 1;
+}

@@ -1,0 +1,91 @@
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package sigstore.rekor;
+
+option go_package = "github.com/sigstore/proto/rekor";
+option java_package = "com.github.sigstore.proto.rekor";
+
+// RekorKindVersion contains the entry's kind and api version.
+message RekorKindVersion {
+        // Kind is the type of entry being stored in the log.
+        // See here for a list: https://github.com/sigstore/rekor/tree/main/pkg/types
+        string kind = 3;
+        // The specific api version of the type.
+        string version = 4;
+}
+
+// InclusionProof is the proof returned from the transparency log. Can
+// be used for on line verification against the log.
+message InclusionProof {
+        // The index of the entry in the log.
+        int64 log_index = 1;
+        // The hash digest stored at the root of the merkle tree at the time
+        // the proof was generated.
+        bytes root_hash = 2;
+        // The size of the merkle tree at the time the proof was generated.
+        int64 tree_size = 3;
+        // A list of hashes required to compute the inclusion proof, sorted
+        // in order from leaf to root.
+        repeated bytes hashes = 4;
+        // The checkpoint contains a signature of the tree head (root hash),
+        // size of the tree, the transparency log's unique identifier
+        // (log ID), hostname and the current time.
+        // The result is a string, the format is described here
+        // https://github.com/transparency-dev/formats/blob/main/log/README.md
+        // The details are here https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go#L114.
+        // The signature has the same format as
+        // TransparencyLogEntry.inclusion_proof. See below for more details.
+        string checkpoint = 5;
+}
+
+// TransparencyLogEntry is a separate type, capturing all the details required
+// from Rekor to reconstruct an entry, given that the payload is provided
+// via other means.
+// This type can easily be created from the existing response from Rekor.
+// Future iterations could rely on Rekor returning the minimal set of
+// attributes (excluding the payload) that are required for verifying the
+// inclusion promise. The inclusion promise (called SignedEntryTimestamp
+// the response from Rekor) is similar to a Signed Certificate Timestamp
+// as described here https://www.rfc-editor.org/rfc/rfc9162#name-signed-certificate-timestam.
+message TransparencyLogEntry {
+        // The index of the entry in the log.
+        int64 log_index = 1;
+        // The unique (binary) identifier of the log.
+        bytes log_id = 2;
+        // The kind (type) and version of the object associated with this
+        // entry. These values are required to construct the entry during
+        // verification.
+        RekorKindVersion kind_version = 3;
+        // The UNIX timestamp from the log when the entry was persisted.
+        int64 integrated_time = 4;
+        // The inclusion promise is calculated by Rekor. It's calculated as a
+        // signature over a canonical JSON serialization of the persisted
+        // entry, the log ID, log index and the integration timestamp.
+        // See https://github.com/sigstore/rekor/blob/main/pkg/api/entries.go#L54
+        // The format of the signature depends on the transparency log's
+        // public key. If the signature algorithm requires a hash function
+        // and/or a signature scheme (e.g. RSA) those has to be retrieved
+        // out-of-band from the log's operators, together with the public
+        // key.
+        // This is primarily used to verify the integration timestamp's
+        // value. This is commonly also referred to as the
+        // 'SignedEntryTimestamp', or just SET in short.
+        bytes inclusion_promise = 5;
+        // The inclusion proof can be used for online verification that the
+        // entry was appended to the log, and that the log has not been
+        // altered.
+        optional InclusionProof inclusion_proof = 6;
+}
