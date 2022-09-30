@@ -34,8 +34,8 @@ enum HashAlgorithm {
         SHA2_512 = 2;
 }
 
-// HashOutput captures a digest of a 'message' and the corresponding hash
-// algorithm used.
+// HashOutput captures a digest of a 'message' (generic octet sequence)
+// and the corresponding hash algorithm used.
 message HashOutput {
         HashAlgorithm algorithm = 1;
         // This is the raw octets of the message digest as computed by
@@ -43,8 +43,7 @@ message HashOutput {
         bytes digest = 2;
 }
 
-// MessageSignature stores the computed signature over a message
-// (generic octet sequence).
+// MessageSignature stores the computed signature over a message.
 message MessageSignature {
         // Message digest can be used to identify the artifact.
         HashOutput message_digest = 1;
@@ -79,9 +78,9 @@ message PublicKeyIdentifier {
 
 message X509CertificateChain {
         // DER encoded certificate(s), with indices 0 to n.
-        // The first certificate in the array
-        // must be the leaf certificate used for signing. Any intermediate
-        // certificates must be stored as offset 1 to n-1, and the root
-        // certificate at position n.
+        // The first certificate in the array  must be the leaf
+        // certificate used for signing. Any intermediate certificates
+        // must be stored as offset 1 to n-1, and the root certificate at
+        // position n.
         repeated bytes certificates = 1;
 }

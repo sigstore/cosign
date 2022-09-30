@@ -51,13 +51,12 @@ message InclusionProof {
         string checkpoint = 5;
 }
 
-// TransparencyLogEntry is a separate type, capturing all the details required
-// from Rekor to reconstruct an entry, given that the payload is provided
-// via other means.
+// TransparencyLogEntry captures all the details required from Rekor to
+// reconstruct an entry, given that the payload is provided via other means.
 // This type can easily be created from the existing response from Rekor.
 // Future iterations could rely on Rekor returning the minimal set of
 // attributes (excluding the payload) that are required for verifying the
-// inclusion promise. The inclusion promise (called SignedEntryTimestamp
+// inclusion promise. The inclusion promise (called SignedEntryTimestamp in
 // the response from Rekor) is similar to a Signed Certificate Timestamp
 // as described here https://www.rfc-editor.org/rfc/rfc9162#name-signed-certificate-timestam.
 message TransparencyLogEntry {
