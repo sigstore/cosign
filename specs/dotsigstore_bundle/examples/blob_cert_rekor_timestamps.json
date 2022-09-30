@@ -28,6 +28,7 @@
   },
   "messageSignature": {
     "messageDigest": {
+      "algorithm": "SHA2_256",
       "digest": "aGFzaA=="
     },
     "signature": "aGVq"
