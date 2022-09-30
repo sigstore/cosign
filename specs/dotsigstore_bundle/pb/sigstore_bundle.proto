@@ -34,7 +34,7 @@ option java_package = "com.github.sigstore.proto.bundle";
 // of the time the signature was generated.
 // As this message can be either empty (no timestamps), or a combination of
 // an arbitrarily number of transparency log entries and signed timestamps,
-// it is the client's responsibility implement any required verification
+// it is the client's responsibility to implement any required verification
 // policies.
 message TimestampVerificationData {
         // This is the regular inclusion promise and proof, where
@@ -55,16 +55,13 @@ message Bundle {
         // when encoded as JSON.
         string media_type = 1;
         TimestampVerificationData timestamp_verification_data = 2;
-        oneof verification_material {
-                sigstore.common.PublicKeyIdentifier public_key = 3;
-                sigstore.common.X509CertificateChain x509_certificate_chain = 4;
-        }
+        sigstore.common.VerificationMaterial verification_material = 3;
         oneof content {
-                sigstore.common.MessageSignature message_signature = 5;
+                sigstore.common.MessageSignature message_signature = 4;
                 // A DSSE envelope can contain arbitrary payloads.
-                // Verifiers must verify that the payload type a supported or
-                // expected type. This is part of the DSSE protocol which
-                // is defined here https://github.com/secure-systems-lab/dsse/blob/master/protocol.md
-                io.intoto.Envelope dsse_envelope = 6;
+                // Verifiers must verify that the payload type is a
+                // supported and expected type. This is part of the DSSE
+                // protocol which is defined here https://github.com/secure-systems-lab/dsse/blob/master/protocol.md
+                io.intoto.Envelope dsse_envelope = 5;
         }
 }

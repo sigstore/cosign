@@ -19,12 +19,14 @@
       }
     ]
   },
-  "x509CertificateChain": {
-    "certificates": [
-      "MIIDKzCC",
-      "MIIEKzCC",
-      "MIIFKzCC"
-    ]
+  "verificationMaterial": {
+    "x509CertificateChain": {
+      "certificates": [
+        "MIIDKzCC",
+        "MIIEKzCC",
+        "MIIFKzCC"
+      ]
+    }
   },
   "messageSignature": {
     "messageDigest": {

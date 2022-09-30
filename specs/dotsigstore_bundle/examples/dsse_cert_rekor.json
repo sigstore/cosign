@@ -14,12 +14,14 @@
       }
     ]
   },
-  "x509CertificateChain": {
-    "certificates": [
-      "MIIDKzCC",
-      "MIIEKzCC",
-      "MIIFKzCC"
-    ]
+  "verificationMaterial": {
+    "x509CertificateChain": {
+      "certificates": [
+        "MIIDKzCC",
+        "MIIEKzCC",
+        "MIIFKzCC"
+      ]
+    }
   },
   "dsseEnvelope": {
     "payload": "eyJrZXkiOiJ2YWx1ZSJ9",
