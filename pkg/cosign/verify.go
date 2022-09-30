@@ -410,11 +410,34 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signat
 	if err != nil {
 		return nil, err
 	}
-	e, err := FindTlogEntry(ctx, client, b64sig, payload, pem)
+	tlogEntries, err := FindTlogEntry(ctx, client, b64sig, payload, pem)
 	if err != nil {
 		return nil, err
 	}
-	return e, VerifyTLogEntry(ctx, client, e)
+	if len(tlogEntries) == 0 {
+		return nil, fmt.Errorf("no valid tlog entries found with proposed entry")
+	}
+	// Always return the earliest integrated entry. That
+	// always suffices for verification of signature time.
+	var earliestLogEntry models.LogEntryAnon
+	var earliestLogEntryTime *time.Time
+	entryVerificationErrs := make([]string, 0)
+	for _, e := range tlogEntries {
+		entry := e
+		if err := VerifyTLogEntry(ctx, client, &entry); err != nil {
+			entryVerificationErrs = append(entryVerificationErrs, err.Error())
+			continue
+		}
+		entryTime := time.Unix(*entry.IntegratedTime, 0)
+		if earliestLogEntryTime == nil || entryTime.Before(*earliestLogEntryTime) {
+			earliestLogEntryTime = &entryTime
+			earliestLogEntry = entry
+		}
+	}
+	if earliestLogEntryTime == nil {
+		return nil, fmt.Errorf("no valid tlog entries found %s", strings.Join(entryVerificationErrs, ", "))
+	}
+	return &earliestLogEntry, nil
 }
 
 type fakeOCISignatures struct {

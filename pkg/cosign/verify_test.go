@@ -400,7 +400,7 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	// match the underlying data / key)
 	mClient := new(client.Rekor)
 	mClient.Entries = &mock.EntriesClient{
-		Entries: &data,
+		Entries: []*models.LogEntry{&data},
 	}
 
 	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
@@ -414,7 +414,7 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 		// but we should look into improving this once there is an in-memory
 		// Rekor client that is capable of performing inclusion proof validation
 		// in unit tests.
-		t.Fatal("expected error while verifying signature")
+		t.Fatalf("expected error while verifying signature, got %s", err)
 	}
 }
 
