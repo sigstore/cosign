@@ -1,0 +1,37 @@
+{
+  "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+  "timestampVerificationData": {
+    "tlogEntries": [
+      {
+        "logIndex": "123",
+        "logId": "bG9naWQtMTIz",
+        "kindVersion": {
+          "kind": "hashedrecord",
+          "version": "v0.0.1"
+        },
+        "integratedTime": "1661340393",
+        "inclusionPromise": "U0VU",
+        "inclusionProof": {
+          "logIndex": "412",
+          "rootHash": "AREh",
+          "treeSize": "242",
+          "hashes": [
+            "AhIiMg==",
+            "AxMjMw==",
+            "BBQkNA=="
+          ],
+          "checkpoint": "checkpoint string"
+        }
+      }
+    ]
+  },
+  "publicKey": {
+    "hint": "key-123"
+  },
+  "messageSignature": {
+    "messageDigest": {
+      "digest": "aGFzaA=="
+    },
+    "signature": "aGVq"
+  }
+}

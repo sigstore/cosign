@@ -1,0 +1,16 @@
+{
+  "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+  "publicKey": {
+    "hint": "key-123"
+  },
+  "dsseEnvelope": {
+    "payload": "eyJrZXkiOiJ2YWx1ZSJ9",
+    "payloadType": "text/json",
+    "signatures": [
+      {
+        "sig": "aGVq",
+        "keyid": "key-123"
+      }
+    ]
+  }
+}

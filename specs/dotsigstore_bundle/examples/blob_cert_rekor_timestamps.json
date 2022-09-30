@@ -12,6 +12,11 @@
         "integratedTime": "1661340393",
         "inclusionPromise": "U0VU"
       }
+    ],
+    "rfc3161Timestamps": [
+      {
+        "signedTimestamp": "IyQlJg=="
+      }
     ]
   },
   "x509CertificateChain": {
@@ -21,14 +26,10 @@
       "MIIFKzCC"
     ]
   },
-  "dsseEnvelope": {
-    "payload": "eyJrZXkiOiJ2YWx1ZSJ9",
-    "payloadType": "text/json",
-    "signatures": [
-      {
-        "sig": "aGVq",
-        "keyid": "key-123"
-      }
-    ]
+  "messageSignature": {
+    "messageDigest": {
+      "digest": "aGFzaA=="
+    },
+    "signature": "aGVq"
   }
 }

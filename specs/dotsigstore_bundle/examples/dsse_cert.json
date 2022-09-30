@@ -1,19 +1,5 @@
 {
   "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
-  "timestampVerificationData": {
-    "tlogEntries": [
-      {
-        "logIndex": "123",
-        "logId": "bG9naWQtMTIz",
-        "kindVersion": {
-          "kind": "hashedrecord",
-          "version": "v0.0.1"
-        },
-        "integratedTime": "1661340393",
-        "inclusionPromise": "U0VU"
-      }
-    ]
-  },
   "x509CertificateChain": {
     "certificates": [
       "MIIDKzCC",

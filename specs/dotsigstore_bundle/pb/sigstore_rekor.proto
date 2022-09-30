@@ -18,8 +18,8 @@ package sigstore.rekor;
 option go_package = "github.com/sigstore/proto/rekor";
 option java_package = "com.github.sigstore.proto.rekor";
 
-// RekorKindVersion contains the entry's kind and api version.
-message RekorKindVersion {
+// KindVersion contains the entry's kind and api version.
+message KindVersion {
         // Kind is the type of entry being stored in the log.
         // See here for a list: https://github.com/sigstore/rekor/tree/main/pkg/types
         string kind = 3;
@@ -68,7 +68,7 @@ message TransparencyLogEntry {
         // The kind (type) and version of the object associated with this
         // entry. These values are required to construct the entry during
         // verification.
-        RekorKindVersion kind_version = 3;
+        KindVersion kind_version = 3;
         // The UNIX timestamp from the log when the entry was persisted.
         int64 integrated_time = 4;
         // The inclusion promise is calculated by Rekor. It's calculated as a

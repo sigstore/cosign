@@ -73,12 +73,10 @@ message PublicKeyIdentifier {
 }
 
 message X509CertificateChain {
-        // PEM encoded certificate(s), with indices 0 to n.
-        // For information on PEM encoding, see
-        // https://www.rfc-editor.org/rfc/rfc7468#section-2.
+        // DER encoded certificate(s), with indices 0 to n.
         // The first certificate in the array
         // must be the leaf certificate used for signing. Any intermediate
         // certificates must be stored as offset 1 to n-1, and the root
         // certificate at position n.
-        repeated string certificates = 1;
+        repeated bytes certificates = 1;
 }
