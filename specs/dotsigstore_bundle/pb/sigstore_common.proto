@@ -60,7 +60,7 @@ message MessageSignature {
 
 // This message holds a RFC 3161 timestamp.
 message RFC3161SignedTimestamp {
-        // Signed timestamp is the DER encoded TSTInfo.
+        // Signed timestamp is the DER encoded TimeStampToken
         // See https://www.rfc-editor.org/rfc/rfc3161.html#section-2.4.2
         bytes signed_timestamp = 1;
 }
