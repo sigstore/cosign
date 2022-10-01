@@ -410,7 +410,26 @@ func tlogFindCertificate(ctx context.Context, rekorClient *client.Rekor,
 func tlogFindEntry(ctx context.Context, client *client.Rekor,
 	blobBytes []byte, sig string, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig := base64.StdEncoding.EncodeToString([]byte(sig))
-	return cosign.FindTlogEntry(ctx, client, b64sig, blobBytes, pem)
+	tlogEntries, err := cosign.FindTlogEntry(ctx, client, b64sig, blobBytes, pem)
+	if err != nil {
+		return nil, err
+	}
+	if len(tlogEntries) == 0 {
+		return nil, fmt.Errorf("no valid tlog entries found with proposed entry")
+	}
+	// Always return the earliest integrated entry. That
+	// always suffices for verification of signature time.
+	var earliestLogEntry models.LogEntryAnon
+	var earliestLogEntryTime *time.Time
+	// We'll always return a tlog entry because there's at least one entry in the log.
+	for _, entry := range tlogEntries {
+		entryTime := time.Unix(*entry.IntegratedTime, 0)
+		if earliestLogEntryTime == nil || entryTime.Before(*earliestLogEntryTime) {
+			earliestLogEntryTime = &entryTime
+			earliestLogEntry = entry
+		}
+	}
+	return &earliestLogEntry, nil
 }
 
 // signatures returns the raw signature

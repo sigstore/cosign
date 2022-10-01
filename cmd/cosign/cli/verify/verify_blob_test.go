@@ -248,7 +248,7 @@ func TestVerifyBlob(t *testing.T) {
 		// If online lookups to Rekor are enabled
 		experimental bool
 		// The rekor entry response when Rekor is enabled
-		rekorEntry *models.LogEntry
+		rekorEntry []*models.LogEntry
 		shouldErr  bool
 	}{
 		{
@@ -274,8 +274,8 @@ func TestVerifyBlob(t *testing.T) {
 			signature:    blobSignature,
 			sigVerifier:  signer,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				pubKeyBytes, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				pubKeyBytes, true)},
 			shouldErr: false,
 		},
 		{
@@ -411,19 +411,18 @@ func TestVerifyBlob(t *testing.T) {
 			cert:         unexpiredLeafCert,
 			sigVerifier:  signer,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				unexpiredCertPem, true)},
 			shouldErr: false,
 		},
-
 		{
 			name:         "valid signature with unexpired certificate - experimental & rekor entry found",
 			blob:         blobBytes,
 			signature:    blobSignature,
 			cert:         unexpiredLeafCert,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				unexpiredCertPem, true)},
 			shouldErr: false,
 		},
 		{
@@ -442,8 +441,20 @@ func TestVerifyBlob(t *testing.T) {
 			sigVerifier:  signer,
 			cert:         expiredLeafCert,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true)},
+			shouldErr: false,
+		},
+		{
+			name:         "valid signature with expired certificate - experimental multiple rekor entries",
+			blob:         blobBytes,
+			signature:    blobSignature,
+			sigVerifier:  signer,
+			cert:         expiredLeafCert,
+			experimental: true,
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true), makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, false)},
 			shouldErr: false,
 		},
 		{
@@ -453,8 +464,8 @@ func TestVerifyBlob(t *testing.T) {
 			cert:         expiredLeafCert,
 			sigVerifier:  signer,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, false),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, false)},
 			shouldErr: true,
 		},
 
@@ -521,8 +532,8 @@ func TestVerifyBlob(t *testing.T) {
 			cert:         expiredLeafCert,
 			experimental: true,
 			// This is the wrong signer for the SET!
-			rekorEntry: makeRekorEntry(t, *signer, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *signer, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true)},
 			shouldErr: true,
 		},
 	}
