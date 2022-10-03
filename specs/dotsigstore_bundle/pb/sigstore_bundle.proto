@@ -13,15 +13,17 @@
 // limitations under the License.
 
 syntax = "proto3";
-package sigstore.bundle;
+package dev.sigstore.bundle.v1;
 
 // https://raw.githubusercontent.com/secure-systems-lab/dsse/9c813476bd36de70a5738c72e784f123ecea16af/envelope.proto
 import "envelope.proto";
 import "sigstore_common.proto";
 import "sigstore_rekor.proto";
 
-option go_package = "github.com/sigstore/proto/bundle";
-option java_package = "com.github.sigstore.proto.bundle";
+option go_package = "github.com/sigstore/proto/bundle/v1";
+option java_package = "dev.sigstore.proto.bundle.v1";
+option java_multiple_files = true;
+option java_outer_classname = "BundleProto";
 
 // Notes on versioning.
 // The primary message ('Bundle') MUST be versioned, by populating the
@@ -39,7 +41,7 @@ option java_package = "com.github.sigstore.proto.bundle";
 message TimestampVerificationData {
         // This is the regular inclusion promise and proof, where
         // the timestamp is coming from the transparency log.
-        repeated sigstore.rekor.TransparencyLogEntry tlog_entries = 1;
+        repeated dev.sigstore.rekor.v1.TransparencyLogEntry tlog_entries = 1;
         // A list of RFC3161 signed timestamps provided by the user.
         // This can be used when the entry has not been stored on a
         // transparency log.
@@ -47,7 +49,7 @@ message TimestampVerificationData {
         // against the artifact. Note that the message hash algorithm may
         // differ from the one in message signature, or the subject of the
         // DSSE envelope.
-        repeated sigstore.common.RFC3161SignedTimestamp rfc3161_timestamps = 2;
+        repeated dev.sigstore.common.v1.RFC3161SignedTimestamp rfc3161_timestamps = 2;
 }
 
 message Bundle {
@@ -55,9 +57,9 @@ message Bundle {
         // when encoded as JSON.
         string media_type = 1;
         TimestampVerificationData timestamp_verification_data = 2;
-        sigstore.common.VerificationMaterial verification_material = 3;
+        dev.sigstore.common.v1.VerificationMaterial verification_material = 3;
         oneof content {
-                sigstore.common.MessageSignature message_signature = 4;
+                dev.sigstore.common.v1.MessageSignature message_signature = 4;
                 // A DSSE envelope can contain arbitrary payloads.
                 // Verifiers must verify that the payload type is a
                 // supported and expected type. This is part of the DSSE

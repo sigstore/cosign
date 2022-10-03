@@ -13,10 +13,12 @@
 // limitations under the License.
 
 syntax = "proto3";
-package sigstore.common;
+package dev.sigstore.common.v1;
 
-option go_package = "github.com/sigstore/proto/common";
-option java_package = "com.github.sigstore.proto.common";
+option go_package = "github.com/sigstore/proto/common/v1";
+option java_package = "dev.sigstore.proto.common.v1";
+option java_multiple_files = true;
+option java_outer_classname = "CommonProto";
 
 // This package defines commonly used message types within the Sigstore
 // community.
