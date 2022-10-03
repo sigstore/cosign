@@ -1090,6 +1090,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",                  /*certRef*/
 			identity,            /*certEmail*/
+			"",                  /*certIdentity*/
 			issuer,              /*certOidcIssuer*/
 			tmpChainFile.Name(), /*certChain*/
 			"",                  /*sigRef*/ // Sig is fetched from bundle
