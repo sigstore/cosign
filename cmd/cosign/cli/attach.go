@@ -70,7 +70,7 @@ func attachSBOM() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "WARNING: Attaching SBOMs this way does not sign them. If you want to sign them, use 'cosign attest -predicate %s -key <key path>' or 'cosign sign -key <key path> <sbom image>'.\n", o.SBOM)
+			fmt.Fprintf(os.Stderr, "WARNING: Attaching SBOMs this way does not sign them. If you want to sign them, use 'cosign attest --predicate %s --key <key path>' or 'cosign sign --key <key path> --attachment sbom <image uri>'.\n", o.SBOM)
 			return attach.SBOMCmd(cmd.Context(), o.Registry, o.SBOM, mediaType, args[0])
 		},
 	}
