@@ -17,7 +17,7 @@ package remote
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http/httptest"
 	"net/url"
@@ -109,7 +109,7 @@ func TestUploadFiles(t *testing.T) {
 		err          error
 	)
 	// Set up a fake registry (with NOP logger to avoid spamming test logs).
-	nopLog := log.New(ioutil.Discard, "", 0)
+	nopLog := log.New(io.Discard, "", 0)
 	s := httptest.NewServer(registry.New(registry.Logger(nopLog)))
 	defer s.Close()
 	u, err := url.Parse(s.URL)
