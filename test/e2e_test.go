@@ -909,7 +909,7 @@ func TestUploadBlob(t *testing.T) {
 
 	// Upload it!
 	files := []cremote.File{cremote.FileFromFlag(payloadPath)}
-	must(upload.BlobCmd(ctx, options.RegistryOptions{}, files, "", imgName), t)
+	must(upload.BlobCmd(ctx, options.RegistryOptions{}, files, nil, "", imgName), t)
 
 	// Check it
 	ref, err := name.ParseReference(imgName)

@@ -22,12 +22,19 @@ cosign upload blob [flags]
 
   # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting the os fields
   cosign upload blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
+
+  # upload a blob named foo to the location specified by <IMAGE>, setting annotations mykey=myvalue.
+  cosign upload blob -a mykey=myvalue -f foo <IMAGE>
+
+  # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting annotations
+  cosign upload blob -a mykey=myvalue -a myotherkey="my other value" -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
 ```
 
 ### Options
 
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+  -a, --annotation stringToString                                                                annotations to set (default [])
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --ct string                                                                                content type to set
   -f, --files strings                                                                            <filepath>:[platform/arch]
