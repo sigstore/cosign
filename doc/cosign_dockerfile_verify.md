@@ -54,7 +54,7 @@ cosign dockerfile verify [flags]
 ```
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
   -a, --annotations strings                                                                      extra key=value pairs to sign
-      --attachment string                                                                        related image attachment to sign (sbom), default none
+      --attachment string                                                                        related image attachment to verify (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --base-image-only                                                                          only verify the base image (the last FROM image in the Dockerfile)
       --certificate string                                                                       path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.
