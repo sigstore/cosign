@@ -6,6 +6,10 @@ Sign the supplied container image.
 
 Sign the supplied container image.
 
+Images should be specified by digest (example.com/image@sha256:abcdef...) rather
+than tag (example.com/image:latest).
+
+
 ```
 cosign sign [flags]
 ```
