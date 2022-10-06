@@ -33,7 +33,7 @@ func WasmCmd(ctx context.Context, regOpts options.RegistryOptions, wasmPath, ima
 		return err
 	}
 
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
 	}

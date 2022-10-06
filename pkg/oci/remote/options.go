@@ -43,8 +43,8 @@ type options struct {
 	TagPrefix         string
 	TargetRepository  name.Repository
 	ROpt              []remote.Option
-
-	OriginalOptions []Option
+	NameOpts          []name.Option
+	OriginalOptions   []Option
 }
 
 var defaultOptions = []remote.Option{
@@ -133,4 +133,12 @@ func GetEnvTargetRepository() (name.Repository, error) {
 		return repo, nil
 	}
 	return name.Repository{}, nil
+}
+
+// WithNameOptions is a functional option for overriding the default
+// name options passed to GGCR.
+func WithNameOptions(opts ...name.Option) Option {
+	return func(o *options) {
+		o.NameOpts = opts
+	}
 }

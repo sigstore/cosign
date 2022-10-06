@@ -36,7 +36,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 	}
 
 	for _, payload := range signedPayloads {
-		if err := attachAttestation(ociremoteOpts, payload, imageRef); err != nil {
+		if err := attachAttestation(ociremoteOpts, payload, imageRef, regOpts.NameOptions()); err != nil {
 			return fmt.Errorf("attaching payload from %s: %w", payload, err)
 		}
 	}
@@ -44,7 +44,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 	return nil
 }
 
-func attachAttestation(remoteOpts []ociremote.Option, signedPayload, imageRef string) error {
+func attachAttestation(remoteOpts []ociremote.Option, signedPayload, imageRef string, nameOpts []name.Option) error {
 	fmt.Fprintf(os.Stderr, "Using payload from: %s", signedPayload)
 	attestationFile, err := os.Open(signedPayload)
 	if err != nil {
@@ -71,7 +71,7 @@ func attachAttestation(remoteOpts []ociremote.Option, signedPayload, imageRef st
 			return fmt.Errorf("could not attach attestation without having signatures")
 		}
 
-		ref, err := name.ParseReference(imageRef)
+		ref, err := name.ParseReference(imageRef, nameOpts...)
 		if err != nil {
 			return err
 		}

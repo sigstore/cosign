@@ -83,8 +83,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	if err != nil {
 		return err
 	}
-
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("parsing reference: %w", err)
 	}

@@ -32,7 +32,7 @@ import (
 )
 
 func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef string, sbomType types.MediaType, imageRef string) error {
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
 	}
