@@ -198,12 +198,17 @@ func TLogUploadInTotoAttestation(ctx context.Context, rekorClient *client.Rekor,
 
 func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEntryAnon, error) {
 	params := entries.NewCreateLogEntryParamsWithContext(ctx)
-	params.SetProposedEntry(pe)
+	if pei, ok := pe.(types.ProposedEntryIterator); ok {
+		params.SetProposedEntry(pei.Get())
+	} else {
+		params.SetProposedEntry(pe)
+	}
 	resp, err := rekorClient.Entries.CreateLogEntry(params)
 	if err != nil {
 		// If the entry already exists, we get a specific error.
 		// Here, we display the proof and succeed.
 		var existsErr *entries.CreateLogEntryConflict
+		var badRequestErr *entries.CreateLogEntryBadRequest
 		if errors.As(err, &existsErr) {
 			fmt.Println("Signature already exists. Displaying proof")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
@@ -213,7 +218,14 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 				return nil, err
 			}
 			return e, VerifyTLogEntry(ctx, rekorClient, e)
+		} else if errors.As(err, &badRequestErr) {
+			if pei, ok := pe.(types.ProposedEntryIterator); ok {
+				if pei.HasNext() {
+					return doUpload(ctx, rekorClient, pei.GetNext())
+				}
+			}
 		}
+
 		return nil, err
 	}
 	// UUID is at the end of location
@@ -378,7 +390,14 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 		if err != nil {
 			return nil, err
 		}
-		proposedEntry = []models.ProposedEntry{e}
+		if entries, ok := e.(types.ProposedEntryIterator); ok {
+			proposedEntry = append(proposedEntry, entries.Get())
+			for entries.HasNext() {
+				proposedEntry = append(proposedEntry, entries.GetNext())
+			}
+		} else {
+			proposedEntry = append(proposedEntry, e)
+		}
 	} else {
 		re := rekorEntry(payload, signature, pubKey)
 		entry := &models.Hashedrekord{
