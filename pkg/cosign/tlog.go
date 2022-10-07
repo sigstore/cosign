@@ -42,8 +42,8 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
-	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
-	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1" // need to import to call type-specific init func
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2" // need to import to call type-specific init func
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
