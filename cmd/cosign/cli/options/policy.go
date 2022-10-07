@@ -39,6 +39,7 @@ func (o *PolicyInitOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.OutFile, "out", "o",
 		"output policy locally")
+	_ = cmd.Flags().SetAnnotation("out", cobra.BashCompSubdirsInDir, []string{})
 
 	cmd.Flags().StringVar(&o.Issuer, "issuer", "",
 		"trusted issuer to use for identity tokens, e.g. https://accounts.google.com")

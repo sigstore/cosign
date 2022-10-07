@@ -21,6 +21,7 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -64,7 +65,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 	return cbundle.EntryToBundle(entry), nil
 }
 
-//nolint
+// nolint
 func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string, certChainPath string,
 	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, noTlogUpload bool) error {
 	// A key file or token is required unless we're in experimental mode!
@@ -116,12 +117,18 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 	dd := cremote.NewDupeDetector(sv)
 
-	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
-	predicate, err := os.Open(predicatePath)
-	if err != nil {
-		return err
+	var predicate io.ReadCloser
+	if predicatePath == "-" {
+		fmt.Fprintln(os.Stderr, "Using payload from: standard input")
+		predicate = os.Stdin
+	} else {
+		fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
+		predicate, err = os.Open(predicatePath)
+		if err != nil {
+			return err
+		}
+		defer predicate.Close()
 	}
-	defer predicate.Close()
 
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
 		Predicate: predicate,

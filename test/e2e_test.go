@@ -909,7 +909,7 @@ func TestUploadBlob(t *testing.T) {
 
 	// Upload it!
 	files := []cremote.File{cremote.FileFromFlag(payloadPath)}
-	must(upload.BlobCmd(ctx, options.RegistryOptions{}, files, "", imgName), t)
+	must(upload.BlobCmd(ctx, options.RegistryOptions{}, files, nil, "", imgName), t)
 
 	// Check it
 	ref, err := name.ParseReference(imgName)
@@ -1329,10 +1329,10 @@ func registryClientOpts(ctx context.Context) []remote.Option {
 
 // If a signature has a bundle, but *not for that signature*, cosign verification should fail
 // This test is pretty long, so here are the basic points:
-//    1. Sign image1 with a keypair, store entry in rekor
-//    2. Sign image2 with keypair, DO NOT store entry in rekor
-//    3. Take the bundle from image1 and store it on the signature in image2
-//    4. Verification of image2 should now fail, since the bundle is for a different signature
+//  1. Sign image1 with a keypair, store entry in rekor
+//  2. Sign image2 with keypair, DO NOT store entry in rekor
+//  3. Take the bundle from image1 and store it on the signature in image2
+//  4. Verification of image2 should now fail, since the bundle is for a different signature
 func TestInvalidBundle(t *testing.T) {
 	regName, stop := reg(t)
 	defer stop()

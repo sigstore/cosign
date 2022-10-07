@@ -45,6 +45,7 @@ var _ Interface = (*PKCS11ToolListKeysUrisOptions)(nil)
 func (o *PKCS11ToolListKeysUrisOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.ModulePath, "module-path", "",
 		"absolute path to the PKCS11 module")
+	_ = cmd.Flags().SetAnnotation("module-path", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().UintVar(&o.SlotID, "slot-id", 0,
 		"id of the PKCS11 slot, uses 0 if empty")

@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -32,55 +31,6 @@ import (
 	"github.com/google/certificate-transparency-go/tls"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
-
-func TestGetPublicKey(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Failed to get cwd: %v", err)
-	}
-	tests := []struct {
-		file       string
-		wantErrSub string
-		wantType   string
-	}{
-		{file: "garbage-there-are-limits", wantErrSub: "failed to parse"},
-		// Testflume 2021 from here, https://letsencrypt.org/docs/ct-logs/
-		{file: "letsencrypt-testflume-2021", wantType: "*ecdsa.PublicKey"},
-		// This needs to be parsed with the pkcs1, pkix won't do.
-		{file: "rsa", wantType: "*rsa.PublicKey"},
-		// This works with pkix, from:
-		// https://www.gstatic.com/ct/log_list/v2/log_list_pubkey.pem
-		{file: "google", wantType: "*rsa.PublicKey"},
-	}
-	for _, tc := range tests {
-		filepath := fmt.Sprintf("%s/testdata/%s", wd, tc.file)
-		bytes, err := os.ReadFile(filepath)
-		if err != nil {
-			t.Fatalf("Failed to read testfile %s : %v", tc.file, err)
-		}
-		got, err := getPublicKey(bytes)
-		switch {
-		case err == nil && tc.wantErrSub != "":
-			t.Errorf("Wanted Error for %s but got none", tc.file)
-		case err != nil && tc.wantErrSub == "":
-			t.Errorf("Did not want error for %s but got: %v", tc.file, err)
-		case err != nil && tc.wantErrSub != "":
-			if !strings.Contains(err.Error(), tc.wantErrSub) {
-				t.Errorf("Unexpected error for %s: %s wanted to contain: %s", tc.file, err.Error(), tc.wantErrSub)
-			}
-		}
-		switch {
-		case got == nil && tc.wantType != "":
-			t.Errorf("Wanted public key for %s but got none", tc.file)
-		case got != nil && tc.wantType == "":
-			t.Errorf("Did not want error for %s but got: %v", tc.file, err)
-		case got != nil && tc.wantType != "":
-			if reflect.TypeOf(got).String() != tc.wantType {
-				t.Errorf("Unexpected type for %s: %+T wanted: %s", tc.file, got, tc.wantType)
-			}
-		}
-	}
-}
 
 func TestContainsSCT(t *testing.T) {
 	// test certificate without embedded SCT

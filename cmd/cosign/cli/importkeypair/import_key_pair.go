@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 
+	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
 )
 
@@ -36,7 +37,12 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 		return err
 	}
 
-	if cosign.FileExists("import-cosign.key") {
+	fileExists, err := icos.FileExists("import-cosign.key")
+	if err != nil {
+		return fmt.Errorf("failed checking if import-cosign.key exists: %w", err)
+	}
+
+	if fileExists {
 		var overwrite string
 		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)

@@ -40,7 +40,7 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/sget"
+	"github.com/sigstore/cosign/pkg/sget" //nolint:staticcheck
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sigstore/sigstore/pkg/tuf"
@@ -150,7 +150,7 @@ func initPolicy() *cobra.Command {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(cmd.Context(), o.Registry, files, "", rootPath(o.ImageRef))
+			return upload.BlobCmd(cmd.Context(), o.Registry, files, nil, "", rootPath(o.ImageRef))
 		},
 	}
 
@@ -297,7 +297,7 @@ func signPolicy() *cobra.Command {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(ctx, o.Registry, files, "", rootPath(o.ImageRef))
+			return upload.BlobCmd(ctx, o.Registry, files, nil, "", rootPath(o.ImageRef))
 		},
 	}
 

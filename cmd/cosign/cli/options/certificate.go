@@ -38,6 +38,7 @@ var _ Interface = (*RekorOptions)(nil)
 func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
+	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
 
 	cmd.Flags().StringVar(&o.CertEmail, "certificate-email", "",
 		"the email expected in a valid Fulcio certificate")
@@ -67,6 +68,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate")
+	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
 
 	cmd.Flags().BoolVar(&o.EnforceSCT, "enforce-sct", false,
 		"whether to enforce that a certificate contain an embedded SCT, a proof of "+

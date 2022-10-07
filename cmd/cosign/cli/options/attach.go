@@ -61,6 +61,7 @@ func (o *AttachSBOMOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SBOM, "sbom", "",
 		"path to the sbom, or {-} for stdin")
+	_ = cmd.Flags().SetAnnotation("sbom", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().StringVar(&o.SBOMType, "type", "spdx",
 		"type of sbom (spdx|cyclonedx|syft)")

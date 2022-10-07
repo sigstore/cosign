@@ -20,8 +20,9 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/sigstore/cosign/cmd/sget/cli"
+	"github.com/sigstore/cosign/cmd/sget/cli" //nolint:staticcheck
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
@@ -30,7 +31,18 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
+const deprecationWarning = `
+-------- NOTICE --------
+The sget tool in the cosign repo is deprecated, and will be removed in a future release.
+
+If you're interested in fetching content from an OCI registry or from an arbitrary URLs, please see: https://github.com/sigstore/sget.
+------------------------
+`
+
 func main() {
+	log.Print(deprecationWarning)
+	time.Sleep(3 * time.Second)
+
 	// Fix up flags to POSIX standard flags.
 	for i, arg := range os.Args {
 		if (strings.HasPrefix(arg, "-") && len(arg) == 2) || (strings.HasPrefix(arg, "--") && len(arg) >= 4) {

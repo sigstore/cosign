@@ -16,9 +16,10 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -33,7 +34,7 @@ func tokenWriter(filename string) func(http.ResponseWriter, *http.Request) {
 	}
 }
 func getToken(tokenFile string, w http.ResponseWriter, _ *http.Request) {
-	content, err := ioutil.ReadFile(tokenFile)
+	content, err := os.ReadFile(tokenFile)
 	if err != nil {
 		log.Print("failed to read token file", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,7 +53,15 @@ func main() {
 		log.Fatalf("failed to process env var: %s", err)
 	}
 	http.HandleFunc("/", tokenWriter(env.FileName))
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+
+	srv := &http.Server{
+		Addr:              ":8080",
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
 		panic(err)
 	}
 }

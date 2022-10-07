@@ -28,6 +28,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/git/github"
 	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
 
+	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -85,7 +86,12 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		return err
 	}
 
-	if cosign.FileExists("cosign.key") {
+	fileExists, err := icos.FileExists("cosign.key")
+	if err != nil {
+		return fmt.Errorf("failed checking if cosign.key exists: %w", err)
+	}
+
+	if fileExists {
 		var overwrite string
 		fmt.Fprint(os.Stderr, "File cosign.key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)

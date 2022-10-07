@@ -23,6 +23,14 @@ import (
 	"strings"
 )
 
+type UnrecognizedSchemeError struct {
+	Scheme string
+}
+
+func (e *UnrecognizedSchemeError) Error() string {
+	return fmt.Sprintf("loading URL: unrecognized scheme: %s", e.Scheme)
+}
+
 func LoadFileOrURL(fileRef string) ([]byte, error) {
 	var raw []byte
 	var err error
@@ -51,7 +59,7 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 			}
 			raw = []byte(value)
 		default:
-			return nil, fmt.Errorf("loading URL: unrecognized scheme: %s", scheme)
+			return nil, &UnrecognizedSchemeError{Scheme: scheme}
 		}
 	} else {
 		raw, err = os.ReadFile(filepath.Clean(fileRef))

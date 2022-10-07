@@ -17,6 +17,14 @@ name: CI-Container-Build
 
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches:
       - main
       - release-*
@@ -33,20 +41,20 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
 
-      - uses: sigstore/cosign-installer@09a077b27eb1310dcfb21981bee195b30ce09de0 # v2.3.0
+      - uses: sigstore/cosign-installer@ced07f21fb1da67979f539bbc6304c16c0677e76 # v2.6.0
 
-      - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.2.0
+      - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v2.2.0
         with:
-          go-version: '1.18'
+          go-version: '1.19'
           check-latest: true
 
       # will use the latest release available for ko
-      - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/auth@ceee102ec2387dd9e844e01b530ccd4ec87ce955 # v0.8.0
+        uses: google-github-actions/auth@dac4e13deb3640f22e3ffe758fd3f95e6e89f712 # v0.8.1
         with:
           workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
           service_account: 'github-actions@projectsigstore.iam.gserviceaccount.com'

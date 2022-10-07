@@ -17,13 +17,21 @@ name: CI-Tests
 on:
   workflow_dispatch:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches: ['main', 'release-*']
   pull_request:
 
 permissions: read-all
 
 env:
-  GO_VERSION: 1.18
+  GO_VERSION: 1.19
 
 jobs:
   unit-tests:
@@ -38,9 +46,9 @@ jobs:
       OS: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@a7c34adf76222e77931dedbf4a45b2e4648ced19 # v3.0.3
+      - uses: actions/cache@56461b9eb0f8438fd15c7a9968e3c9ebb18ceff1 # v3.0.3
         with:
           # In order:
           # * Module download cache
@@ -55,7 +63,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.1.5
+      - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
@@ -65,7 +73,7 @@ jobs:
           GODEBUG: x509sha1=1
         run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # v2.1.0
+        uses: codecov/codecov-action@d9f34f8cd5cb3b3eb79b3e4b5dae3a16df499a70 # v3.1.1
         with:
           env_vars: OS
       - name: Run Go tests w/ `-race`
@@ -80,9 +88,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@a7c34adf76222e77931dedbf4a45b2e4648ced19 # v3.0.3
+      - uses: actions/cache@56461b9eb0f8438fd15c7a9968e3c9ebb18ceff1 # v3.0.3
         with:
           # In order:
           # * Module download cache
@@ -97,15 +105,15 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.1.5
+      - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v2.1.5
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
-      - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
       - name: setup kind cluster
         run: |
           # Used to test: cosign generate-key-pair k8s://...
-          go install sigs.k8s.io/kind@v0.11.1
+          go install sigs.k8s.io/kind@v0.15.0
           kind create cluster
 
       - name: Run end-to-end tests
@@ -122,14 +130,14 @@ jobs:
     name: Run PowerShell E2E tests
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
-      - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.1.5
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+      - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@a7c34adf76222e77931dedbf4a45b2e4648ced19 # v3.0.3
+      - uses: actions/cache@56461b9eb0f8438fd15c7a9968e3c9ebb18ceff1 # v3.0.3
         with:
           # In order:
           # * Module download cache
@@ -148,8 +156,8 @@ jobs:
     name: license boilerplate check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
-      - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.2.0
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+      - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
@@ -164,14 +172,14 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
-      - uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a # v2.2.0
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3
+      - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3
         with:
-          go-version: 1.18
+          go-version: 1.19
           check-latest: true
       - name: golangci-lint
         uses: golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc # v3
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.46
+          version: v1.49
           args: --timeout=5m

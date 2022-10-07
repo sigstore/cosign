@@ -15,81 +15,60 @@
 package mock
 
 import (
-	"encoding/base64"
-	"encoding/hex"
+	"errors"
 
 	"github.com/go-openapi/runtime"
-	"github.com/transparency-dev/merkle/rfc6962"
 
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
-var (
-	lea = models.LogEntryAnon{
-		Attestation:    &models.LogEntryAnonAttestation{},
-		Body:           base64.StdEncoding.EncodeToString([]byte("asdf")),
-		IntegratedTime: new(int64),
-		LogID:          new(string),
-		LogIndex:       new(int64),
-		Verification: &models.LogEntryAnonVerification{
-			InclusionProof: &models.InclusionProof{
-				RootHash: new(string),
-				TreeSize: new(int64),
-				LogIndex: new(int64),
-			},
-		},
-	}
-	data = models.LogEntry{
-		uuid(lea): lea,
-	}
-)
-
-// uuid generates the UUID for the given LogEntry.
-// This is effectively a reimplementation of
-// pkg/cosign/tlog.go -> verifyUUID / ComputeLeafHash, but separated
-// to avoid a circular dependency.
-// TODO?: Perhaps we should refactor the tlog libraries into a separate
-// package?
-func uuid(e models.LogEntryAnon) string {
-	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
-	if err != nil {
-		panic(err)
-	}
-	return hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(entryBytes))
-}
-
 // EntriesClient is a client that implements entries.ClientService for Rekor
 // To use:
 // var mClient client.Rekor
-// mClient.entries = &EntriesClient{}
+// mClient.Entries = &logEntry
 type EntriesClient struct {
-	Entries models.LogEntry
+	Entries []*models.LogEntry
 }
 
 func (m *EntriesClient) CreateLogEntry(params *entries.CreateLogEntryParams, opts ...entries.ClientOption) (*entries.CreateLogEntryCreated, error) {
-	return &entries.CreateLogEntryCreated{
-		ETag:     "",
-		Location: "",
-		Payload:  data,
-	}, nil
+	if m.Entries != nil {
+		return &entries.CreateLogEntryCreated{
+			ETag:     "",
+			Location: "",
+			Payload:  *m.Entries[0],
+		}, nil
+	}
+	return nil, errors.New("entry not provided")
 }
 
 func (m *EntriesClient) GetLogEntryByIndex(params *entries.GetLogEntryByIndexParams, opts ...entries.ClientOption) (*entries.GetLogEntryByIndexOK, error) {
-	return &entries.GetLogEntryByIndexOK{
-		Payload: data,
-	}, nil
+	if m.Entries != nil {
+		return &entries.GetLogEntryByIndexOK{
+			Payload: *m.Entries[0],
+		}, nil
+	}
+	return nil, errors.New("entry not provided")
 }
 
 func (m *EntriesClient) GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParams, opts ...entries.ClientOption) (*entries.GetLogEntryByUUIDOK, error) {
-	return &entries.GetLogEntryByUUIDOK{
-		Payload: data,
-	}, nil
+	if m.Entries != nil {
+		return &entries.GetLogEntryByUUIDOK{
+			Payload: *m.Entries[0],
+		}, nil
+	}
+	return nil, errors.New("entry not provided")
 }
 
 func (m *EntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams, opts ...entries.ClientOption) (*entries.SearchLogQueryOK, error) {
+	resp := []models.LogEntry{}
+	if m.Entries != nil {
+		for _, entry := range m.Entries {
+			resp = append(resp, *entry)
+		}
+	}
 	return &entries.SearchLogQueryOK{
-		Payload: []models.LogEntry{data},
+		Payload: resp,
 	}, nil
 }
 

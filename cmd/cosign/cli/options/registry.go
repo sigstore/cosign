@@ -17,7 +17,7 @@ package options
 import (
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	alibabaacr "github.com/mozillazg/docker-credential-acr-helper/pkg/credhelper"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/spf13/cobra"
 )
@@ -83,8 +84,9 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 		kc := authn.NewMultiKeychain(
 			authn.DefaultKeychain,
 			google.Keychain,
-			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(ioutil.Discard))),
+			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard))),
 			authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
+			authn.NewKeychainFromHelper(alibabaacr.NewACRHelper().WithLoggerOut(io.Discard)),
 			github.Keychain,
 		)
 		opts = append(opts, remote.WithAuthFromKeychain(kc))

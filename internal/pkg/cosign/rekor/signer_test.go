@@ -22,10 +22,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-openapi/swag"
 	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
 	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -48,7 +50,12 @@ func TestSigner(t *testing.T) {
 
 	// Mock out Rekor client
 	var mClient client.Rekor
-	mClient.Entries = &mock.EntriesClient{}
+
+	mClient.Entries = &mock.EntriesClient{
+		Entries: []*models.LogEntry{{"123": models.LogEntryAnon{
+			LogIndex: swag.Int64(123),
+		}}},
+	}
 
 	testSigner := NewSigner(payloadSigner, &mClient)
 

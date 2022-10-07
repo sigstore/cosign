@@ -43,9 +43,19 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 // verifier using the provided hash algorithm
 func VerifierForKeyRef(ctx context.Context, keyRef string, hashAlgorithm crypto.Hash) (verifier signature.Verifier, err error) {
 	// The key could be plaintext, in a file, at a URL, or in KMS.
-	if kmsKey, err := kms.Get(ctx, keyRef, hashAlgorithm); err == nil {
+	var perr *kms.ProviderNotFoundError
+	kmsKey, err := kms.Get(ctx, keyRef, hashAlgorithm)
+	switch {
+	case err == nil:
 		// KMS specified
 		return kmsKey, nil
+	case errors.As(err, &perr):
+		// We can ignore ProviderNotFoundError; that just means the keyRef
+		// didn't match any of the KMS schemes.
+	default:
+		// But other errors indicate something more insidious; pass those
+		// through.
+		return nil, err
 	}
 
 	raw, err := blob.LoadFileOrURL(keyRef)
@@ -78,14 +88,13 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.SignerVerifier, erro
 	return cosign.LoadPrivateKey(kb, pass)
 }
 
-// LoadPublicKeyRaw loads a verifier from a raw public key passed in
+// LoadPublicKeyRaw loads a verifier from a PEM-encoded public key
 func LoadPublicKeyRaw(raw []byte, hashAlgorithm crypto.Hash) (signature.Verifier, error) {
-	// PEM encoded file.
-	ed, err := cosign.PemToECDSAKey(raw)
+	pub, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
 	if err != nil {
-		return nil, fmt.Errorf("pem to ecdsa: %w", err)
+		return nil, err
 	}
-	return signature.LoadECDSAVerifier(ed, hashAlgorithm)
+	return signature.LoadVerifier(pub, hashAlgorithm)
 }
 
 func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.Signer, error) {
@@ -232,6 +241,11 @@ func CertSubject(c *x509.Certificate) string {
 		return c.EmailAddresses[0]
 	case c.URIs != nil:
 		return c.URIs[0].String()
+	}
+	// ignore error if there's no OtherName SAN
+	otherName, _ := cosign.UnmarshalOtherNameSAN(c.Extensions)
+	if len(otherName) > 0 {
+		return otherName
 	}
 	return ""
 }

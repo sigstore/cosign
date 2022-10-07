@@ -151,6 +151,10 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
 		}
 
+                if _, ok := ref.(name.Tag); ok {
+                   fmt.Println("Warning: Tag used in reference to identify the image. Consider supplying the digest for immutability.")
+                }
+
 		if digest, ok := ref.(name.Digest); ok && !recursive {
 			se, err := ociremote.SignedEntity(ref, opts...)
 			if err != nil {

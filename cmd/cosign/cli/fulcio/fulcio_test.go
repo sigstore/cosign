@@ -49,7 +49,7 @@ type testClient struct {
 	err      error
 }
 
-var _ api.Client = (*testClient)(nil)
+var _ api.LegacyClient = (*testClient)(nil)
 
 func (p *testClient) SigningCert(cr api.CertificateRequest, token string) (*api.CertificateResponse, error) {
 	return &p.payload, p.err
