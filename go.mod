@@ -22,7 +22,7 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/mozillazg/docker-credential-acr-helper v0.3.0
-	github.com/open-policy-agent/opa v0.44.0
+	github.com/open-policy-agent/opa v0.45.0
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
 	github.com/sigstore/fulcio v0.6.0
 	github.com/sigstore/rekor v0.12.1-0.20220915152154-4bb6f441c1b2
