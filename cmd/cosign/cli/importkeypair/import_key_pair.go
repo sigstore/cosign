@@ -23,6 +23,7 @@ import (
 
 	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 var (
@@ -74,7 +75,7 @@ func GetPass(confirm bool) ([]byte, error) {
 }
 
 func readPasswordFn(confirm bool) func() ([]byte, error) {
-	pw, ok := os.LookupEnv("COSIGN_PASSWORD")
+	pw, ok := env.LookupEnv(env.VariablePassword)
 	switch {
 	case ok:
 		return func() ([]byte, error) {

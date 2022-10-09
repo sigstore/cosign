@@ -15,16 +15,13 @@
 package options
 
 import (
-	"os"
 	"strconv"
-)
 
-const (
-	ExperimentalEnv = "COSIGN_EXPERIMENTAL"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 func EnableExperimental() bool {
-	if b, err := strconv.ParseBool(os.Getenv(ExperimentalEnv)); err == nil {
+	if b, err := strconv.ParseBool(env.Getenv(env.VariableExperimental)); err == nil {
 		return b
 	}
 	return false

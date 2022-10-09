@@ -17,11 +17,11 @@ package remote
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 const (
@@ -125,7 +125,7 @@ func WithTargetRepository(repo name.Repository) Option {
 // `os.Getenv(RepoOverrideEnvKey)`, or the empty value if not set.
 // Returns an error if the value is set but cannot be parsed.
 func GetEnvTargetRepository() (name.Repository, error) {
-	if ro := os.Getenv(RepoOverrideEnvKey); ro != "" {
+	if ro := env.Getenv(env.VariableRepository); ro != "" {
 		repo, err := name.NewRepository(ro)
 		if err != nil {
 			return name.Repository{}, fmt.Errorf("parsing $"+RepoOverrideEnvKey+": %w", err)
