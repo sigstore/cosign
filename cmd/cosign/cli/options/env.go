@@ -13,25 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package options
 
 import (
-	"os"
-	"testing"
-
-	"github.com/google/go-cmp/cmp"
+	"github.com/spf13/cobra"
 )
 
-func TestGetEnv(t *testing.T) {
-	os.Setenv("SIGSTORE_TEST", "test")
-	os.Setenv("TUF_ROOT", "bar")
-	got := getExternalEnv()
-	want := []string{
-		"SIGSTORE_TEST=test",
-		"TUF_ROOT=bar",
-	}
+// EnvOptions is the top level wrapper for the env command.
+type EnvOptions struct {
+	ShowDescriptions    bool
+	ShowSensitiveValues bool
+}
 
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Error(diff)
-	}
+var _ Interface = (*EnvOptions)(nil)
+
+// AddFlags implements Interface
+func (o *EnvOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&o.ShowDescriptions, "show-descriptions", true,
+		"show descriptions for environment variables")
+
+	cmd.Flags().BoolVar(&o.ShowSensitiveValues, "show-sensitive-values", false,
+		"show values of sensitive environment variables")
 }

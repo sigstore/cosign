@@ -21,29 +21,41 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 func Env() *cobra.Command {
-	return &cobra.Command{
+	o := &options.EnvOptions{}
+
+	cmd := &cobra.Command{
 		Use:   "env",
 		Short: "Prints Cosign environment variables",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			for _, e := range getEnv() {
+			// Print COSIGN_ environment variables
+			env.PrintEnv(o.ShowDescriptions, o.ShowSensitiveValues)
+
+			// Print external environment variables (SIGSTORE_ and TUF_)
+			for _, e := range getExternalEnv() {
 				fmt.Println(e)
 			}
+
 			return nil
 		},
 	}
+
+	o.AddFlags(cmd)
+	return cmd
 }
 
-func getEnv() []string {
+func getExternalEnv() []string {
 	out := []string{}
 	for _, e := range os.Environ() {
 		// Prefixes to look for. err on the side of showing too much rather
 		// than too little. We'll only output things that have values set.
 		for _, prefix := range []string{
-			"COSIGN_",
 			// Can modify Sigstore/TUF client behavior - https://github.com/sigstore/sigstore/blob/35d6a82c15183f7fe7a07eca45e17e378aa32126/pkg/tuf/client.go#L52
 			"SIGSTORE_",
 			"TUF_",
