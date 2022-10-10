@@ -48,10 +48,10 @@ If you have Go 1.17+, you can setup a development environment:
 Here is how to install and use cosign inside a Dockerfile through the gcr.io/projectsigstore/cosign image:
 
 ```shell
-FROM gcr.io/projectsigstore/cosign:v1.9.0 as cosign-bin
+FROM gcr.io/projectsigstore/cosign:v1.13.0 as cosign-bin
 
-# Source: https://github.com/distroless/static
-FROM ghcr.io/distroless/static:latest
+# Source: https://github.com/chainguard-images/static
+FROM cgr.dev/chainguard/static:latest
 COPY --from=cosign-bin /ko-app/cosign /usr/local/bin/cosign
 ENTRYPOINT [ "cosign" ]
 ```
