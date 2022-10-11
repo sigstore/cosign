@@ -66,7 +66,7 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
+func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, certIdentity,
 	certOidcIssuer, certChain, sigRef, blobRef, certGithubWorkflowTrigger, certGithubWorkflowSha,
 	certGithubWorkflowName,
 	certGithubWorkflowRepository,
@@ -90,6 +90,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 
 	co := &cosign.CheckOpts{
 		CertEmail:                    certEmail,
+		CertIdentity:                 certIdentity,
 		CertOidcIssuer:               certOidcIssuer,
 		CertGithubWorkflowTrigger:    certGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        certGithubWorkflowSha,
@@ -166,7 +167,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 			}
 			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
-				return err
+				return fmt.Errorf("verifying certRef with certChain: %w", err)
 			}
 		}
 	case ko.BundlePath != "":
@@ -197,6 +198,9 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 					return fmt.Errorf("getting Fulcio intermediates: %w", err)
 				}
 				co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
+				if err != nil {
+					return fmt.Errorf("verifying certificate from bundle: %w", err)
+				}
 			} else {
 				// Verify certificate with chain
 				chain, err := loadCertChainFromFileOrURL(certChain)
@@ -204,6 +208,9 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail,
 					return err
 				}
 				co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+				if err != nil {
+					return fmt.Errorf("verifying certificate from bundle with chain: %w", err)
+				}
 			}
 		}
 		if err != nil {
@@ -404,7 +411,26 @@ func tlogFindCertificate(ctx context.Context, rekorClient *client.Rekor,
 func tlogFindEntry(ctx context.Context, client *client.Rekor,
 	blobBytes []byte, sig string, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig := base64.StdEncoding.EncodeToString([]byte(sig))
-	return cosign.FindTlogEntry(ctx, client, b64sig, blobBytes, pem)
+	tlogEntries, err := cosign.FindTlogEntry(ctx, client, b64sig, blobBytes, pem)
+	if err != nil {
+		return nil, err
+	}
+	if len(tlogEntries) == 0 {
+		return nil, fmt.Errorf("no valid tlog entries found with proposed entry")
+	}
+	// Always return the earliest integrated entry. That
+	// always suffices for verification of signature time.
+	var earliestLogEntry models.LogEntryAnon
+	var earliestLogEntryTime *time.Time
+	// We'll always return a tlog entry because there's at least one entry in the log.
+	for _, entry := range tlogEntries {
+		entryTime := time.Unix(*entry.IntegratedTime, 0)
+		if earliestLogEntryTime == nil || entryTime.Before(*earliestLogEntryTime) {
+			earliestLogEntryTime = &entryTime
+			earliestLogEntry = entry
+		}
+	}
+	return &earliestLogEntry, nil
 }
 
 // signatures returns the raw signature

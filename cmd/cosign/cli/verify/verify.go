@@ -52,6 +52,7 @@ type VerifyCommand struct {
 	KeyRef                       string
 	CertRef                      string
 	CertEmail                    string
+	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
@@ -59,6 +60,7 @@ type VerifyCommand struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 	CertChain                    string
+	CertOidcProvider             string
 	EnforceSCT                   bool
 	Sk                           bool
 	Slot                         string
@@ -100,6 +102,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		Annotations:                  c.Annotations.Annotations,
 		RegistryClientOpts:           ociremoteOpts,
 		CertEmail:                    c.CertEmail,
+		CertIdentity:                 c.CertIdentity,
 		CertOidcIssuer:               c.CertOidcIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,

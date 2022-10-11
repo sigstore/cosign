@@ -28,7 +28,7 @@ import (
 // var mClient client.Rekor
 // mClient.Entries = &logEntry
 type EntriesClient struct {
-	Entries *models.LogEntry
+	Entries []*models.LogEntry
 }
 
 func (m *EntriesClient) CreateLogEntry(params *entries.CreateLogEntryParams, opts ...entries.ClientOption) (*entries.CreateLogEntryCreated, error) {
@@ -36,7 +36,7 @@ func (m *EntriesClient) CreateLogEntry(params *entries.CreateLogEntryParams, opt
 		return &entries.CreateLogEntryCreated{
 			ETag:     "",
 			Location: "",
-			Payload:  *m.Entries,
+			Payload:  *m.Entries[0],
 		}, nil
 	}
 	return nil, errors.New("entry not provided")
@@ -45,7 +45,7 @@ func (m *EntriesClient) CreateLogEntry(params *entries.CreateLogEntryParams, opt
 func (m *EntriesClient) GetLogEntryByIndex(params *entries.GetLogEntryByIndexParams, opts ...entries.ClientOption) (*entries.GetLogEntryByIndexOK, error) {
 	if m.Entries != nil {
 		return &entries.GetLogEntryByIndexOK{
-			Payload: *m.Entries,
+			Payload: *m.Entries[0],
 		}, nil
 	}
 	return nil, errors.New("entry not provided")
@@ -54,7 +54,7 @@ func (m *EntriesClient) GetLogEntryByIndex(params *entries.GetLogEntryByIndexPar
 func (m *EntriesClient) GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParams, opts ...entries.ClientOption) (*entries.GetLogEntryByUUIDOK, error) {
 	if m.Entries != nil {
 		return &entries.GetLogEntryByUUIDOK{
-			Payload: *m.Entries,
+			Payload: *m.Entries[0],
 		}, nil
 	}
 	return nil, errors.New("entry not provided")
@@ -63,7 +63,9 @@ func (m *EntriesClient) GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParam
 func (m *EntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams, opts ...entries.ClientOption) (*entries.SearchLogQueryOK, error) {
 	resp := []models.LogEntry{}
 	if m.Entries != nil {
-		resp = append(resp, *m.Entries)
+		for _, entry := range m.Entries {
+			resp = append(resp, *entry)
+		}
 	}
 	return &entries.SearchLogQueryOK{
 		Payload: resp,

@@ -55,7 +55,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 		"whether to check the claims found")
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
-		"related image attachment to sign (sbom), default none")
+		"related image attachment to verify (sbom), default none")
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")

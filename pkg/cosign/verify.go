@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -91,6 +92,8 @@ type CheckOpts struct {
 	IntermediateCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
+	// CertIdentity is the identity expected for a certificate to be valid.
+	CertIdentity string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertOidcIssuer string
 
@@ -116,19 +119,6 @@ type CheckOpts struct {
 	// to be met for the signature to ve valid.
 	// Supercedes CertEmail / CertOidcIssuer
 	Identities []Identity
-}
-
-func getSignedEntity(signedImgRef name.Reference, regClientOpts []ociremote.Option) (oci.SignedEntity, v1.Hash, error) {
-	se, err := ociremote.SignedEntity(signedImgRef, regClientOpts...)
-	if err != nil {
-		return nil, v1.Hash{}, err
-	}
-	// Both of the SignedEntity types implement Digest()
-	h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
-	if err != nil {
-		return nil, v1.Hash{}, err
-	}
-	return se, h, nil
 }
 
 func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oci.Signature) error {
@@ -182,6 +172,20 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
 
+	// Handle certificates where the Subject Alternative Name is not set to a supported
+	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
+	// or URIs as SANs. Fulcio can issue a certificate with an OtherName GeneralName, so
+	// remove the unhandled critical SAN extension before verifying.
+	if len(cert.UnhandledCriticalExtensions) > 0 {
+		var unhandledExts []asn1.ObjectIdentifier
+		for _, oid := range cert.UnhandledCriticalExtensions {
+			if !oid.Equal(SANOID) {
+				unhandledExts = append(unhandledExts, oid)
+			}
+		}
+		cert.UnhandledCriticalExtensions = unhandledExts
+	}
+
 	// Now verify the cert, then the signature.
 	chains, err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts)
 	if err != nil {
@@ -217,17 +221,9 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 // the expected values.
 func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	ce := CertExtensions{Cert: cert}
-	if co.CertEmail != "" {
-		emailVerified := false
-		for _, em := range cert.EmailAddresses {
-			if co.CertEmail == em {
-				emailVerified = true
-				break
-			}
-		}
-		if !emailVerified {
-			return &VerificationError{"expected email not found in certificate"}
-		}
+
+	if err := validateCertIdentity(cert, co); err != nil {
+		return err
 	}
 
 	if err := validateCertExtensions(ce, co); err != nil {
@@ -330,6 +326,35 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 	return nil
 }
 
+func validateCertIdentity(cert *x509.Certificate, co *CheckOpts) error {
+	// TODO: Make it mandatory to include one of these options.
+	if co.CertEmail == "" && co.CertIdentity == "" {
+		return nil
+	}
+
+	for _, dns := range cert.DNSNames {
+		if co.CertIdentity == dns {
+			return nil
+		}
+	}
+	for _, em := range cert.EmailAddresses {
+		if co.CertIdentity == em || co.CertEmail == em {
+			return nil
+		}
+	}
+	for _, ip := range cert.IPAddresses {
+		if co.CertIdentity == ip.String() {
+			return nil
+		}
+	}
+	for _, uri := range cert.URIs {
+		if co.CertIdentity == uri.String() {
+			return nil
+		}
+	}
+	return &VerificationError{"expected identity not found in certificate"}
+}
+
 // getSubjectAlternateNames returns all of the following for a Certificate.
 // DNSNames
 // EmailAddresses
@@ -344,6 +369,11 @@ func getSubjectAlternateNames(cert *x509.Certificate) []string {
 	}
 	for _, uri := range cert.URIs {
 		sans = append(sans, uri.String())
+	}
+	// ignore error if there's no OtherName SAN
+	otherName, _ := UnmarshalOtherNameSAN(cert.Extensions)
+	if len(otherName) > 0 {
+		sans = append(sans, otherName)
 	}
 	return sans
 }
@@ -403,11 +433,34 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signat
 	if err != nil {
 		return nil, err
 	}
-	e, err := FindTlogEntry(ctx, client, b64sig, payload, pem)
+	tlogEntries, err := FindTlogEntry(ctx, client, b64sig, payload, pem)
 	if err != nil {
 		return nil, err
 	}
-	return e, VerifyTLogEntry(ctx, client, e)
+	if len(tlogEntries) == 0 {
+		return nil, fmt.Errorf("no valid tlog entries found with proposed entry")
+	}
+	// Always return the earliest integrated entry. That
+	// always suffices for verification of signature time.
+	var earliestLogEntry models.LogEntryAnon
+	var earliestLogEntryTime *time.Time
+	entryVerificationErrs := make([]string, 0)
+	for _, e := range tlogEntries {
+		entry := e
+		if err := VerifyTLogEntry(ctx, client, &entry); err != nil {
+			entryVerificationErrs = append(entryVerificationErrs, err.Error())
+			continue
+		}
+		entryTime := time.Unix(*entry.IntegratedTime, 0)
+		if earliestLogEntryTime == nil || entryTime.Before(*earliestLogEntryTime) {
+			earliestLogEntryTime = &entryTime
+			earliestLogEntry = entry
+		}
+	}
+	if earliestLogEntryTime == nil {
+		return nil, fmt.Errorf("no valid tlog entries found %s", strings.Join(entryVerificationErrs, ", "))
+	}
+	return &earliestLogEntry, nil
 }
 
 type fakeOCISignatures struct {
@@ -427,9 +480,13 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		return nil, false, errors.New("one of verifier or root certs is required")
 	}
 
-	// TODO(mattmoor): We could implement recursive verification if we just wrapped
-	// most of the logic below here in a call to mutate.Map
-	se, h, err := getSignedEntity(signedImgRef, co.RegistryClientOpts)
+	// This is a carefully optimized sequence for fetching the signatures of the
+	// entity that minimizes registry requests when supplied with a digest input
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	h, err := v1.NewHash(digest.Identifier())
 	if err != nil {
 		return nil, false, err
 	}
@@ -437,7 +494,11 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 	var sigs oci.Signatures
 	sigRef := co.SignatureRef
 	if sigRef == "" {
-		sigs, err = se.Signatures()
+		st, err := ociremote.SignatureTag(digest, co.RegistryClientOpts...)
+		if err != nil {
+			return nil, false, err
+		}
+		sigs, err = ociremote.Signatures(st, co.RegistryClientOpts...)
 		if err != nil {
 			return nil, false, err
 		}
@@ -506,6 +567,11 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	validationErrs := []string{}
 
 	for _, sig := range sl {
+		sig, err := static.Copy(sig)
+		if err != nil {
+			validationErrs = append(validationErrs, err.Error())
+			continue
+		}
 		verified, err := VerifyImageSignature(ctx, sig, h, co)
 		bundleVerified = bundleVerified || verified
 		if err != nil {
@@ -625,7 +691,7 @@ func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *Check
 	}, nil
 }
 
-// VerifyAttestations does all the main cosign checks in a loop, returning the verified attestations.
+// VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
@@ -633,14 +699,22 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 		return nil, false, errors.New("one of verifier or root certs is required")
 	}
 
-	// TODO(mattmoor): We could implement recursive verification if we just wrapped
-	// most of the logic below here in a call to mutate.Map
-
-	se, h, err := getSignedEntity(signedImgRef, co.RegistryClientOpts)
+	// This is a carefully optimized sequence for fetching the attestations of
+	// the entity that minimizes registry requests when supplied with a digest
+	// input.
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, false, err
 	}
-	atts, err := se.Attestations()
+	h, err := v1.NewHash(digest.Identifier())
+	if err != nil {
+		return nil, false, err
+	}
+	st, err := ociremote.AttestationTag(digest, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	atts, err := ociremote.Signatures(st, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -702,6 +776,11 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 
 	validationErrs := []string{}
 	for _, att := range sl {
+		att, err := static.Copy(att)
+		if err != nil {
+			validationErrs = append(validationErrs, err.Error())
+			continue
+		}
 		if err := func(att oci.Signature) error {
 			verifier := co.SigVerifier
 			if verifier == nil {

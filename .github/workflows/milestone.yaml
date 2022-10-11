@@ -23,7 +23,7 @@ jobs:
       statuses: none
 
     steps:
-      - uses: actions/github-script@c713e510dbd7d213d92d41b7a7805a986f4c5c66 # v6.1.0
+      - uses: actions/github-script@100527700e8b29ca817ac0e0dfbfc5e8ff38edda # v6.3.0
         with:
           script: |
             if (!context.payload.pull_request.merged) {
