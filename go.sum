@@ -268,7 +268,7 @@ github.com/aws/aws-sdk-go v1.25.37/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpi
 github.com/aws/aws-sdk-go v1.27.0/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.36.30/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
 github.com/aws/aws-sdk-go v1.37.0/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
-github.com/aws/aws-sdk-go v1.44.111 h1:AcWfOgeedSQ4gQVwcIe6aLxpQNJMloZQyqnr7Dzki+s=
+github.com/aws/aws-sdk-go v1.44.114 h1:plIkWc/RsHr3DXBj4MEw9sEW4CcL/e2ryokc+CKyq1I=
 github.com/aws/aws-sdk-go-v2 v0.18.0/go.mod h1:JWVYvqSMppoMJC0x5wdwiImzgXTI9FuZwxzkQq9wy+g=
 github.com/aws/aws-sdk-go-v2 v1.7.1/go.mod h1:L5LuPC1ZgDr2xQS7AmIec/Jlc7O/Y1u2KxJyNVab250=
 github.com/aws/aws-sdk-go-v2 v1.14.0/go.mod h1:ZA3Y8V0LrlWj63MQAnRHgKf/5QB//LSZCPNWlWrNGLU=
@@ -1431,8 +1431,8 @@ github.com/sigstore/fulcio v0.6.0 h1:YNfnGm9EjYPlzHiPDcIVhslYj846jkPtHQH+FTKNncw
 github.com/sigstore/fulcio v0.6.0/go.mod h1:lwxzHDYYQ0lVVWqaj68ZQNkcP847aoF7AIa7ra9rRqA=
 github.com/sigstore/rekor v0.12.1-0.20220915152154-4bb6f441c1b2 h1:LD8LcwygdD2DxaINWwbkaUEBAknr205wmn66/N05s7c=
 github.com/sigstore/rekor v0.12.1-0.20220915152154-4bb6f441c1b2/go.mod h1:C/jZ3EZywl/Kew48fGMWQoh+1LxOMk0BkP3DHmtB+8M=
-github.com/sigstore/sigstore v1.4.3 h1:BGFDtkk3AmRS0Dx+kN3OvbVJMLXz32BnaD57A6xUYQA=
-github.com/sigstore/sigstore v1.4.3/go.mod h1:U2bbfhzgWD9UIu4aXBRhZhQcD7KU8jPUD7d0tp4ikLM=
+github.com/sigstore/sigstore v1.4.4 h1:lVsnNTY8DUmy2hnwCPtimWfEqv+DIwleORkF8KyFsMs=
+github.com/sigstore/sigstore v1.4.4/go.mod h1:wIqu9sN72+pds31MMu89GchxXHy17k+VZWc+HY1ZXMA=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.1/go.mod h1:ni0Sbl8bgC9z8RoU9G6nDWqqs/fq4eDPysMBDgk/93Q=
