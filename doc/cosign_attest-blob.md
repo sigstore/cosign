@@ -49,6 +49,7 @@ cosign attest-blob [flags]
       --oidc-issuer string               [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
       --oidc-provider string             [EXPERIMENTAL] Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem]
       --oidc-redirect-url string         [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
+      --output-signature string          write the signature to FILE
       --predicate string                 path to the predicate file.
       --rekor-url string                 [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --replace                          

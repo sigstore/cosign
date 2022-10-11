@@ -70,7 +70,7 @@ func AttestBlob() *cobra.Command {
 			}
 			for _, artifact := range args {
 				if err := attest.AttestBlobCmd(cmd.Context(), ko, artifact, o.Hash, o.Cert, o.CertChain, o.NoUpload,
-					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout); err != nil {
+					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout, o.OutputSignature); err != nil {
 					return errors.Wrapf(err, "attesting %s", artifact)
 				}
 			}

@@ -43,7 +43,7 @@ import (
 )
 
 // nolint
-func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration) error {
+func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, outputSignature string) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
 		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -118,6 +118,10 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("Payload:")
+	fmt.Println(string(payload))
+
 	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "signing")
@@ -157,14 +161,18 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 		fmt.Printf("Bundle wrote in the file %s\n", ko.BundlePath)
 	}
 
-	// Print signature and certificate
-	// TODO: Write the signature and certificate to file if specified via flag
-	fmt.Println("Signature:")
+	// TODO: Write the certificate to file if specified via flag
 	sig = []byte(base64.StdEncoding.EncodeToString(sig))
-	fmt.Println(string(sig))
+	if outputSignature != "" {
+		if err := os.WriteFile(outputSignature, sig, 0600); err != nil {
+			return fmt.Errorf("create signature file: %w", err)
+		}
+		fmt.Printf("Signature written in %s\n", outputSignature)
+	} else {
+		fmt.Println(string(sig))
+	}
 
 	if rekorBytes != nil {
-		fmt.Println("Cert:")
 		fmt.Println(string(rekorBytes))
 	}
 
