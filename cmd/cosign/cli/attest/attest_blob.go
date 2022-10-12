@@ -40,7 +40,7 @@ import (
 )
 
 // nolint
-func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, predicatePath string, predicateType string, timeout time.Duration, outputSignature string) error {
+func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, predicatePath string, predicateType string, timeout time.Duration, outputSignature, outputAttestation string) error {
 	// TODO: Add in experimental keyless mode
 	if !options.OneOf(ko.KeyRef, ko.Sk) {
 		return &options.KeyParseError{}
@@ -85,7 +85,7 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 	}
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 
-	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
+	fmt.Fprintln(os.Stderr, "Using predicate from:", predicatePath)
 	predicate, err := os.Open(predicatePath)
 	if err != nil {
 		return err
@@ -122,6 +122,15 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 		fmt.Fprintf(os.Stderr, "Signature written in %s\n", outputSignature)
 	} else {
 		fmt.Fprintln(os.Stdout, string(sig))
+	}
+
+	if outputAttestation != "" {
+		if err := os.WriteFile(outputAttestation, payload, 0600); err != nil {
+			return fmt.Errorf("create signature file: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", outputAttestation)
+	} else {
+		fmt.Fprintln(os.Stdout, string(payload))
 	}
 
 	return nil
