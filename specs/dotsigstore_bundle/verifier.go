@@ -23,12 +23,17 @@ type Options {
 	// Map of trusted root certificates when verifying RFC3161 signed
 	// timestamps. Indexex by their 'Name'.
 	Rfc3162RootCertificates map[pkix.Name]*x509.Certificate
+	// The minumum number of TSA's the artifact has to be witnessed by.
+	Rfc3161TimestampThreshold int
 	// Map of trusted public keys for verifying a transparency log entry.
 	// The keys are indexed by the log's id.
 	// PublicKey is expected to be the concrete representation of the
 	// public key, with all parameters required (padding, hash function
 	// etc.) instantiated.
 	RekorPublicKeys map[LogId]*PublicKey
+	// The minimum number of transparency logs the entry has to be
+	// appended to.
+	RekorThreshold int
 	// Set to true if the transparency log entry's inclusion promise
 	// (SET) is not enough, and a full inclsion proof is required.
 	RequireInclusionProof bool
@@ -66,22 +71,22 @@ func Verify(b *bundle, blobPath string, opts Options) error {
 	var verifiedOk = 0
 	for entry = range b.TimestampVerificationData.GetTLogEntries() {
 		err = verifyRekor(b, entry, blobPath, opts); err != nil {
-			return err
+			log(err)
 		}
 		verifiedOk++
 	}
-	if verifiedOk < opts.TLogThreshold {
+	if verifiedOk < opts.RekorThreshold {
 		return ErrTooFewTlogs
 	}
 
 	verifiedOk = 0
 	for ts = range b.TimestampVerificationData.GetRfc3161Timestamps() {
 		err = verifyRfc3161Ts(b, ts, blobPath, opts); err != nil {
-			return err
+			log(err)
 		}
 		verifiedOk++
 	}
-	if verifiedOk < opts.TimestampThreshold {
+	if verifiedOk < opts.Rfc3161TimestampThreshold {
 		return ErrTooFewTimestamps
 	}
 
