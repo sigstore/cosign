@@ -27,7 +27,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -39,10 +38,21 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+type AttestBlobCommand struct {
+	KeyRef       string
+	ArtifactHash string
+
+	PredicatePath string
+	PredicateType string
+
+	OutputSignature   string
+	OutputAttestation string
+}
+
 // nolint
-func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, predicatePath string, predicateType string, timeout time.Duration, outputSignature, outputAttestation string) error {
+func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error {
 	// TODO: Add in experimental keyless mode
-	if !options.OneOf(ko.KeyRef, ko.Sk) {
+	if !options.OneOf(c.KeyRef) {
 		return &options.KeyParseError{}
 	}
 
@@ -50,7 +60,7 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 	var hexDigest string
 	var err error
 
-	if artifactHash == "" {
+	if c.ArtifactHash == "" {
 		if artifactPath == "-" {
 			artifact, err = io.ReadAll(os.Stdin)
 		} else {
@@ -62,31 +72,27 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 		}
 	}
 
-	sv, err := sign.SignerFromKeyOpts(ctx, certPath, certChainPath, ko)
+	ko := options.KeyOpts{}
+
+	sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
 		return errors.Wrap(err, "getting signer")
 	}
 	defer sv.Close()
 
-	if timeout != 0 {
-		var cancelFn context.CancelFunc
-		ctx, cancelFn = context.WithTimeout(ctx, timeout)
-		defer cancelFn()
-	}
-
-	if artifactHash == "" {
+	if c.ArtifactHash == "" {
 		digest, _, err := signature.ComputeDigestForSigning(bytes.NewReader(artifact), crypto.SHA256, []crypto.Hash{crypto.SHA256, crypto.SHA384})
 		if err != nil {
 			return err
 		}
 		hexDigest = strings.ToLower(hex.EncodeToString(digest))
 	} else {
-		hexDigest = artifactHash
+		hexDigest = c.ArtifactHash
 	}
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 
-	fmt.Fprintln(os.Stderr, "Using predicate from:", predicatePath)
-	predicate, err := os.Open(predicatePath)
+	fmt.Fprintln(os.Stderr, "Using predicate from:", c.PredicatePath)
+	predicate, err := os.Open(c.PredicatePath)
 	if err != nil {
 		return err
 	}
@@ -96,7 +102,7 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
 		Predicate: predicate,
-		Type:      predicateType,
+		Type:      c.PredicateType,
 		Digest:    hexDigest,
 		Repo:      base,
 	})
@@ -115,20 +121,20 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 	}
 
 	sig = []byte(base64.StdEncoding.EncodeToString(sig))
-	if outputSignature != "" {
-		if err := os.WriteFile(outputSignature, sig, 0600); err != nil {
+	if c.OutputSignature != "" {
+		if err := os.WriteFile(c.OutputSignature, sig, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "Signature written in %s\n", outputSignature)
+		fmt.Fprintf(os.Stderr, "Signature written in %s\n", c.OutputSignature)
 	} else {
 		fmt.Fprintln(os.Stdout, string(sig))
 	}
 
-	if outputAttestation != "" {
-		if err := os.WriteFile(outputAttestation, payload, 0600); err != nil {
+	if c.OutputAttestation != "" {
+		if err := os.WriteFile(c.OutputAttestation, payload, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", outputAttestation)
+		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", c.OutputAttestation)
 	} else {
 		fmt.Fprintln(os.Stdout, string(payload))
 	}

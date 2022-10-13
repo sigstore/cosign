@@ -15,9 +15,7 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
-	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/spf13/cobra"
 )
@@ -45,21 +43,17 @@ func AttestBlob() *cobra.Command {
   # attach an attestation to a blob with a key pair stored in Hashicorp Vault
   cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ko := options.KeyOpts{
-				KeyRef:   o.Key,
-				PassFunc: generate.GetPass,
-				Sk:       o.SecurityKey.Use,
-				Slot:     o.SecurityKey.Slot,
+			v := attest.AttestBlobCommand{
+				KeyRef:            o.Key,
+				ArtifactHash:      o.Hash,
+				PredicateType:     o.Predicate.Type,
+				PredicatePath:     o.Predicate.Path,
+				OutputSignature:   o.OutputSignature,
+				OutputAttestation: o.OutputAttestation,
 			}
-			for _, artifact := range args {
-				if err := attest.AttestBlobCmd(cmd.Context(), ko, artifact, o.Hash, o.Cert, o.CertChain,
-					o.Predicate.Path, o.Predicate.Type, ro.Timeout, o.OutputSignature, o.OutputAttestation); err != nil {
-					return errors.Wrapf(err, "attesting %s", artifact)
-				}
-			}
-			return nil
+			return v.Exec(cmd.Context(), args[0])
 		},
 	}
 	o.AddFlags(cmd)
