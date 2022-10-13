@@ -14,6 +14,13 @@ See [`go-piv`'s installation instructions for your platform.](https://github.com
 
 We recommend using an application provided by your hardware vendor to manage keys and permissions for advanced use-cases, but `cosign piv-tool` should work well for most users.
 
+The following exmamples use this image:
+
+```shell
+$ IMAGE=gcr.io/dlorenc-vmtest2/demo
+$ IMAGE_DIGEST=$IMAGE@sha256:410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd
+```
+
 ## Quick Start
 
 ### Setup
@@ -91,7 +98,7 @@ You can then use the normal `cosign` commands to sign images and blobs with your
 **NOTE**: The default PIN is `123456`.
 
 ```shell
-$ cosign sign --sk gcr.io/dlorenc-vmtest2/demo
+$ cosign sign --sk $IMAGE_DIGEST
 Enter PIN for security key:
 Please tap security key...
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.sig
@@ -100,7 +107,7 @@ Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f94
 To verify, you can either use the hardware key directly:
 
 ```shell
-$ cosign verify --sk gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --sk $IMAGE_DIGEST
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
@@ -116,7 +123,7 @@ Or export the public key and verify against that:
 ```shell
 $ cosign public-key --sk > pub.key
 
-$ cosign verify --key pub.key gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key pub.key $IMAGE
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:

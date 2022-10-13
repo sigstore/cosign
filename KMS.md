@@ -33,13 +33,20 @@ jnVtSyKZxNzBfNMLLtVxdu8q+AigrGCS2KPmejda9bICTcHQCRUrD5OLGQ==
 
 ### Signing and Verification
 
+For the following examples, we have:
+
+```shell
+$ IMAGE=gcr.io/dlorenc-vmtest2/demo
+$ IMAGE_DIGEST=$IMAGE@sha256:410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd
+```
+
 To sign and verify using a key managed by a KMS provider, you can pass a provider-specific URI to the `--key` command:
 
 ```shell
-$ cosign sign --key <some provider>://<some key> gcr.io/dlorenc-vmtest2/demo
+$ cosign sign --key <some provider>://<some key> $IMAGE_DIGEST
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.cosign
 
-$ cosign verify --key <some provider>://<some key> gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key <some provider>://<some key> $IMAGE
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
@@ -54,7 +61,7 @@ You can also export the public key and verify against that file:
 
 ```shell
 $ cosign public-key --key <some provider>://<some key> > kms.pub
-$ cosign verify --key kms.pub gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key kms.pub $IMAGE
 ```
 
 ### Providers
@@ -104,8 +111,8 @@ $ export AWS_CMK_ID=$(aws kms create-key --customer-master-key-spec RSA_4096 \
                                          --description "Cosign Signature Key Pair" \
                                          --query KeyMetadata.KeyId --output text)
 
-$ cosign sign --key awskms:///${AWS_CMK_ID} docker.io/davivcgarcia/hello-world:latest
-$ cosign verify --key awskms:///${AWS_CMK_ID} docker.io/davivcgarcia/hello-world:latest | jq .
+$ cosign sign --key awskms:///${AWS_CMK_ID} $IMAGE_DIGEST
+$ cosign verify --key awskms:///${AWS_CMK_ID} $IMAGE | jq .
 ```
 
 ### GCP
@@ -140,7 +147,7 @@ The following environment variables must be set to let cosign authenticate to Az
 
 To create a key using `cosign generate-key-pair --kms azurekms://[VAULT_NAME][VAULT_URI]/[KEY]` you will need a user which has permissions to create keys in Key Vault. For example `Key Vault Crypto Officer` role.
 
-To sign images using `cosign sign --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] [IMAGE]` you will need a user which has permissions to the sign action such as the `Key Vault Crypto User` role.
+To sign images using `cosign sign --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] [IMAGE DIGEST]` you will need a user which has permissions to the sign action such as the `Key Vault Crypto User` role.
 
 ### Hashicorp Vault
 

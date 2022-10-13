@@ -3,6 +3,13 @@
 The `cosign` command line tool optionally supports PKCS11 tokens for signing.
 This support is enabled through the [crypto11](https://github.com/ThalesIgnite/crypto11) and the [pkcs11](https://github.com/miekg/pkcs11) libraries, which are not included in the standard release. Use [`make cosign-pivkey-pkcs11key`](https://github.com/sigstore/cosign/blob/a8d1cc1132d4a019a62ff515b9375c8c5b98a5c5/Makefile#L52), or `go build -tags=pkcs11key`, to build `cosign` with support for PKCS11 tokens.
 
+For the following examples, we have:
+
+```shell
+$ IMAGE=gcr.io/dlorenc-vmtest2/demo
+$ IMAGE_DIGEST=$IMAGE@sha256:410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd
+```
+
 ## Quick Start
 
 ### Setup
@@ -55,14 +62,14 @@ If `pin-value` is not present in the URI, `cosign` expects the PIN to be set usi
 You can then use the normal `cosign` commands to sign images and blobs with your PKCS11 key.
 
 ```shell
-$ cosign sign --key "<PKCS11_URI>" gcr.io/dlorenc-vmtest2/demo
+$ cosign sign --key "<PKCS11_URI>" $IMAGE_DIGEST
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.sig
 ```
 
 To verify, you can either use the PKCS11 token key directly:
 
 ```shell
-$ cosign verify --key "<PKCS11_URI>" gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key "<PKCS11_URI>" $IMAGE
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
 - The cosign claims were validated
@@ -77,7 +84,7 @@ Or export the public key and verify against that:
 ```shell
 $ cosign public-key --key "<PKCS11_URI>" > pub.key
 
-$ cosign verify --key pub.key gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key pub.key $IMAGE_DIGEST
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
 - The cosign claims were validated
