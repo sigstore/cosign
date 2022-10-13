@@ -31,6 +31,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -38,6 +39,7 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// nolint
 type AttestBlobCommand struct {
 	KeyRef       string
 	ArtifactHash string
@@ -47,6 +49,8 @@ type AttestBlobCommand struct {
 
 	OutputSignature   string
 	OutputAttestation string
+
+	PassFunc cosign.PassFunc
 }
 
 // nolint
@@ -72,7 +76,10 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		}
 	}
 
-	ko := options.KeyOpts{}
+	ko := options.KeyOpts{
+		KeyRef:   c.KeyRef,
+		PassFunc: c.PassFunc,
+	}
 
 	sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
