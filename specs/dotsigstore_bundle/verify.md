@@ -64,6 +64,6 @@ If any step is failing, abort verification unless otherwise specified.
 5. Return success.
 
 <hr/>
-<sup>1<sup/>: The neccesary parameters for are considered to be part of
+<sup>1</sup>: The neccesary parameters for are considered to be part of
 the public key, even if they are not expressed in the encoded key
 (.e.g PEM).
