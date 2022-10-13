@@ -204,3 +204,28 @@ func Test_signerFromKeyRefFailureEmptyChainFile(t *testing.T) {
 		t.Fatalf("expected empty chain error, got %v", err)
 	}
 }
+
+func Test_ParseOCIReference(t *testing.T) {
+	var tests = []struct {
+		ref      string
+		expected string
+	}{
+		{"image:bytag", "WARNING: Image reference image:bytag uses a tag, not a digest"},
+		{"image:bytag@sha256:abcdef", ""},
+		{"image:@sha256:abcdef", ""},
+	}
+	for _, tt := range tests {
+		var buf strings.Builder
+		ParseOCIReference(tt.ref, &buf)
+		actual := buf.String()
+		if len(tt.expected) == 0 {
+			if len(actual) != 0 {
+				t.Errorf("expected no warning, got %s", actual)
+			}
+		} else {
+			if strings.Contains(tt.expected, actual) {
+				t.Errorf("bad warning: expected match for `%s`, got %s", tt.expected, actual)
+			}
+		}
+	}
+}

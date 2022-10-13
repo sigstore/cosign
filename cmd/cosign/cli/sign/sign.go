@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,6 +107,21 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
 
+// ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
+func ParseOCIReference(refStr string, out io.Writer) (name.Reference, error) {
+	ref, err := name.ParseReference(refStr)
+	if err != nil {
+		return nil, fmt.Errorf("parsing reference: %w", err)
+	}
+	if _, ok := ref.(name.Digest); !ok {
+		msg := fmt.Sprintf(TagReferenceMessage, refStr)
+		if _, err := io.WriteString(out, msg); err != nil {
+			panic("cannot write")
+		}
+	}
+	return ref, nil
+}
+
 // nolint
 func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
 	imgs []string, certPath string, certChainPath string, upload bool, outputSignature, outputCertificate string,
@@ -145,22 +161,18 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 		ErrDone = mutate.ErrSkipChildren
 	}
 
+	opts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("constructing client options: %w", err)
+	}
 	for _, inputImg := range imgs {
-		ref, err := name.ParseReference(inputImg)
+		ref, err := ParseOCIReference(inputImg, os.Stderr)
 		if err != nil {
-			return fmt.Errorf("parsing reference: %w", err)
-		}
-		opts, err := regOpts.ClientOpts(ctx)
-		if err != nil {
-			return fmt.Errorf("constructing client options: %w", err)
+			return err
 		}
 		ref, err = GetAttachedImageRef(ref, attachment, opts...)
 		if err != nil {
 			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
-		}
-
-		if _, ok := ref.(name.Tag); ok {
-			fmt.Fprintf(os.Stderr, TagReferenceMessage, inputImg)
 		}
 
 		if digest, ok := ref.(name.Digest); ok && !recursive {
