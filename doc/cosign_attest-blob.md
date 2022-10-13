@@ -9,13 +9,10 @@ cosign attest-blob [flags]
 ### Examples
 
 ```
-  cosign attest-blob --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--f] [--r] <BLOB uri>
+  cosign attest-blob --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--f] [--r] <BLOB uri>
 
-  # attach an attestation to a blob Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign attest-blob --timeout 90s --predicate <FILE> --type <TYPE> <BLOB>
-
-  # attach an attestation to a blob with a local key pair file
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key <BLOB>
+  # attach an attestation to a blob with a local key pair file and print the attestation
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --output-attestation <path> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Azure Key Vault
   cosign attest-blob --predicate <FILE> --type <TYPE> --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <BLOB>
@@ -49,6 +46,7 @@ cosign attest-blob [flags]
       --oidc-issuer string               [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
       --oidc-provider string             [EXPERIMENTAL] Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem]
       --oidc-redirect-url string         [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
+      --output-attestation string        write the attestation to FILE
       --output-signature string          write the signature to FILE
       --predicate string                 path to the predicate file.
       --rekor-url string                 [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
