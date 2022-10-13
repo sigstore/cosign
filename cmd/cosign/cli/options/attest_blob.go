@@ -22,16 +22,17 @@ import (
 
 // AttestOptions is the top level wrapper for the attest command.
 type AttestBlobOptions struct {
-	Key             string
-	Cert            string
-	CertChain       string
-	NoUpload        bool
-	Force           bool
-	Recursive       bool
-	Replace         bool
-	Timeout         time.Duration
-	Hash            string
-	OutputSignature string
+	Key               string
+	Cert              string
+	CertChain         string
+	NoUpload          bool
+	Force             bool
+	Recursive         bool
+	Replace           bool
+	Timeout           time.Duration
+	Hash              string
+	OutputSignature   string
+	OutputAttestation string
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -59,6 +60,9 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
 	_ = cmd.Flags().SetAnnotation("output-signature", cobra.BashCompFilenameExt, []string{})
+
+	cmd.Flags().StringVar(&o.OutputAttestation, "output-attestation", "",
+		"write the attestation to FILE")
 
 	cmd.Flags().StringVar(&o.CertChain, "cert-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+

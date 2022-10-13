@@ -31,11 +31,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
-	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -43,21 +40,14 @@ import (
 )
 
 // nolint
-func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, outputSignature string) error {
-	// A key file or token is required unless we're in experimental mode!
-	if options.EnableExperimental() {
-		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
-			return &options.KeyParseError{}
-		}
-	} else {
-		if !options.OneOf(ko.KeyRef, ko.Sk) {
-			return &options.KeyParseError{}
-		}
+func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string, artifactHash string, certPath string, certChainPath string, predicatePath string, predicateType string, timeout time.Duration, outputSignature, outputAttestation string) error {
+	// TODO: Add in experimental keyless mode
+	if !options.OneOf(ko.KeyRef, ko.Sk) {
+		return &options.KeyParseError{}
 	}
 
 	var artifact []byte
 	var hexDigest string
-	var rekorBytes []byte
 	var err error
 
 	if artifactHash == "" {
@@ -95,7 +85,7 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 	}
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 
-	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
+	fmt.Fprintln(os.Stderr, "Using predicate from:", predicatePath)
 	predicate, err := os.Open(predicatePath)
 	if err != nil {
 		return err
@@ -119,61 +109,28 @@ func AttestBlobCmd(ctx context.Context, ko options.KeyOpts, artifactPath string,
 		return err
 	}
 
-	fmt.Println("Payload:")
-	fmt.Println(string(payload))
-
 	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
 
-	// Check whether we should be uploading to the transparency log
-	signedPayload := cosign.LocalSignedPayload{}
-	if options.EnableExperimental() {
-		rekorBytes, err := sv.Bytes(ctx)
-		if err != nil {
-			return err
-		}
-		rekorClient, err := rekor.NewClient(ko.RekorURL)
-		if err != nil {
-			return err
-		}
-		entry, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-		signedPayload.Bundle = cbundle.EntryToBundle(entry)
-	}
-
-	// if bundle is specified, just do that and ignore the rest
-	if ko.BundlePath != "" {
-		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
-
-		contents, err := json.Marshal(signedPayload)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
-			return fmt.Errorf("create bundle file: %w", err)
-		}
-		fmt.Printf("Bundle wrote in the file %s\n", ko.BundlePath)
-	}
-
-	// TODO: Write the certificate to file if specified via flag
 	sig = []byte(base64.StdEncoding.EncodeToString(sig))
 	if outputSignature != "" {
 		if err := os.WriteFile(outputSignature, sig, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
-		fmt.Printf("Signature written in %s\n", outputSignature)
+		fmt.Fprintf(os.Stderr, "Signature written in %s\n", outputSignature)
 	} else {
-		fmt.Println(string(sig))
+		fmt.Fprintln(os.Stdout, string(sig))
 	}
 
-	if rekorBytes != nil {
-		fmt.Println(string(rekorBytes))
+	if outputAttestation != "" {
+		if err := os.WriteFile(outputAttestation, payload, 0600); err != nil {
+			return fmt.Errorf("create signature file: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", outputAttestation)
+	} else {
+		fmt.Fprintln(os.Stdout, string(payload))
 	}
 
 	return nil
