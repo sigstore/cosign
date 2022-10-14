@@ -279,3 +279,39 @@ The blob may be specified as a path to a file or - for stdin.`,
 	o.AddFlags(cmd)
 	return cmd
 }
+
+func VerifyBlobAttestation() *cobra.Command {
+	o := &options.VerifyBlobAttestationOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "verify-blob-attestation",
+		Short: "Verify an attestation on the supplied blob",
+		Long: `Verify an attestation on the supplied blob input using the specified key reference.
+You may specify either a key or a kms reference to verify against.
+
+The signature may be specified as a path to a file or a base64 encoded string.
+The blob may be specified as a path to a file.`,
+		Example: ` cosign verify-blob-attestastion (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+
+  # Verify a simple blob attestation with a DSSE style signature
+  cosign verify-blob-attestastion --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+
+`,
+
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := verify.VerifyBlobAttestationCommand{
+				KeyRef:        o.Key,
+				PredicateType: o.PredicateOptions.Type,
+				SignaturePath: o.SignaturePath,
+			}
+			if len(args) != 1 {
+				return fmt.Errorf("no path to blob passed in, run `cosign verify-blob-attestation -h` for more help")
+			}
+			return v.Exec(cmd.Context(), args[0])
+		},
+	}
+
+	o.AddFlags(cmd)
+	return cmd
+}
