@@ -291,10 +291,10 @@ You may specify either a key or a kms reference to verify against.
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file.`,
-		Example: ` cosign verify-blob-attestastion (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+		Example: ` cosign verify-blob-attestation (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
 
   # Verify a simple blob attestation with a DSSE style signature
-  cosign verify-blob-attestastion --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+  cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
 
 `,
 
