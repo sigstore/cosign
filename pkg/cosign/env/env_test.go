@@ -73,20 +73,26 @@ const (
 COSIGN_TEST2=""
 `
 	expectedPrintWithDescription = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
 COSIGN_TEST1="abcd"
 # COSIGN_TEST2 is the second test variable
+# Expects: test2 value
 COSIGN_TEST2=""
 `
 
 	expectedPrintWithHiddenSensitive = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
 COSIGN_TEST1="abcd"
 # COSIGN_TEST2 is the second test variable
+# Expects: test2 value
 COSIGN_TEST2="******"
 `
 
 	expectedPrintWithSensitive = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
 COSIGN_TEST1="abcd"
 # COSIGN_TEST2 is the second test variable
+# Expects: test2 value
 COSIGN_TEST2="1234"
 `
 
@@ -96,6 +102,19 @@ COSIGN_TEST2="1234"
 )
 
 func TestPrintEnv(t *testing.T) {
+	variables := map[Variable]VariableOpts{
+		VariableTest1: {
+			Description: "is the first test variable",
+			Expects:     "test1 value",
+			Sensitive:   false,
+		},
+		VariableTest2: {
+			Description: "is the second test variable",
+			Expects:     "test2 value",
+			Sensitive:   true,
+		},
+	}
+
 	tests := []struct {
 		name                 string
 		prepareFn            func()
@@ -110,19 +129,10 @@ func TestPrintEnv(t *testing.T) {
 				os.Setenv("COSIGN_TEST1", "abcd")
 				os.Setenv("COSIGN_TEST2", "")
 			},
-			environmentVariables: map[Variable]VariableOpts{
-				VariableTest1: {
-					Description: "is the first test variable",
-					Sensitive:   false,
-				},
-				VariableTest2: {
-					Description: "is the second test variable",
-					Sensitive:   true,
-				},
-			},
-			showDescriptions:    false,
-			showSensitiveValues: false,
-			expectedOutput:      expectedPrintWithoutDescription,
+			environmentVariables: variables,
+			showDescriptions:     false,
+			showSensitiveValues:  false,
+			expectedOutput:       expectedPrintWithoutDescription,
 		},
 		{
 			name: "descriptions but sensitive variable is unset",
@@ -130,19 +140,10 @@ func TestPrintEnv(t *testing.T) {
 				os.Setenv("COSIGN_TEST1", "abcd")
 				os.Setenv("COSIGN_TEST2", "")
 			},
-			environmentVariables: map[Variable]VariableOpts{
-				VariableTest1: {
-					Description: "is the first test variable",
-					Sensitive:   false,
-				},
-				VariableTest2: {
-					Description: "is the second test variable",
-					Sensitive:   true,
-				},
-			},
-			showDescriptions:    true,
-			showSensitiveValues: false,
-			expectedOutput:      expectedPrintWithDescription,
+			environmentVariables: variables,
+			showDescriptions:     true,
+			showSensitiveValues:  false,
+			expectedOutput:       expectedPrintWithDescription,
 		},
 		{
 			name: "sensitive variable is non-empty but show sensitive variables is disabled",
@@ -150,19 +151,10 @@ func TestPrintEnv(t *testing.T) {
 				os.Setenv("COSIGN_TEST1", "abcd")
 				os.Setenv("COSIGN_TEST2", "1234")
 			},
-			environmentVariables: map[Variable]VariableOpts{
-				VariableTest1: {
-					Description: "is the first test variable",
-					Sensitive:   false,
-				},
-				VariableTest2: {
-					Description: "is the second test variable",
-					Sensitive:   true,
-				},
-			},
-			showDescriptions:    true,
-			showSensitiveValues: false,
-			expectedOutput:      expectedPrintWithHiddenSensitive,
+			environmentVariables: variables,
+			showDescriptions:     true,
+			showSensitiveValues:  false,
+			expectedOutput:       expectedPrintWithHiddenSensitive,
 		},
 		{
 			name: "sensitive variable is empty",
@@ -170,19 +162,10 @@ func TestPrintEnv(t *testing.T) {
 				os.Setenv("COSIGN_TEST1", "abcd")
 				os.Setenv("COSIGN_TEST2", "")
 			},
-			environmentVariables: map[Variable]VariableOpts{
-				VariableTest1: {
-					Description: "is the first test variable",
-					Sensitive:   false,
-				},
-				VariableTest2: {
-					Description: "is the second test variable",
-					Sensitive:   true,
-				},
-			},
-			showDescriptions:    true,
-			showSensitiveValues: true,
-			expectedOutput:      expectedPrintWithDescription,
+			environmentVariables: variables,
+			showDescriptions:     true,
+			showSensitiveValues:  true,
+			expectedOutput:       expectedPrintWithDescription,
 		},
 		{
 			name: "sensitive variable is non-empty and show sensitive variables is enabled",
@@ -190,19 +173,10 @@ func TestPrintEnv(t *testing.T) {
 				os.Setenv("COSIGN_TEST1", "abcd")
 				os.Setenv("COSIGN_TEST2", "1234")
 			},
-			environmentVariables: map[Variable]VariableOpts{
-				VariableTest1: {
-					Description: "is the first test variable",
-					Sensitive:   false,
-				},
-				VariableTest2: {
-					Description: "is the second test variable",
-					Sensitive:   true,
-				},
-			},
-			showDescriptions:    true,
-			showSensitiveValues: true,
-			expectedOutput:      expectedPrintWithSensitive,
+			environmentVariables: variables,
+			showDescriptions:     true,
+			showSensitiveValues:  true,
+			expectedOutput:       expectedPrintWithSensitive,
 		},
 		{
 			name: "sensitive variable is non-empty but show descriptions is disabled",
@@ -210,19 +184,10 @@ func TestPrintEnv(t *testing.T) {
 				os.Setenv("COSIGN_TEST1", "abcd")
 				os.Setenv("COSIGN_TEST2", "1234")
 			},
-			environmentVariables: map[Variable]VariableOpts{
-				VariableTest1: {
-					Description: "is the first test variable",
-					Sensitive:   false,
-				},
-				VariableTest2: {
-					Description: "is the second test variable",
-					Sensitive:   true,
-				},
-			},
-			showDescriptions:    false,
-			showSensitiveValues: true,
-			expectedOutput:      expectedPrintSensitiveWithoutDescription,
+			environmentVariables: variables,
+			showDescriptions:     false,
+			showSensitiveValues:  true,
+			expectedOutput:       expectedPrintSensitiveWithoutDescription,
 		},
 	}
 

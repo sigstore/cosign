@@ -26,6 +26,7 @@ type Variable string
 
 type VariableOpts struct {
 	Description string
+	Expects     string
 	Sensitive   bool
 }
 
@@ -46,36 +47,55 @@ var (
 	environmentVariables = map[Variable]VariableOpts{
 		VariableExperimental: {
 			Description: "enables experimental cosign features",
+			Expects:     "1 if experimental features should be enabled (0 by default)",
 			Sensitive:   false,
 		},
 		VariableDockerMediaTypes: {
 			Description: "to be used with registries that do not support OCI media types",
+			Expects:     "1 to fallback to legacy OCI media types equivalents (0 by default)",
 			Sensitive:   false,
 		},
 		VariablePassword: {
 			Description: "overrides password inputs with this value",
+			Expects:     "string with a password (asks on stdin by default)",
 			Sensitive:   true,
 		},
 		VariablePKCS11Pin: {
 			Description: "to be used if PKCS11 PIN is not provided",
+			Expects:     "string with a PIN",
 			Sensitive:   true,
 		},
 		VariablePKCS11ModulePath: {
 			Description: "is PKCS11 module-path",
+			Expects:     "string with a module-path",
 			Sensitive:   false,
 		},
 		VariableRepository: {
 			Description: "can be used to store signatures in an alternate location",
+			Expects:     "string with a repository",
 			Sensitive:   false,
 		},
 	}
 )
 
+func mustRegisterEnv(name Variable) {
+	if _, ok := environmentVariables[name]; !ok {
+		panic(fmt.Sprintf("environment variable %q is not registered in pkg/cosign/env", name.String()))
+	}
+	if !strings.HasPrefix(name.String(), "COSIGN_") {
+		panic(fmt.Sprintf("environment varialbe %q must start with COSIGN_ prefix", name.String()))
+	}
+}
+
 func Getenv(name Variable) string {
+	mustRegisterEnv(name)
+
 	return os.Getenv(name.String())
 }
 
 func LookupEnv(name Variable) (string, bool) {
+	mustRegisterEnv(name)
+
 	return os.LookupEnv(name.String())
 }
 
@@ -92,6 +112,7 @@ func PrintEnv(showDescription, showSensitive bool) {
 		// If showDescription is set, print description for that variable
 		if showDescription {
 			fmt.Printf("# %s %s\n", env.String(), opts.Description)
+			fmt.Printf("# Expects: %s\n", opts.Expects)
 		}
 
 		// If variable is sensitive, and we don't want to show sensitive values,
