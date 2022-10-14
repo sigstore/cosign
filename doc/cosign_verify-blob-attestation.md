@@ -17,10 +17,10 @@ cosign verify-blob-attestation [flags]
 ### Examples
 
 ```
- cosign verify-blob-attestastion (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+ cosign verify-blob-attestation (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
 
   # Verify a simple blob attestation with a DSSE style signature
-  cosign verify-blob-attestastion --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+  cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
 
 
 ```
