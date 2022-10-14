@@ -142,10 +142,16 @@ func verifyBlobAttestation(env ssldsse.Envelope, blobPath, predicateType string)
 	if statement.Subject == nil {
 		return fmt.Errorf("no subject in intoto statement")
 	}
-	if len(statement.Subject) != 1 {
-		return fmt.Errorf("expected one subject in intoto statement")
+
+	for _, subj := range statement.Subject {
+		if err := verifySubject(statement, subj, blobPath, actualDigest, predicateType); err == nil {
+			return nil
+		}
 	}
-	subject := statement.Subject[0]
+	return fmt.Errorf("attestation does not contain a subject matching the provided blob")
+}
+
+func verifySubject(statement in_toto.Statement, subject in_toto.Subject, blobPath, actualDigest, predicateType string) error {
 	sha256Digest, ok := subject.Digest["sha256"]
 	if !ok {
 		return fmt.Errorf("no sha256 digest available")
