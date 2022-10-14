@@ -74,7 +74,7 @@ func ContainsSCT(cert []byte) (bool, error) {
 func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 	// fetch SCT verification key
 	pubKeys := make(map[[sha256.Size]byte]logIDMetadata)
-	rootEnv := os.Getenv(altCTLogPublicKeyLocation)
+	rootEnv := os.Getenv(altCTLogPublicKeyLocation) //nolint:forbidigo
 	if rootEnv == "" {
 		tufClient, err := tuf.NewFromEnv(ctx)
 		if err != nil {

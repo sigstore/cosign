@@ -110,7 +110,7 @@ func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.Proposed
 // TODO: Rename SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY to be test-only or remove.
 func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]RekorPubKey, error) {
 	publicKeys := make(map[string]RekorPubKey)
-	altRekorPub := os.Getenv(altRekorPublicKey)
+	altRekorPub := os.Getenv(altRekorPublicKey) //nolint:forbidigo
 
 	if altRekorPub != "" {
 		raw, err := os.ReadFile(altRekorPub)
@@ -150,7 +150,7 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 
 	// If we have a Rekor client and we've been told to fetch the Public Key from Rekor,
 	// additionally fetch it here.
-	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor)
+	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor) //nolint:forbidigo
 	if addRekorPublic != "" && rekorClient != nil {
 		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Fetching public key from Rekor API directly\n", addRekorPublicKeyFromRekor)
 		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)

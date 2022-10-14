@@ -62,7 +62,7 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 	// intermediatePool should be nil if no intermediates are found
 	var intermediatePool *x509.CertPool
 
-	rootEnv := os.Getenv(altRoot)
+	rootEnv := os.Getenv(altRoot) //nolint:forbidigo
 	if rootEnv != "" {
 		raw, err := os.ReadFile(rootEnv)
 		if err != nil {

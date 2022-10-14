@@ -53,7 +53,7 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 			}
 		case "env://":
 			envVar := parts[1]
-			value, found := os.LookupEnv(envVar)
+			value, found := os.LookupEnv(envVar) //nolint:forbidigo
 			if !found {
 				return nil, fmt.Errorf("loading URL: env var $%s not found", envVar)
 			}

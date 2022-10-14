@@ -44,7 +44,7 @@ func New() *Gh {
 
 func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
 	var httpClient *http.Client
-	if token, ok := os.LookupEnv("GITHUB_TOKEN"); ok {
+	if token, ok := os.LookupEnv("GITHUB_TOKEN"); ok { //nolint:forbidigo
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
