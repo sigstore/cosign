@@ -1417,3 +1417,63 @@ func TestInvalidBundle(t *testing.T) {
 	// veriyfing image2 now should fail
 	mustErr(verify(pubKeyPath, img2, true, nil, ""), t)
 }
+
+func TestAttestBlobSignVerify(t *testing.T) {
+	blob := "someblob"
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicateType := "slsaprovenance"
+
+	td1 := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td1)
+	})
+
+	bp := filepath.Join(td1, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	anotherBlob := filepath.Join(td1, "another-blob")
+	if err := os.WriteFile(anotherBlob, []byte("another-blob"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	predicatePath := filepath.Join(td1, "predicate")
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	outputSignature := filepath.Join(td1, "signature")
+
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+
+	ctx := context.Background()
+	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
+		KeyRef:        pubKeyPath1,
+		SignaturePath: outputSignature,
+		PredicateType: predicateType,
+	}
+	// Verify should fail on a bad input
+	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Now attest the blob with the private key
+	attestBlobCmd := attest.AttestBlobCommand{
+		KeyRef:          privKeyPath1,
+		PredicatePath:   predicatePath,
+		PredicateType:   predicateType,
+		OutputSignature: outputSignature,
+		PassFunc:        passFunc,
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	// Now verify should work
+	must(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Make sure we fail with the wrong predicate type
+	blobVerifyAttestationCmd.PredicateType = "custom"
+	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Make sure we fail with the wrong blob (set the predicate type back)
+	blobVerifyAttestationCmd.PredicateType = predicateType
+	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
+}

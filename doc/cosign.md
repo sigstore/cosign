@@ -42,5 +42,6 @@ A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign verify](cosign_verify.md)	 - Verify a signature on the supplied container image
 * [cosign verify-attestation](cosign_verify-attestation.md)	 - Verify an attestation on the supplied container image
 * [cosign verify-blob](cosign_verify-blob.md)	 - Verify a signature on the supplied blob
+* [cosign verify-blob-attestation](cosign_verify-blob-attestation.md)	 - Verify an attestation on the supplied blob
 * [cosign version](cosign_version.md)	 - Prints the version
 

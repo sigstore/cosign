@@ -115,6 +115,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Verify())
 	cmd.AddCommand(VerifyAttestation())
 	cmd.AddCommand(VerifyBlob())
+	cmd.AddCommand(VerifyBlobAttestation())
 	cmd.AddCommand(Triangulate())
 	cmd.AddCommand(Env())
 	cmd.AddCommand(version.WithFont("starwars"))
