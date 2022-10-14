@@ -139,7 +139,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 		"path to bundle FILE")
 }
 
-// VerifyBlobOptions is the top level wrapper for the `verify blob` command.
+// VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.
 type VerifyDockerfileOptions struct {
 	VerifyOptions
 	BaseImageOnly bool
@@ -155,7 +155,7 @@ func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 		"only verify the base image (the last FROM image in the Dockerfile)")
 }
 
-// VerifyBlobOptions is the top level wrapper for the `verify blob` command.
+// VerifyBlobAttestationOptions is the top level wrapper for the `verify-blob-attestation` command.
 type VerifyBlobAttestationOptions struct {
 	Key           string
 	SignaturePath string
