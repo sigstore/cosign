@@ -1,3 +1,27 @@
+# v1.13.1
+
+## Enhancements
+* verify-blob-attestation: allow multiple subjects in in_toto attestation (#2341)
+* Add verify-blob-attestation command and tests (#2337)
+* Add --output-attestation flag to attest-blob and remove experimental signing (#2332)
+* Add attest-blob command (#2286)
+* Add '--cert-identity' flag to support subject alternate names for ver… (#2278)
+* Update Dockerfile section of README (#2323)
+
+## Bug Fixes
+* Update warning when users sign images by tag. (#2313)
+
+## Others
+* Remove experimental flags from attest-blob and refactor (#2338)
+
+## Contributors
+* Alex Cameron
+* Ville Aikas
+* Zack Newman
+* asraa
+* kpk47
+* priyawadhwa
+
 # v1.13.0
 
 > # Highlights
