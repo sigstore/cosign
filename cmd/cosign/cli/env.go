@@ -51,14 +51,10 @@ type envGetter func(env.Variable) string
 type environGetter func() []string
 
 func getEnv() envGetter {
-	return func(key env.Variable) string {
-		return env.Getenv(key)
-	}
+	return env.Getenv
 }
 func getEnviron() environGetter {
-	return func() []string {
-		return os.Environ()
-	}
+	return os.Environ
 }
 
 // NB: printEnv intentionally takes map of env vars to make it easier to unit test it
