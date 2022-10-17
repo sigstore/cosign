@@ -22,6 +22,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/fulcioroots"
 )
@@ -32,8 +33,6 @@ var (
 	intermediates    *x509.CertPool
 	singletonRootErr error
 )
-
-const altRoot = "SIGSTORE_ROOT_FILE"
 
 // Get returns the Fulcio root certificate.
 //
@@ -62,7 +61,7 @@ func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 	// intermediatePool should be nil if no intermediates are found
 	var intermediatePool *x509.CertPool
 
-	rootEnv := os.Getenv(altRoot) //nolint:forbidigo
+	rootEnv := env.Getenv(env.VariableSigstoreRootFile)
 	if rootEnv != "" {
 		raw, err := os.ReadFile(rootEnv)
 		if err != nil {

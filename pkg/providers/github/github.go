@@ -19,8 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"os"
 
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/cosign/pkg/providers"
 )
 
@@ -32,17 +32,12 @@ type githubActions struct{}
 
 var _ providers.Interface = (*githubActions)(nil)
 
-const (
-	RequestTokenEnvKey = "ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-	RequestURLEnvKey   = "ACTIONS_ID_TOKEN_REQUEST_URL"
-)
-
 // Enabled implements providers.Interface
 func (ga *githubActions) Enabled(ctx context.Context) bool {
-	if os.Getenv(RequestTokenEnvKey) == "" {
+	if env.Getenv(env.VariableGitHubRequestToken) == "" {
 		return false
 	}
-	if os.Getenv(RequestURLEnvKey) == "" {
+	if env.Getenv(env.VariableGitHubRequestURL) == "" {
 		return false
 	}
 	return true
@@ -50,14 +45,14 @@ func (ga *githubActions) Enabled(ctx context.Context) bool {
 
 // Provide implements providers.Interface
 func (ga *githubActions) Provide(ctx context.Context, audience string) (string, error) {
-	url := os.Getenv(RequestURLEnvKey) + "&audience=" + audience
+	url := env.Getenv(env.VariableGitHubRequestURL) + "&audience=" + audience
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
 	}
 
-	req.Header.Add("Authorization", "bearer "+os.Getenv(RequestTokenEnvKey))
+	req.Header.Add("Authorization", "bearer "+env.Getenv(env.VariableGitHubRequestToken))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err

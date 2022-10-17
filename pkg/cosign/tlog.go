@@ -35,6 +35,7 @@ import (
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
@@ -55,19 +56,6 @@ type RekorPubKey struct {
 	PubKey *ecdsa.PublicKey
 	Status tuf.StatusKind
 }
-
-const (
-	// If specified, you can specify an oob Public Key that Rekor uses using
-	// this ENV variable.
-	altRekorPublicKey = "SIGSTORE_REKOR_PUBLIC_KEY"
-	// Add Rekor API Public Key
-	// If specified, will fetch the Rekor Public Key from the specified Rekor
-	// server and add it to RekorPubKeys. This ENV var is only for testing
-	// purposes, as users should distribute keys out of band.
-	// TODO(vaikas): Implement storing state like Rekor does so that if tree
-	// state ever changes, it will make lots of noise.
-	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
-)
 
 const treeIDHexStringLen = 16
 const uuidHexStringLen = 64
@@ -110,7 +98,7 @@ func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.Proposed
 // TODO: Rename SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY to be test-only or remove.
 func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]RekorPubKey, error) {
 	publicKeys := make(map[string]RekorPubKey)
-	altRekorPub := os.Getenv(altRekorPublicKey) //nolint:forbidigo
+	altRekorPub := env.Getenv(env.VariableSigstoreRekorPublicKey)
 
 	if altRekorPub != "" {
 		raw, err := os.ReadFile(altRekorPub)
@@ -150,9 +138,9 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 
 	// If we have a Rekor client and we've been told to fetch the Public Key from Rekor,
 	// additionally fetch it here.
-	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor) //nolint:forbidigo
+	addRekorPublic := env.Getenv(env.VariableSigstoreTrustRekorPublicKey)
 	if addRekorPublic != "" && rekorClient != nil {
-		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Fetching public key from Rekor API directly\n", addRekorPublicKeyFromRekor)
+		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Fetching public key from Rekor API directly\n", env.VariableSigstoreTrustRekorPublicKey.String())
 		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
 		if err != nil {
 			return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)

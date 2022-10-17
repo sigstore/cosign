@@ -28,6 +28,7 @@ import (
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/google/certificate-transparency-go/x509util"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctutil"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/tuf"
@@ -35,10 +36,6 @@ import (
 
 // This is the CT log public key target name
 var ctPublicKeyStr = `ctfe.pub`
-
-// Setting this env variable will over ride what is used to validate
-// the SCT coming back from Fulcio.
-const altCTLogPublicKeyLocation = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 
 // logIDMetadata holds information for mapping a key ID hash (log ID) to associated data.
 type logIDMetadata struct {
@@ -74,7 +71,7 @@ func ContainsSCT(cert []byte) (bool, error) {
 func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte) error {
 	// fetch SCT verification key
 	pubKeys := make(map[[sha256.Size]byte]logIDMetadata)
-	rootEnv := os.Getenv(altCTLogPublicKeyLocation) //nolint:forbidigo
+	rootEnv := env.Getenv(env.VariableSigstoreCTLogPublicKeyFile)
 	if rootEnv == "" {
 		tufClient, err := tuf.NewFromEnv(ctx)
 		if err != nil {

@@ -51,14 +51,12 @@ issues:
     linters:
     - errcheck
     - gosec
+    # We want to allow using os.Getenv and os.Setenv in tests because it
+    # might be easier (and needed in some cases)
     - forbidigo
+  # pkg/cosign/env implements working with environment variables in cosign
+  # and is based on os.Getenv and os.LookupEnv
   - path: pkg/cosign/env
-    linters:
-    - forbidigo
-  - path: pkg/providers/
-    linters:
-    - forbidigo
-  - path: pkg/cosign/git/gitlab
     linters:
     - forbidigo
   max-issues-per-linter: 0

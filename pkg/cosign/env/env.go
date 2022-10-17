@@ -22,12 +22,21 @@ import (
 	"strings"
 )
 
+// Variable is a type representing an environment variable
 type Variable string
 
+// VariableOpts closely describes a Variable
 type VariableOpts struct {
+	// Description contains description for the environment variable
 	Description string
-	Expects     string
-	Sensitive   bool
+	// Expects describes what value is expected by the environment variable
+	Expects string
+	// Sensitive is used for environment variables with sensitive values
+	// (e.g. passwords, credentials, etc.)
+	Sensitive bool
+	// External is used for environment variables coming from external projects
+	// and dependencies (e.g. GITHUB_TOKEN, SIGSTORE_, TUF_)
+	External bool
 }
 
 func (v Variable) String() string {
@@ -35,12 +44,28 @@ func (v Variable) String() string {
 }
 
 const (
+	// Cosign environment variables
 	VariableExperimental     Variable = "COSIGN_EXPERIMENTAL"
 	VariableDockerMediaTypes Variable = "COSIGN_DOCKER_MEDIA_TYPES"
 	VariablePassword         Variable = "COSIGN_PASSWORD"
 	VariablePKCS11Pin        Variable = "COSIGN_PKCS11_PIN"
 	VariablePKCS11ModulePath Variable = "COSIGN_PKCS11_MODULE_PATH"
 	VariableRepository       Variable = "COSIGN_REPOSITORY"
+
+	// Sigstore environment variables
+	VariableSigstoreCTLogPublicKeyFile  Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
+	VariableSigstoreRootFile            Variable = "SIGSTORE_ROOT_FILE"
+	VariableSigstoreTrustRekorPublicKey Variable = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
+	VariableSigstoreRekorPublicKey      Variable = "SIGSTORE_REKOR_PUBLIC_KEY"
+
+	// Other external environment variables
+	VariableGitHubToken              Variable = "GITHUB_TOKEN" //nolint:gosec
+	VariableGitHubRequestToken       Variable = "ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+	VariableGitHubRequestURL         Variable = "ACTIONS_ID_TOKEN_REQUEST_URL"
+	VariableSPIFFEEndpointSocket     Variable = "SPIFFE_ENDPOINT_SOCKET"
+	VariableGoogleServiceAccountName Variable = "GOOGLE_SERVICE_ACCOUNT_NAME"
+	VariableGitLabHost               Variable = "GITLAB_HOST"
+	VariableGitLabToken              Variable = "GITLAB_TOKEN"
 )
 
 var (
@@ -75,15 +100,84 @@ var (
 			Expects:     "string with a repository",
 			Sensitive:   false,
 		},
+
+		VariableSigstoreCTLogPublicKeyFile: {
+			Description: "overrides what is used to validate the SCT coming back from Fulcio",
+			Expects:     "path to the public key file",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableSigstoreRootFile: {
+			Description: "overrides the public good instance root CA",
+			Expects:     "path to the root CA",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableSigstoreTrustRekorPublicKey: {
+			Description: "if specified, will fetch the Rekor Public Key from the specified Rekor server and add it to RekorPubKeys. This env var is only for testing!",
+			Expects:     "any string to trigger this behavior",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableSigstoreRekorPublicKey: {
+			Description: "if specified, you can specify an oob Public Key that Rekor uses",
+			Expects:     "path to the public key",
+			Sensitive:   false,
+			External:    true,
+		},
+
+		VariableGitHubToken: {
+			Description: "is a token used to authenticate with GitHub",
+			Expects:     "token generated on GitHub",
+			Sensitive:   true,
+			External:    true,
+		},
+		VariableGitHubRequestToken: {
+			Description: "is bearer token for the request to the OIDC provider",
+			Expects:     "string with a bearer token",
+			Sensitive:   true,
+			External:    true,
+		},
+		VariableGitHubRequestURL: {
+			Description: "is the URL for GitHub's OIDC provider",
+			Expects:     "string with the URL for the OIDC provider",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableSPIFFEEndpointSocket: {
+			Description: "allows you to specify non-default SPIFFE socket to use.",
+			Expects:     "string with SPIFFE socket path",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableGoogleServiceAccountName: {
+			Description: "is a service account name to be used with the Google provider",
+			Expects:     "string with the service account's name",
+			Sensitive:   false,
+			External:    false,
+		},
+		VariableGitLabHost: {
+			Description: "is URL of the GitLab instance",
+			Expects:     "string with the URL of GitLab instance",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableGitLabToken: {
+			Description: "is a token used to authenticate with GitLab",
+			Expects:     "string with a token",
+			Sensitive:   true,
+			External:    true,
+		},
 	}
 )
 
 func mustRegisterEnv(name Variable) {
-	if _, ok := environmentVariables[name]; !ok {
+	opts, ok := environmentVariables[name]
+	if !ok {
 		panic(fmt.Sprintf("environment variable %q is not registered in pkg/cosign/env", name.String()))
 	}
-	if !strings.HasPrefix(name.String(), "COSIGN_") {
-		panic(fmt.Sprintf("environment varialbe %q must start with COSIGN_ prefix", name.String()))
+	if !opts.External && !strings.HasPrefix(name.String(), "COSIGN_") {
+		panic(fmt.Sprintf("cosign environment variable %q must start with COSIGN_ prefix", name.String()))
 	}
 }
 
