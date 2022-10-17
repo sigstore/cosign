@@ -29,6 +29,18 @@ message KindVersion {
         string version = 2;
 }
 
+// The checkpoint contains a signature of the tree head (root hash),
+// size of the tree, the transparency log's unique identifier (log ID),
+// hostname and the current time.
+// The result is a string, the format is described here
+// https://github.com/transparency-dev/formats/blob/main/log/README.md
+// The details are here https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go#L114.
+// The signature has the same format as
+// TransparencyLogEntry.inclusion_proof. See below for more details.
+message Checkpoint {
+        string envelope = 1;
+}
+
 // InclusionProof is the proof returned from the transparency log. Can
 // be used for on line verification against the log.
 message InclusionProof {
@@ -42,15 +54,21 @@ message InclusionProof {
         // A list of hashes required to compute the inclusion proof, sorted
         // in order from leaf to root.
         repeated bytes hashes = 4;
-        // The checkpoint contains a signature of the tree head (root hash),
-        // size of the tree, the transparency log's unique identifier
-        // (log ID), hostname and the current time.
-        // The result is a string, the format is described here
-        // https://github.com/transparency-dev/formats/blob/main/log/README.md
-        // The details are here https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go#L114.
-        // The signature has the same format as
-        // TransparencyLogEntry.inclusion_proof. See below for more details.
-        string checkpoint = 5;
+        // Signature of the current tree head. See above for more details.
+        Checkpoint checkpoint = 5;
+}
+
+// The inclusion promise is calculated by Rekor. It's calculated as a
+// signature over a canonical JSON serialization of the persisted entry, the
+// log ID, log index and the integration timestamp.
+// See https://github.com/sigstore/rekor/blob/main/pkg/api/entries.go#L54
+// The format of the signature depends on the transparency log's public key.
+// If the signature algorithm requires a hash function and/or a signature
+// scheme (e.g. RSA) those has to be retrieved out-of-band from the log's
+// operators, together with the public key.
+// This is primarily used to verify the integration timestamp's value.
+message InclusionPromise {
+        bytes signed_entry_timestamp = 1;
 }
 
 // TransparencyLogEntry captures all the details required from Rekor to
@@ -72,19 +90,8 @@ message TransparencyLogEntry {
         KindVersion kind_version = 3;
         // The UNIX timestamp from the log when the entry was persisted.
         int64 integrated_time = 4;
-        // The inclusion promise is calculated by Rekor. It's calculated as a
-        // signature over a canonical JSON serialization of the persisted
-        // entry, the log ID, log index and the integration timestamp.
-        // See https://github.com/sigstore/rekor/blob/main/pkg/api/entries.go#L54
-        // The format of the signature depends on the transparency log's
-        // public key. If the signature algorithm requires a hash function
-        // and/or a signature scheme (e.g. RSA) those has to be retrieved
-        // out-of-band from the log's operators, together with the public
-        // key.
-        // This is primarily used to verify the integration timestamp's
-        // value. This is commonly also referred to as the
-        // 'SignedEntryTimestamp', or just SET in short.
-        bytes inclusion_promise = 5;
+        // The inclusion promise/signed entry timestamp from the log.
+        InclusionPromise inclusion_promise = 5;
         // The inclusion proof can be used for online verification that the
         // entry was appended to the log, and that the log has not been
         // altered.
