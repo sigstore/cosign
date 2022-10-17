@@ -18,7 +18,6 @@ package env
 import (
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 )
 
@@ -69,6 +68,8 @@ const (
 )
 
 var (
+	// NB: this is intentionally private to avoid anyone changing this from
+	// code. There's a getter function used to get this slice if needed.
 	environmentVariables = map[Variable]VariableOpts{
 		VariableExperimental: {
 			Description: "enables experimental cosign features",
@@ -171,6 +172,10 @@ var (
 	}
 )
 
+func EnvironmentVariables() map[Variable]VariableOpts {
+	return environmentVariables
+}
+
 func mustRegisterEnv(name Variable) {
 	opts, ok := environmentVariables[name]
 	if !ok {
@@ -191,45 +196,4 @@ func LookupEnv(name Variable) (string, bool) {
 	mustRegisterEnv(name)
 
 	return os.LookupEnv(name.String())
-}
-
-func PrintEnv(showDescription, showSensitive bool) {
-	// Sort keys to print them in predictable order
-	keys := sortKeys()
-
-	for _, env := range keys {
-		opts := environmentVariables[env]
-
-		// Get value of environment variable
-		val := os.Getenv(env.String())
-
-		// If showDescription is set, print description for that variable
-		if showDescription {
-			fmt.Printf("# %s %s\n", env.String(), opts.Description)
-			fmt.Printf("# Expects: %s\n", opts.Expects)
-		}
-
-		// If variable is sensitive, and we don't want to show sensitive values,
-		// print environment variable name and some asterisk symbols.
-		// If sensitive variable isn't set or doesn't have any value, we'll just
-		// print like non-sensitive variable
-		if opts.Sensitive && !showSensitive && val != "" {
-			fmt.Printf("%s=\"******\"\n", env.String())
-		} else {
-			fmt.Printf("%s=%q\n", env.String(), val)
-		}
-	}
-}
-
-func sortKeys() []Variable {
-	keys := []Variable{}
-	for k := range environmentVariables {
-		keys = append(keys, k)
-	}
-
-	sort.Slice(keys, func(i, j int) bool {
-		return strings.Compare(keys[i].String(), keys[j].String()) < 0
-	})
-
-	return keys
 }

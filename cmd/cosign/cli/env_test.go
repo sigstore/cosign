@@ -16,22 +16,204 @@
 package cli
 
 import (
+	"io"
 	"os"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
-func TestGetEnv(t *testing.T) {
-	os.Setenv("SIGSTORE_TEST", "test")
-	os.Setenv("TUF_ROOT", "bar")
-	got := getExternalEnv()
-	want := []string{
-		"SIGSTORE_TEST=test",
-		"TUF_ROOT=bar",
+const (
+	VariableTest1 env.Variable = "COSIGN_TEST1"
+	VariableTest2 env.Variable = "COSIGN_TEST2"
+
+	expectedWithoutDescription = `COSIGN_TEST1="abcd"
+COSIGN_TEST2=""
+`
+	expectedWithDescription = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
+COSIGN_TEST1="abcd"
+# COSIGN_TEST2 is the second test variable
+# Expects: test2 value
+COSIGN_TEST2=""
+`
+
+	expectedWithHiddenSensitive = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
+COSIGN_TEST1="abcd"
+# COSIGN_TEST2 is the second test variable
+# Expects: test2 value
+COSIGN_TEST2="******"
+`
+
+	expectedWithSensitive = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
+COSIGN_TEST1="abcd"
+# COSIGN_TEST2 is the second test variable
+# Expects: test2 value
+COSIGN_TEST2="1234"
+`
+
+	expectedSensitiveWithoutDescription = `COSIGN_TEST1="abcd"
+COSIGN_TEST2="1234"
+`
+
+	expectedWithNonRegisteredEnv = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
+COSIGN_TEST1="abcd"
+# COSIGN_TEST2 is the second test variable
+# Expects: test2 value
+COSIGN_TEST2=""
+# Environment variables below are not registered with cosign,
+# but might still influence cosign's behavior.
+COSIGN_TEST3=abcd
+`
+
+	expectedWithNonRegisteredEnvNoDesc = `COSIGN_TEST1="abcd"
+COSIGN_TEST2=""
+COSIGN_TEST3=abcd
+`
+)
+
+func TestPrintEnv(t *testing.T) {
+	variables := map[env.Variable]env.VariableOpts{
+		VariableTest1: {
+			Description: "is the first test variable",
+			Expects:     "test1 value",
+			Sensitive:   false,
+		},
+		VariableTest2: {
+			Description: "is the second test variable",
+			Expects:     "test2 value",
+			Sensitive:   true,
+		},
 	}
 
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Error(diff)
+	tests := []struct {
+		name                 string
+		environmentVariables map[string]string
+		registeredVariables  map[env.Variable]env.VariableOpts
+		showDescriptions     bool
+		showSensitiveValues  bool
+		expectedOutput       string
+	}{
+		{
+			name: "no descriptions and sensitive variables",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+			},
+			registeredVariables: variables,
+			showDescriptions:    false,
+			showSensitiveValues: false,
+			expectedOutput:      expectedWithoutDescription,
+		},
+		{
+			name: "descriptions but sensitive variable is unset",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+			},
+			registeredVariables: variables,
+			showDescriptions:    true,
+			showSensitiveValues: false,
+			expectedOutput:      expectedWithDescription,
+		},
+		{
+			name: "sensitive variable is non-empty but show sensitive variables is disabled",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "1234",
+			},
+			registeredVariables: variables,
+			showDescriptions:    true,
+			showSensitiveValues: false,
+			expectedOutput:      expectedWithHiddenSensitive,
+		},
+		{
+			name: "sensitive variable is empty",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+			},
+			registeredVariables: variables,
+			showDescriptions:    true,
+			showSensitiveValues: true,
+			expectedOutput:      expectedWithDescription,
+		},
+		{
+			name: "sensitive variable is non-empty and show sensitive variables is enabled",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "1234",
+			},
+			registeredVariables: variables,
+			showDescriptions:    true,
+			showSensitiveValues: true,
+			expectedOutput:      expectedWithSensitive,
+		},
+		{
+			name: "sensitive variable is non-empty but show descriptions is disabled",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "1234",
+			},
+			registeredVariables: variables,
+			showDescriptions:    false,
+			showSensitiveValues: true,
+			expectedOutput:      expectedSensitiveWithoutDescription,
+		},
+		{
+			name: "print unregistered variable with description",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+				"COSIGN_TEST3": "abcd",
+			},
+			registeredVariables: variables,
+			showDescriptions:    true,
+			showSensitiveValues: false,
+			expectedOutput:      expectedWithNonRegisteredEnv,
+		},
+		{
+			name: "print unregistered variable without description",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+				"COSIGN_TEST3": "abcd",
+			},
+			registeredVariables: variables,
+			showDescriptions:    false,
+			showSensitiveValues: false,
+			expectedOutput:      expectedWithNonRegisteredEnvNoDesc,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set needed environment variables
+			for k, v := range tt.environmentVariables {
+				os.Setenv(k, v)
+			}
+
+			orgStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			printEnv(tt.registeredVariables, tt.showDescriptions, tt.showSensitiveValues)
+
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = orgStdout
+
+			if tt.expectedOutput != string(out) {
+				t.Errorf("Expected to get %q\n, but got %q", tt.expectedOutput, string(out))
+			}
+
+			// Unset needed environment variables to ensure clean state between tests
+			for k := range tt.environmentVariables {
+				os.Unsetenv(k)
+			}
+		})
 	}
 }

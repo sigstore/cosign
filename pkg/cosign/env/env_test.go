@@ -16,30 +16,64 @@
 package env
 
 import (
-	"io"
 	"os"
 	"testing"
 )
 
+func TestMustRegisterEnv(t *testing.T) {
+	// Calling this should NOT panic
+	mustRegisterEnv(VariableExperimental)
+}
+
+func TestMustRegisterEnvWithNonRegisteredEnv(t *testing.T) {
+	// This test must panic because non-registered variable is not registered with cosign.
+	// We fail if the test doesn't panic.
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("expected to panic, but panic did not happen")
+		}
+	}()
+	mustRegisterEnv(Variable("non-registered"))
+}
+
+func TestMustRegisterEnvWithInvalidCosignEnvVar(t *testing.T) {
+	// This test must panic because registered non-external variable doesn't start with COSIGN_.
+	// We fail if the test doesn't panic.
+	saveEnvs := environmentVariables
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("expected to panic, but panic did not happen")
+		}
+		environmentVariables = saveEnvs
+	}()
+	v := Variable("TEST")
+	environmentVariables = map[Variable]VariableOpts{
+		v: {
+			External: false,
+		},
+	}
+	mustRegisterEnv(v)
+}
+
 func TestGetenv(t *testing.T) {
-	os.Setenv(VariableExperimental.String(), "1")
+	os.Setenv("COSIGN_EXPERIMENTAL", "1")
 	if val := Getenv(VariableExperimental); val != "1" {
 		t.Errorf("expected to get \"1\", but got %q", val)
 	}
 }
 
 func TestGetenvUnset(t *testing.T) {
-	os.Unsetenv(VariableExperimental.String())
+	os.Unsetenv("COSIGN_EXPERIMENTAL")
 	if val := Getenv(VariableExperimental); val != "" {
 		t.Errorf("expected to get \"\", but got %q", val)
 	}
 }
 
 func TestLookupEnv(t *testing.T) {
-	os.Setenv(VariableExperimental.String(), "1")
+	os.Setenv("COSIGN_EXPERIMENTAL", "1")
 	val, f := LookupEnv(VariableExperimental)
 	if !f {
-		t.Errorf("expected to find %q, but it's not set", VariableExperimental.String())
+		t.Errorf("expected to find %q, but it's not set", "COSIGN_EXPERIMENTAL")
 	}
 	if val != "1" {
 		t.Errorf("expected to get value \"1\", but got %q", val)
@@ -47,10 +81,10 @@ func TestLookupEnv(t *testing.T) {
 }
 
 func TestLookupEnvEmpty(t *testing.T) {
-	os.Setenv(VariableExperimental.String(), "")
+	os.Setenv("COSIGN_EXPERIMENTAL", "")
 	val, f := LookupEnv(VariableExperimental)
 	if !f {
-		t.Errorf("expected to find %q, but it's not set", VariableExperimental.String())
+		t.Errorf("expected to find %q, but it's not set", "COSIGN_EXPERIMENTAL")
 	}
 	if val != "" {
 		t.Errorf("expected to get value \"\", but got %q", val)
@@ -58,157 +92,9 @@ func TestLookupEnvEmpty(t *testing.T) {
 }
 
 func TestLookupEnvUnset(t *testing.T) {
-	os.Unsetenv(VariableExperimental.String())
+	os.Unsetenv("COSIGN_EXPERIMENTAL")
 	val, f := LookupEnv(VariableExperimental)
 	if f {
-		t.Errorf("expected to not find %q, but it's set to %q", VariableExperimental.String(), val)
-	}
-}
-
-const (
-	VariableTest1 Variable = "COSIGN_TEST1"
-	VariableTest2 Variable = "COSIGN_TEST2"
-
-	expectedPrintWithoutDescription = `COSIGN_TEST1="abcd"
-COSIGN_TEST2=""
-`
-	expectedPrintWithDescription = `# COSIGN_TEST1 is the first test variable
-# Expects: test1 value
-COSIGN_TEST1="abcd"
-# COSIGN_TEST2 is the second test variable
-# Expects: test2 value
-COSIGN_TEST2=""
-`
-
-	expectedPrintWithHiddenSensitive = `# COSIGN_TEST1 is the first test variable
-# Expects: test1 value
-COSIGN_TEST1="abcd"
-# COSIGN_TEST2 is the second test variable
-# Expects: test2 value
-COSIGN_TEST2="******"
-`
-
-	expectedPrintWithSensitive = `# COSIGN_TEST1 is the first test variable
-# Expects: test1 value
-COSIGN_TEST1="abcd"
-# COSIGN_TEST2 is the second test variable
-# Expects: test2 value
-COSIGN_TEST2="1234"
-`
-
-	expectedPrintSensitiveWithoutDescription = `COSIGN_TEST1="abcd"
-COSIGN_TEST2="1234"
-`
-)
-
-func TestPrintEnv(t *testing.T) {
-	variables := map[Variable]VariableOpts{
-		VariableTest1: {
-			Description: "is the first test variable",
-			Expects:     "test1 value",
-			Sensitive:   false,
-		},
-		VariableTest2: {
-			Description: "is the second test variable",
-			Expects:     "test2 value",
-			Sensitive:   true,
-		},
-	}
-
-	tests := []struct {
-		name                 string
-		prepareFn            func()
-		environmentVariables map[Variable]VariableOpts
-		showDescriptions     bool
-		showSensitiveValues  bool
-		expectedOutput       string
-	}{
-		{
-			name: "no descriptions and sensitive variables",
-			prepareFn: func() {
-				os.Setenv("COSIGN_TEST1", "abcd")
-				os.Setenv("COSIGN_TEST2", "")
-			},
-			environmentVariables: variables,
-			showDescriptions:     false,
-			showSensitiveValues:  false,
-			expectedOutput:       expectedPrintWithoutDescription,
-		},
-		{
-			name: "descriptions but sensitive variable is unset",
-			prepareFn: func() {
-				os.Setenv("COSIGN_TEST1", "abcd")
-				os.Setenv("COSIGN_TEST2", "")
-			},
-			environmentVariables: variables,
-			showDescriptions:     true,
-			showSensitiveValues:  false,
-			expectedOutput:       expectedPrintWithDescription,
-		},
-		{
-			name: "sensitive variable is non-empty but show sensitive variables is disabled",
-			prepareFn: func() {
-				os.Setenv("COSIGN_TEST1", "abcd")
-				os.Setenv("COSIGN_TEST2", "1234")
-			},
-			environmentVariables: variables,
-			showDescriptions:     true,
-			showSensitiveValues:  false,
-			expectedOutput:       expectedPrintWithHiddenSensitive,
-		},
-		{
-			name: "sensitive variable is empty",
-			prepareFn: func() {
-				os.Setenv("COSIGN_TEST1", "abcd")
-				os.Setenv("COSIGN_TEST2", "")
-			},
-			environmentVariables: variables,
-			showDescriptions:     true,
-			showSensitiveValues:  true,
-			expectedOutput:       expectedPrintWithDescription,
-		},
-		{
-			name: "sensitive variable is non-empty and show sensitive variables is enabled",
-			prepareFn: func() {
-				os.Setenv("COSIGN_TEST1", "abcd")
-				os.Setenv("COSIGN_TEST2", "1234")
-			},
-			environmentVariables: variables,
-			showDescriptions:     true,
-			showSensitiveValues:  true,
-			expectedOutput:       expectedPrintWithSensitive,
-		},
-		{
-			name: "sensitive variable is non-empty but show descriptions is disabled",
-			prepareFn: func() {
-				os.Setenv("COSIGN_TEST1", "abcd")
-				os.Setenv("COSIGN_TEST2", "1234")
-			},
-			environmentVariables: variables,
-			showDescriptions:     false,
-			showSensitiveValues:  true,
-			expectedOutput:       expectedPrintSensitiveWithoutDescription,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.prepareFn()
-			environmentVariables = tt.environmentVariables
-
-			orgStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			PrintEnv(tt.showDescriptions, tt.showSensitiveValues)
-
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = orgStdout
-
-			if tt.expectedOutput != string(out) {
-				t.Errorf("Expected to get %q\n, but got %q", tt.expectedOutput, string(out))
-			}
-		})
+		t.Errorf("expected to not find %q, but it's set to %q", "COSIGN_EXPERIMENTAL", val)
 	}
 }
