@@ -24,9 +24,9 @@ option java_outer_classname = "RekorProto";
 message KindVersion {
         // Kind is the type of entry being stored in the log.
         // See here for a list: https://github.com/sigstore/rekor/tree/main/pkg/types
-        string kind = 3;
+        string kind = 1;
         // The specific api version of the type.
-        string version = 4;
+        string version = 2;
 }
 
 // InclusionProof is the proof returned from the transparency log. Can

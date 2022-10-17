@@ -38,8 +38,6 @@ option java_outer_classname = "BundleProto";
 // an arbitrarily number of transparency log entries and signed timestamps,
 // it is the client's responsibility to implement any required verification
 // policies.
-// When using RFC3161 timestamps together with DSSE envelopes, the message
-// imprint (message digest) MUST be computed over the payload (octets).
 message TimestampVerificationData {
         // This is the regular inclusion promise and proof, where
         // the timestamp is coming from the transparency log.
@@ -48,9 +46,7 @@ message TimestampVerificationData {
         // This can be used when the entry has not been stored on a
         // transparency log.
         // Clients MUST verify the hashed message in the message imprint
-        // against the artifact. Note that the message hash algorithm may
-        // differ from the one in message signature, or the subject of the
-        // DSSE envelope.
+        // against the signature in the bundle.
         repeated dev.sigstore.common.v1.RFC3161SignedTimestamp rfc3161_timestamps = 2;
 }
 
