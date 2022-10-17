@@ -39,7 +39,8 @@ func Copy() *cobra.Command {
   # overwrite destination image and signatures
   cosign copy -f example.com/src example.com/dest`,
 
-		Args: cobra.ExactArgs(2),
+		Args:             cobra.ExactArgs(2),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return copy.CopyCmd(cmd.Context(), o.Registry, args[0], args[1], o.SignatureOnly, o.Force)
 		},

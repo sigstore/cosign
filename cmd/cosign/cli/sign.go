@@ -79,7 +79,8 @@ race conditions or (worse) malicious tampering.
   # sign a container image and not upload transparency log
   cosign sign --key cosign.key --no-tlog-upload=true <IMAGE DIGEST>`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch o.Attachment {
 			case "sbom", "":

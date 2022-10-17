@@ -37,7 +37,7 @@ func ImportKeyPair() *cobra.Command {
 CAVEATS:
   This command interactively prompts for a password. You can use
   the COSIGN_PASSWORD environment variable to provide one.`,
-
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return importkeypair.ImportKeyPairCmd(cmd.Context(), o.Key, args)
 		},

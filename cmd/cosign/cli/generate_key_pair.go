@@ -62,6 +62,7 @@ CAVEATS:
   This command interactively prompts for a password. You can use
   the COSIGN_PASSWORD environment variable to provide one.`,
 
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return generate.GenerateKeyPairCmd(cmd.Context(), o.KMS, args)
 		},

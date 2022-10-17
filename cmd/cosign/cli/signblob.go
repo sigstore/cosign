@@ -52,7 +52,8 @@ func SignBlob() *cobra.Command {
 
   # sign a blob with a key pair stored in Hashicorp Vault
   cosign sign-blob --key hashivault://[KEY] <FILE>`,
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !options.EnableExperimental() {

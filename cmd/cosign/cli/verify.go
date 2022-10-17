@@ -80,7 +80,8 @@ against the transparency log.`,
   # verify image with public key stored in GitLab with project id
   cosign verify --key gitlab://[PROJECT_ID] <IMAGE>`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			annotations, err := o.AnnotationsMap()
 			if err != nil {
@@ -175,7 +176,8 @@ against the transparency log.`,
   # verify image with public key and validate attestation based on CUE policy
   cosign verify-attestation --key cosign.pub --type <PREDICATE_TYPE> --policy <CUE_POLICY> <IMAGE>`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
@@ -256,7 +258,8 @@ The blob may be specified as a path to a file or - for stdin.`,
   COSIGN_EXPERIMENTAL=1 cosign verify-blob --certificate <cert> --signature $sig <blob>
 `,
 
-		Args: cobra.ExactArgs(1),
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := options.KeyOpts{
 				KeyRef:     o.Key,
@@ -298,7 +301,8 @@ The blob may be specified as a path to a file.`,
 
 `,
 
-		Args: cobra.ExactArgs(1),
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := verify.VerifyBlobAttestationCommand{
 				KeyRef:        o.Key,
