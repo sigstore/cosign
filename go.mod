@@ -9,7 +9,7 @@ require (
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
 	github.com/cyberphone/json-canonicalization v0.0.0-20210823021906-dc406ceaf94b
 	github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936
-	github.com/go-openapi/runtime v0.24.1
+	github.com/go-openapi/runtime v0.24.2
 	github.com/go-openapi/strfmt v0.21.3
 	github.com/go-openapi/swag v0.22.3
 	github.com/go-piv/piv-go v1.10.0
