@@ -87,14 +87,14 @@ func printEnv(envVars map[env.Variable]env.VariableOpts,
 		// If sensitive variable isn't set or doesn't have any value, we'll just
 		// print like non-sensitive variable
 		if opts.Sensitive && !showSensitive && val != "" {
-			fmt.Printf("%s=\"******\"\n", e.String())
+			fmt.Printf("%s=******\n", e.String())
 		} else {
-			fmt.Printf("%s=%q\n", e.String(), val)
+			fmt.Printf("%s=%s\n", e.String(), val)
 		}
 	}
 
 	// Print not registered environment variables
-	var nonRegEnv []string
+	nonRegEnv := map[string]string{}
 	for _, e := range environGet() {
 		// Prefixes to look for. err on the side of showing too much rather
 		// than too little. We'll only output things that have values set.
@@ -106,21 +106,33 @@ func printEnv(envVars map[env.Variable]env.VariableOpts,
 			"TUF_",
 		} {
 			if strings.HasPrefix(e, prefix) {
-				// Skip registered environment variables (those are already printed above).
-				// os.Environ returns key=value pairs, so we use split by '=' to get the key
-				key := strings.Split(e, "=")[0]
+				// os.Environ returns key=value pairs, so we split by =
+				envSplit := strings.Split(e, "=")
+				key := envSplit[0]
+
+				// Skip registered environment variables (those are already printed above)
 				if _, ok := envVars[env.Variable(key)]; ok {
 					continue
 				}
-				nonRegEnv = append(nonRegEnv, e)
+
+				val := ""
+				if len(envSplit) == 2 {
+					val = envSplit[1]
+				}
+
+				nonRegEnv[key] = val
 			}
 		}
 	}
 	if len(nonRegEnv) > 0 && showDescription {
 		fmt.Println("# Environment variables below are not registered with cosign,\n# but might still influence cosign's behavior.")
 	}
-	for _, e := range nonRegEnv {
-		fmt.Println(e)
+	for key, val := range nonRegEnv {
+		if !showSensitive && val != "" {
+			fmt.Printf("%s=******\n", key)
+		} else {
+			fmt.Printf("%s=%s\n", key, val)
+		}
 	}
 }
 

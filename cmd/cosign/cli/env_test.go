@@ -29,51 +29,72 @@ const (
 	VariableTest2 env.Variable = "COSIGN_TEST2"
 	VariableTest3 env.Variable = "COSIGN_TEST3"
 
-	expectedWithoutDescription = `COSIGN_TEST1="abcd"
-COSIGN_TEST2=""
+	expectedWithoutDescription = `COSIGN_TEST1=abcd
+COSIGN_TEST2=
 `
 	expectedWithDescription = `# COSIGN_TEST1 is the first test variable
 # Expects: test1 value
-COSIGN_TEST1="abcd"
+COSIGN_TEST1=abcd
 # COSIGN_TEST2 is the second test variable
 # Expects: test2 value
-COSIGN_TEST2=""
+COSIGN_TEST2=
 `
 
 	expectedWithHiddenSensitive = `# COSIGN_TEST1 is the first test variable
 # Expects: test1 value
-COSIGN_TEST1="abcd"
+COSIGN_TEST1=abcd
 # COSIGN_TEST2 is the second test variable
 # Expects: test2 value
-COSIGN_TEST2="******"
+COSIGN_TEST2=******
 `
 
 	expectedWithSensitive = `# COSIGN_TEST1 is the first test variable
 # Expects: test1 value
-COSIGN_TEST1="abcd"
+COSIGN_TEST1=abcd
 # COSIGN_TEST2 is the second test variable
 # Expects: test2 value
-COSIGN_TEST2="1234"
+COSIGN_TEST2=1234
 `
 
-	expectedSensitiveWithoutDescription = `COSIGN_TEST1="abcd"
-COSIGN_TEST2="1234"
+	expectedSensitiveWithoutDescription = `COSIGN_TEST1=abcd
+COSIGN_TEST2=1234
 `
 
 	expectedWithNonRegisteredEnv = `# COSIGN_TEST1 is the first test variable
 # Expects: test1 value
-COSIGN_TEST1="abcd"
+COSIGN_TEST1=abcd
 # COSIGN_TEST2 is the second test variable
 # Expects: test2 value
-COSIGN_TEST2=""
+COSIGN_TEST2=
+# Environment variables below are not registered with cosign,
+# but might still influence cosign's behavior.
+COSIGN_TEST3=******
+`
+
+	expectedWithNonRegisteredEnvSensitive = `# COSIGN_TEST1 is the first test variable
+# Expects: test1 value
+COSIGN_TEST1=abcd
+# COSIGN_TEST2 is the second test variable
+# Expects: test2 value
+COSIGN_TEST2=
 # Environment variables below are not registered with cosign,
 # but might still influence cosign's behavior.
 COSIGN_TEST3=abcd
 `
 
-	expectedWithNonRegisteredEnvNoDesc = `COSIGN_TEST1="abcd"
-COSIGN_TEST2=""
+	expectedWithNonRegisteredEnvNoDesc = `COSIGN_TEST1=abcd
+COSIGN_TEST2=
+COSIGN_TEST3=******
+`
+
+	expectedWithNonRegisteredEnvNoDescSensitive = `COSIGN_TEST1=abcd
+COSIGN_TEST2=
 COSIGN_TEST3=abcd
+`
+
+	expectedWithNonRegisteredEnvNoDescEmpty = `COSIGN_TEST1=abcd
+COSIGN_TEST2=
+COSIGN_TEST3=
 `
 )
 
@@ -199,6 +220,18 @@ func TestPrintEnv(t *testing.T) {
 			expectedOutput:      expectedWithNonRegisteredEnv,
 		},
 		{
+			name: "print unregistered variable with description (sensitive enabled)",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+				"COSIGN_TEST3": "abcd",
+			},
+			registeredVariables: variables,
+			showDescriptions:    true,
+			showSensitiveValues: true,
+			expectedOutput:      expectedWithNonRegisteredEnvSensitive,
+		},
+		{
 			name: "print unregistered variable without description",
 			environmentVariables: map[string]string{
 				"COSIGN_TEST1": "abcd",
@@ -210,16 +243,48 @@ func TestPrintEnv(t *testing.T) {
 			showSensitiveValues: false,
 			expectedOutput:      expectedWithNonRegisteredEnvNoDesc,
 		},
+		{
+			name: "print unregistered variable without description (sensitive enabled)",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+				"COSIGN_TEST3": "abcd",
+			},
+			registeredVariables: variables,
+			showDescriptions:    false,
+			showSensitiveValues: true,
+			expectedOutput:      expectedWithNonRegisteredEnvNoDescSensitive,
+		},
+		{
+			name: "print empty unregistered variable",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+				"COSIGN_TEST3": "",
+			},
+			registeredVariables: variables,
+			showDescriptions:    false,
+			showSensitiveValues: false,
+			expectedOutput:      expectedWithNonRegisteredEnvNoDescEmpty,
+		},
+		{
+			name: "print empty unregistered variable (sensitive enabled)",
+			environmentVariables: map[string]string{
+				"COSIGN_TEST1": "abcd",
+				"COSIGN_TEST2": "",
+				"COSIGN_TEST3": "",
+			},
+			registeredVariables: variables,
+			showDescriptions:    false,
+			showSensitiveValues: false,
+			expectedOutput:      expectedWithNonRegisteredEnvNoDescEmpty,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set needed environment variables
 			testingEnvVars = tt.environmentVariables
-			for k, v := range testingEnvVars {
-				t.Log(k)
-				t.Log(v)
-			}
 
 			orgStdout := os.Stdout
 			r, w, _ := os.Pipe()

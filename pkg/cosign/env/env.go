@@ -155,7 +155,7 @@ var (
 			Description: "is a service account name to be used with the Google provider",
 			Expects:     "string with the service account's name",
 			Sensitive:   false,
-			External:    false,
+			External:    true,
 		},
 		VariableGitLabHost: {
 			Description: "is URL of the GitLab instance",
