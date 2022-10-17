@@ -48,10 +48,10 @@ If you have Go 1.17+, you can setup a development environment:
 Here is how to install and use cosign inside a Dockerfile through the gcr.io/projectsigstore/cosign image:
 
 ```shell
-FROM gcr.io/projectsigstore/cosign:v1.9.0 as cosign-bin
+FROM gcr.io/projectsigstore/cosign:v1.13.0 as cosign-bin
 
-# Source: https://github.com/distroless/static
-FROM ghcr.io/distroless/static:latest
+# Source: https://github.com/chainguard-images/static
+FROM cgr.dev/chainguard/static:latest
 COPY --from=cosign-bin /ko-app/cosign /usr/local/bin/cosign
 ENTRYPOINT [ "cosign" ]
 ```
@@ -72,6 +72,16 @@ NOTE: you will need access to a container registry for cosign to work with.
 [ttl.sh](https://ttl.sh) offers free, short-lived (ie: hours), anonymous container image
 hosting if you just want to try these commands out.
 
+For instance:
+
+```shell
+$ SRC_IMAGE=busybox
+$ SRC_DIGEST=$(crane digest busybox)
+$ IMAGE_URI=ttl.sh/$(uuidgen | head -c 8):1h
+$ crane cp $SRC_IMAGE@$SRC_DIGEST $IMAGE_URI:1h
+$ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
+```
+
 ### Generate a keypair
 
 ```shell
@@ -84,8 +94,12 @@ Public key written to cosign.pub
 
 ### Sign a container and store the signature in the registry
 
+Note that you should always sign images based on their digest (`@sha256:...`)
+rather than a tag (`:latest`) because otherwise you might sign something you
+didn't intend to!
+
 ```shell
-$ cosign sign --key cosign.key dlorenc/demo
+$ cosign sign --key cosign.key $IMAGE_URI_DIGEST
 Enter password for private key:
 Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
@@ -105,7 +119,7 @@ Note that these signed payloads include the digest of the container image, which
 sure these "detached" signatures cover the correct image.
 
 ```shell
-$ cosign verify --key cosign.pub dlorenc/demo
+$ cosign verify --key cosign.pub $IMAGE_URI
 The following checks were performed on these signatures:
   - The cosign claims were validated
   - The signatures were verified against the specified public key
@@ -169,32 +183,39 @@ You can publish an artifact with `cosign upload blob`:
 
 ```shell
 $ echo "my first artifact" > artifact
-$ cosign upload blob -f artifact gcr.io/dlorenc-vmtest2/artifact
-Uploading file from [artifact] to [gcr.io/dlorenc-vmtest2/artifact:latest] with media type [text/plain; charset=utf-8]
-File is available directly at [us.gcr.io/v2/dlorenc-vmtest2/readme/blobs/sha256:b57400c0ad852a7c2f6f7da4a1f94547692c61f3e921a49ba3a41805ae8e1e99]
-us.gcr.io/dlorenc-vmtest2/readme@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec
+$ BLOB_SUM=$(shasum -a 256 artifact | cut -d' ' -f 1)
+c69d72c98b55258f9026f984e4656f0e9fd3ef024ea3fac1d7e5c7e6249f1626  artifact
+$ BLOB_NAME=my-artifact-$(uuidgen | head -c 8)
+$ BLOB_URI=ttl.sh/$BLOB_NAME:1h
+$ BLOB_URI_DIGEST=$(cosign upload blob -f artifact $BLOB_URI)
+Uploading file from [artifact] to [ttl.sh/my-artifact-f42c22e0:5m] with media type [text/plain]
+File [artifact] is available directly at [ttl.sh/v2/my-artifact-f42c22e0/blobs/sha256:c69d72c98b55258f9026f984e4656f0e9fd3ef024ea3fac1d7e5c7e6249f1626]
+Uploaded image to:
+ttl.sh/my-artifact-f42c22e0@sha256:790d47850411e902aabebc3a684eeb78fcae853d4dd6e1cc554d70db7f05f99f
 ```
 
 Your users can download it from the "direct" url with standard tools like curl or wget:
 
 ```shell
-$ curl -L gcr.io/v2/dlorenc-vmtest2/artifact/blobs/sha256:97f16c28f6478f3c02d7fff4c7f3c2a30041b72eb6852ca85b919fd85534ed4b > artifact
+$ curl -L ttl.sh/v2/$BLOB_NAME/blobs/sha256:$BLOB_SUM > artifact-fetched
 ```
 
 The digest is baked right into the URL, so they can check that as well:
 
 ```shell
-$ curl -L gcr.io/v2/dlorenc-vmtest2/artifact/blobs/sha256:97f16c28f6478f3c02d7fff4c7f3c2a30041b72eb6852ca85b919fd85534ed4b | shasum -a 256
-97f16c28f6478f3c02d7fff4c7f3c2a30041b72eb6852ca85b919fd85534ed4b  -
+$ cat artifact-fetched | shasum -a 256
+c69d72c98b55258f9026f984e4656f0e9fd3ef024ea3fac1d7e5c7e6249f1626  -
 ```
 
 You can sign it with the normal `cosign sign` command and flags:
 
 ```shell
-$ cosign sign --key cosign.key gcr.io/dlorenc-vmtest2/artifact
+$ cosign sign --key cosign.key $BLOB_URI_DIGEST
 Enter password for private key:
-Pushing signature to: gcr.io/dlorenc-vmtest2/artifact:sha256-3f612a4520b2c245d620d0cca029f1173f6bea76819dde8543f5b799ea3c696c.sig
+Pushing signature to: ttl.sh/my-artifact-f42c22e0
 ```
+
+As usual, make sure to reference any images you sign by their digest to make sure you don't sign the wrong thing!
 
 #### sget
 
@@ -249,7 +270,7 @@ Creating Tekton Bundle:
         - Added TaskRun:  to image
 
 Pushed Tekton Bundle to us.gcr.io/dlorenc-vmtest2/pipeline@sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155
-$ cosign sign --key cosign.key us.gcr.io/dlorenc-vmtest2/pipeline:latest
+$ cosign sign --key cosign.key us.gcr.io/dlorenc-vmtest2/pipeline@sha256:124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155
 Enter password for private key:
 tlog entry created with index: 5086
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/demo:sha256-124e1fdee94fe5c5f902bc94da2d6e2fea243934c74e76c2368acdc8d3ac7155.sig
@@ -263,7 +284,7 @@ Cosign can upload these using the `cosign wasm upload` command:
 
 ```shell
 $ cosign upload wasm -f hello.wasm us.gcr.io/dlorenc-vmtest2/wasm
-$ cosign sign --key cosign.key us.gcr.io/dlorenc-vmtest2/wasm
+$ cosign sign --key cosign.key us.gcr.io/dlorenc-vmtest2/wasm@sha256:9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812
 Enter password for private key:
 tlog entry created with index: 5198
 Pushing signature to: us.gcr.io/dlorenc-vmtest2/wasm:sha256-9e7a511fb3130ee4641baf1adc0400bed674d4afc3f1b81bb581c3c8f613f812.sig
@@ -279,11 +300,10 @@ Cosign can then sign these images as they can any other OCI image.
 ```shell
 $ bee build ./examples/tcpconnect/tcpconnect.c localhost:5000/tcpconnect:test
 $ bee push localhost:5000/tcpconnect:test
-$ cosign sign  --key cosign.key localhost:5000/tcpconnect:test
+$ cosign sign  --key cosign.key localhost:5000/tcpconnect@sha256:7a91c50d922925f152fec96ed1d84b7bc6b2079c169d68826f6cf307f22d40e6
 Enter password for private key:
 Pushing signature to: localhost:5000/tcpconnect
 $ cosign verify --key cosign.pub localhost:5000/tcpconnect:test
-cosign verify --key pubkey.pem localhost:5001/tcpconnect:test
 
 Verification for localhost:5000/tcpconnect:test --
 The following checks were performed on each of these signatures:
@@ -302,7 +322,7 @@ The specification for these is defined [here](https://github.com/in-toto/attesta
 You can create and sign one from a local predicate file using the following commands:
 
 ```shell
-$ cosign attest --predicate <file> --key cosign.key <image>
+$ cosign attest --predicate <file> --key cosign.key $IMAGE_URI_DIGEST
 ```
 
 All of the standard key management systems are supported.
@@ -311,7 +331,7 @@ Payloads are signed using the DSSE signing spec, defined [here](https://github.c
 To verify:
 
 ```shell
-$ cosign verify-attestation --key cosign.pub <image>
+$ cosign verify-attestation --key cosign.pub $IMAGE_URI
 ```
 
 ## Detailed Usage
@@ -353,7 +373,7 @@ Today, `cosign` has been tested and works against the following registries:
 We aim for wide registry support. To `sign` images in registries which do not yet fully support [OCI media types](https://github.com/sigstore/cosign/blob/main/SPEC.md#object-types), one may need to use `COSIGN_DOCKER_MEDIA_TYPES` to fall back to legacy equivalents. For example:
 
 ```shell
-COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
+COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@$DIGEST
 ```
 
 Please help test and file bugs if you see issues!
@@ -366,8 +386,8 @@ To publish signed artifacts to a Rekor transparency log and verify their existen
 set the `COSIGN_EXPERIMENTAL=1` environment variable.
 
 ```shell
-$ COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key dlorenc/demo
-$ COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub dlorenc/demo
+$ COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key $IMAGE_URI_DIGEST
+$ COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub $IMAGE_URI
 ```
 
 `cosign` defaults to using the public instance of rekor at [rekor.sigstore.dev](https://rekor.sigstore.dev).
@@ -418,7 +438,7 @@ That looks like:
 }
 ```
 
-**Note:** This can be generated for an image reference using `cosign generate <image>`.
+**Note:** This can be generated for an image reference using `cosign generate $IMAGE_URI_DIGEST`.
 
 I'm happy to switch this format to something else if it makes sense.
 See https://github.com/notaryproject/nv2/issues/40 for one option.
@@ -445,7 +465,7 @@ This will replace the repo in the provided image like this:
 
 ```shell
 $ export COSIGN_REPOSITORY=gcr.io/my-new-repo
-$ gcr.io/dlorenc-vmtest2/demo -> gcr.io/my-new-repo/demo:sha256-DIGEST.sig
+$ cosign sign --key cosign.key $IMAGE_URI_DIGEST
 ```
 
 So the signature for `gcr.io/dlorenc-vmtest2/demo` will be stored in `gcr.io/my-new-repo/demo:sha256-DIGEST.sig`.
@@ -460,8 +480,8 @@ Note: different registries might expect different formats for the "repository."
   repository. For example,
 
   ```shell
-  COSIGN_REPOSITORY=us-docker.pkg.dev/my-new-repo/demo
-  gcr.io/dlorenc-vmtest2/demo --> us-docker.pkg.dev/my-new-repo/demo:sha256-DIGEST.sig
+  $ export COSIGN_REPOSITORY=us-docker.pkg.dev/my-new-repo/demo
+  $ cosign sign --key cosign.key $IMAGE_URI_DIGEST
   ```
 
   where the `sha256-DIGEST` will match the digest for
@@ -633,19 +653,22 @@ If you would like to attest that a specific tag (or set of tags) should point at
 run something like:
 
 ```shell
+$ docker push $IMAGE_URI
+The push refers to repository [dlorenc/demo]
+994393dc58e7: Pushed
+5m: digest: sha256:1304f174557314a7ed9eddb4eab12fed12cb0cd9809e4c28f29af86979a3c870 size: 528
 $ TAG=sign-me
-$ DGST=$(crane digest dlorenc/demo:$TAG)
-$ cosign sign --key cosign.key -a tag=$TAG dlorenc/demo@$DGST
+$ cosign sign --key cosign.key -a tag=$TAG $IMAGE_URI_DIGEST
 Enter password for private key:
-Pushing signature to: dlorenc/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.sig
+Pushing signature to: dlorenc/demo:1304f174557314a7ed9eddb4eab12fed12cb0cd9809e4c28f29af86979a3c870.sig
 ```
 
 Then you can verify that the tag->digest mapping is also covered in the signature, using the `-a` flag to `cosign verify`.
-This example verifies that the digest `$TAG` points to (`sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36`)
-has been signed, **and also** that the `$TAG`:
+This example verifies that the digest `$TAG` which points to (`sha256:1304f174557314a7ed9eddb4eab12fed12cb0cd9809e4c28f29af86979a3c870`)
+has been signed, **and also** that the `tag` annotation has the value `sign-me`:
 
 ```shell
-$ cosign verify --key cosign.pub -a tag=$TAG dlorenc/demo:$TAG | jq .
+$ cosign verify --key cosign.pub -a tag=$TAG $IMAGE_URI | jq .
 {
   "Critical": {
     "Identity": {
@@ -729,7 +752,7 @@ it to act as an attestation to the **signature(s) themselves**.
 Before we sign the signature artifact, we first give it a memorable name so we can find it later.
 
 ```shell
-$ cosign sign --key cosign.key -a sig=original dlorenc/demo
+$ cosign sign --key cosign.key -a sig=original $IMAGE_URI_DIGEST
 Enter password for private key:
 Pushing signature to: dlorenc/demo:sha256-97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36.sig
 $ cosign verify --key cosign.pub dlorenc/demo | jq .
@@ -749,10 +772,12 @@ $ cosign verify --key cosign.pub dlorenc/demo | jq .
 }
 ```
 
+<!-- TODO: https://github.com/sigstore/cosign/issues/2333 -->
+
 Now give that signature a memorable name, then sign that:
 
 ```shell
-$ crane tag $(cosign triangulate dlorenc/demo) mysignature
+$ crane tag $(cosign triangulate $IMAGE_URI) mysignature
 2021/02/15 20:22:55 dlorenc/demo:mysignature: digest: sha256:71f70e5d29bde87f988740665257c35b1c6f52dafa20fab4ba16b3b1f4c6ba0e size: 556
 $ cosign sign --key cosign.key -a sig=counter dlorenc/demo:mysignature
 Enter password for private key:

@@ -98,6 +98,7 @@ against the transparency log.`,
 				KeyRef:                       o.Key,
 				CertRef:                      o.CertVerify.Cert,
 				CertEmail:                    o.CertVerify.CertEmail,
+				CertIdentity:                 o.CertVerify.CertIdentity,
 				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
@@ -181,6 +182,7 @@ against the transparency log.`,
 				CheckClaims:                  o.CheckClaims,
 				CertRef:                      o.CertVerify.Cert,
 				CertEmail:                    o.CertVerify.CertEmail,
+				CertIdentity:                 o.CertVerify.CertIdentity,
 				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
 				CertChain:                    o.CertVerify.CertChain,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
@@ -264,13 +266,49 @@ The blob may be specified as a path to a file or - for stdin.`,
 				BundlePath: o.BundlePath,
 			}
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
-				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain,
+				o.CertVerify.CertEmail, o.CertVerify.CertIdentity, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain,
 				o.Signature, args[0], o.CertVerify.CertGithubWorkflowTrigger, o.CertVerify.CertGithubWorkflowSha,
 				o.CertVerify.CertGithubWorkflowName, o.CertVerify.CertGithubWorkflowRepository, o.CertVerify.CertGithubWorkflowRef,
 				o.CertVerify.EnforceSCT); err != nil {
 				return fmt.Errorf("verifying blob %s: %w", args, err)
 			}
 			return nil
+		},
+	}
+
+	o.AddFlags(cmd)
+	return cmd
+}
+
+func VerifyBlobAttestation() *cobra.Command {
+	o := &options.VerifyBlobAttestationOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "verify-blob-attestation",
+		Short: "Verify an attestation on the supplied blob",
+		Long: `Verify an attestation on the supplied blob input using the specified key reference.
+You may specify either a key or a kms reference to verify against.
+
+The signature may be specified as a path to a file or a base64 encoded string.
+The blob may be specified as a path to a file.`,
+		Example: ` cosign verify-blob-attestation (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+
+  # Verify a simple blob attestation with a DSSE style signature
+  cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+
+`,
+
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := verify.VerifyBlobAttestationCommand{
+				KeyRef:        o.Key,
+				PredicateType: o.PredicateOptions.Type,
+				SignaturePath: o.SignaturePath,
+			}
+			if len(args) != 1 {
+				return fmt.Errorf("no path to blob passed in, run `cosign verify-blob-attestation -h` for more help")
+			}
+			return v.Exec(cmd.Context(), args[0])
 		},
 	}
 

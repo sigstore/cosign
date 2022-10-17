@@ -45,6 +45,8 @@ func normalizeCertificateFlags(_ *pflag.FlagSet, name string) pflag.NormalizedNa
 		name = "certificate-oidc-issuer"
 	case "output-cert":
 		name = "output-certificate"
+	case "cert-identity":
+		name = "certificate-identity"
 	}
 	return pflag.NormalizedName(name)
 }
@@ -89,6 +91,7 @@ func New() *cobra.Command {
 	// Add sub-commands.
 	cmd.AddCommand(Attach())
 	cmd.AddCommand(Attest())
+	cmd.AddCommand(AttestBlob())
 	cmd.AddCommand(Clean())
 	cmd.AddCommand(Tree())
 	cmd.AddCommand(Completion())
@@ -112,6 +115,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Verify())
 	cmd.AddCommand(VerifyAttestation())
 	cmd.AddCommand(VerifyBlob())
+	cmd.AddCommand(VerifyBlobAttestation())
 	cmd.AddCommand(Triangulate())
 	cmd.AddCommand(Env())
 	cmd.AddCommand(version.WithFont("starwars"))

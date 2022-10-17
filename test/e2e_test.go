@@ -627,8 +627,8 @@ func TestSignBlob(t *testing.T) {
 		KeyRef: pubKeyPath2,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "", "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "", "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -640,8 +640,8 @@ func TestSignBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "", "", "", "", "", false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "", "", "", "", "", false), t)
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
 }
 
 func TestSignBlobBundle(t *testing.T) {
@@ -666,7 +666,7 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", "", blob, "", "", "", "", "", false), t)
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -679,7 +679,7 @@ func TestSignBlobBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", "", bp, "", "", "", "", "", false), t)
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, options.ExperimentalEnv, "1")()
@@ -689,7 +689,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "", "", "", "", "", bp, "", "", "", "", "", false), t)
+	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
 }
 
 func TestGenerate(t *testing.T) {
@@ -1416,4 +1416,64 @@ func TestInvalidBundle(t *testing.T) {
 
 	// veriyfing image2 now should fail
 	mustErr(verify(pubKeyPath, img2, true, nil, ""), t)
+}
+
+func TestAttestBlobSignVerify(t *testing.T) {
+	blob := "someblob"
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicateType := "slsaprovenance"
+
+	td1 := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td1)
+	})
+
+	bp := filepath.Join(td1, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	anotherBlob := filepath.Join(td1, "another-blob")
+	if err := os.WriteFile(anotherBlob, []byte("another-blob"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	predicatePath := filepath.Join(td1, "predicate")
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	outputSignature := filepath.Join(td1, "signature")
+
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+
+	ctx := context.Background()
+	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
+		KeyRef:        pubKeyPath1,
+		SignaturePath: outputSignature,
+		PredicateType: predicateType,
+	}
+	// Verify should fail on a bad input
+	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Now attest the blob with the private key
+	attestBlobCmd := attest.AttestBlobCommand{
+		KeyRef:          privKeyPath1,
+		PredicatePath:   predicatePath,
+		PredicateType:   predicateType,
+		OutputSignature: outputSignature,
+		PassFunc:        passFunc,
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	// Now verify should work
+	must(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Make sure we fail with the wrong predicate type
+	blobVerifyAttestationCmd.PredicateType = "custom"
+	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Make sure we fail with the wrong blob (set the predicate type back)
+	blobVerifyAttestationCmd.PredicateType = predicateType
+	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
 }

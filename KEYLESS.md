@@ -8,12 +8,19 @@ Try it out!
 This signature mode relies on the Sigstore Public Good Instance, which is rapidly heading toward a GA release!
 We don't have a date yet, but follow along on the [GitHub project](https://github.com/orgs/sigstore/projects/5).
 
+The following examples use this image:
+
+```shell
+$ IMAGE=gcr.io/dlorenc-vmtest2/demo
+$ IMAGE_DIGEST=$IMAGE@sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313786befa1e4e36
+```
+
 ## Usage
 
 Keyless signing:
 
 ```shell
-$ COSIGN_EXPERIMENTAL=1 cosign sign gcr.io/dlorenc-vmtest2/demo
+$ COSIGN_EXPERIMENTAL=1 cosign sign $IMAGE_DIGEST
 Generating ephemeral keys...
 Retrieving signed certificate...
 Your browser will now be opened to:
@@ -24,7 +31,7 @@ Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d
 Keyless verifying:
 
 ```shell
-$ COSIGN_EXPERIMENTAL=1 cosign verify gcr.io/dlorenc-vmtest2/demo
+$ COSIGN_EXPERIMENTAL=1 cosign verify $IMAGE
 The following checks were performed on all of these signatures:
   - The cosign claims were validated
   - The claims were present in the transparency log
@@ -73,21 +80,18 @@ and producing an identity token.  Currently this supports Google and GitHub.
 From a GCE VM, you can use the VM's service account identity to sign an image:
 
 ```shell
-$ cosign sign --identity-token=$(
-    gcloud auth print-identity-token \
-        --audiences=sigstore) \
-    gcr.io/dlorenc-vmtest2/demo
+$ IDENTITY_TOKEN=$(gcloud auth print-identity-token --audiences=sigstore)
+$ cosign sign --identity-token=$IDENTITY_TOKEN $IMAGE_DIGEST
 ```
 
 From outside a GCE VM, you can impersonate a GCP IAM service account to sign an image:
 
 ```shell
-$ cosign sign --identity-token=$(
-    gcloud auth print-identity-token \
+$ IDENTITY_TOKEN=$(gcloud auth print-identity-token \
         --audiences=sigstore \
         --include-email \
-        --impersonate-service-account my-sa@my-project.iam.gserviceaccount.com) \
-    gcr.io/dlorenc-vmtest2/demo
+        --impersonate-service-account my-sa@my-project.iam.gserviceaccount.com)
+$ cosign sign --identity-token=$IDENTITY_TOKEN $IMAGE_DIGEST
 ```
 
 In order to impersonate an IAM service account, your account must have the
@@ -138,7 +142,7 @@ To use this instance, follow the steps below:
 1. `gsutil cp -r gs://tuf-root-staging/root.json .`
 1. `cd tuf-root-staging`
 1. `cosign initialize --mirror=tuf-root-staging --root=root.json`
-1. `COSIGN_EXPERIMENTAL=1 cosign sign --oidc-issuer "https://oauth2.sigstage.dev/auth" --fulcio-url "https://fulcio.sigstage.dev" --rekor-url "https://rekor.sigstage.dev" ${IMAGE}`
+1. `COSIGN_EXPERIMENTAL=1 cosign sign --oidc-issuer "https://oauth2.sigstage.dev/auth" --fulcio-url "https://fulcio.sigstage.dev" --rekor-url "https://rekor.sigstage.dev" ${IMAGE_DIGEST}`
 1. `COSIGN_EXPERIMENTAL=1 cosign verify --rekor-url "https://rekor.sigstage.dev" ${IMAGE}`
 
 * Steps 1-4 configures your local environment to use the staging keys and certificates.
@@ -157,10 +161,10 @@ We need to clear the local TUF root data and re-initialize with the default prod
 If you're running your own sigstore services flags are available to set your own endpoint's, e.g
 
 ```
- COSIGN_EXPERIMENTAL=1 go run cmd/cosign/main.go sign -oidc-issuer "https://oauth2.example.com/auth" \
+ COSIGN_EXPERIMENTAL=1 cosign sign -oidc-issuer "https://oauth2.example.com/auth" \
                         -fulcio-url "https://fulcio.example.com" \
                         -rekor-url "https://rekor.example.com"  \
-                        ghcr.io/jdoe/somerepo/testcosign
+                        $IMAGE_DIGEST
 
 ```
 
