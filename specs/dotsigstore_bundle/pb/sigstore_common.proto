@@ -80,14 +80,19 @@ message PublicKeyIdentifier {
         string hint = 1;
 }
 
+message X509Certificate {
+        // DER encoded X509 certificate.
+        bytes der_bytes = 1;
+}
+
 // A chain of X509 certificates.
 message X509CertificateChain {
-        // DER encoded certificate(s), with indices 0 to n.
+        // The chain of certificates, with indices 0 to n.
         // The first certificate in the array  must be the leaf
         // certificate used for signing. Any intermediate certificates
         // must be stored as offset 1 to n-1, and the root certificate at
         // position n.
-        repeated bytes certificates = 1;
+        repeated X509Certificate certificates = 1;
 }
 
 // VerificationMaterial captures details on the materials used to verify

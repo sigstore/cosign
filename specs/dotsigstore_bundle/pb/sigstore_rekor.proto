@@ -71,6 +71,15 @@ message InclusionPromise {
         bytes signed_entry_timestamp = 1;
 }
 
+// LogId captures the identity of a transparceny log.
+message LogId {
+        // The unique id of the log, represented as the SHA-256 hash
+        // of the log's public key, computed over the DER encoding.
+        // This is similar to how it works for certificate transparency logs:
+        // https://www.rfc-editor.org/rfc/rfc6962#section-3.2
+        bytes key_id = 1;
+}
+
 // TransparencyLogEntry captures all the details required from Rekor to
 // reconstruct an entry, given that the payload is provided via other means.
 // This type can easily be created from the existing response from Rekor.
@@ -82,8 +91,8 @@ message InclusionPromise {
 message TransparencyLogEntry {
         // The index of the entry in the log.
         int64 log_index = 1;
-        // The unique (binary) identifier of the log.
-        bytes log_id = 2;
+        // The unique identifier of the log.
+        LogId log_id = 2;
         // The kind (type) and version of the object associated with this
         // entry. These values are required to construct the entry during
         // verification.
