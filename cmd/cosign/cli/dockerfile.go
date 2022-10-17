@@ -40,8 +40,8 @@ func dockerfileVerify() *cobra.Command {
 	o := &options.VerifyDockerfileOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "verify",
-		Short: "Verify a signature on the base image specified in the Dockerfile",
+		Use:              "verify",
+		Short:            "Verify a signature on the base image specified in the Dockerfile",
 		PersistentPreRun: options.BindViper,
 		Long: `Verify signature and annotations on images in a Dockerfile by checking claims
 against the transparency log.
