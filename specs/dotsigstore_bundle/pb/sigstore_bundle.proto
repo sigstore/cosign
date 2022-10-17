@@ -64,4 +64,6 @@ message Bundle {
                 // protocol which is defined here https://github.com/secure-systems-lab/dsse/blob/master/protocol.md
                 io.intoto.Envelope dsse_envelope = 5;
         }
+        // Reserved for future additions of artifact types.
+        reserved 6 to 50;
 }
