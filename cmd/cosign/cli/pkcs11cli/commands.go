@@ -28,6 +28,7 @@ import (
 	"syscall"
 
 	"github.com/miekg/pkcs11"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"golang.org/x/term"
 )
@@ -106,7 +107,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 
 	// If pin was not given, check COSIGN_PKCS11_PIN environment variable.
 	if pin == "" {
-		pin = os.Getenv("COSIGN_PKCS11_PIN")
+		pin = env.Getenv(env.VariablePKCS11Pin)
 
 		// If COSIGN_PKCS11_PIN was not set, check if CKF_LOGIN_REQUIRED is set in Token Info.
 		// If it is, ask the user for the PIN, otherwise, do not.

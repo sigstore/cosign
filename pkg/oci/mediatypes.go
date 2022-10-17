@@ -16,16 +16,13 @@
 package oci
 
 import (
-	"os"
 	"strconv"
-)
 
-const (
-	DockerMediaTypesEnv = "COSIGN_DOCKER_MEDIA_TYPES"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 func DockerMediaTypes() bool {
-	if b, err := strconv.ParseBool(os.Getenv(DockerMediaTypesEnv)); err == nil {
+	if b, err := strconv.ParseBool(env.Getenv(env.VariableDockerMediaTypes)); err == nil {
 		return b
 	}
 	return false

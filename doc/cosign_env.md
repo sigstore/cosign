@@ -9,7 +9,9 @@ cosign env [flags]
 ### Options
 
 ```
-  -h, --help   help for env
+  -h, --help                    help for env
+      --show-descriptions       show descriptions for environment variables (default true)
+      --show-sensitive-values   show values of sensitive environment variables
 ```
 
 ### Options inherited from parent commands

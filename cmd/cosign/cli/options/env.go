@@ -1,4 +1,5 @@
-// Copyright 2021 The Sigstore Authors.
+//
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,14 +16,22 @@
 package options
 
 import (
-	"strconv"
-
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	"github.com/spf13/cobra"
 )
 
-func EnableExperimental() bool {
-	if b, err := strconv.ParseBool(env.Getenv(env.VariableExperimental)); err == nil {
-		return b
-	}
-	return false
+// EnvOptions is the top level wrapper for the env command.
+type EnvOptions struct {
+	ShowDescriptions    bool
+	ShowSensitiveValues bool
+}
+
+var _ Interface = (*EnvOptions)(nil)
+
+// AddFlags implements Interface
+func (o *EnvOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&o.ShowDescriptions, "show-descriptions", true,
+		"show descriptions for environment variables")
+
+	cmd.Flags().BoolVar(&o.ShowSensitiveValues, "show-sensitive-values", false,
+		"show values of sensitive environment variables")
 }

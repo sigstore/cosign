@@ -17,12 +17,12 @@ package gitlab
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -42,14 +42,14 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("generating key pair: %w", err)
 	}
 
-	token, tokenExists := os.LookupEnv("GITLAB_TOKEN")
+	token, tokenExists := env.LookupEnv(env.VariableGitLabToken)
 
 	if !tokenExists {
-		return errors.New("could not find \"GITLAB_TOKEN\"")
+		return fmt.Errorf("could not find %q", env.VariableGitLabToken.String())
 	}
 
 	var client *gitlab.Client
-	if url, baseURLExists := os.LookupEnv("GITLAB_HOST"); baseURLExists {
+	if url, baseURLExists := env.LookupEnv(env.VariableGitLabHost); baseURLExists {
 		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
 		if err != nil {
 			return fmt.Errorf("could not create GitLab client: %w", err)
@@ -125,15 +125,15 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 }
 
 func (g *Gl) GetSecret(ctx context.Context, ref string, key string) (string, error) {
-	token, tokenExists := os.LookupEnv("GITLAB_TOKEN")
+	token, tokenExists := env.LookupEnv(env.VariableGitLabToken)
 	var varPubKeyValue string
 	if !tokenExists {
-		return varPubKeyValue, errors.New("could not find \"GITLAB_TOKEN\"")
+		return varPubKeyValue, fmt.Errorf("could not find %q", env.VariableGitLabToken.String())
 	}
 
 	var client *gitlab.Client
 	var err error
-	if url, baseURLExists := os.LookupEnv("GITLAB_HOST"); baseURLExists {
+	if url, baseURLExists := env.LookupEnv(env.VariableGitLabHost); baseURLExists {
 		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
 		if err != nil {
 			return varPubKeyValue, fmt.Errorf("could not create GitLab client): %w", err)

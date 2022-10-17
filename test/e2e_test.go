@@ -58,6 +58,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	cliverify "github.com/sigstore/cosign/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
@@ -434,7 +435,7 @@ func TestAttestationReplace(t *testing.T) {
 
 func TestRekorBundle(t *testing.T) {
 	// turn on the tlog
-	defer setenv(t, options.ExperimentalEnv, "1")()
+	defer setenv(t, env.VariableExperimental.String(), "1")()
 
 	repo, stop := reg(t)
 	defer stop()
@@ -682,7 +683,7 @@ func TestSignBlobBundle(t *testing.T) {
 	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
 
 	// Now we turn on the tlog and sign again
-	defer setenv(t, options.ExperimentalEnv, "1")()
+	defer setenv(t, env.VariableExperimental.String(), "1")()
 	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", ""); err != nil {
 		t.Fatal(err)
 	}
@@ -1146,7 +1147,7 @@ func TestTlog(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Now we turn on the tlog!
-	defer setenv(t, options.ExperimentalEnv, "1")()
+	defer setenv(t, env.VariableExperimental.String(), "1")()
 
 	// Verify shouldn't work since we haven't put anything in it yet.
 	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -1184,7 +1185,7 @@ func TestNoTlog(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Now we turn on the tlog!
-	defer setenv(t, options.ExperimentalEnv, "1")()
+	defer setenv(t, env.VariableExperimental.String(), "1")()
 
 	// Verify shouldn't work since we haven't put anything in it yet.
 	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
@@ -1349,7 +1350,7 @@ func TestInvalidBundle(t *testing.T) {
 
 	// Sign image1 and store the entry in rekor
 	// (we're just using it for its bundle)
-	defer setenv(t, options.ExperimentalEnv, "1")()
+	defer setenv(t, env.VariableExperimental.String(), "1")()
 	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	regOpts := options.RegistryOptions{}
@@ -1375,7 +1376,7 @@ func TestInvalidBundle(t *testing.T) {
 
 	// Now, we move on to image2
 	// Sign image2 and DO NOT store the entry in rekor
-	defer setenv(t, options.ExperimentalEnv, "0")()
+	defer setenv(t, env.VariableExperimental.String(), "0")()
 	img2 := path.Join(regName, "unrelated")
 	imgRef2, _, cleanup := mkimage(t, img2)
 	defer cleanup()

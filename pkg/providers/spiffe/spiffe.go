@@ -21,6 +21,7 @@ import (
 
 	"github.com/spiffe/go-spiffe/v2/svid/jwtsvid"
 
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/cosign/pkg/providers"
 	"github.com/spiffe/go-spiffe/v2/workloadapi"
 )
@@ -38,14 +39,12 @@ const (
 	// token from the spiffe by default.
 	// nolint
 	defaultSocketPath = "/tmp/spire-agent/public/api.sock"
-	// This allows you to specify non-default Spiffe socket to use.
-	socketEnv = "SPIFFE_ENDPOINT_SOCKET"
 )
 
 // getSocketPath gets which Spiffe socket to use. Either default
 // or the one specified by environment variable.
 func getSocketPath() string {
-	if env := os.Getenv(socketEnv); env != "" {
+	if env := env.Getenv(env.VariableSPIFFEEndpointSocket); env != "" {
 		return env
 	}
 	return defaultSocketPath
