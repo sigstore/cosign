@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -26,6 +27,7 @@ import (
 const (
 	VariableTest1 env.Variable = "COSIGN_TEST1"
 	VariableTest2 env.Variable = "COSIGN_TEST2"
+	VariableTest3 env.Variable = "COSIGN_TEST3"
 
 	expectedWithoutDescription = `COSIGN_TEST1="abcd"
 COSIGN_TEST2=""
@@ -74,6 +76,27 @@ COSIGN_TEST2=""
 COSIGN_TEST3=abcd
 `
 )
+
+var (
+	testingEnvVars = map[string]string{}
+)
+
+func tGetEnv() envGetter {
+	return func(key env.Variable) string {
+		return testingEnvVars[key.String()]
+	}
+}
+func tGetEnviron() environGetter {
+	return func() []string {
+		var s []string
+
+		for k, v := range testingEnvVars {
+			s = append(s, fmt.Sprintf("%s=%s", k, v))
+		}
+
+		return s
+	}
+}
 
 func TestPrintEnv(t *testing.T) {
 	variables := map[env.Variable]env.VariableOpts{
@@ -192,15 +215,17 @@ func TestPrintEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set needed environment variables
-			for k, v := range tt.environmentVariables {
-				os.Setenv(k, v)
+			testingEnvVars = tt.environmentVariables
+			for k, v := range testingEnvVars {
+				t.Log(k)
+				t.Log(v)
 			}
 
 			orgStdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			printEnv(tt.registeredVariables, tt.showDescriptions, tt.showSensitiveValues)
+			printEnv(tt.registeredVariables, tGetEnv(), tGetEnviron(), tt.showDescriptions, tt.showSensitiveValues)
 
 			w.Close()
 			out, _ := io.ReadAll(r)
@@ -208,11 +233,6 @@ func TestPrintEnv(t *testing.T) {
 
 			if tt.expectedOutput != string(out) {
 				t.Errorf("Expected to get %q\n, but got %q", tt.expectedOutput, string(out))
-			}
-
-			// Unset needed environment variables to ensure clean state between tests
-			for k := range tt.environmentVariables {
-				os.Unsetenv(k)
 			}
 		})
 	}

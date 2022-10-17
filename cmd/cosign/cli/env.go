@@ -36,7 +36,7 @@ func Env() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			envVars := env.EnvironmentVariables()
-			printEnv(envVars, o.ShowDescriptions, o.ShowSensitiveValues)
+			printEnv(envVars, getEnv(), getEnviron(), o.ShowDescriptions, o.ShowSensitiveValues)
 
 			return nil
 		},
@@ -46,24 +46,39 @@ func Env() *cobra.Command {
 	return cmd
 }
 
+// NB: the purpose of those types and functions is to make it possible to swap function for testing purposes
+type envGetter func(env.Variable) string
+type environGetter func() []string
+
+func getEnv() envGetter {
+	return func(key env.Variable) string {
+		return env.Getenv(key)
+	}
+}
+func getEnviron() environGetter {
+	return func() []string {
+		return os.Environ()
+	}
+}
+
 // NB: printEnv intentionally takes map of env vars to make it easier to unit test it
-func printEnv(envVars map[env.Variable]env.VariableOpts, showDescription, showSensitive bool) {
+func printEnv(envVars map[env.Variable]env.VariableOpts,
+	envGet envGetter,
+	environGet environGetter,
+	showDescription, showSensitive bool) {
 	// Sort keys to print them in a predictable order
 	keys := sortEnvKeys(envVars)
 
 	// Print known/registered environment variables
-	for _, env := range keys {
-		opts := envVars[env]
+	for _, e := range keys {
+		opts := envVars[e]
 
 		// Get value of environment variable
-		// NB: This package works with environment variables, so we ignore forbidigo linter.
-		// We could use env.Getenv here, but that would make unit testing too complicated
-		// as unit tests are using non-registered variables
-		val := os.Getenv(env.String()) //nolint:forbidigo
+		val := envGet(e)
 
 		// If showDescription is set, print description for that variable
 		if showDescription {
-			fmt.Printf("# %s %s\n", env.String(), opts.Description)
+			fmt.Printf("# %s %s\n", e.String(), opts.Description)
 			fmt.Printf("# Expects: %s\n", opts.Expects)
 		}
 
@@ -72,15 +87,15 @@ func printEnv(envVars map[env.Variable]env.VariableOpts, showDescription, showSe
 		// If sensitive variable isn't set or doesn't have any value, we'll just
 		// print like non-sensitive variable
 		if opts.Sensitive && !showSensitive && val != "" {
-			fmt.Printf("%s=\"******\"\n", env.String())
+			fmt.Printf("%s=\"******\"\n", e.String())
 		} else {
-			fmt.Printf("%s=%q\n", env.String(), val)
+			fmt.Printf("%s=%q\n", e.String(), val)
 		}
 	}
 
 	// Print not registered environment variables
 	var nonRegEnv []string
-	for _, e := range os.Environ() {
+	for _, e := range environGet() {
 		// Prefixes to look for. err on the side of showing too much rather
 		// than too little. We'll only output things that have values set.
 		for _, prefix := range []string{
