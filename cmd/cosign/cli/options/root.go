@@ -17,6 +17,7 @@ package options
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -53,10 +54,29 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func BindViper(cmd *cobra.Command, args []string) {
+	callPersistentPreRun(cmd, args)
 	v := viper.New()
 	v.SetEnvPrefix(EnvPrefix)
 	v.AutomaticEnv()
 	bindFlags(cmd, v)
+}
+
+// callPersistentPreRun calls parent commands. PersistentPreRun
+// does not call parents PersistentPreRun functions
+func callPersistentPreRun(cmd *cobra.Command, args []string) {
+	if parent := cmd.Parent(); parent != nil {
+		if parent.PersistentPreRun != nil {
+			parent.PersistentPreRun(parent, args)
+		}
+		if parent.PersistentPreRunE != nil {
+			err := parent.PersistentPreRunE(parent, args)
+			if err != nil {
+				cmd.PrintErrln("Error:", err.Error())
+				os.Exit(1)
+			}
+		}
+		callPersistentPreRun(parent, args)
+	}
 }
 
 func bindFlags(cmd *cobra.Command, v *viper.Viper) {
