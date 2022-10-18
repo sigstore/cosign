@@ -36,10 +36,11 @@ func Clean() *cobra.Command {
 	c := &options.CleanOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "clean",
-		Short:   "Remove all signatures from an image.",
-		Example: "  cosign clean <IMAGE>",
-		Args:    cobra.ExactArgs(1),
+		Use:              "clean",
+		Short:            "Remove all signatures from an image.",
+		Example:          "  cosign clean <IMAGE>",
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return CleanCmd(cmd.Context(), c.Registry, c.CleanType, args[0], c.Force)
 		},

@@ -16,10 +16,16 @@
 package options
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
+
+const EnvPrefix = "COSIGN"
 
 // RootOptions define flags and options for the root cosign cli.
 type RootOptions struct {
@@ -44,4 +50,28 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.PersistentFlags().DurationVarP(&o.Timeout, "timeout", "t", DefaultTimeout,
 		"timeout for commands")
+}
+
+func BindViper(cmd *cobra.Command, args []string) {
+	v := viper.New()
+	v.SetEnvPrefix(EnvPrefix)
+	v.AutomaticEnv()
+	bindFlags(cmd, v)
+}
+
+func bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if strings.Contains(f.Name, "-") {
+			_ = v.BindEnv(f.Name, flagToEnvVar(f.Name))
+		}
+		if !f.Changed && v.IsSet((f.Name)) {
+			val := v.Get(f.Name)
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
+}
+
+func flagToEnvVar(f string) string {
+	f = strings.ToUpper(f)
+	return fmt.Sprintf("%s_%s", EnvPrefix, strings.ReplaceAll(f, "-", "_"))
 }

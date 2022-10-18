@@ -30,11 +30,12 @@ func Load() *cobra.Command {
 	o := &options.LoadOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "load",
-		Short:   "Load a signed image on disk to a remote registry",
-		Long:    "Load a signed image on disk to a remote registry",
-		Example: `  cosign load --dir <path to directory> <IMAGE>`,
-		Args:    cobra.ExactArgs(1),
+		Use:              "load",
+		Short:            "Load a signed image on disk to a remote registry",
+		Long:             "Load a signed image on disk to a remote registry",
+		Example:          `  cosign load --dir <path to directory> <IMAGE>`,
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return LoadCmd(cmd.Context(), *o, args[0])
 		},

@@ -63,7 +63,8 @@ func uploadBlob() *cobra.Command {
 
   # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting annotations
   cosign upload blob -a mykey=myvalue -a myotherkey="my other value" -f foo-darwin:darwin -f foo-linux:linux <IMAGE>`,
-		Args: cobra.ExactArgs(1),
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(o.Files.Files) < 1 {
 				return flag.ErrHelp
@@ -89,10 +90,11 @@ func uploadWASM() *cobra.Command {
 	o := &options.UploadWASMOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "wasm",
-		Short:   "Upload a wasm module to the supplied container image reference",
-		Example: "  cosign upload wasm -f foo.wasm <image uri>",
-		Args:    cobra.ExactArgs(1),
+		Use:              "wasm",
+		Short:            "Upload a wasm module to the supplied container image reference",
+		Example:          "  cosign upload wasm -f foo.wasm <image uri>",
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return upload.WasmCmd(cmd.Context(), o.Registry, o.File, args[0])
 		},

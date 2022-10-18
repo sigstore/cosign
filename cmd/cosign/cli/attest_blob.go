@@ -43,7 +43,8 @@ func AttestBlob() *cobra.Command {
   # attach an attestation to a blob with a key pair stored in Hashicorp Vault
   cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>`,
 
-		Args: cobra.ExactArgs(1),
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := attest.AttestBlobCommand{
 				KeyRef:            o.Key,

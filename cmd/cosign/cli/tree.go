@@ -33,10 +33,11 @@ func Tree() *cobra.Command {
 	c := &options.TreeOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "tree",
-		Short:   "Display supply chain security related artifacts for an image such as signatures, SBOMs and attestations",
-		Example: "  cosign tree <IMAGE>",
-		Args:    cobra.ExactArgs(1),
+		Use:              "tree",
+		Short:            "Display supply chain security related artifacts for an image such as signatures, SBOMs and attestations",
+		Example:          "  cosign tree <IMAGE>",
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return TreeCmd(cmd.Context(), c.Registry, args[0])
 		},

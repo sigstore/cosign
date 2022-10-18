@@ -72,7 +72,8 @@ against the transparency log.`,
 
   # verify images with public key stored in Hashicorp Vault
   cosign manifest verify --key hashivault://[KEY] <path/to/my-deployment.yaml>`,
-		Args: cobra.ExactArgs(1),
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			annotations, err := o.AnnotationsMap()
 			if err != nil {

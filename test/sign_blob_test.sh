@@ -34,6 +34,9 @@ $COSIGN_CLI sign-blob --output-certificate blob.cert --output-signature blob.sig
 
 echo "Verifying ..."
 $COSIGN_CLI verify-blob --signature blob.sig --cert blob.cert $BLOB
+echo "Verifying using cosign ENV variables..."
+COSIGN_SIGNATURE=blob.sig COSIGN_CERTIFICATE=blob.cert $COSIGN_CLI verify-blob $BLOB
+
 
 # Now, sign the blob with a self-signed certificate and upload to rekor
 SIG_FILE=verify-experimental-signature
@@ -79,3 +82,6 @@ curl -X POST https://rekor.sigstore.dev/api/v1/log/entries -H 'Content-Type: app
 # Verifying should still work
 echo "Verifying ..."
 $COSIGN_CLI verify-blob --signature "$SIG_FILE" --cert "$CERT_FILE" --certificate-chain "$CERT_FILE" "$BLOB"
+
+echo "Verifying using cosign ENV variables ..."
+COSIGN_SIGNATURE="$SIG_FILE" COSIGN_CERTIFICATE_CHAIN="$CERT_FILE" COSIGN_CERTIFICATE="$CERT_FILE" $COSIGN_CLI verify-blob "$BLOB"
