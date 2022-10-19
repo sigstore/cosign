@@ -20,7 +20,7 @@ import (
 )
 
 func TestGetRekorPubKeys(t *testing.T) {
-	keys, err := GetRekorPubs(context.Background(), nil)
+	keys, err := GetRekorPubs(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error calling GetRekorPubs, expected nil: %v", err)
 	}

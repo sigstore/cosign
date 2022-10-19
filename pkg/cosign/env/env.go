@@ -52,10 +52,9 @@ const (
 	VariableRepository       Variable = "COSIGN_REPOSITORY"
 
 	// Sigstore environment variables
-	VariableSigstoreCTLogPublicKeyFile  Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
-	VariableSigstoreRootFile            Variable = "SIGSTORE_ROOT_FILE"
-	VariableSigstoreTrustRekorPublicKey Variable = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
-	VariableSigstoreRekorPublicKey      Variable = "SIGSTORE_REKOR_PUBLIC_KEY"
+	VariableSigstoreCTLogPublicKeyFile Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
+	VariableSigstoreRootFile           Variable = "SIGSTORE_ROOT_FILE"
+	VariableSigstoreRekorPublicKey     Variable = "SIGSTORE_REKOR_PUBLIC_KEY"
 
 	// Other external environment variables
 	VariableGitHubToken              Variable = "GITHUB_TOKEN" //nolint:gosec
@@ -111,12 +110,6 @@ var (
 		VariableSigstoreRootFile: {
 			Description: "overrides the public good instance root CA",
 			Expects:     "path to the root CA",
-			Sensitive:   false,
-			External:    true,
-		},
-		VariableSigstoreTrustRekorPublicKey: {
-			Description: "if specified, will fetch the Rekor Public Key from the specified Rekor server and add it to RekorPubKeys. This env var is only for testing!",
-			Expects:     "any string to trigger this behavior",
 			Sensitive:   false,
 			External:    true,
 		},
