@@ -17,7 +17,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-containerregistry v0.11.0
 	github.com/google/go-github/v45 v45.2.0
-	github.com/in-toto/in-toto-golang v0.3.4-0.20220709202702-fa494aaa0add
+	github.com/in-toto/in-toto-golang v0.4.1-0.20221018183522-731d0640b65f
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.1.1
