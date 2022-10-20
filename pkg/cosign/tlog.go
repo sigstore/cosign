@@ -88,12 +88,10 @@ func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.Proposed
 
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
-// A Rekor client may optionally be provided in case using SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY
-// (see below).
 // There are two Env variable that can be used to override this behaviour:
 // SIGSTORE_REKOR_PUBLIC_KEY - If specified, location of the file that contains
 // the Rekor Public Key on local filesystem
-func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
+func GetRekorPubs(ctx context.Context, _ *client.Rekor) (map[string]RekorPubKey, error) {
 	publicKeys := make(map[string]RekorPubKey)
 	altRekorPub := env.Getenv(env.VariableSigstoreRekorPublicKey)
 
@@ -176,7 +174,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntry(ctx, e)
+			return e, VerifyTLogEntry(ctx, nil, e)
 		}
 		return nil, err
 	}
@@ -405,7 +403,8 @@ func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, pa
 }
 
 // VerityTLogEntry verifies a TLog entry.
-func VerifyTLogEntry(ctx context.Context, e *models.LogEntryAnon) error {
+// The argument *client.Rekor is unused and may be nil.
+func VerifyTLogEntry(ctx context.Context, _ *client.Rekor, e *models.LogEntryAnon) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
@@ -437,7 +436,7 @@ func VerifyTLogEntry(ctx context.Context, e *models.LogEntryAnon) error {
 		LogID:          *e.LogID,
 	}
 
-	rekorPubKeys, err := GetRekorPubs(ctx)
+	rekorPubKeys, err := GetRekorPubs(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("unable to fetch Rekor public keys: %w", err)
 	}
