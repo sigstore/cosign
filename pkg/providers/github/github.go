@@ -24,6 +24,13 @@ import (
 	"github.com/sigstore/cosign/pkg/providers"
 )
 
+const (
+	// Deprecated: use `env.VariableGitHubRequestToken` instead
+	RequestTokenEnvKey = env.VariableGitHubRequestToken
+	// Deprecated: use `env.VariableGitHubRequestURL` instead
+	RequestURLEnvKey = env.VariableGitHubRequestURL
+)
+
 func init() {
 	providers.Register("github-actions", &githubActions{})
 }
