@@ -77,7 +77,7 @@ For instance:
 ```shell
 $ SRC_IMAGE=busybox
 $ SRC_DIGEST=$(crane digest busybox)
-$ IMAGE_URI=ttl.sh/$(uuidgen | head -c 8):1h
+$ IMAGE_URI=ttl.sh/$(uuidgen | head -c 8 | tr 'A-Z' 'a-z')
 $ crane cp $SRC_IMAGE@$SRC_DIGEST $IMAGE_URI:1h
 $ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
 ```
@@ -185,7 +185,7 @@ You can publish an artifact with `cosign upload blob`:
 $ echo "my first artifact" > artifact
 $ BLOB_SUM=$(shasum -a 256 artifact | cut -d' ' -f 1)
 c69d72c98b55258f9026f984e4656f0e9fd3ef024ea3fac1d7e5c7e6249f1626  artifact
-$ BLOB_NAME=my-artifact-$(uuidgen | head -c 8)
+BLOB_NAME=my-artifact-(uuidgen | head -c 8 | tr 'A-Z' 'a-z')
 $ BLOB_URI=ttl.sh/$BLOB_NAME:1h
 $ BLOB_URI_DIGEST=$(cosign upload blob -f artifact $BLOB_URI)
 Uploading file from [artifact] to [ttl.sh/my-artifact-f42c22e0:5m] with media type [text/plain]
