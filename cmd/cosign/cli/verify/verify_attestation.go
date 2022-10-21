@@ -62,6 +62,7 @@ type VerifyAttestationCommand struct {
 	PredicateType                string
 	Policies                     []string
 	LocalImage                   bool
+	NameOptions                  []name.Option
 }
 
 // Exec runs the verification command
@@ -182,7 +183,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return err
 			}
 		} else {
-			ref, err := name.ParseReference(imageRef)
+			ref, err := name.ParseReference(imageRef, c.NameOptions...)
 			if err != nil {
 				return err
 			}

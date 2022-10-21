@@ -193,6 +193,7 @@ func signPolicy() *cobra.Command {
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 			})
+
 			if err != nil {
 				return err
 			}
@@ -211,7 +212,7 @@ func signPolicy() *cobra.Command {
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
-			ref, err := name.ParseReference(imgName)
+			ref, err := name.ParseReference(imgName, o.Registry.NameOptions()...)
 			if err != nil {
 				return err
 			}

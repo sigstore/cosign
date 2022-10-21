@@ -39,7 +39,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		return errors.New("empty signature")
 	}
 
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
 	}

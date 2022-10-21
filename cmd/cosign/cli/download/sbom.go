@@ -47,7 +47,7 @@ func SBOMCmd(
 	ctx context.Context, regOpts options.RegistryOptions,
 	dnOpts options.SBOMDownloadOptions, imageRef string, out io.Writer,
 ) ([]string, error) {
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return nil, err
 	}

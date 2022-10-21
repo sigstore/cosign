@@ -58,8 +58,7 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, i
 	if !ok {
 		return nil
 	}
-
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
 	}

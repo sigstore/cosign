@@ -18,6 +18,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/google/go-containerregistry/pkg/name"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -119,6 +121,10 @@ against the transparency log.`,
 				LocalImage:                   o.LocalImage,
 			}
 
+			if o.Registry.AllowInsecure {
+				v.NameOptions = append(v.NameOptions, name.Insecure)
+			}
+
 			return v.Exec(cmd.Context(), args)
 		},
 	}
@@ -201,7 +207,9 @@ against the transparency log.`,
 				PredicateType:                o.Predicate.Type,
 				Policies:                     o.Policies,
 				LocalImage:                   o.LocalImage,
+				NameOptions:                  o.Registry.NameOptions(),
 			}
+
 			return v.Exec(cmd.Context(), args)
 		},
 	}

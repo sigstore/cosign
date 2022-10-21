@@ -49,7 +49,7 @@ func Tree() *cobra.Command {
 
 func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
 	scsaMap := map[name.Tag][]v1.Layer{}
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
 	}

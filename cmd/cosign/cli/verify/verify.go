@@ -71,6 +71,7 @@ type VerifyCommand struct {
 	SignatureRef                 string
 	HashAlgorithm                crypto.Hash
 	LocalImage                   bool
+	NameOptions                  []name.Option
 }
 
 // Exec runs the verification command
@@ -206,7 +207,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			PrintVerificationHeader(img, co, bundleVerified, fulcioVerified)
 			PrintVerification(img, verified, c.Output)
 		} else {
-			ref, err := name.ParseReference(img)
+			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
 				return fmt.Errorf("parsing reference: %w", err)
 			}

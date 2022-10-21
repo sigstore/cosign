@@ -29,7 +29,7 @@ import (
 )
 
 func BlobCmd(ctx context.Context, regOpts options.RegistryOptions, files []cremote.File, annotations map[string]string, contentType, imageRef string) error {
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
 	}

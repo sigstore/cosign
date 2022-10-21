@@ -108,8 +108,8 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 }
 
 // ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
-func ParseOCIReference(refStr string, out io.Writer) (name.Reference, error) {
-	ref, err := name.ParseReference(refStr)
+func ParseOCIReference(refStr string, out io.Writer, opts ...name.Option) (name.Reference, error) {
+	ref, err := name.ParseReference(refStr, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
@@ -166,7 +166,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 	for _, inputImg := range imgs {
-		ref, err := ParseOCIReference(inputImg, os.Stderr)
+		ref, err := ParseOCIReference(inputImg, os.Stderr, regOpts.NameOptions()...)
 		if err != nil {
 			return err
 		}

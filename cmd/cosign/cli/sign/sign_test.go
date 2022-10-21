@@ -26,6 +26,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -216,7 +218,8 @@ func Test_ParseOCIReference(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var buf strings.Builder
-		ParseOCIReference(tt.ref, &buf)
+		var opts []name.Option
+		ParseOCIReference(tt.ref, &buf, opts...)
 		actual := buf.String()
 		if len(tt.expected) == 0 {
 			if len(actual) != 0 {
