@@ -21,6 +21,11 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
+const (
+	// Deprecated: use `pkg/cosign/env/VariableDockerMediaTypes` instead.
+	DockerMediaTypesEnv = env.VariableDockerMediaTypes
+)
+
 func DockerMediaTypes() bool {
 	if b, err := strconv.ParseBool(env.Getenv(env.VariableDockerMediaTypes)); err == nil {
 		return b
