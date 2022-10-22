@@ -72,7 +72,8 @@ against the transparency log.`,
 
   # verify images with public key stored in Hashicorp Vault
   cosign manifest verify --key hashivault://[KEY] <path/to/my-deployment.yaml>`,
-		Args: cobra.ExactArgs(1),
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			annotations, err := o.AnnotationsMap()
 			if err != nil {
@@ -80,18 +81,25 @@ against the transparency log.`,
 			}
 			v := &manifest.VerifyManifestCommand{
 				VerifyCommand: verify.VerifyCommand{
-					RegistryOptions: o.Registry,
-					CheckClaims:     o.CheckClaims,
-					KeyRef:          o.Key,
-					CertRef:         o.CertVerify.Cert,
-					CertEmail:       o.CertVerify.CertEmail,
-					CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
-					Sk:              o.SecurityKey.Use,
-					Slot:            o.SecurityKey.Slot,
-					Output:          o.Output,
-					RekorURL:        o.Rekor.URL,
-					Attachment:      o.Attachment,
-					Annotations:     annotations,
+					RegistryOptions:              o.Registry,
+					CheckClaims:                  o.CheckClaims,
+					KeyRef:                       o.Key,
+					CertRef:                      o.CertVerify.Cert,
+					CertEmail:                    o.CertVerify.CertEmail,
+					CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
+					CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+					CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+					CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+					CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+					CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+					CertChain:                    o.CertVerify.CertChain,
+					EnforceSCT:                   o.CertVerify.EnforceSCT,
+					Sk:                           o.SecurityKey.Use,
+					Slot:                         o.SecurityKey.Slot,
+					Output:                       o.Output,
+					RekorURL:                     o.Rekor.URL,
+					Attachment:                   o.Attachment,
+					Annotations:                  annotations,
 				},
 			}
 			return v.Exec(cmd.Context(), args)

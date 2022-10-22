@@ -16,8 +16,6 @@
 package options
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 )
 
@@ -34,8 +32,8 @@ type SignBlobOptions struct {
 	Rekor             RekorOptions
 	OIDC              OIDCOptions
 	Registry          RegistryOptions
-	Timeout           time.Duration
 	BundlePath        string
+	SkipConfirmation  bool
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -50,22 +48,26 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
+	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().BoolVar(&o.Base64Output, "b64", true,
 		"whether to base64 encode the output")
 
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
+	_ = cmd.Flags().SetAnnotation("output-signature", cobra.BashCompFilenameExt, []string{})
 
 	// TODO: remove when output flag is fully deprecated
 	cmd.Flags().StringVar(&o.Output, "output", "", "write the signature to FILE")
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
-
-	cmd.Flags().DurationVar(&o.Timeout, "timeout", time.Second*30,
-		"HTTP Timeout defaults to 30 seconds")
+	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
+	_ = cmd.Flags().SetAnnotation("bundle", cobra.BashCompFilenameExt, []string{})
+
+	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
+		"skip confirmation prompts for non-destructive operations")
 }

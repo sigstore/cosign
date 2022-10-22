@@ -25,11 +25,11 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/theupdateframework/go-tuf/encrypted"
 
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -48,6 +48,8 @@ const (
 	BundleKey         = static.BundleAnnotationKey
 )
 
+// PassFunc is the function to be called to retrieve the signer password. If
+// nil, then it assumes that no password is provided.
 type PassFunc func(bool) ([]byte, error)
 
 type Keys struct {
@@ -55,45 +57,23 @@ type Keys struct {
 	public  crypto.PublicKey
 }
 
+// TODO(jason): Move this to an internal package.
 type KeysBytes struct {
 	PrivateBytes []byte
 	PublicBytes  []byte
 	password     []byte
 }
 
-// Enforce a minimum and maximum RSA key size.
-func validateRsaKey(pk *rsa.PrivateKey) error {
-	// Key size is the bit length of modulus
-	keySize := pk.N.BitLen()
-	if keySize < 2048 {
-		return fmt.Errorf("rsa key size too small, expected >= 2048")
-	}
-	if keySize > 4096 {
-		return fmt.Errorf("rsa key size too large, expected <= 4096")
-	}
-	return nil
+func (k *KeysBytes) Password() []byte {
+	return k.password
 }
 
-// Enforce that the ECDSA key curve is one of:
-// * NIST P-256 (secp256r1, prime256v1)
-// * NIST P-384
-// * NIST P-521.
-// Other EC curves, like secp256k1, are not supported by Go.
-func validateEcdsaKey(pk *ecdsa.PrivateKey) error {
-	switch pk.Curve {
-	case elliptic.P224():
-		return fmt.Errorf("unsupported ec curve, expected NIST P-256, P-384, or P-521")
-	case elliptic.P256(), elliptic.P384(), elliptic.P521():
-		return nil
-	default:
-		return fmt.Errorf("unexpected ec curve")
-	}
-}
-
+// TODO(jason): Move this to an internal package.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
+// TODO(jason): Move this to the only place it's used in cmd/cosign/cli/importkeypair, and unexport it.
 func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
@@ -111,10 +91,10 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	case RSAPrivateKeyPemType:
 		rsaPk, err := x509.ParsePKCS1PrivateKey(p.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing rsa private key")
+			return nil, fmt.Errorf("error parsing rsa private key: %w", err)
 		}
-		if err = validateRsaKey(rsaPk); err != nil {
-			return nil, errors.Wrap(err, "error validating rsa key")
+		if err = cryptoutils.ValidatePubKey(rsaPk.Public()); err != nil {
+			return nil, fmt.Errorf("error validating rsa key: %w", err)
 		}
 		pk = rsaPk
 	case ECPrivateKeyPemType:
@@ -122,8 +102,8 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing ecdsa private key")
 		}
-		if err = validateEcdsaKey(ecdsaPk); err != nil {
-			return nil, errors.Wrap(err, "error validating ecdsa key")
+		if err = cryptoutils.ValidatePubKey(ecdsaPk.Public()); err != nil {
+			return nil, fmt.Errorf("error validating ecdsa key: %w", err)
 		}
 		pk = ecdsaPk
 	case PrivateKeyPemType:
@@ -133,17 +113,19 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		}
 		switch k := pkcs8Pk.(type) {
 		case *rsa.PrivateKey:
-			if err = validateRsaKey(k); err != nil {
-				return nil, errors.Wrap(err, "error validating rsa key")
+			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
+				return nil, fmt.Errorf("error validating rsa key: %w", err)
 			}
 			pk = k
 		case *ecdsa.PrivateKey:
-			if err = validateEcdsaKey(k); err != nil {
-				return nil, errors.Wrap(err, "error validating ecdsa key")
+			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
+				return nil, fmt.Errorf("error validating ecdsa key: %w", err)
 			}
 			pk = k
 		case ed25519.PrivateKey:
-			// Nothing to validate, since ED25519 supports only one key size.
+			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
+				return nil, fmt.Errorf("error validating ed25519 key: %w", err)
+			}
 			pk = k
 		default:
 			return nil, fmt.Errorf("unexpected private key")
@@ -154,15 +136,18 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(Keys{pk, pk.Public()}, pf)
 }
 
-func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
+func marshalKeyPair(keypair Keys, pf PassFunc) (key *KeysBytes, err error) {
 	x509Encoded, err := x509.MarshalPKCS8PrivateKey(keypair.private)
 	if err != nil {
-		return nil, errors.Wrap(err, "x509 encoding private key")
+		return nil, fmt.Errorf("x509 encoding private key: %w", err)
 	}
 
-	password, err := pf(true)
-	if err != nil {
-		return nil, err
+	password := []byte{}
+	if pf != nil {
+		password, err = pf(true)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	encBytes, err := encrypted.Encrypt(x509Encoded, password)
@@ -189,6 +174,7 @@ func marshalKeyPair(keypair Keys, pf PassFunc) (*KeysBytes, error) {
 	}, nil
 }
 
+// TODO(jason): Move this to an internal package.
 func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	priv, err := GeneratePrivateKey()
 	if err != nil {
@@ -198,10 +184,7 @@ func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(Keys{priv, priv.Public()}, pf)
 }
 
-func (k *KeysBytes) Password() []byte {
-	return k.password
-}
-
+// TODO(jason): Move this to an internal package.
 func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
@@ -214,6 +197,7 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	return ecdsaPub, nil
 }
 
+// TODO(jason): Move this to pkg/signature, the only place it's used, and unimport it.
 func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
@@ -226,19 +210,21 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 
 	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
 	if err != nil {
-		return nil, errors.Wrap(err, "decrypt")
+		return nil, fmt.Errorf("decrypt: %w", err)
 	}
 
 	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing private key")
+		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
 	switch pk := pk.(type) {
 	case *rsa.PrivateKey:
 		return signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
 	case *ecdsa.PrivateKey:
 		return signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
+	case ed25519.PrivateKey:
+		return signature.LoadED25519SignerVerifier(pk)
 	default:
-		return nil, errors.Wrap(err, "unsupported key type")
+		return nil, errors.New("unsupported key type")
 	}
 }

@@ -16,34 +16,50 @@
 package cosign
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"syscall"
 
-	"github.com/pkg/errors"
 	"golang.org/x/term"
 )
 
-// TODO need to centralize this logic
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
+// ConfirmPrompt prompts the user for confirmation for an action. Supports skipping
+// the confirmation prompt when skipConfirmation is set.
+// TODO(jason): Move this to an internal package.
+func ConfirmPrompt(msg string, skipConfirmation bool) (bool, error) {
+	if skipConfirmation {
+		return true, nil
 	}
-	return !info.IsDir()
+
+	fmt.Fprintf(os.Stderr, "%s\n\nAre you sure you want to continue? (y/[N]): ", msg)
+	reader := bufio.NewReader(os.Stdin)
+	r, err := reader.ReadString('\n')
+	if err != nil {
+		return false, err
+	}
+	return strings.Trim(r, "\n") == "Y" || strings.Trim(r, "\n") == "y", nil
 }
 
+// TODO(jason): Move this to an internal package.
 func GetPassFromTerm(confirm bool) ([]byte, error) {
 	fmt.Fprint(os.Stderr, "Enter password for private key: ")
-	pw1, err := term.ReadPassword(0)
+	// Unnecessary convert of syscall.Stdin on *nix, but Windows is a uintptr
+	// nolint:unconvert
+	pw1, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintln(os.Stderr)
 	if !confirm {
 		return pw1, nil
 	}
-	fmt.Fprintln(os.Stderr)
 	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
-	confirmpw, err := term.ReadPassword(0)
+	// Unnecessary convert of syscall.Stdin on *nix, but Windows is a uintptr
+	// nolint:unconvert
+	confirmpw, err := term.ReadPassword(int(syscall.Stdin))
 	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return nil, err
@@ -55,6 +71,7 @@ func GetPassFromTerm(confirm bool) ([]byte, error) {
 	return pw1, nil
 }
 
+// TODO(jason): Move this to an internal package.
 func IsTerminal() bool {
 	stat, _ := os.Stdin.Stat()
 	return (stat.Mode() & os.ModeCharDevice) != 0

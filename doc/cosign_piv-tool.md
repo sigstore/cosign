@@ -12,14 +12,14 @@ Provides utilities for managing a hardware token
 ### Options inherited from parent commands
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+      --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign piv-tool attestation](cosign_piv-tool_attestation.md)	 - attestation contains commands to manage a hardware token
 * [cosign piv-tool generate-key](cosign_piv-tool_generate-key.md)	 - generate-key generates a new signing key on the hardware token
 * [cosign piv-tool reset](cosign_piv-tool_reset.md)	 - reset resets the hardware token completely

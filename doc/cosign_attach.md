@@ -11,14 +11,14 @@ Provides utilities for attaching artifacts to other artifacts in a registry
 ### Options inherited from parent commands
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+      --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign attach attestation](cosign_attach_attestation.md)	 - Attach attestation to the supplied container image
 * [cosign attach sbom](cosign_attach_sbom.md)	 - Attach sbom to the supplied container image
 * [cosign attach signature](cosign_attach_signature.md)	 - Attach signatures to the supplied container image

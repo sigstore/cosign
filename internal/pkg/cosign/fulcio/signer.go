@@ -20,7 +20,6 @@ import (
 	"io"
 
 	"github.com/sigstore/cosign/internal/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 )
@@ -42,13 +41,8 @@ func (fs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	timestamp, err := tuf.GetTimestamp(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// TODO(dekkagaijin): move the fulcio SignerVerifier logic here
-	newSig, err := mutate.Signature(sig, mutate.WithCertChain(fs.cert, fs.chain), mutate.WithTimestamp(timestamp))
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(fs.cert, fs.chain))
 	if err != nil {
 		return nil, nil, err
 	}

@@ -1,3 +1,1122 @@
+# v1.13.1
+
+## Enhancements
+* verify-blob-attestation: allow multiple subjects in in_toto attestation (#2341)
+* Add verify-blob-attestation command and tests (#2337)
+* Add --output-attestation flag to attest-blob and remove experimental signing (#2332)
+* Add attest-blob command (#2286)
+* Add '--cert-identity' flag to support subject alternate names for ver… (#2278)
+* Update Dockerfile section of README (#2323)
+
+## Bug Fixes
+* Update warning when users sign images by tag. (#2313)
+
+## Others
+* Remove experimental flags from attest-blob and refactor (#2338)
+
+## Contributors
+* Alex Cameron
+* Ville Aikas
+* Zack Newman
+* asraa
+* kpk47
+* priyawadhwa
+
+# v1.13.0
+
+> # Highlights
+> * For users who have deployed a private instance of Fulcio release v0.6.x and issue certificates with the Username identity, you will need to upgrade to use this version."
+
+## Enhancements
+
+* Add support for Fulcio username identity in SAN (https://github.com/sigstore/cosign/pull/2291)
+* Data race in FetchSignaturesForReference (https://github.com/sigstore/cosign/pull/2283)
+* Check error on chain verification failure (https://github.com/sigstore/cosign/pull/2284)
+* feat: improve the verification message (https://github.com/sigstore/cosign/pull/2268)
+* feat: use stdin as an input for predicate (https://github.com/sigstore/cosign/pull/2269)
+
+## Bug Fixes
+
+* fix: make tlog entry lookups for online verification shard-aware (https://github.com/sigstore/cosign/pull/2297)
+* Fix: Create a static copy of signatures as part of verification. (https://github.com/sigstore/cosign/pull/2287)
+* Fix: Remove an extra registry request from verification path. (https://github.com/sigstore/cosign/pull/2285)
+* fix pivtool generate key touch policy (https://github.com/sigstore/cosign/pull/2282)
+
+## Others
+
+* use scaffolding 0.4.8 for tests. (https://github.com/sigstore/cosign/pull/2280)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* Matt Moore (@mattmoor)
+* Ross Tannenbaum (@RTann)
+* Ville Aikas (@vaikas)
+
+# v1.12.1
+
+> # Highlights
+> * Pulls Fulcio root and intermediate when `--certificate-chain` is not passed into `verify-blob`. The v1.12.0 release introduced a regression: when `COSIGN_EXPERIMENTAL` was not set, cosign `verify-blob` would check a` --certificate` (without a `--certificate-chain` provided) against the operating system root CA bundle. In this release, Cosign checks the certificate against Fulcio's CA root instead (restoring the earlier behavior).
+
+## Bug Fixes
+
+* fix: fixing breaking changes in  rekor v1.12.0 upgrade (https://github.com/sigstore/cosign/pull/2260)
+* Fixed bug where intermediate certificates were not automatically read from the OCI chain annotation (https://github.com/sigstore/cosign/pull/2244)
+* fix: add COSIGN_EXPERIMENTAL=1 for verify-blob (https://github.com/sigstore/cosign/pull/2254)
+* fix: fix cert chain validation for verify-blob in non-experimental mode (https://github.com/sigstore/cosign/pull/2256)
+* fix: fix secret test, non-experimental bundle should pass (https://github.com/sigstore/cosign/pull/2249)
+* Fix e2e test failure, add test for local bundle without rekor bundle (https://github.com/sigstore/cosign/pull/2248)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* n3k0m4 (@n3k0m4)
+
+# v1.12.0
+
+**Note: This release comes with a fix for `CVE-2022-36056` described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-8gw7-4j42-w388). Please upgrade to this release ASAP**
+
+> # Highlights
+> **BREAKING:** The fix for [GHSA-GHSA-8gw7-4j42-w388](https://github.com/sigstore/cosign/security/advisories/GHSA-8gw7-4j42-w388) (CVE-2022-36056) means that some `verify-blob` commands that used to work may not anymore. In particular:
+> - When using `verify-blob` with signatures created with keyless mode, we require either `COSIGN_EXPERIMENTAL=1` or a valid Rekor bundle for offline verification passed with `--bundle`.
+>
+> If you upgrade and encounter other issues, please read the advisory in full; your prior checks may have been passing inappropriately.
+
+
+## Enhancements
+
+* Add deprecation warning for sget CLI and packages (https://github.com/sigstore/cosign/pull/2019)
+* feat: set annotations to generate additional bash completion information (https://github.com/sigstore/cosign/pull/2221)
+* feat: integrate Alibaba Cloud Container Registry cred helper (https://github.com/sigstore/cosign/pull/2008)
+* Support non-ECDSA key types for verify-blob (https://github.com/sigstore/cosign/pull/2203)
+* Bump github.com/theupdateframework/go-tuf from 0.3.1 to 0.5.0 (https://github.com/sigstore/cosign/pull/2232)
+    * feat: Add support for verifying ECDSA PEM-encoded keys. Continues deprecated hex-encoded keys for backward compatibility
+
+## Bug Fixes
+
+* fix: fix secret test, non-experimental bundle should pass (https://github.com/sigstore/cosign/pull/2249)
+* Fix e2e test failure, add test for local bundle without rekor bundle (https://github.com/sigstore/cosign/pull/2248)
+* Clarify error when KMS provider fails to load (https://github.com/sigstore/cosign/pull/2220)
+
+## Others
+
+* update kind to use release v0.15.0 and some version comments (https://github.com/sigstore/cosign/pull/2246)
+* Bump github.com/theupdateframework/go-tuf from 0.3.1 to 0.5.0 (https://github.com/sigstore/cosign/pull/2232)
+* update go builder to go1.19.1 (https://github.com/sigstore/cosign/pull/2241)
+* Bump mikefarah/yq from 4.27.3 to 4.27.5 (https://github.com/sigstore/cosign/pull/2239)
+* Bump github.com/open-policy-agent/opa from 0.43.0 to 0.44.0 (https://github.com/sigstore/cosign/pull/2234)
+* Bump github.com/google/go-cmp from 0.5.8 to 0.5.9 (https://github.com/sigstore/cosign/pull/2233)
+* Bump google.golang.org/api from 0.94.0 to 0.95.0 (https://github.com/sigstore/cosign/pull/2229)
+* upgrade setup-ko to point to new repo (https://github.com/sigstore/cosign/pull/2225)
+* Bump github.com/spf13/viper from 1.12.0 to 1.13.0 (https://github.com/sigstore/cosign/pull/2224)
+* Upgrade to go1.19 (https://github.com/sigstore/cosign/pull/2213)
+* remove doubl quotes, looks like it is passing as a single string to cosign and not as an array (https://github.com/sigstore/cosign/pull/2205)
+* use scaffolding v0.4.6. (https://github.com/sigstore/cosign/pull/2201)
+* Bump google.golang.org/api from 0.93.0 to 0.94.0 (https://github.com/sigstore/cosign/pull/2200)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Engin Diri (@dirien)
+* Hayden Blauzvern (@haydentherapper)
+* Huang Huang (@mozillazg)
+* Jason Hall (@imjasonh)
+* Priya Wadhwa (@priyawadhwa)
+* Ville Aikas (@vaikas)
+* Zack Newman (@znewman01)
+
+# v1.11.1
+
+## Enhancements
+
+* feat: Rework fig autocomplete command (https://github.com/sigstore/cosign/pull/2187)
+
+## Bug Fixes
+
+* fix: fix typo that caused attestation verification failure (https://github.com/sigstore/cosign/pull/2199)
+
+## Documention
+
+* add release cadence section in the readme (https://github.com/sigstore/cosign/pull/2179)
+
+## Others
+
+* Bump actions/cache from 3.0.7 to 3.0.8 (https://github.com/sigstore/cosign/pull/2192)
+* Bump actions/dependency-review-action from 2.0.4 to 2.1.0 (https://github.com/sigstore/cosign/pull/2185)
+* Bump actions/setup-go from 3.2.1 to 3.3.0 (https://github.com/sigstore/cosign/pull/2196)
+* Bump github.com/go-openapi/swag from 0.22.1 to 0.22.3 (https://github.com/sigstore/cosign/pull/2182)
+* Bump github.com/sigstore/fulcio from 0.5.2 to 0.5.3 (https://github.com/sigstore/cosign/pull/2190)
+* Bump github.com/sigstore/rekor from 0.10.0 to 0.11.0 (https://github.com/sigstore/cosign/pull/2181)
+* Bump github.com/xanzy/go-gitlab from 0.72.0 to 0.73.0 (https://github.com/sigstore/cosign/pull/2191)
+* Bump github.com/xanzy/go-gitlab from 0.73.0 to 0.73.1 (https://github.com/sigstore/cosign/pull/2195)
+* Bump github/codeql-action from 2.1.18 to 2.1.19 (https://github.com/sigstore/cosign/pull/2184)
+* Bump github/codeql-action from 2.1.19 to 2.1.20 (https://github.com/sigstore/cosign/pull/2193)
+* Bump google.golang.org/api from 0.92.0 to 0.93.0 (https://github.com/sigstore/cosign/pull/2183)
+* Update Scorecard action to v2:alpha (https://github.com/sigstore/cosign/pull/2177)
+* add stale workflow using the workflow template (https://github.com/sigstore/cosign/pull/2175)
+* bump fulcio dep to 0.5.2 (https://github.com/sigstore/cosign/pull/2176)
+* bump scaffold in tests to use release v0.4.5 (https://github.com/sigstore/cosign/pull/2180)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Azeem Shaikh (@azeemshaikh38)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Engin Diri (@dirien)
+* Kenny Leung (@k4leung4)
+
+# v1.11.0
+
+## Enhancements
+
+* use updated device flow logic with PKCE (https://github.com/sigstore/cosign/pull/2163)
+
+## Bug Fixes
+
+* fix panic when os.Stat returns an error besides ErrNotExists (https://github.com/sigstore/cosign/pull/2162)
+* fix: add env cmd to root (https://github.com/sigstore/cosign/pull/2171)
+* fix: rekor get tlog entry with uuid (https://github.com/sigstore/cosign/pull/2058)
+* fix oidc post-merge job (https://github.com/sigstore/cosign/pull/2164)
+* fix handling of verify-attestation types for URIs (https://github.com/sigstore/cosign/pull/2159)
+* fix: adds envelope hash to in-toto entries in tlog entry creation (https://github.com/sigstore/cosign/pull/2118)
+* fix: fix blob verification output (https://github.com/sigstore/cosign/pull/2157)
+* Verify the certificate chain against the Fulcio root trust by default (https://github.com/sigstore/cosign/pull/2139)
+
+## Documention
+
+* docs: clarify wording in spec about usage of certificate chain (https://github.com/sigstore/cosign/pull/2152)
+* Add notes to clarify registry use. (https://github.com/sigstore/cosign/pull/2145)
+
+## Others
+
+* Bump github.com/go-openapi/swag from 0.22.0 to 0.22.1 (https://github.com/sigstore/cosign/pull/2167)
+* Bump sigstore/cosign-installer from 2.5.0 to 2.5.1 (https://github.com/sigstore/cosign/pull/2168)
+* update e2e job to run only when push to main (https://github.com/sigstore/cosign/pull/2169)
+* Remove third_party (https://github.com/sigstore/cosign/pull/2166)
+* bump to scaffolding v0.4.4 (https://github.com/sigstore/cosign/pull/2165)
+* Bump sigs.k8s.io/release-utils from 0.6.0 to 0.7.3 (https://github.com/sigstore/cosign/pull/2102)
+* Run tests using Go 1.18 (https://github.com/sigstore/cosign/pull/2093)
+* Bump actions/github-script from 6.1.0 to 6.1.1 (https://github.com/sigstore/cosign/pull/2156)
+* Bump go.uber.org/atomic from 1.9.0 to 1.10.0 (https://github.com/sigstore/cosign/pull/2155)
+* Bump github.com/xanzy/go-gitlab from 0.71.0 to 0.72.0 (https://github.com/sigstore/cosign/pull/2148)
+* Bump tests to use scaffolding-0.4.3. (https://github.com/sigstore/cosign/pull/2153)
+* Bump google.golang.org/api from 0.91.0 to 0.92.0 (https://github.com/sigstore/cosign/pull/2150)
+* Bump actions/cache from 3.0.6 to 3.0.7 (https://github.com/sigstore/cosign/pull/2151)
+* Use TUF from scaffolding for validating cosign. (https://github.com/sigstore/cosign/pull/2146)
+* Bump github.com/hashicorp/go-secure-stdlib/parseutil from 0.1.6 to 0.1.7 (https://github.com/sigstore/cosign/pull/2141)
+* Bump github.com/go-openapi/swag from 0.21.1 to 0.22.0 (https://github.com/sigstore/cosign/pull/2140)
+* Bump github.com/xanzy/go-gitlab from 0.70.0 to 0.71.0 (https://github.com/sigstore/cosign/pull/2142)
+* Bump actions/cache from 3.0.5 to 3.0.6 (https://github.com/sigstore/cosign/pull/2136)
+* Bump github.com/go-piv/piv-go from 1.9.0 to 1.10.0 (https://github.com/sigstore/cosign/pull/2135)
+* Bump github/codeql-action from 2.1.17 to 2.1.18 (https://github.com/sigstore/cosign/pull/2129)
+* Update CHANGELOG for 1.10.1 release (https://github.com/sigstore/cosign/pull/2130)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* David Bendory (@bendory)
+* Jason Hall (@imjasonh)
+* Kazuma Watanabe (@wata727)
+* Matt Moore (@mattmoor)
+* Noah Kreiger (@nkreiger)
+* Priya Wadhwa (@priyawadhwa)
+* Samsondeen (@dsa0x)
+* Ville Aikas (@vaikas)
+* saso (@otms61)
+
+# v1.10.1
+
+**Note: This release comes with a fix for CVE-2022-35929 described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-vjxv-45g9-9296). Please upgrade to this release ASAP**
+
+## Enhancements
+
+* update cross-builder to go1.18.5 and cosign image to 1.10.0 (https://github.com/sigstore/cosign/pull/2119)
+* feat: attach: attestation: allow passing multiple payloads (https://github.com/sigstore/cosign/pull/2085)
+* Resolves #522 set Created date to time of execution (https://github.com/sigstore/cosign/pull/2108)
+* Fix field names in the vulnerability attestation (https://github.com/sigstore/cosign/pull/2099)
+* Change Result in Vulnerability Attestation to interface{} (https://github.com/sigstore/cosign/pull/2096)
+* Improve error message when no sigs/atts are found for an image (https://github.com/sigstore/cosign/pull/2101)
+* add flag to allow skipping upload to transparency log (https://github.com/sigstore/cosign/pull/2089)
+
+## Documention
+
+* chore: fix documentation and warning on using untrusted rekor key (https://github.com/sigstore/cosign/pull/2124)
+* Enable Scorecard badge (https://github.com/sigstore/cosign/pull/2109)
+
+## Bug Fixes
+
+* Merge pull request from GHSA-vjxv-45g9-9296
+* Correct the type used for attest (https://github.com/sigstore/cosign/pull/2128)
+
+## Others
+
+* Bump mikefarah/yq from 4.26.1 to 4.27.2 (https://github.com/sigstore/cosign/pull/2116)
+* Bump github.com/open-policy-agent/opa from 0.42.2 to 0.43.0 (https://github.com/sigstore/cosign/pull/2115)
+* Bump github.com/xanzy/go-gitlab from 0.69.0 to 0.70.0 (https://github.com/sigstore/cosign/pull/2120)
+* Bump google.golang.org/api from 0.90.0 to 0.91.0 (https://github.com/sigstore/cosign/pull/2125)
+* Bump google.golang.org/api from 0.89.0 to 0.90.0 (https://github.com/sigstore/cosign/pull/2111)
+* Bump github/codeql-action from 2.1.16 to 2.1.17 (https://github.com/sigstore/cosign/pull/2112)
+* Bump google.golang.org/protobuf from 1.28.0 to 1.28.1 (https://github.com/sigstore/cosign/pull/2110)
+* Bump google.golang.org/api from 0.88.0 to 0.89.0 (https://github.com/sigstore/cosign/pull/2106)
+* Bump imjasonh/setup-ko from 0.4 to 0.5 (https://github.com/sigstore/cosign/pull/2107)
+* Introduce a custom error type to classify errors. (https://github.com/sigstore/cosign/pull/2114)
+* Bump github.com/hashicorp/go-hclog from 1.2.1 to 1.2.2 (https://github.com/sigstore/cosign/pull/2103)
+* remove style jobs and cleanup makefile gofmt and goimports are running already with golangci-lint (https://github.com/sigstore/cosign/pull/2105)
+* Bump sigstore/cosign-installer from 2.4.1 to 2.5.0 (https://github.com/sigstore/cosign/pull/2100)
+* Remove knative/pkg deps (https://github.com/sigstore/cosign/pull/2092)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Azeem Shaikh (@azeemshaikh38)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Furkan Türkal (@Dentrax)
+* Jason Hall (@imjasonh)
+* Kenny Leung (@k4leung4)
+* Matt Moore (@mattmoor)
+* Teppei Fukuda (@knqyf263)
+* Tobias Trabelsi (@Lerentis)
+* saso (@otms61)
+
+# v1.10.0
+
+## Enhancements
+
+* Add env subcommand. (https://github.com/sigstore/cosign/pull/2051)
+* feat: cert-extensions verify (https://github.com/sigstore/cosign/pull/1626)
+* sign-blob: bundle should work independently (https://github.com/sigstore/cosign/pull/2016)
+* Add --oidc-provider flag to specify which provider to use for ambient credentials (https://github.com/sigstore/cosign/pull/1998)
+* Use pkg/fulcioroots and pkg/tuf from sigstore/sigstore (https://github.com/sigstore/cosign/pull/1866)
+* Add --platform flag to cosign sbom download  (https://github.com/sigstore/cosign/pull/1975)
+* Route deprectated  -version to subcommand (https://github.com/sigstore/cosign/pull/1854)
+* Add cyclonedx predicate type for attestations (https://github.com/sigstore/cosign/pull/1977)
+* Updated Azure kms commands. (https://github.com/sigstore/cosign/pull/1972)
+* Add spdxjson predicate type for attestations (https://github.com/sigstore/cosign/pull/1974)
+* Drop tuf client dependency on GCS client library (https://github.com/sigstore/cosign/pull/1967)
+* feat(fulcioroots): singleton error pattern (https://github.com/sigstore/cosign/pull/1965)
+* tuf: improve TUF client concurrency and caching (https://github.com/sigstore/cosign/pull/1953)
+* Separate RegExp matching of issuer/subject from strict (https://github.com/sigstore/cosign/pull/1956)
+
+## Documention
+
+* update design doc link (https://github.com/sigstore/cosign/pull/2077)
+* specs: fix list formatting on SIGNATURE_SPEC (https://github.com/sigstore/cosign/pull/2030)
+* public-key: fix command description (https://github.com/sigstore/cosign/pull/2024)
+* docs(readme): add installation steps for container image for cosign binary (https://github.com/sigstore/cosign/pull/1986)
+* Add Cloudsmith Container Registry to tested registry list (https://github.com/sigstore/cosign/pull/1966)
+
+
+## Bug Fixes
+
+* Fix OIDC test  (https://github.com/sigstore/cosign/pull/2050)
+* Use cosign.ConfirmPrompt more consistently (https://github.com/sigstore/cosign/pull/2039)
+* chore: add note about SIGSTORE_REKOR_PUBLIC_KEY (https://github.com/sigstore/cosign/pull/2040)
+* Fix #1378 create new attestation signature in replace mode if not existent (https://github.com/sigstore/cosign/pull/2014)
+* encrypt values to create the github action secret  (https://github.com/sigstore/cosign/pull/1990)
+* fix/update post build job (https://github.com/sigstore/cosign/pull/1983)
+* fix typos (https://github.com/sigstore/cosign/pull/1982)
+
+## Others
+
+* Bump github.com/hashicorp/vault/sdk from 0.5.2 to 0.5.3 (https://github.com/sigstore/cosign/pull/2079)
+* Bump github.com/go-openapi/strfmt from 0.21.2 to 0.21.3 (https://github.com/sigstore/cosign/pull/2078)
+* Bump google.golang.org/api from 0.87.0 to 0.88.0 (https://github.com/sigstore/cosign/pull/2081)
+* Remove hack/tools.go (https://github.com/sigstore/cosign/pull/2080)
+* Remove replace directives in go.mod. (https://github.com/sigstore/cosign/pull/2070)
+* Bump mikefarah/yq from 4.25.3 to 4.26.1 (https://github.com/sigstore/cosign/pull/2076)
+* Bump github.com/xanzy/go-gitlab from 0.68.2 to 0.69.0 (https://github.com/sigstore/cosign/pull/2075)
+* Bump actions/dependency-review-action from 2.0.2 to 2.0.4 (https://github.com/sigstore/cosign/pull/2073)
+* Bump google.golang.org/api from 0.86.0 to 0.87.0 (https://github.com/sigstore/cosign/pull/2064)
+* chore(deps): CycloneDX PredicateType changed to use in-toto-golang (https://github.com/sigstore/cosign/pull/2067)
+* Bump github.com/open-policy-agent/opa from 0.42.0 to 0.42.2 (https://github.com/sigstore/cosign/pull/2063)
+* Bump google.golang.org/grpc from 1.47.0 to 1.48.0 (https://github.com/sigstore/cosign/pull/2062)
+* Bump actions/setup-go from 3.2.0 to 3.2.1 (https://github.com/sigstore/cosign/pull/2060)
+* Bump github/codeql-action from 2.1.15 to 2.1.16 (https://github.com/sigstore/cosign/pull/2065)
+* Bump actions/cache from 3.0.4 to 3.0.5 (https://github.com/sigstore/cosign/pull/2066)
+* update to go 1.18 (https://github.com/sigstore/cosign/pull/2059)
+* Bump github.com/open-policy-agent/opa from 0.35.0 to 0.42.0 (https://github.com/sigstore/cosign/pull/2046)
+* update ct/otel and etcd (https://github.com/sigstore/cosign/pull/2054)
+* remove tests with 1.21 k8s cluster because it is deprecated and add v1.23/24 (https://github.com/sigstore/cosign/pull/2055)
+* Bump sigstore/cosign-installer from 2.4.0 to 2.4.1 (https://github.com/sigstore/cosign/pull/2042)
+* Bump github.com/hashicorp/go-version from 1.5.0 to 1.6.0 (https://github.com/sigstore/cosign/pull/2032)
+* Bump github.com/spiffe/go-spiffe/v2 from 2.1.0 to 2.1.1 (https://github.com/sigstore/cosign/pull/2037)
+* Bump github/codeql-action from 2.1.14 to 2.1.15 (https://github.com/sigstore/cosign/pull/2038)
+* Bump google.golang.org/api from 0.85.0 to 0.86.0 (https://github.com/sigstore/cosign/pull/2036)
+* Bump github.com/stretchr/testify from 1.7.5 to 1.8.0 (https://github.com/sigstore/cosign/pull/2035)
+* Bump ossf/scorecard-action from 1.1.1 to 1.1.2 (https://github.com/sigstore/cosign/pull/2033)
+* Bump github.com/xanzy/go-gitlab from 0.68.0 to 0.68.2 (https://github.com/sigstore/cosign/pull/2029)
+* Bump github.com/stretchr/testify from 1.7.4 to 1.7.5 (https://github.com/sigstore/cosign/pull/2026)
+* Attempt to clean up pkg/cosign (https://github.com/sigstore/cosign/pull/2018)
+* Bump github/codeql-action from 2.1.13 to 2.1.14 (https://github.com/sigstore/cosign/pull/2023)
+* Bump github.com/google/go-containerregistry from 0.9.0 to 0.10.0 (https://github.com/sigstore/cosign/pull/2021)
+* Bump mikefarah/yq from 4.25.2 to 4.25.3 (https://github.com/sigstore/cosign/pull/2022)
+* Bump google.golang.org/api from 0.84.0 to 0.85.0 (https://github.com/sigstore/cosign/pull/2015)
+* Bump github.com/stretchr/testify from 1.7.3 to 1.7.4 (https://github.com/sigstore/cosign/pull/2010)
+* Bump github.com/google/go-github/v45 from 45.1.0 to 45.2.0 (https://github.com/sigstore/cosign/pull/2011)
+* Bump github.com/spf13/cobra from 1.4.0 to 1.5.0 (https://github.com/sigstore/cosign/pull/2012)
+* Bump github/codeql-action from 2.1.12 to 2.1.13 (https://github.com/sigstore/cosign/pull/2013)
+* Bump github.com/stretchr/testify from 1.7.2 to 1.7.3 (https://github.com/sigstore/cosign/pull/2009)
+* Bump actions/dependency-review-action from 2.0.1 to 2.0.2 (https://github.com/sigstore/cosign/pull/2001)
+* Bump github.com/hashicorp/vault/sdk from 0.5.1 to 0.5.2 (https://github.com/sigstore/cosign/pull/1996)
+* Bump actions/dependency-review-action from 1.0.2 to 2.0.1 (https://github.com/sigstore/cosign/pull/2000)
+* Bump google.golang.org/api from 0.83.0 to 0.84.0 (https://github.com/sigstore/cosign/pull/1999)
+* Bump sigstore/sigstore to HEAD (https://github.com/sigstore/cosign/pull/1995)
+* Bump github.com/hashicorp/vault/sdk from 0.5.0 to 0.5.1 (https://github.com/sigstore/cosign/pull/1988)
+* cleanup ci job and remove policy-controller references (https://github.com/sigstore/cosign/pull/1981)
+* Bump google.golang.org/api from 0.82.0 to 0.83.0 (https://github.com/sigstore/cosign/pull/1979)
+* cleanup: unexport kubernetes.Client method (https://github.com/sigstore/cosign/pull/1973)
+* Remove policy-controller now that it lives in sigstore/policy-controller (https://github.com/sigstore/cosign/pull/1976)
+* Bump sigstore/cosign-installer from 2.3.0 to 2.4.0 (https://github.com/sigstore/cosign/pull/1980)
+* Bump actions/cache from 3.0.3 to 3.0.4 (https://github.com/sigstore/cosign/pull/1970)
+* Bump github.com/hashicorp/go-hclog from 1.2.0 to 1.2.1 (https://github.com/sigstore/cosign/pull/1968)
+* Bump github.com/stretchr/testify from 1.7.1 to 1.7.2 (https://github.com/sigstore/cosign/pull/1963)
+* Bump google.golang.org/grpc from 1.46.2 to 1.47.0 (https://github.com/sigstore/cosign/pull/1943)
+* Bump github.com/hashicorp/go-secure-stdlib/parseutil from 0.1.5 to 0.1.6 (https://github.com/sigstore/cosign/pull/1958)
+* replace gcr.io/distroless/ to use ghcr.io/distroless/ (https://github.com/sigstore/cosign/pull/1961)
+* Bump github/codeql-action from 2.1.11 to 2.1.12 (https://github.com/sigstore/cosign/pull/1951)
+* Bump google.golang.org/api from 0.81.0 to 0.82.0 (https://github.com/sigstore/cosign/pull/1948)
+
+## Contributors
+
+* Adolfo García Veytia (@puerco)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Billy Lynch (@wlynch)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Ciara Carey (@ciaracarey)
+* Frederik Boster (@Syquel)
+* Furkan Türkal (@Dentrax)
+* Hector Fernandez (@hectorj2f)
+* Jason Hall (@imjasonh)
+* Jinhong Brejnholt (@JBrejnholt)
+* Josh Dolitsky (@jdolitsky)
+* Masahiro331 (@masahiro331)
+* Priya Wadhwa (@priyawadhwa)
+* Ville Aikas (@vaikas)
+* William Woodruff (@woodruffw)
+
+# v1.9.0
+
+## Enhancements
+
+* Do not push to public rekor. (https://github.com/sigstore/cosign/pull/1931)
+* Add privacy statement for PII storage (https://github.com/sigstore/cosign/pull/1909)
+* Add support for "**" in image glob matching (https://github.com/sigstore/cosign/pull/1914)
+* [cosigned] Rename cosigned references to policy-controller (https://github.com/sigstore/cosign/pull/1893)
+* [cosigned] Remove undefined apiGroups from policy clusterrole (https://github.com/sigstore/cosign/pull/1896)
+* tree: support --attachment-tag-prefix (https://github.com/sigstore/cosign/pull/1900)
+* v1beta1 API for cosigned (https://github.com/sigstore/cosign/pull/1890)
+* tree: only report artifacts that are present (https://github.com/sigstore/cosign/pull/1872)
+* Check certificate policy flags with only a certificate (https://github.com/sigstore/cosign/pull/1869)
+* Normalize certificate flag names (https://github.com/sigstore/cosign/pull/1868)
+* Add rekor.0.pub TUF target to unit tests (https://github.com/sigstore/cosign/pull/1860)
+* If SBOM ref has .json suffix, assume JSON mediatype (https://github.com/sigstore/cosign/pull/1859)
+* sget: Enable KMS providers for sget (https://github.com/sigstore/cosign/pull/1852)
+* Use filepath match instead of glob (https://github.com/sigstore/cosign/pull/1842)
+* cosigned: Fix podAntiAffinity labels (https://github.com/sigstore/cosign/pull/1841)
+* Add function to explictly request a certain provider (https://github.com/sigstore/cosign/pull/1837)
+* Validate tlog entry when verifying signature via public key. (https://github.com/sigstore/cosign/pull/1833)
+* New flag --oidc-providers-disable to disable OIDC providers (https://github.com/sigstore/cosign/pull/1832)
+* Add auth flow option to KeyOpts. (https://github.com/sigstore/cosign/pull/1827)
+* cosigned: Test unsupported KMS providers (https://github.com/sigstore/cosign/pull/1820)
+* Refactor fulcio signer to take in KeyOpts (take 2) (https://github.com/sigstore/cosign/pull/1818)
+* feat: add rego policy support (https://github.com/sigstore/cosign/pull/1817)
+* [Cosigned] Add signature pull secrets (https://github.com/sigstore/cosign/pull/1805)
+* Check failure message of policy that fails with issuer mismatch (https://github.com/sigstore/cosign/pull/1815)
+* Support PKCS1 encoded and non-ECDSA CT log public keys (https://github.com/sigstore/cosign/pull/1806)
+
+## Documention
+
+* update README with ebpf modules (https://github.com/sigstore/cosign/pull/1888)
+* Point git commmit FUN.md to gitsign! (https://github.com/sigstore/cosign/pull/1874)
+* Add IBM Cloud Container Registry to tested registry list (https://github.com/sigstore/cosign/pull/1856)
+* Document Staging instance usage with Keyless (https://github.com/sigstore/cosign/pull/1824)
+
+## Bug Fixes
+
+* fix: fix #1930 for AWS KMS formats (https://github.com/sigstore/cosign/pull/1946)
+* fix: fix fetching updated targets from TUF root (https://github.com/sigstore/cosign/pull/1921)
+* Fix piv-tool generate-key command in TOKENS doc (https://github.com/sigstore/cosign/pull/1850)
+
+## Others
+
+* remove deprecation (https://github.com/sigstore/cosign/pull/1952)
+* Bump github.com/aws/aws-sdk-go-v2 from 1.14.0 to 1.16.4 (https://github.com/sigstore/cosign/pull/1949)
+* update cross-builder image to use go1.17.11 (https://github.com/sigstore/cosign/pull/1950)
+* Bump ossf/scorecard-action from 1.1.0 to 1.1.1 (https://github.com/sigstore/cosign/pull/1945)
+* Bump github.com/secure-systems-lab/go-securesystemslib (https://github.com/sigstore/cosign/pull/1944)
+* Bump actions/cache from 3.0.2 to 3.0.3 (https://github.com/sigstore/cosign/pull/1937)
+* Bump mikefarah/yq from 4.25.1 to 4.25.2 (https://github.com/sigstore/cosign/pull/1933)
+* Bump github.com/spf13/viper from 1.11.0 to 1.12.0 (https://github.com/sigstore/cosign/pull/1924)
+* Bump github.com/hashicorp/vault/sdk from 0.4.1 to 0.5.0 (https://github.com/sigstore/cosign/pull/1926)
+* Bump actions/setup-go from 3.1.0 to 3.2.0 (https://github.com/sigstore/cosign/pull/1927)
+* Bump actions/dependency-review-action from 1.0.1 to 1.0.2 (https://github.com/sigstore/cosign/pull/1915)
+* Bump google-github-actions/auth from 0.7.3 to 0.8.0 (https://github.com/sigstore/cosign/pull/1916)
+* Bump ossf/scorecard-action from 1.0.4 to 1.1.0 (https://github.com/sigstore/cosign/pull/1922)
+* Bump google.golang.org/api from 0.80.0 to 0.81.0 (https://github.com/sigstore/cosign/pull/1918)
+* Bump github.com/armon/go-metrics from 0.3.11 to 0.4.0 (https://github.com/sigstore/cosign/pull/1919)
+* Bump github.com/xanzy/go-gitlab from 0.66.0 to 0.68.0 (https://github.com/sigstore/cosign/pull/1920)
+* Bump github.com/xanzy/go-gitlab from 0.65.0 to 0.66.0 (https://github.com/sigstore/cosign/pull/1913)
+* Move deprecated dependency: google/trillian/merkle to transparency-dev (https://github.com/sigstore/cosign/pull/1910)
+* Bump github.com/hashicorp/go-version from 1.4.0 to 1.5.0 (https://github.com/sigstore/cosign/pull/1902)
+* Bump github.com/hashicorp/go-secure-stdlib/parseutil from 0.1.4 to 0.1.5 (https://github.com/sigstore/cosign/pull/1883)
+* Bump cloud.google.com/go/storage from 1.22.0 to 1.22.1 (https://github.com/sigstore/cosign/pull/1906)
+* Bump actions/upload-artifact from 3.0.0 to 3.1.0 (https://github.com/sigstore/cosign/pull/1907)
+* The timeout arg in golangci-lint has been moved to the generic args param. (https://github.com/sigstore/cosign/pull/1901)
+* Update go-tuf (https://github.com/sigstore/cosign/pull/1894)
+* Bump google.golang.org/api from 0.79.0 to 0.80.0 (https://github.com/sigstore/cosign/pull/1897)
+* Bump google-github-actions/auth from 0.7.2 to 0.7.3 (https://github.com/sigstore/cosign/pull/1898)
+* Bump github/codeql-action from 2.1.10 to 2.1.11 (https://github.com/sigstore/cosign/pull/1891)
+* Update github.com/google/go-containerregistry/pkg/authn/k8schain module to f1b065c6cb3d (https://github.com/sigstore/cosign/pull/1889)
+* Remove dependency on deprecated github.com/pkg/errors (https://github.com/sigstore/cosign/pull/1887)
+* Bump google.golang.org/grpc from 1.46.0 to 1.46.2 (https://github.com/sigstore/cosign/pull/1884)
+* Bump google-github-actions/auth from 0.7.1 to 0.7.2 (https://github.com/sigstore/cosign/pull/1886)
+* go.mod: format go.mod (https://github.com/sigstore/cosign/pull/1879)
+* chore: remove regex from image pattern (https://github.com/sigstore/cosign/pull/1873)
+* Bump actions/dependency-review-action (https://github.com/sigstore/cosign/pull/1875)
+* Bump actions/github-script from 6.0.0 to 6.1.0 (https://github.com/sigstore/cosign/pull/1876)
+* Bump actions/setup-go from 3.0.0 to 3.1.0 (https://github.com/sigstore/cosign/pull/1870)
+* Update go to 1.17.10 / cosign image to 1.18.0 and actions setup go (https://github.com/sigstore/cosign/pull/1861)
+* Bump github/codeql-action from 2.1.9 to 2.1.10 (https://github.com/sigstore/cosign/pull/1863)
+* Bump golangci/golangci-lint-action from 3.1.0 to 3.2.0 (https://github.com/sigstore/cosign/pull/1864)
+* Bump google.golang.org/api from 0.78.0 to 0.79.0 (https://github.com/sigstore/cosign/pull/1858)
+* Bump github.com/xanzy/go-gitlab from 0.64.0 to 0.65.0 (https://github.com/sigstore/cosign/pull/1857)
+* Bump github.com/go-openapi/runtime from 0.24.0 to 0.24.1 (https://github.com/sigstore/cosign/pull/1851)
+* remove exclude from go.mod (https://github.com/sigstore/cosign/pull/1846)
+* Bump github.com/hashicorp/go-plugin from 1.4.3 to 1.4.4 (https://github.com/sigstore/cosign/pull/1843)
+* Bump google.golang.org/api from 0.77.0 to 0.78.0 (https://github.com/sigstore/cosign/pull/1838)
+* Bump mikefarah/yq from 4.24.5 to 4.25.1 (https://github.com/sigstore/cosign/pull/1831)
+* Bump google.golang.org/api from 0.76.0 to 0.77.0 (https://github.com/sigstore/cosign/pull/1829)
+* Bump github.com/go-openapi/runtime from 0.23.3 to 0.24.0 (https://github.com/sigstore/cosign/pull/1830)
+* Bump github.com/spiffe/go-spiffe/v2 from 2.0.0 to 2.1.0 (https://github.com/sigstore/cosign/pull/1828)
+* chore(deps): Included dependency review (https://github.com/sigstore/cosign/pull/1792)
+* Bump sigstore/cosign-installer from 2.2.1 to 2.3.0 (https://github.com/sigstore/cosign/pull/1813)
+* Bump github/codeql-action from 2.1.8 to 2.1.9 (https://github.com/sigstore/cosign/pull/1814)
+* Bump google.golang.org/api from 0.75.0 to 0.76.0 (https://github.com/sigstore/cosign/pull/1810)
+* Bump github.com/google/go-cmp from 0.5.7 to 0.5.8 (https://github.com/sigstore/cosign/pull/1809)
+* Bump github.com/armon/go-metrics from 0.3.10 to 0.3.11 (https://github.com/sigstore/cosign/pull/1808)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Adolfo García Veytia (@puerco)
+* Andrés Torres (@elfotografo007)
+* Billy Lynch (@wlynch)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Denny (@DennyHoang)
+* Eitan Yarmush (@EItanya)
+* Hayden Blauzvern (@haydentherapper)
+* Hector Fernandez (@hectorj2f)
+* Jack Baines (@bainsy88)
+* Jason Hall (@imjasonh)
+* Josh Dolitsky (@jdolitsky)
+* Kenny Leung (@k4leung4)
+* Koichi Shiraishi (@zchee)
+* Naveen Srinivasan (@naveensrinivasan)
+* Neal McBurnett (@nealmcb)
+* Priya Wadhwa (@priyawadhwa)
+* Rob Best (@ribbybibby)
+* Tomasz Janiszewski (@janisz)
+* Ville Aikas (@vaikas)
+* Vladimir Nachev (@vpnachev)
+
+
+# v1.8.0
+
+_NOTE_: If you use Fulcio to issue certificates you will need to use this release.
+
+## Enhancements
+
+* Support PKCS1 encoded and non-ECDSA CT log public keys (https://github.com/sigstore/cosign/pull/1806)
+* Load in intermediate cert pool from TUF (https://github.com/sigstore/cosign/pull/1804)
+* Don't fail open in VerifyBundle (https://github.com/sigstore/cosign/pull/1648)
+* Handle context cancelled properly + tests. (https://github.com/sigstore/cosign/pull/1796)
+* Allow passing keys via environment variables (`env://` refs) (https://github.com/sigstore/cosign/pull/1794)
+* Add parallelization for processing policies / authorities. (https://github.com/sigstore/cosign/pull/1795)
+* Attestations + policy in cip. (https://github.com/sigstore/cosign/pull/1772)
+* Refactor fulcio signer to take in KeyOpts. (https://github.com/sigstore/cosign/pull/1788)
+* Remove the dependency on v1alpha1.Identity which brings in (https://github.com/sigstore/cosign/pull/1790)
+* Add Fulcio intermediate CA certificate to intermediate pool (https://github.com/sigstore/cosign/pull/1774)
+* Cosigned validate against remote sig src (https://github.com/sigstore/cosign/pull/1754)
+* tuf: add debug info if tuf update fails (https://github.com/sigstore/cosign/pull/1766)
+* Break the CIP action tests into a sh script. (https://github.com/sigstore/cosign/pull/1767)
+* [policy-webhook] The webhooks name is now configurable via --(validating|mutating)-webhook-name flags (https://github.com/sigstore/cosign/pull/1757)
+* Verify embedded SCTs (https://github.com/sigstore/cosign/pull/1731)
+* Validate issuer/subject regexp in validate webhook. (https://github.com/sigstore/cosign/pull/1761)
+* Add intermediate CA certificate pool for Fulcio (https://github.com/sigstore/cosign/pull/1749)
+* [cosigned] The webhook name is now configurable via --webhook-name flag (https://github.com/sigstore/cosign/pull/1726)
+* Use bundle log ID to find verification key (https://github.com/sigstore/cosign/pull/1748)
+* Refactor policy related code, add support for vuln verify (https://github.com/sigstore/cosign/pull/1747)
+* Create convert functions for internal CIP (https://github.com/sigstore/cosign/pull/1736)
+* Move the KMS integration imports into the binary entrypoints (https://github.com/sigstore/cosign/pull/1744)
+
+## Bug Fixes
+
+* Fix a bug where an error would send duplicate results. (https://github.com/sigstore/cosign/pull/1797)
+* fix: more informative error (https://github.com/sigstore/cosign/pull/1778)
+* fix: add support for rsa keys (https://github.com/sigstore/cosign/pull/1768)
+* Implement identities, fix bug in webhook validation. (https://github.com/sigstore/cosign/pull/1759)
+
+## Others
+
+* update changelog for 1.8.0 (https://github.com/sigstore/cosign/pull/1807)
+* add changelog for release v1.8.0 (https://github.com/sigstore/cosign/pull/1803)
+* Bump github.com/hashicorp/go-retryablehttp from 0.7.0 to 0.7.1 (https://github.com/sigstore/cosign/pull/1758)
+* Bump google-github-actions/auth from 0.7.0 to 0.7.1 (https://github.com/sigstore/cosign/pull/1801)
+* Bump google.golang.org/grpc from 1.45.0 to 1.46.0 (https://github.com/sigstore/cosign/pull/1800)
+* Bump github.com/xanzy/go-gitlab from 0.63.0 to 0.64.0 (https://github.com/sigstore/cosign/pull/1799)
+* Revert "Refactor fulcio signer to take in KeyOpts. (https://github.com/sigstore/cosign/pull/1788)" (https://github.com/sigstore/cosign/pull/1798)
+* chore: add rego function to consume modules (https://github.com/sigstore/cosign/pull/1787)
+* test: add cue unit tests (https://github.com/sigstore/cosign/pull/1791)
+* Run update-codegen. (https://github.com/sigstore/cosign/pull/1789)
+* Bump actions/checkout from 3.0.1 to 3.0.2 (https://github.com/sigstore/cosign/pull/1783)
+* Bump github.com/mitchellh/mapstructure from 1.4.3 to 1.5.0 (https://github.com/sigstore/cosign/pull/1782)
+* Bump k8s.io/code-generator from 0.23.5 to 0.23.6 (https://github.com/sigstore/cosign/pull/1781)
+* Bump google.golang.org/api from 0.74.0 to 0.75.0 (https://github.com/sigstore/cosign/pull/1780)
+* Bump cuelang.org/go from 0.4.2 to 0.4.3 (https://github.com/sigstore/cosign/pull/1779)
+* Bump codecov/codecov-action from 3.0.0 to 3.1.0 (https://github.com/sigstore/cosign/pull/1784)
+* Bump actions/checkout from 3.0.0 to 3.0.1 (https://github.com/sigstore/cosign/pull/1764)
+* Bump mikefarah/yq from 4.24.4 to 4.24.5 (https://github.com/sigstore/cosign/pull/1765)
+* chore: add warning when downloading a sBOM (https://github.com/sigstore/cosign/pull/1763)
+* chore: add warn when attaching sBOM (https://github.com/sigstore/cosign/pull/1756)
+* Bump sigstore/cosign-installer from 2.2.0 to 2.2.1 (https://github.com/sigstore/cosign/pull/1752)
+* update go builder and cosign images (https://github.com/sigstore/cosign/pull/1755)
+* test: create fake TUF test root and create test SETs for verification (https://github.com/sigstore/cosign/pull/1750)
+* Bump github.com/spf13/viper from 1.10.1 to 1.11.0 (https://github.com/sigstore/cosign/pull/1751)
+* Bump mikefarah/yq from 4.24.2 to 4.24.4 (https://github.com/sigstore/cosign/pull/1746)
+* Bump github.com/xanzy/go-gitlab from 0.62.0 to 0.63.0 (https://github.com/sigstore/cosign/pull/1745)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Billy Lynch (@wlynch)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Denny (@DennyHoang)
+* Hayden Blauzvern (@haydentherapper)
+* Hector Fernandez (@hectorj2f)
+* Matt Moore (@mattmoor)
+* Ville Aikas (@vaikas)
+* Vladimir Nachev (@vpnachev)
+* Youssef Bel Mekki (@ybelMekk)
+* Zack Newman (@znewman01)
+
+# v1.7.2
+
+## Bug Fixes
+
+* Make public all types required to use ValidatePolicy (https://github.com/sigstore/cosign/pull/1727)
+* fix: add permissions to patch events (https://github.com/sigstore/cosign/pull/1722)
+* Fix publicKey unmarshal (https://github.com/sigstore/cosign/pull/1719)
+* Update release job (https://github.com/sigstore/cosign/pull/1720)
+* Makefile: fix directory not found error (https://github.com/sigstore/cosign/pull/1718)
+
+## Others
+
+* Remove newline from download sbom output (https://github.com/sigstore/cosign/pull/1732)
+* Bump github.com/hashicorp/go-uuid from 1.0.2 to 1.0.3 (https://github.com/sigstore/cosign/pull/1724)
+* Add unit tests for IntotoAttestation verifier. (https://github.com/sigstore/cosign/pull/1728)
+* Bump github/codeql-action from 2.1.7 to 2.1.8 (https://github.com/sigstore/cosign/pull/1725)
+* Bump cloud.google.com/go/storage from 1.21.0 to 1.22.0 (https://github.com/sigstore/cosign/pull/1721)
+* Bump sigstore/cosign-installer from 2.1.0 to 2.2.0 (https://github.com/sigstore/cosign/pull/1723)
+* Bump github.com/xanzy/go-gitlab from 0.61.0 to 0.62.0 (https://github.com/sigstore/cosign/pull/1711)
+* Bump google-github-actions/auth from 0.6.0 to 0.7.0 (https://github.com/sigstore/cosign/pull/1712)
+* Bump github/codeql-action from 2.1.6 to 2.1.7 (https://github.com/sigstore/cosign/pull/1713)
+* Bump codecov/codecov-action from 2.1.0 to 3 (https://github.com/sigstore/cosign/pull/1714)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior (@cpanato)
+* Denny (@DennyHoang)
+* Hector Fernandez (@hectorj2f)
+* Josh Dolitsky (@jdolitsky)
+* Rob Best (@ribbybibby)
+* Ville Aikas (@vaikas)
+
+# v1.7.1
+
+## Bug Fixes
+
+* commenting out the copy from gcr to ghcr due issues on github side (https://github.com/sigstore/cosign/pull/1715)
+
+# v1.7.0
+
+## Enhancements
+
+* sign: set the oidc redirect uri (https://github.com/sigstore/cosign/pull/1675)
+* Use ValidatePubKey from sigstore/sigstore (https://github.com/sigstore/cosign/pull/1676)
+* Remove the hardcoded sigstore audience (https://github.com/sigstore/cosign/pull/1698)
+* verify: remove extra calls to rekor for verify and verify-blob (https://github.com/sigstore/cosign/pull/1694)
+* add leaf hash verification (https://github.com/sigstore/cosign/pull/1688)
+* cosign clean: Don't log failure if the registry responds with 404 (https://github.com/sigstore/cosign/pull/1687)
+* Update error message for verify/verify attestation (https://github.com/sigstore/cosign/pull/1686)
+* change file_name_template to PackageName (https://github.com/sigstore/cosign/pull/1683)
+* Make `cosign copy` copy metadata attached to child images. (https://github.com/sigstore/cosign/pull/1682)
+* Add support for cert and cert chain flags with PKCS11 tokens (https://github.com/sigstore/cosign/pull/1671)
+* Find all valid entries in verify-blob (https://github.com/sigstore/cosign/pull/1673)
+* Refactor based on discussions in #1650 (https://github.com/sigstore/cosign/pull/1674)
+* feat: add ability to override registry keychain (https://github.com/sigstore/cosign/pull/1666)
+* Add specific suffixes mediaTypes to sboms (https://github.com/sigstore/cosign/pull/1663)
+* Add certificate chain flag for signing (https://github.com/sigstore/cosign/pull/1656)
+* First batch of followups to #1650 (https://github.com/sigstore/cosign/pull/1664)
+* Add support for certificate chain to verify certificate (https://github.com/sigstore/cosign/pull/1659)
+* Use syscall.Stdin for input handle. Fixes #1153 (https://github.com/sigstore/cosign/pull/1657)
+* Shorten example OAuth URL (https://github.com/sigstore/cosign/pull/1661)
+* Prompt user before running `cosign clean` (https://github.com/sigstore/cosign/pull/1649)
+* Add support for intermediate certificates when verifiying (https://github.com/sigstore/cosign/pull/1631)
+* feat: tree command utility (https://github.com/sigstore/cosign/pull/1603)
+* Validate authority keys (https://github.com/sigstore/cosign/pull/1623)
+* improve cosigned validation error messages (https://github.com/sigstore/cosign/pull/1618)
+* Init entity from ociremote when signing a digest ref (https://github.com/sigstore/cosign/pull/1616)
+* Add two env variables. One for using Rekor public key from OOB and (https://github.com/sigstore/cosign/pull/1610)
+* Ensure entry is removed from CM on secret error. (https://github.com/sigstore/cosign/pull/1605)
+* Validate a public key in a secret is valid. (https://github.com/sigstore/cosign/pull/1602)
+* Add public key validation (https://github.com/sigstore/cosign/pull/1598)
+* Add ability to inline secrets from SecretRef to configmap. (https://github.com/sigstore/cosign/pull/1595)
+* 1417 policy validations (https://github.com/sigstore/cosign/pull/1548)
+* Support deletion of ClusterImagePolicy (https://github.com/sigstore/cosign/pull/1580)
+* Start of the necessary pieces to get #1418 and #1419 implemented (https://github.com/sigstore/cosign/pull/1562)
+
+## Bug Fixes
+
+* Fix handling of policy in verify-attestation (https://github.com/sigstore/cosign/pull/1672)
+* Fix relative paths in Gitub OIDC blob test (https://github.com/sigstore/cosign/pull/1677)
+* fix build date format for version command (https://github.com/sigstore/cosign/pull/1644)
+* Fix 1608, 1613 (https://github.com/sigstore/cosign/pull/1617)
+* Fix copy/paste mistake in repo name. (https://github.com/sigstore/cosign/pull/1600)
+* Fix #1592 move authorities as siblings of images. (https://github.com/sigstore/cosign/pull/1593)
+* Fix piping 'cosign verify' using fulcio/rekor (https://github.com/sigstore/cosign/pull/1590)
+* Fix #1583 #1582. Disallow regex now until implemented. (https://github.com/sigstore/cosign/pull/1584)
+* Don't lowercase input image refs, just fail (https://github.com/sigstore/cosign/pull/1586)
+
+## Documention
+
+* Document Elastic container registry support (https://github.com/sigstore/cosign/pull/1641)
+* FUN.md broke when RecordObj changed to HashedRecordObj (https://github.com/sigstore/cosign/pull/1633)
+* Add example using AWS Key Management Service (KMS) (https://github.com/sigstore/cosign/pull/1564)
+
+
+## Others
+
+* Use the github actions from sigstore/scaffolding. (https://github.com/sigstore/cosign/pull/1699)
+* Bump google.golang.org/api from 0.73.0 to 0.74.0 (https://github.com/sigstore/cosign/pull/1695)
+* Bump github/codeql-action from 1.1.5 to 2.1.6 (https://github.com/sigstore/cosign/pull/1690)
+* Bump actions/cache from 3.0.0 to 3.0.1 (https://github.com/sigstore/cosign/pull/1689)
+* Add e2e test for attest / verify-attestation (https://github.com/sigstore/cosign/pull/1685)
+* Use cosign @ HEAD for Github OIDC sign blob test (https://github.com/sigstore/cosign/pull/1678)
+* Bump mikefarah/yq from 4.23.1 to 4.24.2 (https://github.com/sigstore/cosign/pull/1670)
+* remove replace directive (https://github.com/sigstore/cosign/pull/1669)
+* update font when output the cosign version (https://github.com/sigstore/cosign/pull/1668)
+* Use ClusterImagePolicy with Keyless + e2e tests for CIP with kind (https://github.com/sigstore/cosign/pull/1650)
+* Bump google.golang.org/protobuf from 1.27.1 to 1.28.0 (https://github.com/sigstore/cosign/pull/1646)
+* Bump mikefarah/yq from 4.22.1 to 4.23.1 (https://github.com/sigstore/cosign/pull/1639)
+* Bump actions/cache from 2.1.7 to 3 (https://github.com/sigstore/cosign/pull/1640)
+* Bump github.com/go-openapi/runtime from 0.23.2 to 0.23.3 (https://github.com/sigstore/cosign/pull/1638)
+* Add extra label and change the latest tag to unstable for non tagged releases (https://github.com/sigstore/cosign/pull/1637)
+* push latest tag when building a release (https://github.com/sigstore/cosign/pull/1636)
+* update crane to v0.8.0 release (https://github.com/sigstore/cosign/pull/1635)
+* Bump github.com/xanzy/go-gitlab from 0.59.0 to 0.60.0 (https://github.com/sigstore/cosign/pull/1634)
+* Included OpenSSF Best Practices Badge (https://github.com/sigstore/cosign/pull/1628)
+* Use latest knative/pkg's configmap informer (https://github.com/sigstore/cosign/pull/1615)
+* Bump github.com/stretchr/testify from 1.7.0 to 1.7.1 (https://github.com/sigstore/cosign/pull/1621)
+* Bump google.golang.org/api from 0.72.0 to 0.73.0 (https://github.com/sigstore/cosign/pull/1619)
+* Bump github/codeql-action from 1.1.4 to 1.1.5 (https://github.com/sigstore/cosign/pull/1622)
+* Bump ecr-login to pick up WithLogger rename (https://github.com/sigstore/cosign/pull/1624)
+* Bump to knative pkg 1.3 (https://github.com/sigstore/cosign/pull/1614)
+* Bump google.golang.org/api from 0.71.0 to 0.72.0 (https://github.com/sigstore/cosign/pull/1612)
+* Use reusuable release workflow in sigstore/sigstore (https://github.com/sigstore/cosign/pull/1599)
+* Bump github.com/spiffe/go-spiffe/v2 from 2.0.0-beta.12 to 2.0.0 (https://github.com/sigstore/cosign/pull/1597)
+* Bump mikefarah/yq from 4.21.1 to 4.22.1 (https://github.com/sigstore/cosign/pull/1589)
+* Bump google.golang.org/grpc from 1.44.0 to 1.45.0 (https://github.com/sigstore/cosign/pull/1587)
+* Bump github.com/spf13/cobra from 1.3.0 to 1.4.0 (https://github.com/sigstore/cosign/pull/1588)
+* Bump github.com/xanzy/go-gitlab from 0.58.0 to 0.59.0 (https://github.com/sigstore/cosign/pull/1579)
+* Bump google-github-actions/setup-gcloud from 0.5.1 to 0.6.0 (https://github.com/sigstore/cosign/pull/1578)
+* Bump github.com/hashicorp/go-hclog from 1.1.0 to 1.2.0 (https://github.com/sigstore/cosign/pull/1576)
+* Bump google.golang.org/api from 0.70.0 to 0.71.0 (https://github.com/sigstore/cosign/pull/1577)
+* Bump github/codeql-action from 1.1.3 to 1.1.4 (https://github.com/sigstore/cosign/pull/1565)
+* add definition for artifact hub to verify the ownership (https://github.com/sigstore/cosign/pull/1563)
+* Bump sigstore/cosign-installer from 2.0.1 to 2.1.0 (https://github.com/sigstore/cosign/pull/1561)
+* Bump github.com/go-openapi/runtime from 0.23.1 to 0.23.2 (https://github.com/sigstore/cosign/pull/1559)
+* Bump github.com/xanzy/go-gitlab from 0.57.0 to 0.58.0 (https://github.com/sigstore/cosign/pull/1560)
+* Update hashicorp/parseutil to v0.1.3. (https://github.com/sigstore/cosign/pull/1557)
+* Mirror signed release images from GCR to GHCR as part of release with Cloud Build. (https://github.com/sigstore/cosign/pull/1547)
+* Bump github.com/xanzy/go-gitlab from 0.56.0 to 0.57.0 (https://github.com/sigstore/cosign/pull/1552)
+* Bump actions/upload-artifact from 2.3.1 to 3 (https://github.com/sigstore/cosign/pull/1553)
+* pkcs11: fix build instructions (https://github.com/sigstore/cosign/pull/1550)
+* Update images for release job (https://github.com/sigstore/cosign/pull/1551)
+
+## Contributors
+
+* Adam A.G. Shamblin (@coyote240)
+* Adolfo García Veytia (@puerco)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Davi Garcia (@davivcgarcia)
+* Hayden Blauzvern (@haydentherapper)
+* Hector Fernandez (@hectorj2f)
+* James Strong (@strongjz)
+* Jason Hall (@imjasonh)
+* Kavitha (@kkavitha)
+* Kenny Leung (@k4leung4)
+* Luiz Carvalho (@lcarva)
+* Marco Franssen (@marcofranssen)
+* Mark Percival (@mdp)
+* Matt Moore (@mattmoor)
+* Maxime Gréau (@mgreau)
+* Mitch Thomas (@MitchellJThomas)
+* Naveen Srinivasan (@naveensrinivasan)
+* Nghia Tran (@tcnghia)
+* Priya Wadhwa (@priyawadhwa)
+* Radoslav Gerganov (@rgerganov)
+* Thomas Strömberg (@tstromberg)
+* Ville Aikas (@vaikas)
+* noamichael (@noamichael)
+
+# v1.6.0
+
+## Security Fixes
+
+* CVE-2022-23649 - Make sure signature in Rekor bundle matches signature being verified
+
+## Enhancements
+
+* Change Fulcio URL default to be fulcio.sigstore.dev (https://github.com/sigstore/cosign/pull/1529)
+* Add CertExtensions func to extract all extensions (https://github.com/sigstore/cosign/pull/1515)
+* Add a dummy.go file to allow vendoring config (https://github.com/sigstore/cosign/pull/1520)
+* Add skeleton reconciler for cosigned API CRD. (https://github.com/sigstore/cosign/pull/1513)
+* use v6 api calls (https://github.com/sigstore/cosign/pull/1511)
+* This sets up the scaffolding for the `cosigned` CRD types. (https://github.com/sigstore/cosign/pull/1504)
+* add correct layer media type to attach attestation (https://github.com/sigstore/cosign/pull/1503)
+* Pick up some of the shared workflows (https://github.com/sigstore/cosign/pull/1490)
+* feat: support other types in copy cmd (https://github.com/sigstore/cosign/pull/1493)
+* Pick up a change to quiet ECR-login logging. (https://github.com/sigstore/cosign/pull/1491)
+* Merge pull request from GHSA-ccxc-vr6p-4858
+* fix(sign): refactor unsupported provider log (https://github.com/sigstore/cosign/pull/1464)
+* Print message when verifying with old TUF targets (https://github.com/sigstore/cosign/pull/1468)
+* convert release cosigned to also generate yaml artifact. (https://github.com/sigstore/cosign/pull/1453)
+* Streamline `SignBlobCmd` API with `SignCmd` (https://github.com/sigstore/cosign/pull/1454)
+* feat: add -buildid= to ldflags (https://github.com/sigstore/cosign/pull/1451)
+* Fetch verification targets by TUF custom metadata (https://github.com/sigstore/cosign/pull/1423)
+* feat: fig autocomplete feature (https://github.com/sigstore/cosign/pull/1360)
+* Improve log lines to match with implementation (https://github.com/sigstore/cosign/pull/1432)
+* use the upstream kubernetes version lib and ldflags (https://github.com/sigstore/cosign/pull/1413)
+* feat: enhance clean cmd capability (https://github.com/sigstore/cosign/pull/1430)
+* Remove TUF timestamp from OCI signature bundle (https://github.com/sigstore/cosign/pull/1428)
+* Allow `PassFunc` to be `nil` (https://github.com/sigstore/cosign/pull/1426)
+* Add ability to override the Spiffe socket via environmental variable: (https://github.com/sigstore/cosign/pull/1421)
+* Improve error message when image is not found in registry (https://github.com/sigstore/cosign/pull/1410)
+* add root status output (https://github.com/sigstore/cosign/pull/1404)
+* feat: login command (https://github.com/sigstore/cosign/pull/1398)
+* Minor refactor to verify SCT and Rekor entry with multiple keys (https://github.com/sigstore/cosign/pull/1396)
+* Add Cosign logo to README (https://github.com/sigstore/cosign/pull/1395)
+* Add `--timeout` support to `sign` command (https://github.com/sigstore/cosign/pull/1379)
+
+## Bug Fixes
+
+* bug fix: import ed25519 keys and fix error handling (https://github.com/sigstore/cosign/pull/1518)
+* Fix wording on attach attestation help (https://github.com/sigstore/cosign/pull/1480)
+* fix(sign): kms unspported message (https://github.com/sigstore/cosign/pull/1475)
+* Fix incorrect error check when verifying SCT (https://github.com/sigstore/cosign/pull/1422)
+* make imageRef lowercase before parsing (https://github.com/sigstore/cosign/pull/1409)
+* Add a new line after password input (https://github.com/sigstore/cosign/pull/1407)
+* Fix comparison in replace option for attestation (https://github.com/sigstore/cosign/pull/1366)
+
+## Documention
+
+* Quay OCI Support in README (https://github.com/sigstore/cosign/pull/1539)
+* feat: nominate Dentrax as codeowner (https://github.com/sigstore/cosign/pull/1492)
+* add initial changelog for 1.5.2 (https://github.com/sigstore/cosign/pull/1483)
+* fix tkn link in readme (https://github.com/sigstore/cosign/pull/1459)
+* Add FEATURES.md and DEPRECATIONS.md (https://github.com/sigstore/cosign/pull/1429)
+* Update the cosign keyless documentation to point to the GA release. (https://github.com/sigstore/cosign/pull/1427)
+* Fix link for SECURITY.md (https://github.com/sigstore/cosign/pull/1399)
+
+## Others
+
+* Consistent parenthesis use in Makefile (https://github.com/sigstore/cosign/pull/1541)
+* Bump github.com/xanzy/go-gitlab from 0.55.1 to 0.56.0 (https://github.com/sigstore/cosign/pull/1538)
+* add rpm,deb and apks for cosign packages (https://github.com/sigstore/cosign/pull/1537)
+* update github.com/hashicorp/vault/sdk, codegen and go module to 1.17 (https://github.com/sigstore/cosign/pull/1536)
+* images: remove --bare flags that conflict with --base-import-paths (https://github.com/sigstore/cosign/pull/1533)
+* Bump actions/checkout from 2 to 3 (https://github.com/sigstore/cosign/pull/1531)
+* Add codecov as github action, set permissions to read content only (https://github.com/sigstore/cosign/pull/1530)
+* Bump github.com/spiffe/go-spiffe/v2 from 2.0.0-beta.11 to 2.0.0-beta.12 (https://github.com/sigstore/cosign/pull/1528)
+* Bump actions/setup-go from 2 to 3 (https://github.com/sigstore/cosign/pull/1527)
+* Bump golangci/golangci-lint-action from 3.0.0 to 3.1.0 (https://github.com/sigstore/cosign/pull/1526)
+* Bump mikefarah/yq from 4.20.2 to 4.21.1 (https://github.com/sigstore/cosign/pull/1525)
+* Bump github.com/secure-systems-lab/go-securesystemslib (https://github.com/sigstore/cosign/pull/1524)
+* chore(ci): add artifact hub support (https://github.com/sigstore/cosign/pull/1522)
+* optimize codeql speed by using caching and tracing (https://github.com/sigstore/cosign/pull/1519)
+* Bump golangci/golangci-lint-action from 2.5.2 to 3 (https://github.com/sigstore/cosign/pull/1516)
+* Bump github/codeql-action from 1.1.2 to 1.1.3 (https://github.com/sigstore/cosign/pull/1512)
+* Bump mikefarah/yq from 4.16.2 to 4.20.2 (https://github.com/sigstore/cosign/pull/1510)
+* Bump github.com/go-openapi/runtime from 0.23.0 to 0.23.1 (https://github.com/sigstore/cosign/pull/1507)
+* Bump go.uber.org/zap from 1.20.0 to 1.21.0 (https://github.com/sigstore/cosign/pull/1509)
+* Bump actions/setup-go from 2.1.5 to 2.2.0 (https://github.com/sigstore/cosign/pull/1495)
+* Bump google-github-actions/auth from 0.4.4 to 0.6.0 (https://github.com/sigstore/cosign/pull/1501)
+* Bump ossf/scorecard-action (https://github.com/sigstore/cosign/pull/1502)
+* Bump google.golang.org/api from 0.69.0 to 0.70.0 (https://github.com/sigstore/cosign/pull/1500)
+* Bump sigstore/cosign-installer from 1.4.1 to 2.0.1 (https://github.com/sigstore/cosign/pull/1496)
+* Bump actions/github-script from 4.1.1 to 6 (https://github.com/sigstore/cosign/pull/1497)
+* Update github/codeql-action requirement to d39d5d5c9707b926d517b1b292905ef4c03aa777 (https://github.com/sigstore/cosign/pull/1498)
+* Bump google-github-actions/setup-gcloud from 0.3.0 to 0.5.1 (https://github.com/sigstore/cosign/pull/1499)
+* chore(makefile): use kocache, convert publish to build (https://github.com/sigstore/cosign/pull/1488)
+* Bump cloud.google.com/go/storage from 1.20.0 to 1.21.0 (https://github.com/sigstore/cosign/pull/1481)
+* update changelog (https://github.com/sigstore/cosign/pull/1485)
+* fix lint (https://github.com/sigstore/cosign/pull/1484)
+* update go-tuf and simplify TUF client code (https://github.com/sigstore/cosign/pull/1455)
+* Bump sigstore/sigstore to pick up the kms change and the monkey-patch work. (https://github.com/sigstore/cosign/pull/1479)
+* refactor release cloudbuild job (https://github.com/sigstore/cosign/pull/1476)
+* increase timeout for goreleaser snapshot (https://github.com/sigstore/cosign/pull/1473)
+* Double goreleaser timeout (https://github.com/sigstore/cosign/pull/1472)
+* Bump google.golang.org/api from 0.68.0 to 0.69.0 (https://github.com/sigstore/cosign/pull/1469)
+* tests: `/bin/bash` -> `/usr/bin/env bash` (https://github.com/sigstore/cosign/pull/1470)
+* Bump the gitlab library and add a nil opt for the API change. (https://github.com/sigstore/cosign/pull/1466)
+* Bump webhook timeout. (https://github.com/sigstore/cosign/pull/1465)
+* update cross-build to use go 1.17.7 (https://github.com/sigstore/cosign/pull/1446)
+* Bump go-containerregistry, pick up new features (https://github.com/sigstore/cosign/pull/1442)
+* update cross-build image which adds goimports (https://github.com/sigstore/cosign/pull/1435)
+* Bump google.golang.org/api from 0.67.0 to 0.68.0 (https://github.com/sigstore/cosign/pull/1434)
+* Skip the ReadWrite test that flakes on Windows. (https://github.com/sigstore/cosign/pull/1415)
+* Bump github.com/go-openapi/strfmt from 0.21.1 to 0.21.2 (https://github.com/sigstore/cosign/pull/1411)
+* Bump github.com/go-openapi/runtime from 0.22.0 to 0.23.0 (https://github.com/sigstore/cosign/pull/1412)
+* Bump cloud.google.com/go/storage from 1.19.0 to 1.20.0 (https://github.com/sigstore/cosign/pull/1403)
+* Bump google.golang.org/api from 0.66.0 to 0.67.0 (https://github.com/sigstore/cosign/pull/1402)
+* Bump cuelang.org/go from 0.4.1 to 0.4.2 (https://github.com/sigstore/cosign/pull/1401)
+* update cosign and cross-build image for the release job (https://github.com/sigstore/cosign/pull/1400)
+* Bump github.com/xanzy/go-gitlab from 0.54.3 to 0.54.4 (https://github.com/sigstore/cosign/pull/1391)
+* Bump github.com/go-openapi/swag from 0.20.0 to 0.21.1 (https://github.com/sigstore/cosign/pull/1386)
+* Fix double `time` import in e2e tests (https://github.com/sigstore/cosign/pull/1388)
+* Bump github.com/go-openapi/swag from 0.19.15 to 0.20.0 (https://github.com/sigstore/cosign/pull/1383)
+* Bump github.com/go-openapi/runtime from 0.21.1 to 0.22.0 (https://github.com/sigstore/cosign/pull/1382)
+* add changelog for 1.5.1 release (https://github.com/sigstore/cosign/pull/1376)
+
+## Contributors
+
+* Andrew Block (@sabre1041)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Blake Burkhart (@bburky)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Christian Kotzbauer (@ckotzbauer)
+* Christopher Angelo Phillips (@spiffcs)
+* Dan Lorenc (@dlorenc)
+* Dan Luhring (@luhring)
+* Furkan Türkal (@Dentrax)
+* Hayden Blauzvern (@haydentherapper)
+* Jason Hall (@imjasonh)
+* Josh Dolitsky (@jdolitsky)
+* Kenny Leung (@k4leung4)
+* Matt Moore (@mattmoor)
+* Marco Franssen (@marcofranssen)
+* Nathan Smith (@nsmith5)
+* Priya Wadhwa (@priyawadhwa)
+* Sascha Grunert (@saschagrunert)
+* Scott Nichols (@n3wscott)
+* Teppei Fukuda (@knqyf263)
+* Ville Aikas (@vaikas)
+* Yongxuan Zhang (@Yongxuanzhang)
+* Zack Newman (@znewman01)
+
+# v1.5.2
+
+## Security Fixes
+
+* CVE-2022-23649 - Make sure signature in Rekor bundle matches signature being verified
+
+## Others
+
+* refactor release cloudbuild job (https://github.com/sigstore/cosign/pull/1476)
+* increase timeout for goreleaser snapshot (https://github.com/sigstore/cosign/pull/1473)
+* Double goreleaser timeout (https://github.com/sigstore/cosign/pull/1472)
+* Bump webhook timeout. (https://github.com/sigstore/cosign/pull/1465)
+* convert release cosigned to also generate yaml artifact. (https://github.com/sigstore/cosign/pull/1453)
+* feat: add -buildid= to ldflags (https://github.com/sigstore/cosign/pull/1451)
+* update cross-build to use go 1.17.7 (https://github.com/sigstore/cosign/pull/1446)
+
+## Contributors
+
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Kenny Leung (@k4leung4)
+* Matt Moore (@mattmoor)
+* Nathan Smith (@nsmith5)
+* Priya Wadhwa (@priyawadhwa)
+* Zack Newman (@znewman01)
+
+# v1.5.1
+
+## Bug Fixes
+
+* add check to make sure the go modules are in sync (https://github.com/sigstore/cosign/pull/1369)
+* Update verify-blob to support DSSEs (https://github.com/sigstore/cosign/pull/1355)
+
+## Documention
+
+* docs: verify-attestation cue and rego policy doc (https://github.com/sigstore/cosign/pull/1362)
+* README: fix link to race conditions (https://github.com/sigstore/cosign/pull/1367)
+
+## Others
+
+* Bump sigstore/sigstore to pick up oidc login for vault. (https://github.com/sigstore/cosign/pull/1377)
+* Bump google.golang.org/api from 0.65.0 to 0.66.0 (https://github.com/sigstore/cosign/pull/1371)
+* expose dafaults fulcio, rekor, oidc issuer urls (https://github.com/sigstore/cosign/pull/1368)
+* Bump cloud.google.com/go/storage from 1.18.2 to 1.19.0 (https://github.com/sigstore/cosign/pull/1365)
+* organize, update select deps (https://github.com/sigstore/cosign/pull/1358)
+* Bump go-containerregistry to pick up ACR keychain fix (https://github.com/sigstore/cosign/pull/1357)
+* Bump github.com/go-openapi/runtime from 0.21.0 to 0.21.1 (https://github.com/sigstore/cosign/pull/1352)
+* sync go modules (https://github.com/sigstore/cosign/pull/1353)
+
+## Contributors
+
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Jake Sanders (@dekkagaijin)
+* Jason Hall (@imjasonh)
+* Mark Lodato (@MarkLodato)
+* Rémy Greinhofer (@rgreinho)
+
+# v1.5.0
+
+## Highlights
+
+* enable sbom generation when releasing (https://github.com/sigstore/cosign/pull/1261)
+* feat: log error to stderr (https://github.com/sigstore/cosign/pull/1260)
+* feat: support attach attestation (https://github.com/sigstore/cosign/pull/1253)
+* feat: resolve --cert from URL (https://github.com/sigstore/cosign/pull/1245)
+* feat: generate/upload sbom for cosign projects (https://github.com/sigstore/cosign/pull/1237)
+* feat: vuln attest support (https://github.com/sigstore/cosign/pull/1168)
+* feat: add ambient credential detection with spiffe/spire (https://github.com/sigstore/cosign/pull/1220)
+* feat: generate/upload sbom for cosign projects (https://github.com/sigstore/cosign/pull/1236)
+* feat: implement cosign download attestation (https://github.com/sigstore/cosign/pull/1216)
+
+## Enhancements
+
+* Don't use k8schain, statically link cloud cred helpers in cosign (https://github.com/sigstore/cosign/pull/1279)
+* Export function to verify individual signature (https://github.com/sigstore/cosign/pull/1334)
+* Add suffix with digest to signature file output for recursive signing (https://github.com/sigstore/cosign/pull/1267)
+* Take OIDC client secret into account (https://github.com/sigstore/cosign/pull/1310)
+* Add --bundle flag to sign-blob and verify-blob (https://github.com/sigstore/cosign/pull/1306)
+* Add flag to verify OIDC issuer in certificate (https://github.com/sigstore/cosign/pull/1308)
+* add OSSF scorecard action (https://github.com/sigstore/cosign/pull/1318)
+* Add TUF timestamp to attestation bundle (https://github.com/sigstore/cosign/pull/1316)
+* Provide certificate flags to all verify commands (https://github.com/sigstore/cosign/pull/1305)
+* Bundle TUF timestamp with signature on signing (https://github.com/sigstore/cosign/pull/1294)
+* Add support for importing PKCShttps://github.com/sigstore/cosign/pull/8 private keys, and add validation (https://github.com/sigstore/cosign/pull/1300)
+* add error message (https://github.com/sigstore/cosign/pull/1296)
+* Move bundle out of `oci` and into `bundle` package (https://github.com/sigstore/cosign/pull/1295)
+* Reorganize verify-blob code and add a unit test (https://github.com/sigstore/cosign/pull/1286)
+* One-to-one mapping of invocation to scan result (https://github.com/sigstore/cosign/pull/1268)
+* refactor common utilities (https://github.com/sigstore/cosign/pull/1266)
+* Importing RSA and EC keypairs (https://github.com/sigstore/cosign/pull/1050)
+* Refactor the tuf client code. (https://github.com/sigstore/cosign/pull/1252)
+* Moved certificate output before checking for upload during signing (https://github.com/sigstore/cosign/pull/1255)
+* Remove remaining ioutil usage (https://github.com/sigstore/cosign/pull/1256)
+* Update the embedded TUF metadata. (https://github.com/sigstore/cosign/pull/1251)
+* Add support for other public key types for SCT verification, allow override for testing. (https://github.com/sigstore/cosign/pull/1241)
+* Log the proper remote repo for the signatures on verify (https://github.com/sigstore/cosign/pull/1243)
+* Do not require multiple Fulcio certs in the TUF root (https://github.com/sigstore/cosign/pull/1230)
+* clean up references to 'keyless' in `ephemeral.Signer` (https://github.com/sigstore/cosign/pull/1225)
+* create `DSSEAttestor` interface, `payload.DSSEAttestor` implementation (https://github.com/sigstore/cosign/pull/1221)
+* use `mutate.Signature` in the new `Signer`s (https://github.com/sigstore/cosign/pull/1213)
+* create `mutate` functions for `oci.Signature` (https://github.com/sigstore/cosign/pull/1199)
+* add a writeable `$HOME` for the `nonroot` cosigned user (https://github.com/sigstore/cosign/pull/1209)
+* signing attestation should private key (https://github.com/sigstore/cosign/pull/1200)
+* Remove the "upload" flag for "cosign initialize" (https://github.com/sigstore/cosign/pull/1201)
+* create KeylessSigner (https://github.com/sigstore/cosign/pull/1189)
+
+## Bug Fixes
+
+* fix: cosign verify for vault (https://github.com/sigstore/cosign/pull/1328)
+* fix missing goimports (https://github.com/sigstore/cosign/pull/1327)
+* Fix TestSignBlobBundle (https://github.com/sigstore/cosign/pull/1320)
+* Fix a couple bugs in cert verification for blobs (https://github.com/sigstore/cosign/pull/1287)
+* Fix a few bugs in cosign initialize (https://github.com/sigstore/cosign/pull/1280)
+* Fix the unit tests with expired TUF metadata. (https://github.com/sigstore/cosign/pull/1270)
+* Fix output-file flag. (https://github.com/sigstore/cosign/pull/1264)
+* fix: typo in the error message (https://github.com/sigstore/cosign/pull/1250)
+* Fix semantic bugs in attestation verifification. (https://github.com/sigstore/cosign/pull/1249)
+* Fix semantic bug in DSSE specification. (https://github.com/sigstore/cosign/pull/1248)
+
+## Others
+
+* Bump github.com/google/go-cmp from 0.5.6 to 0.5.7 (https://github.com/sigstore/cosign/pull/1343)
+* Bump recommended Go development version in README (https://github.com/sigstore/cosign/pull/1340)
+* Bump the snapshot and timestamp roles metadata from root signing. (https://github.com/sigstore/cosign/pull/1339)
+* Bump github.com/spiffe/go-spiffe/v2 from 2.0.0-beta.10 to 2.0.0-beta.11 (https://github.com/sigstore/cosign/pull/1336)
+* update go-github to v42 release (https://github.com/sigstore/cosign/pull/1335)
+* install latest release for ko instead of head of main branch (https://github.com/sigstore/cosign/pull/1333)
+* remove wrong settings in the gco auth for gh actions (https://github.com/sigstore/cosign/pull/1332)
+* update gcp setup for the GH action (https://github.com/sigstore/cosign/pull/1330)
+* update some dependencies (https://github.com/sigstore/cosign/pull/1326)
+* Verify checksum of downloaded utilities during CI (https://github.com/sigstore/cosign/pull/1322)
+* pin github actions by digest (https://github.com/sigstore/cosign/pull/1319)
+* Bump google.golang.org/api from 0.64.0 to 0.65.0 (https://github.com/sigstore/cosign/pull/1303)
+* Bump cuelang.org/go from 0.4.0 to 0.4.1 (https://github.com/sigstore/cosign/pull/1302)
+* Bump github.com/xanzy/go-gitlab from 0.54.2 to 0.54.3 (https://github.com/sigstore/cosign/pull/1292)
+* update import documentation (https://github.com/sigstore/cosign/pull/1290)
+* update release image to use go 1.17.6 (https://github.com/sigstore/cosign/pull/1284)
+* Bump google.golang.org/api. (https://github.com/sigstore/cosign/pull/1283)
+* Bump opa and go-gitlab. (https://github.com/sigstore/cosign/pull/1281)
+* Update SBOM spec to indicate compat for syft (https://github.com/sigstore/cosign/pull/1278)
+* Bump miekg/pkcs11 (https://github.com/sigstore/cosign/pull/1275)
+* Update signature spec with timestamp annotation (https://github.com/sigstore/cosign/pull/1274)
+* Pick up latest knative.dev/pkg, and k8s 0.22 libs (https://github.com/sigstore/cosign/pull/1269)
+* Bump sigstore/sigstore. (https://github.com/sigstore/cosign/pull/1247)
+* Spelling (https://github.com/sigstore/cosign/pull/1246)
+* Use ${{github.repository}} placeholder in OIDC GitHub workflow (https://github.com/sigstore/cosign/pull/1244)
+* update codeowners list with missing codeowners (https://github.com/sigstore/cosign/pull/1238)
+* update build images for release and bump cosign in the release job (https://github.com/sigstore/cosign/pull/1234)
+* update deps (https://github.com/sigstore/cosign/pull/1222)
+* nit: add comments to `Signer` interface (https://github.com/sigstore/cosign/pull/1228)
+* update google.golang.org/api from 0.62.0 to 0.63.0 (https://github.com/sigstore/cosign/pull/1214)
+* update snapshot and timestamp (https://github.com/sigstore/cosign/pull/1211)
+* Bump github.com/spf13/viper from 1.9.0 to 1.10.0 (https://github.com/sigstore/cosign/pull/1198)
+* Bump the DSSE library and handle manual changes in the API. (https://github.com/sigstore/cosign/pull/1191)
+* nit: drop every section title down a level (https://github.com/sigstore/cosign/pull/1188)
+
+## Contributors
+
+* Andrew Block (@sabre1041)
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Bob Callaway (@bobcallaway)
+* Carlos Alexandro Becker (@caarlos0)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Hayden Blauzvern (@haydentherapper)
+* Hector Fernandez (@hectorj2f)
+* Itxaka (@Itxaka)
+* Ivan Wallis (@venafi-iw)
+* Jake Sanders (@dekkagaijin)
+* Jason Hall (@imjasonh)
+* Josh Dolitsky (@jdolitsky)
+* Josh Soref (@jsoref)
+* Matt Moore (@mattmoor)
+* Morten Linderud (@Foxboron)
+* Priya Wadhwa (@priyawadhwa)
+* Radoslav Gerganov (@rgerganov)
+* Rob Best (@ribbybibby)
+* Sambhav Kothari (@samj1912)
+* Ville Aikas (@vaikas)
+* Zack Newman (@znewman01)
+
 # v1.4.1
 
 ## Highlights
@@ -415,7 +1534,7 @@ See [#254](https://github.com/sigstore/cosign/issues/254) for more info.
 * Dependabot!
 * Mark Bestavros
 * Jake Sanders
-* Carlos Tadeu Panato Junior 
+* Carlos Tadeu Panato Junior
 
 # v0.2.0
 

@@ -24,6 +24,7 @@ type UploadBlobOptions struct {
 	ContentType string
 	Files       FilesOptions
 	Registry    RegistryOptions
+	Annotations map[string]string
 }
 
 var _ Interface = (*UploadBlobOptions)(nil)
@@ -35,6 +36,8 @@ func (o *UploadBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.ContentType, "ct", "",
 		"content type to set")
+	cmd.Flags().StringToStringVarP(&o.Annotations, "annotation", "a", nil,
+		"annotations to set")
 }
 
 // UploadWASMOptions is the top level wrapper for the `upload wasm` command.
@@ -51,5 +54,6 @@ func (o *UploadWASMOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVarP(&o.File, "file", "f", "",
 		"path to the wasm file to upload")
+	_ = cmd.Flags().SetAnnotation("file", cobra.BashCompFilenameExt, []string{})
 	_ = cmd.MarkFlagRequired("file")
 }

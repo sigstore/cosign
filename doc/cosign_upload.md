@@ -11,14 +11,14 @@ Provides utilities for uploading artifacts to a registry
 ### Options inherited from parent commands
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+      --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign upload blob](cosign_upload_blob.md)	 - Upload one or more blobs to the supplied container image address.
 * [cosign upload wasm](cosign_upload_wasm.md)	 - Upload a wasm module to the supplied container image reference
 

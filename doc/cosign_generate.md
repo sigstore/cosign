@@ -30,7 +30,8 @@ cosign generate [flags]
 ### Options
 
 ```
-      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
   -h, --help                                                                                     help for generate
@@ -40,12 +41,12 @@ cosign generate [flags]
 ### Options inherited from parent commands
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+      --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 

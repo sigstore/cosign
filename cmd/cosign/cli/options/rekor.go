@@ -19,6 +19,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const DefaultRekorURL = "https://rekor.sigstore.dev"
+
 // RekorOptions is the wrapper for Rekor related options.
 type RekorOptions struct {
 	URL string
@@ -28,6 +30,6 @@ var _ Interface = (*RekorOptions)(nil)
 
 // AddFlags implements Interface
 func (o *RekorOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.URL, "rekor-url", "https://rekor.sigstore.dev",
+	cmd.Flags().StringVar(&o.URL, "rekor-url", DefaultRekorURL,
 		"[EXPERIMENTAL] address of rekor STL server")
 }

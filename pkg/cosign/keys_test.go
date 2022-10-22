@@ -315,12 +315,12 @@ func TestImportPrivateKey(t *testing.T) {
 		{
 			fileName: "invalidrsasmallkey.key",
 			pemData:  invalidrsasmallkey,
-			expected: errors.New("error validating rsa key: rsa key size too small, expected >= 2048"),
+			expected: errors.New("error validating rsa key: key too small: 1024"),
 		},
 		{
 			fileName: "invalidrsalargekey.key",
 			pemData:  invalidrsalargekey,
-			expected: errors.New("error validating rsa key: rsa key size too large, expected <= 4096"),
+			expected: errors.New("error validating rsa key: key too large: 5120 > 4096"),
 		},
 		// EC tests
 		{
@@ -375,8 +375,11 @@ func TestImportPrivateKey(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = ImportKeyPair(f, pass("hello"))
+			keyBytes, err := ImportKeyPair(f, pass("hello"))
 			if err == nil || tc.expected == nil {
+				require.Equal(t, tc.expected, err)
+				// Loading the private key should also work.
+				_, err = LoadPrivateKey(keyBytes.PrivateBytes, []byte("hello"))
 				require.Equal(t, tc.expected, err)
 			} else {
 				require.Equal(t, tc.expected.Error(), err.Error())

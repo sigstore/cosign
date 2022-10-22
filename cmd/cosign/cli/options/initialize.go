@@ -16,6 +16,7 @@
 package options
 
 import (
+	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
 )
 
@@ -29,9 +30,10 @@ var _ Interface = (*InitializeOptions)(nil)
 
 // AddFlags implements Interface
 func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.Mirror, "mirror", "sigstore-tuf-root",
+	cmd.Flags().StringVar(&o.Mirror, "mirror", tuf.DefaultRemoteRoot,
 		"GCS bucket to a SigStore TUF repository or HTTP(S) base URL")
 
 	cmd.Flags().StringVar(&o.Root, "root", "",
 		"path to trusted initial root. defaults to embedded root")
+	_ = cmd.Flags().SetAnnotation("root", cobra.BashCompSubdirsInDir, []string{})
 }

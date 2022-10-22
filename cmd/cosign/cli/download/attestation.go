@@ -26,7 +26,7 @@ import (
 )
 
 func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
 	}

@@ -65,6 +65,8 @@ Ej6T/GLK6XJSB28haSPRWB7k
   This OPTIONAL property contains a PEM-encoded, DER-formatted, ASN.1 x509 certificate chain.
   The `certificate` property MUST be present if this property is present.
   This chain MAY be used by implementations to verify the `certificate` property.
+  Clients MUST validate that any certificates in the chain that are self-signed
+  or are expected to be trust anchors with an out-of-band mechanism.
 
   Example `chain`:
 
@@ -115,47 +117,17 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
   }
 }
 ```
+
   The following are REQUIRED properties of the bundle:
-    - The `SignedEntryTimestamp` is a rekor-signed signature over the logIndex, body and integratedTime of the Rekor Log Entry
-    - The `Payload` consists of all fields required to verify the SET:
-      - The `body` is the body of the Rekor Log Entry
-      - The `integratedTime` is the UNIX timestamp the log entry was integrated into the transparency log
-      - The `logIndex` is the index of the log entry in the transparency log
-      - The `logID` is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
+
+  - The `SignedEntryTimestamp` is a rekor-signed signature over the logIndex, body and integratedTime of the Rekor Log Entry
+  - The `Payload` consists of all fields required to verify the SET:
+    - The `body` is the body of the Rekor Log Entry
+    - The `integratedTime` is the UNIX timestamp the log entry was integrated into the transparency log
+    - The `logIndex` is the index of the log entry in the transparency log
+    - The `logID` is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
 
 For instructions on using the `bundle` for verification, see [USAGE.md](../USAGE.md#verify-a-signature-was-added-to-the-transparency-log).
-
-* `timestamp` string
-
-  This OPTIONAL property contains JSON formatted [TUF timestamp metadata](https://theupdateframework.io/metadata/#timestamp-metadata-timestampjson), which is used to find which versioned TUF target should be used to verify a signature.
-  Example `timestamp`:
-
-```json
-{
-	"signatures": [
-		{
-			"keyid": "b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d",
-			"sig": "3046022100926cd1a5a90539f3efa97390293180132413c7d30d94399c220a8a9aa9907e6e0221009e07b0e207f76dd45caeab87258553ddcf83fc7db6dfbbd4678d18f8c3517023"
-		}
-	],
-	"signed": {
-		"_type": "timestamp",
-		"expires": "2022-01-15T00:39:22Z",
-		"meta": {
-			"snapshot.json": {
-				"hashes": {
-					"sha256": "95e5b6822e0c3a9924f2f906c0b75e09246ad6d37078806085a273fddd079679",
-					"sha512": "4b1df9f2cc2d052bee185554ded7c526e283d4fab8388557a7b684c4ce0efb28c196e33a5140e7de9de99b2f5f37a7b2503617c2ff220168c5b7a79340675acf"
-				},
-				"length": 1658,
-				"version": 8
-			}
-		},
-		"spec_version": "1.0",
-		"version": 8
-	}
-}
-```
 
 ## Storage
 
@@ -269,19 +241,6 @@ Example `chain`:
 ```json
 "annotations": {
       "dev.sigstore.cosign/chain": "-----BEGIN CERTIFICATE-----\nMIIB+DCCAX6gAwIBAgITNVkDZoCiofPDsy7dfm6geLbuhzAKBggqhkjOPQQDAzAq\nMRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx\nMDMwNzAzMjAyOVoXDTMxMDIyMzAzMjAyOVowKjEVMBMGA1UEChMMc2lnc3RvcmUu\nZGV2MREwDwYDVQQDEwhzaWdzdG9yZTB2MBAGByqGSM49AgEGBSuBBAAiA2IABLSy\nA7Ii5k+pNO8ZEWY0ylemWDowOkNa3kL+GZE5Z5GWehL9/A9bRNA3RbrsZ5i0Jcas\ntaRL7Sp5fp/jD5dxqc/UdTVnlvS16an+2Yfswe/QuLolRUCrcOE2+2iA5+tzd6Nm\nMGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE\nFMjFHQBBmiQpMlEk6w2uSu1KBtPsMB8GA1UdIwQYMBaAFMjFHQBBmiQpMlEk6w2u\nSu1KBtPsMAoGCCqGSM49BAMDA2gAMGUCMH8liWJfMui6vXXBhjDgY4MwslmN/TJx\nVe/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup\nHr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==\n-----END CERTIFICATE-----"
-}
-```
-
-##### Timestamp
-
-The `timestamp` is stored as an `annotation` on the layer, in the same descriptor.
-The `annotation` key is `dev.cosignproject.cosign/timestamp`.
-
-Example `timestamp`:
-
-```json
-"annotations": {
-  "dev.sigstore.cosign/timestamp": "{\"signatures\": [{\"keyid\": \"b6710623a30c010738e64c5209d367df1c0a18cf90e6ab5292fb01680f83453d\", \"sig\": \"3046022100926cd1a5a90539f3efa97390293180132413c7d30d94399c220a8a9aa9907e6e0221009e07b0e207f76dd45caeab87258553ddcf83fc7db6dfbbd4678d18f8c3517023\"}], \"signed\": {\"_type\": \"timestamp\", \"expires\": \"2022-01-15T00:39:22Z\", \"meta\": {\"snapshot.json\": {\"hashes\": {\"sha256\": \"95e5b6822e0c3a9924f2f906c0b75e09246ad6d37078806085a273fddd079679\", \"sha512\": \"4b1df9f2cc2d052bee185554ded7c526e283d4fab8388557a7b684c4ce0efb28c196e33a5140e7de9de99b2f5f37a7b2503617c2ff220168c5b7a79340675acf\"}, \"length\": 1658, \"version\": 8}}, \"spec_version\": \"1.0\", \"version\": 8}}"
 }
 ```
 

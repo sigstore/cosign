@@ -27,7 +27,7 @@ import (
 
 func TestNewFile(t *testing.T) {
 	payload := "this is the content!"
-	file, err := NewFile([]byte(payload), WithLayerMediaType("foo"))
+	file, err := NewFile([]byte(payload), WithLayerMediaType("foo"), WithAnnotations(map[string]string{"foo": "bar"}))
 	if err != nil {
 		t.Fatalf("NewFile() = %v", err)
 	}
@@ -118,6 +118,27 @@ func TestNewFile(t *testing.T) {
 		}
 		if got, want := string(gotPayload), payload; got != want {
 			t.Errorf("Payload() = %s, wanted %s", got, want)
+		}
+	})
+
+	t.Run("check date", func(t *testing.T) {
+		fileCfg, err := file.ConfigFile()
+		if err != nil {
+			t.Fatalf("ConfigFile() = %v", err)
+		}
+		if fileCfg.Created.Time.IsZero() {
+			t.Errorf("Date of Signature was Zero")
+		}
+	})
+
+	t.Run("check annotations", func(t *testing.T) {
+		m, err := file.Manifest()
+		if err != nil {
+			t.Fatalf("Manifest() = %v", err)
+		}
+		gotAnnotations := m.Annotations
+		if got, want := gotAnnotations["foo"], "bar"; got != want {
+			t.Errorf("Annotations = %s, wanted %s", got, want)
 		}
 	})
 }

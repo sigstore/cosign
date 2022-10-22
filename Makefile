@@ -20,15 +20,13 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-GOFILES ?= $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-
 # Set version variables for LDFLAGS
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
 GIT_TAG ?= dirty-tag
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
-DATE_FMT = +'%Y-%m-%dT%H:%M:%SZ'
+DATE_FMT = +%Y-%m-%dT%H:%M:%SZ
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
 ifdef SOURCE_DATE_EPOCH
     BUILD_DATE ?= $(shell date -u -d "@$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u -r "$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u "$(DATE_FMT)")
@@ -42,9 +40,12 @@ ifeq ($(DIFF), 1)
 endif
 PLATFORMS=darwin linux windows
 ARCHITECTURES=amd64
+COSIGNED_ARCHS?=all
 
-PKG=github.com/sigstore/cosign/pkg/version
-LDFLAGS=-X $(PKG).GitVersion=$(GIT_VERSION) -X $(PKG).gitCommit=$(GIT_HASH) -X $(PKG).gitTreeState=$(GIT_TREESTATE) -X $(PKG).buildDate=$(BUILD_DATE)
+LDFLAGS=-buildid= -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
+        -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
+        -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
+        -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 
@@ -53,6 +54,8 @@ GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
 
 KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
+GHCR_PREFIX ?= ghcr.io/sigstore/cosign
+LATEST_TAG ?=
 
 .PHONY: all lint test clean cosign cross
 all: cosign
@@ -67,27 +70,11 @@ log-%:
 				printf "\033[36m==> %s\033[0m\n", $$2 \
 			}'
 
-.PHONY: checkfmt
-checkfmt: SHELL := /usr/bin/env bash
-checkfmt: ## Check formatting of all go files
-	@ $(MAKE) --no-print-directory log-$@
- 	$(shell test -z "$(shell gofmt -l $(GOFILES) | tee /dev/stderr)")
- 	$(shell test -z "$(shell goimports -l $(GOFILES) | tee /dev/stderr)")
-
-.PHONY: fmt
-fmt: ## Format all go files
-	@ $(MAKE) --no-print-directory log-$@
-	goimports -w $(GOFILES)
-
 cosign: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
 
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 go build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
-
-.PHONY: cosigned
-cosigned: ## Build cosigned binary
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign/webhook
 
 .PHONY: sget
 sget: ## Build sget binary
@@ -107,47 +94,64 @@ cross:
 golangci-lint:
 	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2 ;\
 
 lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
 
 test:
-	go test ./...
+	go test $(shell go list ./... | grep -v third_party/)
 
 clean:
 	rm -rf cosign
-	rm -rf cosigned
 	rm -rf sget
 	rm -rf dist/
+
+KOCACHE_PATH=/tmp/ko
+ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url="https://raw.githubusercontent.com/sigstore/cosign/main/README.md" \
+                    --image-label io.artifacthub.package.logo-url=https://raw.githubusercontent.com/sigstore/cosign/main/images/logo.svg \
+                    --image-label io.artifacthub.package.license=Apache-2.0 --image-label io.artifacthub.package.vendor=sigstore \
+                    --image-label io.artifacthub.package.version=0.1.0 \
+                    --image-label io.artifacthub.package.name=cosign \
+                    --image-label org.opencontainers.image.created=$(BUILD_DATE) \
+                    --image-label org.opencontainers.image.description="Container signing verification and storage in an OCI registry" \
+                    --image-label io.artifacthub.package.alternative-locations="oci://ghcr.io/sigstore/cosign/cosign"
+
+define create_kocache_path
+  mkdir -p $(KOCACHE_PATH)
+endef
 
 ##########
 # ko build
 ##########
 .PHONY: ko
-ko:
+ko: ko-cosign ko-sget
+
+.PHONY: ko-cosign
+ko-cosign:
+	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
+		$(ARTIFACT_HUB_LABELS) --image-refs cosignImagerefs \
 		github.com/sigstore/cosign/cmd/cosign
 
-	# cosigned
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=${KO_PREFIX}/cosigned ko publish --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		github.com/sigstore/cosign/cmd/cosign/webhook
-
+.PHONY: ko-sget
+ko-sget:
 	# sget
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
+		--image-refs sgetImagerefs \
 		github.com/sigstore/cosign/cmd/sget
 
 .PHONY: ko-local
 ko-local:
+	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/cmd/cosign
 
 ##################

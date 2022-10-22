@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright 2021 The Sigstore Authors.
 #
@@ -34,7 +34,7 @@ verification_key=cosign.pub
 
 img="${INSECURE_REGISTRY_NAME}:${INSECURE_REGISTRY_PORT}/test"
 (crane delete $(./cosign triangulate $img)) || true
-crane cp gcr.io/distroless/static $img --insecure
+crane cp ghcr.io/distroless/static $img --insecure
 
 # Operations with insecure registries should fail by default, then succeed
 # with `--allow-insecure-registry`

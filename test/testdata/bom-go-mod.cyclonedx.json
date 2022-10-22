@@ -1,0 +1,9 @@
+{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.4",
+    "serialNumber": "urn:uuid:9b0c2427-be94-439c-82e5-8928db124270",
+    "version": 1,
+    "metadata": {},
+    "components": [],
+    "dependencies": []
+}

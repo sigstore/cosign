@@ -32,21 +32,6 @@ builds:
   - -extldflags "-static"
   - "{{ .Env.LDFLAGS }}"
 
-- id: cosigned
-  dir: .
-  main: ./cmd/cosign/webhook
-  env:
-  - CGO_ENABLED=0
-  flags:
-  - -trimpath
-  - --tags
-  - "{{ .Env.GIT_HASH }}"
-  - --tags
-  - "{{ .Env.GIT_VERSION }}"
-  ldflags:
-  - -extldflags "-static"
-  - "{{ .Env.LDFLAGS }}"
-
 - id: sget
   dir: .
   main: ./cmd/sget

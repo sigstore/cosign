@@ -127,23 +127,38 @@ func (r *ro) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures
 	}
 
 	for _, s := range sigs {
-		var payloadData map[string]interface{}
-
+		var signaturePayload map[string]interface{}
 		p, err := s.Payload()
 		if err != nil {
 			return nil, fmt.Errorf("could not get payload: %w", err)
 		}
-
-		err = json.Unmarshal(p, &payloadData)
+		err = json.Unmarshal(p, &signaturePayload)
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal payload data: %w", err)
 		}
 
-		if r.predicateURI == payloadData["payloadType"] {
-			fmt.Fprintln(os.Stderr, "Attestation already present, not adding new one.")
+		val, ok := signaturePayload["payload"]
+		if !ok {
+			return nil, fmt.Errorf("could not find 'payload' in payload data")
+		}
+		decodedPayload, err := base64.StdEncoding.DecodeString(val.(string))
+		if err != nil {
+			return nil, fmt.Errorf("could not decode 'payload': %w", err)
+		}
+
+		var payloadData map[string]interface{}
+		if err := json.Unmarshal(decodedPayload, &payloadData); err != nil {
+			return nil, fmt.Errorf("unmarshal payloadData: %w", err)
+		}
+		val, ok = payloadData["predicateType"]
+		if !ok {
+			return nil, fmt.Errorf("could not find 'predicateType' in payload data")
+		}
+		if r.predicateURI == val {
+			fmt.Fprintln(os.Stderr, "Replacing attestation predicate:", r.predicateURI)
 			continue
 		} else {
-			fmt.Fprintln(os.Stderr, "Attestation not found, adding new attestation.")
+			fmt.Fprintln(os.Stderr, "Not replacing attestation predicate:", val)
 			sigsCopy = append(sigsCopy, s)
 		}
 	}

@@ -16,11 +16,13 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
+	"github.com/google/go-containerregistry/pkg/name"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 )
 
@@ -56,8 +58,14 @@ against the transparency log.`,
   # verify image with an on-disk signed image from 'cosign save'
   cosign verify --key cosign.pub --local-image <PATH>
 
+  # verify image with local certificate and certificate chain
+  cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
+
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
+
+  # verify image with a key stored in an environment variable
+  cosign verify --key env://[ENV_VAR] <IMAGE>
 
   # verify image with public key stored in Google Cloud KMS
   cosign verify --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <IMAGE>
@@ -74,7 +82,8 @@ against the transparency log.`,
   # verify image with public key stored in GitLab with project id
   cosign verify --key gitlab://[PROJECT_ID] <IMAGE>`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			annotations, err := o.AnnotationsMap()
 			if err != nil {
@@ -87,21 +96,33 @@ against the transparency log.`,
 			}
 
 			v := verify.VerifyCommand{
-				RegistryOptions: o.Registry,
-				CheckClaims:     o.CheckClaims,
-				KeyRef:          o.Key,
-				CertRef:         o.CertVerify.Cert,
-				CertEmail:       o.CertVerify.CertEmail,
-				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
-				Sk:              o.SecurityKey.Use,
-				Slot:            o.SecurityKey.Slot,
-				Output:          o.Output,
-				RekorURL:        o.Rekor.URL,
-				Attachment:      o.Attachment,
-				Annotations:     annotations,
-				HashAlgorithm:   hashAlgorithm,
-				SignatureRef:    o.SignatureRef,
-				LocalImage:      o.LocalImage,
+				RegistryOptions:              o.Registry,
+				CheckClaims:                  o.CheckClaims,
+				KeyRef:                       o.Key,
+				CertRef:                      o.CertVerify.Cert,
+				CertEmail:                    o.CertVerify.CertEmail,
+				CertIdentity:                 o.CertVerify.CertIdentity,
+				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				CertChain:                    o.CertVerify.CertChain,
+				EnforceSCT:                   o.CertVerify.EnforceSCT,
+				Sk:                           o.SecurityKey.Use,
+				Slot:                         o.SecurityKey.Slot,
+				Output:                       o.Output,
+				RekorURL:                     o.Rekor.URL,
+				Attachment:                   o.Attachment,
+				Annotations:                  annotations,
+				HashAlgorithm:                hashAlgorithm,
+				SignatureRef:                 o.SignatureRef,
+				LocalImage:                   o.LocalImage,
+			}
+
+			if o.Registry.AllowInsecure {
+				v.NameOptions = append(v.NameOptions, name.Insecure)
 			}
 
 			return v.Exec(cmd.Context(), args)
@@ -153,25 +174,42 @@ against the transparency log.`,
   cosign verify-attestation --key gitlab://[OWNER]/[PROJECT_NAME] <IMAGE>
 
   # verify image with public key stored in GitLab with project id
-  cosign verify-attestation --key gitlab://[PROJECT_ID] <IMAGE>`,
+  cosign verify-attestation --key gitlab://[PROJECT_ID] <IMAGE>
 
-		Args: cobra.MinimumNArgs(1),
+  # verify image with public key and validate attestation based on Rego policy
+  cosign verify-attestation --key cosign.pub --type <PREDICATE_TYPE> --policy <REGO_POLICY> <IMAGE>
+
+  # verify image with public key and validate attestation based on CUE policy
+  cosign verify-attestation --key cosign.pub --type <PREDICATE_TYPE> --policy <CUE_POLICY> <IMAGE>`,
+
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := verify.VerifyAttestationCommand{
-				RegistryOptions: o.Registry,
-				CheckClaims:     o.CheckClaims,
-				CertRef:         o.CertVerify.Cert,
-				CertEmail:       o.CertVerify.CertEmail,
-				CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
-				KeyRef:          o.Key,
-				Sk:              o.SecurityKey.Use,
-				Slot:            o.SecurityKey.Slot,
-				Output:          o.Output,
-				RekorURL:        o.Rekor.URL,
-				PredicateType:   o.Predicate.Type,
-				Policies:        o.Policies,
-				LocalImage:      o.LocalImage,
+				RegistryOptions:              o.Registry,
+				CheckClaims:                  o.CheckClaims,
+				CertRef:                      o.CertVerify.Cert,
+				CertEmail:                    o.CertVerify.CertEmail,
+				CertIdentity:                 o.CertVerify.CertIdentity,
+				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
+				CertChain:                    o.CertVerify.CertChain,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				EnforceSCT:                   o.CertVerify.EnforceSCT,
+				KeyRef:                       o.Key,
+				Sk:                           o.SecurityKey.Use,
+				Slot:                         o.SecurityKey.Slot,
+				Output:                       o.Output,
+				RekorURL:                     o.Rekor.URL,
+				PredicateType:                o.Predicate.Type,
+				Policies:                     o.Policies,
+				LocalImage:                   o.LocalImage,
+				NameOptions:                  o.Registry.NameOptions(),
 			}
+
 			return v.Exec(cmd.Context(), args)
 		},
 	}
@@ -192,13 +230,10 @@ You may specify either a key, a certificate or a kms reference to verify against
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file or - for stdin.`,
-		Example: `  cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--cert <cert>) --signature <sig> <blob>
+		Example: ` cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--certificate <cert>) --signature <sig> <blob>
 
   # Verify a simple blob and message
-  cosign verify-blob --key cosign.pub --signature sig msg
-
-  # Verify a simple blob with remote signature URL, both http and https schemes are supported
-  cosign verify-blob --key cosign.pub --signature http://host/my.sig
+  cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
@@ -206,8 +241,8 @@ The blob may be specified as a path to a file or - for stdin.`,
   # verify a signature with public key provided by URL
   cosign verify-blob --key https://host.for/<FILE> --signature $sig msg
 
-  # Verify a signature against a payload from another process using process redirection
-  cosign verify-blob --key cosign.pub --signature $sig <(git rev-parse HEAD)
+  # verify a signature with signature and key provided by URL
+  cosign verify-blob --key https://host.for/<FILE> --signature https://example.com/<SIG>
 
   # Verify a signature against Azure Key Vault
   cosign verify-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --signature $sig <blob>
@@ -228,12 +263,13 @@ The blob may be specified as a path to a file or - for stdin.`,
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 
   # Verify a signature against a certificate
-  cosign verify-blob --cert <cert> --signature $sig <blob>
+  COSIGN_EXPERIMENTAL=1 cosign verify-blob --certificate <cert> --signature $sig <blob>
 `,
 
-		Args: cobra.ExactArgs(1),
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ko := sign.KeyOpts{
+			ko := options.KeyOpts{
 				KeyRef:     o.Key,
 				Sk:         o.SecurityKey.Use,
 				Slot:       o.SecurityKey.Slot,
@@ -241,10 +277,50 @@ The blob may be specified as a path to a file or - for stdin.`,
 				BundlePath: o.BundlePath,
 			}
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
-				o.CertVerify.CertEmail, o.CertVerify.CertOidcIssuer, o.Signature, args[0]); err != nil {
-				return errors.Wrapf(err, "verifying blob %s", args)
+				o.CertVerify.CertEmail, o.CertVerify.CertIdentity, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain,
+				o.Signature, args[0], o.CertVerify.CertGithubWorkflowTrigger, o.CertVerify.CertGithubWorkflowSha,
+				o.CertVerify.CertGithubWorkflowName, o.CertVerify.CertGithubWorkflowRepository, o.CertVerify.CertGithubWorkflowRef,
+				o.CertVerify.EnforceSCT); err != nil {
+				return fmt.Errorf("verifying blob %s: %w", args, err)
 			}
 			return nil
+		},
+	}
+
+	o.AddFlags(cmd)
+	return cmd
+}
+
+func VerifyBlobAttestation() *cobra.Command {
+	o := &options.VerifyBlobAttestationOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "verify-blob-attestation",
+		Short: "Verify an attestation on the supplied blob",
+		Long: `Verify an attestation on the supplied blob input using the specified key reference.
+You may specify either a key or a kms reference to verify against.
+
+The signature may be specified as a path to a file or a base64 encoded string.
+The blob may be specified as a path to a file.`,
+		Example: ` cosign verify-blob-attestation (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+
+  # Verify a simple blob attestation with a DSSE style signature
+  cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+
+`,
+
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := verify.VerifyBlobAttestationCommand{
+				KeyRef:        o.Key,
+				PredicateType: o.PredicateOptions.Type,
+				SignaturePath: o.SignaturePath,
+			}
+			if len(args) != 1 {
+				return fmt.Errorf("no path to blob passed in, run `cosign verify-blob-attestation -h` for more help")
+			}
+			return v.Exec(cmd.Context(), args[0])
 		},
 	}
 

@@ -1,0 +1,154 @@
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Test attest / verify-attestation
+
+on:
+  pull_request:
+    branches: [ 'main', 'release-*' ]
+
+defaults:
+  run:
+    shell: bash
+
+permissions: read-all
+
+jobs:
+  cip-test:
+    name: attest / verify-attestation test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        k8s-version:
+        - v1.24.x
+
+    env:
+      KO_DOCKER_REPO: "registry.local:5000/policy-controller"
+      SCAFFOLDING_RELEASE_VERSION: "v0.4.8"
+      GO111MODULE: on
+      GOFLAGS: -ldflags=-s -ldflags=-w
+      KOCACHE: ~/ko
+      # We are only testing keyless here, so set it.
+      COSIGN_EXPERIMENTAL: "true"
+
+    steps:
+    - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
+    - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.2.0
+      with:
+        go-version: '1.19'
+        check-latest: true
+
+    # will use the latest release available for ko
+    - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
+
+    - name: Install yq
+      uses: mikefarah/yq@1f0881fb5faf371694bfa108753cda0b824f5037 # v4.27.5
+
+    - name: build cosign
+      run: |
+        make cosign
+
+    - name: Install cluster + sigstore
+      uses: sigstore/scaffolding/actions/setup@main
+      with:
+        legacy-variables: "false"
+        k8s-version: ${{ matrix.k8s-version }}
+        version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
+
+    - name: Create sample image - demoimage
+      run: |
+        pushd $(mktemp -d)
+        go mod init example.com/demo
+        cat <<EOF > main.go
+        package main
+        import "fmt"
+        func main() {
+          fmt.Println("hello world")
+        }
+        EOF
+        demoimage=`ko publish -B example.com/demo`
+        echo "demoimage=$demoimage" >> $GITHUB_ENV
+        echo Created image $demoimage
+        popd
+
+    - name: Initialize with our custom TUF root
+      run: |
+        TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}')
+        ./cosign initialize --mirror $TUF_MIRROR --root ./root.json
+
+    - name: Sign demoimage with cosign
+      run: |
+        ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --force --allow-insecure-registry ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+
+    - name: Create attestation for it
+      run: |
+        echo -n 'foobar e2e test' > ./predicate-file
+        ./cosign attest --predicate ./predicate-file --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --force ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+
+    - name: Verify with cosign
+      run: |
+        ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }}
+
+    - name: Verify custom attestation with cosign, works
+      run: |
+        echo '::group:: test custom verify-attestation success'
+        if ! ./cosign verify-attestation --policy ./test/testdata/policies/cue-works.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} ; then
+          echo Failed to verify attestation with a valid policy
+          exit 1
+        else
+          echo Successfully validated custom attestation with a valid policy
+        fi
+        echo '::endgroup::'
+
+    - name: Verify custom attestation with cosign, fails
+      run: |
+        echo '::group:: test custom verify-attestation success'
+        if ./cosign verify-attestation --policy ./test/testdata/policies/cue-fails.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} ; then
+          echo custom verify-attestation succeeded with cue policy that should not work
+          exit 1
+        else
+          echo Successfully failed a policy that should not work
+        fi
+        echo '::endgroup::'
+
+    - name: Collect diagnostics
+      if: ${{ failure() }}
+      uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+
+    - name: Create vuln attestation for it
+      run: |
+        ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --type vuln --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --force ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+
+    - name: Verify vuln attestation with cosign, works
+      run: |
+        echo '::group:: test vuln verify-attestation success'
+        if ! ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-works.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} ; then
+          echo Failed to verify attestation with a valid policy
+          exit 1
+        else
+          echo Successfully validated vuln attestation with a valid policy
+        fi
+        echo '::endgroup::'
+
+    - name: Verify vuln attestation with cosign, fails
+      run: |
+        echo '::group:: test vuln verify-attestation success'
+        if ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-fails.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} ; then
+          echo verify-attestation succeeded with cue policy that should not work
+          exit 1
+        else
+          echo Successfully failed a policy that should not work
+        fi
+        echo '::endgroup::'

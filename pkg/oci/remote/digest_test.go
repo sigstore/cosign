@@ -15,12 +15,12 @@
 package remote
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 )
 
 func TestResolveDigest(t *testing.T) {

@@ -32,19 +32,17 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.4.1@sha256:502d5130431e45f28c51d2c24a05ef5ccd3fd916bcc91db0c8bee3a81e09a0bb'
+- name: 'gcr.io/projectsigstore/cosign:v1.12.1@sha256:ac8e08a2141e093f4fd7d1d0b05448804eb3771b66574b13ad73e31b460af64d'
   dir: "go/src/sigstore/cosign"
   env:
   - COSIGN_EXPERIMENTAL=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - '--key'
-  - 'https://raw.githubusercontent.com/gythialy/golang-cross/main/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.6-0@sha256:d22430bb9b3b2ba21adae7f9774a68e9891a0458c8e487edf86311cefb32c766'
+  - 'ghcr.io/gythialy/golang-cross:v1.19.2-1@sha256:d7e32c3e7d89356fb014ded4c1be7baabe3c454ca7753842334226fd3327d280'
 
 # maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-0@sha256:d22430bb9b3b2ba21adae7f9774a68e9891a0458c8e487edf86311cefb32c766
+- name: ghcr.io/gythialy/golang-cross:v1.19.2-1@sha256:d7e32c3e7d89356fb014ded4c1be7baabe3c454ca7753842334226fd3327d280
   entrypoint: /bin/sh
   dir: "go/src/sigstore/cosign"
   env:
@@ -58,14 +56,16 @@ steps:
   - GIT_TAG=${_GIT_TAG}
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
   - COSIGN_EXPERIMENTAL=true
+  - KO_PREFIX=gcr.io/${PROJECT_ID}
   secretEnv:
   - GITHUB_TOKEN
   args:
     - '-c'
     - |
-      make release
+      gcloud auth configure-docker \
+      && make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-0@sha256:d22430bb9b3b2ba21adae7f9774a68e9891a0458c8e487edf86311cefb32c766
+- name: ghcr.io/gythialy/golang-cross:v1.19.2-1@sha256:d7e32c3e7d89356fb014ded4c1be7baabe3c454ca7753842334226fd3327d280
   entrypoint: 'bash'
   dir: "go/src/sigstore/cosign"
   env:
@@ -80,14 +80,14 @@ steps:
   - KO_PREFIX=gcr.io/${PROJECT_ID}
   - COSIGN_EXPERIMENTAL=true
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+  - GITHUB_USER=${_GITHUB_USER}
   secretEnv:
   - GITHUB_TOKEN
   args:
-  - '-c'
-  - |
-    gcloud auth configure-docker \
-    && make sign-container-release \
-    && make sign-keyless-release
+    - '-c'
+    - |
+      echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
+      && make copy-signed-release-to-ghcr || true
 
 availableSecrets:
   secretManager:
@@ -102,7 +102,7 @@ artifacts:
     - "go/src/sigstore/cosign/release/release-cosign.pub"
 
 options:
-  machineType: E2_HIGHCPU_8
+  machineType: E2_HIGHCPU_32
 
 tags:
 - cosign-release
@@ -119,3 +119,4 @@ substitutions:
   _KEY_NAME: 'honk-crypto'
   _KEY_VERSION: '1'
   _KEY_LOCATION: 'global'
+  _GITHUB_USER: 'placeholder'

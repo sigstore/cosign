@@ -36,7 +36,7 @@ type testFlow struct {
 	err   error
 }
 
-func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDToken, error) {
+func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
 	if tf.err != nil {
 		return nil, tf.err
 	}
@@ -44,14 +44,19 @@ func (tf *testFlow) OIDConnect(url, clientID, secret string) (*oauthflow.OIDCIDT
 }
 
 type testClient struct {
-	payload api.CertificateResponse
-	err     error
+	payload  api.CertificateResponse
+	rootResp api.RootResponse
+	err      error
 }
 
-var _ api.Client = (*testClient)(nil)
+var _ api.LegacyClient = (*testClient)(nil)
 
 func (p *testClient) SigningCert(cr api.CertificateRequest, token string) (*api.CertificateResponse, error) {
 	return &p.payload, p.err
+}
+
+func (p *testClient) RootCert() (*api.RootResponse, error) {
+	return &p.rootResp, p.err
 }
 
 func TestGetCertForOauthID(t *testing.T) {
@@ -113,7 +118,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "")
+			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "", "", "")
 
 			if err != nil {
 				if !tc.expectErr {

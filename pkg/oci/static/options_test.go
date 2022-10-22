@@ -22,13 +22,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
 func TestOptions(t *testing.T) {
 	bundle := &bundle.RekorBundle{}
-	timestamp := &tuf.Timestamp{}
 
 	tests := []struct {
 		name string
@@ -92,17 +90,6 @@ func TestOptions(t *testing.T) {
 				BundleAnnotationKey: "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
 			},
 			Bundle: bundle,
-		},
-	}, {
-		name: "with timestamp",
-		opts: []Option{WithTimestamp(timestamp)},
-		want: &options{
-			LayerMediaType:  ctypes.SimpleSigningMediaType,
-			ConfigMediaType: types.OCIConfigJSON,
-			Annotations: map[string]string{
-				TimestampAnnotationKey: `{"signatures":null,"signed":{"_type":"","spec_version":"","version":0,"expires":"0001-01-01T00:00:00Z","meta":null}}`,
-			},
-			Timestamp: timestamp,
 		},
 	}}
 

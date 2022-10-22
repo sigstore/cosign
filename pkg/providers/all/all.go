@@ -27,6 +27,7 @@ import (
 
 // Alias these methods, so that folks can import this to get all providers.
 var (
-	Enabled = providers.Enabled
-	Provide = providers.Provide
+	Enabled     = providers.Enabled
+	Provide     = providers.Provide
+	ProvideFrom = providers.ProvideFrom
 )

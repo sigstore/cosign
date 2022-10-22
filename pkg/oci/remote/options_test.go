@@ -16,6 +16,7 @@
 package remote
 
 import (
+	"errors"
 	"os"
 	"reflect"
 	"testing"
@@ -23,7 +24,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 )
 
 func TestOptions(t *testing.T) {
@@ -139,7 +139,7 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			desc: "bad",
 
 			envVal:  "bad$repo",
-			wantErr: errors.New("parsing $COSIGN_REPOSITORY: repository can only contain the runes `abcdefghijklmnopqrstuvwxyz0123456789_-./`: bad$repo"),
+			wantErr: errors.New("parsing $COSIGN_REPOSITORY: repository can only contain the characters `abcdefghijklmnopqrstuvwxyz0123456789_-./`: bad$repo"),
 		},
 		{
 			desc: "empty",

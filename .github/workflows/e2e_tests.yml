@@ -16,7 +16,19 @@
 name: e2e-tests
 
 # Run on every push, and allow it to be run manually.
-on: [push, workflow_dispatch]
+on:
+  push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
+    branches:
+      - "main"
+  workflow_dispatch:
 
 permissions: read-all
 
@@ -31,18 +43,19 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 # v2.1.5
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
+      - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.2.0
         with:
-          go-version: '1.17.x'
+          go-version: '1.19'
+          check-latest: true
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@a45a0825993ace67ae6e11cf3011b3e7d6795f82 # v0.3.0
+        uses: google-github-actions/setup-gcloud@ee9693ff89cdf73862b8a13988f6a71070e8fc58 # v0.5.1
         with:
           project_id: projectsigstore
           service_account_key: ${{ secrets.GCP_CI_SERVICE_ACCOUNT }}
           export_default_credentials: true
       - name: Set up `crane`
-        run: go install github.com/google/go-containerregistry/cmd/crane@v0.7.0
+        run: go install github.com/google/go-containerregistry/cmd/crane@v0.8.0
       - name: gcloud auth configure-docker
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
       - name: Run e2e_test_secrets.sh

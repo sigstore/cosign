@@ -26,37 +26,18 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func defaultClientConfig() clientcmd.ClientConfig {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	configOverrides := &clientcmd.ConfigOverrides{}
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-}
-
-func restClientConfig() (*rest.Config, error) {
-	kubeCfg := defaultClientConfig()
-
-	restConfig, err := kubeCfg.ClientConfig()
+func client() (kubernetes.Interface, error) {
+	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(), nil).ClientConfig()
 	if clientcmd.IsEmptyConfig(err) {
-		restConfig, err := rest.InClusterConfig()
+		cfg, err = rest.InClusterConfig()
 		if err != nil {
-			return restConfig, fmt.Errorf("error creating REST client config in-cluster: %w", err)
+			return nil, fmt.Errorf("error creating REST client config in-cluster: %w", err)
 		}
-
-		return restConfig, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("error creating REST client config: %w", err)
 	}
-	if err != nil {
-		return restConfig, fmt.Errorf("error creating REST client config: %w", err)
-	}
-
-	return restConfig, nil
-}
-
-func Client() (kubernetes.Interface, error) {
-	config, err := restClientConfig()
-	if err != nil {
-		return nil, fmt.Errorf("getting client config for Kubernetes client: %w", err)
-	}
-	return kubernetes.NewForConfig(config)
+	return kubernetes.NewForConfig(cfg)
 }
 
 func checkImmutableSecretSupported(client kubernetes.Interface) (bool, error) {

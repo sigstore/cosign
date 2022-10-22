@@ -41,19 +41,19 @@ cosign initialize -mirror <url> -root <url>
 
 ```
   -h, --help            help for initialize
-      --mirror string   GCS bucket to a SigStore TUF repository or HTTP(S) base URL (default "sigstore-tuf-root")
+      --mirror string   GCS bucket to a SigStore TUF repository or HTTP(S) base URL (default "https://sigstore-tuf-root.storage.googleapis.com")
       --root string     path to trusted initial root. defaults to embedded root
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+      --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - 
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
 

@@ -17,6 +17,14 @@ name: CI-Container-Build
 
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches:
       - main
       - release-*
@@ -28,26 +36,34 @@ jobs:
     name: build
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: sigstore/cosign-installer@116dc6872c0a067bcb78758f18955414cdbf918f #v1.4.1
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
+
+      - uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b # v2.6.0
+
+      - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.2.0
         with:
-          go-version: '1.17.x'
-      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
-        with:
-          version: tip
+          go-version: '1.19'
+          check-latest: true
+
+      # will use the latest release available for ko
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
+
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@a45a0825993ace67ae6e11cf3011b3e7d6795f82 #v0.3.0
+        uses: google-github-actions/auth@c4799db9111fba4461e9f9da8732e5057b394f72 # v0.8.1
         with:
-          project_id: projectsigstore
-          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          export_default_credentials: true
+          workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
+          service_account: 'github-actions@projectsigstore.iam.gserviceaccount.com'
+
       - name: creds
         run: gcloud auth configure-docker --quiet
-      - name: container
-        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_PREFIX=gcr.io/projectsigstore/cosign/ci make sign-container
-      - name: cosigned
-        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_PREFIX=gcr.io/projectsigstore/cosign/ci make sign-cosigned
-      - name: sget
-        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_PREFIX=gcr.io/projectsigstore/cosign/ci make sign-sget
+
+      - name: containers-cosign-sget
+        run: make sign-ci-containers
+        env:
+          KO_PREFIX: gcr.io/projectsigstore/cosign/ci
+          COSIGN_PASSWORD: "${{secrets.COSIGN_PASSWORD}}"

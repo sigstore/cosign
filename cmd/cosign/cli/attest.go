@@ -16,13 +16,13 @@
 package cli
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 )
 
 func Attest() *cobra.Command {
@@ -51,12 +51,20 @@ func Attest() *cobra.Command {
   # attach an attestation to a container image with a key pair stored in Hashicorp Vault
   cosign attest --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <IMAGE>
 
+  # attach an attestation to a container image with a local key pair file, including a certificate and certificate chain
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
+
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ko := sign.KeyOpts{
+			oidcClientSecret, err := o.OIDC.ClientSecret()
+			if err != nil {
+				return err
+			}
+			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
@@ -67,12 +75,15 @@ func Attest() *cobra.Command {
 				RekorURL:                 o.Rekor.URL,
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCClientSecret:         oidcClientSecret,
+				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCProvider:             o.OIDC.Provider,
+				SkipConfirmation:         o.SkipConfirmation,
 			}
 			for _, img := range args {
-				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.NoUpload,
-					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, o.Timeout); err != nil {
-					return errors.Wrapf(err, "signing %s", img)
+				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
+					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout, o.NoTlogUpload); err != nil {
+					return fmt.Errorf("signing %s: %w", img, err)
 				}
 			}
 			return nil

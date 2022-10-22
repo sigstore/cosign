@@ -17,6 +17,7 @@ package manifest
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -24,7 +25,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
@@ -45,7 +45,7 @@ func (c *VerifyManifestCommand) Exec(ctx context.Context, args []string) error {
 
 	err := isExtensionAllowed(manifestPath)
 	if err != nil {
-		return errors.Wrap(err, "check if extension is valid")
+		return fmt.Errorf("check if extension is valid: %w", err)
 	}
 	manifest, err := os.ReadFile(manifestPath)
 	if err != nil {

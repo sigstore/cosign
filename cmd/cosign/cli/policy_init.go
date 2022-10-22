@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/mail"
@@ -31,7 +32,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
@@ -40,10 +40,10 @@ import (
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
-	"github.com/sigstore/cosign/pkg/sget"
+	"github.com/sigstore/cosign/pkg/sget" //nolint:staticcheck
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
 )
 
@@ -84,6 +84,7 @@ func initPolicy() *cobra.Command {
 		Example: `
   # extract public key from private key to a specified out file.
   cosign policy init -ns <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)`,
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var publicKeys []*tuf.Key
 
@@ -135,7 +136,7 @@ func initPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to %s", outfile)
+					return fmt.Errorf("error writing to %s: %w", outfile, err)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")
@@ -150,7 +151,7 @@ func initPolicy() *cobra.Command {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(cmd.Context(), o.Registry, files, "", rootPath(o.ImageRef))
+			return upload.BlobCmd(cmd.Context(), o.Registry, files, nil, "", rootPath(o.ImageRef))
 		},
 	}
 
@@ -163,27 +164,36 @@ func signPolicy() *cobra.Command {
 	o := &options.PolicySignOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "sign",
-		Short: "sign a keyless policy.",
-		Long:  "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
+		Use:              "sign",
+		Short:            "sign a keyless policy.",
+		Long:             "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if o.Timeout != 0 {
+			if ro.Timeout != 0 {
 				var cancelFn context.CancelFunc
-				ctx, cancelFn = context.WithTimeout(ctx, o.Timeout)
+				ctx, cancelFn = context.WithTimeout(ctx, ro.Timeout)
 				defer cancelFn()
 			}
 
 			// Get Fulcio signer
-			sv, err := sign.SignerFromKeyOpts(ctx, "", sign.KeyOpts{
+			oidcClientSecret, err := o.OIDC.ClientSecret()
+			if err != nil {
+				return err
+			}
+			sv, err := sign.SignerFromKeyOpts(ctx, "", "", options.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
 				RekorURL:                 o.Rekor.URL,
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCClientSecret:         oidcClientSecret,
+				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCProvider:             o.OIDC.Provider,
+				SkipConfirmation:         o.SkipConfirmation,
 			})
+
 			if err != nil {
 				return err
 			}
@@ -197,11 +207,12 @@ func signPolicy() *cobra.Command {
 				return errors.New("error decoding certificate")
 			}
 			signerEmail := sigs.CertSubject(certs[0])
-			signerIssuer := sigs.CertIssuerExtension(certs[0])
+			ce := cosign.CertExtensions{Cert: certs[0]}
+			signerIssuer := ce.GetIssuer()
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
-			ref, err := name.ParseReference(imgName)
+			ref, err := name.ParseReference(imgName, o.Registry.NameOptions()...)
 			if err != nil {
 				return err
 			}
@@ -221,24 +232,24 @@ func signPolicy() *cobra.Command {
 
 			result := &bytes.Buffer{}
 			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
-				return errors.Wrap(err, "error getting result")
+				return fmt.Errorf("error getting result: %w", err)
 			}
 			b, err := io.ReadAll(result)
 			if err != nil {
-				return errors.Wrap(err, "error reading bytes from root.json")
+				return fmt.Errorf("error reading bytes from root.json: %w", err)
 			}
 
 			// Unmarshal policy and verify that Fulcio signer email is in the trusted
 			signed := &tuf.Signed{}
 			if err := json.Unmarshal(b, signed); err != nil {
-				return errors.Wrap(err, "unmarshalling signed root policy")
+				return fmt.Errorf("unmarshalling signed root policy: %w", err)
 			}
 
 			// Create and add signature
 			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
 			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(ctx))
 			if err != nil {
-				return errors.Wrap(err, "error occurred while during artifact signing")
+				return fmt.Errorf("error occurred while during artifact signing): %w", err)
 			}
 			signature := tuf.Signature{
 				Signature: base64.StdEncoding.EncodeToString(sig),
@@ -274,7 +285,7 @@ func signPolicy() *cobra.Command {
 				outfile = o.OutFile
 				err = os.WriteFile(o.OutFile, policyFile, 0600)
 				if err != nil {
-					return errors.Wrapf(err, "error writing to %s", outfile)
+					return fmt.Errorf("error writing to %s: %w", outfile, err)
 				}
 			} else {
 				tempFile, err := os.CreateTemp("", "root")
@@ -289,7 +300,7 @@ func signPolicy() *cobra.Command {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(ctx, o.Registry, files, "", rootPath(o.ImageRef))
+			return upload.BlobCmd(ctx, o.Registry, files, nil, "", rootPath(o.ImageRef))
 		},
 	}
 

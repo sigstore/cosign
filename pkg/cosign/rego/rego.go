@@ -24,11 +24,22 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 )
 
+// The query below should meet the following requirements:
+// * Provides no Bindings. Do not use a query that sets a variable, e.g. x := data.signature.allow
+// * Queries for a single value.
+const QUERY = "data.signature.allow"
+
+// CosignRegoPackageName defines the expected package name of a provided rego module
+const CosignRegoPackageName = "sigstore"
+
+// CosignEvaluationRule defines the expected evaluation role of a provided rego module
+const CosignEvaluationRule = "isCompliant"
+
 func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 	ctx := context.Background()
 
 	r := rego.New(
-		rego.Query("data.signature.deny"), // hardcoded, ? data.cosign.allow→
+		rego.Query(QUERY),
 		rego.Load(entrypoints, nil))
 
 	query, err := r.PrepareForEval(ctx)
@@ -48,6 +59,8 @@ func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 		return []error{err}
 	}
 
+	// Ensure the resultset contains a single result where the Expression contains a single value
+	// which is true and there are no Bindings.
 	if rs.Allowed() {
 		return nil
 	}
@@ -55,14 +68,52 @@ func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 	var errs []error
 	for _, result := range rs {
 		for _, expression := range result.Expressions {
-			for _, v := range expression.Value.([]interface{}) {
-				if s, ok := v.(string); ok {
-					errs = append(errs, fmt.Errorf(s))
-				} else {
-					errs = append(errs, fmt.Errorf("%s", v))
-				}
-			}
+			errs = append(errs, fmt.Errorf("expression value, %v, is not true", expression))
 		}
 	}
+
+	// When rs.Allowed() is not true and len(rs) is 0, the result is undefined. This is a policy
+	// check failure.
+	if len(errs) == 0 {
+		errs = append(errs, fmt.Errorf("result is undefined for query '%s'", QUERY))
+	}
 	return errs
+}
+
+// ValidateJSONWithModuleInput takes the body of the results to evaluate and the defined module
+// in a policy to validate against the input data
+func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) error {
+	ctx := context.Background()
+	query := fmt.Sprintf("%s = data.%s.%s", CosignEvaluationRule, CosignRegoPackageName, CosignEvaluationRule)
+	module := fmt.Sprintf("%s.rego", CosignRegoPackageName)
+
+	r := rego.New(
+		rego.Query(query),
+		rego.Module(module, moduleInput))
+
+	evalQuery, err := r.PrepareForEval(ctx)
+	if err != nil {
+		return err
+	}
+
+	var input interface{}
+	dec := json.NewDecoder(bytes.NewBuffer(jsonBody))
+	dec.UseNumber()
+	if err := dec.Decode(&input); err != nil {
+		return err
+	}
+
+	rs, err := evalQuery.Eval(ctx, rego.EvalInput(input))
+	if err != nil {
+		return err
+	}
+
+	for _, result := range rs {
+		isCompliant, ok := result.Bindings[CosignEvaluationRule].(bool)
+		if ok && isCompliant {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("policy is not compliant for query '%s'", query)
 }

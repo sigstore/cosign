@@ -18,11 +18,11 @@ package initialize
 import (
 	"context"
 	_ "embed" // To enable the `go:embed` directive.
-	"net/url"
+	"encoding/json"
+	"fmt"
 
 	"github.com/sigstore/cosign/pkg/blob"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
-	"github.com/theupdateframework/go-tuf/client"
+	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 func DoInitialize(ctx context.Context, root, mirror string) error {
@@ -36,16 +36,19 @@ func DoInitialize(ctx context.Context, root, mirror string) error {
 		}
 	}
 
-	// Initialize the remote repository.
-	var remote client.RemoteStore
-	if _, parseErr := url.ParseRequestURI(mirror); parseErr != nil {
-		remote, err = tuf.GcsRemoteStore(ctx, mirror, nil, nil)
-	} else {
-		remote, err = client.HTTPRemoteStore(mirror, nil, nil)
+	if err := tuf.Initialize(ctx, mirror, rootFileBytes); err != nil {
+		return err
 	}
+
+	status, err := tuf.GetRootStatus(ctx)
+	if err != nil {
+		return err
+	}
+	b, err := json.MarshalIndent(status, "", "\t")
 	if err != nil {
 		return err
 	}
 
-	return tuf.Initialize(remote, rootFileBytes)
+	fmt.Println("Root status: \n", string(b))
+	return nil
 }

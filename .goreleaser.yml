@@ -5,11 +5,17 @@ env:
   - CGO_ENABLED=1
   - DOCKER_CLI_EXPERIMENTAL=enabled
   - COSIGN_EXPERIMENTAL=true
+  - LATEST_TAG=,latest
 
 # Prevents parallel builds from stepping on each others toes downloading modules
 before:
   hooks:
   - go mod tidy
+  - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+# if running a release we will generate the images in this step
+# if running in the CI the CI env va is set and we dont run the ko steps
+# this is needed because we are generating files that goreleaser was not aware to push to GH project release
+  - /bin/bash -c 'if [ -z "$CI" ]; then make sign-release-images; fi'
 
 gomod:
   proxy: true
@@ -42,6 +48,7 @@ builds:
 
 - id: linux-pivkey-pkcs11key-amd64
   binary: cosign-linux-pivkey-pkcs11key-amd64
+  no_unique_dist_dir: true
   main: ./cmd/cosign
   flags:
     - -trimpath
@@ -86,8 +93,8 @@ builds:
   binary: cosign-darwin-arm64
   no_unique_dist_dir: true
   env:
-    - CC=aarch64-apple-darwin20.2-clang
-    - CXX=aarch64-apple-darwin20.2-clang++
+    - CC=aarch64-apple-darwin21.4-clang
+    - CXX=aarch64-apple-darwin21.4-clang++
   main: ./cmd/cosign
   flags:
     - -trimpath
@@ -121,28 +128,6 @@ builds:
   tags:
     - pivkey
     - pkcs11key
-
-- id: linux-cosigned
-  binary: cosigned-linux-{{ .Arch }}
-  no_unique_dist_dir: true
-  main: ./cmd/cosign/webhook
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  flags:
-    - -trimpath
-  goos:
-    - linux
-  goarch:
-    - amd64
-    - arm64
-    - arm
-    - s390x
-    - ppc64le
-  goarm:
-    - 7
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  env:
-    - CGO_ENABLED=0
 
 - id: sget
   binary: sget-{{ .Os }}-{{ .Arch }}
@@ -183,13 +168,6 @@ signs:
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
-  - id: cosigned
-    signature: "${artifact}.sig"
-    cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
-    artifacts: binary
-    ids:
-      - linux-cosigned
   - id: sget
     signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
@@ -204,14 +182,6 @@ signs:
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: binary
-  - id: cosigned-keyless
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
-    cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
-    artifacts: binary
-    ids:
-      - linux-cosigned
   - id: sget-keyless
     signature: "${artifact}-keyless.sig"
     certificate: "${artifact}-keyless.pem"
@@ -226,6 +196,32 @@ signs:
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: checksum
+  - id: packages-keyless
+    signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    cmd: ./dist/cosign-linux-amd64
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    artifacts: package
+
+nfpms:
+  - id: cosign
+    package_name: cosign
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Sigstore
+    homepage: https://sigstore.dev
+    maintainer: Sigstore Authors 86837369+sigstore-bot@users.noreply.github.com
+    builds:
+      - linux
+    description: Container Signing, Verification and Storage in an OCI registry.
+    license: "Apache License 2.0"
+    formats:
+      - apk
+      - deb
+      - rpm
+    contents:
+      - src: /usr/bin/cosign-linux-{{ .Arch }}
+        dst: /usr/bin/cosign
+        type: "symlink"
 
 archives:
 - format: binary
@@ -245,18 +241,7 @@ release:
     owner: sigstore
     name: cosign
   footer: |
-    ### Thanks for all contributors!
+    ### Thanks to all contributors!
 
   extra_files:
     - glob: "./release/release-cosign.pub"
-
-rigs:
-  - rig:
-      owner: sigstore
-      name: fish-food
-    commit_author:
-      name: sigstore-bot
-      email: 86837369+sigstore-bot@users.noreply.github.com
-    homepage: https://sigstore.dev
-    description: Container Signing, Verification and Storage in an OCI registry.
-    license: "Apache License 2.0"

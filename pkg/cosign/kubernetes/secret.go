@@ -16,13 +16,13 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"k8s.io/utils/pointer"
 
-	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,14 +40,14 @@ func GetKeyPairSecret(ctx context.Context, k8sRef string) (*v1.Secret, error) {
 		return nil, err
 	}
 
-	client, err := Client()
+	client, err := client()
 	if err != nil {
-		return nil, errors.Wrap(err, "new for config")
+		return nil, fmt.Errorf("new for config: %w", err)
 	}
 
 	var s *v1.Secret
 	if s, err = client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
-		return nil, errors.Wrap(err, "checking if secret exists")
+		return nil, fmt.Errorf("checking if secret exists: %w", err)
 	}
 
 	return s, nil
@@ -61,32 +61,32 @@ func KeyPairSecret(ctx context.Context, k8sRef string, pf cosign.PassFunc) error
 	// now, generate the key in memory
 	keys, err := cosign.GenerateKeyPair(pf)
 	if err != nil {
-		return errors.Wrap(err, "generating key pair")
+		return fmt.Errorf("generating key pair: %w", err)
 	}
 
 	// create the k8s client
-	client, err := Client()
+	client, err := client()
 	if err != nil {
-		return errors.Wrap(err, "new for config")
+		return fmt.Errorf("new for config: %w", err)
 	}
 	immutable, err := checkImmutableSecretSupported(client)
 	if err != nil {
-		return errors.Wrap(err, "check immutable")
+		return fmt.Errorf("check immutable: %w", err)
 	}
 	var s *v1.Secret
 	if s, err = client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if k8serrors.IsNotFound(err) {
 			s, err = client.CoreV1().Secrets(namespace).Create(ctx, secret(keys, namespace, name, nil, immutable), metav1.CreateOptions{})
 			if err != nil {
-				return errors.Wrapf(err, "creating secret %s in ns %s", name, namespace)
+				return fmt.Errorf("creating secret %s in ns %s: %w", name, namespace, err)
 			}
 		} else {
-			return errors.Wrap(err, "checking if secret exists")
+			return fmt.Errorf("checking if secret exists: %w", err)
 		}
 	} else { // Update the existing secret
 		s, err = client.CoreV1().Secrets(namespace).Update(ctx, secret(keys, namespace, name, s.Data, immutable), metav1.UpdateOptions{})
 		if err != nil {
-			return errors.Wrapf(err, "updating secret %s in ns %s", name, namespace)
+			return fmt.Errorf("updating secret %s in ns %s: %w", name, namespace, err)
 		}
 	}
 

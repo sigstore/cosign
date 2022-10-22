@@ -2,7 +2,7 @@
 
 The `cosign` command line tool optionally supports hardware tokens for signing and key management.
 This support is enabled through the [PIV protocol](https://csrc.nist.gov/projects/piv/piv-standards-and-supporting-documentation)
-and the [go-piv](https://github.com/go-piv/piv-go) library, which is not included in the standard release. Use [`make cosign-pivkey`](https://github.com/sigstore/cosign/blob/a8d1cc1132d4a019a62ff515b9375c8c5b98a5c5/Makefile#L52), or `go build -tags=pivkey`, to build `cosign` with support for hardware tokens.
+and the [go-piv](https://github.com/go-piv/piv-go) library, which is not included in the standard release. Use `make cosign-pivkey-pkcs11key`, or `go build -tags=pivkey,pkcs11key ./cmd/cosign`, to build `cosign` with support for hardware tokens.
 
 ---
 **NOTE**
@@ -14,11 +14,18 @@ See [`go-piv`'s installation instructions for your platform.](https://github.com
 
 We recommend using an application provided by your hardware vendor to manage keys and permissions for advanced use-cases, but `cosign piv-tool` should work well for most users.
 
+The following exmamples use this image:
+
+```shell
+$ IMAGE=gcr.io/dlorenc-vmtest2/demo
+$ IMAGE_DIGEST=$IMAGE@sha256:410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd
+```
+
 ## Quick Start
 
 ### Setup
 
-To get started, insert a key to your computer and run the `cosign generate-key` command.
+To get started, insert a key to your computer and run the `cosign piv-tool generate-key` command.
 We recommend using the `--random-management-key=true` flag.
 
 This command generates a cryptographically-random management key and configures the device to use it.
@@ -91,7 +98,7 @@ You can then use the normal `cosign` commands to sign images and blobs with your
 **NOTE**: The default PIN is `123456`.
 
 ```shell
-$ cosign sign --sk gcr.io/dlorenc-vmtest2/demo
+$ cosign sign --sk $IMAGE_DIGEST
 Enter PIN for security key:
 Please tap security key...
 Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f942a01748dfdb921de915ea6427d61d60b0357c1dcd.sig
@@ -100,7 +107,7 @@ Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-410a07f17151ffffb513f94
 To verify, you can either use the hardware key directly:
 
 ```shell
-$ cosign verify --sk gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --sk $IMAGE_DIGEST
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:
@@ -116,7 +123,7 @@ Or export the public key and verify against that:
 ```shell
 $ cosign public-key --sk > pub.key
 
-$ cosign verify --key pub.key gcr.io/dlorenc-vmtest2/demo
+$ cosign verify --key pub.key $IMAGE
 
 Verification for gcr.io/dlorenc-vmtest2/demo --
 The following checks were performed on each of these signatures:

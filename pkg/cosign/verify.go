@@ -25,12 +25,16 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/sigstore/pkg/tuf"
 
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -39,7 +43,6 @@ import (
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/pkg/errors"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -54,6 +57,16 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
+// Identity specifies an issuer/subject to verify a signature against.
+// Both IssuerRegExp/SubjectRegExp support regexp while Issuer/Subject are for
+// strict matching.
+type Identity struct {
+	Issuer        string
+	Subject       string
+	IssuerRegExp  string
+	SubjectRegExp string
+}
+
 // CheckOpts are the options for checking signatures.
 type CheckOpts struct {
 	// RegistryClientOpts are the options for interacting with the container registry.
@@ -61,6 +74,7 @@ type CheckOpts struct {
 
 	// Annotations optionally specifies image signature annotations to verify.
 	Annotations map[string]interface{}
+
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
 	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
 
@@ -74,26 +88,37 @@ type CheckOpts struct {
 
 	// RootCerts are the root CA certs used to verify a signature's chained certificate.
 	RootCerts *x509.CertPool
+	// IntermediateCerts are the optional intermediate CA certs used to verify a certificate chain.
+	IntermediateCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
+	// CertIdentity is the identity expected for a certificate to be valid.
+	CertIdentity string
 	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertOidcIssuer string
 
+	// CertGithubWorkflowTrigger is the GitHub Workflow Trigger name expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowTrigger string
+	// CertGithubWorkflowSha is the GitHub Workflow SHA expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowSha string
+	// CertGithubWorkflowName is the GitHub Workflow Name expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowName string
+	// CertGithubWorkflowRepository is the GitHub Workflow Repository  expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowRepository string
+	// CertGithubWorkflowRef is the GitHub Workflow Ref expected for a certificate to be valid. The empty string means any certificate can be valid.
+	CertGithubWorkflowRef string
+
+	// EnforceSCT requires that a certificate contain an embedded SCT during verification. An SCT is proof of inclusion in a
+	// certificate transparency log.
+	EnforceSCT bool
+
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
-}
 
-func getSignedEntity(signedImgRef name.Reference, regClientOpts []ociremote.Option) (oci.SignedEntity, v1.Hash, error) {
-	se, err := ociremote.SignedEntity(signedImgRef, regClientOpts...)
-	if err != nil {
-		return nil, v1.Hash{}, err
-	}
-	// Both of the SignedEntity types implement Digest()
-	h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
-	if err != nil {
-		return nil, v1.Hash{}, err
-	}
-	return se, h, nil
+	// Identities is an array of Identity (Subject, Issuer) matchers that have
+	// to be met for the signature to ve valid.
+	// Supercedes CertEmail / CertOidcIssuer
+	Identities []Identity
 }
 
 func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oci.Signature) error {
@@ -129,7 +154,7 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 	}
 
 	if env.PayloadType != types.IntotoPayloadType {
-		return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
+		return NewVerificationError("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
 	}
 	dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
 	if err != nil {
@@ -140,42 +165,237 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 }
 
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
-// chains up to a trusted root. Optionally verifies the subject of the certificate.
+// chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	verifier, err := signature.LoadECDSAVerifier(cert.PublicKey.(*ecdsa.PublicKey), crypto.SHA256)
+	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid certificate found on signature")
+		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
+	}
+
+	// Handle certificates where the Subject Alternative Name is not set to a supported
+	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
+	// or URIs as SANs. Fulcio can issue a certificate with an OtherName GeneralName, so
+	// remove the unhandled critical SAN extension before verifying.
+	if len(cert.UnhandledCriticalExtensions) > 0 {
+		var unhandledExts []asn1.ObjectIdentifier
+		for _, oid := range cert.UnhandledCriticalExtensions {
+			if !oid.Equal(SANOID) {
+				unhandledExts = append(unhandledExts, oid)
+			}
+		}
+		cert.UnhandledCriticalExtensions = unhandledExts
 	}
 
 	// Now verify the cert, then the signature.
-	if err := TrustedCert(cert, co.RootCerts); err != nil {
+	chains, err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts)
+	if err != nil {
 		return nil, err
 	}
-	if co.CertEmail != "" {
-		emailVerified := false
-		for _, em := range cert.EmailAddresses {
-			if co.CertEmail == em {
-				emailVerified = true
-				break
-			}
+
+	err = CheckCertificatePolicy(cert, co)
+	if err != nil {
+		return nil, err
+	}
+
+	contains, err := ctl.ContainsSCT(cert.Raw)
+	if err != nil {
+		return nil, err
+	}
+	if co.EnforceSCT && !contains {
+		return nil, &VerificationError{"certificate does not include required embedded SCT"}
+	}
+	if contains {
+		// handle if chains has more than one chain - grab first and print message
+		if len(chains) > 1 {
+			fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
 		}
-		if !emailVerified {
-			return nil, errors.New("expected email not found in certificate")
+		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
+			return nil, err
 		}
 	}
-	if co.CertOidcIssuer != "" {
-		issuer := ""
-		for _, ext := range cert.Extensions {
-			if ext.Id.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}) {
-				issuer = string(ext.Value)
-				break
-			}
-		}
-		if issuer != co.CertOidcIssuer {
-			return nil, errors.New("expected oidc issuer not found in certificate")
-		}
-	}
+
 	return verifier, nil
+}
+
+// CheckCertificatePolicy checks that the certificate subject and issuer match
+// the expected values.
+func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
+	ce := CertExtensions{Cert: cert}
+
+	if err := validateCertIdentity(cert, co); err != nil {
+		return err
+	}
+
+	if err := validateCertExtensions(ce, co); err != nil {
+		return err
+	}
+	issuer := ce.GetIssuer()
+	// If there are identities given, go through them and if one of them
+	// matches, call that good, otherwise, return an error.
+	if len(co.Identities) > 0 {
+		for _, identity := range co.Identities {
+			issuerMatches := false
+			switch {
+			// Check the issuer first
+			case identity.IssuerRegExp != "":
+				if regex, err := regexp.Compile(identity.IssuerRegExp); err != nil {
+					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRegExp, err)
+				} else if regex.MatchString(issuer) {
+					issuerMatches = true
+				}
+			case identity.Issuer != "":
+				if identity.Issuer == issuer {
+					issuerMatches = true
+				}
+			default:
+				// No issuer constraint on this identity, so checks out
+				issuerMatches = true
+			}
+
+			// Then the subject
+			subjectMatches := false
+			switch {
+			case identity.SubjectRegExp != "":
+				regex, err := regexp.Compile(identity.SubjectRegExp)
+				if err != nil {
+					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRegExp, err)
+				}
+				for _, san := range getSubjectAlternateNames(cert) {
+					if regex.MatchString(san) {
+						subjectMatches = true
+						break
+					}
+				}
+			case identity.Subject != "":
+				for _, san := range getSubjectAlternateNames(cert) {
+					if san == identity.Subject {
+						subjectMatches = true
+						break
+					}
+				}
+			default:
+				// No subject constraint on this identity, so checks out
+				subjectMatches = true
+			}
+			if subjectMatches && issuerMatches {
+				// If both issuer / subject match, return verifier
+				return nil
+			}
+		}
+		return &VerificationError{"none of the expected identities matched what was in the certificate"}
+	}
+	return nil
+}
+
+func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
+	if co.CertOidcIssuer != "" {
+		if ce.GetIssuer() != co.CertOidcIssuer {
+			return &VerificationError{"expected oidc issuer not found in certificate"}
+		}
+	}
+
+	if co.CertGithubWorkflowTrigger != "" {
+		if ce.GetCertExtensionGithubWorkflowTrigger() != co.CertGithubWorkflowTrigger {
+			return &VerificationError{"expected GitHub Workflow Trigger not found in certificate"}
+		}
+	}
+
+	if co.CertGithubWorkflowSha != "" {
+		if ce.GetExtensionGithubWorkflowSha() != co.CertGithubWorkflowSha {
+			return &VerificationError{"expected GitHub Workflow SHA not found in certificate"}
+		}
+	}
+
+	if co.CertGithubWorkflowName != "" {
+		if ce.GetCertExtensionGithubWorkflowName() != co.CertGithubWorkflowName {
+			return &VerificationError{"expected GitHub Workflow Name not found in certificate"}
+		}
+	}
+
+	if co.CertGithubWorkflowRepository != "" {
+		if ce.GetCertExtensionGithubWorkflowRepository() != co.CertGithubWorkflowRepository {
+			return &VerificationError{"expected GitHub Workflow Repository not found in certificate"}
+		}
+	}
+
+	if co.CertGithubWorkflowRef != "" {
+		if ce.GetCertExtensionGithubWorkflowRef() != co.CertGithubWorkflowRef {
+			return &VerificationError{"expected GitHub Workflow Ref not found in certificate"}
+		}
+	}
+	return nil
+}
+
+func validateCertIdentity(cert *x509.Certificate, co *CheckOpts) error {
+	// TODO: Make it mandatory to include one of these options.
+	if co.CertEmail == "" && co.CertIdentity == "" {
+		return nil
+	}
+
+	for _, dns := range cert.DNSNames {
+		if co.CertIdentity == dns {
+			return nil
+		}
+	}
+	for _, em := range cert.EmailAddresses {
+		if co.CertIdentity == em || co.CertEmail == em {
+			return nil
+		}
+	}
+	for _, ip := range cert.IPAddresses {
+		if co.CertIdentity == ip.String() {
+			return nil
+		}
+	}
+	for _, uri := range cert.URIs {
+		if co.CertIdentity == uri.String() {
+			return nil
+		}
+	}
+	return &VerificationError{"expected identity not found in certificate"}
+}
+
+// getSubjectAlternateNames returns all of the following for a Certificate.
+// DNSNames
+// EmailAddresses
+// IPAddresses
+// URIs
+func getSubjectAlternateNames(cert *x509.Certificate) []string {
+	sans := []string{}
+	sans = append(sans, cert.DNSNames...)
+	sans = append(sans, cert.EmailAddresses...)
+	for _, ip := range cert.IPAddresses {
+		sans = append(sans, ip.String())
+	}
+	for _, uri := range cert.URIs {
+		sans = append(sans, uri.String())
+	}
+	// ignore error if there's no OtherName SAN
+	otherName, _ := UnmarshalOtherNameSAN(cert.Extensions)
+	if len(otherName) > 0 {
+		sans = append(sans, otherName)
+	}
+	return sans
+}
+
+// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
+// chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
+// Optionally verifies the subject and issuer of the certificate.
+func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+	if len(chain) == 0 {
+		return nil, errors.New("no chain provided to validate certificate")
+	}
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(chain[len(chain)-1])
+	co.RootCerts = rootPool
+
+	subPool := x509.NewCertPool()
+	for _, c := range chain[:len(chain)-1] {
+		subPool.AddCert(c)
+	}
+	co.IntermediateCerts = subPool
+
+	return ValidateAndUnpackCert(cert, co)
 }
 
 func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub crypto.PublicKey, sig oci.Signature) error {
@@ -183,15 +403,7 @@ func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub c
 	if err != nil {
 		return err
 	}
-	b64sig, err := sig.Base64Signature()
-	if err != nil {
-		return err
-	}
-	payload, err := sig.Payload()
-	if err != nil {
-		return err
-	}
-	_, _, err = FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
+	_, err = tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
 	return err
 }
 
@@ -204,25 +416,51 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	b64sig, err := sig.Base64Signature()
-	if err != nil {
-		return err
-	}
-	payload, err := sig.Payload()
-	if err != nil {
-		return err
-	}
-	uuid, _, err := FindTlogEntry(ctx, rekorClient, b64sig, payload, pemBytes)
+	e, err := tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
 	if err != nil {
 		return err
 	}
 	// if we have a cert, we should check expiry
-	// The IntegratedTime verified in VerifyTlog
-	e, err := GetTlogEntry(ctx, rekorClient, uuid)
-	if err != nil {
-		return err
-	}
 	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
+}
+
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
+	b64sig, err := sig.Base64Signature()
+	if err != nil {
+		return nil, err
+	}
+	payload, err := sig.Payload()
+	if err != nil {
+		return nil, err
+	}
+	tlogEntries, err := FindTlogEntry(ctx, client, b64sig, payload, pem)
+	if err != nil {
+		return nil, err
+	}
+	if len(tlogEntries) == 0 {
+		return nil, fmt.Errorf("no valid tlog entries found with proposed entry")
+	}
+	// Always return the earliest integrated entry. That
+	// always suffices for verification of signature time.
+	var earliestLogEntry models.LogEntryAnon
+	var earliestLogEntryTime *time.Time
+	entryVerificationErrs := make([]string, 0)
+	for _, e := range tlogEntries {
+		entry := e
+		if err := VerifyTLogEntry(ctx, client, &entry); err != nil {
+			entryVerificationErrs = append(entryVerificationErrs, err.Error())
+			continue
+		}
+		entryTime := time.Unix(*entry.IntegratedTime, 0)
+		if earliestLogEntryTime == nil || entryTime.Before(*earliestLogEntryTime) {
+			earliestLogEntryTime = &entryTime
+			earliestLogEntry = entry
+		}
+	}
+	if earliestLogEntryTime == nil {
+		return nil, fmt.Errorf("no valid tlog entries found %s", strings.Join(entryVerificationErrs, ", "))
+	}
+	return &earliestLogEntry, nil
 }
 
 type fakeOCISignatures struct {
@@ -242,9 +480,13 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		return nil, false, errors.New("one of verifier or root certs is required")
 	}
 
-	// TODO(mattmoor): We could implement recursive verification if we just wrapped
-	// most of the logic below here in a call to mutate.Map
-	se, h, err := getSignedEntity(signedImgRef, co.RegistryClientOpts)
+	// This is a carefully optimized sequence for fetching the signatures of the
+	// entity that minimizes registry requests when supplied with a digest input
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	h, err := v1.NewHash(digest.Identifier())
 	if err != nil {
 		return nil, false, err
 	}
@@ -252,7 +494,11 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 	var sigs oci.Signatures
 	sigRef := co.SignatureRef
 	if sigRef == "" {
-		sigs, err = se.Signatures()
+		st, err := ociremote.SignatureTag(digest, co.RegistryClientOpts...)
+		if err != nil {
+			return nil, false, err
+		}
+		sigs, err = ociremote.Signatures(st, co.RegistryClientOpts...)
 		if err != nil {
 			return nil, false, err
 		}
@@ -321,53 +567,14 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	validationErrs := []string{}
 
 	for _, sig := range sl {
-		if err := func(sig oci.Signature) error {
-			verifier := co.SigVerifier
-			if verifier == nil {
-				// If we don't have a public key to check against, we can try a root cert.
-				cert, err := sig.Cert()
-				if err != nil {
-					return err
-				}
-				if cert == nil {
-					return errors.New("no certificate found on signature")
-				}
-				verifier, err = ValidateAndUnpackCert(cert, co)
-				if err != nil {
-					return err
-				}
-			}
-
-			if err := verifyOCISignature(ctx, verifier, sig); err != nil {
-				return err
-			}
-
-			// We can't check annotations without claims, both require unmarshalling the payload.
-			if co.ClaimVerifier != nil {
-				if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
-					return err
-				}
-			}
-
-			verified, err := VerifyBundle(ctx, sig)
-			if err != nil && co.RekorClient == nil {
-				return errors.Wrap(err, "unable to verify bundle")
-			}
-			bundleVerified = bundleVerified || verified
-
-			if !verified && co.RekorClient != nil {
-				if co.SigVerifier != nil {
-					pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
-					if err != nil {
-						return err
-					}
-					return tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
-				}
-
-				return tlogValidateCertificate(ctx, co.RekorClient, sig)
-			}
-			return nil
-		}(sig); err != nil {
+		sig, err := static.Copy(sig)
+		if err != nil {
+			validationErrs = append(validationErrs, err.Error())
+			continue
+		}
+		verified, err := VerifyImageSignature(ctx, sig, h, co)
+		bundleVerified = bundleVerified || verified
+		if err != nil {
 			validationErrs = append(validationErrs, err.Error())
 			continue
 		}
@@ -376,9 +583,74 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 		checkedSignatures = append(checkedSignatures, sig)
 	}
 	if len(checkedSignatures) == 0 {
-		return nil, false, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n "))
+		return nil, false, fmt.Errorf("%w:\n%s", ErrNoMatchingSignatures, strings.Join(validationErrs, "\n "))
 	}
 	return checkedSignatures, bundleVerified, nil
+}
+
+// VerifyImageSignature verifies a signature
+func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
+	verifier := co.SigVerifier
+	if verifier == nil {
+		// If we don't have a public key to check against, we can try a root cert.
+		cert, err := sig.Cert()
+		if err != nil {
+			return bundleVerified, err
+		}
+		if cert == nil {
+			return bundleVerified, &VerificationError{"no certificate found on signature"}
+		}
+		// Create a certificate pool for intermediate CA certificates, excluding the root
+		chain, err := sig.Chain()
+		if err != nil {
+			return bundleVerified, err
+		}
+		// If the chain annotation is not present or there is only a root
+		if chain == nil || len(chain) <= 1 {
+			co.IntermediateCerts = nil
+		} else if co.IntermediateCerts == nil {
+			// If the intermediate certs have not been loaded in by TUF
+			pool := x509.NewCertPool()
+			for _, cert := range chain[:len(chain)-1] {
+				pool.AddCert(cert)
+			}
+			co.IntermediateCerts = pool
+		}
+		verifier, err = ValidateAndUnpackCert(cert, co)
+		if err != nil {
+			return bundleVerified, err
+		}
+	}
+
+	if err := verifyOCISignature(ctx, verifier, sig); err != nil {
+		return bundleVerified, err
+	}
+
+	// We can't check annotations without claims, both require unmarshalling the payload.
+	if co.ClaimVerifier != nil {
+		if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
+			return bundleVerified, err
+		}
+	}
+
+	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
+	if err != nil && co.RekorClient == nil {
+		return false, fmt.Errorf("unable to verify bundle: %w", err)
+	}
+
+	if !bundleVerified && co.RekorClient != nil {
+		if co.SigVerifier != nil {
+			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
+			if err != nil {
+				return bundleVerified, err
+			}
+			return bundleVerified, tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
+		}
+
+		return bundleVerified, tlogValidateCertificate(ctx, co.RekorClient, sig)
+	}
+
+	return bundleVerified, nil
 }
 
 func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
@@ -419,7 +691,7 @@ func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *Check
 	}, nil
 }
 
-// VerifyAttestations does all the main cosign checks in a loop, returning the verified attestations.
+// VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
@@ -427,14 +699,22 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 		return nil, false, errors.New("one of verifier or root certs is required")
 	}
 
-	// TODO(mattmoor): We could implement recursive verification if we just wrapped
-	// most of the logic below here in a call to mutate.Map
-
-	se, h, err := getSignedEntity(signedImgRef, co.RegistryClientOpts)
+	// This is a carefully optimized sequence for fetching the attestations of
+	// the entity that minimizes registry requests when supplied with a digest
+	// input.
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, false, err
 	}
-	atts, err := se.Attestations()
+	h, err := v1.NewHash(digest.Identifier())
+	if err != nil {
+		return nil, false, err
+	}
+	st, err := ociremote.AttestationTag(digest, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	atts, err := ociremote.Signatures(st, co.RegistryClientOpts...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -496,6 +776,11 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 
 	validationErrs := []string{}
 	for _, att := range sl {
+		att, err := static.Copy(att)
+		if err != nil {
+			validationErrs = append(validationErrs, err.Error())
+			continue
+		}
 		if err := func(att oci.Signature) error {
 			verifier := co.SigVerifier
 			if verifier == nil {
@@ -505,7 +790,23 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 					return err
 				}
 				if cert == nil {
-					return errors.New("no certificate found on attestation")
+					return &VerificationError{"no certificate found on attestation"}
+				}
+				// Create a certificate pool for intermediate CA certificates, excluding the root
+				chain, err := att.Chain()
+				if err != nil {
+					return err
+				}
+				// If the chain annotation is not present or there is only a root
+				if chain == nil || len(chain) <= 1 {
+					co.IntermediateCerts = nil
+				} else if co.IntermediateCerts == nil {
+					// If the intermediate certs have not been loaded in by TUF
+					pool := x509.NewCertPool()
+					for _, cert := range chain[:len(chain)-1] {
+						pool.AddCert(cert)
+					}
+					co.IntermediateCerts = pool
 				}
 				verifier, err = ValidateAndUnpackCert(cert, co)
 				if err != nil {
@@ -524,9 +825,9 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				}
 			}
 
-			verified, err := VerifyBundle(ctx, att)
+			verified, err := VerifyBundle(ctx, att, co.RekorClient)
 			if err != nil && co.RekorClient == nil {
-				return errors.Wrap(err, "unable to verify bundle")
+				return fmt.Errorf("unable to verify bundle: %w", err)
 			}
 			bundleVerified = bundleVerified || verified
 
@@ -551,7 +852,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 		checkedAttestations = append(checkedAttestations, att)
 	}
 	if len(checkedAttestations) == 0 {
-		return nil, false, fmt.Errorf("no matching attestations:\n%s", strings.Join(validationErrs, "\n "))
+		return nil, false, fmt.Errorf("%w:\n%s", ErrNoMatchingAttestations, strings.Join(validationErrs, "\n "))
 	}
 	return checkedAttestations, bundleVerified, nil
 }
@@ -562,17 +863,17 @@ func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 		return t.Format(time.RFC3339)
 	}
 	if cert.NotAfter.Before(it) {
-		return fmt.Errorf("certificate expired before signatures were entered in log: %s is before %s",
+		return NewVerificationError("certificate expired before signatures were entered in log: %s is before %s",
 			ft(cert.NotAfter), ft(it))
 	}
 	if cert.NotBefore.After(it) {
-		return fmt.Errorf("certificate was issued after signatures were entered in log: %s is after %s",
+		return NewVerificationError("certificate was issued after signatures were entered in log: %s is after %s",
 			ft(cert.NotAfter), ft(it))
 	}
 	return nil
 }
 
-func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
+func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Rekor) (bool, error) {
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return false, err
@@ -580,39 +881,47 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, nil
 	}
 
-	pub, err := GetRekorPub(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "retrieving rekor public key")
-	}
-
-	rekorPubKey, err := PemToECDSAKey(pub)
-	if err != nil {
-		return false, errors.Wrap(err, "pem to ecdsa")
-	}
-
-	if err := VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, rekorPubKey); err != nil {
+	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
 		return false, err
+	}
+
+	publicKeys, err := GetRekorPubs(ctx, rekorClient)
+	if err != nil {
+		return false, fmt.Errorf("retrieving rekor public key: %w", err)
+	}
+
+	pubKey, ok := publicKeys[bundle.Payload.LogID]
+	if !ok {
+		return false, &VerificationError{"rekor log public key not found for payload"}
+	}
+	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
+	if err != nil {
+		return false, err
+	}
+	if pubKey.Status != tuf.Active {
+		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
 	cert, err := sig.Cert()
 	if err != nil {
 		return false, err
-	} else if cert == nil {
-		return true, nil
 	}
 
-	// verify the cert against the integrated time
-	if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
-		return false, errors.Wrap(err, "checking expiry on cert")
+	if cert != nil {
+		// Verify the cert against the integrated time.
+		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
+		if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		}
 	}
 
 	payload, err := sig.Payload()
 	if err != nil {
-		return false, errors.Wrap(err, "reading payload")
+		return false, fmt.Errorf("reading payload: %w", err)
 	}
 	signature, err := sig.Base64Signature()
 	if err != nil {
-		return false, errors.Wrap(err, "reading base64signature")
+		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
 
 	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature)
@@ -620,9 +929,34 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 	payloadHash := hex.EncodeToString(h[:])
 
 	if alg != "sha256" || bundlehash != payloadHash {
-		return false, errors.Wrap(err, "matching bundle to payload")
+		return false, fmt.Errorf("matching bundle to payload: %w", err)
 	}
 	return true, nil
+}
+
+// compare bundle signature to the signature we are verifying
+func compareSigs(bundleBody string, sig oci.Signature) error {
+	// TODO(nsmith5): modify function signature to make it more clear _why_
+	// we've returned nil (there are several reasons possible here).
+	actualSig, err := sig.Base64Signature()
+	if err != nil {
+		return fmt.Errorf("base64 signature: %w", err)
+	}
+	if actualSig == "" {
+		// NB: empty sig means this is an attestation
+		return nil
+	}
+	bundleSignature, err := bundleSig(bundleBody)
+	if err != nil {
+		return fmt.Errorf("failed to extract signature from bundle: %w", err)
+	}
+	if bundleSignature == "" {
+		return nil
+	}
+	if bundleSignature != actualSig {
+		return &VerificationError{"signature in bundle does not match signature being verified"}
+	}
+	return nil
 }
 
 func bundleHash(bundleBody, signature string) (string, string, error) {
@@ -686,38 +1020,78 @@ func bundleHash(bundleBody, signature string) (string, string, error) {
 	return *hrekordObj.Data.Hash.Algorithm, *hrekordObj.Data.Hash.Value, nil
 }
 
+// bundleSig extracts the signature from the rekor bundle body
+func bundleSig(bundleBody string) (string, error) {
+	var rekord models.Rekord
+	var hrekord models.Hashedrekord
+	var rekordObj models.RekordV001Schema
+	var hrekordObj models.HashedrekordV001Schema
+
+	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
+	if err != nil {
+		return "", fmt.Errorf("decoding bundleBody: %w", err)
+	}
+
+	// Try Rekord
+	if err := json.Unmarshal(bodyDecoded, &rekord); err == nil {
+		specMarshal, err := json.Marshal(rekord.Spec)
+		if err != nil {
+			return "", err
+		}
+		if err := json.Unmarshal(specMarshal, &rekordObj); err != nil {
+			return "", err
+		}
+		return rekordObj.Signature.Content.String(), nil
+	}
+
+	// Try hashedRekordObj
+	if err := json.Unmarshal(bodyDecoded, &hrekord); err != nil {
+		return "", err
+	}
+	specMarshal, err := json.Marshal(hrekord.Spec)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(specMarshal, &hrekordObj); err != nil {
+		return "", err
+	}
+	return hrekordObj.Signature.Content.String(), nil
+}
+
 func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {
 	contents, err := json.Marshal(bundlePayload)
 	if err != nil {
-		return errors.Wrap(err, "marshaling")
+		return fmt.Errorf("marshaling: %w", err)
 	}
 	canonicalized, err := jsoncanonicalizer.Transform(contents)
 	if err != nil {
-		return errors.Wrap(err, "canonicalizing")
+		return fmt.Errorf("canonicalizing: %w", err)
 	}
 
 	// verify the SET against the public key
 	hash := sha256.Sum256(canonicalized)
 	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
-		return errors.New("unable to verify")
+		return &VerificationError{"unable to verify SET"}
 	}
 	return nil
 }
 
-func TrustedCert(cert *x509.Certificate, roots *x509.CertPool) error {
-	if _, err := cert.Verify(x509.VerifyOptions{
+func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x509.CertPool) ([][]*x509.Certificate, error) {
+	chains, err := cert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
 		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
-		CurrentTime: cert.NotBefore,
-		Roots:       roots,
+		CurrentTime:   cert.NotBefore,
+		Roots:         roots,
+		Intermediates: intermediates,
 		KeyUsages: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageCodeSigning,
 		},
-	}); err != nil {
-		return err
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return chains, nil
 }
 
 func correctAnnotations(wanted, have map[string]interface{}) bool {

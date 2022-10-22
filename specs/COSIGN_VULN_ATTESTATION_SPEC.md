@@ -85,13 +85,13 @@ And the final format for this is defined as follows:
 > This is the most important part of this field because it'll store the scan result as a whole. So, people might want
 > to use this field to take decisions based on them by making use of Policy Engines tooling whether allow or deny these images.
 
-**metadata.buildStartedOn string (Timestamp), required**
+**metadata.scanStartedOn string (Timestamp), required**
 
-> The timestamp of when the build started.
+> The timestamp of when the scan started.
 
-**metadata.buildFinishedOn string (Timestamp), required**
+**metadata.scanFinishedOn string (Timestamp), required**
 
-> The timestamp of when the build completed.
+> The timestamp of when the scan completed.
 
 ```shell
 $ trivy image -f json alpine:3.12

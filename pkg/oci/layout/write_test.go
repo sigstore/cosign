@@ -17,6 +17,7 @@ package layout
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,6 +30,9 @@ import (
 )
 
 func TestReadWrite(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test is flaky on windows, see https://github.com/sigstore/cosign/issues/1389")
+	}
 	// write random signed image to disk
 	si := randomSignedImage(t)
 	tmp := t.TempDir()

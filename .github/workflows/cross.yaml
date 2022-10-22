@@ -1,5 +1,13 @@
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches:
       - main
       - release-*
@@ -9,19 +17,6 @@ permissions: read-all
 
 name: Cross
 jobs:
-  sanity-build:
-    name: build-1.16
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
-        with:
-          go-version: '1.16.x'
-      - name: compile
-        run: |
-          make
-          go build ./...
-
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -42,11 +37,12 @@ jobs:
             COSIGN_PASSWORD: COSIGN_PASSWORD
     steps:
       - name: Install Go
-        uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
+        uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.2.0
         with:
-          go-version: '1.17.x'
+          go-version: '1.19'
+          check-latest: true
       - name: Checkout code
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
       - name: build cosign
         run: |
           make cosign && mv ./cosign ./${{matrix.COSIGN_TARGET}}
@@ -73,7 +69,7 @@ jobs:
           ./${{matrix.COSIGN_TARGET}} verify-blob --key ./.github/workflows/cosign-test.pub --signature ${{matrix.SGET_TARGET}}.sig ./${{matrix.SGET_TARGET}}
       - name: Upload artifacts
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v2.3.1
         with:
           name: artifacts
           path: |

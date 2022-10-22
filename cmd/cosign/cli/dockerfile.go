@@ -40,8 +40,9 @@ func dockerfileVerify() *cobra.Command {
 	o := &options.VerifyDockerfileOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "verify",
-		Short: "Verify a signature on the base image specified in the Dockerfile",
+		Use:              "verify",
+		Short:            "Verify a signature on the base image specified in the Dockerfile",
+		PersistentPreRun: options.BindViper,
 		Long: `Verify signature and annotations on images in a Dockerfile by checking claims
 against the transparency log.
 
@@ -85,18 +86,25 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 			}
 			v := &dockerfile.VerifyDockerfileCommand{
 				VerifyCommand: verify.VerifyCommand{
-					RegistryOptions: o.Registry,
-					CheckClaims:     o.CheckClaims,
-					KeyRef:          o.Key,
-					CertRef:         o.CertVerify.Cert,
-					CertEmail:       o.CertVerify.CertEmail,
-					CertOidcIssuer:  o.CertVerify.CertOidcIssuer,
-					Sk:              o.SecurityKey.Use,
-					Slot:            o.SecurityKey.Slot,
-					Output:          o.Output,
-					RekorURL:        o.Rekor.URL,
-					Attachment:      o.Attachment,
-					Annotations:     annotations,
+					RegistryOptions:              o.Registry,
+					CheckClaims:                  o.CheckClaims,
+					KeyRef:                       o.Key,
+					CertRef:                      o.CertVerify.Cert,
+					CertEmail:                    o.CertVerify.CertEmail,
+					CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
+					CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+					CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+					CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+					CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+					CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+					CertChain:                    o.CertVerify.CertChain,
+					EnforceSCT:                   o.CertVerify.EnforceSCT,
+					Sk:                           o.SecurityKey.Use,
+					Slot:                         o.SecurityKey.Slot,
+					Output:                       o.Output,
+					RekorURL:                     o.Rekor.URL,
+					Attachment:                   o.Attachment,
+					Annotations:                  annotations,
 				},
 				BaseOnly: o.BaseImageOnly,
 			}

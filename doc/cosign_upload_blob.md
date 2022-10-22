@@ -22,12 +22,20 @@ cosign upload blob [flags]
 
   # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting the os fields
   cosign upload blob -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
+
+  # upload a blob named foo to the location specified by <IMAGE>, setting annotations mykey=myvalue.
+  cosign upload blob -a mykey=myvalue -f foo <IMAGE>
+
+  # upload two blobs named foo-darwin and foo-linux to the location specified by <IMAGE>, setting annotations
+  cosign upload blob -a mykey=myvalue -a myotherkey="my other value" -f foo-darwin:darwin -f foo-linux:linux <IMAGE>
 ```
 
 ### Options
 
 ```
-      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
+  -a, --annotation stringToString                                                                annotations to set (default [])
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --ct string                                                                                content type to set
   -f, --files strings                                                                            <filepath>:[platform/arch]
@@ -38,9 +46,9 @@ cosign upload blob [flags]
 ### Options inherited from parent commands
 
 ```
-      --azure-container-registry-config string   Path to the file containing Azure container registry configuration information.
-      --output-file string                       log output to a file
-  -d, --verbose                                  log debug output
+      --output-file string   log output to a file
+  -t, --timeout duration     timeout for commands (default 3m0s)
+  -d, --verbose              log debug output
 ```
 
 ### SEE ALSO

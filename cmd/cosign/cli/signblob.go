@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
@@ -53,7 +52,8 @@ func SignBlob() *cobra.Command {
 
   # sign a blob with a key pair stored in Hashicorp Vault
   cosign sign-blob --key hashivault://[KEY] <FILE>`,
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// A key file is required unless we're in experimental mode!
 			if !options.EnableExperimental() {
@@ -64,7 +64,11 @@ func SignBlob() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ko := sign.KeyOpts{
+			oidcClientSecret, err := o.OIDC.ClientSecret()
+			if err != nil {
+				return err
+			}
+			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
@@ -75,8 +79,11 @@ func SignBlob() *cobra.Command {
 				RekorURL:                 o.Rekor.URL,
 				OIDCIssuer:               o.OIDC.Issuer,
 				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         o.OIDC.ClientSecret,
+				OIDCClientSecret:         oidcClientSecret,
+				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 				BundlePath:               o.BundlePath,
+				SkipConfirmation:         o.SkipConfirmation,
 			}
 			for _, blob := range args {
 				// TODO: remove when the output flag has been deprecated
@@ -84,8 +91,8 @@ func SignBlob() *cobra.Command {
 					fmt.Fprintln(os.Stderr, "WARNING: the '--output' flag is deprecated and will be removed in the future. Use '--output-signature'")
 					o.OutputSignature = o.Output
 				}
-				if _, err := sign.SignBlobCmd(cmd.Context(), ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.Timeout); err != nil {
-					return errors.Wrapf(err, "signing %s", blob)
+				if _, err := sign.SignBlobCmd(ro, ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate); err != nil {
+					return fmt.Errorf("signing %s: %w", blob, err)
 				}
 			}
 			return nil

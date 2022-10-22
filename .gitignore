@@ -27,3 +27,9 @@
 
 bin*
 dist/
+cosignImagerefs
+policyControllerImagerefs
+sgetImagerefs
+policyImagerefs
+
+**verify-experimental*

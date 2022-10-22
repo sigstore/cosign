@@ -56,9 +56,10 @@ func pivToolSetManagementKey() *cobra.Command {
 	o := &options.PIVToolSetManagementKeyOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "set-management-key",
-		Short: "sets the management key of a hardware token",
-		Args:  cobra.ExactArgs(0),
+		Use:              "set-management-key",
+		Short:            "sets the management key of a hardware token",
+		Args:             cobra.ExactArgs(0),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pivcli.SetManagementKeyCmd(cmd.Context(), o.OldKey, o.NewKey, o.RandomKey)
 		},
@@ -73,9 +74,10 @@ func pivToolSetPIN() *cobra.Command {
 	o := &options.PIVToolSetPINOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "set-pin",
-		Short: "sets the PIN on a hardware token",
-		Args:  cobra.ExactArgs(0),
+		Use:              "set-pin",
+		Short:            "sets the PIN on a hardware token",
+		Args:             cobra.ExactArgs(0),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pivcli.SetPinCmd(cmd.Context(), o.OldPIN, o.NewPIN)
 		},

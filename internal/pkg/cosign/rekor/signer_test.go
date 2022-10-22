@@ -22,9 +22,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-openapi/swag"
 	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -47,7 +50,12 @@ func TestSigner(t *testing.T) {
 
 	// Mock out Rekor client
 	var mClient client.Rekor
-	mClient.Entries = &MockEntriesClient{}
+
+	mClient.Entries = &mock.EntriesClient{
+		Entries: []*models.LogEntry{{"123": models.LogEntryAnon{
+			LogIndex: swag.Int64(123),
+		}}},
+	}
 
 	testSigner := NewSigner(payloadSigner, &mClient)
 
@@ -56,15 +64,6 @@ func TestSigner(t *testing.T) {
 	ociSig, pub, err := testSigner.Sign(context.Background(), strings.NewReader(testPayload))
 	if err != nil {
 		t.Fatalf("Sign() returned error: %v", err)
-	}
-
-	// Verify that the OCI signature contains a timestamp.
-	timestamp, err := ociSig.Timestamp()
-	if err != nil {
-		t.Fatalf("ociSig.Timestamp() returned error: %v", err)
-	}
-	if timestamp == nil {
-		t.Fatal("ociSig.Timestamp() missing TUF timestamp, got nil")
 	}
 
 	// Verify that the wrapped signer was called.

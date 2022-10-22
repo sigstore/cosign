@@ -24,11 +24,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/pkg/errors"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
@@ -36,26 +33,8 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-type KeyOpts struct {
-	Sk               bool
-	Slot             string
-	KeyRef           string
-	FulcioURL        string
-	RekorURL         string
-	IDToken          string
-	PassFunc         cosign.PassFunc
-	OIDCIssuer       string
-	OIDCClientID     string
-	OIDCClientSecret string
-	BundlePath       string
-
-	// Modeled after InsecureSkipVerify in tls.Config, this disables
-	// verifying the SCT.
-	InsecureSkipFulcioVerify bool
-}
-
 // nolint
-func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, timeout time.Duration) ([]byte, error) {
+func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string) ([]byte, error) {
 	var payload []byte
 	var err error
 	var rekorBytes []byte
@@ -69,13 +48,11 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 	if err != nil {
 		return nil, err
 	}
-	if timeout != 0 {
-		var cancelFn context.CancelFunc
-		ctx, cancelFn = context.WithTimeout(ctx, timeout)
-		defer cancelFn()
-	}
 
-	sv, err := SignerFromKeyOpts(ctx, "", ko)
+	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
+	defer cancel()
+
+	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +60,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 
 	sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
-		return nil, errors.Wrap(err, "signing blob")
+		return nil, fmt.Errorf("signing blob: %w", err)
 	}
 
 	signedPayload := cosign.LocalSignedPayload{}
@@ -103,11 +80,6 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
-		ts, err := tuf.GetTimestamp(ctx)
-		if err != nil {
-			return nil, err
-		}
-		signedPayload.Timestamp = ts
 	}
 
 	// if bundle is specified, just do that and ignore the rest
@@ -119,7 +91,10 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		if err != nil {
 			return nil, err
 		}
-		return []byte(signedPayload.Base64Signature), os.WriteFile(ko.BundlePath, contents, 0600)
+		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+			return nil, fmt.Errorf("create bundle file: %w", err)
+		}
+		fmt.Printf("Bundle wrote in the file %s\n", ko.BundlePath)
 	}
 
 	if outputSignature != "" {
@@ -128,7 +103,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 			bts = []byte(base64.StdEncoding.EncodeToString(sig))
 		}
 		if err := os.WriteFile(outputSignature, bts, 0600); err != nil {
-			return nil, errors.Wrap(err, "create signature file")
+			return nil, fmt.Errorf("create signature file: %w", err)
 		}
 
 		fmt.Printf("Signature wrote in the file %s\n", outputSignature)
@@ -148,7 +123,7 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 			bts = []byte(base64.StdEncoding.EncodeToString(rekorBytes))
 		}
 		if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
-			return nil, errors.Wrap(err, "create certificate file")
+			return nil, fmt.Errorf("create certificate file: %w", err)
 		}
 		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}

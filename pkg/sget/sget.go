@@ -13,16 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Deprecated: This package is deprecated and will be removed in a future release.
 package sget
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
@@ -83,13 +85,27 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	}
 
 	if co.SigVerifier != nil || options.EnableExperimental() {
-		co.RootCerts = fulcio.GetRoots()
+		// NB: There are only 2 kinds of verification right now:
+		// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
+		// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
+		// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
+		// was performed so we don't need to use this fragile logic here.
+		fulcioVerified := (co.SigVerifier == nil)
+
+		co.RootCerts, err = fulcio.GetRoots()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio roots: %w", err)
+		}
+		co.IntermediateCerts, err = fulcio.GetIntermediates()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		}
 
 		sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 		if err != nil {
 			return err
 		}
-		verify.PrintVerificationHeader(sg.ImageRef, co, bundleVerified)
+		verify.PrintVerificationHeader(sg.ImageRef, co, bundleVerified, fulcioVerified)
 		verify.PrintVerification(sg.ImageRef, sp, "text")
 	}
 

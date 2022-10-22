@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright 2021 The Sigstore Authors.
 #
@@ -46,7 +46,7 @@ img_copy="${img}/copy"
 crane ls $img_copy | while read tag ; do crane delete "${img_copy}:${tag}" ; done
 multiarch_img="${TEST_INSTANCE_REPO}/multiarch-test"
 crane ls $multiarch_img | while read tag ; do crane delete "${multiarch_img}:${tag}" ; done
-crane cp gcr.io/distroless/base $multiarch_img
+crane cp ghcr.io/distroless/alpine-base $multiarch_img
 
 # `initialize`
 ./cosign initialize
@@ -110,12 +110,15 @@ echo "myblob2" > myblob2
 ./cosign sign-blob --key ${signing_key} myblob2 > myblob2.sig
 
 ./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob
+# expected to fail because signature mismatch
 if (./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob2); then false; fi
 
+# expected to fail because signature mismatch
 if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob); then false; fi
 ./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob2
 
 ./cosign sign-blob --key ${signing_key} --bundle bundle.sig myblob
+# passes when local bundle only contains the key and signature
 ./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob
 
 ## sign and verify multiple blobs
@@ -156,25 +159,25 @@ if ( ! cmp -s randomblob randomblob_from_digest ); then false; fi
 
 # TODO: tlog
 
-## KMS!
+## KMS using env variables!
 TEST_KMS=${TEST_KMS:-gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test}
 (crane delete $(./cosign triangulate $img)) || true
-./cosign generate-key-pair --kms $TEST_KMS
+COSIGN_KMS=$TEST_KMS ./cosign generate-key-pair
 signing_key=$TEST_KMS
 
 if (./cosign verify --key ${verification_key} $img); then false; fi
-./cosign sign --key ${signing_key} $img
-./cosign verify --key ${verification_key} $img
+COSIGN_KEY=${signing_key} ./cosign sign $img
+COSIGN_KEY=${verification_key} ./cosign verify $img
 
 if (./cosign verify -a foo=bar --key ${verification_key} $img); then false; fi
-./cosign sign --key ${signing_key} -a foo=bar $img
-./cosign verify --key ${verification_key} -a foo=bar $img
+COSIGN_KEY=${signing_key} ./cosign sign -a foo=bar $img
+COSIGN_KEY=${verification_key} ./cosign verify -a foo=bar $img
 
 # store signatures in a different repo
 export COSIGN_REPOSITORY=${TEST_INSTANCE_REPO}/subbedrepo
 (crane delete $(./cosign triangulate $img)) || true
-./cosign sign --key ${signing_key} $img
-./cosign verify --key ${verification_key} $img
+COSIGN_KEY=${signing_key} ./cosign sign $img
+COSIGN_KEY=${verification_key} ./cosign verify $img
 unset COSIGN_REPOSITORY
 
 # test stdin interaction for private key password
@@ -182,7 +185,7 @@ stdin_password=${COSIGN_PASSWORD}
 unset COSIGN_PASSWORD
 (crane delete $(./cosign triangulate $img)) || true
 echo $stdin_password | ./cosign sign --key ${signing_key} --output-signature interactive.sig  $img
-./cosign verify --key ${verification_key} --signature interactive.sig $img
+COSIGN_KEY=${verification_key} COSIGN_SIGNATURE=interactive.sig ./cosign verify $img
 export COSIGN_PASSWORD=${stdin_password}
 
 # What else needs auth?

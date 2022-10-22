@@ -21,7 +21,9 @@ import (
 	"io"
 	"os"
 
+	icos "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 var (
@@ -31,13 +33,17 @@ var (
 
 // nolint
 func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
-
 	keys, err := cosign.ImportKeyPair(keyVal, GetPass)
 	if err != nil {
 		return err
 	}
 
-	if cosign.FileExists("import-cosign.key") {
+	fileExists, err := icos.FileExists("import-cosign.key")
+	if err != nil {
+		return fmt.Errorf("failed checking if import-cosign.key exists: %w", err)
+	}
+
+	if fileExists {
 		var overwrite string
 		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
 		fmt.Scanf("%s", &overwrite)
@@ -69,7 +75,7 @@ func GetPass(confirm bool) ([]byte, error) {
 }
 
 func readPasswordFn(confirm bool) func() ([]byte, error) {
-	pw, ok := os.LookupEnv("COSIGN_PASSWORD")
+	pw, ok := env.LookupEnv(env.VariablePassword)
 	switch {
 	case ok:
 		return func() ([]byte, error) {

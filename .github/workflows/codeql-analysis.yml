@@ -17,11 +17,22 @@ name: CodeQL
 
 on:
   push:
+    paths:
+     - '**'
+     - '!**.md'
+     - '!doc/**'
+     - '!**.txt'
+     - '!images/**'
+     - '!LICENSE'
+     - 'test/**'
     branches: [ main ]
   pull_request:
     branches: [ main ]
   schedule:
     - cron: '30 1 * * 0'
+
+env:
+  CODEQL_EXTRACTOR_GO_BUILD_TRACING: true
 
 jobs:
   analyze:
@@ -43,7 +54,23 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
+
+    - name: Utilize Go Module Cache
+      uses: actions/cache@9b0c1fce7a93df8e3bb8926b0d6e9d89e92f20a7 # v3.0.3
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Set correct version of Golang to use during CodeQL run
+      uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.1.5
+      with:
+        go-version: '1.19'
+        check-latest: true
 
     - name: Use build cache
       uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed #v2.1.7
@@ -65,25 +92,12 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@300c8b6dcbaf905eb250b06113e2e62c340a2d20 #v1.0.27
+      uses: github/codeql-action/init@cc7986c02bac29104a72998e67239bb5ee2ee110 # v2.1.25
       with:
         languages: ${{ matrix.language }}
-        # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@300c8b6dcbaf905eb250b06113e2e62c340a2d20 #v1.0.27
-
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 https://git.io/JvXDl
-
-    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
-    #    and modify them (or add more) to build your code if your project
-    #    uses a compiled language
-    #- run: |
-    #   make bootstrap
-    #   make release
+    - name: Build cosign for CodeQL
+      run: make cosign
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@300c8b6dcbaf905eb250b06113e2e62c340a2d20 #v1.0.27
+      uses: github/codeql-action/analyze@cc7986c02bac29104a72998e67239bb5ee2ee110 # v2.1.25

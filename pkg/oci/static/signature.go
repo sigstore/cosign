@@ -23,7 +23,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/tuf"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -33,7 +32,6 @@ const (
 	CertificateAnnotationKey = "dev.sigstore.cosign/certificate"
 	ChainAnnotationKey       = "dev.sigstore.cosign/chain"
 	BundleAnnotationKey      = "dev.sigstore.cosign/bundle"
-	TimestampAnnotationKey   = "dev.sigstore.cosign/timestamp"
 )
 
 // NewSignature constructs a new oci.Signature from the provided options.
@@ -55,6 +53,58 @@ func NewSignature(payload []byte, b64sig string, opts ...Option) (oci.Signature,
 // the Base64Signature.
 func NewAttestation(payload []byte, opts ...Option) (oci.Signature, error) {
 	return NewSignature(payload, "", opts...)
+}
+
+// Copy constructs a new oci.Signature from the provided one.
+func Copy(sig oci.Signature) (oci.Signature, error) {
+	payload, err := sig.Payload()
+	if err != nil {
+		return nil, err
+	}
+	b64sig, err := sig.Base64Signature()
+	if err != nil {
+		return nil, err
+	}
+	var opts []Option
+
+	mt, err := sig.MediaType()
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, WithLayerMediaType(mt))
+
+	ann, err := sig.Annotations()
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, WithAnnotations(ann))
+
+	bundle, err := sig.Bundle()
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, WithBundle(bundle))
+
+	cert, err := sig.Cert()
+	if err != nil {
+		return nil, err
+	}
+	if cert != nil {
+		rawCert, err := cryptoutils.MarshalCertificateToPEM(cert)
+		if err != nil {
+			return nil, err
+		}
+		chain, err := sig.Chain()
+		if err != nil {
+			return nil, err
+		}
+		rawChain, err := cryptoutils.MarshalCertificatesToPEM(chain)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, WithCertChain(rawCert, rawChain))
+	}
+	return NewSignature(payload, b64sig, opts...)
 }
 
 type staticLayer struct {
@@ -110,11 +160,6 @@ func (l *staticLayer) Chain() ([]*x509.Certificate, error) {
 // Bundle implements oci.Signature
 func (l *staticLayer) Bundle() (*bundle.RekorBundle, error) {
 	return l.opts.Bundle, nil
-}
-
-// Timestamp implements oci.Signature
-func (l *staticLayer) Timestamp() (*tuf.Timestamp, error) {
-	return l.opts.Timestamp, nil
 }
 
 // Digest implements v1.Layer

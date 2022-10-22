@@ -49,12 +49,13 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
+	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
-		"related image attachment to sign (sbom), default none")
+		"related image attachment to verify (sbom), default none")
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")
@@ -138,7 +139,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 		"path to bundle FILE")
 }
 
-// VerifyBlobOptions is the top level wrapper for the `verify blob` command.
+// VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.
 type VerifyDockerfileOptions struct {
 	VerifyOptions
 	BaseImageOnly bool
@@ -152,4 +153,24 @@ func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.BaseImageOnly, "base-image-only", false,
 		"only verify the base image (the last FROM image in the Dockerfile)")
+}
+
+// VerifyBlobAttestationOptions is the top level wrapper for the `verify-blob-attestation` command.
+type VerifyBlobAttestationOptions struct {
+	Key           string
+	SignaturePath string
+	PredicateOptions
+}
+
+var _ Interface = (*VerifyBlobOptions)(nil)
+
+// AddFlags implements Interface
+func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
+	o.PredicateOptions.AddFlags(cmd)
+
+	cmd.Flags().StringVar(&o.Key, "key", "",
+		"path to the public key file, KMS URI or Kubernetes Secret")
+
+	cmd.Flags().StringVar(&o.SignaturePath, "signature", "",
+		"path to base64-encoded signature over attestation in DSSE format")
 }

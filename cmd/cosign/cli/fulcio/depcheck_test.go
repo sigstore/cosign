@@ -18,14 +18,13 @@ package fulcio_test
 import (
 	"testing"
 
-	"knative.dev/pkg/depcheck"
+	"github.com/depcheck-test/depcheck-test/depcheck"
 )
 
 func TestNoDeps(t *testing.T) {
 	depcheck.AssertNoDependency(t, map[string][]string{
 		"github.com/sigstore/cosign/cmd/cosign/cli/fulcio": {
 			// Avoid pulling in a variety of things that are massive dependencies.
-			"github.com/google/certificate-transparency-go",
 			"github.com/google/trillian",
 			"github.com/envoyproxy/go-control-plane",
 			"github.com/gogo/protobuf/protoc-gen-gogo",
