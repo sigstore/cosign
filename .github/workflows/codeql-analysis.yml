@@ -32,7 +32,7 @@ on:
     - cron: '30 1 * * 0'
 
 env:
-  CODEQL_EXTRACTOR_GO_BUILD_TRACING: true
+  CODEQL_EXTRACTOR_GO_BUILD_TRACING: on
 
 jobs:
   analyze:
@@ -56,39 +56,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
 
-    - name: Utilize Go Module Cache
-      uses: actions/cache@9b0c1fce7a93df8e3bb8926b0d6e9d89e92f20a7 # v3.0.3
-      with:
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
     - name: Set correct version of Golang to use during CodeQL run
-      uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.1.5
+      uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v3.3.1
       with:
-        go-version: '1.19'
+        go-version-file: 'go.mod'
+        cache: true
         check-latest: true
-
-    - name: Use build cache
-      uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed #v2.1.7
-      with:
-        # In order:
-        # * Module download cache
-        # * Build cache (Linux)
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
-    - name: Setup Go Version
-      uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
-      with:
-        go-version: '1.16.x'
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
