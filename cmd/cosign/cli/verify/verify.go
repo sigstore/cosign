@@ -92,9 +92,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
-	if !options.OneOf(c.KeyRef, c.CertRef, c.Sk) && !options.EnableExperimental() {
-		return &options.PubKeyParseError{}
-	}
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
@@ -116,7 +113,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
-	if options.EnableExperimental() {
+
+	if c.keylessVerification() {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -397,4 +395,14 @@ func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 	return certs, nil
+}
+
+func (c *VerifyCommand) keylessVerification() bool {
+	if c.KeyRef != "" {
+		return false
+	}
+	if c.Sk {
+		return false
+	}
+	return true
 }
