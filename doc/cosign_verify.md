@@ -16,7 +16,7 @@ cosign verify [flags]
 ```
   cosign verify --key <key path>|<key url>|<kms uri> <image uri> [<image uri> ...]
 
-  # verify cosign claims and signing certificates on the image
+  # verify cosign claims and signing certificates on the image with the transparency log
   cosign verify <IMAGE>
 
   # verify multiple images
@@ -24,9 +24,6 @@ cosign verify [flags]
 
   # additionally verify specified annotations
   cosign verify -a key1=val1 -a key2=val2 <IMAGE>
-
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign verify <IMAGE>
 
   # verify image with an on-disk public key
   cosign verify --key cosign.pub <IMAGE>

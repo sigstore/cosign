@@ -130,6 +130,10 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
+	if options.NOf(ko.KeyRef, ko.Sk) > 1 {
+		return &options.KeyParseError{}
+	}
+
 	sv, err := SignerFromKeyOpts(ctx, certPath, certChainPath, ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
