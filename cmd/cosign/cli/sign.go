@@ -109,12 +109,7 @@ race conditions or (worse) malicious tampering.
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 			}
-			annotationsMap, err := o.AnnotationsMap()
-			if err != nil {
-				return err
-			}
-			if err := sign.SignCmd(ro, ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.CertChain, o.Upload,
-				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment, o.NoTlogUpload); err != nil {
+			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {
 					return fmt.Errorf("signing %v: %w", args, err)
 				}
