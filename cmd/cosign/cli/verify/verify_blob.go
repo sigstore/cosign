@@ -56,7 +56,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types/rekord"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -107,8 +106,6 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 			}
 			co.RekorClient = rekorClient
 		}
-	}
-	if options.EnableExperimental() {
 		co.RootCerts, err = fulcio.GetRoots()
 		if err != nil {
 			return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -300,12 +297,8 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 		}
 	}
 
-	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
-	// TODO: This verifier only supports verification of a single signer/signature on
-	// the envelope. Either have the verifier validate that only one signature exists,
-	// or use a multi-signature verifier.
 	if isIntotoDSSE(blobBytes) {
-		co.SigVerifier = dsse.WrapVerifier(co.SigVerifier)
+		return errors.New("attempting to validate a DSSE envelope, use verify-blob-attestation")
 	}
 
 	// 1. Verify the signature.

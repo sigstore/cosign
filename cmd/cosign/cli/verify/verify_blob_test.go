@@ -42,7 +42,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	sigs "github.com/sigstore/cosign/pkg/signature"
-	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -54,7 +53,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types/rekord"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -818,45 +816,6 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatal("expected error due to expired cert, received nil")
 		}
 	})
-	t.Run("Attestation", func(t *testing.T) {
-		identity := "hello@foo.com"
-		issuer := "issuer"
-		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
-
-		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"customFoo","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
-		wrapped := dsse.WrapSigner(signer, ctypes.IntotoPayloadType)
-		signedPayload, err := wrapped.SignMessage(bytes.NewReader([]byte(stmt)), signatureoptions.WithContext(context.Background()))
-		if err != nil {
-			t.Fatal(err)
-		}
-		// intoto sig = json-serialized dsse envelope
-		sig := signedPayload
-
-		// Create bundle
-		entry := genRekorEntry(t, intoto.KIND, "0.0.1", signedPayload, leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
-		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
-		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
-		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
-
-		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",       /*certRef*/ // Cert is fetched from bundle
-			"",       /*certEmail*/
-			"",       /*certIdentity*/
-			"",       /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
 	t.Run("Invalid blob signature", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
@@ -1299,6 +1258,10 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 	return hex.EncodeToString(digest[:]), nil
 }
 
+// TODO(https://github.com/sigstore/cosign/issues/2138)
+// test intoto types. Currently, only hashedrekord is
+// used here.
+//nolint
 func genRekorEntry(t *testing.T, kind, version string, artifact []byte, cert []byte, sig []byte) string {
 	// Generate the Rekor Entry
 	entryImpl, err := createEntry(context.Background(), kind, version, artifact, cert, sig)
