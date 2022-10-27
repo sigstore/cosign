@@ -333,7 +333,7 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 				return fmt.Errorf("marshalling pubkey: %w", err)
 			}
 		}
-		bundle, err := verifyRekorBundle(ctx, bundle, co.RekorClient, blobBytes, sig, svBytes)
+		bundle, err := verifyRekorBundle(ctx, bundle, blobBytes, sig, svBytes)
 		if err != nil {
 			// Return when the provided bundle fails verification. (Do not fallback).
 			return err
@@ -364,7 +364,7 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 		fallthrough
 	// We are provided a log entry, possibly from above, or search.
 	case e != nil:
-		if err := cosign.VerifyTLogEntry(ctx, co.RekorClient, e); err != nil {
+		if err := cosign.VerifyTLogEntry(ctx, nil, e); err != nil {
 			return err
 		}
 
@@ -482,15 +482,13 @@ func payloadBytes(blobRef string) ([]byte, error) {
 	return blobBytes, nil
 }
 
-// TODO: RekorClient can be removed when SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY
-// is removed.
-func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle, rekorClient *client.Rekor,
+func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle,
 	blobBytes []byte, sig string, pubKeyBytes []byte) (*bundle.RekorPayload, error) {
 	if err := verifyBundleMatchesData(ctx, bundle, blobBytes, pubKeyBytes, []byte(sig)); err != nil {
 		return nil, err
 	}
 
-	publicKeys, err := cosign.GetRekorPubs(ctx, rekorClient)
+	publicKeys, err := cosign.GetRekorPubs(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving rekor public key: %w", err)
 	}

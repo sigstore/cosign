@@ -447,7 +447,7 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signat
 	entryVerificationErrs := make([]string, 0)
 	for _, e := range tlogEntries {
 		entry := e
-		if err := VerifyTLogEntry(ctx, client, &entry); err != nil {
+		if err := VerifyTLogEntry(ctx, nil, &entry); err != nil {
 			entryVerificationErrs = append(entryVerificationErrs, err.Error())
 			continue
 		}
@@ -885,7 +885,7 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 		return false, err
 	}
 
-	publicKeys, err := GetRekorPubs(ctx, rekorClient)
+	publicKeys, err := GetRekorPubs(ctx, nil)
 	if err != nil {
 		return false, fmt.Errorf("retrieving rekor public key: %w", err)
 	}
