@@ -56,6 +56,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 func TestSignaturesRef(t *testing.T) {
@@ -224,6 +225,16 @@ func TestVerifyBlob(t *testing.T) {
 		t.Fatalf("failed to write rekor pub file: %v", err)
 	}
 	t.Setenv("SIGSTORE_REKOR_PUBLIC_KEY", tmpRekorPubFile.Name())
+	logID, err := getLogID(rekorPriv.Public())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rekorPubKeys := map[string]cosign.RekorPubKey{
+		logID: {
+			PubKey: &rekorPriv.PublicKey,
+			Status: tuf.Active,
+		},
+	}
 
 	var makeSignature = func(blob []byte) string {
 		sig, err := signer.SignMessage(bytes.NewReader(blob))
@@ -543,8 +554,9 @@ func TestVerifyBlob(t *testing.T) {
 			var mClient client.Rekor
 			mClient.Entries = &mock.EntriesClient{Entries: tt.rekorEntry}
 			co := &cosign.CheckOpts{
-				SigVerifier: tt.sigVerifier,
-				RootCerts:   rootPool,
+				SigVerifier:  tt.sigVerifier,
+				RootCerts:    rootPool,
+				RekorPubKeys: rekorPubKeys,
 			}
 			// if expermental is enabled, add RekorClient to co.
 			if tt.experimental {

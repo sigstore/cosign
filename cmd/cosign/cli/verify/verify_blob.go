@@ -117,6 +117,10 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 		if err != nil {
 			return fmt.Errorf("getting Fulcio intermediates: %w", err)
 		}
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting Rekor public keys: %w", err)
+		}
 	}
 
 	// Keys are optional!
@@ -364,7 +368,7 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 		fallthrough
 	// We are provided a log entry, possibly from above, or search.
 	case e != nil:
-		if err := cosign.VerifyTLogEntry(ctx, nil, e); err != nil {
+		if err := cosign.VerifyTLogEntry(e, co.RekorPubKeys); err != nil {
 			return err
 		}
 
@@ -488,7 +492,7 @@ func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle,
 		return nil, err
 	}
 
-	publicKeys, err := cosign.GetRekorPubs(ctx, nil)
+	publicKeys, err := cosign.GetRekorPubs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving rekor public key: %w", err)
 	}

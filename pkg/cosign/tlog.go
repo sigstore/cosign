@@ -91,7 +91,7 @@ func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.Proposed
 // There are two Env variable that can be used to override this behaviour:
 // SIGSTORE_REKOR_PUBLIC_KEY - If specified, location of the file that contains
 // the Rekor Public Key on local filesystem
-func GetRekorPubs(ctx context.Context, _ *client.Rekor) (map[string]RekorPubKey, error) {
+func GetRekorPubs(ctx context.Context) (map[string]RekorPubKey, error) {
 	publicKeys := make(map[string]RekorPubKey)
 	altRekorPub := env.Getenv(env.VariableSigstoreRekorPublicKey)
 
@@ -138,6 +138,27 @@ func GetRekorPubs(ctx context.Context, _ *client.Rekor) (map[string]RekorPubKey,
 	return publicKeys, nil
 }
 
+// rekorPubsFromClient returns a RekorPubKey keyed by the log ID from the Rekor client.
+// NOTE: This should **not** be used in the verification path, but may be used in the
+// sign path to validate return responses are consistent from Rekor.
+func rekorPubsFromClient(rekorClient *client.Rekor) (map[string]RekorPubKey, error) {
+	publicKeys := make(map[string]RekorPubKey)
+	pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)
+	}
+	pubFromAPI, err := PemToECDSAKey([]byte(pubOK.Payload))
+	if err != nil {
+		return nil, fmt.Errorf("error converting rekor PEM public key from rekor to ECDSAKey: %w", err)
+	}
+	keyID, err := getLogID(pubFromAPI)
+	if err != nil {
+		return nil, fmt.Errorf("error generating log ID: %w", err)
+	}
+	publicKeys[keyID] = RekorPubKey{PubKey: pubFromAPI, Status: tuf.Active}
+	return publicKeys, nil
+}
+
 // TLogUpload will upload the signature, public key and payload to the transparency log.
 func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
 	re := rekorEntry(payload, signature, pemBytes)
@@ -174,7 +195,11 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntry(ctx, nil, e)
+			rekorPubsFromAPI, err := rekorPubsFromClient(rekorClient)
+			if err != nil {
+				return nil, err
+			}
+			return e, VerifyTLogEntry(e, rekorPubsFromAPI)
 		}
 		return nil, err
 	}
@@ -402,9 +427,9 @@ func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, pa
 	return searchIndex.GetPayload(), nil
 }
 
-// VerityTLogEntry verifies a TLog entry.
+// VerityTLogEntry verifies a TLog entry against the trusted map of rekorPubKeys.
 // The argument *client.Rekor is unused and may be nil.
-func VerifyTLogEntry(ctx context.Context, _ *client.Rekor, e *models.LogEntryAnon) error {
+func VerifyTLogEntry(e *models.LogEntryAnon, rekorPubKeys map[string]RekorPubKey) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
@@ -434,11 +459,6 @@ func VerifyTLogEntry(ctx context.Context, _ *client.Rekor, e *models.LogEntryAno
 		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       *e.LogIndex,
 		LogID:          *e.LogID,
-	}
-
-	rekorPubKeys, err := GetRekorPubs(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("unable to fetch Rekor public keys: %w", err)
 	}
 
 	pubKey, ok := rekorPubKeys[payload.LogID]

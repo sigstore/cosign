@@ -78,8 +78,12 @@ type CheckOpts struct {
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
 	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
 
-	// RekorClient, if set, is used to use to verify signatures and public keys.
+	// RekorClient, if set, is used to make online tlog calls use to verify signatures and public keys.
 	RekorClient *client.Rekor
+	// RekorPubKeys, if set, is used to validate signatures on log entries from Rekor.
+	// Note: We use RekorPubKey that contains other information like status besides the
+	// raw public key.
+	RekorPubKeys map[string]RekorPubKey
 
 	// SigVerifier is used to verify signatures.
 	SigVerifier signature.Verifier
@@ -398,16 +402,18 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub crypto.PublicKey, sig oci.Signature) error {
+func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, rekorPubKeys map[string]RekorPubKey,
+	pub crypto.PublicKey, sig oci.Signature) error {
 	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pub)
 	if err != nil {
 		return err
 	}
-	_, err = tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
+	_, err = tlogValidateEntry(ctx, rekorClient, rekorPubKeys, sig, pemBytes)
 	return err
 }
 
-func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig oci.Signature) error {
+func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, rekorPubKeys map[string]RekorPubKey,
+	sig oci.Signature) error {
 	cert, err := sig.Cert()
 	if err != nil {
 		return err
@@ -416,7 +422,7 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	e, err := tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
+	e, err := tlogValidateEntry(ctx, rekorClient, rekorPubKeys, sig, pemBytes)
 	if err != nil {
 		return err
 	}
@@ -424,7 +430,8 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
-func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys map[string]RekorPubKey,
+	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
 		return nil, err
@@ -447,7 +454,7 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signat
 	entryVerificationErrs := make([]string, 0)
 	for _, e := range tlogEntries {
 		entry := e
-		if err := VerifyTLogEntry(ctx, nil, &entry); err != nil {
+		if err := VerifyTLogEntry(&entry, rekorPubKeys); err != nil {
 			entryVerificationErrs = append(entryVerificationErrs, err.Error())
 			continue
 		}
@@ -633,7 +640,7 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 		}
 	}
 
-	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
+	bundleVerified, err = VerifyBundle(sig, co.RekorPubKeys)
 	if err != nil && co.RekorClient == nil {
 		return false, fmt.Errorf("unable to verify bundle: %w", err)
 	}
@@ -644,10 +651,12 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 			if err != nil {
 				return bundleVerified, err
 			}
-			return bundleVerified, tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
+			return bundleVerified, tlogValidatePublicKey(ctx, co.RekorClient, co.RekorPubKeys,
+				pub, sig)
 		}
 
-		return bundleVerified, tlogValidateCertificate(ctx, co.RekorClient, sig)
+		return bundleVerified, tlogValidateCertificate(ctx, co.RekorClient, co.RekorPubKeys,
+			sig)
 	}
 
 	return bundleVerified, nil
@@ -825,7 +834,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				}
 			}
 
-			verified, err := VerifyBundle(ctx, att, co.RekorClient)
+			verified, err := VerifyBundle(att, co.RekorPubKeys)
 			if err != nil && co.RekorClient == nil {
 				return fmt.Errorf("unable to verify bundle: %w", err)
 			}
@@ -837,10 +846,12 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 					if err != nil {
 						return err
 					}
-					return tlogValidatePublicKey(ctx, co.RekorClient, pub, att)
+					return tlogValidatePublicKey(ctx, co.RekorClient, co.RekorPubKeys,
+						pub, att)
 				}
 
-				return tlogValidateCertificate(ctx, co.RekorClient, att)
+				return tlogValidateCertificate(ctx, co.RekorClient, co.RekorPubKeys,
+					att)
 			}
 			return nil
 		}(att); err != nil {
@@ -873,7 +884,9 @@ func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Rekor) (bool, error) {
+// This verifies an offline bundle contained in the sig against the trusted
+// Rekor publicKeys.
+func VerifyBundle(sig oci.Signature, publicKeys map[string]RekorPubKey) (bool, error) {
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return false, err
@@ -883,11 +896,6 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 
 	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
 		return false, err
-	}
-
-	publicKeys, err := GetRekorPubs(ctx, nil)
-	if err != nil {
-		return false, fmt.Errorf("retrieving rekor public key: %w", err)
 	}
 
 	pubKey, ok := publicKeys[bundle.Payload.LogID]
