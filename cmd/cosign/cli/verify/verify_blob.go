@@ -152,6 +152,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
+	if !co.SkipTlogVerify {
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting Rekor public keys: %w", err)
+		}
+	}
+
 	// Keys are optional!
 	switch {
 	case c.KeyRef != "":

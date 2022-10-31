@@ -55,6 +55,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/spf13/viper"
@@ -254,18 +255,23 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	entry, _ := rtypes.UnmarshalEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	rekorPubKeys := NewTrustedRekorPubKeys()
+	rekorPubKeys.AddRekorPubKey(pemBytes, tuf.Active)
 
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
 
-	// TODO(asraa): Re-enable passing test when Rekor public keys can be set in CheckOpts,
-	// instead of relying on the singleton TUF instance.
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true})
-	if err == nil {
-		t.Fatalf("expected error due to custom Rekor public key")
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:    rootPool,
+			IgnoreSCT:    true,
+			RekorPubKeys: &rekorPubKeys})
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
 	}
-	if verified == true {
-		t.Fatalf("expected verified=false, got verified=true")
+	if verified == false {
+		t.Fatalf("expected verified=true, got verified=false")
 	}
 }
 
@@ -416,14 +422,10 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		SigVerifier: sv,
 		RekorClient: mClient,
-	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
-		// TODO(wlynch): This is a weak test, since this is really failing because
-		// there is no inclusion proof for the Rekor entry rather than failing to
-		// validate the Rekor public key itself. At the very least this ensures
-		// that we're hitting tlog validation during signature checking,
-		// but we should look into improving this once there is an in-memory
-		// Rekor client that is capable of performing inclusion proof validation
-		// in unit tests.
+	}); err == nil || !strings.Contains(err.Error(), "no valid tlog entries found no trusted rekor public keys provided") {
+		// This is failing to validate the Rekor public key itself.
+		// At the very least this ensures
+		// that we're hitting tlog validation during signature checking.
 		t.Fatalf("expected error while verifying signature, got %s", err)
 	}
 }
@@ -517,7 +519,7 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		SigVerifier: sv,
 		TSACerts:    tsaCertPool,
 		RekorClient: mClient,
-	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
+	}); err == nil || !strings.Contains(err.Error(), "no trusted rekor public keys provided") {
 		// TODO(wlynch): This is a weak test, since this is really failing because
 		// there is no inclusion proof for the Rekor entry rather than failing to
 		// validate the Rekor public key itself. At the very least this ensures

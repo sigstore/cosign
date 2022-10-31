@@ -57,6 +57,13 @@ type RekorPubKey struct {
 	Status tuf.StatusKind
 }
 
+// This is a map of RekorPubKeys indexed by log ID that's used in verification
+// for the trusted set of RekorPubKeys.
+type TrustedRekorPubKeys struct {
+	// A map of keys indexed by log ID
+	Keys map[string]RekorPubKey
+}
+
 const treeIDHexStringLen = 16
 const uuidHexStringLen = 64
 const entryIDHexStringLen = treeIDHexStringLen + uuidHexStringLen
@@ -91,8 +98,8 @@ func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.Proposed
 // There are two Env variable that can be used to override this behaviour:
 // SIGSTORE_REKOR_PUBLIC_KEY - If specified, location of the file that contains
 // the Rekor Public Key on local filesystem
-func GetRekorPubs(ctx context.Context, _ *client.Rekor) (map[string]RekorPubKey, error) {
-	publicKeys := make(map[string]RekorPubKey)
+func GetRekorPubs(ctx context.Context) (*TrustedRekorPubKeys, error) {
+	publicKeys := NewTrustedRekorPubKeys()
 	altRekorPub := env.Getenv(env.VariableSigstoreRekorPublicKey)
 
 	if altRekorPub != "" {
@@ -100,15 +107,9 @@ func GetRekorPubs(ctx context.Context, _ *client.Rekor) (map[string]RekorPubKey,
 		if err != nil {
 			return nil, fmt.Errorf("error reading alternate Rekor public key file: %w", err)
 		}
-		extra, err := PemToECDSAKey(raw)
-		if err != nil {
-			return nil, fmt.Errorf("error converting PEM to ECDSAKey: %w", err)
+		if err := publicKeys.AddRekorPubKey(raw, tuf.Active); err != nil {
+			return nil, fmt.Errorf("AddRekorPubKey: %w", err)
 		}
-		keyID, err := getLogID(extra)
-		if err != nil {
-			return nil, fmt.Errorf("error generating log ID: %w", err)
-		}
-		publicKeys[keyID] = RekorPubKey{PubKey: extra, Status: tuf.Active}
 	} else {
 		tufClient, err := tuf.NewFromEnv(ctx)
 		if err != nil {
@@ -119,23 +120,32 @@ func GetRekorPubs(ctx context.Context, _ *client.Rekor) (map[string]RekorPubKey,
 			return nil, err
 		}
 		for _, t := range targets {
-			rekorPubKey, err := PemToECDSAKey(t.Target)
-			if err != nil {
-				return nil, fmt.Errorf("pem to ecdsa: %w", err)
+			if err := publicKeys.AddRekorPubKey(t.Target, t.Status); err != nil {
+				return nil, fmt.Errorf("AddRekorPubKey: %w", err)
 			}
-			keyID, err := getLogID(rekorPubKey)
-			if err != nil {
-				return nil, fmt.Errorf("error generating log ID: %w", err)
-			}
-			publicKeys[keyID] = RekorPubKey{PubKey: rekorPubKey, Status: t.Status}
 		}
 	}
 
-	if len(publicKeys) == 0 {
+	if len(publicKeys.Keys) == 0 {
 		return nil, errors.New("none of the Rekor public keys have been found")
 	}
 
-	return publicKeys, nil
+	return &publicKeys, nil
+}
+
+// rekorPubsFromClient returns a RekorPubKey keyed by the log ID from the Rekor client.
+// NOTE: This **must not** be used in the verification path, but may be used in the
+// sign path to validate return responses are consistent from Rekor.
+func rekorPubsFromClient(rekorClient *client.Rekor) (*TrustedRekorPubKeys, error) {
+	publicKeys := NewTrustedRekorPubKeys()
+	pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)
+	}
+	if err := publicKeys.AddRekorPubKey([]byte(pubOK.Payload), tuf.Active); err != nil {
+		return nil, fmt.Errorf("constructRekorPubKey: %w", err)
+	}
+	return &publicKeys, nil
 }
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
@@ -174,7 +184,11 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntry(ctx, nil, e)
+			rekorPubsFromAPI, err := rekorPubsFromClient(rekorClient)
+			if err != nil {
+				return nil, err
+			}
+			return e, VerifyTLogEntry(e, rekorPubsFromAPI)
 		}
 		return nil, err
 	}
@@ -390,11 +404,15 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 	return results, nil
 }
 
-// VerityTLogEntry verifies a TLog entry.
-// The argument *client.Rekor is unused and may be nil.
-func VerifyTLogEntry(ctx context.Context, _ *client.Rekor, e *models.LogEntryAnon) error {
+// VerityTLogEntry verifies a TLog entry against a map of trusted rekorPubKeys indexed
+// by log id.
+func VerifyTLogEntry(e *models.LogEntryAnon, rekorPubKeys *TrustedRekorPubKeys) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
+	}
+
+	if rekorPubKeys == nil || rekorPubKeys.Keys == nil {
+		return errors.New("no trusted rekor public keys provided")
 	}
 
 	hashes := [][]byte{}
@@ -424,12 +442,7 @@ func VerifyTLogEntry(ctx context.Context, _ *client.Rekor, e *models.LogEntryAno
 		LogID:          *e.LogID,
 	}
 
-	rekorPubKeys, err := GetRekorPubs(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("unable to fetch Rekor public keys: %w", err)
-	}
-
-	pubKey, ok := rekorPubKeys[payload.LogID]
+	pubKey, ok := rekorPubKeys.Keys[payload.LogID]
 	if !ok {
 		return errors.New("rekor log public key not found for payload")
 	}
@@ -440,5 +453,24 @@ func VerifyTLogEntry(ctx context.Context, _ *client.Rekor, e *models.LogEntryAno
 	if pubKey.Status != tuf.Active {
 		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
+	return nil
+}
+
+func NewTrustedRekorPubKeys() TrustedRekorPubKeys {
+	return TrustedRekorPubKeys{Keys: make(map[string]RekorPubKey, 0)}
+}
+
+// constructRekorPubkey returns a log ID and RekorPubKey from a given
+// byte-array representing the PEM-encoded Rekor key and a status.
+func (t *TrustedRekorPubKeys) AddRekorPubKey(pemBytes []byte, status tuf.StatusKind) error {
+	pubKey, err := PemToECDSAKey(pemBytes)
+	if err != nil {
+		return err
+	}
+	keyID, err := getLogID(pubKey)
+	if err != nil {
+		return err
+	}
+	t.Keys[keyID] = RekorPubKey{PubKey: pubKey, Status: status}
 	return nil
 }

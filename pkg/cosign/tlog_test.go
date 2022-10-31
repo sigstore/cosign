@@ -20,15 +20,15 @@ import (
 )
 
 func TestGetRekorPubKeys(t *testing.T) {
-	keys, err := GetRekorPubs(context.Background(), nil)
+	keys, err := GetRekorPubs(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error calling GetRekorPubs, expected nil: %v", err)
 	}
-	if len(keys) == 0 {
+	if len(keys.Keys) == 0 {
 		t.Errorf("expected 1 or more keys, got 0")
 	}
 	// check that the mapping of key digest to key is correct
-	for logID, key := range keys {
+	for logID, key := range keys.Keys {
 		expectedLogID, err := getLogID(key.PubKey)
 		if err != nil {
 			t.Fatalf("unexpected error generated log ID: %v", err)

@@ -139,6 +139,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if err != nil {
 			return fmt.Errorf("getting Fulcio intermediates: %w", err)
 		}
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting Rekor public keys: %w", err)
+		}
 	}
 	keyRef := c.KeyRef
 
