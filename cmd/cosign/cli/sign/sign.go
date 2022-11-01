@@ -60,17 +60,13 @@ import (
 
 const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not a digest, to identify the image to sign.
 
-This can lead you to sign a different image than the intended one. Please use a
-digest (example.com/ubuntu@sha256:abc123...) rather than tag
-(example.com/ubuntu:latest) for the input to cosign. The ability to refer to
-images by tag will be removed in a future release.
+    This can lead you to sign a different image than the intended one. Please use a
+    digest (example.com/ubuntu@sha256:abc123...) rather than tag
+    (example.com/ubuntu:latest) for the input to cosign. The ability to refer to
+    images by tag will be removed in a future release.
 `
 
-func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, noTlogUpload bool, url string) bool {
-	// Check whether experimental is on!
-	if !options.EnableExperimental() {
-		return false
-	}
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, force, noTlogUpload bool) bool {
 	// We are forcing publishing to the Tlog.
 	if force {
 		return true
@@ -80,9 +76,14 @@ func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, noT
 		return false
 	}
 
+	// If we aren't using keyless signing, we can skip the tlog
+	if !keylessSigning(ko) {
+		return false
+	}
+
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
-		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), url)
+		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), ko.RekorURL)
 
 		var tlogConfirmResponse string
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
@@ -124,14 +125,8 @@ func ParseOCIReference(refStr string, out io.Writer, opts ...name.Option) (name.
 
 // nolint
 func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignOptions, imgs []string) error {
-	if options.EnableExperimental() {
-		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
-			return &options.KeyParseError{}
-		}
-	} else {
-		if !options.OneOf(ko.KeyRef, ko.Sk) {
-			return &options.KeyParseError{}
-		}
+	if options.NOf(ko.KeyRef, ko.Sk) > 1 {
+		return &options.KeyParseError{}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
@@ -236,7 +231,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	if sv.Cert != nil {
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
-	if ShouldUploadToTlog(ctx, digest, force, noTlogUpload, ko.RekorURL) {
+	if ShouldUploadToTlog(ctx, ko, digest, force, noTlogUpload) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
@@ -530,4 +525,14 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return pemBytes, nil
+}
+
+func keylessSigning(ko options.KeyOpts) bool {
+	if ko.KeyRef != "" {
+		return false
+	}
+	if ko.Sk {
+		return false
+	}
+	return true
 }

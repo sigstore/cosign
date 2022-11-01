@@ -40,8 +40,8 @@ race conditions or (worse) malicious tampering.
 `,
 		Example: `  cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
 
-  # sign a container image with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign sign <IMAGE DIGEST>
+  # sign a container image with the Sigstore OIDC flow
+  cosign sign <IMAGE DIGEST>
 
   # sign a container image with a local key pair file
   cosign sign --key cosign.key <IMAGE DIGEST>
