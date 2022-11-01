@@ -80,10 +80,11 @@ type CheckOpts struct {
 
 	// RekorClient, if set, is used to make online tlog calls use to verify signatures and public keys.
 	RekorClient *client.Rekor
-	// RekorPubKeys, if set, is used to validate signatures on log entries from Rekor.
-	// Note: We use RekorPubKey that contains other information like status besides the
-	// raw public key.
-	RekorPubKeys map[string]RekorPubKey
+	// TrustedRekorPubKeys, if set, is used to validate signatures on log entries from Rekor.
+	// It is a map from log id to RekorPubKey.
+	// Note: The RekorPubKey values contains information like status along with the
+	// raw public key information.
+	RekorPubKeys *TrustedRekorPubKeys
 
 	// SigVerifier is used to verify signatures.
 	SigVerifier signature.Verifier
@@ -402,7 +403,7 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, rekorPubKeys map[string]RekorPubKey,
+func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, rekorPubKeys *TrustedRekorPubKeys,
 	pub crypto.PublicKey, sig oci.Signature) error {
 	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pub)
 	if err != nil {
@@ -412,7 +413,7 @@ func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, rekor
 	return err
 }
 
-func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, rekorPubKeys map[string]RekorPubKey,
+func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, rekorPubKeys *TrustedRekorPubKeys,
 	sig oci.Signature) error {
 	cert, err := sig.Cert()
 	if err != nil {
@@ -430,7 +431,7 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, rek
 	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
-func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys map[string]RekorPubKey,
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedRekorPubKeys,
 	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
@@ -886,7 +887,7 @@ func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 
 // This verifies an offline bundle contained in the sig against the trusted
 // Rekor publicKeys.
-func VerifyBundle(sig oci.Signature, publicKeys map[string]RekorPubKey) (bool, error) {
+func VerifyBundle(sig oci.Signature, publicKeys *TrustedRekorPubKeys) (bool, error) {
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return false, err
@@ -898,7 +899,11 @@ func VerifyBundle(sig oci.Signature, publicKeys map[string]RekorPubKey) (bool, e
 		return false, err
 	}
 
-	pubKey, ok := publicKeys[bundle.Payload.LogID]
+	if publicKeys == nil || publicKeys.Keys == nil {
+		return false, &VerificationError{"no trusted rekor public key found for payload"}
+	}
+
+	pubKey, ok := publicKeys.Keys[bundle.Payload.LogID]
 	if !ok {
 		return false, &VerificationError{"rekor log public key not found for payload"}
 	}

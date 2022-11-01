@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -53,6 +54,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/stretchr/testify/require"
 	"github.com/transparency-dev/merkle/rfc6962"
 )
@@ -248,9 +250,17 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
 
+	logId, _ := getLogID(sv.Public)
+	ecdsaKey, _ := sv.PublicKey()
+
 	// TODO(asraa): Re-enable passing test when Rekor public keys can be set in CheckOpts,
 	// instead of relying on the singleton TUF instance.
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
+		RootCerts: rootPool,
+		RekorPubKeys: &TrustedRekorPubKeys{
+			Keys: map[string]RekorPubKey{logId: {PubKey: ecdsaKey.(*ecdsa.PublicKey), Status: tuf.Active}},
+		},
+	})
 	if err == nil {
 		t.Fatalf("expected error due to custom Rekor public key")
 	}

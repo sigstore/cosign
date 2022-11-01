@@ -497,7 +497,11 @@ func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle,
 		return nil, fmt.Errorf("retrieving rekor public key: %w", err)
 	}
 
-	pubKey, ok := publicKeys[bundle.Payload.LogID]
+	if publicKeys == nil || publicKeys.Keys == nil {
+		return nil, errors.New("rekor log public key not found for payload")
+	}
+
+	pubKey, ok := publicKeys.Keys[bundle.Payload.LogID]
 	if !ok {
 		return nil, errors.New("rekor log public key not found for payload")
 	}

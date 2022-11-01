@@ -229,10 +229,12 @@ func TestVerifyBlob(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rekorPubKeys := map[string]cosign.RekorPubKey{
-		logID: {
-			PubKey: &rekorPriv.PublicKey,
-			Status: tuf.Active,
+	rekorPubKeys := cosign.TrustedRekorPubKeys{
+		Keys: map[string]cosign.RekorPubKey{
+			logID: {
+				PubKey: &rekorPriv.PublicKey,
+				Status: tuf.Active,
+			},
 		},
 	}
 
@@ -556,7 +558,7 @@ func TestVerifyBlob(t *testing.T) {
 			co := &cosign.CheckOpts{
 				SigVerifier:  tt.sigVerifier,
 				RootCerts:    rootPool,
-				RekorPubKeys: rekorPubKeys,
+				RekorPubKeys: &rekorPubKeys,
 			}
 			// if expermental is enabled, add RekorClient to co.
 			if tt.experimental {
