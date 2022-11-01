@@ -74,6 +74,7 @@ cosign manifest verify [flags]
       --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --verify-tlog                                                                              set to true to ensure a valid signature has a corresponding entry in the tlog
 ```
 
 ### Options inherited from parent commands

@@ -1172,23 +1172,31 @@ func TestTlog(t *testing.T) {
 		RekorURL: rekorURL,
 	}
 	so := options.SignOptions{
-		Upload: true,
+		Upload: true, // upload the signature
 	}
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// TODO: priyawadhwa@ to figure out how to add an entry to the tlog without using keyless signing
-	// We could add an --upload-tlog flag, but it's a bit weird since we have a --no-upload-tlog flag too right now.
+	// Now, verify with the tlog
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        pubKeyPath,
+		RekorURL:      rekorURL,
+		CheckClaims:   true,
+		HashAlgorithm: crypto.SHA256,
+		VerifyTlog:    true,
+	}
 
-	// Verify shouldn't work since we haven't put anything in it yet.
-	// mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+	args := []string{imgName}
+	// Verify shouldn't work since we haven't put anything in the tlog yet.
+	mustErr(cmd.Exec(context.Background(), args), t)
 
-	// // Sign again with the tlog env var on
-	// must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	// // And now verify works!
-	// must(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// Sign again, but this time upload to the tlog
+	so.TlogUpload = true
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// And now verification with the tlog works!
+	must(cmd.Exec(context.Background(), args), t)
 }
 
 func TestNoTlog(t *testing.T) {
@@ -1220,13 +1228,18 @@ func TestNoTlog(t *testing.T) {
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// Sign again and make sure tlog upload is set to false
-	so = options.SignOptions{
-		TlogUpload: false,
+	// Now, verify with the tlog
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        pubKeyPath,
+		RekorURL:      rekorURL,
+		CheckClaims:   true,
+		HashAlgorithm: crypto.SHA256,
+		VerifyTlog:    true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	// And verify it still fails.
-	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	args := []string{imgName}
+	// Verify shouldn't work since we signed with --upload-tlog=false
+	mustErr(cmd.Exec(context.Background(), args), t)
 }
 
 func TestGetPublicKeyCustomOut(t *testing.T) {

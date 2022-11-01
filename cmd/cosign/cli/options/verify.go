@@ -31,6 +31,7 @@ type VerifyOptions struct {
 	SecurityKey     SecurityKeyOptions
 	CertVerify      CertVerifyOptions
 	Rekor           RekorOptions
+	RekorVerify     RekorVerifyOptions
 	Registry        RegistryOptions
 	SignatureDigest SignatureDigestOptions
 	AnnotationOptions
@@ -42,6 +43,7 @@ var _ Interface = (*VerifyOptions)(nil)
 func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
+	o.RekorVerify.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)

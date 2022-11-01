@@ -63,6 +63,7 @@ type VerifyCommand struct {
 	CertOidcProvider             string
 	EnforceSCT                   bool
 	Sk                           bool
+	VerifyTlog                   bool
 	Slot                         string
 	Output                       string
 	RekorURL                     string
@@ -114,7 +115,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	if c.keylessVerification() {
+	if c.keylessVerification() || c.VerifyTlog {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
