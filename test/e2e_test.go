@@ -1220,19 +1220,13 @@ func TestNoTlog(t *testing.T) {
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// TODO: priyawadhwa@ to figure out how to add an entry to the tlog without using keyless signing
-	// We could add an --upload-tlog flag, but it's a bit weird since we have a --no-upload-tlog flag too right now.
-
-	// // Now we turn on the tlog!
-	// defer setenv(t, env.VariableExperimental.String(), "1")()
-
-	// Sign again with the tlog env var on with option to not upload tlog
-	// so = options.SignOptions{
-	// 	NoTlogUpload: true,
-	// }
-	// must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	// // And verify it still fails.
-	// mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// Sign again and make sure tlog upload is set to false
+	so = options.SignOptions{
+		TlogUpload: false,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// And verify it still fails.
+	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestGetPublicKeyCustomOut(t *testing.T) {
@@ -1422,8 +1416,8 @@ func TestInvalidBundle(t *testing.T) {
 	imgRef2, _, cleanup := mkimage(t, img2)
 	defer cleanup()
 	so = options.SignOptions{
-		Upload:       true,
-		NoTlogUpload: true,
+		Upload:     true,
+		TlogUpload: false,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img2}), t)
 	must(verify(pubKeyPath, img2, true, nil, ""), t)
