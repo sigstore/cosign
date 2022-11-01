@@ -423,6 +423,10 @@ func VerifyTLogEntry(e *models.LogEntryAnon, rekorPubKeys *TrustedRekorPubKeys) 
 		return errors.New("inclusion proof not provided")
 	}
 
+	if rekorPubKeys == nil || rekorPubKeys.Keys == nil {
+		return errors.New("no trusted rekor public keys provided")
+	}
+
 	hashes := [][]byte{}
 	for _, h := range e.Verification.InclusionProof.Hashes {
 		hb, _ := hex.DecodeString(h)

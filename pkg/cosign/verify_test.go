@@ -250,7 +250,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
 
-	logId, _ := getLogID(sv.Public)
+	logID, _ := getLogID(sv.Public)
 	ecdsaKey, _ := sv.PublicKey()
 
 	// TODO(asraa): Re-enable passing test when Rekor public keys can be set in CheckOpts,
@@ -258,7 +258,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		RootCerts: rootPool,
 		RekorPubKeys: &TrustedRekorPubKeys{
-			Keys: map[string]RekorPubKey{logId: {PubKey: ecdsaKey.(*ecdsa.PublicKey), Status: tuf.Active}},
+			Keys: map[string]RekorPubKey{logID: {PubKey: ecdsaKey.(*ecdsa.PublicKey), Status: tuf.Active}},
 		},
 	})
 	if err == nil {
