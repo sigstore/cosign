@@ -66,11 +66,7 @@ const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not 
     images by tag will be removed in a future release.
 `
 
-func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, force, noTlogUpload bool) bool {
-	// We are forcing publishing to the Tlog.
-	if force {
-		return true
-	}
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, skipConfirmation, noTlogUpload bool) bool {
 	// Check whether to not upload Tlog.
 	if noTlogUpload {
 		return false
@@ -81,13 +77,17 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		return false
 	}
 
+	if skipConfirmation {
+		return true
+	}
+
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
 		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), ko.RekorURL)
 
 		var tlogConfirmResponse string
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
-			fmt.Fprintf(os.Stderr, "\nWARNING: skipping transparency log upload (use --force to upload from scripts): %v\n", err)
+			fmt.Fprintf(os.Stderr, "\nWARNING: skipping transparency log upload (use --yes to skip confirmation: %v\n", err)
 			return false
 		}
 		if strings.ToUpper(tlogConfirmResponse) != "Y" {
@@ -178,7 +178,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 			if err != nil {
 				return fmt.Errorf("accessing image: %w", err)
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Force, signOpts.Recursive, signOpts.NoTlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Recursive, signOpts.NoTlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -198,7 +198,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 			}
 			digest := ref.Context().Digest(d.String())
 
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Force, signOpts.Recursive, signOpts.NoTlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Recursive, signOpts.NoTlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -212,7 +212,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts,
-	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool, recursive bool, noTlogUpload bool,
+	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, recursive bool, noTlogUpload bool,
 	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
@@ -231,7 +231,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	if sv.Cert != nil {
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
-	if ShouldUploadToTlog(ctx, ko, digest, force, noTlogUpload) {
+	if ShouldUploadToTlog(ctx, ko, digest, ko.SkipConfirmation, noTlogUpload) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
