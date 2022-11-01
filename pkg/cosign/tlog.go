@@ -107,7 +107,7 @@ func GetRekorPubs(ctx context.Context) (*TrustedRekorPubKeys, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error reading alternate Rekor public key file: %w", err)
 		}
-		if publicKeys.AddRekorPubKey(raw, tuf.Active); err != nil {
+		if err := publicKeys.AddRekorPubKey(raw, tuf.Active); err != nil {
 			return nil, fmt.Errorf("AddRekorPubKey: %w", err)
 		}
 	} else {
@@ -120,7 +120,7 @@ func GetRekorPubs(ctx context.Context) (*TrustedRekorPubKeys, error) {
 			return nil, err
 		}
 		for _, t := range targets {
-			if publicKeys.AddRekorPubKey(t.Target, t.Status); err != nil {
+			if err := publicKeys.AddRekorPubKey(t.Target, t.Status); err != nil {
 				return nil, fmt.Errorf("AddRekorPubKey: %w", err)
 			}
 		}
@@ -142,7 +142,7 @@ func rekorPubsFromClient(rekorClient *client.Rekor) (*TrustedRekorPubKeys, error
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)
 	}
-	if publicKeys.AddRekorPubKey([]byte(pubOK.Payload), tuf.Active); err != nil {
+	if err := publicKeys.AddRekorPubKey([]byte(pubOK.Payload), tuf.Active); err != nil {
 		return nil, fmt.Errorf("constructRekorPubKey: %w", err)
 	}
 	return &publicKeys, nil
