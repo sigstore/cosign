@@ -79,7 +79,7 @@ type VerifyBlobCmd struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
-	EnforceSCT                   bool
+	IgnoreSCT                    bool
 }
 
 // nolint
@@ -110,7 +110,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
-		EnforceSCT:                   c.EnforceSCT,
+		IgnoreSCT:                    c.IgnoreSCT,
 	}
 	if options.EnableExperimental() {
 		if c.RekorURL != "" {

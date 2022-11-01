@@ -72,11 +72,12 @@ cosign verify-blob [flags]
       --certificate-github-workflow-trigger string                                               contains the event_name claim from the GitHub OIDC Identity token that contains the name of the event that triggered the workflow run
       --certificate-identity string                                                              the identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs.
       --certificate-oidc-issuer string                                                           the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth
-      --enforce-sct                                                                              whether to enforce that a certificate contain an embedded SCT, a proof of inclusion in a certificate transparency log
   -h, --help                                                                                     help for verify-blob
+      --insecure-ignore-sct                                                                      when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --sct string                                                                               path to an RFC 6962 detached Signed CertifiCate Timestamp. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
       --signature string                                                                         signature content or path or remote URL
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)

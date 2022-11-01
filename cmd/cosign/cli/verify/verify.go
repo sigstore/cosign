@@ -61,7 +61,7 @@ type VerifyCommand struct {
 	CertGithubWorkflowRef        string
 	CertChain                    string
 	CertOidcProvider             string
-	EnforceSCT                   bool
+	IgnoreSCT                    bool
 	Sk                           bool
 	Slot                         string
 	Output                       string
@@ -107,7 +107,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
-		EnforceSCT:                   c.EnforceSCT,
+		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
 	}
 	if c.CheckClaims {

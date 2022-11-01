@@ -54,7 +54,7 @@ type VerifyAttestationCommand struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 	CertChain                    string
-	EnforceSCT                   bool
+	IgnoreSCT                    bool
 	Sk                           bool
 	Slot                         string
 	Output                       string
@@ -89,7 +89,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
-		EnforceSCT:                   c.EnforceSCT,
+		IgnoreSCT:                    c.IgnoreSCT,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier

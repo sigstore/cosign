@@ -71,7 +71,7 @@ jobs:
         env:
           # See #2091 for the issue describing this temp workaround.
           GODEBUG: x509sha1=1
-        run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
+        run: go test -tags=sct -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
         uses: codecov/codecov-action@d9f34f8cd5cb3b3eb79b3e4b5dae3a16df499a70 # v3.1.1
         with:
@@ -81,7 +81,7 @@ jobs:
           # See #2091 for the issue describing this temp workaround.
           GODEBUG: x509sha1=1
         if: ${{ runner.os == 'Linux' }}
-        run: go test -race $(go list ./... | grep -v third_party/)
+        run: go test -tags=sct -race $(go list ./... | grep -v third_party/)
 
   e2e-tests:
     name: Run e2e tests

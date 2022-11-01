@@ -108,9 +108,9 @@ type CheckOpts struct {
 	// CertGithubWorkflowRef is the GitHub Workflow Ref expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertGithubWorkflowRef string
 
-	// EnforceSCT requires that a certificate contain an embedded SCT during verification. An SCT is proof of inclusion in a
+	// IgnoreSCT requires that a certificate contain an embedded SCT during verification. An SCT is proof of inclusion in a
 	// certificate transparency log.
-	EnforceSCT bool
+	IgnoreSCT bool
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
@@ -197,21 +197,23 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		return nil, err
 	}
 
+	// If IgnoreSCT is set, skip the SCT check
+	if co.IgnoreSCT {
+		return verifier, nil
+	}
 	contains, err := ctl.ContainsSCT(cert.Raw)
 	if err != nil {
 		return nil, err
 	}
-	if co.EnforceSCT && !contains {
+	if !contains {
 		return nil, &VerificationError{"certificate does not include required embedded SCT"}
 	}
-	if contains {
-		// handle if chains has more than one chain - grab first and print message
-		if len(chains) > 1 {
-			fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
-		}
-		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
-			return nil, err
-		}
+	// handle if chains has more than one chain - grab first and print message
+	if len(chains) > 1 {
+		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
+	}
+	if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
+		return nil, err
 	}
 
 	return verifier, nil
