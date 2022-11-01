@@ -393,6 +393,10 @@ func uuid(e models.LogEntryAnon) string {
 
 // This test ensures that image signature validation fails properly if we are
 // using a SigVerifier with Rekor.
+// In other words, we require checking against RekorPubKeys when verifying
+// image signature.
+// This could be made more robust with supplying a mismatched trusted RekorPubKeys
+// rather than none.
 // See https://github.com/sigstore/cosign/issues/1816 for more details.
 func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	sv, privKey, err := signature.NewDefaultECDSASignerVerifier()
@@ -416,14 +420,7 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		SigVerifier: sv,
 		RekorClient: mClient,
-	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
-		// TODO(wlynch): This is a weak test, since this is really failing because
-		// there is no inclusion proof for the Rekor entry rather than failing to
-		// validate the Rekor public key itself. At the very least this ensures
-		// that we're hitting tlog validation during signature checking,
-		// but we should look into improving this once there is an in-memory
-		// Rekor client that is capable of performing inclusion proof validation
-		// in unit tests.
+	}); err == nil || !strings.Contains(err.Error(), "no trusted rekor public keys") {
 		t.Fatalf("expected error while verifying signature, got %s", err)
 	}
 }
