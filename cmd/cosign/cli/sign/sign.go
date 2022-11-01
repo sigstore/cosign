@@ -72,7 +72,6 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		return true
 	}
 	// If we aren't using keyless signing and --tlog-upload=false, return
-	// keyless signing currently requires uploading to the tlog (this will change once user-supplied timestamps for cert verification are supported)
 	if !keylessSigning(ko) && !tlogUpload {
 		return false
 	}

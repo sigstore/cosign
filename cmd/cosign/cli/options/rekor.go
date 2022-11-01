@@ -33,16 +33,3 @@ func (o *RekorOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.URL, "rekor-url", DefaultRekorURL,
 		"[EXPERIMENTAL] address of rekor STL server")
 }
-
-type RekorVerifyOptions struct {
-	VerifyTlog bool // Used for verification functions, set to true to verify against the tlog
-
-}
-
-var _ Interface = (*RekorVerifyOptions)(nil)
-
-// AddFlags implements Interface
-func (o *RekorVerifyOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&o.VerifyTlog, "verify-tlog", false,
-		"set to true to ensure a valid signature has a corresponding entry in the tlog")
-}
