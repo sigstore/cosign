@@ -399,6 +399,10 @@ func uuid(e models.LogEntryAnon) string {
 
 // This test ensures that image signature validation fails properly if we are
 // using a SigVerifier with Rekor.
+// In other words, we require checking against RekorPubKeys when verifying
+// image signature.
+// This could be made more robust with supplying a mismatched trusted RekorPubKeys
+// rather than none.
 // See https://github.com/sigstore/cosign/issues/1816 for more details.
 func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	sv, privKey, err := signature.NewDefaultECDSASignerVerifier()
