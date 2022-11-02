@@ -66,35 +66,49 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 }
 
 // nolint
-func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.RegistryOptions, imageRef string, certPath string, certChainPath string,
-	noUpload bool, predicatePath string, force bool, predicateType string, replace bool, timeout time.Duration, tlogUpload bool) error {
+type AttestCommand struct {
+	options.KeyOpts
+	options.RegistryOptions
+	CertPath      string
+	CertChainPath string
+	NoUpload      bool
+	PredicatePath string
+	Force         bool
+	PredicateType string
+	Replace       bool
+	Timeout       time.Duration
+	TlogUpload    bool
+}
+
+// nolint
+func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	// A key file or token is required unless we're in experimental mode!
 	if options.EnableExperimental() {
-		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
+		if options.NOf(c.KeyRef, c.Sk) > 1 {
 			return &options.KeyParseError{}
 		}
 	} else {
-		if !options.OneOf(ko.KeyRef, ko.Sk) {
+		if !options.OneOf(c.KeyRef, c.Sk) {
 			return &options.KeyParseError{}
 		}
 	}
 
-	predicateURI, err := options.ParsePredicateType(predicateType)
+	predicateURI, err := options.ParsePredicateType(c.PredicateType)
 	if err != nil {
 		return err
 	}
-	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
+	ref, err := name.ParseReference(imageRef, c.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("parsing reference: %w", err)
 	}
 
-	if timeout != 0 {
+	if c.Timeout != 0 {
 		var cancelFn context.CancelFunc
-		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+		ctx, cancelFn = context.WithTimeout(ctx, c.Timeout)
 		defer cancelFn()
 	}
 
-	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	ociremoteOpts, err := c.RegistryOptions.ClientOpts(ctx)
 	if err != nil {
 		return err
 	}
@@ -108,7 +122,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	// each access.
 	ref = digest // nolint
 
-	sv, err := sign.SignerFromKeyOpts(ctx, certPath, certChainPath, ko)
+	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
@@ -117,12 +131,12 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	dd := cremote.NewDupeDetector(sv)
 
 	var predicate io.ReadCloser
-	if predicatePath == "-" {
+	if c.PredicatePath == "-" {
 		fmt.Fprintln(os.Stderr, "Using payload from: standard input")
 		predicate = os.Stdin
 	} else {
-		fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
-		predicate, err = os.Open(predicatePath)
+		fmt.Fprintln(os.Stderr, "Using payload from:", c.PredicatePath)
+		predicate, err = os.Open(c.PredicatePath)
 		if err != nil {
 			return err
 		}
@@ -131,7 +145,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
 		Predicate: predicate,
-		Type:      predicateType,
+		Type:      c.PredicateType,
 		Digest:    h.Hex,
 		Repo:      digest.Repository.String(),
 	})
@@ -148,7 +162,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 		return fmt.Errorf("signing: %w", err)
 	}
 
-	if noUpload {
+	if c.NoUpload {
 		fmt.Println(string(signedPayload))
 		return nil
 	}
@@ -159,8 +173,8 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 	}
 
 	// Check whether we should be uploading to the transparency log
-	if sign.ShouldUploadToTlog(ctx, ko, digest, force, tlogUpload) {
-		bundle, err := uploadToTlog(ctx, sv, ko.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+	if sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.Force, c.TlogUpload) {
+		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})
 		if err != nil {
@@ -183,7 +197,7 @@ func AttestCmd(ctx context.Context, ko options.KeyOpts, regOpts options.Registry
 		mutate.WithDupeDetector(dd),
 	}
 
-	if replace {
+	if c.Replace {
 		ro := cremote.NewReplaceOp(predicateURI)
 		signOpts = append(signOpts, mutate.WithReplaceOp(ro))
 	}
