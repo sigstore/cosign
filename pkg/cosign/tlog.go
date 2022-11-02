@@ -484,5 +484,6 @@ func (t *TrustedRekorPubKeys) AddRekorPubKey(pemBytes []byte, status tuf.StatusK
 		return err
 	}
 	t.Keys[keyID] = RekorPubKey{PubKey: pubKey, Status: status}
+	fmt.Fprintf(os.Stdout, "ADDING REKOR KEY WITH KEY ID: %s\n", keyID)
 	return nil
 }

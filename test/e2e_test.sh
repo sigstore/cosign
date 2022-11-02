@@ -44,7 +44,7 @@ echo "running tests"
 
 popd
 go build -o cosign ./cmd/cosign
-go test -tags=e2e -race $(go list ./... | grep -v third_party/)
+go test -v -tags=e2e -race ./test/
 
 # Test `cosign dockerfile verify`
 export COSIGN_EXPERIMENTAL=true

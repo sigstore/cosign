@@ -1397,8 +1397,6 @@ func TestInvalidBundle(t *testing.T) {
 		Force:  true,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
-	// verify image1
-	must(verify(pubKeyPath, img1, true, nil, ""), t)
 	// extract the bundle from image1
 	si, err := ociremote.SignedImage(imgRef, remoteOpts)
 	must(err, t)
@@ -1414,6 +1412,10 @@ func TestInvalidBundle(t *testing.T) {
 	if bund == nil {
 		t.Fail()
 	}
+	fmt.Println("*********UPLOADED BUNDLE TO LOG ID*******")
+	fmt.Println(bund.Payload.LogID)
+	// verify image1
+	must(verify(pubKeyPath, img1, true, nil, ""), t)
 
 	// Now, we move on to image2
 	// Sign image2 and DO NOT store the entry in rekor
