@@ -20,8 +20,8 @@ cosign sign [flags]
 ```
   cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
 
-  # sign a container image with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign sign <IMAGE DIGEST>
+  # sign a container image with the Sigstore OIDC flow
+  cosign sign <IMAGE DIGEST>
 
   # sign a container image with a local key pair file
   cosign sign --key cosign.key <IMAGE DIGEST>
@@ -56,8 +56,8 @@ cosign sign [flags]
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
 
-  # sign a container image and not upload transparency log
-  cosign sign --key cosign.key --no-tlog-upload=true <IMAGE DIGEST>
+  # sign a container image and upload to the transparency log
+  cosign sign --key cosign.key --tlog-upload=true <IMAGE DIGEST>
 ```
 
 ### Options
@@ -77,7 +77,6 @@ cosign sign [flags]
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
-      --no-tlog-upload                                                                           whether to not upload the transparency log
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           [EXPERIMENTAL] Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers                                                           [EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read
@@ -91,6 +90,7 @@ cosign sign [flags]
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --tlog-upload                                                                              whether or not to upload to the tlog
       --upload                                                                                   whether to upload the signature (default true)
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```

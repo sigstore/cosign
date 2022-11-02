@@ -304,8 +304,13 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, attestationPath, false,
-		predicateType, false, 30*time.Second, false), t)
+	attestCmd := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: attestationPath,
+		PredicateType: predicateType,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCmd.Exec(ctx, imgName), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -360,8 +365,14 @@ func TestAttestationReplaceCreate(t *testing.T) {
 	}
 
 	// Attest with replace=true to create an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -405,8 +416,13 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once with replace=false creating an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -418,8 +434,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest again with replace=true, replacing the previous attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
 
 	// Download and count the attestations
@@ -431,8 +453,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "custom",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -1048,8 +1076,13 @@ func TestSaveLoadAttestation(t *testing.T) {
 
 	// Now attest the image
 	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()
@@ -1179,16 +1212,16 @@ func TestTlog(t *testing.T) {
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// Now we turn on the tlog!
-	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: priyawadhwa@ to figure out how to add an entry to the tlog without using keyless signing
+	// We could add an --upload-tlog flag, but it's a bit weird since we have a --no-upload-tlog flag too right now.
 
 	// Verify shouldn't work since we haven't put anything in it yet.
-	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// Sign again with the tlog env var on
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	// And now verify works!
-	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// // Sign again with the tlog env var on
+	// must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// // And now verify works!
+	// must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestNoTlog(t *testing.T) {
@@ -1220,19 +1253,16 @@ func TestNoTlog(t *testing.T) {
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// Now we turn on the tlog!
-	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Uncomment once we have a way to tell `cosign verify` that we want to verify with a public key
+	// and a tlog entry
 
-	// Verify shouldn't work since we haven't put anything in it yet.
-	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
-
-	// Sign again with the tlog env var on with option to not upload tlog
-	so = options.SignOptions{
-		NoTlogUpload: true,
-	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	// And verify it still fails.
-	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// // Sign again and make sure tlog upload is set to false
+	// so = options.SignOptions{
+	// 	TlogUpload: false,
+	// }
+	// must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// // And verify it still fails.
+	// mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestGetPublicKeyCustomOut(t *testing.T) {
@@ -1424,8 +1454,8 @@ func TestInvalidBundle(t *testing.T) {
 	imgRef2, _, cleanup := mkimage(t, img2)
 	defer cleanup()
 	so = options.SignOptions{
-		Upload:       true,
-		NoTlogUpload: true,
+		Upload:     true,
+		TlogUpload: false,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img2}), t)
 	must(verify(pubKeyPath, img2, true, nil, ""), t)
