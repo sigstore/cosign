@@ -304,8 +304,13 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, attestationPath, false,
-		predicateType, false, 30*time.Second, false), t)
+	attestCmd := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: attestationPath,
+		PredicateType: predicateType,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCmd.Exec(ctx, imgName), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -360,8 +365,14 @@ func TestAttestationReplaceCreate(t *testing.T) {
 	}
 
 	// Attest with replace=true to create an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -405,8 +416,13 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once with replace=false creating an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -418,8 +434,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest again with replace=true, replacing the previous attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
 
 	// Download and count the attestations
@@ -431,8 +453,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "custom",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -1048,8 +1076,13 @@ func TestSaveLoadAttestation(t *testing.T) {
 
 	// Now attest the image
 	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()
@@ -1390,8 +1423,8 @@ func TestInvalidBundle(t *testing.T) {
 	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	so := options.SignOptions{
-		Upload: true,
-		Force:  true,
+		Upload:           true,
+		SkipConfirmation: true,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
 	// verify image1

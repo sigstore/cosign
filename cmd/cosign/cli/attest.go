@@ -80,9 +80,21 @@ func Attest() *cobra.Command {
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 			}
+			attestCommand := attest.AttestCommand{
+				KeyOpts:         ko,
+				RegistryOptions: o.Registry,
+				CertPath:        o.Cert,
+				CertChainPath:   o.CertChain,
+				NoUpload:        o.NoUpload,
+				PredicatePath:   o.Predicate.Path,
+				PredicateType:   o.Predicate.Type,
+				Replace:         o.Replace,
+				Timeout:         ro.Timeout,
+				TlogUpload:      o.TlogUpload,
+			}
+
 			for _, img := range args {
-				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
-					o.Predicate.Path, o.Predicate.Type, o.Replace, ro.Timeout, o.TlogUpload); err != nil {
+				if err := attestCommand.Exec(cmd.Context(), img); err != nil {
 					return fmt.Errorf("signing %s: %w", img, err)
 				}
 			}
