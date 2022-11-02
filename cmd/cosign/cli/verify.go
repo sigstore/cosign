@@ -273,11 +273,22 @@ The blob may be specified as a path to a file or - for stdin.`,
 				RekorURL:   o.Rekor.URL,
 				BundlePath: o.BundlePath,
 			}
-			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.CertVerify.Cert,
-				o.CertVerify.CertEmail, o.CertVerify.CertIdentity, o.CertVerify.CertOidcIssuer, o.CertVerify.CertChain,
-				o.Signature, args[0], o.CertVerify.CertGithubWorkflowTrigger, o.CertVerify.CertGithubWorkflowSha,
-				o.CertVerify.CertGithubWorkflowName, o.CertVerify.CertGithubWorkflowRepository, o.CertVerify.CertGithubWorkflowRef,
-				o.CertVerify.EnforceSCT); err != nil {
+			verifyBlobCmd := verify.VerifyBlobCmd{
+				KeyOpts:                      ko,
+				CertRef:                      o.CertVerify.Cert,
+				CertEmail:                    o.CertVerify.CertEmail,
+				CertIdentity:                 o.CertVerify.CertIdentity,
+				CertOIDCIssuer:               o.CertVerify.CertOidcIssuer,
+				CertChain:                    o.CertVerify.CertChain,
+				SigRef:                       o.Signature,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				EnforceSCT:                   o.CertVerify.EnforceSCT,
+			}
+			if err := verifyBlobCmd.Exec(cmd.Context(), args[0]); err != nil {
 				return fmt.Errorf("verifying blob %s: %w", args, err)
 			}
 			return nil
