@@ -130,7 +130,7 @@ func Test_verifyOCIAttestation(t *testing.T) {
 func TestVerifyImageSignature(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
@@ -145,7 +145,10 @@ func TestVerifyImageSignature(t *testing.T) {
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:  rootPool,
+			Identities: []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -160,7 +163,7 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 	subCert1, subKey1, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 	subCert2, subKey2, _ := test.GenerateSubordinateCa(subCert1, subKey1)
 	subCert3, subKey3, _ := test.GenerateSubordinateCa(subCert2, subKey2)
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert3, subKey3)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert3, subKey3)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert1.Raw})
 	pemSub2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert2.Raw})
@@ -176,7 +179,9 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub3, pemSub2, pemSub1, pemRoot})))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -229,7 +234,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 		t.Fatalf("creating signer: %v", err)
 	}
 
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
 
 	rootPool := x509.NewCertPool()
@@ -250,7 +255,10 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 
 	// TODO(asraa): Re-enable passing test when Rekor public keys can be set in CheckOpts,
 	// instead of relying on the singleton TUF instance.
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:  rootPool,
+			Identities: []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err == nil {
 		t.Fatalf("expected error due to custom Rekor public key")
 	}
@@ -261,7 +269,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 
 func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
 
@@ -273,7 +281,10 @@ func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:  rootPool,
+			Identities: []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -286,7 +297,7 @@ func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
 
@@ -298,7 +309,10 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:  rootPool,
+			Identities: []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")
 	}
@@ -314,7 +328,7 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
@@ -334,7 +348,11 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IntermediateCerts: subPool})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:         rootPool,
+			IntermediateCerts: subPool,
+			Identities:        []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")
 	}
@@ -403,10 +421,12 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 		Entries: []*models.LogEntry{&data},
 	}
 
-	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
-		SigVerifier: sv,
-		RekorClient: mClient,
-	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
+	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			SigVerifier: sv,
+			RekorClient: mClient,
+			Identities:  []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+		}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
 		// TODO(wlynch): This is a weak test, since this is really failing because
 		// there is no inclusion proof for the Rekor entry rather than failing to
 		// validate the Rekor public key itself. At the very least this ensures
@@ -429,9 +449,8 @@ func TestValidateAndUnpackCertSuccess(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertEmail:      subject,
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -455,7 +474,8 @@ func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts: rootPool,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -476,6 +496,7 @@ func TestValidateAndUnpackCertWithSCT(t *testing.T) {
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(chain[1])
+
 	co := &CheckOpts{
 		RootCerts: rootPool,
 	}
@@ -516,10 +537,9 @@ func TestValidateAndUnpackCertWithoutRequiredSCT(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertEmail:      subject,
-		CertOidcIssuer: oidcIssuer,
-		EnforceSCT:     true,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
+		EnforceSCT: true,
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -544,9 +564,8 @@ func TestValidateAndUnpackCertSuccessWithDnsSan(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertIdentity:   subject,
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -577,9 +596,8 @@ func TestValidateAndUnpackCertSuccessWithEmailSan(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertIdentity:   subject,
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -610,9 +628,8 @@ func TestValidateAndUnpackCertSuccessWithIpAddressSan(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertIdentity:   subject,
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -643,9 +660,8 @@ func TestValidateAndUnpackCertSuccessWithUriSan(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertIdentity:   "scheme://userinfo@host",
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: "scheme://userinfo@host", Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -671,9 +687,8 @@ func TestValidateAndUnpackCertInvalidRoot(t *testing.T) {
 	rootPool.AddCert(otherRoot)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertEmail:      subject,
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -691,15 +706,14 @@ func TestValidateAndUnpackCertInvalidOidcIssuer(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertEmail:      subject,
-		CertOidcIssuer: "other",
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: subject, Issuer: "other"}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
-	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
+	require.Contains(t, err.Error(), "none of the expected identities matched what was in the certificate")
 	err = CheckCertificatePolicy(leafCert, co)
-	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
+	require.Contains(t, err.Error(), "none of the expected identities matched what was in the certificate")
 }
 
 func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
@@ -713,15 +727,14 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertEmail:      "other",
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{Identity{Subject: "other", Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
-	require.Contains(t, err.Error(), "expected identity not found in certificate")
+	require.Contains(t, err.Error(), "none of the expected identities matched what was in the certificate")
 	err = CheckCertificatePolicy(leafCert, co)
-	require.Contains(t, err.Error(), "expected identity not found in certificate")
+	require.Contains(t, err.Error(), "none of the expected identities matched what was in the certificate")
 }
 
 func TestValidateAndUnpackCertInvalidGithubWorkflowTrigger(t *testing.T) {
@@ -737,9 +750,8 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowTrigger(t *testing.T) {
 
 	co := &CheckOpts{
 		RootCerts:                 rootPool,
-		CertEmail:                 subject,
+		Identities:                []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 		CertGithubWorkflowTrigger: "otherTrigger",
-		CertOidcIssuer:            oidcIssuer,
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -761,9 +773,8 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowSHA(t *testing.T) {
 
 	co := &CheckOpts{
 		RootCerts:             rootPool,
-		CertEmail:             subject,
+		Identities:            []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 		CertGithubWorkflowSha: "otherSHA",
-		CertOidcIssuer:        oidcIssuer,
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -785,9 +796,8 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowName(t *testing.T) {
 
 	co := &CheckOpts{
 		RootCerts:              rootPool,
-		CertEmail:              subject,
+		Identities:             []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 		CertGithubWorkflowName: "otherName",
-		CertOidcIssuer:         oidcIssuer,
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -809,9 +819,8 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowRepository(t *testing.T) {
 
 	co := &CheckOpts{
 		RootCerts:                    rootPool,
-		CertEmail:                    subject,
+		Identities:                   []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 		CertGithubWorkflowRepository: "otherRepository",
-		CertOidcIssuer:               oidcIssuer,
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -833,9 +842,8 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowRef(t *testing.T) {
 
 	co := &CheckOpts{
 		RootCerts:             rootPool,
-		CertEmail:             subject,
+		Identities:            []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 		CertGithubWorkflowRef: "otherRef",
-		CertOidcIssuer:        oidcIssuer,
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -853,8 +861,7 @@ func TestValidateAndUnpackCertWithChainSuccess(t *testing.T) {
 	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, subCert, subKey)
 
 	co := &CheckOpts{
-		CertEmail:      subject,
-		CertOidcIssuer: oidcIssuer,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{subCert, leafCert}, co)
@@ -871,8 +878,7 @@ func TestValidateAndUnpackCertWithChainSuccessWithRoot(t *testing.T) {
 	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
 
 	co := &CheckOpts{
-		CertEmail:      subject,
-		CertOidcIssuer: oidcIssuer,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{rootCert}, co)
@@ -889,8 +895,7 @@ func TestValidateAndUnpackCertWithChainFailsWithoutChain(t *testing.T) {
 	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
 
 	co := &CheckOpts{
-		CertEmail:      subject,
-		CertOidcIssuer: oidcIssuer,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{}, co)
@@ -908,8 +913,7 @@ func TestValidateAndUnpackCertWithChainFailsWithInvalidChain(t *testing.T) {
 	rootCertOther, _, _ := test.GenerateRootCa()
 
 	co := &CheckOpts{
-		CertEmail:      subject,
-		CertOidcIssuer: oidcIssuer,
+		Identities: []Identity{Identity{Subject: subject, Issuer: oidcIssuer}},
 	}
 
 	_, err := ValidateAndUnpackCertWithChain(leafCert, []*x509.Certificate{rootCertOther}, co)
@@ -1008,6 +1012,7 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 			RootCerts:  rootPool,
 			Identities: tc.identities,
 		}
+
 		_, err := ValidateAndUnpackCert(leafCert, co)
 		if err == nil && tc.wantErrSubstring != "" {
 			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
@@ -1071,7 +1076,7 @@ func TestCompareSigs(t *testing.T) {
 func TestTrustedCertSuccess(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	leafCert, _, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
@@ -1092,7 +1097,7 @@ func TestTrustedCertSuccess(t *testing.T) {
 
 func TestTrustedCertSuccessNoIntermediates(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
-	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	leafCert, _, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
@@ -1107,7 +1112,7 @@ func TestTrustedCertSuccessNoIntermediates(t *testing.T) {
 // present, but a chain is built with only the leaf and root certificates.
 func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
-	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	leafCert, _, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 	subCert, _, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 
 	rootPool := x509.NewCertPool()
@@ -1131,7 +1136,7 @@ func Test_getSubjectAltnernativeNames(t *testing.T) {
 		t.Fatalf("error marshalling SANs: %v", err)
 	}
 	exts := []pkix.Extension{*ext}
-	leafCert, _, _ := test.GenerateLeafCert("unused", "oidc-issuer", subCert, subKey, exts...)
+	leafCert, _, _ := test.GenerateLeafCert("unused@mail.com", "oidc-issuer", subCert, subKey, exts...)
 
 	sans := getSubjectAlternateNames(leafCert)
 	if len(sans) != 1 {

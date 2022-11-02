@@ -69,7 +69,6 @@ func isb64(data []byte) bool {
 type VerifyBlobCmd struct {
 	options.KeyOpts
 	CertRef                      string
-	CertEmail                    string
 	CertIdentity                 string
 	CertOIDCIssuer               string
 	CertChain                    string
@@ -102,15 +101,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	co := &cosign.CheckOpts{
-		CertEmail:                    c.CertEmail,
-		CertIdentity:                 c.CertIdentity,
-		CertOidcIssuer:               c.CertOIDCIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSHA,
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		EnforceSCT:                   c.EnforceSCT,
+		Identities:                   []cosign.Identity{{Issuer: c.CertOIDCIssuer, Subject: c.CertIdentity}},
 	}
 	if options.EnableExperimental() {
 		if c.RekorURL != "" {

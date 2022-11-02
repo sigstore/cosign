@@ -45,7 +45,6 @@ type VerifyAttestationCommand struct {
 	CheckClaims                  bool
 	KeyRef                       string
 	CertRef                      string
-	CertEmail                    string
 	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
@@ -81,15 +80,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
-		CertEmail:                    c.CertEmail,
-		CertIdentity:                 c.CertIdentity,
-		CertOidcIssuer:               c.CertOidcIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		EnforceSCT:                   c.EnforceSCT,
+		Identities:                   []cosign.Identity{{Issuer: c.CertOidcIssuer, Subject: c.CertIdentity}},
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier

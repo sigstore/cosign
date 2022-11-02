@@ -90,7 +90,7 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					CheckClaims:                  o.CheckClaims,
 					KeyRef:                       o.Key,
 					CertRef:                      o.CertVerify.Cert,
-					CertEmail:                    o.CertVerify.CertEmail,
+					CertIdentity:                 o.CertVerify.CertIdentity,
 					CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
 					CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 					CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,

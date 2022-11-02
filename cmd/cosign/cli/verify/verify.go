@@ -51,7 +51,6 @@ type VerifyCommand struct {
 	CheckClaims                  bool
 	KeyRef                       string
 	CertRef                      string
-	CertEmail                    string
 	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
@@ -99,9 +98,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	co := &cosign.CheckOpts{
 		Annotations:                  c.Annotations.Annotations,
 		RegistryClientOpts:           ociremoteOpts,
-		CertEmail:                    c.CertEmail,
-		CertIdentity:                 c.CertIdentity,
-		CertOidcIssuer:               c.CertOidcIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
@@ -109,6 +105,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		EnforceSCT:                   c.EnforceSCT,
 		SignatureRef:                 c.SignatureRef,
+		Identities:                   []cosign.Identity{{Issuer: c.CertOidcIssuer, Subject: c.CertIdentity}},
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier

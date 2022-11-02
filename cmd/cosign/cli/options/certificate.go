@@ -21,7 +21,6 @@ import (
 // CertVerifyOptions is the wrapper for certificate verification.
 type CertVerifyOptions struct {
 	Cert                         string
-	CertEmail                    string
 	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
@@ -41,14 +40,14 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
 	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
 
-	cmd.Flags().StringVar(&o.CertEmail, "certificate-email", "",
-		"the email expected in a valid Fulcio certificate")
+	cmd.Flags().StringVar(&o.CertIdentity, "certificate-email", "",
+		"DEPRECATED: Use --certificate-identity instead. The email expected in a valid Fulcio certificate")
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
-		"the identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs.")
+		"Required. The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs.")
 
 	cmd.Flags().StringVar(&o.CertOidcIssuer, "certificate-oidc-issuer", "",
-		"the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth")
+		"Required. The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth")
 
 	// -- Cert extensions begin --
 	// Source: https://github.com/sigstore/fulcio/blob/main/docs/oid-info.md
