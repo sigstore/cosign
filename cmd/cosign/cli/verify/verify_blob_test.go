@@ -717,20 +717,13 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",       /*certRef*/ // Cert is fetched from bundle
-			identity, /*certEmail*/
-			"",       /*certIdentity*/
-			issuer,   /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
-		if err != nil {
+		cmd := VerifyBlobCmd{
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			CertEmail:      identity,
+			CertOIDCIssuer: issuer,
+			EnforceSCT:     false,
+		}
+		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -762,20 +755,11 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",       /*certRef*/ // Cert is fetched from bundle
-			"",       /*certEmail*/
-			"",       /*certIdentity*/
-			"",       /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
-		if err == nil {
+		cmd := VerifyBlobCmd{
+			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT: false,
+		}
+		if err := cmd.Exec(context.Background(), blobPath); err == nil {
 			t.Fatal("expecting err due to mismatched signatures, got nil")
 		}
 	})
@@ -801,20 +785,12 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",       /*certRef*/ // Cert is fetched from bundle
-			"",       /*certEmail*/
-			"",       /*certIdentity*/
-			"",       /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
-		if err == nil {
+		cmd := VerifyBlobCmd{
+			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT: false,
+		}
+
+		if err := cmd.Exec(context.Background(), blobPath); err == nil {
 			t.Fatal("expected error due to expired cert, received nil")
 		}
 	})
@@ -840,20 +816,14 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",       /*certRef*/ // Cert is fetched from bundle
-			"",       /*certEmail*/
-			"",       /*certIdentity*/
-			"",       /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
-		if err != nil {
+		cmd := VerifyBlobCmd{
+			CertRef:    "", // Cert is fetched from bundle
+			CertChain:  "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:     "", // Sig is fetched from bundle
+			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT: false,
+		}
+		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -879,19 +849,14 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",       /*certRef*/ // Cert is fetched from bundle
-			"",       /*certEmail*/
-			"",       /*certIdentity*/
-			"",       /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			CertRef:    "", // Cert is fetched from bundle
+			CertChain:  "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:     "", // Sig is fetched from bundle
+			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT: false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "unable to verify SET") {
 			t.Fatalf("expected error verifying SET, got %v", err)
 		}
@@ -918,19 +883,16 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",                    /*certRef*/ // Cert is fetched from bundle
-			"invalid@example.com", /*certEmail*/
-			"",                    /*certIdentity*/
-			issuer,                /*certOidcIssuer*/
-			"",                    /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",                    /*sigRef*/    // Sig is fetched from bundle
-			blobPath,              /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			CertRef:        "", // Cert is fetched from bundle
+			CertOIDCIssuer: issuer,
+			CertEmail:      "invalid@example.com",
+			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:         "", // Sig is fetched from bundle
+			EnforceSCT:     false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "expected identity not found in certificate") {
 			t.Fatalf("expected error with mismatched identity, got %v", err)
 		}
@@ -957,19 +919,16 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",        /*certRef*/ // Cert is fetched from bundle
-			identity,  /*certEmail*/
-			"",        /*certIdentity*/
-			"invalid", /*certOidcIssuer*/
-			"",        /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",        /*sigRef*/    // Sig is fetched from bundle
-			blobPath,  /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			CertRef:        "", // Cert is fetched from bundle
+			CertOIDCIssuer: "invalid",
+			CertEmail:      identity,
+			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:         "", // Sig is fetched from bundle
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT:     false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "expected oidc issuer not found in certificate") {
 			t.Fatalf("expected error with mismatched issuer, got %v", err)
 		}
@@ -997,19 +956,16 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		certPath := writeBlobFile(t, keyless.td, string(leafPemCert), "cert.pem")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			certPath, /*certRef*/
-			identity, /*certEmail*/
-			"",       /*certIdentity*/
-			issuer,   /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			CertRef:        certPath,
+			CertOIDCIssuer: issuer,
+			CertEmail:      identity,
+			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:         "", // Sig is fetched from bundle
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT:     false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err != nil {
 			t.Fatalf("expected success without specifying the intermediates, got %v", err)
 		}
@@ -1036,19 +992,15 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",                              /*certRef*/
-			identity,                        /*certEmail*/
-			"",                              /*certIdentity*/
-			issuer,                          /*certOidcIssuer*/
-			os.Getenv("SIGSTORE_ROOT_FILE"), /*certChain*/
-			"",                              /*sigRef*/ // Sig is fetched from bundle
-			blobPath,                        /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			CertOIDCIssuer: issuer,
+			CertEmail:      identity,
+			CertChain:      os.Getenv("SIGSTORE_ROOT_FILE"),
+			SigRef:         "", // Sig is fetched from bundle
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT:     false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err != nil {
 			t.Fatalf("expected success specifying the intermediates, got %v", err)
 		}
@@ -1086,19 +1038,15 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",                  /*certRef*/
-			identity,            /*certEmail*/
-			"",                  /*certIdentity*/
-			issuer,              /*certOidcIssuer*/
-			tmpChainFile.Name(), /*certChain*/
-			"",                  /*sigRef*/ // Sig is fetched from bundle
-			blobPath,            /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			CertOIDCIssuer: issuer,
+			CertEmail:      identity,
+			CertChain:      tmpChainFile.Name(),
+			SigRef:         "", // Sig is fetched from bundle
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT:     false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "verifying certificate from bundle with chain: x509: certificate signed by unknown authority") {
 			t.Fatalf("expected error with mismatched root, got %v", err)
 		}
@@ -1132,19 +1080,16 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 		certPath := writeBlobFile(t, keyless.td, string(leafPemCert), "cert.pem")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			certPath, /*certRef*/
-			identity, /*certEmail*/
-			"",       /*certIdentity*/
-			issuer,   /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			CertRef:        certPath,
+			CertOIDCIssuer: issuer,
+			CertEmail:      identity,
+			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:         "", // Sig is fetched from bundle
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT:     false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
 			t.Fatalf("expected error with invalid root CA, got %v", err)
 		}
@@ -1171,19 +1116,16 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
 		// Verify command
-		err = VerifyBlobCmd(context.Background(),
-			options.KeyOpts{BundlePath: bundlePath},
-			"",       /*certRef*/ // Fetched from bundle
-			identity, /*certEmail*/
-			"",       /*certIdentity*/
-			issuer,   /*certOidcIssuer*/
-			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			"",       /*sigRef*/    // Sig is fetched from bundle
-			blobPath, /*blobRef*/
-			// GitHub identity flags start
-			"", "", "", "", "",
-			// GitHub identity flags end
-			false /*enforceSCT*/)
+		cmd := VerifyBlobCmd{
+			CertRef:        "",
+			CertOIDCIssuer: issuer, // Fetched from bundle
+			CertEmail:      identity,
+			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:         "", // Sig is fetched from bundle
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
+			EnforceSCT:     false,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
 			t.Fatalf("expected error with invalid root CA, got %v", err)
 		}

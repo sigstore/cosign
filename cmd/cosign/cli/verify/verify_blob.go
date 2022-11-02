@@ -66,19 +66,32 @@ func isb64(data []byte) bool {
 }
 
 // nolint
-func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, certIdentity,
-	certOidcIssuer, certChain, sigRef, blobRef, certGithubWorkflowTrigger, certGithubWorkflowSha,
-	certGithubWorkflowName,
-	certGithubWorkflowRepository,
-	certGithubWorkflowRef string, enforceSCT bool) error {
+type VerifyBlobCmd struct {
+	options.KeyOpts
+	CertRef                      string
+	CertEmail                    string
+	CertIdentity                 string
+	CertOIDCIssuer               string
+	CertChain                    string
+	SigRef                       string
+	CertGithubWorkflowTrigger    string
+	CertGithubWorkflowSHA        string
+	CertGithubWorkflowName       string
+	CertGithubWorkflowRepository string
+	CertGithubWorkflowRef        string
+	EnforceSCT                   bool
+}
+
+// nolint
+func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	var cert *x509.Certificate
 	var bundle *bundle.RekorBundle
 
-	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() && ko.BundlePath == "" {
+	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && !options.EnableExperimental() && c.BundlePath == "" {
 		return &options.PubKeyParseError{}
 	}
 
-	sig, err := signatures(sigRef, ko.BundlePath)
+	sig, err := signatures(c.SigRef, c.BundlePath)
 	if err != nil {
 		return err
 	}
@@ -89,19 +102,19 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 	}
 
 	co := &cosign.CheckOpts{
-		CertEmail:                    certEmail,
-		CertIdentity:                 certIdentity,
-		CertOidcIssuer:               certOidcIssuer,
-		CertGithubWorkflowTrigger:    certGithubWorkflowTrigger,
-		CertGithubWorkflowSha:        certGithubWorkflowSha,
-		CertGithubWorkflowName:       certGithubWorkflowName,
-		CertGithubWorkflowRepository: certGithubWorkflowRepository,
-		CertGithubWorkflowRef:        certGithubWorkflowRef,
-		EnforceSCT:                   enforceSCT,
+		CertEmail:                    c.CertEmail,
+		CertIdentity:                 c.CertIdentity,
+		CertOidcIssuer:               c.CertOIDCIssuer,
+		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
+		CertGithubWorkflowSha:        c.CertGithubWorkflowSHA,
+		CertGithubWorkflowName:       c.CertGithubWorkflowName,
+		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
+		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
+		EnforceSCT:                   c.EnforceSCT,
 	}
 	if options.EnableExperimental() {
-		if ko.RekorURL != "" {
-			rekorClient, err := rekor.NewClient(ko.RekorURL)
+		if c.RekorURL != "" {
+			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
 				return fmt.Errorf("creating Rekor client: %w", err)
 			}
@@ -121,8 +134,8 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 
 	// Keys are optional!
 	switch {
-	case ko.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, ko.KeyRef)
+	case c.KeyRef != "":
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
@@ -130,8 +143,8 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 		if ok {
 			defer pkcs11Key.Close()
 		}
-	case ko.Sk:
-		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
+	case c.Sk:
+		sk, err := pivkey.GetKeyWithSlot(c.Slot)
 		if err != nil {
 			return fmt.Errorf("opening piv token: %w", err)
 		}
@@ -140,12 +153,12 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 		if err != nil {
 			return fmt.Errorf("loading public key from token: %w", err)
 		}
-	case certRef != "":
-		cert, err = loadCertFromFileOrURL(certRef)
+	case c.CertRef != "":
+		cert, err = loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
 		}
-		if certChain == "" {
+		if c.CertChain == "" {
 			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
 				return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -161,7 +174,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 			}
 		} else {
 			// Verify certificate with chain
-			chain, err := loadCertChainFromFileOrURL(certChain)
+			chain, err := loadCertChainFromFileOrURL(c.CertChain)
 			if err != nil {
 				return err
 			}
@@ -170,8 +183,8 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 				return fmt.Errorf("verifying certRef with certChain: %w", err)
 			}
 		}
-	case ko.BundlePath != "":
-		b, err := cosign.FetchLocalSignedPayloadFromPath(ko.BundlePath)
+	case c.BundlePath != "":
+		b, err := cosign.FetchLocalSignedPayloadFromPath(c.BundlePath)
 		if err != nil {
 			return err
 		}
@@ -188,7 +201,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 			// check if cert is actually a public key
 			co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
 		} else {
-			if certChain == "" {
+			if c.CertChain == "" {
 				co.RootCerts, err = fulcio.GetRoots()
 				if err != nil {
 					return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -203,7 +216,7 @@ func VerifyBlobCmd(ctx context.Context, ko options.KeyOpts, certRef, certEmail, 
 				}
 			} else {
 				// Verify certificate with chain
-				chain, err := loadCertChainFromFileOrURL(certChain)
+				chain, err := loadCertChainFromFileOrURL(c.CertChain)
 				if err != nil {
 					return err
 				}

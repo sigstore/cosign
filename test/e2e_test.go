@@ -676,8 +676,16 @@ func TestSignBlob(t *testing.T) {
 		KeyRef: pubKeyPath2,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	cmd1 := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+		SigRef:  "badsig",
+	}
+	cmd2 := cliverify.VerifyBlobCmd{
+		KeyOpts: ko2,
+		SigRef:  "badsig",
+	}
+	mustErr(cmd1.Exec(ctx, blob), t)
+	mustErr(cmd2.Exec(ctx, blob), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -689,8 +697,10 @@ func TestSignBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	cmd1.SigRef = string(sig)
+	cmd2.SigRef = string(sig)
+	must(cmd1.Exec(ctx, bp), t)
+	mustErr(cmd2.Exec(ctx, bp), t)
 }
 
 func TestSignBlobBundle(t *testing.T) {
@@ -715,7 +725,10 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+	}
+	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -728,7 +741,7 @@ func TestSignBlobBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, env.VariableExperimental.String(), "1")()
@@ -738,7 +751,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
 func TestGenerate(t *testing.T) {
