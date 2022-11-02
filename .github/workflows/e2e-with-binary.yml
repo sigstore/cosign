@@ -25,7 +25,9 @@ on:
      - '!images/**'
      - '!LICENSE'
      - 'test/**'
-    branches: [ 'main' ]
+    branches:
+      - main
+      - 1.0-fork
   workflow_dispatch:
 
 jobs:

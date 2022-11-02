@@ -27,7 +27,8 @@ on:
      - '!LICENSE'
      - 'test/**'
     branches:
-      - "main"
+      - main
+      - 1.0-fork
   workflow_dispatch:
 
 permissions: read-all

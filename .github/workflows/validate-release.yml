@@ -20,6 +20,7 @@ on:
     branches:
       - main
       - release-*
+      - 1.0-fork
   pull_request:
 
 jobs:
