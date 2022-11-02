@@ -77,7 +77,7 @@ cosign verify-blob [flags]
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --sct string                                                                               path to an RFC 6962 detached Signed CertifiCate Timestamp. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
+      --sct string                                                                               path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
       --signature string                                                                         signature content or path or remote URL
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)

@@ -76,7 +76,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
 
 	cmd.Flags().StringVar(&o.SCT, "sct", "",
-		"path to an RFC 6962 detached Signed CertifiCate Timestamp. "+
+		"path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. "+
 			"If a certificate contains an SCT, verification will check both the detached and embedded SCTs.")
 	cmd.Flags().BoolVar(&o.IgnoreSCT, "insecure-ignore-sct", false,
 		"when set, verification will not check that a certificate contains an embedded SCT, a proof of "+

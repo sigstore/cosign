@@ -111,6 +111,8 @@ type CheckOpts struct {
 	// IgnoreSCT requires that a certificate contain an embedded SCT during verification. An SCT is proof of inclusion in a
 	// certificate transparency log.
 	IgnoreSCT bool
+	// Detached SCT. Optional, as the SCT is usually embedded in the certificate.
+	SCT []byte
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
@@ -205,15 +207,33 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	if err != nil {
 		return nil, err
 	}
-	if !contains {
-		return nil, &VerificationError{"certificate does not include required embedded SCT"}
+	if !contains && len(co.SCT) == 0 {
+		return nil, &VerificationError{"certificate does not include required embedded SCT and no detached SCT was set"}
 	}
 	// handle if chains has more than one chain - grab first and print message
 	if len(chains) > 1 {
 		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
 	}
-	if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
-		return nil, err
+	if contains {
+		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
+			return nil, err
+		}
+	} else {
+		chain := chains[0]
+		if len(chain) < 2 {
+			return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
+		}
+		certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
+		if err != nil {
+			return nil, err
+		}
+		chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
+		if err != nil {
+			return nil, err
+		}
+		if err := ctl.VerifySCT(context.Background(), certPEM, chainPEM, co.SCT); err != nil {
+			return nil, err
+		}
 	}
 
 	return verifier, nil

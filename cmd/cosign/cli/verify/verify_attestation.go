@@ -55,6 +55,7 @@ type VerifyAttestationCommand struct {
 	CertGithubWorkflowRef        string
 	CertChain                    string
 	IgnoreSCT                    bool
+	SCTRef                       string
 	Sk                           bool
 	Slot                         string
 	Output                       string
@@ -163,6 +164,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			if err != nil {
 				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
+		}
+		if c.SCTRef != "" {
+			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
+			if err != nil {
+				return fmt.Errorf("reading sct from file: %w", err)
+			}
+			co.SCT = sct
 		}
 	}
 

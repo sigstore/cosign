@@ -81,7 +81,7 @@ cosign verify-attestation [flags]
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files will be using for validation
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --sct string                                                                               path to an RFC 6962 detached Signed CertifiCate Timestamp. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
+      --sct string                                                                               path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")

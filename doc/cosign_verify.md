@@ -86,7 +86,7 @@ cosign verify [flags]
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --sct string                                                                               path to an RFC 6962 detached Signed CertifiCate Timestamp. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
+      --sct string                                                                               path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
       --signature string                                                                         signature content or path or remote URL
       --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
