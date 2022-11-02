@@ -52,9 +52,9 @@ func TestSigner(t *testing.T) {
 	var mClient client.Rekor
 
 	mClient.Entries = &mock.EntriesClient{
-		Entries: &models.LogEntry{"123": models.LogEntryAnon{
+		Entries: []*models.LogEntry{{"123": models.LogEntryAnon{
 			LogIndex: swag.Int64(123),
-		}},
+		}}},
 	}
 
 	testSigner := NewSigner(payloadSigner, &mClient)

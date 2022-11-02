@@ -26,7 +26,7 @@ func TestGetSocketPath(t *testing.T) {
 	if got := getSocketPath(); got != defaultSocketPath {
 		t.Errorf("Expected %s got %s", defaultSocketPath, got)
 	}
-	os.Setenv(socketEnv, nonDefault)
+	os.Setenv("SPIFFE_ENDPOINT_SOCKET", nonDefault)
 	if got := getSocketPath(); got != nonDefault {
 		t.Errorf("Expected %s got %s", nonDefault, got)
 	}

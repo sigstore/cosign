@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 func TestEmptyImage(t *testing.T) {
@@ -48,7 +48,7 @@ func TestEmptyImage(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if err := os.Setenv(oci.DockerMediaTypesEnv, test.value); err != nil {
+			if err := os.Setenv(env.VariableDockerMediaTypes.String(), test.value); err != nil {
 				t.Fatalf("Setenv() = %v", err)
 			}
 

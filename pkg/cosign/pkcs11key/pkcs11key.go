@@ -34,6 +34,7 @@ import (
 
 	"github.com/ThalesIgnite/crypto11"
 	"github.com/miekg/pkcs11"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/term"
 )
@@ -80,7 +81,7 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 
 	// If no PIN was specified, and if askForPinIfNeeded is true, check to see if COSIGN_PKCS11_PIN env var is set.
 	if conf.Pin == "" && askForPinIfNeeded {
-		conf.Pin = os.Getenv("COSIGN_PKCS11_PIN")
+		conf.Pin = env.Getenv(env.VariablePKCS11Pin)
 
 		// If COSIGN_PKCS11_PIN not set, check to see if CKF_LOGIN_REQUIRED is set in Token Info.
 		// If it is, and if askForPinIfNeeded is true, ask the user for the PIN, otherwise, do not.

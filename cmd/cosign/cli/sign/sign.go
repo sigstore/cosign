@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,23 +58,27 @@ import (
 	_ "github.com/sigstore/cosign/pkg/providers/all"
 )
 
-func ShouldUploadToTlog(ctx context.Context, ref name.Reference, force bool, noTlogUpload bool, url string) bool {
-	// Check whether experimental is on!
-	if !options.EnableExperimental() {
-		return false
-	}
+const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not a digest, to identify the image to sign.
+
+    This can lead you to sign a different image than the intended one. Please use a
+    digest (example.com/ubuntu@sha256:abc123...) rather than tag
+    (example.com/ubuntu:latest) for the input to cosign. The ability to refer to
+    images by tag will be removed in a future release.
+`
+
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, force, tlogUpload bool) bool {
 	// We are forcing publishing to the Tlog.
 	if force {
 		return true
 	}
-	// Check whether to not upload Tlog.
-	if noTlogUpload {
+	// If we aren't using keyless signing and --tlog-upload=false, return
+	if !keylessSigning(ko) && !tlogUpload {
 		return false
 	}
 
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
-		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), url)
+		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), ko.RekorURL)
 
 		var tlogConfirmResponse string
 		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
@@ -98,24 +103,31 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
 
+// ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
+func ParseOCIReference(refStr string, out io.Writer, opts ...name.Option) (name.Reference, error) {
+	ref, err := name.ParseReference(refStr, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("parsing reference: %w", err)
+	}
+	if _, ok := ref.(name.Digest); !ok {
+		msg := fmt.Sprintf(TagReferenceMessage, refStr)
+		if _, err := io.WriteString(out, msg); err != nil {
+			panic("cannot write")
+		}
+	}
+	return ref, nil
+}
+
 // nolint
-func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, annotations map[string]interface{},
-	imgs []string, certPath string, certChainPath string, upload bool, outputSignature, outputCertificate string,
-	payloadPath string, force bool, recursive bool, attachment string, noTlogUpload bool) error {
-	if options.EnableExperimental() {
-		if options.NOf(ko.KeyRef, ko.Sk) > 1 {
-			return &options.KeyParseError{}
-		}
-	} else {
-		if !options.OneOf(ko.KeyRef, ko.Sk) {
-			return &options.KeyParseError{}
-		}
+func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignOptions, imgs []string) error {
+	if options.NOf(ko.KeyRef, ko.Sk) > 1 {
+		return &options.KeyParseError{}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, err := SignerFromKeyOpts(ctx, certPath, certChainPath, ko)
+	sv, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
@@ -123,9 +135,9 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 	dd := cremote.NewDupeDetector(sv)
 
 	var staticPayload []byte
-	if payloadPath != "" {
-		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		staticPayload, err = os.ReadFile(filepath.Clean(payloadPath))
+	if signOpts.PayloadPath != "" {
+		fmt.Fprintln(os.Stderr, "Using payload from:", signOpts.PayloadPath)
+		staticPayload, err = os.ReadFile(filepath.Clean(signOpts.PayloadPath))
 		if err != nil {
 			return fmt.Errorf("payload from file: %w", err)
 		}
@@ -133,30 +145,35 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 
 	// Set up an ErrDone consideration to return along "success" paths
 	var ErrDone error
-	if !recursive {
+	if !signOpts.Recursive {
 		ErrDone = mutate.ErrSkipChildren
 	}
-
+	regOpts := signOpts.Registry
+	opts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("constructing client options: %w", err)
+	}
+	am, err := signOpts.AnnotationsMap()
+	if err != nil {
+		return fmt.Errorf("getting annotations: %w", err)
+	}
+	annotations := am.Annotations
 	for _, inputImg := range imgs {
-		ref, err := name.ParseReference(inputImg)
+		ref, err := ParseOCIReference(inputImg, os.Stderr, regOpts.NameOptions()...)
 		if err != nil {
-			return fmt.Errorf("parsing reference: %w", err)
+			return err
 		}
-		opts, err := regOpts.ClientOpts(ctx)
+		ref, err = GetAttachedImageRef(ref, signOpts.Attachment, opts...)
 		if err != nil {
-			return fmt.Errorf("constructing client options: %w", err)
-		}
-		ref, err = GetAttachedImageRef(ref, attachment, opts...)
-		if err != nil {
-			return fmt.Errorf("unable to resolve attachment %s for image %s", attachment, inputImg)
+			return fmt.Errorf("unable to resolve attachment %s for image %s", signOpts.Attachment, inputImg)
 		}
 
-		if digest, ok := ref.(name.Digest); ok && !recursive {
+		if digest, ok := ref.(name.Digest); ok && !signOpts.Recursive {
 			se, err := ociremote.SignedEntity(ref, opts...)
 			if err != nil {
 				return fmt.Errorf("accessing image: %w", err)
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, noTlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Force, signOpts.Recursive, signOpts.TlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -176,7 +193,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 			}
 			digest := ref.Context().Digest(d.String())
 
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, upload, outputSignature, outputCertificate, force, recursive, noTlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Force, signOpts.Recursive, signOpts.TlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -190,7 +207,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Regist
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts,
-	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool, recursive bool, noTlogUpload bool,
+	regOpts options.RegistryOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, force bool, recursive bool, tlogUpload bool,
 	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
@@ -209,7 +226,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	if sv.Cert != "" {
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
-	if ShouldUploadToTlog(ctx, digest, force, noTlogUpload, ko.RekorURL) {
+	if ShouldUploadToTlog(ctx, ko, digest, force, tlogUpload) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
@@ -503,4 +520,14 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return pemBytes, nil
+}
+
+func keylessSigning(ko options.KeyOpts) bool {
+	if ko.KeyRef != "" {
+		return false
+	}
+	if ko.Sk {
+		return false
+	}
+	return true
 }

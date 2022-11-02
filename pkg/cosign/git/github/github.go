@@ -30,6 +30,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 const (
@@ -44,13 +45,13 @@ func New() *Gh {
 
 func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
 	var httpClient *http.Client
-	if token, ok := os.LookupEnv("GITHUB_TOKEN"); ok {
+	if token, ok := env.LookupEnv(env.VariableGitHubToken); ok {
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
 		httpClient = oauth2.NewClient(ctx, ts)
 	} else {
-		return errors.New("could not find \"GITHUB_TOKEN\" environment variable")
+		return fmt.Errorf("could not find %q environment variable", env.VariableGitHubRequestToken.String())
 	}
 	client := github.NewClient(httpClient)
 

@@ -32,49 +32,55 @@ func Sign() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign",
 		Short: "Sign the supplied container image.",
-		Long:  "Sign the supplied container image.",
-		Example: `  cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image uri>
+		Long: `Sign the supplied container image.
 
-  # sign a container image with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign sign <IMAGE>
+Make sure to sign the image by its digest (@sha256:...) rather than by tag
+(:latest) so that you actually sign what you think you're signing! This prevents
+race conditions or (worse) malicious tampering.
+`,
+		Example: `  cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+
+  # sign a container image with the Sigstore OIDC flow
+  cosign sign <IMAGE DIGEST>
 
   # sign a container image with a local key pair file
-  cosign sign --key cosign.key <IMAGE>
+  cosign sign --key cosign.key <IMAGE DIGEST>
 
   # sign a multi-arch container image AND all referenced, discrete images
-  cosign sign --key cosign.key --recursive <MULTI-ARCH IMAGE>
+  cosign sign --key cosign.key --recursive <MULTI-ARCH IMAGE DIGEST>
 
   # sign a container image and add annotations
-  cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE>
+  cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE DIGEST>
 
   # sign a container image with a key stored in an environment variable
-  cosign sign --key env://[ENV_VAR] <IMAGE>
+  cosign sign --key env://[ENV_VAR] <IMAGE DIGEST>
 
   # sign a container image with a key pair stored in Azure Key Vault
-  cosign sign --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE>
+  cosign sign --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <IMAGE DIGEST>
 
   # sign a container image with a key pair stored in AWS KMS
-  cosign sign --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <IMAGE>
+  cosign sign --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <IMAGE DIGEST>
 
   # sign a container image with a key pair stored in Google Cloud KMS
-  cosign sign --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <IMAGE>
+  cosign sign --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <IMAGE DIGEST>
 
   # sign a container image with a key pair stored in Hashicorp Vault
-  cosign sign --key hashivault://[KEY] <IMAGE>
+  cosign sign --key hashivault://[KEY] <IMAGE DIGEST>
 
   # sign a container image with a key pair stored in a Kubernetes secret
-  cosign sign --key k8s://[NAMESPACE]/[KEY] <IMAGE>
+  cosign sign --key k8s://[NAMESPACE]/[KEY] <IMAGE DIGEST>
 
   # sign a container image with a key, attaching a certificate and certificate chain
-  cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
+  cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE DIGEST>
 
   # sign a container in a registry which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
 
-  # sign a container image and not upload transparency log
-  cosign sign --key cosign.key --no-tlog-upload=true <IMAGE>`,
+  # sign a container image and upload to the transparency log
+  cosign sign --key cosign.key --tlog-upload=true <IMAGE DIGEST>`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch o.Attachment {
 			case "sbom", "":
@@ -103,12 +109,7 @@ func Sign() *cobra.Command {
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 			}
-			annotationsMap, err := o.AnnotationsMap()
-			if err != nil {
-				return err
-			}
-			if err := sign.SignCmd(ro, ko, o.Registry, annotationsMap.Annotations, args, o.Cert, o.CertChain, o.Upload,
-				o.OutputSignature, o.OutputCertificate, o.PayloadPath, o.Force, o.Recursive, o.Attachment, o.NoTlogUpload); err != nil {
+			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {
 					return fmt.Errorf("signing %v: %w", args, err)
 				}

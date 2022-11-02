@@ -53,7 +53,10 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 			}
 		case "env://":
 			envVar := parts[1]
-			value, found := os.LookupEnv(envVar)
+			// Most of Cosign should use `env.LookupEnv` (see #2236) to restrict us to known environment variables
+			// (usually `$COSIGN_*`). However, in this case, `envVar` is user-provided and not one of the allow-listed
+			// env vars.
+			value, found := os.LookupEnv(envVar) //nolint:forbidigo
 			if !found {
 				return nil, fmt.Errorf("loading URL: env var $%s not found", envVar)
 			}

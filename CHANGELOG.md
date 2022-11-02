@@ -1,3 +1,61 @@
+# v1.13.1
+
+## Enhancements
+* verify-blob-attestation: allow multiple subjects in in_toto attestation (#2341)
+* Add verify-blob-attestation command and tests (#2337)
+* Add --output-attestation flag to attest-blob and remove experimental signing (#2332)
+* Add attest-blob command (#2286)
+* Add '--cert-identity' flag to support subject alternate names for ver… (#2278)
+* Update Dockerfile section of README (#2323)
+
+## Bug Fixes
+* Update warning when users sign images by tag. (#2313)
+
+## Others
+* Remove experimental flags from attest-blob and refactor (#2338)
+
+## Contributors
+* Alex Cameron
+* Ville Aikas
+* Zack Newman
+* asraa
+* kpk47
+* priyawadhwa
+
+# v1.13.0
+
+> # Highlights
+> * For users who have deployed a private instance of Fulcio release v0.6.x and issue certificates with the Username identity, you will need to upgrade to use this version."
+
+## Enhancements
+
+* Add support for Fulcio username identity in SAN (https://github.com/sigstore/cosign/pull/2291)
+* Data race in FetchSignaturesForReference (https://github.com/sigstore/cosign/pull/2283)
+* Check error on chain verification failure (https://github.com/sigstore/cosign/pull/2284)
+* feat: improve the verification message (https://github.com/sigstore/cosign/pull/2268)
+* feat: use stdin as an input for predicate (https://github.com/sigstore/cosign/pull/2269)
+
+## Bug Fixes
+
+* fix: make tlog entry lookups for online verification shard-aware (https://github.com/sigstore/cosign/pull/2297)
+* Fix: Create a static copy of signatures as part of verification. (https://github.com/sigstore/cosign/pull/2287)
+* Fix: Remove an extra registry request from verification path. (https://github.com/sigstore/cosign/pull/2285)
+* fix pivtool generate key touch policy (https://github.com/sigstore/cosign/pull/2282)
+
+## Others
+
+* use scaffolding 0.4.8 for tests. (https://github.com/sigstore/cosign/pull/2280)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Batuhan Apaydın (@developer-guy)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* Matt Moore (@mattmoor)
+* Ross Tannenbaum (@RTann)
+* Ville Aikas (@vaikas)
+
 # v1.12.1
 
 > # Highlights

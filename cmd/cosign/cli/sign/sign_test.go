@@ -26,6 +26,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -118,7 +120,8 @@ func TestSignCmdLocalKeyAndSk(t *testing.T) {
 			Sk:       true,
 		},
 	} {
-		err := SignCmd(ro, ko, options.RegistryOptions{}, nil, nil, "", "", false, "", "", "", false, false, "", false)
+		so := options.SignOptions{}
+		err := SignCmd(ro, ko, so, nil)
 		if (errors.Is(err, &options.KeyParseError{}) == false) {
 			t.Fatal("expected KeyParseError")
 		}
@@ -202,5 +205,31 @@ func Test_signerFromKeyRefFailureEmptyChainFile(t *testing.T) {
 	_, err = signerFromKeyRef(ctx, certFile, tmpChainFile.Name(), keyFile, pass("foo"))
 	if err == nil || err.Error() != "no certificates in certificate chain" {
 		t.Fatalf("expected empty chain error, got %v", err)
+	}
+}
+
+func Test_ParseOCIReference(t *testing.T) {
+	var tests = []struct {
+		ref      string
+		expected string
+	}{
+		{"image:bytag", "WARNING: Image reference image:bytag uses a tag, not a digest"},
+		{"image:bytag@sha256:abcdef", ""},
+		{"image:@sha256:abcdef", ""},
+	}
+	for _, tt := range tests {
+		var buf strings.Builder
+		var opts []name.Option
+		ParseOCIReference(tt.ref, &buf, opts...)
+		actual := buf.String()
+		if len(tt.expected) == 0 {
+			if len(actual) != 0 {
+				t.Errorf("expected no warning, got %s", actual)
+			}
+		} else {
+			if strings.Contains(tt.expected, actual) {
+				t.Errorf("bad warning: expected match for `%s`, got %s", tt.expected, actual)
+			}
+		}
 	}
 }

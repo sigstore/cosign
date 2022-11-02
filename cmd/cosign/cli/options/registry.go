@@ -38,6 +38,7 @@ type Keychain = authn.Keychain
 // RegistryOptions is the wrapper for the registry options.
 type RegistryOptions struct {
 	AllowInsecure      bool
+	AllowHTTPRegistry  bool
 	KubernetesKeychain bool
 	RefOpts            ReferenceOptions
 	Keychain           Keychain
@@ -48,7 +49,10 @@ var _ Interface = (*RegistryOptions)(nil)
 // AddFlags implements Interface
 func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.AllowInsecure, "allow-insecure-registry", false,
-		"whether to allow insecure connections to registries. Don't use this for anything but testing")
+		"whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing")
+
+	cmd.Flags().BoolVar(&o.AllowHTTPRegistry, "allow-http-registry", false,
+		"whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing")
 
 	cmd.Flags().BoolVar(&o.KubernetesKeychain, "k8s-keychain", false,
 		"whether to use the kubernetes keychain instead of the default keychain (supports workload identity).")
@@ -69,6 +73,14 @@ func (o *RegistryOptions) ClientOpts(ctx context.Context) ([]ociremote.Option, e
 		opts = append(opts, ociremote.WithTargetRepository(targetRepoOverride))
 	}
 	return opts, nil
+}
+
+func (o *RegistryOptions) NameOptions() []name.Option {
+	var nameOpts []name.Option
+	if o.AllowHTTPRegistry {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+	return nameOpts
 }
 
 func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Option {

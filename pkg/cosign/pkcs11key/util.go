@@ -18,9 +18,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 const (
@@ -164,7 +165,7 @@ func (conf *Pkcs11UriConfig) Parse(uriString string) error {
 	// module-path should be specified and should point to the absolute path of the PKCS11 module.
 	// If it is not, COSIGN_PKCS11_MODULE_PATH environment variable must be set.
 	if modulePath == "" {
-		modulePath = os.Getenv("COSIGN_PKCS11_MODULE_PATH")
+		modulePath = env.Getenv(env.VariablePKCS11ModulePath)
 		if modulePath == "" {
 			return errors.New("invalid uri: module-path or COSIGN_PKCS11_MODULE_PATH must be set to the absolute path of the PKCS11 module")
 		}

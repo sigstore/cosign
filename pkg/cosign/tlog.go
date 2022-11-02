@@ -35,6 +35,7 @@ import (
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
@@ -55,19 +56,6 @@ type RekorPubKey struct {
 	PubKey *ecdsa.PublicKey
 	Status tuf.StatusKind
 }
-
-const (
-	// If specified, you can specify an oob Public Key that Rekor uses using
-	// this ENV variable.
-	altRekorPublicKey = "SIGSTORE_REKOR_PUBLIC_KEY"
-	// Add Rekor API Public Key
-	// If specified, will fetch the Rekor Public Key from the specified Rekor
-	// server and add it to RekorPubKeys. This ENV var is only for testing
-	// purposes, as users should distribute keys out of band.
-	// TODO(vaikas): Implement storing state like Rekor does so that if tree
-	// state ever changes, it will make lots of noise.
-	addRekorPublicKeyFromRekor = "SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY"
-)
 
 const treeIDHexStringLen = 16
 const uuidHexStringLen = 64
@@ -100,17 +88,12 @@ func intotoEntry(ctx context.Context, signature, pubKey []byte) (models.Proposed
 
 // GetRekorPubs retrieves trusted Rekor public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
-// A Rekor client may optionally be provided in case using SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY
-// (see below).
 // There are two Env variable that can be used to override this behaviour:
 // SIGSTORE_REKOR_PUBLIC_KEY - If specified, location of the file that contains
 // the Rekor Public Key on local filesystem
-// SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY - If specified, fetches the Rekor public
-// key from the Rekor server using the provided rekorClient.
-// TODO: Rename SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY to be test-only or remove.
-func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]RekorPubKey, error) {
+func GetRekorPubs(ctx context.Context, _ *client.Rekor) (map[string]RekorPubKey, error) {
 	publicKeys := make(map[string]RekorPubKey)
-	altRekorPub := os.Getenv(altRekorPublicKey)
+	altRekorPub := env.Getenv(env.VariableSigstoreRekorPublicKey)
 
 	if altRekorPub != "" {
 		raw, err := os.ReadFile(altRekorPub)
@@ -146,26 +129,6 @@ func GetRekorPubs(ctx context.Context, rekorClient *client.Rekor) (map[string]Re
 			}
 			publicKeys[keyID] = RekorPubKey{PubKey: rekorPubKey, Status: t.Status}
 		}
-	}
-
-	// If we have a Rekor client and we've been told to fetch the Public Key from Rekor,
-	// additionally fetch it here.
-	addRekorPublic := os.Getenv(addRekorPublicKeyFromRekor)
-	if addRekorPublic != "" && rekorClient != nil {
-		fmt.Fprintf(os.Stderr, "**Warning ('%s' is only for testing)** Fetching public key from Rekor API directly\n", addRekorPublicKeyFromRekor)
-		pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
-		if err != nil {
-			return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)
-		}
-		pubFromAPI, err := PemToECDSAKey([]byte(pubOK.Payload))
-		if err != nil {
-			return nil, fmt.Errorf("error converting rekor PEM public key from rekor to ECDSAKey: %w", err)
-		}
-		keyID, err := getLogID(pubFromAPI)
-		if err != nil {
-			return nil, fmt.Errorf("error generating log ID: %w", err)
-		}
-		publicKeys[keyID] = RekorPubKey{PubKey: pubFromAPI, Status: tuf.Active}
 	}
 
 	if len(publicKeys) == 0 {
@@ -211,7 +174,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntry(ctx, rekorClient, e)
+			return e, VerifyTLogEntry(ctx, nil, e)
 		}
 		return nil, err
 	}
@@ -389,7 +352,8 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 	return proposedEntry, nil
 }
 
-func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor, b64Sig string, payload, pubKey []byte) (entry *models.LogEntryAnon, err error) {
+func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
+	b64Sig string, payload, pubKey []byte) ([]models.LogEntryAnon, error) {
 	searchParams := entries.NewSearchLogQueryParamsWithContext(ctx)
 	searchLogQuery := models.SearchLogQuery{}
 	proposedEntry, err := proposedEntry(b64Sig, payload, pubKey)
@@ -406,23 +370,21 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor, b64Sig string
 	}
 	if len(resp.Payload) == 0 {
 		return nil, errors.New("signature not found in transparency log")
-	} else if len(resp.Payload) > 1 {
-		return nil, errors.New("multiple entries returned; this should not happen")
-	}
-	logEntry := resp.Payload[0]
-	if len(logEntry) != 1 {
-		return nil, errors.New("UUID value can not be extracted")
 	}
 
-	var tlogEntry models.LogEntryAnon
-	for k, e := range logEntry {
-		// Check body hash matches uuid
-		if err := verifyUUID(k, e); err != nil {
-			return nil, err
+	// This may accumulate multiple entries on multiple tree IDs.
+	results := make([]models.LogEntryAnon, 0)
+	for _, logEntry := range resp.GetPayload() {
+		for k, e := range logEntry {
+			// Check body hash matches uuid
+			if err := verifyUUID(k, e); err != nil {
+				continue
+			}
+			results = append(results, e)
 		}
-		tlogEntry = e
 	}
-	return &tlogEntry, nil
+
+	return results, nil
 }
 
 func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, payload []byte) (uuids []string, err error) {
@@ -441,7 +403,8 @@ func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, pa
 }
 
 // VerityTLogEntry verifies a TLog entry.
-func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.LogEntryAnon) error {
+// The argument *client.Rekor is unused and may be nil.
+func VerifyTLogEntry(ctx context.Context, _ *client.Rekor, e *models.LogEntryAnon) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
@@ -473,7 +436,7 @@ func VerifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, e *models.L
 		LogID:          *e.LogID,
 	}
 
-	rekorPubKeys, err := GetRekorPubs(ctx, rekorClient)
+	rekorPubKeys, err := GetRekorPubs(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("unable to fetch Rekor public keys: %w", err)
 	}

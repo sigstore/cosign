@@ -57,7 +57,8 @@ func Attest() *cobra.Command {
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image`,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
@@ -81,7 +82,7 @@ func Attest() *cobra.Command {
 			}
 			for _, img := range args {
 				if err := attest.AttestCmd(cmd.Context(), ko, o.Registry, img, o.Cert, o.CertChain, o.NoUpload,
-					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout, o.NoTlogUpload); err != nil {
+					o.Predicate.Path, o.Force, o.Predicate.Type, o.Replace, ro.Timeout, o.TlogUpload); err != nil {
 					return fmt.Errorf("signing %s: %w", img, err)
 				}
 			}

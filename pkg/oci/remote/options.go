@@ -17,11 +17,11 @@ package remote
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/sigstore/cosign/pkg/cosign/env"
 )
 
 const (
@@ -43,8 +43,8 @@ type options struct {
 	TagPrefix         string
 	TargetRepository  name.Repository
 	ROpt              []remote.Option
-
-	OriginalOptions []Option
+	NameOpts          []name.Option
+	OriginalOptions   []Option
 }
 
 var defaultOptions = []remote.Option{
@@ -125,7 +125,7 @@ func WithTargetRepository(repo name.Repository) Option {
 // `os.Getenv(RepoOverrideEnvKey)`, or the empty value if not set.
 // Returns an error if the value is set but cannot be parsed.
 func GetEnvTargetRepository() (name.Repository, error) {
-	if ro := os.Getenv(RepoOverrideEnvKey); ro != "" {
+	if ro := env.Getenv(env.VariableRepository); ro != "" {
 		repo, err := name.NewRepository(ro)
 		if err != nil {
 			return name.Repository{}, fmt.Errorf("parsing $"+RepoOverrideEnvKey+": %w", err)
@@ -133,4 +133,12 @@ func GetEnvTargetRepository() (name.Repository, error) {
 		return repo, nil
 	}
 	return name.Repository{}, nil
+}
+
+// WithNameOptions is a functional option for overriding the default
+// name options passed to GGCR.
+func WithNameOptions(opts ...name.Option) Option {
+	return func(o *options) {
+		o.NameOpts = opts
+	}
 }

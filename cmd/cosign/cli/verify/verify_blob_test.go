@@ -248,7 +248,7 @@ func TestVerifyBlob(t *testing.T) {
 		// If online lookups to Rekor are enabled
 		experimental bool
 		// The rekor entry response when Rekor is enabled
-		rekorEntry *models.LogEntry
+		rekorEntry []*models.LogEntry
 		shouldErr  bool
 	}{
 		{
@@ -274,8 +274,8 @@ func TestVerifyBlob(t *testing.T) {
 			signature:    blobSignature,
 			sigVerifier:  signer,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				pubKeyBytes, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				pubKeyBytes, true)},
 			shouldErr: false,
 		},
 		{
@@ -411,19 +411,18 @@ func TestVerifyBlob(t *testing.T) {
 			cert:         unexpiredLeafCert,
 			sigVerifier:  signer,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				unexpiredCertPem, true)},
 			shouldErr: false,
 		},
-
 		{
 			name:         "valid signature with unexpired certificate - experimental & rekor entry found",
 			blob:         blobBytes,
 			signature:    blobSignature,
 			cert:         unexpiredLeafCert,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				unexpiredCertPem, true)},
 			shouldErr: false,
 		},
 		{
@@ -442,8 +441,20 @@ func TestVerifyBlob(t *testing.T) {
 			sigVerifier:  signer,
 			cert:         expiredLeafCert,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true)},
+			shouldErr: false,
+		},
+		{
+			name:         "valid signature with expired certificate - experimental multiple rekor entries",
+			blob:         blobBytes,
+			signature:    blobSignature,
+			sigVerifier:  signer,
+			cert:         expiredLeafCert,
+			experimental: true,
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true), makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, false)},
 			shouldErr: false,
 		},
 		{
@@ -453,8 +464,8 @@ func TestVerifyBlob(t *testing.T) {
 			cert:         expiredLeafCert,
 			sigVerifier:  signer,
 			experimental: true,
-			rekorEntry: makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, false),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, false)},
 			shouldErr: true,
 		},
 
@@ -521,8 +532,8 @@ func TestVerifyBlob(t *testing.T) {
 			cert:         expiredLeafCert,
 			experimental: true,
 			// This is the wrong signer for the SET!
-			rekorEntry: makeRekorEntry(t, *signer, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *signer, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true)},
 			shouldErr: true,
 		},
 	}
@@ -710,6 +721,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -754,6 +766,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -792,6 +805,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -830,6 +844,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -868,6 +883,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Cert is fetched from bundle
 			"",       /*certEmail*/
+			"",       /*certIdentity*/
 			"",       /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -906,6 +922,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",                    /*certRef*/ // Cert is fetched from bundle
 			"invalid@example.com", /*certEmail*/
+			"",                    /*certIdentity*/
 			issuer,                /*certOidcIssuer*/
 			"",                    /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",                    /*sigRef*/    // Sig is fetched from bundle
@@ -914,7 +931,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			"", "", "", "", "",
 			// GitHub identity flags end
 			false /*enforceSCT*/)
-		if err == nil || !strings.Contains(err.Error(), "expected email not found in certificate") {
+		if err == nil || !strings.Contains(err.Error(), "expected identity not found in certificate") {
 			t.Fatalf("expected error with mismatched identity, got %v", err)
 		}
 	})
@@ -944,6 +961,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",        /*certRef*/ // Cert is fetched from bundle
 			identity,  /*certEmail*/
+			"",        /*certIdentity*/
 			"invalid", /*certOidcIssuer*/
 			"",        /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",        /*sigRef*/    // Sig is fetched from bundle
@@ -983,6 +1001,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			certPath, /*certRef*/
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -1021,6 +1040,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",                              /*certRef*/
 			identity,                        /*certEmail*/
+			"",                              /*certIdentity*/
 			issuer,                          /*certOidcIssuer*/
 			os.Getenv("SIGSTORE_ROOT_FILE"), /*certChain*/
 			"",                              /*sigRef*/ // Sig is fetched from bundle
@@ -1031,6 +1051,56 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			false /*enforceSCT*/)
 		if err != nil {
 			t.Fatalf("expected success specifying the intermediates, got %v", err)
+		}
+	})
+	t.Run("Explicit Fulcio mismatched chain failure", func(t *testing.T) {
+		identity := "hello@foo.com"
+		issuer := "issuer"
+		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
+
+		// Create blob
+		blob := "someblob"
+
+		// Sign blob with private key
+		sig, err := signer.SignMessage(bytes.NewReader([]byte(blob)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create bundle
+		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
+		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
+		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
+
+		rootCert, _, _ := test.GenerateRootCa()
+		rootPemCert, _ := cryptoutils.MarshalCertificateToPEM(rootCert)
+		tmpChainFile, err := os.CreateTemp(t.TempDir(), "cosign_fulcio_root_*.cert")
+		if err != nil {
+			t.Fatalf("failed to create temp chain file: %v", err)
+		}
+		defer tmpChainFile.Close()
+		if _, err := tmpChainFile.Write(rootPemCert); err != nil {
+			t.Fatalf("failed to write chain file: %v", err)
+		}
+
+		// Verify command
+		err = VerifyBlobCmd(context.Background(),
+			options.KeyOpts{BundlePath: bundlePath},
+			"",                  /*certRef*/
+			identity,            /*certEmail*/
+			"",                  /*certIdentity*/
+			issuer,              /*certOidcIssuer*/
+			tmpChainFile.Name(), /*certChain*/
+			"",                  /*sigRef*/ // Sig is fetched from bundle
+			blobPath,            /*blobRef*/
+			// GitHub identity flags start
+			"", "", "", "", "",
+			// GitHub identity flags end
+			false /*enforceSCT*/)
+		if err == nil || !strings.Contains(err.Error(), "verifying certificate from bundle with chain: x509: certificate signed by unknown authority") {
+			t.Fatalf("expected error with mismatched root, got %v", err)
 		}
 	})
 }
@@ -1066,6 +1136,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			certPath, /*certRef*/
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle
@@ -1104,6 +1175,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			options.KeyOpts{BundlePath: bundlePath},
 			"",       /*certRef*/ // Fetched from bundle
 			identity, /*certEmail*/
+			"",       /*certIdentity*/
 			issuer,   /*certOidcIssuer*/
 			"",       /*certChain*/ // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			"",       /*sigRef*/    // Sig is fetched from bundle

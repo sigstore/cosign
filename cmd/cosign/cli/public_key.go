@@ -62,6 +62,7 @@ func PublicKey() *cobra.Command {
 			}
 			return nil
 		},
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			writer := publickey.NamedWriter{Name: "", Writer: nil}
 			var f *os.File

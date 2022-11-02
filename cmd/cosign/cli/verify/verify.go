@@ -52,6 +52,7 @@ type VerifyCommand struct {
 	KeyRef                       string
 	CertRef                      string
 	CertEmail                    string
+	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
@@ -59,6 +60,7 @@ type VerifyCommand struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 	CertChain                    string
+	CertOidcProvider             string
 	EnforceSCT                   bool
 	Sk                           bool
 	Slot                         string
@@ -69,6 +71,7 @@ type VerifyCommand struct {
 	SignatureRef                 string
 	HashAlgorithm                crypto.Hash
 	LocalImage                   bool
+	NameOptions                  []name.Option
 }
 
 // Exec runs the verification command
@@ -89,9 +92,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
-	if !options.OneOf(c.KeyRef, c.CertRef, c.Sk) && !options.EnableExperimental() {
-		return &options.PubKeyParseError{}
-	}
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
@@ -100,6 +100,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		Annotations:                  c.Annotations.Annotations,
 		RegistryClientOpts:           ociremoteOpts,
 		CertEmail:                    c.CertEmail,
+		CertIdentity:                 c.CertIdentity,
 		CertOidcIssuer:               c.CertOidcIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
@@ -112,7 +113,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
-	if options.EnableExperimental() {
+
+	if c.keylessVerification() {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -203,7 +205,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			PrintVerificationHeader(img, co, bundleVerified, fulcioVerified)
 			PrintVerification(img, verified, c.Output)
 		} else {
-			ref, err := name.ParseReference(img)
+			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
 				return fmt.Errorf("parsing reference: %w", err)
 			}
@@ -393,4 +395,14 @@ func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 	return certs, nil
+}
+
+func (c *VerifyCommand) keylessVerification() bool {
+	if c.KeyRef != "" {
+		return false
+	}
+	if c.Sk {
+		return false
+	}
+	return true
 }

@@ -34,13 +34,14 @@ import (
 // CopyCmd implements the logic to copy the supplied container image and signatures.
 // nolint
 func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool) error {
-	srcRef, err := name.ParseReference(srcImg)
+	no := regOpts.NameOptions()
+	srcRef, err := name.ParseReference(srcImg, no...)
 	if err != nil {
 		return err
 	}
 	srcRepoRef := srcRef.Context()
 
-	dstRef, err := name.ParseReference(dstImg)
+	dstRef, err := name.ParseReference(dstImg, no...)
 	if err != nil {
 		return err
 	}

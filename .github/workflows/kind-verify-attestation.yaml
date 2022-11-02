@@ -44,8 +44,8 @@ jobs:
       COSIGN_EXPERIMENTAL: "true"
 
     steps:
-    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
-    - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v2.2.0
+    - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
+    - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.2.0
       with:
         go-version: '1.19'
         check-latest: true
@@ -54,7 +54,7 @@ jobs:
     - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
 
     - name: Install yq
-      uses: mikefarah/yq@9b6961875e10b058aeb482f263f26ca0f6b18eb8 # v4.27.5
+      uses: mikefarah/yq@5e490527de24715db37869037083f7f391dde5a6 # v4.27.5
 
     - name: build cosign
       run: |

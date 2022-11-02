@@ -43,10 +43,11 @@ func attachSignature() *cobra.Command {
 	o := &options.AttachSignatureOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "signature",
-		Short:   "Attach signatures to the supplied container image",
-		Example: "  cosign attach signature <image uri>",
-		Args:    cobra.ExactArgs(1),
+		Use:              "signature",
+		Short:            "Attach signatures to the supplied container image",
+		Example:          "  cosign attach signature <image uri>",
+		PersistentPreRun: options.BindViper,
+		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attach.SignatureCmd(cmd.Context(), o.Registry, o.Signature, o.Payload, args[0])
 		},
@@ -61,16 +62,17 @@ func attachSBOM() *cobra.Command {
 	o := &options.AttachSBOMOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "sbom",
-		Short:   "Attach sbom to the supplied container image",
-		Example: "  cosign attach sbom <image uri>",
-		Args:    cobra.ExactArgs(1),
+		Use:              "sbom",
+		Short:            "Attach sbom to the supplied container image",
+		Example:          "  cosign attach sbom <image uri>",
+		Args:             cobra.ExactArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			mediaType, err := o.MediaType()
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "WARNING: Attaching SBOMs this way does not sign them. If you want to sign them, use 'cosign attest -predicate %s -key <key path>' or 'cosign sign -key <key path> <sbom image>'.\n", o.SBOM)
+			fmt.Fprintf(os.Stderr, "WARNING: Attaching SBOMs this way does not sign them. If you want to sign them, use 'cosign attest --predicate %s --key <key path>' or 'cosign sign --key <key path> --attachment sbom <image uri>'.\n", o.SBOM)
 			return attach.SBOMCmd(cmd.Context(), o.Registry, o.SBOM, mediaType, args[0])
 		},
 	}
@@ -96,7 +98,8 @@ func attachAttestation() *cobra.Command {
   cosign attach attestation --attestation <attestation bundle file path> <image uri>
 `,
 
-		Args: cobra.MinimumNArgs(1),
+		Args:             cobra.MinimumNArgs(1),
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attach.AttestationCmd(cmd.Context(), o.Registry, o.Attestations, args[0])
 		},

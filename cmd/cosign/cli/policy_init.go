@@ -84,6 +84,7 @@ func initPolicy() *cobra.Command {
 		Example: `
   # extract public key from private key to a specified out file.
   cosign policy init -ns <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)`,
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var publicKeys []*tuf.Key
 
@@ -150,7 +151,7 @@ func initPolicy() *cobra.Command {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(cmd.Context(), o.Registry, files, "", rootPath(o.ImageRef))
+			return upload.BlobCmd(cmd.Context(), o.Registry, files, nil, "", rootPath(o.ImageRef))
 		},
 	}
 
@@ -163,9 +164,10 @@ func signPolicy() *cobra.Command {
 	o := &options.PolicySignOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "sign",
-		Short: "sign a keyless policy.",
-		Long:  "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
+		Use:              "sign",
+		Short:            "sign a keyless policy.",
+		Long:             "policy is used to manage a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
+		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if ro.Timeout != 0 {
@@ -191,6 +193,7 @@ func signPolicy() *cobra.Command {
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 			})
+
 			if err != nil {
 				return err
 			}
@@ -209,7 +212,7 @@ func signPolicy() *cobra.Command {
 
 			// Retrieve root.json from registry.
 			imgName := rootPath(o.ImageRef)
-			ref, err := name.ParseReference(imgName)
+			ref, err := name.ParseReference(imgName, o.Registry.NameOptions()...)
 			if err != nil {
 				return err
 			}
@@ -297,7 +300,7 @@ func signPolicy() *cobra.Command {
 				cremote.FileFromFlag(outfile),
 			}
 
-			return upload.BlobCmd(ctx, o.Registry, files, "", rootPath(o.ImageRef))
+			return upload.BlobCmd(ctx, o.Registry, files, nil, "", rootPath(o.ImageRef))
 		},
 	}
 

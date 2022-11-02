@@ -52,9 +52,10 @@ cosign dockerfile verify [flags]
 ### Options
 
 ```
-      --allow-insecure-registry                                                                  whether to allow insecure connections to registries. Don't use this for anything but testing
+      --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
   -a, --annotations strings                                                                      extra key=value pairs to sign
-      --attachment string                                                                        related image attachment to sign (sbom), default none
+      --attachment string                                                                        related image attachment to verify (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --base-image-only                                                                          only verify the base image (the last FROM image in the Dockerfile)
       --certificate string                                                                       path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.
@@ -65,6 +66,7 @@ cosign dockerfile verify [flags]
       --certificate-github-workflow-repository string                                            contains the repository claim from the GitHub OIDC Identity token that contains the repository that the workflow run was based upon
       --certificate-github-workflow-sha string                                                   contains the sha claim from the GitHub OIDC Identity token that contains the commit SHA that the workflow run was based upon.
       --certificate-github-workflow-trigger string                                               contains the event_name claim from the GitHub OIDC Identity token that contains the name of the event that triggered the workflow run
+      --certificate-identity string                                                              the identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs.
       --certificate-oidc-issuer string                                                           the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth
       --check-claims                                                                             whether to check the claims found (default true)
       --enforce-sct                                                                              whether to enforce that a certificate contain an embedded SCT, a proof of inclusion in a certificate transparency log
