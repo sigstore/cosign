@@ -116,6 +116,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
+	fmt.Fprintf(os.Stdout, "WHETHER COSIGN EXPERIMENTAL IS ON: %t\n", options.EnableExperimental())
 	if options.EnableExperimental() {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
