@@ -25,7 +25,9 @@ on:
      - '!images/**'
      - '!LICENSE'
      - 'test/**'
-    branches: [ main ]
+    branches:
+      - main
+      - 1.0-fork
 
 env:
   CODEQL_EXTRACTOR_GO_BUILD_TRACING: true

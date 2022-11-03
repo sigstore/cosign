@@ -23,7 +23,10 @@ on:
      - '!images/**'
      - '!LICENSE'
      - 'test/**'
-    branches: [ 'main', 'release-*' ]
+    branches:
+      - main
+      - release-*
+      - 1.0-fork
   schedule:
     - cron: '0 1 * * *' # 1AM UTC
   workflow_dispatch:

@@ -1,16 +1,17 @@
 on:
   push:
     paths:
-     - '**'
-     - '!**.md'
-     - '!doc/**'
-     - '!**.txt'
-     - '!images/**'
-     - '!LICENSE'
-     - 'test/**'
+      - '**'
+      - '!**.md'
+      - '!doc/**'
+      - '!**.txt'
+      - '!images/**'
+      - '!LICENSE'
+      - 'test/**'
     branches:
       - main
       - release-*
+      - 1.0-fork
   pull_request:
 
 permissions: read-all

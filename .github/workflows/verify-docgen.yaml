@@ -18,7 +18,10 @@ name: Docgen
 on:
   workflow_dispatch:
   push:
-    branches: ['main', 'release-*']
+    branches:
+      - main
+      - release-*
+      - 1.0-fork
   pull_request:
 
 permissions: read-all

@@ -16,7 +16,10 @@ name: Test attest / verify-attestation
 
 on:
   pull_request:
-    branches: [ 'main', 'release-*' ]
+    branches:
+      - main
+      - release-*
+      - 1.0-fork
 
 defaults:
   run:
