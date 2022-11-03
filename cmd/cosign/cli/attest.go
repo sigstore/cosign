@@ -87,7 +87,6 @@ func Attest() *cobra.Command {
 				CertChainPath:   o.CertChain,
 				NoUpload:        o.NoUpload,
 				PredicatePath:   o.Predicate.Path,
-				Force:           o.Force,
 				PredicateType:   o.Predicate.Type,
 				Replace:         o.Replace,
 				Timeout:         ro.Timeout,

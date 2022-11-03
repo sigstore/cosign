@@ -1432,12 +1432,12 @@ func TestInvalidBundle(t *testing.T) {
 
 	// Sign image1 and store the entry in rekor
 	// (we're just using it for its bundle)
-	defer setenv(t, env.VariableExperimental.String(), "1")()
 	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	so := options.SignOptions{
-		Upload: true,
-		Force:  true,
+		Upload:           true,
+		TlogUpload:       true,
+		SkipConfirmation: true,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
 	// verify image1

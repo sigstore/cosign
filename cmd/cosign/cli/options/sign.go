@@ -29,7 +29,6 @@ type SignOptions struct {
 	OutputSignature   string // TODO: this should be the root output file arg.
 	OutputCertificate string
 	PayloadPath       string
-	Force             bool
 	Recursive         bool
 	Attachment        string
 	SkipConfirmation  bool
@@ -83,9 +82,6 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
 	_ = cmd.Flags().SetAnnotation("payload", cobra.BashCompFilenameExt, []string{})
-
-	cmd.Flags().BoolVarP(&o.Force, "force", "f", false,
-		"skip warnings and confirmations")
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")

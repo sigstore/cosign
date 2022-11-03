@@ -90,12 +90,12 @@ jobs:
 
     - name: Sign demoimage with cosign
       run: |
-        ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --force --allow-insecure-registry ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+        ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --yes --allow-insecure-registry ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
 
     - name: Create attestation for it
       run: |
         echo -n 'foobar e2e test' > ./predicate-file
-        ./cosign attest --predicate ./predicate-file --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --force ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+        ./cosign attest --predicate ./predicate-file --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --yes ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
 
     - name: Verify with cosign
       run: |
@@ -129,7 +129,7 @@ jobs:
 
     - name: Create vuln attestation for it
       run: |
-        ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --type vuln --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --force ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+        ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --type vuln --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --yes ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
 
     - name: Verify vuln attestation with cosign, works
       run: |
