@@ -21,7 +21,6 @@ import (
 // CertVerifyOptions is the wrapper for certificate verification.
 type CertVerifyOptions struct {
 	Cert                         string
-	CertEmail                    string
 	CertIdentity                 string
 	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
@@ -40,9 +39,6 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
 	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
-
-	cmd.Flags().StringVar(&o.CertEmail, "certificate-email", "",
-		"DEPRECATED: Use --certificate-identity instead. The email expected in a valid Fulcio certificate")
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
 		"Required. The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs.")

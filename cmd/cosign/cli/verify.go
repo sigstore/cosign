@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -91,13 +90,6 @@ against the transparency log.`,
 			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
 			if err != nil {
 				return err
-			}
-
-			if o.CertVerify.CertEmail != "" {
-				if o.CertVerify.CertIdentity != "" {
-					return errors.New("Only one of --certificate-email and --certificate-identity is allowed")
-				}
-				o.CertVerify.CertIdentity = o.CertVerify.CertEmail
 			}
 
 			v := verify.VerifyCommand{
