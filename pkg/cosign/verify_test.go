@@ -148,7 +148,7 @@ func TestVerifyImageSignature(t *testing.T) {
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
 		&CheckOpts{
 			RootCerts:  rootPool,
-			Identities: []Identity{Identity{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
+			Identities: []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
