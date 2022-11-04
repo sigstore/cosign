@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -90,6 +91,10 @@ against the transparency log.`,
 			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
 			if err != nil {
 				return err
+			}
+
+			if o.CertVerify.CertIdentity == "" || o.CertVerify.CertOidcIssuer == "" {
+				return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
 			}
 
 			v := verify.VerifyCommand{
@@ -181,6 +186,10 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.CertVerify.CertIdentity == "" || o.CertVerify.CertOidcIssuer == "" {
+				return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
+			}
+
 			v := verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
 				CheckClaims:                  o.CheckClaims,
@@ -264,6 +273,9 @@ The blob may be specified as a path to a file or - for stdin.`,
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.CertVerify.CertIdentity == "" || o.CertVerify.CertOidcIssuer == "" {
+				return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
+			}
 			ko := options.KeyOpts{
 				KeyRef:     o.Key,
 				Sk:         o.SecurityKey.Use,
