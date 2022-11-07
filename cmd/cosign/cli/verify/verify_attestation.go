@@ -53,7 +53,8 @@ type VerifyAttestationCommand struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 	CertChain                    string
-	EnforceSCT                   bool
+	IgnoreSCT                    bool
+	SCTRef                       string
 	Sk                           bool
 	Slot                         string
 	Output                       string
@@ -90,7 +91,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
-		EnforceSCT:                   c.EnforceSCT,
+		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   []cosign.Identity{{Issuer: c.CertOidcIssuer, Subject: c.CertIdentity}},
 	}
 	if c.CheckClaims {
@@ -165,6 +166,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			if err != nil {
 				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
+		}
+		if c.SCTRef != "" {
+			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
+			if err != nil {
+				return fmt.Errorf("reading sct from file: %w", err)
+			}
+			co.SCT = sct
 		}
 	}
 
