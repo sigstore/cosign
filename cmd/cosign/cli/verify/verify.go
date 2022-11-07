@@ -96,8 +96,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 
-	if c.CertIdentity == "" || c.CertOidcIssuer == "" {
-		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
+	if c.KeyRef == "" && (c.CertIdentity == "" || c.CertOidcIssuer == "") {
+		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
 	}
 
 	co := &cosign.CheckOpts{
