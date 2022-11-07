@@ -25,8 +25,10 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
+	"strings"
 
 	"golang.org/x/term"
 	"google.golang.org/grpc"
@@ -131,7 +133,7 @@ type Signer struct {
 }
 
 func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
-	fClient, err := NewClient(ko.FulcioURL)
+	fClient, err := NewClient(ko)
 	if err != nil {
 		return nil, fmt.Errorf("creating Fulcio client: %w", err)
 	}
@@ -186,7 +188,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		}
 		flow = flowNormal
 	}
-	resp, err := GetCert(ctx, priv, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
+	resp, err := GetCert(ctx, priv, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving cert: %w", err)
 	}
@@ -222,26 +224,46 @@ func GetIntermediates() (*x509.CertPool, error) {
 	return fulcioroots.GetIntermediates()
 }
 
-func NewClient(fulcioURL string) (fulciopb.CAClient, error) {
-	var opts []grpc.DialOption
-	fulcioServer, err := url.Parse(fulcioURL)
-	if err != nil {
-		return nil, err
-	}
-	host := fulcioServer.Host
-	switch fulcioServer.Scheme {
-	case "https":
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})))
-		if fulcioServer.Port() == "" {
-			host = fmt.Sprintf("%s:443", host)
+func NewClient(ko options.KeyOpts) (fulciopb.CAClient, error) {
+	opts := []grpc.DialOption{grpc.WithUserAgent(options.UserAgent())}
+	// follows https://github.com/grpc/grpc/blob/master/doc/naming.md
+	// if port was not specified, use 443
+	// if port is 443, presume TLS
+	host := ""
+	port := "443"
+	// if the url has a scheme, let's parse it with url.Parse
+	if strings.Contains(ko.FulcioURL, "://") {
+		fulcioServer, err := url.Parse(ko.FulcioURL)
+		if err != nil {
+			return nil, err
 		}
-	default:
-		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if fulcioServer.Port() == "" {
-			host = fmt.Sprintf("%s:80", host)
+		host = fulcioServer.Hostname()
+		if fulcioServer.Port() != "" {
+			port = fulcioServer.Port()
 		}
+
+	} else if strings.Contains(ko.FulcioURL, ":") {
+		// if the url does not have a scheme, but has a colon, let's split host and port
+		parsedHost, parsedPort, err := net.SplitHostPort(ko.FulcioURL)
+		if err != nil {
+			return nil, err
+		}
+		host = parsedHost
+		port = parsedPort
+	} else {
+		// the url does not have a scheme or a colon, let's assume it's just a hostname
+		host = ko.FulcioURL
 	}
-	conn, err := grpc.Dial(host, opts...)
+	target := fmt.Sprintf("%v:%v", host, port)
+
+	// assume TLS unless flag explicitly says to use insecure
+	transportCreds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
+	if ko.AllowFulcioInsecure {
+		transportCreds = insecure.NewCredentials()
+	}
+
+	opts = append(opts, grpc.WithTransportCredentials(transportCreds))
+	conn, err := grpc.Dial(target, opts...)
 	if err != nil {
 		return nil, err
 	}

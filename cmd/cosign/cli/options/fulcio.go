@@ -19,13 +19,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const DefaultFulcioURL = "https://fulcio.sigstore.dev"
+const DefaultFulcioURL = "fulcio.sigstore.dev"
 
 // FulcioOptions is the wrapper for Fulcio related options.
 type FulcioOptions struct {
 	URL                      string
 	IdentityToken            string
 	InsecureSkipFulcioVerify bool
+	AllowInsecure            bool
 }
 
 var _ Interface = (*FulcioOptions)(nil)
@@ -41,4 +42,7 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.InsecureSkipFulcioVerify, "insecure-skip-verify", false,
 		"[EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).")
+
+	cmd.Flags().BoolVar(&o.AllowInsecure, "allow-insecure-fulcio", false,
+		"whether to allow insecure connections to Fulcio (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing")
 }

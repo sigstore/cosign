@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	fulciopb "github.com/sigstore/fulcio/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"google.golang.org/grpc"
@@ -170,7 +171,12 @@ func TestNewClient(t *testing.T) {
 		}))
 	defer testServer.Close()
 
-	client, err := NewClient(testServer.URL)
+	keyOpts := options.KeyOpts{
+		AllowFulcioInsecure: true,
+		FulcioURL:           testServer.URL,
+	}
+
+	client, err := NewClient(keyOpts)
 	if err != nil {
 		t.Error(err)
 	}
