@@ -88,6 +88,11 @@ func (m *mockAttestation) Payload() ([]byte, error) {
 	return json.Marshal(m.payload)
 }
 
+func (m *mockAttestation) Base64Signature() (string, error) {
+	b, err := json.Marshal(m.payload)
+	return string(b), err
+}
+
 func appendSlices(slices [][]byte) []byte {
 	var tmp []byte
 	for _, s := range slices {
