@@ -78,6 +78,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
+
+	if c.CertIdentity == "" || c.CertOidcIssuer == "" {
+		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
+	}
+
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,

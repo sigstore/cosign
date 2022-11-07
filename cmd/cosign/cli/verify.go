@@ -93,10 +93,6 @@ against the transparency log.`,
 				return err
 			}
 
-			if o.CertVerify.CertIdentity == "" || o.CertVerify.CertOidcIssuer == "" {
-				return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
-			}
-
 			v := verify.VerifyCommand{
 				RegistryOptions:              o.Registry,
 				CheckClaims:                  o.CheckClaims,

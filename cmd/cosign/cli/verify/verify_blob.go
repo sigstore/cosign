@@ -100,6 +100,10 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return err
 	}
 
+	if c.CertIdentity == "" || c.CertOIDCIssuer == "" {
+		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
+	}
+
 	co := &cosign.CheckOpts{
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSHA,

@@ -95,6 +95,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
+
+	if c.CertIdentity == "" || c.CertOidcIssuer == "" {
+		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification")
+	}
+
 	co := &cosign.CheckOpts{
 		Annotations:                  c.Annotations.Annotations,
 		RegistryClientOpts:           ociremoteOpts,
