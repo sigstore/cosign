@@ -119,6 +119,9 @@ type CheckOpts struct {
 	// to be met for the signature to ve valid.
 	// Supercedes CertEmail / CertOidcIssuer
 	Identities []Identity
+
+	// Force offline verification of the signature
+	Offline bool
 }
 
 func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oci.Signature) error {

@@ -27,6 +27,7 @@ type VerifyOptions struct {
 	Output       string
 	SignatureRef string
 	LocalImage   bool
+	Offline      bool
 
 	SecurityKey     SecurityKeyOptions
 	CertVerify      CertVerifyOptions
@@ -65,6 +66,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
+
+	cmd.Flags().BoolVar(&o.Offline, "offline", false,
+		"only allow offline verification")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.

@@ -116,6 +116,7 @@ against the transparency log.`,
 				HashAlgorithm:                hashAlgorithm,
 				SignatureRef:                 o.SignatureRef,
 				LocalImage:                   o.LocalImage,
+				Offline:                      o.Offline,
 			}
 
 			if o.Registry.AllowInsecure {
