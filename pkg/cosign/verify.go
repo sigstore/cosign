@@ -352,6 +352,12 @@ func validateCertIdentity(cert *x509.Certificate, co *CheckOpts) error {
 			return nil
 		}
 	}
+
+	otherName, _ := UnmarshalOtherNameSAN(cert.Extensions)
+	if len(otherName) > 0 && co.CertIdentity == otherName {
+		return nil
+	}
+
 	return &VerificationError{"expected identity not found in certificate"}
 }
 

@@ -650,6 +650,39 @@ func TestValidateAndUnpackCertSuccessWithUriSan(t *testing.T) {
 	}
 }
 
+func TestValidateAndUnpackCertSuccessWithOtherNameSan(t *testing.T) {
+	// generate with OtherName, which will override other SANs
+	subject := "subject-othername"
+	ext, err := MarshalOtherNameSAN(subject, true)
+	if err != nil {
+		t.Fatalf("error marshalling SANs: %v", err)
+	}
+	exts := []pkix.Extension{*ext}
+
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert("unused", oidcIssuer, rootCert, rootKey, exts...)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	co := &CheckOpts{
+		RootCerts:      rootPool,
+		CertIdentity:   subject,
+		CertOidcIssuer: oidcIssuer,
+	}
+
+	_, err = ValidateAndUnpackCert(leafCert, co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
+}
+
 func TestValidateAndUnpackCertInvalidRoot(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"

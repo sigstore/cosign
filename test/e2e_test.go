@@ -304,8 +304,13 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, attestationPath, false,
-		predicateType, false, 30*time.Second, false), t)
+	attestCmd := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: attestationPath,
+		PredicateType: predicateType,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCmd.Exec(ctx, imgName), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -360,8 +365,14 @@ func TestAttestationReplaceCreate(t *testing.T) {
 	}
 
 	// Attest with replace=true to create an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -405,8 +416,13 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once with replace=false creating an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -418,8 +434,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest again with replace=true, replacing the previous attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
 
 	// Download and count the attestations
@@ -431,8 +453,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "custom",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -648,8 +676,16 @@ func TestSignBlob(t *testing.T) {
 		KeyRef: pubKeyPath2,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	cmd1 := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+		SigRef:  "badsig",
+	}
+	cmd2 := cliverify.VerifyBlobCmd{
+		KeyOpts: ko2,
+		SigRef:  "badsig",
+	}
+	mustErr(cmd1.Exec(ctx, blob), t)
+	mustErr(cmd2.Exec(ctx, blob), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -661,8 +697,10 @@ func TestSignBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	cmd1.SigRef = string(sig)
+	cmd2.SigRef = string(sig)
+	must(cmd1.Exec(ctx, bp), t)
+	mustErr(cmd2.Exec(ctx, bp), t)
 }
 
 func TestSignBlobBundle(t *testing.T) {
@@ -687,7 +725,10 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+	}
+	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -700,7 +741,7 @@ func TestSignBlobBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Now verify should work
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, env.VariableExperimental.String(), "1")()
@@ -710,7 +751,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
 func TestGenerate(t *testing.T) {
@@ -1048,8 +1089,13 @@ func TestSaveLoadAttestation(t *testing.T) {
 
 	// Now attest the image
 	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()
@@ -1386,12 +1432,12 @@ func TestInvalidBundle(t *testing.T) {
 
 	// Sign image1 and store the entry in rekor
 	// (we're just using it for its bundle)
-	defer setenv(t, env.VariableExperimental.String(), "1")()
 	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	so := options.SignOptions{
-		Upload: true,
-		Force:  true,
+		Upload:           true,
+		TlogUpload:       true,
+		SkipConfirmation: true,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
 	// verify image1
