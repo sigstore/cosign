@@ -232,7 +232,8 @@ func NewClient(ko options.KeyOpts) (fulciopb.CAClient, error) {
 	host := ""
 	port := "443"
 	// if the url has a scheme, let's parse it with url.Parse
-	if strings.Contains(ko.FulcioURL, "://") {
+	switch {
+	case strings.Contains(ko.FulcioURL, "://"):
 		fulcioServer, err := url.Parse(ko.FulcioURL)
 		if err != nil {
 			return nil, err
@@ -241,8 +242,7 @@ func NewClient(ko options.KeyOpts) (fulciopb.CAClient, error) {
 		if fulcioServer.Port() != "" {
 			port = fulcioServer.Port()
 		}
-
-	} else if strings.Contains(ko.FulcioURL, ":") {
+	case strings.Contains(ko.FulcioURL, ":"):
 		// if the url does not have a scheme, but has a colon, let's split host and port
 		parsedHost, parsedPort, err := net.SplitHostPort(ko.FulcioURL)
 		if err != nil {
@@ -250,7 +250,7 @@ func NewClient(ko options.KeyOpts) (fulciopb.CAClient, error) {
 		}
 		host = parsedHost
 		port = parsedPort
-	} else {
+	default:
 		// the url does not have a scheme or a colon, let's assume it's just a hostname
 		host = ko.FulcioURL
 	}
