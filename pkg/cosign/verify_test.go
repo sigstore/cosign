@@ -507,8 +507,7 @@ func TestValidateAndUnpackCertWithoutRequiredSCT(t *testing.T) {
 		RootCerts:  rootPool,
 		Identities: []Identity{{Subject: subject, Issuer: oidcIssuer}},
 		// explicitly set to false
-		IgnoreSCT:  false,
-		EnforceSCT: true,
+		IgnoreSCT: false,
 	}
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
@@ -665,9 +664,9 @@ func TestValidateAndUnpackCertSuccessWithOtherNameSan(t *testing.T) {
 	rootPool.AddCert(rootCert)
 
 	co := &CheckOpts{
-		RootCerts:      rootPool,
-		CertIdentity:   subject,
-		CertOidcIssuer: oidcIssuer,
+		RootCerts:  rootPool,
+		Identities: []Identity{{Subject: subject, Issuer: oidcIssuer}},
+		IgnoreSCT:  true,
 	}
 
 	_, err = ValidateAndUnpackCert(leafCert, co)
