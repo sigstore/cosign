@@ -40,11 +40,12 @@ cosign attest [flags]
 
 ```
       --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
+      --allow-insecure-fulcio                                                                    whether to allow insecure connections to Fulcio (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --certificate string                                                                       path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
-      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "fulcio.sigstore.dev")
   -h, --help                                                                                     help for attest
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).

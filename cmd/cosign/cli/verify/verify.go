@@ -26,6 +26,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
 
@@ -61,7 +62,8 @@ type VerifyCommand struct {
 	CertGithubWorkflowRef        string
 	CertChain                    string
 	CertOidcProvider             string
-	EnforceSCT                   bool
+	IgnoreSCT                    bool
+	SCTRef                       string
 	Sk                           bool
 	Slot                         string
 	Output                       string
@@ -107,7 +109,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
-		EnforceSCT:                   c.EnforceSCT,
+		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
 	}
 	if c.CheckClaims {
@@ -185,6 +187,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
+		}
+		if c.SCTRef != "" {
+			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
+			if err != nil {
+				return fmt.Errorf("reading sct from file: %w", err)
+			}
+			co.SCT = sct
 		}
 	}
 	co.SigVerifier = pubKey
