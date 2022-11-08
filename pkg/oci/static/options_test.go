@@ -26,7 +26,7 @@ import (
 )
 
 func TestOptions(t *testing.T) {
-	bundle := &bundle.RekorBundle{}
+	bundle := &bundle.Bundle{}
 
 	tests := []struct {
 		name string
@@ -87,7 +87,7 @@ func TestOptions(t *testing.T) {
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
 			Annotations: map[string]string{
-				BundleAnnotationKey: "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
+				BundleAnnotationKey: "{\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"},\"SignedEntryTimestamp\":null,\"EntryTimestampAuthority\":null,\"CertBytes\":null,\"PublicKeyIdentifier\":\"\"}",
 			},
 			Bundle: bundle,
 		},

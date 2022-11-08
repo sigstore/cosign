@@ -47,7 +47,7 @@ import (
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.Bundle, error) {
 	rekorBytes, err := sv.Bytes(ctx)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 		return nil, err
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return cbundle.EntryToBundle(entry), nil
+	return cbundle.EntryToBundle(entry, []byte{}, []byte{}, []byte{}, ""), nil
 }
 
 // nolint

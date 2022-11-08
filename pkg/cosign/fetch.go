@@ -34,13 +34,13 @@ type SignedPayload struct {
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
-	Bundle          *bundle.RekorBundle
+	Bundle          *bundle.Bundle
 }
 
 type LocalSignedPayload struct {
-	Base64Signature string              `json:"base64Signature"`
-	Cert            string              `json:"cert,omitempty"`
-	Bundle          *bundle.RekorBundle `json:"rekorBundle,omitempty"`
+	Base64Signature string         `json:"base64Signature"`
+	Cert            string         `json:"cert,omitempty"`
+	Bundle          *bundle.Bundle `json:"rekorBundle,omitempty"`
 }
 
 type Signatures struct {

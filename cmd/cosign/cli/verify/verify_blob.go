@@ -87,7 +87,7 @@ type VerifyBlobCmd struct {
 // nolint
 func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	var cert *x509.Certificate
-	var bundle *bundle.RekorBundle
+	var bundle *bundle.Bundle
 
 	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && !options.EnableExperimental() && c.BundlePath == "" {
 		return &options.PubKeyParseError{}
@@ -312,7 +312,7 @@ We recommend requesting the certificate/signature from the original signer of th
 // clean up the args into CheckOpts or use KeyOpts here to resolve different KeyOpts.
 func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 	blobBytes []byte, sig string, cert *x509.Certificate,
-	bundle *bundle.RekorBundle, e *models.LogEntryAnon) error {
+	bundle *bundle.Bundle, e *models.LogEntryAnon) error {
 	if cert != nil {
 		// This would have already be done in the main entrypoint, but do this for robustness.
 		var err error
@@ -504,7 +504,7 @@ func payloadBytes(blobRef string) ([]byte, error) {
 	return blobBytes, nil
 }
 
-func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle,
+func verifyRekorBundle(ctx context.Context, bundle *bundle.Bundle,
 	blobBytes []byte, sig string, pubKeyBytes []byte) (*bundle.RekorPayload, error) {
 	if err := verifyBundleMatchesData(ctx, bundle, blobBytes, pubKeyBytes, []byte(sig)); err != nil {
 		return nil, err
@@ -530,7 +530,7 @@ func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle,
 	return &bundle.Payload, nil
 }
 
-func verifyBundleMatchesData(ctx context.Context, bundle *bundle.RekorBundle, blobBytes, certBytes, sigBytes []byte) error {
+func verifyBundleMatchesData(ctx context.Context, bundle *bundle.Bundle, blobBytes, certBytes, sigBytes []byte) error {
 	eimpl, kind, apiVersion, err := unmarshalEntryImpl(bundle.Payload.Body.(string))
 	if err != nil {
 		return err

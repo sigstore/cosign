@@ -33,7 +33,7 @@ type sigWrapper struct {
 	wrapped oci.Signature
 
 	annotations map[string]string
-	bundle      *bundle.RekorBundle
+	bundle      *bundle.Bundle
 	cert        *x509.Certificate
 	chain       []*x509.Certificate
 	mediaType   types.MediaType
@@ -85,7 +85,7 @@ func (sw *sigWrapper) Chain() ([]*x509.Certificate, error) {
 }
 
 // Bundle implements oci.Signature.
-func (sw *sigWrapper) Bundle() (*bundle.RekorBundle, error) {
+func (sw *sigWrapper) Bundle() (*bundle.Bundle, error) {
 	if sw.bundle != nil {
 		return sw.bundle, nil
 	}

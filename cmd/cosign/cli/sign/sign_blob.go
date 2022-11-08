@@ -79,7 +79,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 			return nil, err
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-		signedPayload.Bundle = cbundle.EntryToBundle(entry)
+		signedPayload.Bundle = cbundle.EntryToBundle(entry, []byte{}, []byte{}, []byte{}, "")
 	}
 
 	// if bundle is specified, just do that and ignore the rest

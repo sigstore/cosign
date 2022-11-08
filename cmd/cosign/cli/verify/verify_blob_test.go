@@ -552,7 +552,7 @@ func TestVerifyBlob(t *testing.T) {
 				co.RekorClient = &mClient
 			}
 
-			var bundle *bundle.RekorBundle
+			var bundle *bundle.Bundle
 			b, err := cosign.FetchLocalSignedPayloadFromPath(tt.bundlePath)
 			if err == nil && b.Bundle != nil {
 				bundle = b.Bundle
@@ -650,14 +650,18 @@ func makeLocalBundle(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	b := cosign.LocalSignedPayload{
 		Base64Signature: base64.StdEncoding.EncodeToString(sig),
 		Cert:            string(svBytes),
-		Bundle: &bundle.RekorBundle{
-			Payload: bundle.RekorPayload{
-				Body:           e.Body,
-				IntegratedTime: *e.IntegratedTime,
-				LogIndex:       *e.LogIndex,
-				LogID:          *e.LogID,
+		Bundle: &bundle.Bundle{
+			VerificationData: bundle.VerificationData{
+				Payload: bundle.RekorPayload{
+					Body:           e.Body,
+					IntegratedTime: *e.IntegratedTime,
+					LogIndex:       *e.LogIndex,
+					LogID:          *e.LogID,
+				},
+				TimestampVerificationData: bundle.TimestampVerificationData{
+					SignedEntryTimestamp: e.Verification.SignedEntryTimestamp,
+				},
 			},
-			SignedEntryTimestamp: e.Verification.SignedEntryTimestamp,
 		},
 	}
 
@@ -1263,13 +1267,17 @@ func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integr
 	b := &cosign.LocalSignedPayload{
 		Base64Signature: base64.StdEncoding.EncodeToString(sig),
 		Cert:            string(certPem),
-		Bundle: &bundle.RekorBundle{
-			SignedEntryTimestamp: []byte{},
-			Payload: bundle.RekorPayload{
-				LogID:          logID,
-				IntegratedTime: integratedTime,
-				LogIndex:       1,
-				Body:           rekorEntry,
+		Bundle: &bundle.Bundle{
+			VerificationData: bundle.VerificationData{
+				TimestampVerificationData: bundle.TimestampVerificationData{
+					SignedEntryTimestamp: []byte{},
+				},
+				Payload: bundle.RekorPayload{
+					LogID:          logID,
+					IntegratedTime: integratedTime,
+					LogIndex:       1,
+					Body:           rekorEntry,
+				},
 			},
 		},
 	}

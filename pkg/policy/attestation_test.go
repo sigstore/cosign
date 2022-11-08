@@ -52,7 +52,7 @@ func (fa *failingAttestation) Cert() (*x509.Certificate, error) {
 func (fa *failingAttestation) Chain() ([]*x509.Certificate, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
-func (fa *failingAttestation) Bundle() (*bundle.RekorBundle, error) {
+func (fa *failingAttestation) Bundle() (*bundle.Bundle, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 func (fa *failingAttestation) Digest() (v1.Hash, error) {

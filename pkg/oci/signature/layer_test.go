@@ -57,7 +57,7 @@ func TestSignature(t *testing.T) {
 		wantCertErr    error
 		wantChain      int
 		wantChainErr   error
-		wantBundle     *bundle.RekorBundle
+		wantBundle     *bundle.Bundle
 		wantBundleErr  error
 	}{{
 		name: "just payload and signature",
@@ -152,13 +152,17 @@ func TestSignature(t *testing.T) {
 			},
 		},
 		wantSig: "blah",
-		wantBundle: &bundle.RekorBundle{
-			SignedEntryTimestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-			Payload: bundle.RekorPayload{
-				Body:           "REMOVED",
-				IntegratedTime: 1631646761,
-				LogIndex:       693591,
-				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
+		wantBundle: &bundle.Bundle{
+			VerificationData: bundle.VerificationData{
+				TimestampVerificationData: bundle.TimestampVerificationData{
+					SignedEntryTimestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
+				},
+				Payload: bundle.RekorPayload{
+					Body:           "REMOVED",
+					IntegratedTime: 1631646761,
+					LogIndex:       693591,
+					LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
+				},
 			},
 		},
 	}, {
