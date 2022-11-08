@@ -14,33 +14,11 @@
 
 package bundle
 
-import "github.com/sigstore/rekor/pkg/generated/models"
-
-// RekorBundle holds metadata about recording a Signature's ephemeral key to
+// RekorPayload holds metadata about recording a Signature's ephemeral key to
 // a Rekor transparency log.
-type RekorBundle struct {
-	SignedEntryTimestamp []byte
-	Payload              RekorPayload
-}
-
 type RekorPayload struct {
 	Body           interface{} `json:"body"`
 	IntegratedTime int64       `json:"integratedTime"`
 	LogIndex       int64       `json:"logIndex"`
 	LogID          string      `json:"logID"`
-}
-
-func EntryToBundle(entry *models.LogEntryAnon) *RekorBundle {
-	if entry.Verification == nil {
-		return nil
-	}
-	return &RekorBundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: RekorPayload{
-			Body:           entry.Body,
-			IntegratedTime: *entry.IntegratedTime,
-			LogIndex:       *entry.LogIndex,
-			LogID:          *entry.LogID,
-		},
-	}
 }
