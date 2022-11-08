@@ -680,6 +680,11 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		return false, fmt.Errorf("unable to verify bundle: %w", err)
 	}
 
+	// If the --offline flag was specified, fail here
+	if !bundleVerified && co.Offline {
+		return false, fmt.Errorf("offline verification failed")
+	}
+
 	if !bundleVerified && co.RekorClient != nil {
 		if co.SigVerifier != nil {
 			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)

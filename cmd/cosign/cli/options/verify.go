@@ -19,6 +19,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type CommonVerifyOptions struct {
+	Offline bool // Force offline verification
+}
+
+func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&o.Offline, "offline", false,
+		"only allow offline verification")
+}
+
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {
 	Key          string
@@ -27,13 +36,13 @@ type VerifyOptions struct {
 	Output       string
 	SignatureRef string
 	LocalImage   bool
-	Offline      bool
 
-	SecurityKey     SecurityKeyOptions
-	CertVerify      CertVerifyOptions
-	Rekor           RekorOptions
-	Registry        RegistryOptions
-	SignatureDigest SignatureDigestOptions
+	CommonVerifyOptions CommonVerifyOptions
+	SecurityKey         SecurityKeyOptions
+	CertVerify          CertVerifyOptions
+	Rekor               RekorOptions
+	Registry            RegistryOptions
+	SignatureDigest     SignatureDigestOptions
 	AnnotationOptions
 }
 
@@ -47,6 +56,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
+	o.CommonVerifyOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -66,9 +76,6 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
-
-	cmd.Flags().BoolVar(&o.Offline, "offline", false,
-		"only allow offline verification")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.
@@ -77,13 +84,14 @@ type VerifyAttestationOptions struct {
 	CheckClaims bool
 	Output      string
 
-	SecurityKey SecurityKeyOptions
-	Rekor       RekorOptions
-	CertVerify  CertVerifyOptions
-	Registry    RegistryOptions
-	Predicate   PredicateRemoteOptions
-	Policies    []string
-	LocalImage  bool
+	CommonVerifyOptions CommonVerifyOptions
+	SecurityKey         SecurityKeyOptions
+	Rekor               RekorOptions
+	CertVerify          CertVerifyOptions
+	Registry            RegistryOptions
+	Predicate           PredicateRemoteOptions
+	Policies            []string
+	LocalImage          bool
 }
 
 var _ Interface = (*VerifyAttestationOptions)(nil)
@@ -95,6 +103,7 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
+	o.CommonVerifyOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -118,10 +127,11 @@ type VerifyBlobOptions struct {
 	Signature  string
 	BundlePath string
 
-	SecurityKey SecurityKeyOptions
-	CertVerify  CertVerifyOptions
-	Rekor       RekorOptions
-	Registry    RegistryOptions
+	SecurityKey         SecurityKeyOptions
+	CertVerify          CertVerifyOptions
+	Rekor               RekorOptions
+	Registry            RegistryOptions
+	CommonVerifyOptions CommonVerifyOptions
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)
@@ -132,6 +142,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.CommonVerifyOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -146,7 +157,8 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 // VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.
 type VerifyDockerfileOptions struct {
 	VerifyOptions
-	BaseImageOnly bool
+	BaseImageOnly       bool
+	CommonVerifyOptions CommonVerifyOptions
 }
 
 var _ Interface = (*VerifyDockerfileOptions)(nil)
@@ -154,6 +166,7 @@ var _ Interface = (*VerifyDockerfileOptions)(nil)
 // AddFlags implements Interface
 func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 	o.VerifyOptions.AddFlags(cmd)
+	o.CommonVerifyOptions.AddFlags(cmd)
 
 	cmd.Flags().BoolVar(&o.BaseImageOnly, "base-image-only", false,
 		"only verify the base image (the last FROM image in the Dockerfile)")

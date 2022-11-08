@@ -82,6 +82,7 @@ type VerifyBlobCmd struct {
 	CertGithubWorkflowRef        string
 	IgnoreSCT                    bool
 	SCTRef                       string
+	Offline                      bool
 }
 
 // nolint
@@ -113,6 +114,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
+		Offline:                      c.Offline,
 	}
 	if options.EnableExperimental() {
 		if c.RekorURL != "" {
