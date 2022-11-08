@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -79,7 +80,8 @@ type VerifyBlobCmd struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
-	EnforceSCT                   bool
+	IgnoreSCT                    bool
+	SCTRef                       string
 }
 
 // nolint
@@ -110,7 +112,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
-		EnforceSCT:                   c.EnforceSCT,
+		IgnoreSCT:                    c.IgnoreSCT,
 	}
 	if options.EnableExperimental() {
 		if c.RekorURL != "" {
@@ -182,6 +184,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			if err != nil {
 				return fmt.Errorf("verifying certRef with certChain: %w", err)
 			}
+		}
+		if c.SCTRef != "" {
+			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
+			if err != nil {
+				return fmt.Errorf("reading sct from file: %w", err)
+			}
+			co.SCT = sct
 		}
 	case c.BundlePath != "":
 		b, err := cosign.FetchLocalSignedPayloadFromPath(c.BundlePath)

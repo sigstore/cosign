@@ -545,6 +545,7 @@ func TestVerifyBlob(t *testing.T) {
 			co := &cosign.CheckOpts{
 				SigVerifier: tt.sigVerifier,
 				RootCerts:   rootPool,
+				IgnoreSCT:   true,
 			}
 			// if expermental is enabled, add RekorClient to co.
 			if tt.experimental {
@@ -721,7 +722,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
 			CertEmail:      identity,
 			CertOIDCIssuer: issuer,
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -756,8 +757,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 
 		// Verify command
 		cmd := VerifyBlobCmd{
-			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT: false,
+			KeyOpts:   options.KeyOpts{BundlePath: bundlePath},
+			IgnoreSCT: true,
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err == nil {
 			t.Fatal("expecting err due to mismatched signatures, got nil")
@@ -786,8 +787,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 
 		// Verify command
 		cmd := VerifyBlobCmd{
-			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT: false,
+			KeyOpts:   options.KeyOpts{BundlePath: bundlePath},
+			IgnoreSCT: true,
 		}
 
 		if err := cmd.Exec(context.Background(), blobPath); err == nil {
@@ -817,11 +818,11 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 
 		// Verify command
 		cmd := VerifyBlobCmd{
-			CertRef:    "", // Cert is fetched from bundle
-			CertChain:  "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			SigRef:     "", // Sig is fetched from bundle
-			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT: false,
+			CertRef:   "", // Cert is fetched from bundle
+			CertChain: "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:    "", // Sig is fetched from bundle
+			KeyOpts:   options.KeyOpts{BundlePath: bundlePath},
+			IgnoreSCT: true,
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -850,11 +851,11 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 
 		// Verify command
 		cmd := VerifyBlobCmd{
-			CertRef:    "", // Cert is fetched from bundle
-			CertChain:  "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			SigRef:     "", // Sig is fetched from bundle
-			KeyOpts:    options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT: false,
+			CertRef:   "", // Cert is fetched from bundle
+			CertChain: "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SigRef:    "", // Sig is fetched from bundle
+			KeyOpts:   options.KeyOpts{BundlePath: bundlePath},
+			IgnoreSCT: true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "unable to verify SET") {
@@ -890,7 +891,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertEmail:      "invalid@example.com",
 			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			SigRef:         "", // Sig is fetched from bundle
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "expected identity not found in certificate") {
@@ -926,7 +927,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			SigRef:         "", // Sig is fetched from bundle
 			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "expected oidc issuer not found in certificate") {
@@ -963,7 +964,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			SigRef:         "", // Sig is fetched from bundle
 			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err != nil {
@@ -998,7 +999,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertChain:      os.Getenv("SIGSTORE_ROOT_FILE"),
 			SigRef:         "", // Sig is fetched from bundle
 			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err != nil {
@@ -1044,7 +1045,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertChain:      tmpChainFile.Name(),
 			SigRef:         "", // Sig is fetched from bundle
 			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "verifying certificate from bundle with chain: x509: certificate signed by unknown authority") {
@@ -1087,7 +1088,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			SigRef:         "", // Sig is fetched from bundle
 			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
@@ -1123,7 +1124,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			CertChain:      "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			SigRef:         "", // Sig is fetched from bundle
 			KeyOpts:        options.KeyOpts{BundlePath: bundlePath},
-			EnforceSCT:     false,
+			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
