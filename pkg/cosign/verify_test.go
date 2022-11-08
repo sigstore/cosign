@@ -651,6 +651,7 @@ func TestValidateAndUnpackCertSuccessWithOtherNameSan(t *testing.T) {
 		RootCerts:      rootPool,
 		CertIdentity:   subject,
 		CertOidcIssuer: oidcIssuer,
+		IgnoreSCT:      true,
 	}
 
 	_, err = ValidateAndUnpackCert(leafCert, co)
