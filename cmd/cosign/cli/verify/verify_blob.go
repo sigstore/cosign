@@ -88,7 +88,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	var cert *x509.Certificate
 	var bundle *bundle.RekorBundle
 
-	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && !options.EnableExperimental() && c.BundlePath == "" {
+	// Require a certificate/key OR a local bundle file that has the cert.
+	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && c.BundlePath == "" {
 		return &options.PubKeyParseError{}
 	}
 
@@ -240,59 +241,10 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return fmt.Errorf("loading verifier from bundle: %w", err)
 		}
 		bundle = b.Bundle
-	// No certificate is provided: search by artifact sha in the TLOG.
-	case options.EnableExperimental():
-		uuids, err := cosign.FindTLogEntriesByPayload(ctx, co.RekorClient, blobBytes)
-		if err != nil {
-			return err
-		}
-
-		if len(uuids) == 0 {
-			return errors.New("could not find a tlog entry for provided blob")
-		}
-
-		// Iterate through and try to find a matching Rekor entry.
-		// This does not support intoto properly! c/f extractCerts and
-		// the verifier.
-		for _, u := range uuids {
-			tlogEntry, err := cosign.GetTlogEntry(ctx, co.RekorClient, u)
-			if err != nil {
-				continue
-			}
-
-			// Note that this will error out if the TLOG entry was signed with a
-			// raw public key. Again, using search on artifact sha is unreliable.
-			certs, err := extractCerts(tlogEntry)
-			if err != nil {
-				continue
-			}
-
-			cert := certs[0]
-			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
-			if err != nil {
-				continue
-			}
-
-			if err := verifyBlob(ctx, co, blobBytes, sig, cert,
-				nil, tlogEntry); err == nil {
-				// We found a succesful Rekor entry!
-				fmt.Fprintln(os.Stderr, "Verified OK")
-				return nil
-			}
-		}
-
-		// No successful Rekor entry found.
-		fmt.Fprintln(os.Stderr, `WARNING: No valid entries were found in rekor to verify this blob.
-
-Transparency log support for blobs is experimental, and occasionally an entry isn't found even if one exists.
-
-We recommend requesting the certificate/signature from the original signer of this blob and manually verifying with cosign verify-blob --cert [cert] --signature [signature].`)
-		return fmt.Errorf("could not find a valid tlog entry for provided blob, found %d invalid entries", len(uuids))
-
 	}
 
 	// Performs all blob verification.
-	if err := verifyBlob(ctx, co, blobBytes, sig, cert, bundle, nil); err != nil {
+	if err := verifyBlob(ctx, co, blobBytes, sig, cert, bundle); err != nil {
 		return err
 	}
 
@@ -303,17 +255,16 @@ We recommend requesting the certificate/signature from the original signer of th
 /* Verify Blob main entry point. This will perform the following:
    1. Verifies the signature on the blob using the provided verifier.
    2. Checks for transparency log entry presence:
-        a. Verifies the Rekor entry in the bundle, if provided. OR
+        a. Verifies the Rekor entry in the bundle, if provided. This works offline OR
         b. If we don't have a Rekor entry retrieved via cert, do an online lookup (assuming
            we are in experimental mode).
-        c. Uses the provided Rekor entry (may have been retrieved through Rekor SearchIndex) OR
    3. If a certificate is provided, check it's expiration.
 */
 // TODO: Make a version of this public. This could be VerifyBlobCmd, but we need to
 // clean up the args into CheckOpts or use KeyOpts here to resolve different KeyOpts.
 func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 	blobBytes []byte, sig string, cert *x509.Certificate,
-	bundle *bundle.RekorBundle, e *models.LogEntryAnon) error {
+	bundle *bundle.RekorBundle) error {
 	if cert != nil {
 		// This would have already be done in the main entrypoint, but do this for robustness.
 		var err error
@@ -364,8 +315,9 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 		validityTime = time.Unix(bundle.IntegratedTime, 0)
 		fmt.Fprintf(os.Stderr, "tlog entry verified offline\n")
 	// b. We can make an online lookup to the transparency log since we don't have an entry.
-	case co.RekorClient != nil && e == nil:
+	case co.RekorClient != nil:
 		var tlogFindErr error
+		var e *models.LogEntryAnon
 		if cert == nil {
 			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
 			if err != nil {
@@ -383,10 +335,6 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 			fmt.Fprintf(os.Stderr, "could not find entry in tlog: %s", tlogFindErr)
 			return tlogFindErr
 		}
-		// Fallthrough here to verify the TLOG entry and compute the integrated time.
-		fallthrough
-	// We are provided a log entry, possibly from above, or search.
-	case e != nil:
 		if err := cosign.VerifyTLogEntry(ctx, nil, e); err != nil {
 			return err
 		}
@@ -657,45 +605,6 @@ func unmarshalEntryImpl(e string) (types.EntryImpl, string, string, error) {
 		return nil, "", "", err
 	}
 	return entry, pe.Kind(), entry.APIVersion(), nil
-}
-
-func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {
-	eimpl, _, _, err := unmarshalEntryImpl(e.Body.(string))
-	if err != nil {
-		return nil, err
-	}
-
-	var publicKeyB64 []byte
-	switch e := eimpl.(type) {
-	case *rekord_v001.V001Entry:
-		publicKeyB64, err = e.RekordObj.Signature.PublicKey.Content.MarshalText()
-		if err != nil {
-			return nil, err
-		}
-	case *hashedrekord_v001.V001Entry:
-		publicKeyB64, err = e.HashedRekordObj.Signature.PublicKey.Content.MarshalText()
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.New("unexpected tlog entry type")
-	}
-
-	publicKey, err := base64.StdEncoding.DecodeString(string(publicKeyB64))
-	if err != nil {
-		return nil, err
-	}
-
-	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(publicKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(certs) == 0 {
-		return nil, errors.New("no certs found in pem tlog")
-	}
-
-	return certs, err
 }
 
 // isIntotoDSSE checks whether a payload is a Dead Simple Signing Envelope with the In-Toto format.

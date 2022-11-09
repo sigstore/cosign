@@ -559,7 +559,7 @@ func TestVerifyBlob(t *testing.T) {
 				bundle = b.Bundle
 			}
 
-			err = verifyBlob(ctx, co, tt.blob, tt.signature, tt.cert, bundle, nil)
+			err = verifyBlob(ctx, co, tt.blob, tt.signature, tt.cert, bundle)
 			if (err != nil) != tt.shouldErr {
 				t.Fatalf("verifyBlob()= %s, expected shouldErr=%t ", err, tt.shouldErr)
 			}

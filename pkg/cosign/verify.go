@@ -116,24 +116,15 @@ type CheckOpts struct {
 	Identities []Identity
 }
 
-func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oci.Signature) error {
-	b64sig, err := sig.Base64Signature()
-	if err != nil {
-		return err
-	}
-	signature, err := base64.StdEncoding.DecodeString(b64sig)
-	if err != nil {
-		return err
-	}
-	payload, err := sig.Payload()
-	if err != nil {
-		return err
-	}
-	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
-}
+// This is a substitutable signature verification function that can be used for verifying
+// attestations of blobs.
+type signatureVerificationFn func(
+	ctx context.Context, verifier signature.Verifier, sig payloader) error
 
 // For unit testing
 type payloader interface {
+	// no-op for attestations
+	Base64Signature() (string, error)
 	Payload() ([]byte, error)
 }
 
@@ -157,6 +148,22 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 	}
 	_, err = dssev.Verify(&env)
 	return err
+}
+
+func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig payloader) error {
+	b64sig, err := sig.Base64Signature()
+	if err != nil {
+		return err
+	}
+	signature, err := base64.StdEncoding.DecodeString(b64sig)
+	if err != nil {
+		return err
+	}
+	payload, err := sig.Payload()
+	if err != nil {
+		return err
+	}
+	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
@@ -564,8 +571,12 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	return checkedSignatures, bundleVerified, nil
 }
 
-// VerifyImageSignature verifies a signature
-func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
+// verifyInternal holds the main verification flow for blobs and attestations.
+// It verifies the certificate chain, the signature, claims, a bundle or the online
+// Rekor client.
+func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
+	verifyFn signatureVerificationFn, co *CheckOpts) (
+	bundleVerified bool, err error) {
 	verifier := co.SigVerifier
 	if verifier == nil {
 		// If we don't have a public key to check against, we can try a root cert.
@@ -598,7 +609,7 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 		}
 	}
 
-	if err := verifyOCISignature(ctx, verifier, sig); err != nil {
+	if err := verifyFn(ctx, verifier, sig); err != nil {
 		return bundleVerified, err
 	}
 
@@ -625,8 +636,13 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 
 		return bundleVerified, tlogValidateCertificate(ctx, co.RekorClient, sig)
 	}
-
 	return bundleVerified, nil
+}
+
+// VerifyImageSignature verifies a signature
+func VerifyImageSignature(ctx context.Context, sig oci.Signature,
+	h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
+	return verifyInternal(ctx, sig, h, verifyOCISignature, co)
 }
 
 func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
@@ -758,67 +774,9 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 			continue
 		}
 		if err := func(att oci.Signature) error {
-			verifier := co.SigVerifier
-			if verifier == nil {
-				// If we don't have a public key to check against, we can try a root cert.
-				cert, err := att.Cert()
-				if err != nil {
-					return err
-				}
-				if cert == nil {
-					return &VerificationError{"no certificate found on attestation"}
-				}
-				// Create a certificate pool for intermediate CA certificates, excluding the root
-				chain, err := att.Chain()
-				if err != nil {
-					return err
-				}
-				// If the chain annotation is not present or there is only a root
-				if chain == nil || len(chain) <= 1 {
-					co.IntermediateCerts = nil
-				} else if co.IntermediateCerts == nil {
-					// If the intermediate certs have not been loaded in by TUF
-					pool := x509.NewCertPool()
-					for _, cert := range chain[:len(chain)-1] {
-						pool.AddCert(cert)
-					}
-					co.IntermediateCerts = pool
-				}
-				verifier, err = ValidateAndUnpackCert(cert, co)
-				if err != nil {
-					return err
-				}
-			}
-
-			if err := verifyOCIAttestation(ctx, verifier, att); err != nil {
-				return err
-			}
-
-			// We can't check annotations without claims, both require unmarshalling the payload.
-			if co.ClaimVerifier != nil {
-				if err := co.ClaimVerifier(att, h, co.Annotations); err != nil {
-					return err
-				}
-			}
-
-			verified, err := VerifyBundle(ctx, att, co.RekorClient)
-			if err != nil && co.RekorClient == nil {
-				return fmt.Errorf("unable to verify bundle: %w", err)
-			}
+			verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co)
 			bundleVerified = bundleVerified || verified
-
-			if !verified && co.RekorClient != nil {
-				if co.SigVerifier != nil {
-					pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
-					if err != nil {
-						return err
-					}
-					return tlogValidatePublicKey(ctx, co.RekorClient, pub, att)
-				}
-
-				return tlogValidateCertificate(ctx, co.RekorClient, att)
-			}
-			return nil
+			return err
 		}(att); err != nil {
 			validationErrs = append(validationErrs, err.Error())
 			continue
