@@ -85,6 +85,11 @@ func (m *mockAttestation) Payload() ([]byte, error) {
 	return json.Marshal(m.payload)
 }
 
+func (m *mockAttestation) Base64Signature() (string, error) {
+	b, err := json.Marshal(m.payload)
+	return string(b), err
+}
+
 func Test_verifyOCIAttestation(t *testing.T) {
 	stmt, err := json.Marshal(in_toto.ProvenanceStatement{})
 	if err != nil {
@@ -638,6 +643,7 @@ func TestValidateAndUnpackCertSuccessWithOtherNameSan(t *testing.T) {
 		RootCerts:      rootPool,
 		CertIdentity:   subject,
 		CertOidcIssuer: oidcIssuer,
+		IgnoreSCT:      true,
 	}
 
 	_, err = ValidateAndUnpackCert(leafCert, co)

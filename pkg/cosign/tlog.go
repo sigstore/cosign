@@ -38,7 +38,6 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
-	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
@@ -385,21 +384,6 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 	}
 
 	return results, nil
-}
-
-func FindTLogEntriesByPayload(ctx context.Context, rekorClient *client.Rekor, payload []byte) (uuids []string, err error) {
-	params := index.NewSearchIndexParamsWithContext(ctx)
-	params.Query = &models.SearchIndex{}
-
-	h := sha256.New()
-	h.Write(payload)
-	params.Query.Hash = fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(h.Sum(nil))))
-
-	searchIndex, err := rekorClient.Index.SearchIndex(params)
-	if err != nil {
-		return nil, err
-	}
-	return searchIndex.GetPayload(), nil
 }
 
 // VerityTLogEntry verifies a TLog entry.
