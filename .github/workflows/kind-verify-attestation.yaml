@@ -105,7 +105,7 @@ jobs:
 
     - name: Verify with cosign
       run: |
-        ./cosign verify --verify cosign.pub --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }}
+        ./cosign verify --key cosign.pub --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }}
 
     - name: Verify custom attestation with cosign, works
       run: |
