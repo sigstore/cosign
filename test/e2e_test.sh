@@ -48,18 +48,18 @@ go test -tags=e2e -race $(go list ./... | grep -v third_party/)
 
 # Test `cosign dockerfile verify`
 export COSIGN_EXPERIMENTAL=true
-./cosign dockerfile verify ./test/testdata/single_stage.Dockerfile
-if (./cosign dockerfile verify ./test/testdata/unsigned_build_stage.Dockerfile); then false; fi
-./cosign dockerfile verify --base-image-only ./test/testdata/unsigned_build_stage.Dockerfile
-./cosign dockerfile verify ./test/testdata/fancy_from.Dockerfile
-test_image="ghcr.io/distroless/alpine-base" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile
+./cosign dockerfile verify ./test/testdata/single_stage.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
+if (./cosign dockerfile verify ./test/testdata/unsigned_build_stage.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
+./cosign dockerfile verify --base-image-only ./test/testdata/unsigned_build_stage.Dockerfile --certificate-identity https://github.com/distroless/static/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
+./cosign dockerfile verify ./test/testdata/fancy_from.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
+test_image="ghcr.io/distroless/alpine-base" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
 # Image exists, but is unsigned
-if (test_image="ubuntu" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile); then false; fi
-./cosign dockerfile verify ./test/testdata/with_lowercase.Dockerfile
+if (test_image="ubuntu" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
+./cosign dockerfile verify ./test/testdata/with_lowercase.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 # Test `cosign manifest verify`
-./cosign manifest verify ./test/testdata/signed_manifest.yaml
-if (./cosign manifest verify ./test/testdata/unsigned_manifest.yaml); then false; fi
+./cosign manifest verify ./test/testdata/signed_manifest.yaml --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
+if (./cosign manifest verify ./test/testdata/unsigned_manifest.yaml --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
 
 # Run the built container to make sure it doesn't crash
 make ko-local
