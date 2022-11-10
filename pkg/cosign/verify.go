@@ -248,6 +248,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 		return err
 	}
 	issuer := ce.GetIssuer()
+	fmt.Fprintf(os.Stderr, "cert issuer: %s\n", issuer)
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
 	if len(co.Identities) > 0 {
@@ -256,12 +257,14 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			switch {
 			// Check the issuer first
 			case identity.IssuerRegExp != "":
+				fmt.Fprintf(os.Stderr, "issuer regexp: %s\n", identity.IssuerRegExp)
 				if regex, err := regexp.Compile(identity.IssuerRegExp); err != nil {
 					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRegExp, err)
 				} else if regex.MatchString(issuer) {
 					issuerMatches = true
 				}
 			case identity.Issuer != "":
+				fmt.Fprintf(os.Stderr, "issuer: %s\n", identity.Issuer)
 				if identity.Issuer == issuer {
 					issuerMatches = true
 				}
@@ -275,6 +278,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			switch {
 			case identity.SubjectRegExp != "":
 				regex, err := regexp.Compile(identity.SubjectRegExp)
+				fmt.Fprintf(os.Stderr, "subject regexp: %s\n", identity.SubjectRegExp)
 				if err != nil {
 					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRegExp, err)
 				}
@@ -286,6 +290,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				}
 			case identity.Subject != "":
 				for _, san := range getSubjectAlternateNames(cert) {
+					fmt.Fprintf(os.Stderr, "subject: %s\n", san)
 					if san == identity.Subject {
 						subjectMatches = true
 						break
