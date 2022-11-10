@@ -33,6 +33,9 @@ jobs:
       matrix:
         k8s-version:
         - v1.24.x
+        tuf-root:
+        - remote
+        - air-gap
 
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
@@ -44,17 +47,17 @@ jobs:
       COSIGN_EXPERIMENTAL: "true"
 
     steps:
-    - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
-    - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.2.0
+    - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
+    - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v3.3.1
       with:
         go-version: '1.19'
         check-latest: true
 
     # will use the latest release available for ko
-    - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
+    - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
 
     - name: Install yq
-      uses: mikefarah/yq@5e490527de24715db37869037083f7f391dde5a6 # v4.27.5
+      uses: mikefarah/yq@5e490527de24715db37869037083f7f391dde5a6 # v4.29.2
 
     - name: build cosign
       run: |
@@ -83,10 +86,22 @@ jobs:
         echo Created image $demoimage
         popd
 
-    - name: Initialize with our custom TUF root
+    - name: Initialize with our custom TUF root pointing to remote root
+      if: ${{ matrix.tuf-root == 'remote' }}
       run: |
         TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}')
         ./cosign initialize --mirror $TUF_MIRROR --root ./root.json
+
+    - name: Initialize with custom TUF root pointing to local filesystem
+      if: ${{ matrix.tuf-root == 'air-gap' }}
+      run: |
+        # Grab the compressed repository for airgap testing.
+        kubectl -n tuf-system get secrets tuf-root -ojsonpath='{.data.repository}'  | base64 -d > ./repository.tar.gz
+        tar -zxvf ./repository.tar.gz
+        PWD=$(pwd)
+        ROOT=${PWD}/repository/1.root.json
+        REPOSITORY=${PWD}/repository
+        ./cosign initialize --root ${ROOT} --mirror file://${REPOSITORY}
 
     - name: Sign demoimage with cosign
       run: |
