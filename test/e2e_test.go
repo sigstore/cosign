@@ -472,7 +472,7 @@ func TestAttestationReplace(t *testing.T) {
 	}
 }
 
-func TestRekorBundle(t *testing.T) {
+func TestBundle(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, env.VariableExperimental.String(), "1")()
 

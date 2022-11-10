@@ -47,7 +47,7 @@ import (
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.Bundle, error) {
 	rekorBytes, err := sv.Bytes(ctx)
 	if err != nil {
 		return nil, err

@@ -294,7 +294,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature:    blobSignature,
 			sigVerifier:  signer,
 			experimental: false,
-			bundlePath:   makeLocalBundleWithoutRekorBundle(t, []byte(blobSignature), pubKeyBytes),
+			bundlePath:   makeLocalBundleWithoutBundle(t, []byte(blobSignature), pubKeyBytes),
 			shouldErr:    false,
 		},
 		{
@@ -552,7 +552,7 @@ func TestVerifyBlob(t *testing.T) {
 				co.RekorClient = &mClient
 			}
 
-			var bundle *bundle.RekorBundle
+			var bundle *bundle.Bundle
 			b, err := cosign.FetchLocalSignedPayloadFromPath(tt.bundlePath)
 			if err == nil && b.Bundle != nil {
 				bundle = b.Bundle
@@ -650,7 +650,7 @@ func makeLocalBundle(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	b := cosign.LocalSignedPayload{
 		Base64Signature: base64.StdEncoding.EncodeToString(sig),
 		Cert:            string(svBytes),
-		Bundle: &bundle.RekorBundle{
+		Bundle: &bundle.Bundle{
 			Payload: bundle.RekorPayload{
 				Body:           e.Body,
 				IntegratedTime: *e.IntegratedTime,
@@ -673,7 +673,7 @@ func makeLocalBundle(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	return bundlePath
 }
 
-func makeLocalBundleWithoutRekorBundle(t *testing.T, sig []byte, svBytes []byte) string {
+func makeLocalBundleWithoutBundle(t *testing.T, sig []byte, svBytes []byte) string {
 	td := t.TempDir()
 
 	b := cosign.LocalSignedPayload{
@@ -729,7 +729,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 	})
 	t.Run("Mismatched cert/sig", func(t *testing.T) {
-		// This test ensures that the signature and cert at the top level in the LocalSignedPayload must be identical to the ones in the RekorBundle.
+		// This test ensures that the signature and cert at the top level in the LocalSignedPayload must be identical to the ones in the Bundle.
 		identity := "hello@foo.com"
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
@@ -1263,7 +1263,7 @@ func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integr
 	b := &cosign.LocalSignedPayload{
 		Base64Signature: base64.StdEncoding.EncodeToString(sig),
 		Cert:            string(certPem),
-		Bundle: &bundle.RekorBundle{
+		Bundle: &bundle.Bundle{
 			SignedEntryTimestamp: []byte{},
 			Payload: bundle.RekorPayload{
 				LogID:          logID,

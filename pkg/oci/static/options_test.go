@@ -26,7 +26,7 @@ import (
 )
 
 func TestOptions(t *testing.T) {
-	bundle := &bundle.RekorBundle{}
+	bundle := &bundle.Bundle{}
 
 	tests := []struct {
 		name string

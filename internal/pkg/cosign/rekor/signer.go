@@ -35,7 +35,7 @@ import (
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
+func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*cbundle.Bundle, error) {
 	entry, err := upload(rClient, rekorBytes)
 	if err != nil {
 		return nil, err

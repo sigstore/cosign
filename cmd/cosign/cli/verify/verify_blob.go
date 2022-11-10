@@ -87,7 +87,7 @@ type VerifyBlobCmd struct {
 // nolint
 func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	var cert *x509.Certificate
-	var bundle *bundle.RekorBundle
+	var bundle *bundle.Bundle
 
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && c.BundlePath == "" {
@@ -263,7 +263,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 // clean up the args into CheckOpts or use KeyOpts here to resolve different KeyOpts.
 func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 	blobBytes []byte, sig string, cert *x509.Certificate,
-	bundle *bundle.RekorBundle) error {
+	bundle *bundle.Bundle) error {
 	if cert != nil {
 		// This would have already be done in the main entrypoint, but do this for robustness.
 		var err error
@@ -306,7 +306,7 @@ func verifyBlob(ctx context.Context, co *cosign.CheckOpts,
 				return fmt.Errorf("marshalling pubkey: %w", err)
 			}
 		}
-		bundle, err := verifyRekorBundle(ctx, bundle, blobBytes, sig, svBytes)
+		bundle, err := verifyBundle(ctx, bundle, blobBytes, sig, svBytes)
 		if err != nil {
 			// Return when the provided bundle fails verification. (Do not fallback).
 			return err
@@ -452,7 +452,7 @@ func payloadBytes(blobRef string) ([]byte, error) {
 	return blobBytes, nil
 }
 
-func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle,
+func verifyBundle(ctx context.Context, bundle *bundle.Bundle,
 	blobBytes []byte, sig string, pubKeyBytes []byte) (*bundle.RekorPayload, error) {
 	if err := verifyBundleMatchesData(ctx, bundle, blobBytes, pubKeyBytes, []byte(sig)); err != nil {
 		return nil, err
@@ -478,7 +478,7 @@ func verifyRekorBundle(ctx context.Context, bundle *bundle.RekorBundle,
 	return &bundle.Payload, nil
 }
 
-func verifyBundleMatchesData(ctx context.Context, bundle *bundle.RekorBundle, blobBytes, certBytes, sigBytes []byte) error {
+func verifyBundleMatchesData(ctx context.Context, bundle *bundle.Bundle, blobBytes, certBytes, sigBytes []byte) error {
 	eimpl, kind, apiVersion, err := unmarshalEntryImpl(bundle.Payload.Body.(string))
 	if err != nil {
 		return err

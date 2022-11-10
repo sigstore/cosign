@@ -1006,7 +1006,7 @@ func bundleHash(bundleBody, signature string) (string, string, error) {
 	return *hrekordObj.Data.Hash.Algorithm, *hrekordObj.Data.Hash.Value, nil
 }
 
-// bundleSig extracts the signature from the rekor bundle body
+// bundleSig extracts the signature from the bundle body
 func bundleSig(bundleBody string) (string, error) {
 	var rekord models.Rekord
 	var hrekord models.Hashedrekord

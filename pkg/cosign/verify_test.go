@@ -204,7 +204,7 @@ func signEntry(ctx context.Context, t *testing.T, signer signature.Signer, entry
 	return signature
 }
 
-func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer, leaf []byte) *bundle.RekorBundle {
+func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer, leaf []byte) *bundle.Bundle {
 	// generate log ID according to rekor public key
 	pk, _ := rekor.PublicKey(nil)
 	keyID, _ := getLogID(pk)
@@ -216,7 +216,7 @@ func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer,
 	}
 	// Sign with root.
 	signature := signEntry(ctx, t, rekor, pyld)
-	b := &bundle.RekorBundle{
+	b := &bundle.Bundle{
 		SignedEntryTimestamp: strfmt.Base64(signature),
 		Payload:              pyld,
 	}
@@ -245,9 +245,9 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
 	entry, _ := rtypes.UnmarshalEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
-	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+	Bundle := CreateTestBundle(ctx, t, sv, leaf)
 
-	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(Bundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
 
 	// TODO(asraa): Re-enable passing test when Rekor public keys can be set in CheckOpts,
