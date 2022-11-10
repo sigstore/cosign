@@ -33,10 +33,13 @@ jobs:
       matrix:
         k8s-version:
         - v1.24.x
+        tuf-root:
+        - remote
+        - air-gap
 
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.4.12"
+      SCAFFOLDING_RELEASE_VERSION: "v0.4.13"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
@@ -83,10 +86,22 @@ jobs:
         echo Created image $demoimage
         popd
 
-    - name: Initialize with our custom TUF root
+    - name: Initialize with our custom TUF root pointing to remote root
+      if: ${{ matrix.tuf-root == 'remote' }}
       run: |
         TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}')
         ./cosign initialize --mirror $TUF_MIRROR --root ./root.json
+
+    - name: Initialize with custom TUF root pointing to local filesystem
+      if: ${{ matrix.tuf-root == 'air-gap' }}
+      run: |
+        # Grab the compressed repository for airgap testing.
+        kubectl -n tuf-system get secrets tuf-root -ojsonpath='{.data.repository}'  | base64 -d > ./repository.tar.gz
+        tar -zxvf ./repository.tar.gz
+        PWD=$(pwd)
+        ROOT=${PWD}/repository/1.root.json
+        REPOSITORY=${PWD}/repository
+        ./cosign initialize --root ${ROOT} --mirror file://${REPOSITORY}
 
     - name: Sign demoimage with cosign
       run: |
