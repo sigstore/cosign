@@ -16,13 +16,13 @@ name: Test GitHub OIDC
 on:
   push:
     paths:
-     - '**'
-     - '!**.md'
-     - '!doc/**'
-     - '!**.txt'
-     - '!images/**'
-     - '!LICENSE'
-     - 'test/**'
+      - '**'
+      - '!**.md'
+      - '!doc/**'
+      - '!**.txt'
+      - '!images/**'
+      - '!LICENSE'
+      - 'test/**'
     branches: [ 'main', 'release-*' ]
   schedule:
     - cron: '0 1 * * *' # 1AM UTC
@@ -43,15 +43,15 @@ jobs:
       KO_PREFIX: ghcr.io/${{ github.repository }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v2.4.0
-      - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v2.2.0
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
+      - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v3.3.1
         with:
           go-version: '1.19'
           check-latest: true
           cache: true
 
       # Install tools.
-      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa 
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
 
       - name: build cosign from the HEAD
         run: |
