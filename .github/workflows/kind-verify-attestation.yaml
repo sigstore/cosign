@@ -120,7 +120,7 @@ jobs:
 
     - name: Verify with cosign
       run: |
-        ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity ${{ env.OIDC_TOKEN }} --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
+        ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
 
     - name: Verify custom attestation with cosign, works
       run: |
