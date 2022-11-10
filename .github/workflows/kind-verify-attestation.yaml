@@ -36,7 +36,7 @@ jobs:
 
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.4.12"
+      SCAFFOLDING_RELEASE_VERSION: "v0.4.13"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
@@ -63,9 +63,9 @@ jobs:
     - name: Install cluster + sigstore
       uses: sigstore/scaffolding/actions/setup@main
       with:
+        version: "v0.4.13"
         legacy-variables: "false"
         k8s-version: ${{ matrix.k8s-version }}
-        version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
     - name: Create sample image - demoimage
       run: |
