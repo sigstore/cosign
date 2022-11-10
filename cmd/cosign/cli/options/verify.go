@@ -157,8 +157,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 // VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.
 type VerifyDockerfileOptions struct {
 	VerifyOptions
-	BaseImageOnly       bool
-	CommonVerifyOptions CommonVerifyOptions
+	BaseImageOnly bool
 }
 
 var _ Interface = (*VerifyDockerfileOptions)(nil)
@@ -166,7 +165,6 @@ var _ Interface = (*VerifyDockerfileOptions)(nil)
 // AddFlags implements Interface
 func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 	o.VerifyOptions.AddFlags(cmd)
-	o.CommonVerifyOptions.AddFlags(cmd)
 
 	cmd.Flags().BoolVar(&o.BaseImageOnly, "base-image-only", false,
 		"only verify the base image (the last FROM image in the Dockerfile)")
