@@ -1583,7 +1583,6 @@ func TestOffline(t *testing.T) {
 	ctx := context.Background()
 
 	// Sign image1 and store the entry in rekor
-	// remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	so := options.SignOptions{
 		Upload:           true,
@@ -1597,7 +1596,6 @@ func TestOffline(t *testing.T) {
 		KeyRef:      pubKeyPath,
 		Offline:     true,
 		CheckClaims: true,
-		RekorURL:    "https://rekor.sigstore.dev",
 	}
 	must(verifyCmd.Exec(ctx, []string{img1}), t)
 
