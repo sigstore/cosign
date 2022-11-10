@@ -241,6 +241,8 @@ func NewClient(ko options.KeyOpts) (fulciopb.CAClient, error) {
 		host = fulcioServer.Hostname()
 		if fulcioServer.Port() != "" {
 			port = fulcioServer.Port()
+		} else if fulcioServer.Scheme == "http" && ko.AllowFulcioInsecure {
+			port = "80"
 		}
 	case strings.Contains(ko.FulcioURL, ":"):
 		// if the url does not have a scheme, but has a colon, let's split host and port
