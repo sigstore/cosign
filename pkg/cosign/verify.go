@@ -248,7 +248,6 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 		return err
 	}
 	issuer := ce.GetIssuer()
-	fmt.Fprintf(os.Stderr, "cert issuer: %s\n", issuer)
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
 	if len(co.Identities) > 0 {

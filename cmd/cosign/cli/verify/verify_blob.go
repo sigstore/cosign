@@ -103,7 +103,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return err
 	}
 
-	if c.KeyRef == "" && (c.CertIdentity == "" || c.CertOIDCIssuer == "") {
+	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOIDCIssuer == "") {
 		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
 	}
 
