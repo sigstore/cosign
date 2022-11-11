@@ -27,7 +27,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
 	github.com/sigstore/fulcio v1.0.0
 	github.com/sigstore/rekor v1.0.1
-	github.com/sigstore/sigstore v1.4.4
+	github.com/sigstore/sigstore v1.4.5
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
