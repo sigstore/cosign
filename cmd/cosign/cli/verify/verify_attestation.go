@@ -75,7 +75,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return &options.PubKeyParseError{}
 	}
 
-	if c.CertRef == "" && (c.CertIdentity == "" || c.CertOidcIssuer == "") {
+	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOidcIssuer == "") {
 		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
 	}
 
