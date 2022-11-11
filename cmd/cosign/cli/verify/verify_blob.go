@@ -93,6 +93,10 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.PubKeyParseError{}
 	}
 
+	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOIDCIssuer == "") {
+		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
+	}
+
 	sig, err := signatures(c.SigRef, c.BundlePath)
 	if err != nil {
 		return err
@@ -101,10 +105,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	blobBytes, err := payloadBytes(blobRef)
 	if err != nil {
 		return err
-	}
-
-	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOIDCIssuer == "") {
-		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
 	}
 
 	co := &cosign.CheckOpts{

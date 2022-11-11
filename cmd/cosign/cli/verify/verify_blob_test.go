@@ -567,6 +567,31 @@ func TestVerifyBlob(t *testing.T) {
 	}
 }
 
+func testVerifyBlobCertMissingSubject(t *testing.T) {
+	ctx := context.Background()
+
+	verifyBlob := VerifyBlobCmd{
+		CertRef:        "cert.pem",
+		CertOIDCIssuer: "issuer",
+	}
+	err := verifyBlob.Exec(ctx, "blob")
+	if err == nil {
+		t.Fatalf("verifyBlob() expected '--certificate-identity required'")
+	}
+}
+
+func testVerifyBlobCertMissingIssuer(t *testing.T) {
+	ctx := context.Background()
+	verifyBlob := VerifyBlobCmd{
+		CertRef:      "cert.pem",
+		CertIdentity: "subject",
+	}
+	err := verifyBlob.Exec(ctx, "blob")
+	if err == nil {
+		t.Fatalf("verifyBlob() expected '--certificate-oidc-issuer required'")
+	}
+}
+
 func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	pyld, sig, svBytes []byte, expiryValid bool) *models.LogEntry {
 	ctx := context.Background()

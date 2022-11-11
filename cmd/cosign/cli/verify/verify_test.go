@@ -16,6 +16,7 @@ package verify
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
@@ -159,4 +160,17 @@ func appendSlices(slices [][]byte) []byte {
 		tmp = append(tmp, s...)
 	}
 	return tmp
+}
+
+func testVerifyCertMissingSubject(t *testing.T) {
+	ctx := context.Background()
+	verifyCommand := VerifyCommand{
+		CertRef:        "cert.pem",
+		CertOidcIssuer: "issuer",
+	}
+
+	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
+	if err == nil {
+		t.Fatal("verify expected 'need --certificate-identity'")
+	}
 }

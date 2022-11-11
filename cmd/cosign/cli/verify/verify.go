@@ -93,13 +93,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
+	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOidcIssuer == "") {
+		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
+	}
+
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
-	}
-
-	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOidcIssuer == "") {
-		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
 	}
 
 	co := &cosign.CheckOpts{
