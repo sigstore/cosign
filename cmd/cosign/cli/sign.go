@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -80,7 +79,7 @@ func Sign() *cobra.Command {
 			case "sbom", "":
 				break
 			default:
-				return flag.ErrHelp
+				return fmt.Errorf("specified image attachment %s not specified. Can be 'sbom'.", o.Attachment)
 			}
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
