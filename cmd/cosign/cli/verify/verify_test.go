@@ -162,7 +162,7 @@ func appendSlices(slices [][]byte) []byte {
 	return tmp
 }
 
-func testVerifyCertMissingSubject(t *testing.T) {
+func TestVerifyCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
 		CertRef:        "cert.pem",
@@ -172,5 +172,18 @@ func testVerifyCertMissingSubject(t *testing.T) {
 	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
 	if err == nil {
 		t.Fatal("verify expected 'need --certificate-identity'")
+	}
+}
+
+func TestVerifyCertMissingIssuer(t *testing.T) {
+	ctx := context.Background()
+	verifyCommand := VerifyCommand{
+		CertRef:      "cert.pem",
+		CertIdentity: "identity",
+	}
+
+	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
+	if err == nil {
+		t.Fatal("verify expected 'need --certificate-oidc-issuer'")
 	}
 }

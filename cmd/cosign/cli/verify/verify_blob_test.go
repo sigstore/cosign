@@ -567,7 +567,7 @@ func TestVerifyBlob(t *testing.T) {
 	}
 }
 
-func testVerifyBlobCertMissingSubject(t *testing.T) {
+func TestVerifyBlobCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 
 	verifyBlob := VerifyBlobCmd{
@@ -580,7 +580,7 @@ func testVerifyBlobCertMissingSubject(t *testing.T) {
 	}
 }
 
-func testVerifyBlobCertMissingIssuer(t *testing.T) {
+func TestVerifyBlobCertMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 	verifyBlob := VerifyBlobCmd{
 		CertRef:      "cert.pem",

@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-func testVerifyAttestationMissingSubject(t *testing.T) {
+func TestVerifyAttestationMissingSubject(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
@@ -33,7 +33,7 @@ func testVerifyAttestationMissingSubject(t *testing.T) {
 	}
 }
 
-func testVerifyAttestationMissingIssuer(t *testing.T) {
+func TestVerifyAttestationMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
