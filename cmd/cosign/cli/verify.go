@@ -94,11 +94,10 @@ against the transparency log.`,
 
 			v := verify.VerifyCommand{
 				RegistryOptions:              o.Registry,
+				CertVerifyOptions:            o.CertVerify,
 				CheckClaims:                  o.CheckClaims,
 				KeyRef:                       o.Key,
 				CertRef:                      o.CertVerify.Cert,
-				CertIdentity:                 o.CertVerify.CertIdentity,
-				CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
@@ -275,9 +274,8 @@ The blob may be specified as a path to a file or - for stdin.`,
 			}
 			verifyBlobCmd := verify.VerifyBlobCmd{
 				KeyOpts:                      ko,
+				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
-				CertIdentity:                 o.CertVerify.CertIdentity,
-				CertOIDCIssuer:               o.CertVerify.CertOidcIssuer,
 				CertChain:                    o.CertVerify.CertChain,
 				SigRef:                       o.Signature,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,

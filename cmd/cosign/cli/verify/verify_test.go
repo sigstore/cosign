@@ -34,6 +34,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/test"
@@ -165,8 +166,10 @@ func appendSlices(slices [][]byte) []byte {
 func TestVerifyCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef:        "cert.pem",
-		CertOidcIssuer: "issuer",
+		CertRef: "cert.pem",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: "issuer",
+		},
 	}
 
 	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
@@ -178,8 +181,10 @@ func TestVerifyCertMissingSubject(t *testing.T) {
 func TestVerifyCertMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef:      "cert.pem",
-		CertIdentity: "identity",
+		CertRef: "cert.pem",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentity: "identity",
+		},
 	}
 
 	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})

@@ -15,6 +15,9 @@
 package options
 
 import (
+	"errors"
+
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/spf13/cobra"
 )
 
@@ -77,4 +80,14 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.IgnoreSCT, "insecure-ignore-sct", false,
 		"when set, verification will not check that a certificate contains an embedded SCT, a proof of "+
 			"inclusion in a certificate transparency log")
+}
+
+func (o *CertVerifyOptions) Identities() ([]cosign.Identity, error) {
+	if o.CertIdentity == "" {
+		return nil, errors.New("--certificate-identity is required for verification in keyless mode")
+	}
+	if o.CertOidcIssuer == "" {
+		return nil, errors.New("--certificate-oidc-issuer is required for verification in keyless mode")
+	}
+	return []cosign.Identity{{Issuer: o.CertOidcIssuer, Subject: o.CertIdentity}}, nil
 }

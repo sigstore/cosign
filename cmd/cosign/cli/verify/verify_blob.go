@@ -69,9 +69,8 @@ func isb64(data []byte) bool {
 // nolint
 type VerifyBlobCmd struct {
 	options.KeyOpts
+	options.CertVerifyOptions
 	CertRef                      string
-	CertIdentity                 string
-	CertOIDCIssuer               string
 	CertChain                    string
 	SigRef                       string
 	CertGithubWorkflowTrigger    string
@@ -93,8 +92,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.PubKeyParseError{}
 	}
 
-	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOIDCIssuer == "") {
-		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
+	var identities []cosign.Identity
+	var err error
+	if c.KeyRef == "" {
+		identities, err = c.Identities()
+		if err != nil {
+			return err
+		}
 	}
 
 	sig, err := signatures(c.SigRef, c.BundlePath)
@@ -114,7 +118,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
-		Identities:                   []cosign.Identity{{Issuer: c.CertOIDCIssuer, Subject: c.CertIdentity}},
+		Identities:                   identities,
 	}
 	if options.EnableExperimental() {
 		if c.RekorURL != "" {

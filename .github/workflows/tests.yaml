@@ -122,6 +122,12 @@ jobs:
           GODEBUG: x509sha1=1
         run: ./test/e2e_test.sh
 
+      - name: Run sign-blob tests
+        env:
+          # See #2091 for the issue describing this temp workaround.
+          GODEBUG: x509sha1=1
+        run: ./test/sign_blob_test.sh
+
       - name: Collect diagnostics
         if: ${{ failure() }}
         uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main

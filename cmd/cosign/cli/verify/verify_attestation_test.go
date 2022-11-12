@@ -17,14 +17,18 @@ package verify
 import (
 	"context"
 	"testing"
+
+	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 )
 
 func TestVerifyAttestationMissingSubject(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
-		CertRef:        "cert.pem",
-		CertOidcIssuer: "issuer",
+		CertRef: "cert.pem",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: "issuer",
+		},
 	}
 
 	err := verifyAttestation.Exec(ctx, []string{"foo", "bar", "baz"})
@@ -37,8 +41,10 @@ func TestVerifyAttestationMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
-		CertRef:      "cert.pem",
-		CertIdentity: "subject",
+		CertRef: "cert.pem",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentity: "subject",
+		},
 	}
 
 	err := verifyAttestation.Exec(ctx, []string{"foo", "bar", "baz"})

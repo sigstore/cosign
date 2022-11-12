@@ -49,11 +49,10 @@ import (
 // nolint
 type VerifyCommand struct {
 	options.RegistryOptions
+	options.CertVerifyOptions
 	CheckClaims                  bool
 	KeyRef                       string
 	CertRef                      string
-	CertIdentity                 string
-	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
 	CertGithubWorkflowName       string
@@ -93,8 +92,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
-	if c.CertRef != "" && (c.CertIdentity == "" || c.CertOidcIssuer == "") {
-		return errors.New("--certificate-identity and --certificate-oidc-issuer are required for verification in keyless mode")
+	var identities []cosign.Identity
+	if c.KeyRef == "" {
+		identities, err = c.Identities()
+		if err != nil {
+			return err
+		}
 	}
 
 	ociremoteOpts, err := c.ClientOpts(ctx)
@@ -112,7 +115,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
-		Identities:                   []cosign.Identity{{Issuer: c.CertOidcIssuer, Subject: c.CertIdentity}},
+		Identities:                   identities,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier

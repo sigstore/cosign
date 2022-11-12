@@ -82,11 +82,10 @@ against the transparency log.`,
 			v := &manifest.VerifyManifestCommand{
 				VerifyCommand: verify.VerifyCommand{
 					RegistryOptions:              o.Registry,
+					CertVerifyOptions:            o.CertVerify,
 					CheckClaims:                  o.CheckClaims,
 					KeyRef:                       o.Key,
 					CertRef:                      o.CertVerify.Cert,
-					CertIdentity:                 o.CertVerify.CertIdentity,
-					CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
 					CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 					CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 					CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
