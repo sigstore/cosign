@@ -102,6 +102,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(GenerateKeyPair())
 	cmd.AddCommand(ImportKeyPair())
 	cmd.AddCommand(Initialize())
+	cmd.AddCommand(Inspect())
 	cmd.AddCommand(Load())
 	cmd.AddCommand(Manifest())
 	cmd.AddCommand(PIVTool())
