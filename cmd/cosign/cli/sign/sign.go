@@ -76,6 +76,11 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		return true
 	}
 
+	// We don't need to validate the ref, just return true
+	if ref == nil {
+		return true
+	}
+
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
 		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), ko.RekorURL)

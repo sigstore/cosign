@@ -34,7 +34,7 @@ import (
 )
 
 // nolint
-func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string) ([]byte, error) {
+func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
 	var payload []byte
 	var err error
 	var rekorBytes []byte
@@ -65,7 +65,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 
 	signedPayload := cosign.LocalSignedPayload{}
 
-	if options.EnableExperimental() {
+	if ShouldUploadToTlog(ctx, ko, nil, ko.SkipConfirmation, tlogUpload) {
 		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
 			return nil, err

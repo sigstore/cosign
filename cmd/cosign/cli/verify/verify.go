@@ -118,7 +118,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	if c.keylessVerification() {
+	if keylessVerification(c.KeyRef, c.Sk) {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -408,11 +408,11 @@ func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func (c *VerifyCommand) keylessVerification() bool {
-	if c.KeyRef != "" {
+func keylessVerification(keyRef string, sk bool) bool {
+	if keyRef != "" {
 		return false
 	}
-	if c.Sk {
+	if sk {
 		return false
 	}
 	return true

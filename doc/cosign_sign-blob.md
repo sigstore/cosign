@@ -12,7 +12,7 @@ cosign sign-blob [flags]
   cosign sign-blob --key <key path>|<kms uri> <blob>
 
   # sign a blob with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign --timeout 90s sign-blob <FILE>
+  cosign sign-blob <FILE> --output-signature <FILE> --output-certificate <FILE>
 
   # sign a blob with a local key pair file
   cosign sign-blob --key cosign.key <FILE>
@@ -56,6 +56,7 @@ cosign sign-blob [flags]
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --tlog-upload                                                                              whether or not to upload to the tlog
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 
