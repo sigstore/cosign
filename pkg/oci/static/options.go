@@ -30,6 +30,7 @@ type options struct {
 	LayerMediaType  types.MediaType
 	ConfigMediaType types.MediaType
 	Bundle          *bundle.RekorBundle
+	TSABundle       *bundle.TSABundle
 	Cert            []byte
 	Chain           []byte
 	Annotations     map[string]string
@@ -59,6 +60,13 @@ func makeOptions(opts ...Option) (*options, error) {
 		o.Annotations[BundleAnnotationKey] = string(b)
 	}
 
+	if o.TSABundle != nil {
+		b, err := json.Marshal(o.TSABundle)
+		if err != nil {
+			return nil, err
+		}
+		o.Annotations[TSABundleAnnotationKey] = string(b)
+	}
 	return o, nil
 }
 
@@ -87,6 +95,13 @@ func WithAnnotations(ann map[string]string) Option {
 func WithBundle(b *bundle.RekorBundle) Option {
 	return func(o *options) {
 		o.Bundle = b
+	}
+}
+
+// WithTSABundle sets the time-stamping bundle to attach to the signature
+func WithTSABundle(b *bundle.TSABundle) Option {
+	return func(o *options) {
+		o.TSABundle = b
 	}
 }
 

@@ -55,6 +55,9 @@ func (fa *failingAttestation) Chain() ([]*x509.Certificate, error) {
 func (fa *failingAttestation) Bundle() (*bundle.RekorBundle, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
+func (fa *failingAttestation) TSABundle() (*bundle.TSABundle, error) {
+	return nil, fmt.Errorf("unimplemented")
+}
 func (fa *failingAttestation) Digest() (v1.Hash, error) {
 	return v1.Hash{}, fmt.Errorf("unimplemented")
 }
