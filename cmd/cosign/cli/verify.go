@@ -264,7 +264,7 @@ The blob may be specified as a path to a file or - for stdin.`,
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 
   # Verify a signature against a certificate
-  COSIGN_EXPERIMENTAL=1 cosign verify-blob --certificate <cert> --signature $sig <blob>
+  cosign verify-blob --certificate <cert> --signature $sig <blob>
 `,
 
 		Args:             cobra.ExactArgs(1),

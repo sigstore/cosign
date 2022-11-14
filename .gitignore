@@ -32,4 +32,8 @@ policyControllerImagerefs
 sgetImagerefs
 policyImagerefs
 
+bundle
+signature
+certificate
+
 **verify-experimental*
