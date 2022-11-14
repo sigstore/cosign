@@ -344,8 +344,8 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey:    "blah",
-					BundleKey: `}`,
+					sigkey:       "blah",
+					TSABundleKey: `}`,
 				},
 			},
 		},

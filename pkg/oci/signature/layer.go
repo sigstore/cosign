@@ -33,7 +33,7 @@ const (
 	certkey      = "dev.sigstore.cosign/certificate"
 	chainkey     = "dev.sigstore.cosign/chain"
 	BundleKey    = "dev.sigstore.cosign/bundle"
-	TSABundleKey = "dev.sigstore.cosign/tsabundle"
+	TSABundleKey = "dev.sigstore.cosign/3161timestamp"
 )
 
 type sigLayer struct {
