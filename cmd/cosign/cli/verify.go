@@ -92,7 +92,7 @@ against the transparency log.`,
 				return err
 			}
 
-			v := verify.VerifyCommand{
+			v := &verify.VerifyCommand{
 				RegistryOptions:              o.Registry,
 				CheckClaims:                  o.CheckClaims,
 				KeyRef:                       o.Key,
@@ -117,6 +117,7 @@ against the transparency log.`,
 				HashAlgorithm:                hashAlgorithm,
 				SignatureRef:                 o.SignatureRef,
 				LocalImage:                   o.LocalImage,
+				Offline:                      o.CommonVerifyOptions.Offline,
 			}
 
 			if o.Registry.AllowInsecure {
@@ -183,7 +184,7 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			v := verify.VerifyAttestationCommand{
+			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
 				CheckClaims:                  o.CheckClaims,
 				CertRef:                      o.CertVerify.Cert,
@@ -207,6 +208,7 @@ against the transparency log.`,
 				Policies:                     o.Policies,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
+				Offline:                      o.CommonVerifyOptions.Offline,
 			}
 
 			return v.Exec(cmd.Context(), args)
@@ -275,7 +277,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				RekorURL:   o.Rekor.URL,
 				BundlePath: o.BundlePath,
 			}
-			verifyBlobCmd := verify.VerifyBlobCmd{
+			verifyBlobCmd := &verify.VerifyBlobCmd{
 				KeyOpts:                      ko,
 				CertRef:                      o.CertVerify.Cert,
 				CertEmail:                    o.CertVerify.CertEmail,
@@ -290,6 +292,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				SCTRef:                       o.CertVerify.SCT,
+				Offline:                      o.CommonVerifyOptions.Offline,
 			}
 			if err := verifyBlobCmd.Exec(cmd.Context(), args[0]); err != nil {
 				return fmt.Errorf("verifying blob %s: %w", args, err)

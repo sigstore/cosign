@@ -121,6 +121,9 @@ type CheckOpts struct {
 	// to be met for the signature to ve valid.
 	// Supercedes CertEmail / CertOidcIssuer
 	Identities []Identity
+
+	// Force offline verification of the signature
+	Offline bool
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -673,8 +676,13 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	}
 
 	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
-	if err != nil && co.RekorClient == nil {
-		return false, fmt.Errorf("unable to verify bundle: %w", err)
+	if err != nil {
+		return false, fmt.Errorf("error verifying bundle: %w", err)
+	}
+
+	// If the --offline flag was specified, fail here
+	if !bundleVerified && co.Offline {
+		return false, fmt.Errorf("offline verification failed")
 	}
 
 	if !bundleVerified && co.RekorClient != nil {

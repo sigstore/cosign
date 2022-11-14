@@ -64,6 +64,7 @@ type VerifyAttestationCommand struct {
 	Policies                     []string
 	LocalImage                   bool
 	NameOptions                  []name.Option
+	Offline                      bool
 }
 
 // Exec runs the verification command
@@ -91,6 +92,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
+		Offline:                      c.Offline,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
