@@ -32,6 +32,7 @@ cosign policy sign [flags]
       --oidc-redirect-url string                                                                 [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --out string                                                                               output policy locally (default "o")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --tlog-upload                                                                              whether or not to upload to the tlog
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 
