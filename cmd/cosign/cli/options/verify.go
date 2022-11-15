@@ -85,12 +85,6 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
-
-	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
-		"url to a timestamp RFC3161 server, default none")
-
-	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
-		"path to certificate chain PEM file for the Timestamp Authority")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.
