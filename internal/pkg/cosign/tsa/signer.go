@@ -42,9 +42,9 @@ func GetTimestampedSignature(sigBytes []byte, tsaClient *tsaclient.TimestampAuth
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Calling TSA authority ...")
+	fmt.Fprintln(os.Stderr, "Calling TSA authority ...")
 	params := ts.NewGetTimestampResponseParams()
-	params.SetTimeout(time.Second * 30)
+	params.SetTimeout(time.Second * 10)
 	params.Request = io.NopCloser(bytes.NewReader(requestBytes))
 
 	var respBytes bytes.Buffer
@@ -59,7 +59,7 @@ func GetTimestampedSignature(sigBytes []byte, tsaClient *tsaclient.TimestampAuth
 		return nil, err
 	}
 
-	fmt.Fprintln(os.Stderr, "Timestamp authority entry created with time:", ts.Time)
+	fmt.Fprintln(os.Stderr, "Timestamp fetched with time:", ts.Time)
 
 	return respBytes.Bytes(), nil
 }
@@ -107,7 +107,7 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 func createTimestampAuthorityRequest(artifactBytes []byte, hash crypto.Hash, policyStr string) ([]byte, error) {
 	reqOpts := &timestamp.RequestOptions{
 		Hash:         hash,
-		Certificates: true, // if the timestamp response should contain a certificate chain
+		Certificates: true, // if the timestamp response should contain the leaf certificate
 	}
 	// specify a pseudo-random nonce in the request
 	nonce, err := cryptoutils.GenerateSerialNumber()

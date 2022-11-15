@@ -20,12 +20,20 @@ import (
 )
 
 type CommonVerifyOptions struct {
-	Offline bool // Force offline verification
+	Offline          bool // Force offline verification
+	TSACertChainPath string
+	TSAServerURL     string
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Offline, "offline", false,
 		"only allow offline verification")
+
+	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
+		"url to a timestamp RFC3161 server, default none")
+
+	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
+		"path to certificate chain PEM file for the Timestamp Authority")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.
@@ -44,8 +52,6 @@ type VerifyOptions struct {
 	Registry            RegistryOptions
 	SignatureDigest     SignatureDigestOptions
 
-	TSACertChainPath string
-	TSAServerURL     string
 	AnnotationOptions
 }
 
@@ -79,12 +85,6 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
-
-	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
-		"url to a timestamp RFC3161 server, default none")
-
-	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
-		"path to certificate chain PEM file for the Timestamp Authority")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.
@@ -141,9 +141,6 @@ type VerifyBlobOptions struct {
 	Rekor               RekorOptions
 	Registry            RegistryOptions
 	CommonVerifyOptions CommonVerifyOptions
-
-	TSAServerURL     string
-	TSACertChainPath string
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)

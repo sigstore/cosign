@@ -377,7 +377,7 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["Bundle"] = tsaBundle
+				ss.Optional["TSABundle"] = tsaBundle
 			}
 
 			outputKeys = append(outputKeys, ss)

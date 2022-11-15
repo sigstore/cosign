@@ -33,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/digitorus/timestamp"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/sigstore/pkg/tuf"
@@ -959,7 +960,10 @@ func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclien
 		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
 
-	fmt.Println("Verifying TSA Bundle")
+	cert, err := sig.Cert()
+	if err != nil {
+		return false, err
+	}
 
 	sigBytes, err := base64.StdEncoding.DecodeString(b64Sig)
 	if err != nil {
@@ -977,7 +981,19 @@ func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclien
 
 	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(sigBytes), certPool)
 	if err != nil {
-		return false, fmt.Errorf("unable verifyTSRWithPEM: %w", err)
+		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
+	}
+
+	if cert != nil {
+		ts, err := timestamp.ParseResponse(bundle.SignedRFC3161Timestamp)
+		if err != nil {
+			return false, fmt.Errorf("error parsing response into timestamp: %w", err)
+		}
+		// Verify the cert against the integrated time.
+		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
+		if err := CheckExpiry(cert, ts.Time); err != nil {
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		}
 	}
 
 	return true, nil
