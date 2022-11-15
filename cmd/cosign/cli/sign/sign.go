@@ -235,7 +235,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
 
-	// TODO: For the moment you can only use the timestamped service OR the transparency log
+	// TODO: For the moment you can only use the timestamped service OR the transparency log.
 	if ko.TSAServerURL != "" {
 		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
 		if err != nil {

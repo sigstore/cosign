@@ -43,6 +43,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
@@ -119,6 +120,19 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
+	}
+
+	if c.TSAServerURL != "" {
+		co.TSAClient, err = tsaclient.GetTimestampClient(c.TSAServerURL)
+		if err != nil {
+			return fmt.Errorf("failed to create TSA client: %w", err)
+		}
+		if c.TSACertChainPath != "" {
+			_, err := os.Stat(c.TSACertChainPath)
+			if err != nil {
+				return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
+			}
+		}
 	}
 
 	if keylessVerification(c.KeyRef, c.Sk) {

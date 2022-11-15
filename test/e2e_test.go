@@ -67,6 +67,9 @@ import (
 	"github.com/sigstore/cosign/pkg/sget"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
+	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/spf13/viper"
 )
 
 const (
