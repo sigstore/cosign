@@ -95,6 +95,22 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 	return cmd.Exec(context.Background(), args)
 }
 
+var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaServerURL, tsaCertChain string) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:           keyRef,
+		CheckClaims:      checkClaims,
+		Annotations:      sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:       attachment,
+		HashAlgorithm:    crypto.SHA256,
+		TSAServerURL:     tsaServerURL,
+		TSACertChainPath: tsaCertChain,
+	}
+
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
 // Used to verify local images stored on disk
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
@@ -506,6 +522,62 @@ func TestRekorBundle(t *testing.T) {
 	// use rekor prod since we have hardcoded the public key
 	os.Setenv(serverEnv, "notreal")
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
+func TestTSABundle(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		TSAServerURL: server.URL,
+	}
+	so := options.SignOptions{
+		Upload:     true,
+		TlogUpload: false,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works against the TSA server
+	must(verifyTSA(pubKeyPath, imgName, true, nil, "", server.URL, file.Name()), t)
 }
 
 func TestDuplicateSign(t *testing.T) {

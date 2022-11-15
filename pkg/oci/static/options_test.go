@@ -21,12 +21,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
 func TestOptions(t *testing.T) {
-	bundle := &bundle.RekorBundle{}
+	bundle := &cbundle.RekorBundle{}
+	tsaBundle := &cbundle.TSABundle{}
 
 	tests := []struct {
 		name string
@@ -90,6 +91,17 @@ func TestOptions(t *testing.T) {
 				BundleAnnotationKey: "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
 			},
 			Bundle: bundle,
+		},
+	}, {
+		name: "with TSA bundle",
+		opts: []Option{WithTSABundle(tsaBundle)},
+		want: &options{
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
+			Annotations: map[string]string{
+				TSABundleAnnotationKey: "{\"SignedRFC3161Timestamp\":null}",
+			},
+			TSABundle: tsaBundle,
 		},
 	}}
 

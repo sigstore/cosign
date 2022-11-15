@@ -32,7 +32,7 @@ const (
 	CertificateAnnotationKey = "dev.sigstore.cosign/certificate"
 	ChainAnnotationKey       = "dev.sigstore.cosign/chain"
 	BundleAnnotationKey      = "dev.sigstore.cosign/bundle"
-	TSABundleAnnotationKey   = "dev.sigstore.cosign/tsabundle"
+	TSABundleAnnotationKey   = "dev.sigstore.cosign/3161timestamp"
 )
 
 // NewSignature constructs a new oci.Signature from the provided options.
@@ -85,6 +85,12 @@ func Copy(sig oci.Signature) (oci.Signature, error) {
 		return nil, err
 	}
 	opts = append(opts, WithBundle(bundle))
+
+	tsaBundle, err := sig.TSABundle()
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, WithTSABundle(tsaBundle))
 
 	cert, err := sig.Cert()
 	if err != nil {

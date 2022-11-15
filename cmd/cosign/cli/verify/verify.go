@@ -75,6 +75,8 @@ type VerifyCommand struct {
 	LocalImage                   bool
 	NameOptions                  []name.Option
 	Offline                      bool
+	TSAServerURL                 string
+	TSACertChainPath             string
 }
 
 // Exec runs the verification command
@@ -113,6 +115,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
 		Offline:                      c.Offline,
+		TSACertChainPath:             c.TSACertChainPath,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
@@ -355,6 +358,12 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 					ss.Optional = make(map[string]interface{})
 				}
 				ss.Optional["Bundle"] = bundle
+			}
+			if tsaBundle, err := sig.TSABundle(); err == nil && tsaBundle != nil {
+				if ss.Optional == nil {
+					ss.Optional = make(map[string]interface{})
+				}
+				ss.Optional["Bundle"] = tsaBundle
 			}
 
 			outputKeys = append(outputKeys, ss)

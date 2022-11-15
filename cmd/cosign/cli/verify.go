@@ -118,6 +118,8 @@ against the transparency log.`,
 				SignatureRef:                 o.SignatureRef,
 				LocalImage:                   o.LocalImage,
 				Offline:                      o.CommonVerifyOptions.Offline,
+				TSAServerURL:                 o.TSAServerURL,
+				TSACertChainPath:             o.TSACertChainPath,
 			}
 
 			if o.Registry.AllowInsecure {

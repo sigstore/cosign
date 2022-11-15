@@ -30,7 +30,9 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -40,7 +42,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
 	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
+	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
@@ -50,6 +54,9 @@ import (
 	rtypes "github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
+	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/transparency-dev/merkle/rfc6962"
 )
@@ -417,6 +424,54 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 		// Rekor client that is capable of performing inclusion proof validation
 		// in unit tests.
 		t.Fatalf("expected error while verifying signature, got %s", err)
+	}
+}
+
+func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+	sv, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatalf("error generating verifier: %v", err)
+	}
+	payloadSigner := payload.NewSigner(sv)
+	testSigner := tsa.NewSigner(payloadSigner, client)
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	payload := []byte{1, 2, 3, 4}
+	sig, _, err := testSigner.Sign(context.Background(), bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("error signing the payload with the tsa client server: %v", err)
+	}
+	if bundleVerified, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
+		SigVerifier:      sv,
+		TSAClient:        client,
+		TSACertChainPath: file.Name(),
+	}); err != nil || !bundleVerified {
+		t.Fatalf("unexpected error while verifying signature, got %s", err)
 	}
 }
 

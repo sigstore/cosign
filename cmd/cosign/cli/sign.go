@@ -108,6 +108,7 @@ race conditions or (worse) malicious tampering.
 				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
+				TSAServerURL:             o.TSAServerURL,
 			}
 			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {
