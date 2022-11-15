@@ -969,10 +969,13 @@ func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclien
 	if err != nil {
 		return false, fmt.Errorf("reading DecodeString: %w", err)
 	}
+	// TODO: Add support for TUF certificates.
 	pemBytes, err := os.ReadFile(filepath.Clean(tsaCertChainPath))
 	if err != nil {
 		return false, fmt.Errorf("error reading certification chain path file: %w", err)
 	}
+	// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
+	// This relies on untrusted leaf certificate.
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(pemBytes)
 	if !ok {
