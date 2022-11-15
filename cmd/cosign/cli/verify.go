@@ -142,7 +142,7 @@ func VerifyAttestation() *cobra.Command {
 against the transparency log.`,
 		Example: `  cosign verify-attestation --key <key path>|<key url>|<kms uri> <image uri> [<image uri> ...]
 
-  # verify cosign attestations on the image
+  # verify cosign attestations on the image against the transparency log
   cosign verify-attestation <IMAGE>
 
   # verify multiple images
@@ -150,9 +150,6 @@ against the transparency log.`,
 
   # additionally verify specified annotations
   cosign verify-attestation -a key1=val1 -a key2=val2 <IMAGE>
-
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign verify-attestation <IMAGE>
 
   # verify image with public key
   cosign verify-attestation --key cosign.pub <IMAGE>

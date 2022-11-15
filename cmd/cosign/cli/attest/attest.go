@@ -81,15 +81,9 @@ type AttestCommand struct {
 
 // nolint
 func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
-	// A key file or token is required unless we're in experimental mode!
-	if options.EnableExperimental() {
-		if options.NOf(c.KeyRef, c.Sk) > 1 {
-			return &options.KeyParseError{}
-		}
-	} else {
-		if !options.OneOf(c.KeyRef, c.Sk) {
-			return &options.KeyParseError{}
-		}
+	// We can't have both a key and a security key
+	if options.NOf(c.KeyRef, c.Sk) > 1 {
+		return &options.KeyParseError{}
 	}
 
 	predicateURI, err := options.ParsePredicateType(c.PredicateType)

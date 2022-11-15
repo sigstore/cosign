@@ -73,8 +73,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return flag.ErrHelp
 	}
 
-	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && !options.EnableExperimental() {
-		return &options.PubKeyParseError{}
+	// We can't have both a key and a security key
+	if options.NOf(c.KeyRef, c.Sk) > 1 {
+		return &options.KeyParseError{}
 	}
 
 	ociremoteOpts, err := c.ClientOpts(ctx)
@@ -97,7 +98,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
-	if options.EnableExperimental() {
+	if keylessVerification(c.KeyRef, c.Sk) {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
