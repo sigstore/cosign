@@ -29,10 +29,11 @@ import (
 )
 
 const (
-	sigkey    = "dev.cosignproject.cosign/signature"
-	certkey   = "dev.sigstore.cosign/certificate"
-	chainkey  = "dev.sigstore.cosign/chain"
-	BundleKey = "dev.sigstore.cosign/bundle"
+	sigkey       = "dev.cosignproject.cosign/signature"
+	certkey      = "dev.sigstore.cosign/certificate"
+	chainkey     = "dev.sigstore.cosign/chain"
+	BundleKey    = "dev.sigstore.cosign/bundle"
+	TSABundleKey = "dev.sigstore.cosign/3161timestamp"
 )
 
 type sigLayer struct {
@@ -112,6 +113,19 @@ func (s *sigLayer) Bundle() (*bundle.RekorBundle, error) {
 	var b bundle.RekorBundle
 	if err := json.Unmarshal([]byte(val), &b); err != nil {
 		return nil, fmt.Errorf("unmarshaling bundle: %w", err)
+	}
+	return &b, nil
+}
+
+// TSABundle implements oci.Signature
+func (s *sigLayer) TSABundle() (*bundle.TSABundle, error) {
+	val := s.desc.Annotations[TSABundleKey]
+	if val == "" {
+		return nil, nil
+	}
+	var b bundle.TSABundle
+	if err := json.Unmarshal([]byte(val), &b); err != nil {
+		return nil, fmt.Errorf("unmarshaling tsa bundle: %w", err)
 	}
 	return &b, nil
 }

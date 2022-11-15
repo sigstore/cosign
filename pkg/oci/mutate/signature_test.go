@@ -128,6 +128,21 @@ func assertSignaturesEqual(t *testing.T, wanted, got oci.Signature) {
 		}
 	})
 
+	t.Run("TSA Bundles match", func(t *testing.T) {
+		t.Helper()
+		wantedBundle, err := wanted.TSABundle()
+		if err != nil {
+			t.Fatalf("wanted.Bundle() returned error: %v", err)
+		}
+		gotBundle, err := got.TSABundle()
+		if err != nil {
+			t.Fatalf("got.TSABundle() returned error: %v", err)
+		}
+		if diff := cmp.Diff(wantedBundle, gotBundle); diff != "" {
+			t.Errorf("TSABundle() mismatch (-want +got):\n%s", diff)
+		}
+	})
+
 	t.Run("Certs match", func(t *testing.T) {
 		t.Helper()
 		wantedCert, err := wanted.Cert()
@@ -292,7 +307,7 @@ func TestSignatureWithBundle(t *testing.T) {
 	payload := "this is the TestSignatureWithBundle content!"
 	b64sig := "b64 content2="
 	b := &bundle.RekorBundle{
-		SignedEntryTimestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
+		SignedEntryTimestamp: mustBase64Decode(t, "MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
 		Payload: bundle.RekorPayload{
 			Body:           "REMOVED",
 			IntegratedTime: 1631646761,
@@ -306,6 +321,23 @@ func TestSignatureWithBundle(t *testing.T) {
 	newSig, err := Signature(originalSig, WithBundle(b))
 	if err != nil {
 		t.Fatalf("Signature(WithBundle()) returned error: %v", err)
+	}
+
+	assertSignaturesEqual(t, expectedSig, newSig)
+}
+
+func TestSignatureWithTSABundle(t *testing.T) {
+	payload := "this is the TestSignatureWithBundle content!"
+	b64sig := "b64 content2="
+	b := &bundle.TSABundle{
+		SignedRFC3161Timestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
+	}
+	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
+	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithTSABundle(b))
+
+	newSig, err := Signature(originalSig, WithTSABundle(b))
+	if err != nil {
+		t.Fatalf("Signature(WithTSABundle()) returned error: %v", err)
 	}
 
 	assertSignaturesEqual(t, expectedSig, newSig)
@@ -371,6 +403,39 @@ func TestSignatureWithEverything(t *testing.T) {
 	newSig, err := Signature(originalSig,
 		WithAnnotations(annotations),
 		WithBundle(b),
+		WithCertChain(testCertBytes, testChainBytes),
+		WithMediaType(mediaType))
+
+	if err != nil {
+		t.Fatalf("Signature(With...) returned error: %v", err)
+	}
+
+	assertSignaturesEqual(t, expectedSig, newSig)
+}
+
+func TestSignatureWithEverythingTSA(t *testing.T) {
+	payload := "this is the TestSignatureWithEverything content!"
+	b64sig := "b64 content5="
+	annotations := map[string]string{
+		"foo":  "bar",
+		"test": "yes",
+	}
+	b := &bundle.TSABundle{
+		SignedRFC3161Timestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
+	}
+	mediaType := types.MediaType("test/media.type")
+
+	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
+
+	expectedSig := mustCreateSignature(t, []byte(payload), b64sig,
+		static.WithAnnotations(annotations),
+		static.WithTSABundle(b),
+		static.WithCertChain(testCertBytes, testChainBytes),
+		static.WithLayerMediaType(mediaType))
+
+	newSig, err := Signature(originalSig,
+		WithAnnotations(annotations),
+		WithTSABundle(b),
 		WithCertChain(testCertBytes, testChainBytes),
 		WithMediaType(mediaType))
 

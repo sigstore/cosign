@@ -187,5 +187,5 @@ jobs:
         uses: golangci/golangci-lint-action@0ad9a0988b3973e851ab0a07adf248ec2e100376 # v3.3.1
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.49
+          version: v1.50.1
           args: --timeout=5m

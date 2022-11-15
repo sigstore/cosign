@@ -80,6 +80,7 @@ type VerifyBlobCmd struct {
 	CertGithubWorkflowRef        string
 	IgnoreSCT                    bool
 	SCTRef                       string
+	Offline                      bool
 }
 
 // nolint
@@ -88,8 +89,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	var bundle *bundle.RekorBundle
 
 	// Require a certificate/key OR a local bundle file that has the cert.
-	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && c.BundlePath == "" {
-		return &options.PubKeyParseError{}
+	if options.NOf(c.KeyRef, c.Sk) > 1 {
+		return &options.KeyParseError{}
 	}
 
 	var identities []cosign.Identity
@@ -119,8 +120,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
+		Offline:                      c.Offline,
 	}
-	if options.EnableExperimental() {
+	if keylessVerification(c.KeyRef, c.Sk) {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -128,8 +130,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			}
 			co.RekorClient = rekorClient
 		}
-	}
-	if options.EnableExperimental() {
 		co.RootCerts, err = fulcio.GetRoots()
 		if err != nil {
 			return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -245,6 +245,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return fmt.Errorf("loading verifier from bundle: %w", err)
 		}
 		bundle = b.Bundle
+	default:
+		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle")
 	}
 
 	// Performs all blob verification.

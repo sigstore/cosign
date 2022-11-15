@@ -58,6 +58,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	cliverify "github.com/sigstore/cosign/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -692,7 +693,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "")
+	sig, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -737,7 +738,7 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 		RekorURL:   rekorURL,
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", ""); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
@@ -745,7 +746,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, env.VariableExperimental.String(), "1")()
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", ""); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1565,4 +1566,71 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	// Make sure we fail with the wrong blob (set the predicate type back)
 	blobVerifyAttestationCmd.PredicateType = predicateType
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
+}
+
+func TestOffline(t *testing.T) {
+	regName, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	img1 := path.Join(regName, "cosign-e2e")
+
+	imgRef, _, cleanup := mkimage(t, img1)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image1 and store the entry in rekor
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
+	so := options.SignOptions{
+		Upload:           true,
+		TlogUpload:       true,
+		SkipConfirmation: true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
+	// verify image1 online and offline
+	must(verify(pubKeyPath, img1, true, nil, ""), t)
+	verifyCmd := &cliverify.VerifyCommand{
+		KeyRef:      pubKeyPath,
+		Offline:     true,
+		CheckClaims: true,
+	}
+	must(verifyCmd.Exec(ctx, []string{img1}), t)
+
+	// Get signatures
+	si, err := ociremote.SignedEntity(imgRef)
+	must(err, t)
+	sigs, err := si.Signatures()
+	must(err, t)
+	gottenSigs, err := sigs.Get()
+	must(err, t)
+
+	fakeBundle := &bundle.RekorBundle{
+		SignedEntryTimestamp: []byte(""),
+		Payload: bundle.RekorPayload{
+			Body: "",
+		},
+	}
+	newSig, err := mutate.Signature(gottenSigs[0], mutate.WithBundle(fakeBundle))
+	must(err, t)
+
+	sigsTag, err := ociremote.SignatureTag(imgRef)
+	if err := remote.Delete(sigsTag); err != nil {
+		t.Fatal(err)
+	}
+
+	si, err = ociremote.SignedEntity(imgRef)
+	must(err, t)
+	newImage, err := mutate.AttachSignatureToEntity(si, newSig)
+	must(err, t)
+
+	mustErr(verify(pubKeyPath, img1, true, nil, ""), t)
+	if err := ociremote.WriteSignatures(sigsTag.Repository, newImage); err != nil {
+		t.Fatal(err)
+	}
+
+	// Confirm offline verification fails
+	mustErr(verifyCmd.Exec(ctx, []string{img1}), t)
 }

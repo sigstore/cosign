@@ -278,3 +278,178 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 		})
 	}
 }
+
+func TestSignatureWithTSAAnnotation(t *testing.T) {
+	layer, err := random.Layer(300 /* byteSize */, types.DockerLayer)
+	if err != nil {
+		t.Fatalf("random.Layer() = %v", err)
+	}
+	digest, err := layer.Digest()
+	if err != nil {
+		t.Fatalf("Digest() = %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		l              *sigLayer
+		wantPayloadErr error
+		wantSig        string
+		wantSigErr     error
+		wantCert       bool
+		wantCertErr    error
+		wantChain      int
+		wantChainErr   error
+		wantBundle     *bundle.TSABundle
+		wantBundleErr  error
+	}{{
+		name: "just payload and signature",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey: "blah",
+				},
+			},
+		},
+		wantSig: "blah",
+	}, {
+		name: "with empty other keys",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey:       "blah",
+					certkey:      "",
+					chainkey:     "",
+					TSABundleKey: "",
+				},
+			},
+		},
+		wantSig: "blah",
+	}, {
+		name: "missing signature",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+			},
+		},
+		wantSigErr: fmt.Errorf("signature layer %s is missing %q annotation", digest, sigkey),
+	}, {
+		name: "min plus bad bundle",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey:       "blah",
+					TSABundleKey: `}`,
+				},
+			},
+		},
+		wantSig:       "blah",
+		wantBundleErr: errors.New(`unmarshaling tsa bundle: invalid character '}' looking for beginning of value`),
+	}, {
+		name: "min plus bad cert",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey:  "blah",
+					certkey: `GARBAGE`,
+				},
+			},
+		},
+		wantSig:     "blah",
+		wantCertErr: errors.New(`error during PEM decoding`),
+	}, {
+		name: "min plus bad chain",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey:   "blah",
+					chainkey: `GARBAGE`,
+				},
+			},
+		},
+		wantSig:      "blah",
+		wantChainErr: errors.New(`error during PEM decoding`),
+	}, {
+		name: "min plus TSA bundle",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey: "TSA blah",
+					// This was extracted from gcr.io/distroless/static:nonroot on 2021/09/16.
+					// The Body has been removed for brevity
+					TSABundleKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
+				},
+			},
+		},
+		wantSig: "TSA blah",
+		wantBundle: &bundle.TSABundle{
+			SignedRFC3161Timestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			b, err := test.l.Payload()
+			switch {
+			case (err != nil) != (test.wantPayloadErr != nil):
+				t.Errorf("Payload() = %v, wanted %v", err, test.wantPayloadErr)
+			case (err != nil) && (test.wantPayloadErr != nil) && err.Error() != test.wantPayloadErr.Error():
+				t.Errorf("Payload() = %v, wanted %v", err, test.wantPayloadErr)
+			case err == nil:
+				if got, _, err := v1.SHA256(bytes.NewBuffer(b)); err != nil {
+					t.Errorf("v1.SHA256() = %v", err)
+				} else if want := digest; want != got {
+					t.Errorf("v1.SHA256() = %v, wanted %v", got, want)
+				}
+			}
+
+			switch got, err := test.l.Base64Signature(); {
+			case (err != nil) != (test.wantSigErr != nil):
+				t.Errorf("Base64Signature() = %v, wanted %v", err, test.wantSigErr)
+			case (err != nil) && (test.wantSigErr != nil) && err.Error() != test.wantSigErr.Error():
+				t.Errorf("Base64Signature() = %v, wanted %v", err, test.wantSigErr)
+			case got != test.wantSig:
+				t.Errorf("Base64Signature() = %v, wanted %v", got, test.wantSig)
+			}
+
+			switch got, err := test.l.Cert(); {
+			case (err != nil) != (test.wantCertErr != nil):
+				t.Errorf("Cert() = %v, wanted %v", err, test.wantCertErr)
+			case (err != nil) && (test.wantCertErr != nil) && err.Error() != test.wantCertErr.Error():
+				t.Errorf("Cert() = %v, wanted %v", err, test.wantCertErr)
+			case (got != nil) != test.wantCert:
+				t.Errorf("Cert() = %v, wanted cert? %v", got, test.wantCert)
+			}
+
+			switch got, err := test.l.Chain(); {
+			case (err != nil) != (test.wantChainErr != nil):
+				t.Errorf("Chain() = %v, wanted %v", err, test.wantChainErr)
+			case (err != nil) && (test.wantChainErr != nil) && err.Error() != test.wantChainErr.Error():
+				t.Errorf("Chain() = %v, wanted %v", err, test.wantChainErr)
+			case len(got) != test.wantChain:
+				t.Errorf("Chain() = %v, wanted chain of length %d", got, test.wantChain)
+			}
+
+			switch got, err := test.l.TSABundle(); {
+			case (err != nil) != (test.wantBundleErr != nil):
+				t.Errorf("TSABundle() = %v, wanted %v", err, test.wantBundleErr)
+			case (err != nil) && (test.wantBundleErr != nil) && err.Error() != test.wantBundleErr.Error():
+				t.Errorf("TSABundle() = %v, wanted %v", err, test.wantBundleErr)
+			case !cmp.Equal(got, test.wantBundle):
+				t.Errorf("TSABundle() %s", cmp.Diff(got, test.wantBundle))
+			}
+		})
+	}
+}

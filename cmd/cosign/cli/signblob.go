@@ -36,7 +36,7 @@ func SignBlob() *cobra.Command {
 		Example: `  cosign sign-blob --key <key path>|<kms uri> <blob>
 
   # sign a blob with Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign --timeout 90s sign-blob <FILE>
+  cosign sign-blob <FILE> --output-signature <FILE> --output-certificate <FILE>
 
   # sign a blob with a local key pair file
   cosign sign-blob --key cosign.key <FILE>
@@ -55,11 +55,8 @@ func SignBlob() *cobra.Command {
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			// A key file is required unless we're in experimental mode!
-			if !options.EnableExperimental() {
-				if !options.OneOf(o.Key, o.SecurityKey.Use) {
-					return &options.KeyParseError{}
-				}
+			if options.NOf(o.Key, o.SecurityKey.Use) > 1 {
+				return &options.KeyParseError{}
 			}
 			return nil
 		},
@@ -91,7 +88,7 @@ func SignBlob() *cobra.Command {
 					fmt.Fprintln(os.Stderr, "WARNING: the '--output' flag is deprecated and will be removed in the future. Use '--output-signature'")
 					o.OutputSignature = o.Output
 				}
-				if _, err := sign.SignBlobCmd(ro, ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate); err != nil {
+				if _, err := sign.SignBlobCmd(ro, ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
 					return fmt.Errorf("signing %s: %w", blob, err)
 				}
 			}
