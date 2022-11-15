@@ -181,7 +181,7 @@ func signPolicy() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sv, err := sign.SignerFromKeyOpts(ctx, "", "", options.KeyOpts{
+			ko := options.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
@@ -192,7 +192,8 @@ func signPolicy() *cobra.Command {
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
-			})
+			}
+			sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
 
 			if err != nil {
 				return err
@@ -260,7 +261,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Upload to rekor
-			if options.EnableExperimental() {
+			if sign.ShouldUploadToTlog(ctx, ko, ref, ko.SkipConfirmation, o.TlogUpload) {
 				// TODO: Refactor with sign.go
 				rekorBytes := sv.Cert
 				rekorClient, err := rekor.NewClient(o.Rekor.URL)
