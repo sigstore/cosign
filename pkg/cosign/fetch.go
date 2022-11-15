@@ -35,6 +35,7 @@ type SignedPayload struct {
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
 	Bundle          *bundle.RekorBundle
+	TSABundle       *bundle.TSABundle
 }
 
 type LocalSignedPayload struct {
@@ -101,6 +102,12 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 			if err != nil {
 				return err
 			}
+
+			signatures[i].TSABundle, err = sig.TSABundle()
+			if err != nil {
+				return err
+			}
+
 			signatures[i].Bundle, err = sig.Bundle()
 			return err
 		})

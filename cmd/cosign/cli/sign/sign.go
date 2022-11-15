@@ -40,6 +40,7 @@ import (
 	ifulcio "github.com/sigstore/cosign/internal/pkg/cosign/fulcio"
 	ipayload "github.com/sigstore/cosign/internal/pkg/cosign/payload"
 	irekor "github.com/sigstore/cosign/internal/pkg/cosign/rekor"
+	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
@@ -53,6 +54,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	// Loads OIDC providers
 	_ "github.com/sigstore/cosign/pkg/providers/all"
@@ -231,7 +234,16 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	if sv.Cert != nil {
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
-	if ShouldUploadToTlog(ctx, ko, digest, ko.SkipConfirmation, tlogUpload) {
+
+	// TODO: For the moment you can only use the timestamped service OR the transparency log.
+	if ko.TSAServerURL != "" {
+		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
+		if err != nil {
+			return fmt.Errorf("failed to create TSA client: %w", err)
+		}
+
+		s = tsa.NewSigner(s, clientTSA)
+	} else if ShouldUploadToTlog(ctx, ko, digest, ko.SkipConfirmation, tlogUpload) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err

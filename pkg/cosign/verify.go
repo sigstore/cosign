@@ -28,10 +28,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/digitorus/timestamp"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/sigstore/pkg/tuf"
@@ -55,6 +57,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/generated/client"
+	tsaverification "github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
 // Identity specifies an issuer/subject to verify a signature against.
@@ -124,6 +128,12 @@ type CheckOpts struct {
 
 	// Force offline verification of the signature
 	Offline bool
+
+	// TSAClient, if set, is used to verify signatures using a RFC3161 time-stamping server.
+	TSAClient *tsaclient.TimestampAuthority
+
+	// TSACertChainPath set the path to PEM-encoded certificate chain to act as a timestamping authority.
+	TSACertChainPath string
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -674,6 +684,15 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return bundleVerified, err
 		}
 	}
+	// TODO: Verify TSA only and return the result with the tsa bundle
+	if co.TSAClient != nil {
+		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSAClient, co.TSACertChainPath)
+		if err != nil {
+			return false, fmt.Errorf("unable to verify TSA bundle: %w", err)
+		}
+
+		return bundleVerified, nil
+	}
 
 	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
 	if err != nil {
@@ -925,6 +944,61 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 	if alg != "sha256" || bundlehash != payloadHash {
 		return false, fmt.Errorf("matching bundle to payload: %w", err)
 	}
+	return true, nil
+}
+
+func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclient.TimestampAuthority, tsaCertChainPath string) (bool, error) {
+	bundle, err := sig.TSABundle()
+	if err != nil {
+		return false, err
+	} else if bundle == nil {
+		return false, nil
+	}
+
+	b64Sig, err := sig.Base64Signature()
+	if err != nil {
+		return false, fmt.Errorf("reading base64signature: %w", err)
+	}
+
+	cert, err := sig.Cert()
+	if err != nil {
+		return false, err
+	}
+
+	sigBytes, err := base64.StdEncoding.DecodeString(b64Sig)
+	if err != nil {
+		return false, fmt.Errorf("reading DecodeString: %w", err)
+	}
+	// TODO: Add support for TUF certificates.
+	pemBytes, err := os.ReadFile(filepath.Clean(tsaCertChainPath))
+	if err != nil {
+		return false, fmt.Errorf("error reading certification chain path file: %w", err)
+	}
+	// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
+	// This relies on untrusted leaf certificate.
+	certPool := x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM(pemBytes)
+	if !ok {
+		return false, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+	}
+
+	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(sigBytes), certPool)
+	if err != nil {
+		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
+	}
+
+	if cert != nil {
+		ts, err := timestamp.ParseResponse(bundle.SignedRFC3161Timestamp)
+		if err != nil {
+			return false, fmt.Errorf("error parsing response into timestamp: %w", err)
+		}
+		// Verify the cert against the integrated time.
+		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
+		if err := CheckExpiry(cert, ts.Time); err != nil {
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		}
+	}
+
 	return true, nil
 }
 

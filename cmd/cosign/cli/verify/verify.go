@@ -43,6 +43,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
@@ -75,6 +76,8 @@ type VerifyCommand struct {
 	LocalImage                   bool
 	NameOptions                  []name.Option
 	Offline                      bool
+	TSAServerURL                 string
+	TSACertChainPath             string
 }
 
 // Exec runs the verification command
@@ -113,9 +116,23 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
 		Offline:                      c.Offline,
+		TSACertChainPath:             c.TSACertChainPath,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
+	}
+
+	if c.TSAServerURL != "" {
+		co.TSAClient, err = tsaclient.GetTimestampClient(c.TSAServerURL)
+		if err != nil {
+			return fmt.Errorf("failed to create TSA client: %w", err)
+		}
+		if c.TSACertChainPath != "" {
+			_, err := os.Stat(c.TSACertChainPath)
+			if err != nil {
+				return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
+			}
+		}
 	}
 
 	if keylessVerification(c.KeyRef, c.Sk) {
@@ -355,6 +372,12 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 					ss.Optional = make(map[string]interface{})
 				}
 				ss.Optional["Bundle"] = bundle
+			}
+			if tsaBundle, err := sig.TSABundle(); err == nil && tsaBundle != nil {
+				if ss.Optional == nil {
+					ss.Optional = make(map[string]interface{})
+				}
+				ss.Optional["TSABundle"] = tsaBundle
 			}
 
 			outputKeys = append(outputKeys, ss)

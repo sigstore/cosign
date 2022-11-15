@@ -76,6 +76,8 @@ cosign manifest verify [flags]
       --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-cert-chain string                                                              path to certificate chain PEM file for the Timestamp Authority
+      --timestamp-server-url string                                                              url to a timestamp RFC3161 server, default none
 ```
 
 ### Options inherited from parent commands
