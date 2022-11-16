@@ -117,6 +117,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
 		Offline:                      c.Offline,
+		TSACertChainPath:             c.TSACertChainPath,
 		SkipTlogVerify:               c.SkipTlogVerify,
 	}
 	if c.CheckClaims {
