@@ -35,6 +35,8 @@ type SignBlobOptions struct {
 	BundlePath        string
 	SkipConfirmation  bool
 	TlogUpload        bool
+	TSAServerURL      string
+	TSABundlePath     string
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -74,4 +76,11 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", false,
 		"whether or not to upload to the tlog")
+
+	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
+		"url to the Timestamp RFC3161 server, default none")
+
+	cmd.Flags().StringVar(&o.TSABundlePath, "tsa-bundle", "",
+		"write everything required to verify the blob to a FILE")
+	_ = cmd.Flags().SetAnnotation("tsa-bundle", cobra.BashCompFilenameExt, []string{})
 }

@@ -102,7 +102,21 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Offline:                      c.Offline,
+		TSACertChainPath:             c.KeyOpts.TSACertChainPath,
 	}
+	if c.KeyOpts.TSAServerURL != "" {
+		co.TSAClient, err = tclient.GetTimestampClient(c.KeyOpts.TSAServerURL)
+		if err != nil {
+			return fmt.Errorf("failed to create TSA client: %w", err)
+		}
+		if c.KeyOpts.TSACertChainPath != "" {
+			_, err := os.Stat(c.KeyOpts.TSACertChainPath)
+			if err != nil {
+				return fmt.Errorf("unable to open timestamp certificate chain file '%s': %w", c.KeyOpts.TSACertChainPath, err)
+			}
+		}
+	}
+
 	if keylessVerification(c.KeyRef, c.Sk) {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)

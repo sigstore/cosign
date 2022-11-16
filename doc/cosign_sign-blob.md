@@ -56,7 +56,9 @@ cosign sign-blob [flags]
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none
       --tlog-upload                                                                              whether or not to upload to the tlog
+      --tsa-bundle string                                                                        write everything required to verify the blob to a FILE
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 

@@ -34,6 +34,8 @@ type KeyOpts struct {
 	BundlePath           string
 	SkipConfirmation     bool
 	TSAServerURL         string
+	TSABundlePath        string
+	TSACertChainPath     string
 
 	// FulcioAuthFlow is the auth flow to use when authenticating against
 	// Fulcio. See https://pkg.go.dev/github.com/sigstore/cosign/cmd/cosign/cli/fulcio#pkg-constants

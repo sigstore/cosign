@@ -42,6 +42,7 @@ type LocalSignedPayload struct {
 	Base64Signature string              `json:"base64Signature"`
 	Cert            string              `json:"cert,omitempty"`
 	Bundle          *bundle.RekorBundle `json:"rekorBundle,omitempty"`
+	TSABundle       *bundle.TSABundle   `json:"tsaBundle,omitempty"`
 }
 
 type Signatures struct {
