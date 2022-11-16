@@ -74,6 +74,7 @@ cosign verify-blob [flags]
       --certificate-oidc-issuer string                                                           the OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth
   -h, --help                                                                                     help for verify-blob
       --insecure-ignore-sct                                                                      when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
+      --insecure-skip-tlog-verify                                                                skip tlog verification
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --offline                                                                                  only allow offline verification

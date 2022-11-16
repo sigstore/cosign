@@ -134,6 +134,9 @@ type CheckOpts struct {
 
 	// TSACertChainPath set the path to PEM-encoded certificate chain to act as a timestamping authority.
 	TSACertChainPath string
+
+	// SkipTlogVerify skip tlog verification
+	SkipTlogVerify bool
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -684,13 +687,13 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return bundleVerified, err
 		}
 	}
-	// TODO: Verify TSA only and return the result with the tsa bundle
 	if co.TSAClient != nil {
 		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSAClient, co.TSACertChainPath)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify TSA bundle: %w", err)
 		}
-
+	}
+	if co.SkipTlogVerify {
 		return bundleVerified, nil
 	}
 

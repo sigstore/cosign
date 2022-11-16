@@ -447,7 +447,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	})
 }
 
-func TestNewSignatureCertChainAndTSABundle(t *testing.T) {
+func TestNewSignatureCertChainAndRekorTSABundle(t *testing.T) {
 	payload := "this is the other content!"
 	b64sig := "b64 content="
 
@@ -489,6 +489,15 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 		b = &bundle.TSABundle{
 			SignedRFC3161Timestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
 		}
+		rekorBundle = &bundle.RekorBundle{
+			SignedEntryTimestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
+			Payload: bundle.RekorPayload{
+				Body:           "REMOVED",
+				IntegratedTime: 1631646761,
+				LogIndex:       693591,
+				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
+			},
+		}
 	)
 
 	l, err := NewSignature([]byte(payload), b64sig,
@@ -497,7 +506,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 		t.Fatalf("NewSignature() = %v", err)
 	}
 
-	t.Run("check signature accessors", func(t *testing.T) {
+	t.Run("check tsa signature accessors", func(t *testing.T) {
 		gotPayload, err := l.Payload()
 		if err != nil {
 			t.Fatalf("Payload() = %v", err)
@@ -533,7 +542,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 		}
 	})
 
-	t.Run("check annotations", func(t *testing.T) {
+	t.Run("check tsa annotations", func(t *testing.T) {
 		want := map[string]string{
 			SignatureAnnotationKey:   b64sig,
 			CertificateAnnotationKey: string(cert),
@@ -542,6 +551,72 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			TSABundleAnnotationKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
 		}
 		got, err := l.Annotations()
+		if err != nil {
+			t.Fatalf("Annotations() = %v", err)
+		}
+		if !cmp.Equal(got, want) {
+			t.Errorf("Annotations = %s", cmp.Diff(got, want))
+		}
+	})
+
+	newSig, err := NewSignature([]byte(payload), b64sig,
+		WithCertChain(cert, chain), WithTSABundle(b), WithBundle(rekorBundle))
+	if err != nil {
+		t.Fatalf("NewSignature() = %v", err)
+	}
+
+	t.Run("check signature accessors", func(t *testing.T) {
+		gotPayload, err := newSig.Payload()
+		if err != nil {
+			t.Fatalf("Payload() = %v", err)
+		}
+		if got, want := string(gotPayload), payload; got != want {
+			t.Errorf("Payload() = %s, wanted %s", got, want)
+		}
+
+		gotSig, err := newSig.Base64Signature()
+		if err != nil {
+			t.Fatalf("Base64Signature() = %v", err)
+		}
+		if got, want := gotSig, b64sig; got != want {
+			t.Errorf("Base64Signature() = %s, wanted %s", got, want)
+		}
+
+		if got, err := newSig.Bundle(); err != nil {
+			t.Fatalf("Bundle() = %v", err)
+		} else if got != rekorBundle {
+			t.Errorf("Bundle() = %#v, wanted %#v", got, b)
+		}
+
+		if got, err := newSig.TSABundle(); err != nil {
+			t.Fatalf("TSABundle() = %v", err)
+		} else if got != b {
+			t.Errorf("TSABundle() = %#v, wanted %#v", got, b)
+		}
+
+		if got, err := newSig.Cert(); err != nil {
+			t.Fatalf("Cert() = %v", err)
+		} else if got == nil {
+			t.Error("Cert() = nil, wanted non-nil")
+		}
+
+		if got, err := newSig.Chain(); err != nil {
+			t.Fatalf("Chain() = %v", err)
+		} else if len(got) != 1 {
+			t.Errorf("len(Chain()) = %d, wanted 1", len(got))
+		}
+	})
+
+	t.Run("check rekor and tsa annotations", func(t *testing.T) {
+		want := map[string]string{
+			SignatureAnnotationKey:   b64sig,
+			CertificateAnnotationKey: string(cert),
+			ChainAnnotationKey:       string(chain),
+
+			TSABundleAnnotationKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
+			BundleAnnotationKey:    `{"SignedEntryTimestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE=","Payload":{"body":"REMOVED","integratedTime":1631646761,"logIndex":693591,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}}`,
+		}
+		got, err := newSig.Annotations()
 		if err != nil {
 			t.Fatalf("Annotations() = %v", err)
 		}

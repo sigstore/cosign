@@ -78,6 +78,7 @@ type VerifyCommand struct {
 	Offline                      bool
 	TSAServerURL                 string
 	TSACertChainPath             string
+	SkipTlogVerify               bool
 }
 
 // Exec runs the verification command
@@ -117,6 +118,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		SignatureRef:                 c.SignatureRef,
 		Offline:                      c.Offline,
 		TSACertChainPath:             c.TSACertChainPath,
+		SkipTlogVerify:               c.SkipTlogVerify,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier

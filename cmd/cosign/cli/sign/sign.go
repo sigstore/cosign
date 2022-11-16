@@ -235,7 +235,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
 	}
 
-	// TODO: For the moment you can only use the timestamped service OR the transparency log.
 	if ko.TSAServerURL != "" {
 		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
 		if err != nil {
@@ -243,7 +242,8 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		}
 
 		s = tsa.NewSigner(s, clientTSA)
-	} else if ShouldUploadToTlog(ctx, ko, digest, ko.SkipConfirmation, tlogUpload) {
+	}
+	if ShouldUploadToTlog(ctx, ko, digest, ko.SkipConfirmation, tlogUpload) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
