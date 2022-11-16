@@ -103,6 +103,19 @@ func TestOptions(t *testing.T) {
 			},
 			TSABundle: tsaBundle,
 		},
+	}, {
+		name: "with TSA and Rekor bundle",
+		opts: []Option{WithTSABundle(tsaBundle), WithBundle(bundle)},
+		want: &options{
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
+			Annotations: map[string]string{
+				TSABundleAnnotationKey: "{\"SignedRFC3161Timestamp\":null}",
+				BundleAnnotationKey:    "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
+			},
+			TSABundle: tsaBundle,
+			Bundle:    bundle,
+		},
 	}}
 
 	for _, test := range tests {

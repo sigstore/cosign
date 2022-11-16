@@ -17,6 +17,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 
@@ -120,10 +121,15 @@ against the transparency log.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				TSAServerURL:                 o.CommonVerifyOptions.TSAServerURL,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
 
 			if o.Registry.AllowInsecure {
 				v.NameOptions = append(v.NameOptions, name.Insecure)
+			}
+
+			if o.CommonVerifyOptions.SkipTlogVerify {
+				fmt.Fprintln(os.Stderr, "**Warning** Skipping tlog verification lacks of transparency and auditability verification for the signature.")
 			}
 
 			return v.Exec(cmd.Context(), args)

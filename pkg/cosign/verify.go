@@ -134,6 +134,9 @@ type CheckOpts struct {
 
 	// TSACertChainPath set the path to PEM-encoded certificate chain to act as a timestamping authority.
 	TSACertChainPath string
+
+	// SkipTlogVerify skip tlog verification
+	SkipTlogVerify bool
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -684,19 +687,18 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return bundleVerified, err
 		}
 	}
-	// TODO: Verify TSA only and return the result with the tsa bundle
 	if co.TSAClient != nil {
 		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSAClient, co.TSACertChainPath)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify TSA bundle: %w", err)
 		}
-
-		return bundleVerified, nil
 	}
 
-	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
-	if err != nil {
-		return false, fmt.Errorf("error verifying bundle: %w", err)
+	if !co.SkipTlogVerify {
+		bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
+		if err != nil {
+			return false, fmt.Errorf("error verifying bundle: %w", err)
+		}
 	}
 
 	// If the --offline flag was specified, fail here
@@ -704,7 +706,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		return false, fmt.Errorf("offline verification failed")
 	}
 
-	if !bundleVerified && co.RekorClient != nil {
+	if !bundleVerified && co.RekorClient != nil && !co.SkipTlogVerify {
 		if co.SigVerifier != nil {
 			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
 			if err != nil {

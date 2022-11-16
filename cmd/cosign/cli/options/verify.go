@@ -23,6 +23,7 @@ type CommonVerifyOptions struct {
 	Offline          bool // Force offline verification
 	TSACertChainPath string
 	TSAServerURL     string
+	SkipTlogVerify   bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -34,6 +35,9 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
 		"path to certificate chain PEM file for the Timestamp Authority")
+
+	cmd.Flags().BoolVar(&o.SkipTlogVerify, "skip-tlog-verify", false,
+		"skip tlog verification")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.

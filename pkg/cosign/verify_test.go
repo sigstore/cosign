@@ -470,8 +470,73 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		SigVerifier:      sv,
 		TSAClient:        client,
 		TSACertChainPath: file.Name(),
+		SkipTlogVerify:   true,
 	}); err != nil || !bundleVerified {
-		t.Fatalf("unexpected error while verifying signature, got %s", err)
+		t.Fatalf("unexpected error while verifying signature, got %v", err)
+	}
+}
+
+func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	// Add a fake rekor client - this makes it look like there's a matching
+	// tlog entry for the signature during validation (even though it does not
+	// match the underlying data / key)
+	mClient := new(client.Rekor)
+	mClient.Entries = &mock.EntriesClient{
+		Entries: []*models.LogEntry{&data},
+	}
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+	sv, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatalf("error generating verifier: %v", err)
+	}
+	payloadSigner := payload.NewSigner(sv)
+	tsaSigner := tsa.NewSigner(payloadSigner, client)
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	payload := []byte{1, 2, 3, 4}
+	sig, _, err := tsaSigner.Sign(context.Background(), bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
+	}
+	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
+		SigVerifier:      sv,
+		TSAClient:        client,
+		TSACertChainPath: file.Name(),
+		RekorClient:      mClient,
+	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
+		// TODO(wlynch): This is a weak test, since this is really failing because
+		// there is no inclusion proof for the Rekor entry rather than failing to
+		// validate the Rekor public key itself. At the very least this ensures
+		// that we're hitting tlog validation during signature checking,
+		// but we should look into improving this once there is an in-memory
+		// Rekor client that is capable of performing inclusion proof validation
+		// in unit tests.
+		t.Fatalf("expected error while verifying signature, got %s", err)
 	}
 }
 
