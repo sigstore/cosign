@@ -170,27 +170,33 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return err
 		}
-		if b.Cert == "" {
+		// A certificate is required in the bundle unless we specified with
+		//  --key, --sk, or --certificate.
+		if b.Cert == "" && co.SigVerifier == nil && cert == nil {
 			return fmt.Errorf("bundle does not contain cert for verification, please provide public key")
 		}
-		// b.Cert can either be a certificate or public key
-		certBytes := []byte(b.Cert)
-		if isb64(certBytes) {
-			certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
-		}
-		cert, err = loadCertFromPEM(certBytes)
-		if err != nil {
-			// check if cert is actually a public key
-			co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
-			if err != nil {
-				return fmt.Errorf("loading verifier from bundle: %w", err)
+		// We have to condition on this because sign-blob may not output the signing
+		// key to the bundle when there is no tlog upload.
+		if b.Cert != "" {
+			// b.Cert can either be a certificate or public key
+			certBytes := []byte(b.Cert)
+			if isb64(certBytes) {
+				certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
 			}
-		} else {
-			if c.CertChain != "" {
-				// Load certificate chain
-				chain, err = loadCertChainFromFileOrURL(c.CertChain)
+			cert, err = loadCertFromPEM(certBytes)
+			if err != nil {
+				// check if cert is actually a public key
+				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
 				if err != nil {
-					return err
+					return fmt.Errorf("loading verifier from bundle: %w", err)
+				}
+			} else {
+				if c.CertChain != "" {
+					// Load certificate chain
+					chain, err = loadCertChainFromFileOrURL(c.CertChain)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
