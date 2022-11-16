@@ -693,12 +693,13 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, fmt.Errorf("unable to verify TSA bundle: %w", err)
 		}
 	}
+	if co.SkipTlogVerify {
+		return bundleVerified, nil
+	}
 
-	if !co.SkipTlogVerify {
-		bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
-		if err != nil {
-			return false, fmt.Errorf("error verifying bundle: %w", err)
-		}
+	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
+	if err != nil {
+		return false, fmt.Errorf("error verifying bundle: %w", err)
 	}
 
 	// If the --offline flag was specified, fail here
@@ -706,7 +707,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		return false, fmt.Errorf("offline verification failed")
 	}
 
-	if !bundleVerified && co.RekorClient != nil && !co.SkipTlogVerify {
+	if !bundleVerified && co.RekorClient != nil {
 		if co.SigVerifier != nil {
 			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
 			if err != nil {

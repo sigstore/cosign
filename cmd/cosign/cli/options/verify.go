@@ -36,7 +36,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
 		"path to certificate chain PEM file for the Timestamp Authority")
 
-	cmd.Flags().BoolVar(&o.SkipTlogVerify, "skip-tlog-verify", false,
+	cmd.Flags().BoolVar(&o.SkipTlogVerify, "insecure-skip-tlog-verify", false,
 		"skip tlog verification")
 }
 

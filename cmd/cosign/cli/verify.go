@@ -129,7 +129,7 @@ against the transparency log.`,
 			}
 
 			if o.CommonVerifyOptions.SkipTlogVerify {
-				fmt.Fprintln(os.Stderr, "**Warning** Skipping tlog verification lacks of transparency and auditability verification for the signature.")
+				fmt.Fprintln(os.Stderr, "**Warning** Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the signature.")
 			}
 
 			return v.Exec(cmd.Context(), args)
