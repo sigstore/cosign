@@ -60,12 +60,12 @@ func WithReplaceOp(ro ReplaceOp) SignOption {
 }
 
 type signatureOpts struct {
-	annotations map[string]string
-	bundle      *bundle.RekorBundle
-	tsaBundle   *bundle.TSABundle
-	cert        []byte
-	chain       []byte
-	mediaType   types.MediaType
+	annotations      map[string]string
+	bundle           *bundle.RekorBundle
+	rfc3161Timestamp *bundle.RFC3161Timestamp
+	cert             []byte
+	chain            []byte
+	mediaType        types.MediaType
 }
 
 type SignatureOption func(*signatureOpts)
@@ -84,10 +84,10 @@ func WithBundle(b *bundle.RekorBundle) SignatureOption {
 	}
 }
 
-// WithTSABundle specifies the new TSABundle the Signature should have.
-func WithTSABundle(b *bundle.TSABundle) SignatureOption {
+// WithRFC3161Timestamp specifies the new RFC3161Timestamp the Signature should have.
+func WithRFC3161Timestamp(b *bundle.RFC3161Timestamp) SignatureOption {
 	return func(so *signatureOpts) {
-		so.tsaBundle = b
+		so.rfc3161Timestamp = b
 	}
 }
 

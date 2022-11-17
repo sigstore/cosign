@@ -528,7 +528,7 @@ func TestRekorBundle(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
-func TestTSABundle(t *testing.T) {
+func TestRFC3161Timestamp(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, env.VariableExperimental.String(), "1")()
 	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
@@ -584,7 +584,7 @@ func TestTSABundle(t *testing.T) {
 	must(verifyTSA(pubKeyPath, imgName, true, nil, "", server.URL, file.Name(), true), t)
 }
 
-func TestRekorBundleAndTSABundle(t *testing.T) {
+func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, env.VariableExperimental.String(), "1")()
 	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146

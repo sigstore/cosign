@@ -44,9 +44,9 @@ const (
 	// PEM-encoded ECDSA private key
 	ECPrivateKeyPemType = "EC PRIVATE KEY"
 	// PEM-encoded PKCS #8 RSA, ECDSA or ED25519 private key
-	PrivateKeyPemType = "PRIVATE KEY"
-	BundleKey         = static.BundleAnnotationKey
-	TSABundleKey      = static.TSABundleAnnotationKey
+	PrivateKeyPemType   = "PRIVATE KEY"
+	BundleKey           = static.BundleAnnotationKey
+	RFC3161TimestampKey = static.RFC3161TimestampAnnotationKey
 )
 
 // PassFunc is the function to be called to retrieve the signer password. If

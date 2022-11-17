@@ -447,7 +447,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	})
 }
 
-func TestNewSignatureCertChainAndRekorTSABundle(t *testing.T) {
+func TestNewSignatureCertChainAndRekorRFC3161Timestamp(t *testing.T) {
 	payload := "this is the other content!"
 	b64sig := "b64 content="
 
@@ -486,7 +486,7 @@ Ve/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup
 Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 -----END CERTIFICATE-----
 `)
-		b = &bundle.TSABundle{
+		b = &bundle.RFC3161Timestamp{
 			SignedRFC3161Timestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
 		}
 		rekorBundle = &bundle.RekorBundle{
@@ -501,7 +501,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	)
 
 	l, err := NewSignature([]byte(payload), b64sig,
-		WithCertChain(cert, chain), WithTSABundle(b))
+		WithCertChain(cert, chain), WithRFC3161Timestamp(b))
 	if err != nil {
 		t.Fatalf("NewSignature() = %v", err)
 	}
@@ -523,10 +523,10 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			t.Errorf("Base64Signature() = %s, wanted %s", got, want)
 		}
 
-		if got, err := l.TSABundle(); err != nil {
-			t.Fatalf("TSABundle() = %v", err)
+		if got, err := l.RFC3161Timestamp(); err != nil {
+			t.Fatalf("RFC3161Timestamp() = %v", err)
 		} else if got != b {
-			t.Errorf("TSABundle() = %#v, wanted %#v", got, b)
+			t.Errorf("RFC3161Timestamp() = %#v, wanted %#v", got, b)
 		}
 
 		if got, err := l.Cert(); err != nil {
@@ -548,7 +548,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			CertificateAnnotationKey: string(cert),
 			ChainAnnotationKey:       string(chain),
 
-			TSABundleAnnotationKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
+			RFC3161TimestampAnnotationKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
 		}
 		got, err := l.Annotations()
 		if err != nil {
@@ -560,7 +560,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	})
 
 	newSig, err := NewSignature([]byte(payload), b64sig,
-		WithCertChain(cert, chain), WithTSABundle(b), WithBundle(rekorBundle))
+		WithCertChain(cert, chain), WithRFC3161Timestamp(b), WithBundle(rekorBundle))
 	if err != nil {
 		t.Fatalf("NewSignature() = %v", err)
 	}
@@ -588,10 +588,10 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			t.Errorf("Bundle() = %#v, wanted %#v", got, b)
 		}
 
-		if got, err := newSig.TSABundle(); err != nil {
-			t.Fatalf("TSABundle() = %v", err)
+		if got, err := newSig.RFC3161Timestamp(); err != nil {
+			t.Fatalf("RFC3161Timestamp() = %v", err)
 		} else if got != b {
-			t.Errorf("TSABundle() = %#v, wanted %#v", got, b)
+			t.Errorf("RFC3161Timestamp() = %#v, wanted %#v", got, b)
 		}
 
 		if got, err := newSig.Cert(); err != nil {
@@ -613,8 +613,8 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			CertificateAnnotationKey: string(cert),
 			ChainAnnotationKey:       string(chain),
 
-			TSABundleAnnotationKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
-			BundleAnnotationKey:    `{"SignedEntryTimestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE=","Payload":{"body":"REMOVED","integratedTime":1631646761,"logIndex":693591,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}}`,
+			RFC3161TimestampAnnotationKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
+			BundleAnnotationKey:           `{"SignedEntryTimestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE=","Payload":{"body":"REMOVED","integratedTime":1631646761,"logIndex":693591,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}}`,
 		}
 		got, err := newSig.Annotations()
 		if err != nil {

@@ -14,18 +14,18 @@
 
 package bundle
 
-// TSABundle holds metadata about timestamp RFC3161 verification data.
-type TSABundle struct {
+// RFC3161Timestamp holds metadata about timestamp RFC3161 verification data.
+type RFC3161Timestamp struct {
 	// SignedRFC3161Timestamp contains a RFC3161 signed timestamp provided by a time-stamping server.
 	// Clients MUST verify the hashed message in the message imprint
 	// against the signature in the bundle. This is encoded as base64.
 	SignedRFC3161Timestamp []byte
 }
 
-// TimestampToTSABundle receives a base64 encoded RFC3161 timestamp.
-func TimestampToTSABundle(timestampRFC3161 []byte) *TSABundle {
+// TimestampToRFC3161Timestamp receives a base64 encoded RFC3161 timestamp.
+func TimestampToRFC3161Timestamp(timestampRFC3161 []byte) *RFC3161Timestamp {
 	if timestampRFC3161 != nil {
-		return &TSABundle{
+		return &RFC3161Timestamp{
 			SignedRFC3161Timestamp: timestampRFC3161,
 		}
 	}

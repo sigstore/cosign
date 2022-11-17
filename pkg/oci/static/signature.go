@@ -28,11 +28,11 @@ import (
 )
 
 const (
-	SignatureAnnotationKey   = "dev.cosignproject.cosign/signature"
-	CertificateAnnotationKey = "dev.sigstore.cosign/certificate"
-	ChainAnnotationKey       = "dev.sigstore.cosign/chain"
-	BundleAnnotationKey      = "dev.sigstore.cosign/bundle"
-	TSABundleAnnotationKey   = "dev.sigstore.cosign/3161timestamp"
+	SignatureAnnotationKey        = "dev.cosignproject.cosign/signature"
+	CertificateAnnotationKey      = "dev.sigstore.cosign/certificate"
+	ChainAnnotationKey            = "dev.sigstore.cosign/chain"
+	BundleAnnotationKey           = "dev.sigstore.cosign/bundle"
+	RFC3161TimestampAnnotationKey = "dev.sigstore.cosign/rfc3161timestamp"
 )
 
 // NewSignature constructs a new oci.Signature from the provided options.
@@ -86,11 +86,11 @@ func Copy(sig oci.Signature) (oci.Signature, error) {
 	}
 	opts = append(opts, WithBundle(bundle))
 
-	tsaBundle, err := sig.TSABundle()
+	rfc3161Timestamp, err := sig.RFC3161Timestamp()
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, WithTSABundle(tsaBundle))
+	opts = append(opts, WithRFC3161Timestamp(rfc3161Timestamp))
 
 	cert, err := sig.Cert()
 	if err != nil {
@@ -169,9 +169,9 @@ func (l *staticLayer) Bundle() (*bundle.RekorBundle, error) {
 	return l.opts.Bundle, nil
 }
 
-// TSABundle implements oci.Signature
-func (l *staticLayer) TSABundle() (*bundle.TSABundle, error) {
-	return l.opts.TSABundle, nil
+// RFC3161Timestamp implements oci.Signature
+func (l *staticLayer) RFC3161Timestamp() (*bundle.RFC3161Timestamp, error) {
+	return l.opts.RFC3161Timestamp, nil
 }
 
 // Digest implements v1.Layer

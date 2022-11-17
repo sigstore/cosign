@@ -94,9 +94,9 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	if err != nil {
 		return nil, nil, err
 	}
-	bundle := bundle.TimestampToTSABundle(responseBytes)
+	bundle := bundle.TimestampToRFC3161Timestamp(responseBytes)
 
-	newSig, err := mutate.Signature(sig, mutate.WithTSABundle(bundle))
+	newSig, err := mutate.Signature(sig, mutate.WithRFC3161Timestamp(bundle))
 	if err != nil {
 		return nil, nil, err
 	}

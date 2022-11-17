@@ -60,7 +60,7 @@ type Signature interface {
 	// Fulcio key in the transparency log.
 	Bundle() (*bundle.RekorBundle, error)
 
-	// TSABundle fetches the optional metadata that records a
+	// RFC3161Timestamp() fetches the optional metadata that records a
 	// RFC3161 signed timestamp.
-	TSABundle() (*bundle.TSABundle, error)
+	RFC3161Timestamp() (*bundle.RFC3161Timestamp, error)
 }

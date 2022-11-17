@@ -666,9 +666,9 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 	if co.TSACerts != nil {
-		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSACerts)
+		bundleVerified, err = VerifyRFC3161Timestamp(ctx, sig, co.TSACerts)
 		if err != nil {
-			return false, fmt.Errorf("unable to verify TSA bundle: %w", err)
+			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
 		}
 	}
 	if co.SkipTlogVerify {
@@ -986,8 +986,8 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, co *CheckOpts, rekorCl
 	return true, nil
 }
 
-func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaCerts *x509.CertPool) (bool, error) {
-	bundle, err := sig.TSABundle()
+func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x509.CertPool) (bool, error) {
+	bundle, err := sig.RFC3161Timestamp()
 	if err != nil {
 		return false, err
 	} else if bundle == nil {
