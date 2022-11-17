@@ -32,7 +32,6 @@ import (
 	"net"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -450,15 +449,10 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
-	if err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-	defer os.Remove(file.Name())
-
-	_, err = file.WriteString(chain.Payload)
-	if err != nil {
-		t.Fatalf("error writing chain payload to temp file: %v", err)
+	tsaCertPool := x509.NewCertPool()
+	ok := tsaCertPool.AppendCertsFromPEM([]byte(chain.Payload))
+	if !ok {
+		t.Fatal("error parsing response into Timestamp while appending certs from PEM")
 	}
 
 	payload := []byte{1, 2, 3, 4}
@@ -467,10 +461,10 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		t.Fatalf("error signing the payload with the tsa client server: %v", err)
 	}
 	if bundleVerified, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
-		SigVerifier:      sv,
-		TSAClient:        client,
-		TSACertChainPath: file.Name(),
-		SkipTlogVerify:   true,
+		SigVerifier:    sv,
+		TSAClient:      client,
+		TSACerts:       tsaCertPool,
+		SkipTlogVerify: true,
 	}); err != nil || !bundleVerified {
 		t.Fatalf("unexpected error while verifying signature, got %v", err)
 	}
@@ -507,15 +501,10 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
-	if err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-	defer os.Remove(file.Name())
-
-	_, err = file.WriteString(chain.Payload)
-	if err != nil {
-		t.Fatalf("error writing chain payload to temp file: %v", err)
+	tsaCertPool := x509.NewCertPool()
+	ok := tsaCertPool.AppendCertsFromPEM([]byte(chain.Payload))
+	if !ok {
+		t.Fatal("error parsing response into Timestamp while appending certs from PEM")
 	}
 
 	payload := []byte{1, 2, 3, 4}
@@ -524,10 +513,10 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
 	}
 	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
-		SigVerifier:      sv,
-		TSAClient:        client,
-		TSACertChainPath: file.Name(),
-		RekorClient:      mClient,
+		SigVerifier: sv,
+		TSAClient:   client,
+		TSACerts:    tsaCertPool,
+		RekorClient: mClient,
 	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
 		// TODO(wlynch): This is a weak test, since this is really failing because
 		// there is no inclusion proof for the Rekor entry rather than failing to
