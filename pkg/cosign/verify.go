@@ -28,7 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -132,8 +131,8 @@ type CheckOpts struct {
 	// TSAClient, if set, is used to verify signatures using a RFC3161 time-stamping server.
 	TSAClient *tsaclient.TimestampAuthority
 
-	// TSACertChainPath set the path to PEM-encoded certificate chain to act as a timestamping authority.
-	TSACertChainPath string
+	// TSACerts are the intermediate CA certs used to verify a time-stamping data.
+	TSACerts *x509.CertPool
 
 	// SkipTlogVerify skip tlog verification
 	SkipTlogVerify bool
@@ -688,7 +687,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 	if co.TSAClient != nil {
-		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSAClient, co.TSACertChainPath)
+		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSAClient, co.TSACerts)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify TSA bundle: %w", err)
 		}
@@ -950,7 +949,7 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 	return true, nil
 }
 
-func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclient.TimestampAuthority, tsaCertChainPath string) (bool, error) {
+func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclient.TimestampAuthority, tsaCerts *x509.CertPool) (bool, error) {
 	bundle, err := sig.TSABundle()
 	if err != nil {
 		return false, err
@@ -972,20 +971,8 @@ func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclien
 	if err != nil {
 		return false, fmt.Errorf("reading DecodeString: %w", err)
 	}
-	// TODO: Add support for TUF certificates.
-	pemBytes, err := os.ReadFile(filepath.Clean(tsaCertChainPath))
-	if err != nil {
-		return false, fmt.Errorf("error reading certification chain path file: %w", err)
-	}
-	// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
-	// This relies on untrusted leaf certificate.
-	certPool := x509.NewCertPool()
-	ok := certPool.AppendCertsFromPEM(pemBytes)
-	if !ok {
-		return false, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
-	}
 
-	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(sigBytes), certPool)
+	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(sigBytes), tsaCerts)
 	if err != nil {
 		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}

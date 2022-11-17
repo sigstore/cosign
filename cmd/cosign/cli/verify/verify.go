@@ -103,6 +103,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
+
 	co := &cosign.CheckOpts{
 		Annotations:                  c.Annotations.Annotations,
 		RegistryClientOpts:           ociremoteOpts,
@@ -117,7 +118,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
 		Offline:                      c.Offline,
-		TSACertChainPath:             c.TSACertChainPath,
 		SkipTlogVerify:               c.SkipTlogVerify,
 	}
 	if c.CheckClaims {
@@ -134,6 +134,19 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
 			}
+			// TODO: Add support for TUF certificates.
+			pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
+			if err != nil {
+				return fmt.Errorf("error reading certification chain path file: %w", err)
+			}
+			// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
+			// This relies on untrusted leaf certificate.
+			tsaCertPool := x509.NewCertPool()
+			ok := tsaCertPool.AppendCertsFromPEM(pemBytes)
+			if !ok {
+				return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+			}
+			co.TSACerts = tsaCertPool
 		}
 	}
 
