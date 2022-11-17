@@ -76,8 +76,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle")
 	}
 
-	// We can't have both a key and a security key
-	if options.NOf(c.KeyRef, c.Sk) > 1 {
+	// Key, sk, and cert are mutually exclusive.
+	if options.NOf(c.KeyRef, c.Sk, c.CertRef) > 1 {
 		return &options.KeyParseError{}
 	}
 

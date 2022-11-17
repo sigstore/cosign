@@ -353,13 +353,12 @@ func TestVerifyBlob(t *testing.T) {
 			shouldErr:    true,
 		},
 		{
-			name:         "valid signature with unexpired certificate",
+			name:         "valid signature with unexpired certificate - no rekor entry",
 			blob:         blobBytes,
 			signature:    blobSignature,
-			key:          pubKeyBytes,
 			cert:         unexpiredLeafCert,
 			experimental: false,
-			shouldErr:    false,
+			shouldErr:    true,
 		},
 		{
 			name:         "valid signature with unexpired certificate - bad bundle cert mismatch",
