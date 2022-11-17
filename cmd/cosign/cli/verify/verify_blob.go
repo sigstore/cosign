@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -194,18 +195,20 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return err
 		}
-		if chain != nil {
-			// Set the last one in the co.RootCerts. This is trusted, as its passed in
-			// via the CLI.
-			if co.RootCerts == nil {
-				co.RootCerts = x509.NewCertPool()
-			}
-			co.RootCerts.AddCert(chain[len(chain)-1])
-			// Use the rest as the cert chain in the signature object.
-			chainPEM, err = cryptoutils.MarshalCertificatesToPEM(chain)
-			if err != nil {
-				return err
-			}
+		if chain == nil {
+			return errors.New("expected certificate chain in --certificate-chain")
+		}
+		// Set the last one in the co.RootCerts. This is trusted, as its passed in
+		// via the CLI.
+		if co.RootCerts == nil {
+			co.RootCerts = x509.NewCertPool()
+		}
+		co.RootCerts.AddCert(chain[len(chain)-1])
+		// Use the whole as the cert chain in the signature object.
+		// The last one is omitted because it is considered the "root".
+		chainPEM, err = cryptoutils.MarshalCertificatesToPEM(chain)
+		if err != nil {
+			return err
 		}
 	}
 
