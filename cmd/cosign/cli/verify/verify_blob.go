@@ -68,7 +68,6 @@ type VerifyBlobCmd struct {
 // nolint
 func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	var cert *x509.Certificate
-	var chain []*x509.Certificate
 	opts := make([]static.Option, 0)
 
 	// Require a certificate/key OR a local bundle file that has the cert.
@@ -150,20 +149,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return err
 		}
-		if c.CertChain != "" {
-			// Verify certificate with chain
-			chain, err = loadCertChainFromFileOrURL(c.CertChain)
-			if err != nil {
-				return err
-			}
-		}
-		if c.SCTRef != "" {
-			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
-			if err != nil {
-				return fmt.Errorf("reading sct from file: %w", err)
-			}
-			co.SCT = sct
-		}
 	}
 	if c.BundlePath != "" {
 		b, err := cosign.FetchLocalSignedPayloadFromPath(c.BundlePath)
@@ -190,41 +175,50 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 				if err != nil {
 					return fmt.Errorf("loading verifier from bundle: %w", err)
 				}
-			} else {
-				if c.CertChain != "" {
-					// Load certificate chain
-					chain, err = loadCertChainFromFileOrURL(c.CertChain)
-					if err != nil {
-						return err
-					}
-				}
 			}
 		}
 		opts = append(opts, static.WithBundle(b.Bundle))
 	}
+	// Set an SCT if provided via the CLI.
+	if c.SCTRef != "" {
+		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
+		if err != nil {
+			return fmt.Errorf("reading sct from file: %w", err)
+		}
+		co.SCT = sct
+	}
+	// Set a cert chain if provided.
+	var chainPEM []byte
+	if c.CertChain != "" {
+		chain, err := loadCertChainFromFileOrURL(c.CertChain)
+		if err != nil {
+			return err
+		}
+		if chain != nil {
+			// Set the last one in the co.RootCerts. This is trusted, as its passed in
+			// via the CLI.
+			if co.RootCerts == nil {
+				co.RootCerts = x509.NewCertPool()
+			}
+			co.RootCerts.AddCert(chain[len(chain)-1])
+			// Use the rest as the cert chain in the signature object.
+			chainPEM, err = cryptoutils.MarshalCertificatesToPEM(chain)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
-	// Gather the cert for the signature.
+	// Gather the cert for the signature and add the cert along with the
+	// cert chain into the signature object.
 	var certPEM []byte
 	if cert != nil {
 		certPEM, err = cryptoutils.MarshalCertificateToPEM(cert)
 		if err != nil {
 			return err
 		}
+		opts = append(opts, static.WithCertChain(certPEM, chainPEM))
 	}
-	var chainPEM []byte
-	if chain != nil {
-		// Set the last one in the co.RootCerts
-		if co.RootCerts == nil {
-			co.RootCerts = x509.NewCertPool()
-		}
-		co.RootCerts.AddCert(chain[len(chain)-1])
-		// Use the rest as the cert chain.
-		chainPEM, err = cryptoutils.MarshalCertificatesToPEM(chain)
-		if err != nil {
-			return err
-		}
-	}
-	opts = append(opts, static.WithCertChain(certPEM, chainPEM))
 
 	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
 	// TODO: This verifier only supports verification of a single signer/signature on
