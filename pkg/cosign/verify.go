@@ -56,7 +56,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/generated/client"
 	tsaverification "github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
@@ -127,9 +126,6 @@ type CheckOpts struct {
 
 	// Force offline verification of the signature
 	Offline bool
-
-	// TSAClient, if set, is used to verify signatures using a RFC3161 time-stamping server.
-	TSAClient *tsaclient.TimestampAuthority
 
 	// TSACerts are the intermediate CA certs used to verify a time-stamping data.
 	TSACerts *x509.CertPool
@@ -686,8 +682,8 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return bundleVerified, err
 		}
 	}
-	if co.TSAClient != nil {
-		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSAClient, co.TSACerts)
+	if co.TSACerts != nil {
+		bundleVerified, err = VerifyTSABundle(ctx, sig, co.TSACerts)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify TSA bundle: %w", err)
 		}
@@ -949,7 +945,7 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 	return true, nil
 }
 
-func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaClient *tsaclient.TimestampAuthority, tsaCerts *x509.CertPool) (bool, error) {
+func VerifyTSABundle(ctx context.Context, sig oci.Signature, tsaCerts *x509.CertPool) (bool, error) {
 	bundle, err := sig.TSABundle()
 	if err != nil {
 		return false, err

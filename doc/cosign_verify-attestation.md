@@ -84,7 +84,6 @@ cosign verify-attestation [flags]
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-cert-chain string                                                              path to certificate chain PEM file for the Timestamp Authority
-      --timestamp-server-url string                                                              url to a timestamp RFC3161 server, default none
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
 ```
 

@@ -119,7 +119,6 @@ against the transparency log.`,
 				SignatureRef:                 o.SignatureRef,
 				LocalImage:                   o.LocalImage,
 				Offline:                      o.CommonVerifyOptions.Offline,
-				TSAServerURL:                 o.CommonVerifyOptions.TSAServerURL,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
