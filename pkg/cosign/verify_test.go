@@ -462,7 +462,6 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 	}
 	if bundleVerified, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
 		SigVerifier:    sv,
-		TSAClient:      client,
 		TSACerts:       tsaCertPool,
 		SkipTlogVerify: true,
 	}); err != nil || !bundleVerified {
@@ -514,7 +513,6 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	}
 	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
 		SigVerifier: sv,
-		TSAClient:   client,
 		TSACerts:    tsaCertPool,
 		RekorClient: mClient,
 	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {

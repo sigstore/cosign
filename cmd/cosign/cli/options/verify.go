@@ -22,16 +22,12 @@ import (
 type CommonVerifyOptions struct {
 	Offline          bool // Force offline verification
 	TSACertChainPath string
-	TSAServerURL     string
 	SkipTlogVerify   bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Offline, "offline", false,
 		"only allow offline verification")
-
-	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
-		"url to a timestamp RFC3161 server, default none")
 
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
 		"path to certificate chain PEM file for the Timestamp Authority")

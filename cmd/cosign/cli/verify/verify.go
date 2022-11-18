@@ -43,7 +43,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
@@ -124,30 +123,24 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	if c.TSAServerURL != "" {
-		co.TSAClient, err = tsaclient.GetTimestampClient(c.TSAServerURL)
+	if c.TSACertChainPath != "" {
+		_, err := os.Stat(c.TSACertChainPath)
 		if err != nil {
-			return fmt.Errorf("failed to create TSA client: %w", err)
+			return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
 		}
-		if c.TSACertChainPath != "" {
-			_, err := os.Stat(c.TSACertChainPath)
-			if err != nil {
-				return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
-			}
-			// TODO: Add support for TUF certificates.
-			pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
-			if err != nil {
-				return fmt.Errorf("error reading certification chain path file: %w", err)
-			}
-			// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
-			// This relies on untrusted leaf certificate.
-			tsaCertPool := x509.NewCertPool()
-			ok := tsaCertPool.AppendCertsFromPEM(pemBytes)
-			if !ok {
-				return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
-			}
-			co.TSACerts = tsaCertPool
+		// TODO: Add support for TUF certificates.
+		pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
+		if err != nil {
+			return fmt.Errorf("error reading certification chain path file: %w", err)
 		}
+		// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
+		// This relies on untrusted leaf certificate.
+		tsaCertPool := x509.NewCertPool()
+		ok := tsaCertPool.AppendCertsFromPEM(pemBytes)
+		if !ok {
+			return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+		}
+		co.TSACerts = tsaCertPool
 	}
 
 	if keylessVerification(c.KeyRef, c.Sk) {
