@@ -93,15 +93,16 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, i
 	}
 
 	for _, t := range cleanTags {
+    if _, err := remote.Get(t, remoteOpts...); err != nil {
+      var te *transport.Error
+      if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
+        continue
+      }
+    }
 		if err := remote.Delete(t, remoteOpts...); err != nil {
 			var te *transport.Error
-			if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
-				// If the tag doesn't exist, some registries may
-				// respond with a 404, which shouldn't be considered an
-				// error.
-			} else {
-				fmt.Fprintf(os.Stderr, "could not delete %s from %s\n: %v\n", t, imageRef, err)
-			}
+			errors.As(err, &te)
+			fmt.Fprintf(os.Stderr, "could not delete %s from %s\n: %v\n", t, imageRef, err)
 		} else {
 			fmt.Fprintf(os.Stderr, "Removed %s from %s\n", t, imageRef)
 		}
