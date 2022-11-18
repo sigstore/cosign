@@ -30,12 +30,12 @@ import (
 )
 
 type SignedPayload struct {
-	Base64Signature string
-	Payload         []byte
-	Cert            *x509.Certificate
-	Chain           []*x509.Certificate
-	Bundle          *bundle.RekorBundle
-	TSABundle       *bundle.TSABundle
+	Base64Signature  string
+	Payload          []byte
+	Cert             *x509.Certificate
+	Chain            []*x509.Certificate
+	Bundle           *bundle.RekorBundle
+	RFC3161Timestamp *bundle.RFC3161Timestamp
 }
 
 type LocalSignedPayload struct {
@@ -103,7 +103,7 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 				return err
 			}
 
-			signatures[i].TSABundle, err = sig.TSABundle()
+			signatures[i].RFC3161Timestamp, err = sig.RFC3161Timestamp()
 			if err != nil {
 				return err
 			}

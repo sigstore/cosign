@@ -381,11 +381,11 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 				}
 				ss.Optional["Bundle"] = bundle
 			}
-			if tsaBundle, err := sig.TSABundle(); err == nil && tsaBundle != nil {
+			if rfc3161Timestamp, err := sig.RFC3161Timestamp(); err == nil && rfc3161Timestamp != nil {
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["TSABundle"] = tsaBundle
+				ss.Optional["RFC3161Timestamp"] = rfc3161Timestamp
 			}
 
 			outputKeys = append(outputKeys, ss)

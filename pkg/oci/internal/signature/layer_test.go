@@ -299,7 +299,7 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 		wantCertErr    error
 		wantChain      int
 		wantChainErr   error
-		wantBundle     *bundle.TSABundle
+		wantBundle     *bundle.RFC3161Timestamp
 		wantBundleErr  error
 	}{{
 		name: "just payload and signature",
@@ -320,10 +320,10 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey:       "blah",
-					certkey:      "",
-					chainkey:     "",
-					TSABundleKey: "",
+					sigkey:              "blah",
+					certkey:             "",
+					chainkey:            "",
+					RFC3161TimestampKey: "",
 				},
 			},
 		},
@@ -344,13 +344,13 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 			desc: v1.Descriptor{
 				Digest: digest,
 				Annotations: map[string]string{
-					sigkey:       "blah",
-					TSABundleKey: `}`,
+					sigkey:              "blah",
+					RFC3161TimestampKey: `}`,
 				},
 			},
 		},
 		wantSig:       "blah",
-		wantBundleErr: errors.New(`unmarshaling tsa bundle: invalid character '}' looking for beginning of value`),
+		wantBundleErr: errors.New(`unmarshaling RFC3161 timestamp bundle: invalid character '}' looking for beginning of value`),
 	}, {
 		name: "min plus bad cert",
 		l: &sigLayer{
@@ -380,7 +380,7 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 		wantSig:      "blah",
 		wantChainErr: errors.New(`error during PEM decoding`),
 	}, {
-		name: "min plus TSA bundle",
+		name: "min plus RFC3161 timestamp bundle",
 		l: &sigLayer{
 			Layer: layer,
 			desc: v1.Descriptor{
@@ -389,12 +389,12 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 					sigkey: "TSA blah",
 					// This was extracted from gcr.io/distroless/static:nonroot on 2021/09/16.
 					// The Body has been removed for brevity
-					TSABundleKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
+					RFC3161TimestampKey: `{"SignedRFC3161Timestamp":"MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="}`,
 				},
 			},
 		},
 		wantSig: "TSA blah",
-		wantBundle: &bundle.TSABundle{
+		wantBundle: &bundle.RFC3161Timestamp{
 			SignedRFC3161Timestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
 		},
 	}}
@@ -442,13 +442,13 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 				t.Errorf("Chain() = %v, wanted chain of length %d", got, test.wantChain)
 			}
 
-			switch got, err := test.l.TSABundle(); {
+			switch got, err := test.l.RFC3161Timestamp(); {
 			case (err != nil) != (test.wantBundleErr != nil):
-				t.Errorf("TSABundle() = %v, wanted %v", err, test.wantBundleErr)
+				t.Errorf("RFC3161Timestamp() = %v, wanted %v", err, test.wantBundleErr)
 			case (err != nil) && (test.wantBundleErr != nil) && err.Error() != test.wantBundleErr.Error():
-				t.Errorf("TSABundle() = %v, wanted %v", err, test.wantBundleErr)
+				t.Errorf("RFC3161Timestamp() = %v, wanted %v", err, test.wantBundleErr)
 			case !cmp.Equal(got, test.wantBundle):
-				t.Errorf("TSABundle() %s", cmp.Diff(got, test.wantBundle))
+				t.Errorf("RFC3161Timestamp() %s", cmp.Diff(got, test.wantBundle))
 			}
 		})
 	}

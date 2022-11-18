@@ -21,27 +21,27 @@ import (
 	"github.com/go-openapi/strfmt"
 )
 
-func TestTSABundle(t *testing.T) {
+func TestRFC3161Timestamp(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		timestampRFC3161Entry []byte
-		expectedTSABundle     *TSABundle
+		name                     string
+		timestampRFC3161Entry    []byte
+		expectedRFC3161Timestamp *RFC3161Timestamp
 	}{{
-		name:                  "nil timestamp entry",
-		timestampRFC3161Entry: nil,
-		expectedTSABundle:     nil,
+		name:                     "nil timestamp entry",
+		timestampRFC3161Entry:    nil,
+		expectedRFC3161Timestamp: nil,
 	}, {
 		name:                  "timestamp entry",
 		timestampRFC3161Entry: strfmt.Base64([]byte("signature")),
-		expectedTSABundle: &TSABundle{
+		expectedRFC3161Timestamp: &RFC3161Timestamp{
 			SignedRFC3161Timestamp: strfmt.Base64([]byte("signature")),
 		},
 	}}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotBundle := TimestampToTSABundle(tc.timestampRFC3161Entry)
-			if !reflect.DeepEqual(gotBundle, tc.expectedTSABundle) {
-				t.Errorf("TimestampToTSABundle returned %v, wanted %v", gotBundle, tc.expectedTSABundle)
+			gotBundle := TimestampToRFC3161Timestamp(tc.timestampRFC3161Entry)
+			if !reflect.DeepEqual(gotBundle, tc.expectedRFC3161Timestamp) {
+				t.Errorf("TimestampToRFC3161Timestamp returned %v, wanted %v", gotBundle, tc.expectedRFC3161Timestamp)
 			}
 		})
 	}

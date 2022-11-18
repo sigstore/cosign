@@ -128,18 +128,18 @@ func assertSignaturesEqual(t *testing.T, wanted, got oci.Signature) {
 		}
 	})
 
-	t.Run("TSA Bundles match", func(t *testing.T) {
+	t.Run("RFC3161 timestamp bundles match", func(t *testing.T) {
 		t.Helper()
-		wantedBundle, err := wanted.TSABundle()
+		wantedBundle, err := wanted.RFC3161Timestamp()
 		if err != nil {
 			t.Fatalf("wanted.Bundle() returned error: %v", err)
 		}
-		gotBundle, err := got.TSABundle()
+		gotBundle, err := got.RFC3161Timestamp()
 		if err != nil {
-			t.Fatalf("got.TSABundle() returned error: %v", err)
+			t.Fatalf("got.RFC3161Timestamp() returned error: %v", err)
 		}
 		if diff := cmp.Diff(wantedBundle, gotBundle); diff != "" {
-			t.Errorf("TSABundle() mismatch (-want +got):\n%s", diff)
+			t.Errorf("RFC3161Timestamp() mismatch (-want +got):\n%s", diff)
 		}
 	})
 
@@ -326,18 +326,18 @@ func TestSignatureWithBundle(t *testing.T) {
 	assertSignaturesEqual(t, expectedSig, newSig)
 }
 
-func TestSignatureWithTSABundle(t *testing.T) {
+func TestSignatureWithRFC3161Timestamp(t *testing.T) {
 	payload := "this is the TestSignatureWithBundle content!"
 	b64sig := "b64 content2="
-	b := &bundle.TSABundle{
+	b := &bundle.RFC3161Timestamp{
 		SignedRFC3161Timestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
 	}
 	originalSig := mustCreateSignature(t, []byte(payload), b64sig)
-	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithTSABundle(b))
+	expectedSig := mustCreateSignature(t, []byte(payload), b64sig, static.WithRFC3161Timestamp(b))
 
-	newSig, err := Signature(originalSig, WithTSABundle(b))
+	newSig, err := Signature(originalSig, WithRFC3161Timestamp(b))
 	if err != nil {
-		t.Fatalf("Signature(WithTSABundle()) returned error: %v", err)
+		t.Fatalf("Signature(WithRFC3161Timestamp()) returned error: %v", err)
 	}
 
 	assertSignaturesEqual(t, expectedSig, newSig)
@@ -420,7 +420,7 @@ func TestSignatureWithEverythingTSA(t *testing.T) {
 		"foo":  "bar",
 		"test": "yes",
 	}
-	b := &bundle.TSABundle{
+	b := &bundle.RFC3161Timestamp{
 		SignedRFC3161Timestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
 	}
 	mediaType := types.MediaType("test/media.type")
@@ -429,13 +429,13 @@ func TestSignatureWithEverythingTSA(t *testing.T) {
 
 	expectedSig := mustCreateSignature(t, []byte(payload), b64sig,
 		static.WithAnnotations(annotations),
-		static.WithTSABundle(b),
+		static.WithRFC3161Timestamp(b),
 		static.WithCertChain(testCertBytes, testChainBytes),
 		static.WithLayerMediaType(mediaType))
 
 	newSig, err := Signature(originalSig,
 		WithAnnotations(annotations),
-		WithTSABundle(b),
+		WithRFC3161Timestamp(b),
 		WithCertChain(testCertBytes, testChainBytes),
 		WithMediaType(mediaType))
 
