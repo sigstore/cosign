@@ -22,21 +22,21 @@ import (
 // SignBlobOptions is the top level wrapper for the sign-blob command.
 // The new output-certificate flag is only in use when COSIGN_EXPERIMENTAL is enabled
 type SignBlobOptions struct {
-	Key               string
-	Base64Output      bool
-	Output            string // deprecated: TODO remove when the output flag is fully deprecated
-	OutputSignature   string // TODO: this should be the root output file arg.
-	OutputCertificate string
-	SecurityKey       SecurityKeyOptions
-	Fulcio            FulcioOptions
-	Rekor             RekorOptions
-	OIDC              OIDCOptions
-	Registry          RegistryOptions
-	BundlePath        string
-	SkipConfirmation  bool
-	TlogUpload        bool
-	TSAServerURL      string
-	TSABundlePath     string
+	Key                  string
+	Base64Output         bool
+	Output               string // deprecated: TODO remove when the output flag is fully deprecated
+	OutputSignature      string // TODO: this should be the root output file arg.
+	OutputCertificate    string
+	SecurityKey          SecurityKeyOptions
+	Fulcio               FulcioOptions
+	Rekor                RekorOptions
+	OIDC                 OIDCOptions
+	Registry             RegistryOptions
+	BundlePath           string
+	SkipConfirmation     bool
+	TlogUpload           bool
+	TSAServerURL         string
+	RFC3161TimestampPath string
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -80,7 +80,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none")
 
-	cmd.Flags().StringVar(&o.TSABundlePath, "tsa-bundle", "",
+	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
 		"write everything required to verify the blob to a FILE")
-	_ = cmd.Flags().SetAnnotation("tsa-bundle", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp-bundle", cobra.BashCompFilenameExt, []string{})
 }

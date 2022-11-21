@@ -72,8 +72,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	opts := make([]static.Option, 0)
 
 	// Require a certificate/key OR a local bundle file that has the cert.
-	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
-		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle")
+	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath, c.RFC3161TimestampPath) == 0 {
+		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle or --rfc3161-timestamp-bundle")
 	}
 
 	// Key, sk, and cert are mutually exclusive.
@@ -81,7 +81,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.KeyParseError{}
 	}
 
-	sig, err := base64signature(c.SigRef, c.BundlePath)
+	sig, err := base64signature(c.SigRef, c.BundlePath, c.RFC3161TimestampPath)
 	if err != nil {
 		return err
 	}
@@ -102,17 +102,37 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Offline:                      c.Offline,
-		TSACertChainPath:             c.KeyOpts.TSACertChainPath,
 	}
-	if c.KeyOpts.TSAServerURL != "" {
-		co.TSAClient, err = tclient.GetTimestampClient(c.KeyOpts.TSAServerURL)
+	if c.RFC3161TimestampPath != "" && c.KeyOpts.TSACertChainPath == "" {
+		return fmt.Errorf("timestamp-cert-chain is required to validate a rfc3161 timestamp bundle")
+	}
+	if c.KeyOpts.TSACertChainPath != "" {
+		_, err := os.Stat(c.KeyOpts.TSACertChainPath)
 		if err != nil {
-			return fmt.Errorf("failed to create TSA client: %w", err)
+			return fmt.Errorf("unable to open timestamp certificate chain file '%s: %w", c.KeyOpts.TSACertChainPath, err)
 		}
-		if c.KeyOpts.TSACertChainPath != "" {
-			_, err := os.Stat(c.KeyOpts.TSACertChainPath)
+		// TODO: Add support for TUF certificates.
+		pemBytes, err := os.ReadFile(filepath.Clean(c.KeyOpts.TSACertChainPath))
+		if err != nil {
+			return fmt.Errorf("error reading certification chain path file: %w", err)
+		}
+		// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
+		// This relies on untrusted leaf certificate.
+		tsaCertPool := x509.NewCertPool()
+		ok := tsaCertPool.AppendCertsFromPEM(pemBytes)
+		if !ok {
+			return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+		}
+		co.TSACerts = tsaCertPool
+		// Use default TUF roots if a cert chain is not provided.
+		if c.CertChain == "" {
+			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
-				return fmt.Errorf("unable to open timestamp certificate chain file '%s': %w", c.KeyOpts.TSACertChainPath, err)
+				return fmt.Errorf("getting Fulcio roots: %w", err)
+			}
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
 			}
 		}
 	}
@@ -194,6 +214,31 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 		opts = append(opts, static.WithBundle(b.Bundle))
 	}
+	if c.RFC3161TimestampPath != "" {
+		b, err := cosign.FetchLocalSignedPayloadFromPath(c.RFC3161TimestampPath)
+		if err != nil {
+			return err
+		}
+		// Note: RFC3161 timestamp does not set the certificate.
+		// We have to condition on this because sign-blob may not output the signing
+		// key to the bundle when there is no tlog upload.
+		if b.Cert != "" {
+			// b.Cert can either be a certificate or public key
+			certBytes := []byte(b.Cert)
+			if isb64(certBytes) {
+				certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
+			}
+			cert, err = loadCertFromPEM(certBytes)
+			if err != nil {
+				// check if cert is actually a public key
+				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
+				if err != nil {
+					return fmt.Errorf("loading verifier from rfc3161 timestamp bundle: %w", err)
+				}
+			}
+		}
+		opts = append(opts, static.WithRFC3161Timestamp(b.RFC3161Timestamp))
+	}
 	// Set an SCT if provided via the CLI.
 	if c.SCTRef != "" {
 		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
@@ -268,7 +313,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 }
 
 // base64signature returns the base64 encoded signature
-func base64signature(sigRef string, bundlePath string) (string, error) {
+func base64signature(sigRef string, bundlePath, rfc3161TimestampPath string) (string, error) {
 	var targetSig []byte
 	var err error
 	switch {
@@ -283,6 +328,12 @@ func base64signature(sigRef string, bundlePath string) (string, error) {
 		}
 	case bundlePath != "":
 		b, err := cosign.FetchLocalSignedPayloadFromPath(bundlePath)
+		if err != nil {
+			return "", err
+		}
+		targetSig = []byte(b.Base64Signature)
+	case rfc3161TimestampPath != "":
+		b, err := cosign.FetchLocalSignedPayloadFromPath(rfc3161TimestampPath)
 		if err != nil {
 			return "", err
 		}

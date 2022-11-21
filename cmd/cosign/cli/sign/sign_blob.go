@@ -79,7 +79,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 			return nil, err
 		}
 
-		signedPayload.TSABundle = cbundle.TimestampToTSABundle(respBytes)
+		signedPayload.RFC3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
 	}
 	if ShouldUploadToTlog(ctx, ko, nil, ko.SkipConfirmation, tlogUpload, ko.TSAServerURL) {
 		rekorBytes, err = sv.Bytes(ctx)
@@ -99,17 +99,17 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 	}
 
 	// if bundle is specified, just do that and ignore the rest
-	if ko.TSABundlePath != "" {
+	if ko.RFC3161TimestampPath != "" {
 		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
 
 		contents, err := json.Marshal(signedPayload)
 		if err != nil {
 			return nil, err
 		}
-		if err := os.WriteFile(ko.TSABundlePath, contents, 0600); err != nil {
-			return nil, fmt.Errorf("create tsa bundle file: %w", err)
+		if err := os.WriteFile(ko.RFC3161TimestampPath, contents, 0600); err != nil {
+			return nil, fmt.Errorf("create rfc3161 timestamp file: %w", err)
 		}
-		fmt.Printf("TSA bundle wrote in the file %s\n", ko.TSABundlePath)
+		fmt.Printf("RF3161 timestamp bundle wrote in the file %s\n", ko.RFC3161TimestampPath)
 	}
 
 	// if bundle is specified, just do that and ignore the rest

@@ -54,11 +54,11 @@ cosign sign-blob [flags]
       --output-certificate string                                                                write the certificate to FILE
       --output-signature string                                                                  write the signature to FILE
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --rfc3161-timestamp-bundle string                                                          write everything required to verify the blob to a FILE
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none
       --tlog-upload                                                                              whether or not to upload to the tlog
-      --tsa-bundle string                                                                        write everything required to verify the blob to a FILE
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 

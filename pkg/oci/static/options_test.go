@@ -104,7 +104,7 @@ func TestOptions(t *testing.T) {
 			RFC3161Timestamp: rfc3161Timestamp,
 		},
 	}, {
-		name: "with TSA and Rekor bundle",
+		name: "with RFC3161Timestamp and Rekor bundle",
 		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
@@ -117,17 +117,17 @@ func TestOptions(t *testing.T) {
 			Bundle:           bundle,
 		},
 	}, {
-		name: "with TSA and Rekor bundle",
-		opts: []Option{WithTSABundle(tsaBundle), WithBundle(bundle)},
+		name: "with RFC3161Timestamp and Rekor bundle",
+		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
 			Annotations: map[string]string{
-				TSABundleAnnotationKey: "{\"SignedRFC3161Timestamp\":null}",
-				BundleAnnotationKey:    "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
+				RFC3161TimestampAnnotationKey: "{\"SignedRFC3161Timestamp\":null}",
+				BundleAnnotationKey:           "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
 			},
-			TSABundle: tsaBundle,
-			Bundle:    bundle,
+			RFC3161Timestamp: rfc3161Timestamp,
+			Bundle:           bundle,
 		},
 	}}
 

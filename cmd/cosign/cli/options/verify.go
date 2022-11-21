@@ -142,7 +142,7 @@ type VerifyBlobOptions struct {
 	Registry            RegistryOptions
 	CommonVerifyOptions CommonVerifyOptions
 
-	TSABundlePath string
+	RFC3161TimestampPath string
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)
@@ -164,7 +164,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
 
-	cmd.Flags().StringVar(&o.TSABundlePath, "tsa-bundle", "",
+	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
 		"path to timestamp bundle FILE")
 }
 

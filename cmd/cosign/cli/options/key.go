@@ -34,7 +34,7 @@ type KeyOpts struct {
 	BundlePath           string
 	SkipConfirmation     bool
 	TSAServerURL         string
-	TSABundlePath        string
+	RFC3161TimestampPath string
 	TSACertChainPath     string
 
 	// FulcioAuthFlow is the auth flow to use when authenticating against

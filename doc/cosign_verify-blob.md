@@ -79,10 +79,10 @@ cosign verify-blob [flags]
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --offline                                                                                  only allow offline verification
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --rfc3161-timestamp-bundle string                                                          path to timestamp bundle FILE
       --sct string                                                                               path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
       --signature string                                                                         signature content or path or remote URL
       --sk                                                                                       whether to use a hardware security key
-      --skip-tlog-verify                                                                         skip tlog verification
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-cert-chain string                                                              path to certificate chain PEM file for the Timestamp Authority
 ```
