@@ -65,7 +65,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 
 	signedPayload := cosign.LocalSignedPayload{}
 
-	if ShouldUploadToTlog(ctx, ko, nil, ko.SkipConfirmation, tlogUpload) {
+	if ShouldUploadToTlog(ctx, ko, nil, ko.SkipConfirmation, tlogUpload, "") {
 		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
 			return nil, err
