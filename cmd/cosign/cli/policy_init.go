@@ -261,7 +261,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Upload to rekor
-			if sign.ShouldUploadToTlog(ctx, ko, ref, ko.SkipConfirmation, o.TlogUpload) {
+			if sign.ShouldUploadToTlog(ctx, ko, ref, ko.SkipConfirmation, o.TlogUpload, "") {
 				// TODO: Refactor with sign.go
 				rekorBytes := sv.Cert
 				rekorClient, err := rekor.NewClient(o.Rekor.URL)
