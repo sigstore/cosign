@@ -98,14 +98,13 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 	return cmd.Exec(context.Background(), args)
 }
 
-var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaServerURL, tsaCertChain string, skipTlogVerify bool) error {
+var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaCertChain string, skipTlogVerify bool) error {
 	cmd := cliverify.VerifyCommand{
 		KeyRef:           keyRef,
 		CheckClaims:      checkClaims,
 		Annotations:      sigs.AnnotationsMap{Annotations: annotations},
 		Attachment:       attachment,
 		HashAlgorithm:    crypto.SHA256,
-		TSAServerURL:     tsaServerURL,
 		TSACertChainPath: tsaCertChain,
 		SkipTlogVerify:   skipTlogVerify,
 	}
@@ -581,7 +580,7 @@ func TestRFC3161Timestamp(t *testing.T) {
 	// Sign the image
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
 	// Make sure verify works against the TSA server
-	must(verifyTSA(pubKeyPath, imgName, true, nil, "", server.URL, file.Name(), true), t)
+	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), true), t)
 }
 
 func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
@@ -638,7 +637,7 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	// Sign the image
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
 	// Make sure verify works against the Rekor and TSA clients
-	must(verifyTSA(pubKeyPath, imgName, true, nil, "", server.URL, file.Name(), false), t)
+	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), false), t)
 }
 
 func TestDuplicateSign(t *testing.T) {
@@ -870,6 +869,86 @@ func TestSignBlobBundle(t *testing.T) {
 		PassFunc:   passFunc,
 		BundlePath: bundlePath,
 		RekorURL:   rekorURL,
+	}
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+	// Now verify should work
+	must(verifyBlobCmd.Exec(ctx, bp), t)
+
+	// Now we turn on the tlog and sign again
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Point to a fake rekor server to make sure offline verification of the tlog entry works
+	os.Setenv(serverEnv, "notreal")
+	must(verifyBlobCmd.Exec(ctx, bp), t)
+}
+
+func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	blob := "someblob"
+	td1 := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td1)
+	})
+	bp := filepath.Join(td1, blob)
+	bundlePath := filepath.Join(td1, "rfc3161TimestampBundle.sig")
+
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+
+	ctx := context.Background()
+
+	ko1 := options.KeyOpts{
+		KeyRef:               pubKeyPath1,
+		RFC3161TimestampPath: bundlePath,
+		TSACertChainPath:     file.Name(),
+	}
+	// Verify should fail on a bad input
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+	}
+	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
+
+	// Now sign the blob with one key
+	ko := options.KeyOpts{
+		KeyRef:               privKeyPath1,
+		PassFunc:             passFunc,
+		RFC3161TimestampPath: bundlePath,
+		TSAServerURL:         server.URL,
 	}
 	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
