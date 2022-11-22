@@ -95,9 +95,10 @@ type GenerateOpts struct {
 	Digest string
 	// Repo context of the reference.
 	Repo string
-
 	// Function to return the time to set
 	Time func() time.Time
+	// Optional Annotations for Attestation
+	Annotations map[string]string
 }
 
 // GenerateStatement returns an in-toto statement based on the provided
