@@ -54,7 +54,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
-
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	// Loads OIDC providers
@@ -73,6 +72,7 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 	// Check if TSA signing is enabled and tlog upload is disabled
 	if !tlogUpload && tsaServerURL != "" {
 		fmt.Fprintln(os.Stderr, "\nWARNING: skipping transparency log upload")
+		return false
 	}
 	// If we aren't using keyless signing and --tlog-upload=false, return
 	if !keylessSigning(ko) && !tlogUpload {

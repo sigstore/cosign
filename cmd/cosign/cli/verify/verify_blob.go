@@ -64,6 +64,7 @@ type VerifyBlobCmd struct {
 	IgnoreSCT                    bool
 	SCTRef                       string
 	Offline                      bool
+	SkipTlogVerify               bool
 }
 
 // nolint
@@ -102,6 +103,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Offline:                      c.Offline,
+		SkipTlogVerify:               c.SkipTlogVerify,
 	}
 	if c.RFC3161TimestampPath != "" && c.KeyOpts.TSACertChainPath == "" {
 		return fmt.Errorf("timestamp-cert-chain is required to validate a rfc3161 timestamp bundle")

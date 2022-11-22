@@ -29,6 +29,7 @@ type AttestOptions struct {
 	Replace          bool
 	SkipConfirmation bool
 	TlogUpload       bool
+	TSAServerURL     string
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -78,4 +79,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", false,
 		"whether or not to upload to the tlog")
+
+	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
+		"url to the Timestamp RFC3161 server, default none")
 }

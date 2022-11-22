@@ -213,6 +213,8 @@ against the transparency log.`,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
 				Offline:                      o.CommonVerifyOptions.Offline,
+				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
 
 			return v.Exec(cmd.Context(), args)
