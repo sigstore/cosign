@@ -68,9 +68,9 @@ const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not 
     images by tag will be removed in a future release.
 `
 
-func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, skipConfirmation, tlogUpload bool, tsaServerURL string) bool {
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
 	// Check if TSA signing is enabled and tlog upload is disabled
-	if !tlogUpload && tsaServerURL != "" {
+	if !tlogUpload && ko.TSAServerURL != "" {
 		fmt.Fprintln(os.Stderr, "\nWARNING: skipping transparency log upload")
 		return false
 	}
@@ -79,7 +79,7 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		return false
 	}
 
-	if skipConfirmation {
+	if ko.SkipConfirmation {
 		return true
 	}
 
@@ -246,7 +246,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 
 		s = tsa.NewSigner(s, clientTSA)
 	}
-	if ShouldUploadToTlog(ctx, ko, digest, ko.SkipConfirmation, tlogUpload, ko.TSAServerURL) {
+	if ShouldUploadToTlog(ctx, ko, digest, tlogUpload) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err

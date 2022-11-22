@@ -120,17 +120,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
 		}
 		co.TSACerts = tsaCertPool
-		// Use default TUF roots if a cert chain is not provided.
-		if c.CertChain == "" {
-			co.RootCerts, err = fulcio.GetRoots()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio roots: %w", err)
-			}
-			co.IntermediateCerts, err = fulcio.GetIntermediates()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio intermediates: %w", err)
-			}
-		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
 		if c.RekorURL != "" {

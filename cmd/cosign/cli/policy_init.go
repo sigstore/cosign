@@ -194,6 +194,7 @@ func signPolicy() *cobra.Command {
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
+				TSAServerURL:             o.TSAServerURL,
 			}
 			sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
 
@@ -275,7 +276,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Upload to rekor
-			if sign.ShouldUploadToTlog(ctx, ko, ref, ko.SkipConfirmation, o.TlogUpload, o.TSAServerURL) {
+			if sign.ShouldUploadToTlog(ctx, ko, ref, o.TlogUpload) {
 				// TODO: Refactor with sign.go
 				rekorBytes := sv.Cert
 				rekorClient, err := rekor.NewClient(o.Rekor.URL)

@@ -81,7 +81,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 
 		signedPayload.RFC3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
 	}
-	if ShouldUploadToTlog(ctx, ko, nil, ko.SkipConfirmation, tlogUpload, ko.TSAServerURL) {
+	if ShouldUploadToTlog(ctx, ko, nil, tlogUpload) {
 		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
 			return nil, err
