@@ -492,6 +492,95 @@ func TestAttestationReplace(t *testing.T) {
 	}
 }
 
+func TestAttestationRFC3161Timestamp(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-timestamp-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest with TSA and skipping tlog creating an attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		TSAServerURL:  server.URL,
+		TlogUpload:    false,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Download and count the attestations
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	verifyAttestation := cliverify.VerifyAttestationCommand{
+		KeyRef:           pubKeyPath,
+		TSACertChainPath: file.Name(),
+		SkipTlogVerify:   true,
+		PredicateType:    "slsaprovenance",
+	}
+
+	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+}
+
 func TestRekorBundle(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, env.VariableExperimental.String(), "1")()
