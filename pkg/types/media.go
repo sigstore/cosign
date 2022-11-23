@@ -27,7 +27,7 @@ const (
 	SyftMediaType          = "application/vnd.syft+json"
 	SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
 	SPDXMediaType          = "text/spdx"
-	SPDXJSONMediaType      = "spdx+json"
+	SPDXJSONMediaType      = "text/spdx+json"
 	WasmLayerMediaType     = "application/vnd.wasm.content.layer.v1+wasm"
 	WasmConfigMediaType    = "application/vnd.wasm.config.v1+json"
 )
