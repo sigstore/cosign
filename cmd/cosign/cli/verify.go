@@ -213,6 +213,8 @@ against the transparency log.`,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
 				Offline:                      o.CommonVerifyOptions.Offline,
+				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
 
 			return v.Exec(cmd.Context(), args)
@@ -275,11 +277,13 @@ The blob may be specified as a path to a file or - for stdin.`,
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := options.KeyOpts{
-				KeyRef:     o.Key,
-				Sk:         o.SecurityKey.Use,
-				Slot:       o.SecurityKey.Slot,
-				RekorURL:   o.Rekor.URL,
-				BundlePath: o.BundlePath,
+				KeyRef:               o.Key,
+				Sk:                   o.SecurityKey.Use,
+				Slot:                 o.SecurityKey.Slot,
+				RekorURL:             o.Rekor.URL,
+				BundlePath:           o.BundlePath,
+				RFC3161TimestampPath: o.RFC3161TimestampPath,
+				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
 			}
 			verifyBlobCmd := &verify.VerifyBlobCmd{
 				KeyOpts:                      ko,

@@ -672,7 +672,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 	if co.SkipTlogVerify {
-		return bundleVerified, nil
+		return bundleVerified, err
 	}
 
 	// 2. Check the validity time of the signature.
@@ -1004,12 +1004,17 @@ func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x5
 		return false, err
 	}
 
-	sigBytes, err := base64.StdEncoding.DecodeString(b64Sig)
-	if err != nil {
-		return false, fmt.Errorf("reading DecodeString: %w", err)
+	verifiedBytes := []byte(b64Sig)
+	if len(b64Sig) == 0 {
+		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
+		signedPayload, err := sig.Payload()
+		if err != nil {
+			return false, fmt.Errorf("reading the payload: %w", err)
+		}
+		verifiedBytes = signedPayload
 	}
 
-	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(sigBytes), tsaCerts)
+	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(verifiedBytes), tsaCerts)
 	if err != nil {
 		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}

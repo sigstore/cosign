@@ -54,7 +54,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
-
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	// Loads OIDC providers
@@ -69,17 +68,18 @@ const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not 
     images by tag will be removed in a future release.
 `
 
-func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, skipConfirmation, tlogUpload bool, tsaServerURL string) bool {
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
 	// Check if TSA signing is enabled and tlog upload is disabled
-	if !tlogUpload && tsaServerURL != "" {
+	if !tlogUpload && ko.TSAServerURL != "" {
 		fmt.Fprintln(os.Stderr, "\nWARNING: skipping transparency log upload")
+		return false
 	}
 	// If we aren't using keyless signing and --tlog-upload=false, return
 	if !keylessSigning(ko) && !tlogUpload {
 		return false
 	}
 
-	if skipConfirmation {
+	if ko.SkipConfirmation {
 		return true
 	}
 
@@ -204,7 +204,6 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 				return fmt.Errorf("computing digest: %w", err)
 			}
 			digest := ref.Context().Digest(d.String())
-
 			err = signDigest(ctx, digest, staticPayload, ko, regOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Recursive, signOpts.TlogUpload, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
@@ -247,7 +246,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 
 		s = tsa.NewSigner(s, clientTSA)
 	}
-	if ShouldUploadToTlog(ctx, ko, digest, ko.SkipConfirmation, tlogUpload, ko.TSAServerURL) {
+	if ShouldUploadToTlog(ctx, ko, digest, tlogUpload) {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err

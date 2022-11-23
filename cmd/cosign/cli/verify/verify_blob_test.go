@@ -40,8 +40,11 @@ import (
 	"github.com/go-openapi/swag"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/pkg/oci"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 	"github.com/sigstore/cosign/test"
@@ -56,6 +59,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
+	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/spf13/viper"
 )
 
 func TestSignaturesRef(t *testing.T) {
@@ -81,7 +87,7 @@ func TestSignaturesRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			gotSig, err := base64signature(test.sigRef, "")
+			gotSig, err := base64signature(test.sigRef, "", "")
 			if test.shouldErr && err != nil {
 				return
 			}
@@ -113,7 +119,34 @@ func TestSignaturesBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gotSig, err := base64signature("", fp)
+	gotSig, err := base64signature("", fp, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotSig != b64sig {
+		t.Fatalf("unexpected signature, expected: %s got: %s", b64sig, gotSig)
+	}
+}
+
+func TestSignaturesRFC3161TimestampBundle(t *testing.T) {
+	td := t.TempDir()
+	fp := filepath.Join(td, "file")
+
+	b64sig := "YT09"
+
+	// save as a LocalSignedPayload to the file
+	lsp := cosign.LocalSignedPayload{
+		Base64Signature: b64sig,
+	}
+	contents, err := json.Marshal(lsp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(fp, contents, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	gotSig, err := base64signature("", "", fp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -975,6 +1008,77 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatalf("expected success without specifying the intermediates, got %v", err)
 		}
 	})
+	t.Run("Explicit Fulcio chain with rekor and timestamp bundles in non-experimental mode", func(t *testing.T) {
+		identity := "hello@foo.com"
+		issuer := "issuer"
+		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
+
+		// Create blob
+		blob := "someblob"
+
+		// Sign blob with private key
+		sig, err := signer.SignMessage(bytes.NewReader([]byte(blob)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+		viper.Set("timestamp-signer", "memory")
+		apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+		server := httptest.NewServer(apiServer.GetHandler())
+		t.Cleanup(server.Close)
+
+		client, err := tsaclient.GetTimestampClient(server.URL)
+		if err != nil {
+			t.Error(err)
+		}
+
+		payloadSigner := payload.NewSigner(keyless.rekorSigner)
+
+		tsaSigner := tsa.NewSigner(payloadSigner, client)
+		var sigTSA oci.Signature
+		sigTSA, _, err = tsaSigner.Sign(context.Background(), bytes.NewReader([]byte(blob)))
+		if err != nil {
+			t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
+		}
+
+		rfc3161Timestamp, err := sigTSA.RFC3161Timestamp()
+		if err != nil {
+			t.Fatalf("unexpected error getting rfc3161 timestamp bundle: %v", err)
+		}
+
+		chain, err := client.Timestamp.GetTimestampCertChain(nil)
+		if err != nil {
+			t.Fatalf("unexpected error getting timestamp chain: %v", err)
+		}
+
+		tsaCertChainPath := filepath.Join(keyless.td, "tsacertchain.pem")
+		if err := os.WriteFile(tsaCertChainPath, []byte(chain.Payload), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(tsaCertChainPath)
+
+		// Create bundle
+		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := createRFC3161TimestampAndOrRekorBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry, rfc3161Timestamp.SignedRFC3161Timestamp)
+		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
+		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
+		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
+
+		// Verify command
+		cmd := VerifyBlobCmd{
+			CertOIDCIssuer: issuer,
+			CertEmail:      identity,
+			CertChain:      os.Getenv("SIGSTORE_ROOT_FILE"),
+			SigRef:         "", // Sig is fetched from bundle
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath, TSACertChainPath: tsaCertChainPath},
+			IgnoreSCT:      true,
+		}
+		err = cmd.Exec(context.Background(), blobPath)
+		if err != nil {
+			t.Fatalf("expected success specifying the intermediates, got %v", err)
+		}
+	})
 	t.Run("Explicit Fulcio chain with bundle in non-experimental mode", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
@@ -1276,6 +1380,37 @@ func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integr
 				Body:           rekorEntry,
 			},
 		},
+	}
+
+	return b
+}
+
+func createRFC3161TimestampAndOrRekorBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string, rfc3161timestamp []byte) *cosign.LocalSignedPayload {
+	// Create bundle with:
+	// * Blob signature
+	// * Signing certificate
+	b := &cosign.LocalSignedPayload{
+		Base64Signature: base64.StdEncoding.EncodeToString(sig),
+		Cert:            string(certPem),
+	}
+
+	if rekorEntry != "" {
+		// * Bundle with a payload and signature over the payload
+		b.Bundle = &bundle.RekorBundle{
+			SignedEntryTimestamp: []byte{},
+			Payload: bundle.RekorPayload{
+				LogID:          logID,
+				IntegratedTime: integratedTime,
+				LogIndex:       1,
+				Body:           rekorEntry,
+			},
+		}
+	}
+
+	if rfc3161timestamp != nil {
+		b.RFC3161Timestamp = &bundle.RFC3161Timestamp{
+			SignedRFC3161Timestamp: rfc3161timestamp,
+		}
 	}
 
 	return b

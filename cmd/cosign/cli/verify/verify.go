@@ -75,7 +75,6 @@ type VerifyCommand struct {
 	LocalImage                   bool
 	NameOptions                  []name.Option
 	Offline                      bool
-	TSAServerURL                 string
 	TSACertChainPath             string
 	SkipTlogVerify               bool
 }

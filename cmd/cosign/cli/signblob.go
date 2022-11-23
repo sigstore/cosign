@@ -81,13 +81,17 @@ func SignBlob() *cobra.Command {
 				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 				BundlePath:               o.BundlePath,
 				SkipConfirmation:         o.SkipConfirmation,
+				TSAServerURL:             o.TSAServerURL,
+				RFC3161TimestampPath:     o.RFC3161TimestampPath,
 			}
+
 			for _, blob := range args {
 				// TODO: remove when the output flag has been deprecated
 				if o.Output != "" {
 					fmt.Fprintln(os.Stderr, "WARNING: the '--output' flag is deprecated and will be removed in the future. Use '--output-signature'")
 					o.OutputSignature = o.Output
 				}
+
 				if _, err := sign.SignBlobCmd(ro, ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
 					return fmt.Errorf("signing %s: %w", blob, err)
 				}

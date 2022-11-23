@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
@@ -43,6 +44,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 )
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
@@ -77,6 +79,7 @@ type AttestCommand struct {
 	Replace       bool
 	Timeout       time.Duration
 	TlogUpload    bool
+	TSAServerURL  string
 }
 
 // nolint
@@ -164,9 +167,23 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
+	if c.KeyOpts.TSAServerURL != "" {
+		clientTSA, err := tsaclient.GetTimestampClient(c.KeyOpts.TSAServerURL)
+		if err != nil {
+			return fmt.Errorf("failed to create TSA client: %w", err)
+		}
 
+		// Here we get the response from the timestamped authority server
+		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, clientTSA)
+		if err != nil {
+			return err
+		}
+		bundle := cbundle.TimestampToRFC3161Timestamp(responseBytes)
+
+		opts = append(opts, static.WithRFC3161Timestamp(bundle))
+	}
 	// Check whether we should be uploading to the transparency log
-	if sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.SkipConfirmation, c.TlogUpload, "") {
+	if sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload) {
 		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})

@@ -141,6 +141,8 @@ type VerifyBlobOptions struct {
 	Rekor               RekorOptions
 	Registry            RegistryOptions
 	CommonVerifyOptions CommonVerifyOptions
+
+	RFC3161TimestampPath string
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)
@@ -161,6 +163,9 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
+
+	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
+		"path to timestamp bundle FILE")
 }
 
 // VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.

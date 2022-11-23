@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -84,13 +83,9 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	if err != nil {
 		return nil, nil, err
 	}
-	sigBytes, err := base64.StdEncoding.DecodeString(b64Sig)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	// Here we get the response from the timestamped authority server
-	responseBytes, err := GetTimestampedSignature(sigBytes, rs.tsaClient)
+	responseBytes, err := GetTimestampedSignature([]byte(b64Sig), rs.tsaClient)
 	if err != nil {
 		return nil, nil, err
 	}
