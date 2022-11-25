@@ -269,7 +269,7 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	ce := CertExtensions{Cert: cert}
 
-	if err := validateCertIdentity(cert, co); err != nil {
+	if err := validateCertSubject(cert, co); err != nil {
 		return err
 	}
 
@@ -373,9 +373,9 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 	return nil
 }
 
-// validateCertIdentity validates the subject of the certificate against co.
+// validateCertSubject validates the subject of the certificate against co.
 // It should only be called after the certificate has been determined to be correctly signed.
-func validateCertIdentity(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
+func validateCertSubject(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
 	// TODO: Make it mandatory to include one of these options.
 	if co.CertEmail == "" && co.CertIdentity == "" {
 		return nil
