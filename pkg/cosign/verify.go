@@ -96,8 +96,8 @@ type CheckOpts struct {
 
 	// RootCerts are the root CA certs used to verify a signature's chained certificate.
 	RootCerts *x509.CertPool
-	// IntermediateCerts are the optional intermediate CA certs used to verify a certificate chain.
-	IntermediateCerts *x509.CertPool
+	// UntrustedIntermediateCerts are the optional intermediate CA certs used to verify a certificate chain.
+	UntrustedIntermediateCerts *x509.CertPool
 	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertEmail string
 	// CertIdentity is the identity expected for a certificate to be valid.
@@ -213,7 +213,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	}
 
 	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts)
+	chains, err := TrustedCert(cert, co.RootCerts, co.UntrustedIntermediateCerts)
 	if err != nil {
 		return nil, err
 	}
@@ -445,7 +445,7 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	for _, c := range chain[:len(chain)-1] {
 		subPool.AddCert(c)
 	}
-	co.IntermediateCerts = subPool
+	co.UntrustedIntermediateCerts = subPool
 
 	return ValidateAndUnpackCert(cert, co)
 }
@@ -694,14 +694,14 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
 		if len(untrustedChain) > 0 {
 			if len(untrustedChain) == 1 {
-				co.IntermediateCerts = nil
-			} else if co.IntermediateCerts == nil {
+				co.UntrustedIntermediateCerts = nil
+			} else if co.UntrustedIntermediateCerts == nil {
 				// If the intermediate certs have not been loaded in by TUF
 				pool := x509.NewCertPool()
 				for _, cert := range untrustedChain[:len(untrustedChain)-1] {
 					pool.AddCert(cert)
 				}
-				co.IntermediateCerts = pool
+				co.UntrustedIntermediateCerts = pool
 			}
 		}
 		verifier, err = ValidateAndUnpackCert(untrustedCert, co)

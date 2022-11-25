@@ -349,7 +349,7 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IntermediateCerts: subPool, IgnoreSCT: true, SkipTlogVerify: true})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, UntrustedIntermediateCerts: subPool, IgnoreSCT: true, SkipTlogVerify: true})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")
 	}
