@@ -1299,8 +1299,9 @@ func bundleKey(bundleBody string) (string, error) {
 	return intotodObj.PublicKey.String(), nil
 }
 
-func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {
-	contents, err := json.Marshal(bundlePayload)
+// VerifySET verifies that untrustedSignature is correctly signing untrustedBundlePayload with pub.
+func VerifySET(untrustedBundlePayload cbundle.RekorPayload, untrustedSignature []byte, pub *ecdsa.PublicKey) error {
+	contents, err := json.Marshal(untrustedBundlePayload)
 	if err != nil {
 		return fmt.Errorf("marshaling: %w", err)
 	}
@@ -1311,7 +1312,7 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 
 	// verify the SET against the public key
 	hash := sha256.Sum256(canonicalized)
-	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
+	if !ecdsa.VerifyASN1(pub, hash[:], untrustedSignature) {
 		return &VerificationError{"unable to verify SET"}
 	}
 	return nil
