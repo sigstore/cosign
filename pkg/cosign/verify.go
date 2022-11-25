@@ -329,16 +329,15 @@ func validateIssuerPolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) 
 // CheckCertificatePolicy checks that the certificate subject and issuer match
 // the expected values.
 func CheckCertificatePolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
-	ce := CertExtensions{Cert: correctlySignedCert}
-
-	if err := validateCertSubject(correctlySignedCert, co); err != nil {
-		return err
-	}
-
-	if err := validateCertExtensions(ce, co); err != nil {
-		return err
-	}
 	if err := validateIssuerPolicy(correctlySignedCert, co); err != nil {
+		return err
+	}
+	certWithAceptedIssuer := correctlySignedCert
+	if err := validateCertSubject(certWithAceptedIssuer, co); err != nil {
+		return err
+	}
+	ce := CertExtensions{Cert: certWithAceptedIssuer}
+	if err := validateCertExtensions(ce, co); err != nil {
 		return err
 	}
 	return nil
