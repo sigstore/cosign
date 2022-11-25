@@ -697,11 +697,11 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 				co.UntrustedIntermediateCerts = nil
 			} else if co.UntrustedIntermediateCerts == nil {
 				// If the intermediate certs have not been loaded in by TUF
-				pool := x509.NewCertPool()
+				untrustedPool := x509.NewCertPool()
 				for _, cert := range untrustedChain[:len(untrustedChain)-1] {
-					pool.AddCert(cert)
+					untrustedPool.AddCert(cert)
 				}
-				co.UntrustedIntermediateCerts = pool
+				co.UntrustedIntermediateCerts = untrustedPool
 			}
 		}
 		verifier, err = ValidateAndUnpackCert(untrustedCert, co)
