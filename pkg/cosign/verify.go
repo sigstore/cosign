@@ -996,10 +996,10 @@ func getBundleIntegratedTime(sig oci.Signature) (time.Time, error) {
 // This verifies an offline bundle contained in the sig against the trusted
 // Rekor publicKeys.
 func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
-	bundle, err := untrustedSig.Bundle()
+	untrustedBundle, err := untrustedSig.Bundle()
 	if err != nil {
 		return false, err
-	} else if bundle == nil {
+	} else if untrustedBundle == nil {
 		return false, nil
 	}
 
@@ -1007,19 +1007,19 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, errors.New("no trusted rekor public keys provided")
 	}
 
-	if err := compareSigs(bundle.Payload.Body.(string), untrustedSig); err != nil {
+	if err := compareSigs(untrustedBundle.Payload.Body.(string), untrustedSig); err != nil {
 		return false, err
 	}
 
-	if err := comparePublicKey(bundle.Payload.Body.(string), untrustedSig, co); err != nil {
+	if err := comparePublicKey(untrustedBundle.Payload.Body.(string), untrustedSig, co); err != nil {
 		return false, err
 	}
 
-	pubKey, ok := co.RekorPubKeys.Keys[bundle.Payload.LogID]
+	pubKey, ok := co.RekorPubKeys.Keys[untrustedBundle.Payload.LogID]
 	if !ok {
 		return false, &VerificationError{"verifying bundle: rekor log public key not found for payload"}
 	}
-	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
+	err = VerifySET(untrustedBundle.Payload, untrustedBundle.SignedEntryTimestamp, pubKey.PubKey)
 	if err != nil {
 		return false, err
 	}
@@ -1036,7 +1036,7 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
 
-	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature)
+	alg, bundlehash, err := bundleHash(untrustedBundle.Payload.Body.(string), signature)
 	h := sha256.Sum256(payload)
 	payloadHash := hex.EncodeToString(h[:])
 
