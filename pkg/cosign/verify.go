@@ -620,6 +620,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
+	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 	verifier := co.SigVerifier
 	if verifier == nil {
 		// If we don't have a public key to check against, we can try a root cert.
@@ -672,6 +673,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 		if acceptableRFC3161Timestamp != nil {
 			bundleVerified = true
+			acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
 
 			cert, err := sig.Cert()
 			if err != nil {
@@ -679,7 +681,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			}
 			if cert != nil {
 				// Verify the cert against the integrated time.
-				if err := CheckExpiry(cert, acceptableRFC3161Timestamp.Time); err != nil {
+				if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
 					return false, fmt.Errorf("checking expiry on cert: %w", err)
 				}
 			}
@@ -698,10 +700,11 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 
 		if bundleVerified {
 			// Update with the verified bundle's integrated time.
-			validityTime, err = getBundleIntegratedTime(sig)
+			t, err := getBundleIntegratedTime(sig)
 			if err != nil {
 				return false, fmt.Errorf("error getting bundle integrated time: %w", err)
 			}
+			acceptableRekorBundleTime = &t
 		} else {
 			// If the --offline flag was specified, fail here. bundleVerified returns false with
 			// no error when there was no bundle provided.
@@ -721,8 +724,12 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				if err != nil {
 					return false, err
 				}
-				validityTime = time.Unix(*e.IntegratedTime, 0)
+				t := time.Unix(*e.IntegratedTime, 0)
+				acceptableRekorBundleTime = &t
 			}
+		}
+		if acceptableRekorBundleTime != nil {
+			validityTime = *acceptableRekorBundleTime
 		}
 
 		// 3. if a certificate was used, verify the cert against the integrated time.
