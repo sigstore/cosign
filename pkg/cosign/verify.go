@@ -481,12 +481,12 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 }
 
 func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedRekorPubKeys,
-	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
-	b64sig, err := sig.Base64Signature()
+	untrustedSig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
+	b64sig, err := untrustedSig.Base64Signature()
 	if err != nil {
 		return nil, err
 	}
-	payload, err := sig.Payload()
+	payload, err := untrustedSig.Payload()
 	if err != nil {
 		return nil, err
 	}
