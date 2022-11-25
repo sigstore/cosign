@@ -666,9 +666,12 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 	if co.TSACerts != nil {
-		bundleVerified, err = VerifyRFC3161Timestamp(ctx, sig, co.TSACerts)
+		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(ctx, sig, co.TSACerts)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
+		}
+		if acceptableRFC3161Timestamp != nil {
+			bundleVerified = true
 		}
 	}
 	if !co.SkipTlogVerify {
@@ -984,22 +987,25 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, co *CheckOpts, rekorCl
 	return true, nil
 }
 
-func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x509.CertPool) (bool, error) {
+// VerifyRFC3161Timestamp verifies that the timestamp in untrustedSig is correctly signed, and if so,
+// returns the timestamp value.
+// It returns (nil, nil) if there is no timestamp; or (nil, err) if there is an invalid timestamp.
+func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x509.CertPool) (*timestamp.Timestamp, error) {
 	bundle, err := sig.RFC3161Timestamp()
 	if err != nil {
-		return false, err
+		return nil, err
 	} else if bundle == nil {
-		return false, nil
+		return nil, nil
 	}
 
 	b64Sig, err := sig.Base64Signature()
 	if err != nil {
-		return false, fmt.Errorf("reading base64signature: %w", err)
+		return nil, fmt.Errorf("reading base64signature: %w", err)
 	}
 
 	cert, err := sig.Cert()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	verifiedBytes := []byte(b64Sig)
@@ -1007,30 +1013,31 @@ func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x5
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
 		signedPayload, err := sig.Payload()
 		if err != nil {
-			return false, fmt.Errorf("reading the payload: %w", err)
+			return nil, fmt.Errorf("reading the payload: %w", err)
 		}
 		verifiedBytes = signedPayload
 	}
 
 	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(verifiedBytes), tsaCerts)
 	if err != nil {
-		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
+		return nil, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}
 	acceptedTimestamp := bundle
 
+	// FIXME: tsaverification.VerifyTimestampResponse has done this parsing; we shouldn’t parse again.
+	acceptableTS, err := timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response into timestamp: %w", err)
+	}
 	if cert != nil {
-		ts, err := timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
-		if err != nil {
-			return false, fmt.Errorf("error parsing response into timestamp: %w", err)
-		}
 		// Verify the cert against the integrated time.
 		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
-		if err := CheckExpiry(cert, ts.Time); err != nil {
-			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		if err := CheckExpiry(cert, acceptableTS.Time); err != nil {
+			return nil, fmt.Errorf("checking expiry on cert: %w", err)
 		}
 	}
 
-	return true, nil
+	return acceptableTS, nil
 }
 
 // compare bundle signature to the signature we are verifying
