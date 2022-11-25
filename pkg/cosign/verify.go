@@ -1031,12 +1031,12 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("reading payload: %w", err)
 	}
-	signature, err := untrustedSig.Base64Signature()
+	untrustedSignature, err := untrustedSig.Base64Signature()
 	if err != nil {
 		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
 
-	alg, bundlehash, err := bundleHash(acceptableBundleBody, signature)
+	alg, bundlehash, err := bundleHash(acceptableBundleBody, untrustedSignature)
 	h := sha256.Sum256(untrustedPayload)
 	payloadHash := hex.EncodeToString(h[:])
 
