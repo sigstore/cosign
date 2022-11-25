@@ -1049,15 +1049,15 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 // VerifyRFC3161Timestamp verifies that the timestamp in untrustedSig is correctly signed, and if so,
 // returns the timestamp value.
 // It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp.
-func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) (*timestamp.Timestamp, error) {
-	ts, err := sig.RFC3161Timestamp()
+func VerifyRFC3161Timestamp(untrustedSig oci.Signature, tsaCerts *x509.CertPool) (*timestamp.Timestamp, error) {
+	ts, err := untrustedSig.RFC3161Timestamp()
 	if err != nil {
 		return nil, err
 	} else if ts == nil {
 		return nil, nil
 	}
 
-	b64Sig, err := sig.Base64Signature()
+	b64Sig, err := untrustedSig.Base64Signature()
 	if err != nil {
 		return nil, fmt.Errorf("reading base64signature: %w", err)
 	}
@@ -1065,7 +1065,7 @@ func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) (*timest
 	var tsBytes []byte
 	if len(b64Sig) == 0 {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
-		signedPayload, err := sig.Payload()
+		signedPayload, err := untrustedSig.Payload()
 		if err != nil {
 			return nil, fmt.Errorf("reading the payload: %w", err)
 		}
