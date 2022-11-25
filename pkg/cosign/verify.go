@@ -214,12 +214,6 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	}
 	correctlySignedCert := untrustedCert
 
-	err = CheckCertificateIssuerAndSubject(correctlySignedCert, co)
-	if err != nil {
-		return nil, err
-	}
-
-	// If IgnoreSCT is set, skip the SCT check
 	if !co.IgnoreSCT {
 		contains, err := ctl.ContainsSCT(correctlySignedCert.Raw)
 		if err != nil {
@@ -254,8 +248,14 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 			}
 		}
 	}
+	correctlyIssuedCert := correctlySignedCert
 
-	verifier, err := signature.LoadVerifier(correctlySignedCert.PublicKey, crypto.SHA256)
+	err = CheckCertificateIssuerAndSubject(correctlyIssuedCert, co)
+	if err != nil {
+		return nil, err
+	}
+
+	verifier, err := signature.LoadVerifier(correctlyIssuedCert.PublicKey, crypto.SHA256)
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
