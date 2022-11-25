@@ -689,11 +689,6 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	}
 
 	if !co.SkipTlogVerify {
-		// 2. Check the validity time of the signature.
-		// This is the signature creation time. As a default upper bound, use the current
-		// time.
-		validityTime := time.Now()
-
 		bundleVerified, err = VerifyBundle(ctx, sig, co, co.RekorClient)
 		if err != nil {
 			return false, fmt.Errorf("error verifying bundle: %w", err)
@@ -729,9 +724,6 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				acceptableRekorBundleTime = &t
 			}
 		}
-		if acceptableRekorBundleTime != nil {
-			validityTime = *acceptableRekorBundleTime
-		}
 
 		// 3. if a certificate was used, verify the cert against the integrated time.
 		cert, err := sig.Cert()
@@ -739,6 +731,13 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, err
 		}
 		if cert != nil {
+			// 2. Check the validity time of the signature.
+			// This is the signature creation time. As a default upper bound, use the current
+			// time.
+			validityTime := time.Now()
+			if acceptableRekorBundleTime != nil {
+				validityTime = *acceptableRekorBundleTime
+			}
 			if err := CheckExpiry(cert, validityTime); err != nil {
 				return false, fmt.Errorf("checking expiry on cert: %w", err)
 			}
