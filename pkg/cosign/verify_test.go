@@ -1201,7 +1201,7 @@ func TestCompareSigs(t *testing.T) {
 	}
 }
 
-func TestTrustedCertSuccess(t *testing.T) {
+func TestCertificateSignedByTrustedRootSuccess(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
@@ -1211,7 +1211,7 @@ func TestTrustedCertSuccess(t *testing.T) {
 	subPool := x509.NewCertPool()
 	subPool.AddCert(subCert)
 
-	chains, err := TrustedCert(leafCert, rootPool, subPool)
+	chains, err := CertificateSignedByTrustedRoot(leafCert, rootPool, subPool)
 	if err != nil {
 		t.Fatalf("expected no error verifying certificate, got %v", err)
 	}
@@ -1223,14 +1223,14 @@ func TestTrustedCertSuccess(t *testing.T) {
 	}
 }
 
-func TestTrustedCertSuccessNoIntermediates(t *testing.T) {
+func TestCertificateSignedByTrustedRootSuccessNoIntermediates(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(rootCert)
 
-	_, err := TrustedCert(leafCert, rootPool, nil)
+	_, err := CertificateSignedByTrustedRoot(leafCert, rootPool, nil)
 	if err != nil {
 		t.Fatalf("expected no error verifying certificate, got %v", err)
 	}
@@ -1238,7 +1238,7 @@ func TestTrustedCertSuccessNoIntermediates(t *testing.T) {
 
 // Tests that verification succeeds if both a root and subordinate pool are
 // present, but a chain is built with only the leaf and root certificates.
-func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
+func TestCertificateSignedByTrustedRootSuccessChainFromRoot(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
 	subCert, _, _ := test.GenerateSubordinateCa(rootCert, rootKey)
@@ -1248,7 +1248,7 @@ func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
 	subPool := x509.NewCertPool()
 	subPool.AddCert(subCert)
 
-	_, err := TrustedCert(leafCert, rootPool, subPool)
+	_, err := CertificateSignedByTrustedRoot(leafCert, rootPool, subPool)
 	if err != nil {
 		t.Fatalf("expected no error verifying certificate, got %v", err)
 	}

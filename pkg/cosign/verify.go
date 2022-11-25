@@ -213,7 +213,7 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	}
 
 	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(untrustedCert, co.RootCerts, co.UntrustedIntermediateCerts)
+	chains, err := CertificateSignedByTrustedRoot(untrustedCert, co.RootCerts, co.UntrustedIntermediateCerts)
 	if err != nil {
 		return nil, err
 	}
@@ -1281,7 +1281,9 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	return nil
 }
 
-func TrustedCert(untrustedCert *x509.Certificate, roots *x509.CertPool, untrustedIntermediates *x509.CertPool) ([][]*x509.Certificate, error) {
+// CertificateSignedByTrustedRoot(untrustedCert verifies that untrusteCertificate is correctly signed by one of the roots in roots.
+// WARNING: The certificate might still not be trusted to sign any particular thing; that depends on other attributes of the certificate.
+func CertificateSignedByTrustedRoot(untrustedCert *x509.Certificate, roots *x509.CertPool, untrustedIntermediates *x509.CertPool) ([][]*x509.Certificate, error) {
 	chains, err := untrustedCert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER

@@ -453,7 +453,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	for _, c := range certChain[:len(certChain)-1] {
 		subPool.AddCert(c)
 	}
-	if _, err := cosign.TrustedCert(leafCert, rootPool, subPool); err != nil {
+	if _, err := cosign.CertificateSignedByTrustedRoot(leafCert, rootPool, subPool); err != nil {
 		return nil, fmt.Errorf("unable to validate certificate chain: %w", err)
 	}
 	// Verify SCT if present in the leaf certificate.
