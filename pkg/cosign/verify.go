@@ -702,34 +702,34 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			if err != nil {
 				return false, fmt.Errorf("error getting bundle integrated time: %w", err)
 			}
+		} else {
+			// If the --offline flag was specified, fail here. bundleVerified returns false with
+			// no error when there was no bundle provided.
+			// TODO: You can be offline when you are verifying with a public key. This shouldn't
+			// error out, but maybe should be a log message.
+			if co.Offline {
+				return false, fmt.Errorf("offline verification failed")
+			}
+
+			if co.RekorClient != nil {
+				pemBytes, err := keyBytes(sig, co)
+				if err != nil {
+					return false, err
+				}
+
+				e, err := tlogValidateEntry(ctx, co.RekorClient, sig, pemBytes)
+				if err != nil {
+					return false, err
+				}
+				validityTime = time.Unix(*e.IntegratedTime, 0)
+			}
 		}
 
-		// If the --offline flag was specified, fail here. bundleVerified returns false with
-		// no error when there was no bundle provided.
-		// TODO: You can be offline when you are verifying with a public key. This shouldn't
-		// error out, but maybe should be a log message.
-		if !bundleVerified && co.Offline {
-			return false, fmt.Errorf("offline verification failed")
-		}
-
+		// 3. if a certificate was used, verify the cert against the integrated time.
 		cert, err := sig.Cert()
 		if err != nil {
 			return false, err
 		}
-		if !bundleVerified && co.RekorClient != nil && !co.Offline {
-			pemBytes, err := keyBytes(sig, co)
-			if err != nil {
-				return false, err
-			}
-
-			e, err := tlogValidateEntry(ctx, co.RekorClient, sig, pemBytes)
-			if err != nil {
-				return false, err
-			}
-			validityTime = time.Unix(*e.IntegratedTime, 0)
-		}
-
-		// 3. if a certificate was used, verify the cert against the integrated time.
 		if cert != nil {
 			if err := CheckExpiry(cert, validityTime); err != nil {
 				return false, fmt.Errorf("checking expiry on cert: %w", err)
