@@ -674,19 +674,20 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if acceptableRFC3161Timestamp != nil {
 			bundleVerified = true
 			acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
-
-			cert, err := sig.Cert()
-			if err != nil {
-				return false, err
-			}
-			if cert != nil {
-				// Verify the cert against the integrated time.
-				if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
-					return false, fmt.Errorf("checking expiry on cert: %w", err)
-				}
-			}
 		}
 	}
+
+	cert, err := sig.Cert()
+	if err != nil {
+		return false, err
+	}
+	if cert != nil && acceptableRFC3161Time != nil {
+		// Verify the cert against the integrated time.
+		if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		}
+	}
+
 	if !co.SkipTlogVerify {
 		// 2. Check the validity time of the signature.
 		// This is the signature creation time. As a default upper bound, use the current
