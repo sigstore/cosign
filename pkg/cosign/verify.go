@@ -621,51 +621,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
-	verifier := co.SigVerifier
-	if verifier == nil {
-		// If we don't have a public key to check against, we can try a root cert.
-		cert, err := sig.Cert()
-		if err != nil {
-			return false, err
-		}
-		if cert == nil {
-			return false, &VerificationError{"no certificate found on signature"}
-		}
-		// Create a certificate pool for intermediate CA certificates, excluding the root
-		chain, err := sig.Chain()
-		if err != nil {
-			return false, err
-		}
-		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
-		if len(chain) > 0 {
-			if len(chain) == 1 {
-				co.IntermediateCerts = nil
-			} else if co.IntermediateCerts == nil {
-				// If the intermediate certs have not been loaded in by TUF
-				pool := x509.NewCertPool()
-				for _, cert := range chain[:len(chain)-1] {
-					pool.AddCert(cert)
-				}
-				co.IntermediateCerts = pool
-			}
-		}
-		verifier, err = ValidateAndUnpackCert(cert, co)
-		if err != nil {
-			return false, err
-		}
-	}
 
-	// 1. Perform cryptographic verification of the signature using the certificate's public key.
-	if err := verifyFn(ctx, verifier, sig); err != nil {
-		return false, err
-	}
-
-	// We can't check annotations without claims, both require unmarshalling the payload.
-	if co.ClaimVerifier != nil {
-		if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
-			return false, err
-		}
-	}
 	if co.TSACerts != nil {
 		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(ctx, sig, co.TSACerts)
 		if err != nil {
@@ -712,6 +668,52 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				t := time.Unix(*e.IntegratedTime, 0)
 				acceptableRekorBundleTime = &t
 			}
+		}
+	}
+
+	verifier := co.SigVerifier
+	if verifier == nil {
+		// If we don't have a public key to check against, we can try a root cert.
+		cert, err := sig.Cert()
+		if err != nil {
+			return false, err
+		}
+		if cert == nil {
+			return false, &VerificationError{"no certificate found on signature"}
+		}
+		// Create a certificate pool for intermediate CA certificates, excluding the root
+		chain, err := sig.Chain()
+		if err != nil {
+			return false, err
+		}
+		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
+		if len(chain) > 0 {
+			if len(chain) == 1 {
+				co.IntermediateCerts = nil
+			} else if co.IntermediateCerts == nil {
+				// If the intermediate certs have not been loaded in by TUF
+				pool := x509.NewCertPool()
+				for _, cert := range chain[:len(chain)-1] {
+					pool.AddCert(cert)
+				}
+				co.IntermediateCerts = pool
+			}
+		}
+		verifier, err = ValidateAndUnpackCert(cert, co)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// 1. Perform cryptographic verification of the signature using the certificate's public key.
+	if err := verifyFn(ctx, verifier, sig); err != nil {
+		return false, err
+	}
+
+	// We can't check annotations without claims, both require unmarshalling the payload.
+	if co.ClaimVerifier != nil {
+		if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
+			return false, err
 		}
 	}
 

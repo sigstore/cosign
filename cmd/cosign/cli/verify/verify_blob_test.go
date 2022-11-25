@@ -1207,8 +1207,8 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
-		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
-			t.Fatalf("expected error with invalid root CA, got %v", err)
+		if err == nil || !strings.Contains(err.Error(), "rekor log public key not found for payload") {
+			t.Fatalf("expected error with rekor public key mismatch, got %v", err)
 		}
 	})
 	t.Run("Invalid certificate root when specifying cert in bundle", func(t *testing.T) {
@@ -1243,8 +1243,8 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
-		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
-			t.Fatalf("expected error with invalid root CA, got %v", err)
+		if err == nil || !strings.Contains(err.Error(), "rekor log public key not found for payload") {
+			t.Fatalf("expected error with rekor public key mismatch, got %v", err)
 		}
 	})
 }
