@@ -740,6 +740,29 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 		// WARNING: Certificate validity time restrictions are not enforced yet, at this point.
 		certWithUnverifiedExpiry := untrustedCert
 
+		// 3. if a certificate was used, verify the cert against the integrated time.
+		checkedExpiry := false
+		// If we have multiple accepted sources of signature creation time, validate against all of them; why not?
+		if acceptableRFC3161Time != nil {
+			// Verify the cert against the timestamp time.
+			if err := CheckExpiry(certWithUnverifiedExpiry, *acceptableRFC3161Time); err != nil {
+				return false, fmt.Errorf("checking expiry on cert: %w", err)
+			}
+			checkedExpiry = true
+		}
+		if acceptableRekorBundleTime != nil {
+			if err := CheckExpiry(certWithUnverifiedExpiry, *acceptableRekorBundleTime); err != nil {
+				return false, fmt.Errorf("checking expiry on cert: %w", err)
+			}
+			checkedExpiry = true
+		}
+		if !checkedExpiry {
+			// As a default upper bound, use the current time.
+			if err := CheckExpiry(certWithUnverifiedExpiry, time.Now()); err != nil {
+				return false, fmt.Errorf("checking expiry on cert: %w", err)
+			}
+		}
+
 		verifier, err = verifierFromTrustedCertificate(certWithUnverifiedExpiry)
 		if err != nil {
 			return false, err
@@ -755,37 +778,6 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 	if co.ClaimVerifier != nil {
 		if err := co.ClaimVerifier(untrustedSignature, h, co.Annotations); err != nil {
 			return false, err
-		}
-	}
-
-	// 3. if a certificate was used, verify the cert against the integrated time.
-	cert, err := untrustedSignature.Cert()
-	if err != nil {
-		return false, err
-	}
-	if cert != nil {
-		// 2. Check the validity time of the signature.
-		checkedExpiry := false
-
-		// If we have multiple accepted sources of signature creation time, validate against all of them; why not?
-		if acceptableRFC3161Time != nil {
-			// Verify the cert against the timestamp time.
-			if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
-				return false, fmt.Errorf("checking expiry on cert: %w", err)
-			}
-			checkedExpiry = true
-		}
-		if acceptableRekorBundleTime != nil {
-			if err := CheckExpiry(cert, *acceptableRekorBundleTime); err != nil {
-				return false, fmt.Errorf("checking expiry on cert: %w", err)
-			}
-			checkedExpiry = true
-		}
-		if !checkedExpiry {
-			// As a default upper bound, use the current time.
-			if err := CheckExpiry(cert, time.Now()); err != nil {
-				return false, fmt.Errorf("checking expiry on cert: %w", err)
-			}
 		}
 	}
 
