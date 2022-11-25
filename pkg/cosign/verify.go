@@ -1016,9 +1016,10 @@ func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x5
 	if err != nil {
 		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}
+	acceptedTimestamp := bundle
 
 	if cert != nil {
-		ts, err := timestamp.ParseResponse(bundle.SignedRFC3161Timestamp)
+		ts, err := timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
 		if err != nil {
 			return false, fmt.Errorf("error parsing response into timestamp: %w", err)
 		}
