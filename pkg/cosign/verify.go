@@ -217,8 +217,9 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	if err != nil {
 		return nil, err
 	}
+	correctlySignedCert := untrustedCert
 
-	err = CheckCertificatePolicy(untrustedCert, co)
+	err = CheckCertificatePolicy(correctlySignedCert, co)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +228,7 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	if co.IgnoreSCT {
 		return verifier, nil
 	}
-	contains, err := ctl.ContainsSCT(untrustedCert.Raw)
+	contains, err := ctl.ContainsSCT(correctlySignedCert.Raw)
 	if err != nil {
 		return nil, err
 	}
