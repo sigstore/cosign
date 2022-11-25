@@ -672,6 +672,17 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 		if acceptableRFC3161Timestamp != nil {
 			bundleVerified = true
+
+			cert, err := sig.Cert()
+			if err != nil {
+				return false, err
+			}
+			if cert != nil {
+				// Verify the cert against the integrated time.
+				if err := CheckExpiry(cert, acceptableRFC3161Timestamp.Time); err != nil {
+					return false, fmt.Errorf("checking expiry on cert: %w", err)
+				}
+			}
 		}
 	}
 	if !co.SkipTlogVerify {
@@ -1003,11 +1014,6 @@ func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x5
 		return nil, fmt.Errorf("reading base64signature: %w", err)
 	}
 
-	cert, err := sig.Cert()
-	if err != nil {
-		return nil, err
-	}
-
 	verifiedBytes := []byte(b64Sig)
 	if len(b64Sig) == 0 {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
@@ -1029,14 +1035,6 @@ func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x5
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response into timestamp: %w", err)
 	}
-	if cert != nil {
-		// Verify the cert against the integrated time.
-		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
-		if err := CheckExpiry(cert, acceptableTS.Time); err != nil {
-			return nil, fmt.Errorf("checking expiry on cert: %w", err)
-		}
-	}
-
 	return acceptableTS, nil
 }
 
