@@ -193,11 +193,6 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
 // chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	verifier, err := signature.LoadVerifier(untrustedCert.PublicKey, crypto.SHA256)
-	if err != nil {
-		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
-	}
-
 	// Handle certificates where the Subject Alternative Name is not set to a supported
 	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
 	// or URIs as SANs. Fulcio can issue a certificate with an OtherName GeneralName, so
@@ -225,42 +220,45 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	}
 
 	// If IgnoreSCT is set, skip the SCT check
-	if co.IgnoreSCT {
-		return verifier, nil
-	}
-	contains, err := ctl.ContainsSCT(correctlySignedCert.Raw)
-	if err != nil {
-		return nil, err
-	}
-	if !contains && len(co.SCT) == 0 {
-		return nil, &VerificationError{"certificate does not include required embedded SCT and no detached SCT was set"}
-	}
-	// handle if chains has more than one chain - grab first and print message
-	if len(chains) > 1 {
-		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
-	}
-	if contains {
-		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
-			return nil, err
-		}
-	} else {
-		chain := chains[0]
-		if len(chain) < 2 {
-			return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
-		}
-		certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
+	if !co.IgnoreSCT {
+		contains, err := ctl.ContainsSCT(correctlySignedCert.Raw)
 		if err != nil {
 			return nil, err
 		}
-		chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
-		if err != nil {
-			return nil, err
+		if !contains && len(co.SCT) == 0 {
+			return nil, &VerificationError{"certificate does not include required embedded SCT and no detached SCT was set"}
 		}
-		if err := ctl.VerifySCT(context.Background(), certPEM, chainPEM, co.SCT); err != nil {
-			return nil, err
+		// handle if chains has more than one chain - grab first and print message
+		if len(chains) > 1 {
+			fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
+		}
+		if contains {
+			if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
+				return nil, err
+			}
+		} else {
+			chain := chains[0]
+			if len(chain) < 2 {
+				return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
+			}
+			certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
+			if err != nil {
+				return nil, err
+			}
+			chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
+			if err != nil {
+				return nil, err
+			}
+			if err := ctl.VerifySCT(context.Background(), certPEM, chainPEM, co.SCT); err != nil {
+				return nil, err
+			}
 		}
 	}
 
+	verifier, err := signature.LoadVerifier(correctlySignedCert.PublicKey, crypto.SHA256)
+	if err != nil {
+		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
+	}
 	return verifier, nil
 }
 
