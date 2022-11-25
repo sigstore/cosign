@@ -192,8 +192,8 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
 // chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
-func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+	verifier, err := signature.LoadVerifier(untrustedCert.PublicKey, crypto.SHA256)
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
@@ -202,23 +202,23 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
 	// or URIs as SANs. Fulcio can issue a certificate with an OtherName GeneralName, so
 	// remove the unhandled critical SAN extension before verifying.
-	if len(cert.UnhandledCriticalExtensions) > 0 {
+	if len(untrustedCert.UnhandledCriticalExtensions) > 0 {
 		var unhandledExts []asn1.ObjectIdentifier
-		for _, oid := range cert.UnhandledCriticalExtensions {
+		for _, oid := range untrustedCert.UnhandledCriticalExtensions {
 			if !oid.Equal(cryptoutils.SANOID) {
 				unhandledExts = append(unhandledExts, oid)
 			}
 		}
-		cert.UnhandledCriticalExtensions = unhandledExts
+		untrustedCert.UnhandledCriticalExtensions = unhandledExts
 	}
 
 	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(cert, co.RootCerts, co.UntrustedIntermediateCerts)
+	chains, err := TrustedCert(untrustedCert, co.RootCerts, co.UntrustedIntermediateCerts)
 	if err != nil {
 		return nil, err
 	}
 
-	err = CheckCertificatePolicy(cert, co)
+	err = CheckCertificatePolicy(untrustedCert, co)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	if co.IgnoreSCT {
 		return verifier, nil
 	}
-	contains, err := ctl.ContainsSCT(cert.Raw)
+	contains, err := ctl.ContainsSCT(untrustedCert.Raw)
 	if err != nil {
 		return nil, err
 	}
