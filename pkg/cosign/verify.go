@@ -1281,14 +1281,14 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	return nil
 }
 
-func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x509.CertPool) ([][]*x509.Certificate, error) {
-	chains, err := cert.Verify(x509.VerifyOptions{
+func TrustedCert(untrustedCert *x509.Certificate, roots *x509.CertPool, untrustedIntermediates *x509.CertPool) ([][]*x509.Certificate, error) {
+	chains, err := untrustedCert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
 		// WE CHECK THAT THE SIGNATURES WERE CREATED DURING THIS WINDOW
-		CurrentTime:   cert.NotBefore,
+		CurrentTime:   untrustedCert.NotBefore,
 		Roots:         roots,
-		Intermediates: intermediates,
+		Intermediates: untrustedIntermediates,
 		KeyUsages: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageCodeSigning,
 		},
