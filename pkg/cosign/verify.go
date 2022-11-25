@@ -1062,24 +1062,24 @@ func VerifyRFC3161Timestamp(untrustedSig oci.Signature, tsaCerts *x509.CertPool)
 		return nil, fmt.Errorf("reading base64signature: %w", err)
 	}
 
-	var tsBytes []byte
+	var untrustedTSAArtifact []byte
 	if len(untrustedB64Sig) == 0 {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
 		untrustedPayload, err := untrustedSig.Payload()
 		if err != nil {
 			return nil, fmt.Errorf("reading the payload: %w", err)
 		}
-		tsBytes = untrustedPayload
+		untrustedTSAArtifact = untrustedPayload
 	} else {
 		// create timestamp over raw bytes of signature
 		untrustedRawSig, err := base64.StdEncoding.DecodeString(untrustedB64Sig)
 		if err != nil {
 			return nil, err
 		}
-		tsBytes = untrustedRawSig
+		untrustedTSAArtifact = untrustedRawSig
 	}
 
-	err = tsaverification.VerifyTimestampResponse(untrustedTimestamp.SignedRFC3161Timestamp, bytes.NewReader(tsBytes), tsaCerts)
+	err = tsaverification.VerifyTimestampResponse(untrustedTimestamp.SignedRFC3161Timestamp, bytes.NewReader(untrustedTSAArtifact), tsaCerts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}
