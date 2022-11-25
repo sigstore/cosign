@@ -219,7 +219,7 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	}
 	correctlySignedCert := untrustedCert
 
-	err = CheckCertificatePolicy(correctlySignedCert, co)
+	err = CheckCertificateIssuerAndSubject(correctlySignedCert, co)
 	if err != nil {
 		return nil, err
 	}
@@ -326,9 +326,9 @@ func validateIssuerPolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) 
 	return nil
 }
 
-// CheckCertificatePolicy checks that the certificate subject and issuer match
+// CheckCertificateIssuerAndSubject checks that the certificate subject and issuer match
 // the expected values.
-func CheckCertificatePolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
+func CheckCertificateIssuerAndSubject(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
 	if err := validateIssuerPolicy(correctlySignedCert, co); err != nil {
 		return err
 	}

@@ -555,7 +555,7 @@ func TestValidateAndUnpackCertSuccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
@@ -580,7 +580,7 @@ func TestValidateAndUnpackCertSuccessAllowAllValues(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
@@ -636,7 +636,7 @@ func TestValidateAndUnpackCertSuccessWithDnsSan(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
@@ -670,7 +670,7 @@ func TestValidateAndUnpackCertSuccessWithEmailSan(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
@@ -704,7 +704,7 @@ func TestValidateAndUnpackCertSuccessWithIpAddressSan(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
@@ -738,7 +738,7 @@ func TestValidateAndUnpackCertSuccessWithUriSan(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
@@ -772,7 +772,7 @@ func TestValidateAndUnpackCertSuccessWithOtherNameSan(t *testing.T) {
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
@@ -820,7 +820,7 @@ func TestValidateAndUnpackCertInvalidOidcIssuer(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	require.Contains(t, err.Error(), "expected oidc issuer not found in certificate")
 }
 
@@ -843,7 +843,7 @@ func TestValidateAndUnpackCertInvalidEmail(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected identity not found in certificate")
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	require.Contains(t, err.Error(), "expected identity not found in certificate")
 }
 
@@ -868,7 +868,7 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowTrigger(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Trigger not found in certificate")
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Trigger not found in certificate")
 }
 
@@ -893,7 +893,7 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowSHA(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow SHA not found in certificate")
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow SHA not found in certificate")
 }
 
@@ -918,7 +918,7 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowName(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Name not found in certificate")
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Name not found in certificate")
 }
 
@@ -943,7 +943,7 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowRepository(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Repository not found in certificate")
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Repository not found in certificate")
 }
 
@@ -968,7 +968,7 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowRef(t *testing.T) {
 
 	_, err := ValidateAndUnpackCert(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Ref not found in certificate")
-	err = CheckCertificatePolicy(leafCert, co)
+	err = CheckCertificateIssuerAndSubject(leafCert, co)
 	require.Contains(t, err.Error(), "expected GitHub Workflow Ref not found in certificate")
 }
 
@@ -1152,7 +1152,7 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 			}
 		}
 		// Test CheckCertificatePolicy
-		err = CheckCertificatePolicy(leafCert, co)
+		err = CheckCertificateIssuerAndSubject(leafCert, co)
 		if err == nil && tc.wantErrSubstring != "" {
 			t.Errorf("Expected error %s got none", tc.wantErrSubstring)
 		} else if err != nil {
