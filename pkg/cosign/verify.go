@@ -625,15 +625,15 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		// If we don't have a public key to check against, we can try a root cert.
 		cert, err := sig.Cert()
 		if err != nil {
-			return bundleVerified, err
+			return false, err
 		}
 		if cert == nil {
-			return bundleVerified, &VerificationError{"no certificate found on signature"}
+			return false, &VerificationError{"no certificate found on signature"}
 		}
 		// Create a certificate pool for intermediate CA certificates, excluding the root
 		chain, err := sig.Chain()
 		if err != nil {
-			return bundleVerified, err
+			return false, err
 		}
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
 		if len(chain) > 0 {
@@ -650,19 +650,19 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 		verifier, err = ValidateAndUnpackCert(cert, co)
 		if err != nil {
-			return bundleVerified, err
+			return false, err
 		}
 	}
 
 	// 1. Perform cryptographic verification of the signature using the certificate's public key.
 	if err := verifyFn(ctx, verifier, sig); err != nil {
-		return bundleVerified, err
+		return false, err
 	}
 
 	// We can't check annotations without claims, both require unmarshalling the payload.
 	if co.ClaimVerifier != nil {
 		if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
-			return bundleVerified, err
+			return false, err
 		}
 	}
 	if co.TSACerts != nil {
@@ -705,12 +705,12 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if !bundleVerified && co.RekorClient != nil && !co.Offline {
 			pemBytes, err := keyBytes(sig, co)
 			if err != nil {
-				return bundleVerified, err
+				return false, err
 			}
 
 			e, err := tlogValidateEntry(ctx, co.RekorClient, sig, pemBytes)
 			if err != nil {
-				return bundleVerified, err
+				return false, err
 			}
 			validityTime = time.Unix(*e.IntegratedTime, 0)
 		}
