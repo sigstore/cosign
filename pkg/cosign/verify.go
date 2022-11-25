@@ -1026,6 +1026,7 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 	if pubKey.Status != tuf.Active {
 		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
+	acceptableBundleBody := untrustedBundle.Payload.Body.(string)
 
 	payload, err := untrustedSig.Payload()
 	if err != nil {
@@ -1036,7 +1037,7 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
 
-	alg, bundlehash, err := bundleHash(untrustedBundle.Payload.Body.(string), signature)
+	alg, bundlehash, err := bundleHash(acceptableBundleBody, signature)
 	h := sha256.Sum256(payload)
 	payloadHash := hex.EncodeToString(h[:])
 
