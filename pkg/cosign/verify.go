@@ -692,12 +692,12 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 				return false, fmt.Errorf("rekor client not provided for online verification")
 			}
 
-			pemBytes, err := keyBytes(untrustedSignature, co)
+			untrustedPEMBytes, err := keyBytes(untrustedSignature, co)
 			if err != nil {
 				return false, err
 			}
 
-			e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, untrustedSignature, pemBytes)
+			e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, untrustedSignature, untrustedPEMBytes)
 			if err != nil {
 				return false, err
 			}
