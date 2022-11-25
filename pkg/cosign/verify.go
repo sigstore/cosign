@@ -204,6 +204,7 @@ func verifierFromTrustedCertificate(trustedCert *x509.Certificate) (signature.Ve
 // chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
 // WARNING: This is not the full set of validations necessary for a certificate embedded in a cosign signature.
 // It is suitable basically as a sanity check for user-provided trusted certificates.
+// WARNING: Certificate validity time restrictions are not enforced.
 func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	if err := validateCertIssuanceAndSubject(untrustedCert, co); err != nil {
 		return nil, err
@@ -215,6 +216,7 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 
 // validateCertIssuanceAndSubject verifies that the certificate
 // chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
+// WARNING: Certificate validity time restrictions are not enforced.
 func validateCertIssuanceAndSubject(untrustedCert *x509.Certificate, co *CheckOpts) error {
 	// Handle certificates where the Subject Alternative Name is not set to a supported
 	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
@@ -735,9 +737,10 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 		if err := validateCertIssuanceAndSubject(untrustedCert, co); err != nil {
 			return false, err
 		}
-		correctlyIssuedCert := untrustedCert
+		// WARNING: Certificate validity time restrictions are not enforced yet, at this point.
+		certWithUnverifiedExpiry := untrustedCert
 
-		verifier, err = verifierFromTrustedCertificate(correctlyIssuedCert)
+		verifier, err = verifierFromTrustedCertificate(certWithUnverifiedExpiry)
 		if err != nil {
 			return false, err
 		}
@@ -1316,6 +1319,7 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 
 // CertificateSignedByTrustedRoot(untrustedCert verifies that untrusteCertificate is correctly signed by one of the roots in roots.
 // WARNING: The certificate might still not be trusted to sign any particular thing; that depends on other attributes of the certificate.
+// WARNING: Certificate validity time restrictions are not enforced.
 func CertificateSignedByTrustedRoot(untrustedCert *x509.Certificate, roots *x509.CertPool, untrustedIntermediates *x509.CertPool) ([][]*x509.Certificate, error) {
 	chains, err := untrustedCert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
