@@ -622,13 +622,13 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 //     b. If we don't have a Rekor entry retrieved via cert, do an online lookup (assuming
 //     we are in experimental mode).
 //  3. If a certificate is provided, check it's expiration using the transparency log timestamp.
-func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
+func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
 	if co.TSACerts != nil {
-		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co.TSACerts)
+		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(untrustedSignature, co.TSACerts)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
 		}
@@ -638,14 +638,14 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	}
 
 	if !co.SkipTlogVerify {
-		bundleVerified, err = VerifyBundle(sig, co)
+		bundleVerified, err = VerifyBundle(untrustedSignature, co)
 		if err != nil {
 			return false, fmt.Errorf("error verifying bundle: %w", err)
 		}
 
 		if bundleVerified {
 			// Update with the verified bundle's integrated time.
-			t, err := getBundleIntegratedTime(sig)
+			t, err := getBundleIntegratedTime(untrustedSignature)
 			if err != nil {
 				return false, fmt.Errorf("error getting bundle integrated time: %w", err)
 			}
@@ -662,12 +662,12 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				return false, fmt.Errorf("rekor client not provided for online verification")
 			}
 
-			pemBytes, err := keyBytes(sig, co)
+			pemBytes, err := keyBytes(untrustedSignature, co)
 			if err != nil {
 				return false, err
 			}
 
-			e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, sig, pemBytes)
+			e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, untrustedSignature, pemBytes)
 			if err != nil {
 				return false, err
 			}
@@ -679,7 +679,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifier := co.SigVerifier
 	if verifier == nil {
 		// If we don't have a public key to check against, we can try a root cert.
-		cert, err := sig.Cert()
+		cert, err := untrustedSignature.Cert()
 		if err != nil {
 			return false, err
 		}
@@ -687,7 +687,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, &VerificationError{"no certificate found on signature"}
 		}
 		// Create a certificate pool for intermediate CA certificates, excluding the root
-		chain, err := sig.Chain()
+		chain, err := untrustedSignature.Chain()
 		if err != nil {
 			return false, err
 		}
@@ -711,19 +711,19 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	}
 
 	// 1. Perform cryptographic verification of the signature using the certificate's public key.
-	if err := verifyFn(ctx, verifier, sig); err != nil {
+	if err := verifyFn(ctx, verifier, untrustedSignature); err != nil {
 		return false, err
 	}
 
 	// We can't check annotations without claims, both require unmarshalling the payload.
 	if co.ClaimVerifier != nil {
-		if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
+		if err := co.ClaimVerifier(untrustedSignature, h, co.Annotations); err != nil {
 			return false, err
 		}
 	}
 
 	// 3. if a certificate was used, verify the cert against the integrated time.
-	cert, err := sig.Cert()
+	cert, err := untrustedSignature.Cert()
 	if err != nil {
 		return false, err
 	}
