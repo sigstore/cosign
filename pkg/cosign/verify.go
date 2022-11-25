@@ -1027,7 +1027,7 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, err
 	}
 
-	payload, err := untrustedSig.Payload()
+	untrustedPayload, err := untrustedSig.Payload()
 	if err != nil {
 		return false, fmt.Errorf("reading payload: %w", err)
 	}
@@ -1037,7 +1037,7 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 	}
 
 	alg, bundlehash, err := bundleHash(acceptableBundleBody, signature)
-	h := sha256.Sum256(payload)
+	h := sha256.Sum256(untrustedPayload)
 	payloadHash := hex.EncodeToString(h[:])
 
 	if alg != "sha256" || bundlehash != payloadHash {
