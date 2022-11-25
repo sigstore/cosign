@@ -190,9 +190,32 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
+// verifierFromTrustedCertificate creates a Verifier from a certificate.
+// It’s the caller’s responsibility to ensure that the certificate is already sufficiently trusted.
+func verifierFromTrustedCertificate(trustedCert *x509.Certificate) (signature.Verifier, error) {
+	verifier, err := signature.LoadVerifier(trustedCert.PublicKey, crypto.SHA256)
+	if err != nil {
+		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
+	}
+	return verifier, nil
+}
+
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
 // chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
+// WARNING: This is not the full set of validations necessary for a certificate embedded in a cosign signature.
+// It is suitable basically as a sanity check for user-provided trusted certificates.
 func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+	if err := validateCertIssuanceAndSubject(untrustedCert, co); err != nil {
+		return nil, err
+	}
+	correctlyIssuedCert := untrustedCert
+
+	return verifierFromTrustedCertificate(correctlyIssuedCert)
+}
+
+// validateCertIssuanceAndSubject verifies that the certificate
+// chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
+func validateCertIssuanceAndSubject(untrustedCert *x509.Certificate, co *CheckOpts) error {
 	// Handle certificates where the Subject Alternative Name is not set to a supported
 	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
 	// or URIs as SANs. Fulcio can issue a certificate with an OtherName GeneralName, so
@@ -210,17 +233,17 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	// Now verify the cert, then the signature.
 	chains, err := CertificateSignedByTrustedRoot(untrustedCert, co.RootCerts, co.UntrustedIntermediateCerts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	correctlySignedCert := untrustedCert
 
 	if !co.IgnoreSCT {
 		contains, err := ctl.ContainsSCT(correctlySignedCert.Raw)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if !contains && len(co.SCT) == 0 {
-			return nil, &VerificationError{"certificate does not include required embedded SCT and no detached SCT was set"}
+			return &VerificationError{"certificate does not include required embedded SCT and no detached SCT was set"}
 		}
 		// handle if chains has more than one chain - grab first and print message
 		if len(chains) > 1 {
@@ -228,38 +251,33 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 		}
 		if contains {
 			if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
-				return nil, err
+				return err
 			}
 		} else {
 			chain := chains[0]
 			if len(chain) < 2 {
-				return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
+				return errors.New("certificate chain must contain at least a certificate and its issuer")
 			}
 			certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
 			if err != nil {
-				return nil, err
+				return err
 			}
 			chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if err := ctl.VerifySCT(context.Background(), certPEM, chainPEM, co.SCT); err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 	correctlyIssuedCert := correctlySignedCert
 
-	err = CheckCertificateIssuerAndSubject(correctlyIssuedCert, co)
-	if err != nil {
-		return nil, err
+	if err := CheckCertificateIssuerAndSubject(correctlyIssuedCert, co); err != nil {
+		return err
 	}
 
-	verifier, err := signature.LoadVerifier(correctlyIssuedCert.PublicKey, crypto.SHA256)
-	if err != nil {
-		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
-	}
-	return verifier, nil
+	return nil
 }
 
 // validateIssuerPolicy checks that the certificate is valid per co.Identities.
