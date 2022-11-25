@@ -373,34 +373,36 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 	return nil
 }
 
-func validateCertIdentity(cert *x509.Certificate, co *CheckOpts) error {
+// validateCertIdentity validates the subject of the certificate against co.
+// It should only be called after the certificate has been determined to be correctly signed.
+func validateCertIdentity(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
 	// TODO: Make it mandatory to include one of these options.
 	if co.CertEmail == "" && co.CertIdentity == "" {
 		return nil
 	}
 
-	for _, dns := range cert.DNSNames {
+	for _, dns := range correctlySignedCert.DNSNames {
 		if co.CertIdentity == dns {
 			return nil
 		}
 	}
-	for _, em := range cert.EmailAddresses {
+	for _, em := range correctlySignedCert.EmailAddresses {
 		if co.CertIdentity == em || co.CertEmail == em {
 			return nil
 		}
 	}
-	for _, ip := range cert.IPAddresses {
+	for _, ip := range correctlySignedCert.IPAddresses {
 		if co.CertIdentity == ip.String() {
 			return nil
 		}
 	}
-	for _, uri := range cert.URIs {
+	for _, uri := range correctlySignedCert.URIs {
 		if co.CertIdentity == uri.String() {
 			return nil
 		}
 	}
 
-	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
+	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(correctlySignedCert.Extensions)
 	if len(otherName) > 0 && co.CertIdentity == otherName {
 		return nil
 	}
