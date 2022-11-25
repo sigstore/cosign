@@ -765,22 +765,27 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 	}
 	if cert != nil {
 		// 2. Check the validity time of the signature.
-		// This is the signature creation time. As a default upper bound, use the current
-		// time.
-		validityTime := time.Now()
+		checkedExpiry := false
 
+		// If we have multiple accepted sources of signature creation time, validate against all of them; why not?
 		if acceptableRFC3161Time != nil {
 			// Verify the cert against the timestamp time.
 			if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
 				return false, fmt.Errorf("checking expiry on cert: %w", err)
 			}
+			checkedExpiry = true
 		}
-
 		if acceptableRekorBundleTime != nil {
-			validityTime = *acceptableRekorBundleTime
+			if err := CheckExpiry(cert, *acceptableRekorBundleTime); err != nil {
+				return false, fmt.Errorf("checking expiry on cert: %w", err)
+			}
+			checkedExpiry = true
 		}
-		if err := CheckExpiry(cert, validityTime); err != nil {
-			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		if !checkedExpiry {
+			// As a default upper bound, use the current time.
+			if err := CheckExpiry(cert, time.Now()); err != nil {
+				return false, fmt.Errorf("checking expiry on cert: %w", err)
+			}
 		}
 	}
 
