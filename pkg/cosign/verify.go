@@ -1007,14 +1007,6 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, errors.New("no trusted rekor public keys provided")
 	}
 
-	if err := compareSigs(untrustedBundle.Payload.Body.(string), untrustedSig); err != nil {
-		return false, err
-	}
-
-	if err := comparePublicKey(untrustedBundle.Payload.Body.(string), untrustedSig, co); err != nil {
-		return false, err
-	}
-
 	pubKey, ok := co.RekorPubKeys.Keys[untrustedBundle.Payload.LogID]
 	if !ok {
 		return false, &VerificationError{"verifying bundle: rekor log public key not found for payload"}
@@ -1027,6 +1019,13 @@ func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 	acceptableBundleBody := untrustedBundle.Payload.Body.(string)
+
+	if err := comparePublicKey(acceptableBundleBody, untrustedSig, co); err != nil {
+		return false, err
+	}
+	if err := compareSigs(acceptableBundleBody, untrustedSig); err != nil {
+		return false, err
+	}
 
 	payload, err := untrustedSig.Payload()
 	if err != nil {
