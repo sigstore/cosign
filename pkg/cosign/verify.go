@@ -677,17 +677,6 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 
-	cert, err := sig.Cert()
-	if err != nil {
-		return false, err
-	}
-	if cert != nil && acceptableRFC3161Time != nil {
-		// Verify the cert against the integrated time.
-		if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
-			return false, fmt.Errorf("checking expiry on cert: %w", err)
-		}
-	}
-
 	if !co.SkipTlogVerify {
 		bundleVerified, err = VerifyBundle(ctx, sig, co, co.RekorClient)
 		if err != nil {
@@ -727,7 +716,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	}
 
 	// 3. if a certificate was used, verify the cert against the integrated time.
-	cert, err = sig.Cert()
+	cert, err := sig.Cert()
 	if err != nil {
 		return false, err
 	}
@@ -736,6 +725,14 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		// This is the signature creation time. As a default upper bound, use the current
 		// time.
 		validityTime := time.Now()
+
+		if acceptableRFC3161Time != nil {
+			// Verify the cert against the integrated time.
+			if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
+				return false, fmt.Errorf("checking expiry on cert: %w", err)
+			}
+		}
+
 		if acceptableRekorBundleTime != nil {
 			validityTime = *acceptableRekorBundleTime
 		}
