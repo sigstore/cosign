@@ -486,11 +486,11 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *
 	if err != nil {
 		return nil, err
 	}
-	payload, err := untrustedSig.Payload()
+	untrustedPayload, err := untrustedSig.Payload()
 	if err != nil {
 		return nil, err
 	}
-	tlogEntries, err := FindTlogEntry(ctx, client, untrustedB64sig, payload, untrustedPEM)
+	tlogEntries, err := FindTlogEntry(ctx, client, untrustedB64sig, untrustedPayload, untrustedPEM)
 	if err != nil {
 		return nil, err
 	}
