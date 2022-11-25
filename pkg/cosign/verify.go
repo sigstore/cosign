@@ -724,23 +724,23 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				acceptableRekorBundleTime = &t
 			}
 		}
+	}
 
-		// 3. if a certificate was used, verify the cert against the integrated time.
-		cert, err := sig.Cert()
-		if err != nil {
-			return false, err
+	// 3. if a certificate was used, verify the cert against the integrated time.
+	cert, err = sig.Cert()
+	if err != nil {
+		return false, err
+	}
+	if cert != nil {
+		// 2. Check the validity time of the signature.
+		// This is the signature creation time. As a default upper bound, use the current
+		// time.
+		validityTime := time.Now()
+		if acceptableRekorBundleTime != nil {
+			validityTime = *acceptableRekorBundleTime
 		}
-		if cert != nil {
-			// 2. Check the validity time of the signature.
-			// This is the signature creation time. As a default upper bound, use the current
-			// time.
-			validityTime := time.Now()
-			if acceptableRekorBundleTime != nil {
-				validityTime = *acceptableRekorBundleTime
-			}
-			if err := CheckExpiry(cert, validityTime); err != nil {
-				return false, fmt.Errorf("checking expiry on cert: %w", err)
-			}
+		if err := CheckExpiry(cert, validityTime); err != nil {
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
 		}
 	}
 
