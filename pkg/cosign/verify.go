@@ -687,18 +687,18 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 			return false, &VerificationError{"no certificate found on signature"}
 		}
 		// Create a certificate pool for intermediate CA certificates, excluding the root
-		chain, err := untrustedSignature.Chain()
+		untrustedChain, err := untrustedSignature.Chain()
 		if err != nil {
 			return false, err
 		}
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
-		if len(chain) > 0 {
-			if len(chain) == 1 {
+		if len(untrustedChain) > 0 {
+			if len(untrustedChain) == 1 {
 				co.IntermediateCerts = nil
 			} else if co.IntermediateCerts == nil {
 				// If the intermediate certs have not been loaded in by TUF
 				pool := x509.NewCertPool()
-				for _, cert := range chain[:len(chain)-1] {
+				for _, cert := range untrustedChain[:len(untrustedChain)-1] {
 					pool.AddCert(cert)
 				}
 				co.IntermediateCerts = pool
