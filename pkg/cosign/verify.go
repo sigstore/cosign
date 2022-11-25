@@ -762,8 +762,9 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 				return false, fmt.Errorf("checking expiry on cert: %w", err)
 			}
 		}
+		acceptableCert := certWithUnverifiedExpiry
 
-		verifier, err = verifierFromTrustedCertificate(certWithUnverifiedExpiry)
+		verifier, err = verifierFromTrustedCertificate(acceptableCert)
 		if err != nil {
 			return false, err
 		}
