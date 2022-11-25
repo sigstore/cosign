@@ -732,7 +732,12 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 				co.UntrustedIntermediateCerts = untrustedPool
 			}
 		}
-		verifier, err = ValidateAndUnpackCert(untrustedCert, co)
+		if err := validateCertIssuanceAndSubject(untrustedCert, co); err != nil {
+			return false, err
+		}
+		correctlyIssuedCert := untrustedCert
+
+		verifier, err = verifierFromTrustedCertificate(correctlyIssuedCert)
 		if err != nil {
 			return false, err
 		}
