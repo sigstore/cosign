@@ -995,8 +995,8 @@ func getBundleIntegratedTime(sig oci.Signature) (time.Time, error) {
 
 // This verifies an offline bundle contained in the sig against the trusted
 // Rekor publicKeys.
-func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
-	bundle, err := sig.Bundle()
+func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
+	bundle, err := untrustedSig.Bundle()
 	if err != nil {
 		return false, err
 	} else if bundle == nil {
@@ -1007,11 +1007,11 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, errors.New("no trusted rekor public keys provided")
 	}
 
-	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
+	if err := compareSigs(bundle.Payload.Body.(string), untrustedSig); err != nil {
 		return false, err
 	}
 
-	if err := comparePublicKey(bundle.Payload.Body.(string), sig, co); err != nil {
+	if err := comparePublicKey(bundle.Payload.Body.(string), untrustedSig, co); err != nil {
 		return false, err
 	}
 
@@ -1027,11 +1027,11 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
-	payload, err := sig.Payload()
+	payload, err := untrustedSig.Payload()
 	if err != nil {
 		return false, fmt.Errorf("reading payload: %w", err)
 	}
-	signature, err := sig.Base64Signature()
+	signature, err := untrustedSig.Base64Signature()
 	if err != nil {
 		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
