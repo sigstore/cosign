@@ -1050,10 +1050,10 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 // returns the timestamp value.
 // It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp.
 func VerifyRFC3161Timestamp(untrustedSig oci.Signature, tsaCerts *x509.CertPool) (*timestamp.Timestamp, error) {
-	ts, err := untrustedSig.RFC3161Timestamp()
+	untrustedTimestamp, err := untrustedSig.RFC3161Timestamp()
 	if err != nil {
 		return nil, err
-	} else if ts == nil {
+	} else if untrustedTimestamp == nil {
 		return nil, nil
 	}
 
@@ -1079,11 +1079,11 @@ func VerifyRFC3161Timestamp(untrustedSig oci.Signature, tsaCerts *x509.CertPool)
 		tsBytes = rawSig
 	}
 
-	err = tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes), tsaCerts)
+	err = tsaverification.VerifyTimestampResponse(untrustedTimestamp.SignedRFC3161Timestamp, bytes.NewReader(tsBytes), tsaCerts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}
-	acceptedTimestamp := ts
+	acceptedTimestamp := untrustedTimestamp
 
 	// FIXME: tsaverification.VerifyTimestampResponse has done this parsing; we shouldn’t parse again.
 	return timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
