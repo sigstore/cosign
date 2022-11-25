@@ -679,11 +679,11 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 	verifier := co.SigVerifier
 	if verifier == nil {
 		// If we don't have a public key to check against, we can try a root cert.
-		cert, err := untrustedSignature.Cert()
+		untrustedCert, err := untrustedSignature.Cert()
 		if err != nil {
 			return false, err
 		}
-		if cert == nil {
+		if untrustedCert == nil {
 			return false, &VerificationError{"no certificate found on signature"}
 		}
 		// Create a certificate pool for intermediate CA certificates, excluding the root
@@ -704,7 +704,7 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 				co.IntermediateCerts = pool
 			}
 		}
-		verifier, err = ValidateAndUnpackCert(cert, co)
+		verifier, err = ValidateAndUnpackCert(untrustedCert, co)
 		if err != nil {
 			return false, err
 		}
