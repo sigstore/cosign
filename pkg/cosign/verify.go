@@ -993,8 +993,9 @@ func getBundleIntegratedTime(sig oci.Signature) (time.Time, error) {
 	return time.Unix(bundle.Payload.IntegratedTime, 0), nil
 }
 
-// This verifies an offline bundle contained in the sig against the trusted
-// Rekor publicKeys.
+// VerifyBundle returns true if untrustedSig contains an offline Rekor bundle corectly signed
+// by the trusted Rekor public keys, and the bundle attests
+// to recording untrustedSig’s public key, signature and payload.
 func VerifyBundle(untrustedSig oci.Signature, co *CheckOpts) (bool, error) {
 	untrustedBundle, err := untrustedSig.Bundle()
 	if err != nil {
