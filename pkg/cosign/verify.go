@@ -646,17 +646,19 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 }
 
 // verifyInternal holds the main verification flow for signatures and attestations.
-//  1. Verifies the signature using the provided verifier.
-//  2. Checks for transparency log entry presence:
+//   - Checks for transparency log entry presence:
 //     a. Verifies the Rekor entry in the bundle, if provided. This works offline OR
 //     b. If we don't have a Rekor entry retrieved via cert, do an online lookup (assuming
 //     we are in experimental mode).
-//  3. If a certificate is provided, check it's expiration using the transparency log timestamp.
+//   - If a certificate is provided and necessary, validates it against CheckOpts
+//   - Verifies the signature (using the provided verifier, if any).
 func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
+	// === If the policy accepts a RFC 3161 timestamp, see if we have an acceptable one.
+	// A missing timestamp is not an error in itself.
 	if co.TSACerts != nil {
 		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(untrustedSignature, co.TSACerts)
 		if err != nil {
@@ -667,6 +669,8 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 		}
 	}
 
+	// === If the policy requires Rekor presence, enforce that.
+	// Also extract a timestamp of Rekor inclusion.
 	if !co.SkipTlogVerify {
 		bundleVerified, err = VerifyBundle(untrustedSignature, co)
 		if err != nil {
@@ -706,6 +710,7 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 		}
 	}
 
+	// === If the user didn't provide a specific public key, validate and use the included certificate.
 	verifier := co.SigVerifier
 	if verifier == nil {
 		// If we don't have a public key to check against, we can try a root cert.
@@ -740,9 +745,9 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 		// WARNING: Certificate validity time restrictions are not enforced yet, at this point.
 		certWithUnverifiedExpiry := untrustedCert
 
-		// 3. if a certificate was used, verify the cert against the integrated time.
-		checkedExpiry := false
+		// Verify the cert against the integrated time.
 		// If we have multiple accepted sources of signature creation time, validate against all of them; why not?
+		checkedExpiry := false
 		if acceptableRFC3161Time != nil {
 			// Verify the cert against the timestamp time.
 			if err := CheckExpiry(certWithUnverifiedExpiry, *acceptableRFC3161Time); err != nil {
@@ -770,11 +775,12 @@ func verifyInternal(ctx context.Context, untrustedSignature oci.Signature, h v1.
 		}
 	}
 
-	// 1. Perform cryptographic verification of the signature using the certificate's public key.
+	// === Perform cryptographic verification of the signature payload.
 	if err := verifyFn(ctx, verifier, untrustedSignature); err != nil {
 		return false, err
 	}
 
+	// === Enforce caller-provided policy on the claims in the signature payload.
 	// We can't check annotations without claims, both require unmarshalling the payload.
 	if co.ClaimVerifier != nil {
 		if err := co.ClaimVerifier(untrustedSignature, h, co.Annotations); err != nil {
