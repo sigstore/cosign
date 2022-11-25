@@ -1065,11 +1065,11 @@ func VerifyRFC3161Timestamp(untrustedSig oci.Signature, tsaCerts *x509.CertPool)
 	var tsBytes []byte
 	if len(untrustedB64Sig) == 0 {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
-		signedPayload, err := untrustedSig.Payload()
+		untrustedPayload, err := untrustedSig.Payload()
 		if err != nil {
 			return nil, fmt.Errorf("reading the payload: %w", err)
 		}
-		tsBytes = signedPayload
+		tsBytes = untrustedPayload
 	} else {
 		// create timestamp over raw bytes of signature
 		rawSig, err := base64.StdEncoding.DecodeString(untrustedB64Sig)
