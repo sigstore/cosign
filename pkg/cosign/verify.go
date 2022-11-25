@@ -266,10 +266,10 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 
 // CheckCertificatePolicy checks that the certificate subject and issuer match
 // the expected values.
-func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
-	ce := CertExtensions{Cert: cert}
+func CheckCertificatePolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
+	ce := CertExtensions{Cert: correctlySignedCert}
 
-	if err := validateCertSubject(cert, co); err != nil {
+	if err := validateCertSubject(correctlySignedCert, co); err != nil {
 		return err
 	}
 
@@ -307,14 +307,14 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				if err != nil {
 					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRegExp, err)
 				}
-				for _, san := range getSubjectAlternateNames(cert) {
+				for _, san := range getSubjectAlternateNames(correctlySignedCert) {
 					if regex.MatchString(san) {
 						subjectMatches = true
 						break
 					}
 				}
 			case identity.Subject != "":
-				for _, san := range getSubjectAlternateNames(cert) {
+				for _, san := range getSubjectAlternateNames(correctlySignedCert) {
 					if san == identity.Subject {
 						subjectMatches = true
 						break
