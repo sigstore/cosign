@@ -264,18 +264,10 @@ func ValidateAndUnpackCert(untrustedCert *x509.Certificate, co *CheckOpts) (sign
 	return verifier, nil
 }
 
-// CheckCertificatePolicy checks that the certificate subject and issuer match
-// the expected values.
-func CheckCertificatePolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
+// validateIssuerPolicy checks that the certificate is valid per co.Identities.
+// It should only be called after the certificate has been determined to be correctly signed.
+func validateIssuerPolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
 	ce := CertExtensions{Cert: correctlySignedCert}
-
-	if err := validateCertSubject(correctlySignedCert, co); err != nil {
-		return err
-	}
-
-	if err := validateCertExtensions(ce, co); err != nil {
-		return err
-	}
 	issuer := ce.GetIssuer()
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
@@ -330,6 +322,24 @@ func CheckCertificatePolicy(correctlySignedCert *x509.Certificate, co *CheckOpts
 			}
 		}
 		return &VerificationError{"none of the expected identities matched what was in the certificate"}
+	}
+	return nil
+}
+
+// CheckCertificatePolicy checks that the certificate subject and issuer match
+// the expected values.
+func CheckCertificatePolicy(correctlySignedCert *x509.Certificate, co *CheckOpts) error {
+	ce := CertExtensions{Cert: correctlySignedCert}
+
+	if err := validateCertSubject(correctlySignedCert, co); err != nil {
+		return err
+	}
+
+	if err := validateCertExtensions(ce, co); err != nil {
+		return err
+	}
+	if err := validateIssuerPolicy(correctlySignedCert, co); err != nil {
+		return err
 	}
 	return nil
 }
