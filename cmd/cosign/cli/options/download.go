@@ -22,10 +22,22 @@ type SBOMDownloadOptions struct {
 	Platform string // Platform to download sboms
 }
 
+type AttestationDownloadOptions struct {
+	PredicateType string // Predicate type of attestation to retrieve
+}
+
 var _ Interface = (*SBOMDownloadOptions)(nil)
+
+var _ Interface = (*AttestationDownloadOptions)(nil)
 
 // AddFlags implements Interface
 func (o *SBOMDownloadOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Platform, "platform", "",
 		"download SBOM for a specific platform image")
+}
+
+// AddFlags implements Interface
+func (o *AttestationDownloadOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.PredicateType, "predicate-type", "",
+		"download attestation matching supplied predicateType")
 }
