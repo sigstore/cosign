@@ -84,19 +84,21 @@ func downloadSBOM() *cobra.Command {
 
 func downloadAttestation() *cobra.Command {
 	o := &options.RegistryOptions{}
+	ao := &options.AttestationDownloadOptions{}
 
 	cmd := &cobra.Command{
 		Use:              "attestation",
 		Short:            "Download in-toto attestations from the supplied container image",
-		Example:          "  cosign download attestation <image uri>",
+		Example:          "  cosign download attestation <image uri> [--predicate-type]",
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return download.AttestationCmd(cmd.Context(), *o, args[0])
+			return download.AttestationCmd(cmd.Context(), *o, *ao, args[0])
 		},
 	}
 
 	o.AddFlags(cmd)
+	ao.AddFlags(cmd)
 
 	return cmd
 }
