@@ -58,6 +58,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
 	cliverify "github.com/sigstore/cosign/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/env"
 	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -66,6 +67,9 @@ import (
 	"github.com/sigstore/cosign/pkg/sget"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
+	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -87,6 +91,23 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
 		Attachment:    attachment,
 		HashAlgorithm: crypto.SHA256,
+	}
+
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
+var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaServerURL, tsaCertChain string, skipTlogVerify bool) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:           keyRef,
+		CheckClaims:      checkClaims,
+		Annotations:      sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:       attachment,
+		HashAlgorithm:    crypto.SHA256,
+		TSAServerURL:     tsaServerURL,
+		TSACertChainPath: tsaCertChain,
+		SkipTlogVerify:   skipTlogVerify,
 	}
 
 	args := []string{imageRef}
@@ -242,19 +263,6 @@ func TestAttestVerifySPDXJSON(t *testing.T) {
 	)
 }
 
-func TestAttestVerifyCycloneDXXML(t *testing.T) {
-	attestationBytes, err := os.ReadFile("./testdata/bom-go-mod.cyclonedx.xml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	attestVerify(t,
-		"cyclonedxxml",
-		string(attestationBytes),
-		`predicate: Data: specVersion: "1.4"`,
-		`predicate: Data: specVersion: "7.7"`,
-	)
-}
-
 func TestAttestVerifyCycloneDXJSON(t *testing.T) {
 	attestationBytes, err := os.ReadFile("./testdata/bom-go-mod.cyclonedx.json")
 	if err != nil {
@@ -317,8 +325,13 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, attestationPath, false,
-		predicateType, false, 30*time.Second, false), t)
+	attestCmd := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: attestationPath,
+		PredicateType: predicateType,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCmd.Exec(ctx, imgName), t)
 
 	// Use cue to verify attestation
 	policyPath := filepath.Join(td, "policy.cue")
@@ -373,8 +386,14 @@ func TestAttestationReplaceCreate(t *testing.T) {
 	}
 
 	// Attest with replace=true to create an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -418,8 +437,13 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once with replace=false creating an attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -431,8 +455,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest again with replace=true, replacing the previous attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
 
 	// Download and count the attestations
@@ -444,8 +474,14 @@ func TestAttestationReplace(t *testing.T) {
 	}
 
 	// Attest once more replace=true using a different predicate, to ensure it adds a new attestation
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"custom", true, 30*time.Second, false), t)
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "custom",
+		Replace:       true,
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
@@ -490,6 +526,119 @@ func TestRekorBundle(t *testing.T) {
 	// use rekor prod since we have hardcoded the public key
 	os.Setenv(serverEnv, "notreal")
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
+func TestRFC3161Timestamp(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		TSAServerURL: server.URL,
+	}
+	so := options.SignOptions{
+		Upload:     true,
+		TlogUpload: false,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works against the TSA server
+	must(verifyTSA(pubKeyPath, imgName, true, nil, "", server.URL, file.Name(), true), t)
+}
+
+func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		TSAServerURL: server.URL,
+		RekorURL:     rekorURL,
+	}
+	so := options.SignOptions{
+		Upload:     true,
+		TlogUpload: true,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works against the Rekor and TSA clients
+	must(verifyTSA(pubKeyPath, imgName, true, nil, "", server.URL, file.Name(), false), t)
 }
 
 func TestDuplicateSign(t *testing.T) {
@@ -661,21 +810,31 @@ func TestSignBlob(t *testing.T) {
 		KeyRef: pubKeyPath2,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "badsig", blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	cmd1 := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+		SigRef:  "badsig",
+	}
+	cmd2 := cliverify.VerifyBlobCmd{
+		KeyOpts: ko2,
+		SigRef:  "badsig",
+	}
+	mustErr(cmd1.Exec(ctx, blob), t)
+	mustErr(cmd2.Exec(ctx, blob), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "")
+	sig, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work with that one, but not the other
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko2, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	cmd1.SigRef = string(sig)
+	cmd2.SigRef = string(sig)
+	must(cmd1.Exec(ctx, bp), t)
+	mustErr(cmd2.Exec(ctx, bp), t)
 }
 
 func TestSignBlobBundle(t *testing.T) {
@@ -700,7 +859,10 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 	}
 	// Verify should fail on a bad input
-	mustErr(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, blob, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+	}
+	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -709,21 +871,21 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 		RekorURL:   rekorURL,
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", ""); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
 	defer setenv(t, env.VariableExperimental.String(), "1")()
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", ""); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
-	must(cliverify.VerifyBlobCmd(ctx, ko1, "" /*certRef*/, "" /*certEmail*/, "" /*certIdentity*/, "" /*certOidcIssuer*/, "" /*certChain*/, "" /*sigRef*/, bp, "" /*certGithubWorkflowTrigger*/, "" /*certGithubWorkflowSha*/, "" /*certGithubWorkflowName*/, "" /*certGithubWorkflowRepository*/, "" /*certGithubWorkflowRef*/, false), t)
+	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
 func TestGenerate(t *testing.T) {
@@ -1061,8 +1223,13 @@ func TestSaveLoadAttestation(t *testing.T) {
 
 	// Now attest the image
 	ko = options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
-	must(attest.AttestCmd(ctx, ko, options.RegistryOptions{}, imgName, "", "", false, slsaAttestationPath, false,
-		"slsaprovenance", false, 30*time.Second, false), t)
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
 
 	// save the image to a temp dir
 	imageDir := t.TempDir()
@@ -1192,16 +1359,16 @@ func TestTlog(t *testing.T) {
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// Now we turn on the tlog!
-	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: priyawadhwa@ to figure out how to add an entry to the tlog without using keyless signing
+	// We could add an --upload-tlog flag, but it's a bit weird since we have a --no-upload-tlog flag too right now.
 
 	// Verify shouldn't work since we haven't put anything in it yet.
-	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// Sign again with the tlog env var on
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	// And now verify works!
-	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// // Sign again with the tlog env var on
+	// must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// // And now verify works!
+	// must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestNoTlog(t *testing.T) {
@@ -1233,19 +1400,16 @@ func TestNoTlog(t *testing.T) {
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
-	// Now we turn on the tlog!
-	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Uncomment once we have a way to tell `cosign verify` that we want to verify with a public key
+	// and a tlog entry
 
-	// Verify shouldn't work since we haven't put anything in it yet.
-	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
-
-	// Sign again with the tlog env var on with option to not upload tlog
-	so = options.SignOptions{
-		NoTlogUpload: true,
-	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	// And verify it still fails.
-	mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
+	// // Sign again and make sure tlog upload is set to false
+	// so = options.SignOptions{
+	// 	TlogUpload: false,
+	// }
+	// must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// // And verify it still fails.
+	// mustErr(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestGetPublicKeyCustomOut(t *testing.T) {
@@ -1402,12 +1566,12 @@ func TestInvalidBundle(t *testing.T) {
 
 	// Sign image1 and store the entry in rekor
 	// (we're just using it for its bundle)
-	defer setenv(t, env.VariableExperimental.String(), "1")()
 	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
 	so := options.SignOptions{
-		Upload: true,
-		Force:  true,
+		Upload:           true,
+		TlogUpload:       true,
+		SkipConfirmation: true,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
 	// verify image1
@@ -1435,8 +1599,8 @@ func TestInvalidBundle(t *testing.T) {
 	imgRef2, _, cleanup := mkimage(t, img2)
 	defer cleanup()
 	so = options.SignOptions{
-		Upload:       true,
-		NoTlogUpload: true,
+		Upload:     true,
+		TlogUpload: false,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{img2}), t)
 	must(verify(pubKeyPath, img2, true, nil, ""), t)
@@ -1535,4 +1699,71 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	// Make sure we fail with the wrong blob (set the predicate type back)
 	blobVerifyAttestationCmd.PredicateType = predicateType
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
+}
+
+func TestOffline(t *testing.T) {
+	regName, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	img1 := path.Join(regName, "cosign-e2e")
+
+	imgRef, _, cleanup := mkimage(t, img1)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image1 and store the entry in rekor
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
+	so := options.SignOptions{
+		Upload:           true,
+		TlogUpload:       true,
+		SkipConfirmation: true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
+	// verify image1 online and offline
+	must(verify(pubKeyPath, img1, true, nil, ""), t)
+	verifyCmd := &cliverify.VerifyCommand{
+		KeyRef:      pubKeyPath,
+		Offline:     true,
+		CheckClaims: true,
+	}
+	must(verifyCmd.Exec(ctx, []string{img1}), t)
+
+	// Get signatures
+	si, err := ociremote.SignedEntity(imgRef)
+	must(err, t)
+	sigs, err := si.Signatures()
+	must(err, t)
+	gottenSigs, err := sigs.Get()
+	must(err, t)
+
+	fakeBundle := &bundle.RekorBundle{
+		SignedEntryTimestamp: []byte(""),
+		Payload: bundle.RekorPayload{
+			Body: "",
+		},
+	}
+	newSig, err := mutate.Signature(gottenSigs[0], mutate.WithBundle(fakeBundle))
+	must(err, t)
+
+	sigsTag, err := ociremote.SignatureTag(imgRef)
+	if err := remote.Delete(sigsTag); err != nil {
+		t.Fatal(err)
+	}
+
+	si, err = ociremote.SignedEntity(imgRef)
+	must(err, t)
+	newImage, err := mutate.AttachSignatureToEntity(si, newSig)
+	must(err, t)
+
+	mustErr(verify(pubKeyPath, img1, true, nil, ""), t)
+	if err := ociremote.WriteSignatures(sigsTag.Repository, newImage); err != nil {
+		t.Fatal(err)
+	}
+
+	// Confirm offline verification fails
+	mustErr(verifyCmd.Exec(ctx, []string{img1}), t)
 }

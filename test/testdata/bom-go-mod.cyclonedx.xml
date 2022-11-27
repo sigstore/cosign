@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.4" serialNumber="urn:uuid:b4c933a6-a48a-4bde-80c8-663ea0a4ec49" version="1">
-  <metadata>
-  </metadata>
-  <components>
-  </components>
-  <dependencies>
-  </dependencies>
-</bom>

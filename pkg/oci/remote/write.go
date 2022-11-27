@@ -116,7 +116,6 @@ func WriteAttestations(repo name.Repository, se oci.SignedEntity, opts ...Option
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s", atts)
 
 	// Determine the tag to which these signatures should be published.
 	h, err := se.(digestable).Digest()

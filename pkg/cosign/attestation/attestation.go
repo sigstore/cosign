@@ -17,7 +17,6 @@ package attestation
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"reflect"
@@ -26,7 +25,6 @@ import (
 
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 
-	cyclonexd "github.com/CycloneDX/cyclonedx-go"
 	"github.com/in-toto/in-toto-golang/in_toto"
 )
 
@@ -95,10 +93,9 @@ type GenerateOpts struct {
 	Digest string
 	// Repo context of the reference.
 	Repo string
+
 	// Function to return the time to set
 	Time func() time.Time
-	// Optional Annotations for Attestation
-	Annotations map[string]string
 }
 
 // GenerateStatement returns an in-toto statement based on the provided
@@ -118,8 +115,6 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, true)
 	case "cyclonedx":
 		return generateCycloneDXStatement(predicate, opts.Digest, opts.Repo)
-	case "cyclonedxxml":
-		return generateCycloneDXXMLStatement(predicate, opts.Digest, opts.Repo)
 	case "link":
 		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
 	case "vuln":
@@ -255,19 +250,6 @@ func generateSPDXStatement(rawPayload []byte, digest string, repo string, parseJ
 func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
 	var data interface{}
 	if err := json.Unmarshal(rawPayload, &data); err != nil {
-		return nil, err
-	}
-	return in_toto.SPDXStatement{
-		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateCycloneDX),
-		Predicate: CosignPredicate{
-			Data: data,
-		},
-	}, nil
-}
-
-func generateCycloneDXXMLStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	data := cyclonexd.NewBOM()
-	if err := xml.Unmarshal(rawPayload, &data); err != nil {
 		return nil, err
 	}
 	return in_toto.SPDXStatement{

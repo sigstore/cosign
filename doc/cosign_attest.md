@@ -11,8 +11,8 @@ cosign attest [flags]
 ```
   cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--f] [--r] <image uri>
 
-  # attach an attestation to a container image Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
+  # attach an attestation to a container image Google sign-in
+  cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
 
   # attach an attestation to a container image with a local key pair file
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key <IMAGE>
@@ -44,14 +44,12 @@ cosign attest [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --certificate string                                                                       path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
-  -f, --force                                                                                    skip warnings and confirmations
       --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for attest
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
-      --no-tlog-upload                                                                           whether to not upload the transparency log
       --no-upload                                                                                do not upload the generated attestation
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           [EXPERIMENTAL] Path to file containing OIDC client secret for application
@@ -62,10 +60,11 @@ cosign attest [flags]
       --predicate string                                                                         path to the predicate file.
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --replace
+      --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|cyclonedxxml|vuln|custom) or an URI (default "custom")
+      --tlog-upload                                                                              whether or not to upload to the tlog
+      --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 
