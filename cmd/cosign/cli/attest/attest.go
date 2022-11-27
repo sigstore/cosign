@@ -189,7 +189,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	predicateTypeAnnotation := map[string]string{
-		"predicateType": predicateType,
+		"predicateType": c.PredicateType,
 	}
 	// Add predicateType as manifest annotation
 	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
