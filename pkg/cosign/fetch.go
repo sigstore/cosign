@@ -141,7 +141,7 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, pred
 	var g errgroup.Group
 	g.SetLimit(runtime.NumCPU())
 
-	for i, att := range l {
+	for _, att := range l {
 		if predicateType != "" {
 			anns, err := att.Annotations()
 			if err != nil {
@@ -153,7 +153,7 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, pred
 				continue
 			}
 		}
-		_, att := i, att
+		att := att
 		var a AttestationPayload
 		g.Go(func() error {
 			attestPayload, _ := att.Payload()
