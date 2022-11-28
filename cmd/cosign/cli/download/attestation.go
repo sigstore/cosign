@@ -40,15 +40,15 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 		return err
 	}
 
-	var predicateURI string
+	var predicateType string
 	if attOptions.PredicateType != "" {
-		predicateURI, err = options.ParsePredicateType(attOptions.PredicateType)
+		predicateType, err = options.ParsePredicateType(attOptions.PredicateType)
 		if err != nil {
 			return err
 		}
 	}
 
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, predicateURI, ociremoteOpts...)
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, predicateType, ociremoteOpts...)
 	if err != nil {
 		return err
 	}

@@ -39,5 +39,5 @@ func (o *SBOMDownloadOptions) AddFlags(cmd *cobra.Command) {
 // AddFlags implements Interface
 func (o *AttestationDownloadOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.PredicateType, "predicate-type", "",
-		"download attestation matching supplied predicateType")
+		"download attestation matching supplied predicate type")
 }

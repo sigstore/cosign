@@ -119,7 +119,7 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 	return signatures, nil
 }
 
-func FetchAttestationsForReference(ctx context.Context, ref name.Reference, predicateURI string, opts ...ociremote.Option) ([]AttestationPayload, error) {
+func FetchAttestationsForReference(ctx context.Context, ref name.Reference, predicateType string, opts ...ociremote.Option) ([]AttestationPayload, error) {
 	simg, err := ociremote.SignedEntity(ref, opts...)
 	if err != nil {
 		return nil, err
@@ -142,14 +142,14 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, pred
 	g.SetLimit(runtime.NumCPU())
 
 	for i, att := range l {
-		if predicateURI != "" {
+		if predicateType != "" {
 			anns, err := att.Annotations()
 			if err != nil {
 				return nil, err
 			}
 			pt, ok := anns["predicateType"]
 			// Skip attestation if predicateType annotation is not present or predicateType annotation does not match supplied predicate type
-			if !ok || pt != predicateURI {
+			if !ok || pt != predicateType {
 				continue
 			}
 		}
@@ -169,8 +169,8 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, pred
 		return nil, err
 	}
 
-	if len(attestations) == 0 && predicateURI != "" {
-		return nil, fmt.Errorf("no layers of predicate type %s found", predicateURI)
+	if len(attestations) == 0 && predicateType != "" {
+		return nil, fmt.Errorf("no attestations with predicate type '%s' found", predicateType)
 	}
 
 	return attestations, nil
