@@ -243,7 +243,7 @@ func CertSubject(c *x509.Certificate) string {
 		return c.URIs[0].String()
 	}
 	// ignore error if there's no OtherName SAN
-	otherName, _ := cosign.UnmarshalOtherNameSAN(c.Extensions)
+	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(c.Extensions)
 	if len(otherName) > 0 {
 		return otherName
 	}

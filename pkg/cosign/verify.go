@@ -200,7 +200,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	if len(cert.UnhandledCriticalExtensions) > 0 {
 		var unhandledExts []asn1.ObjectIdentifier
 		for _, oid := range cert.UnhandledCriticalExtensions {
-			if !oid.Equal(SANOID) {
+			if !oid.Equal(cryptoutils.SANOID) {
 				unhandledExts = append(unhandledExts, oid)
 			}
 		}
@@ -394,7 +394,7 @@ func validateCertIdentity(cert *x509.Certificate, co *CheckOpts) error {
 		}
 	}
 
-	otherName, _ := UnmarshalOtherNameSAN(cert.Extensions)
+	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
 	if len(otherName) > 0 && co.CertIdentity == otherName {
 		return nil
 	}
@@ -418,7 +418,7 @@ func getSubjectAlternateNames(cert *x509.Certificate) []string {
 		sans = append(sans, uri.String())
 	}
 	// ignore error if there's no OtherName SAN
-	otherName, _ := UnmarshalOtherNameSAN(cert.Extensions)
+	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
 	if len(otherName) > 0 {
 		sans = append(sans, otherName)
 	}
