@@ -93,11 +93,6 @@ jobs:
         TUF_MIRROR=$(kubectl -n tuf-system get ksvc tuf -ojsonpath='{.status.url}')
         ./cosign initialize --mirror $TUF_MIRROR --root ./root.json
 
-    - name: Generate key pair
-      run: |
-        COSIGN_PASSWORD="baz"
-        ./cosign generate-key-pair
-
     - name: Initialize with custom TUF root pointing to local filesystem
       if: ${{ matrix.tuf-root == 'air-gap' }}
       run: |
