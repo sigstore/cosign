@@ -7,7 +7,7 @@
 Container Signing, Verification and Storage in an OCI registry.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/sigstore/cosign)](https://goreportcard.com/report/github.com/sigstore/cosign)
-[![e2e-tests](https://github.com/sigstore/cosign/actions/workflows/e2e_tests.yml/badge.svg)](https://github.com/sigstore/cosign/actions/workflows/e2e_tests.yml)
+[![e2e-tests](https://github.com/sigstore/cosign/actions/workflows/e2e-tests.yml/badge.svg)](https://github.com/sigstore/cosign/actions/workflows/e2e-tests.yml)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/5715/badge)](https://bestpractices.coreinfrastructure.org/projects/5715)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/sigstore/cosign/badge)](https://api.securityscorecards.dev/projects/github.com/sigstore/cosign)
 
