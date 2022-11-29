@@ -30,17 +30,19 @@ import (
 )
 
 type SignedPayload struct {
-	Base64Signature string
-	Payload         []byte
-	Cert            *x509.Certificate
-	Chain           []*x509.Certificate
-	Bundle          *bundle.RekorBundle
+	Base64Signature  string
+	Payload          []byte
+	Cert             *x509.Certificate
+	Chain            []*x509.Certificate
+	Bundle           *bundle.RekorBundle
+	RFC3161Timestamp *bundle.RFC3161Timestamp
 }
 
 type LocalSignedPayload struct {
-	Base64Signature string              `json:"base64Signature"`
-	Cert            string              `json:"cert,omitempty"`
-	Bundle          *bundle.RekorBundle `json:"rekorBundle,omitempty"`
+	Base64Signature  string                   `json:"base64Signature"`
+	Cert             string                   `json:"cert,omitempty"`
+	Bundle           *bundle.RekorBundle      `json:"rekorBundle,omitempty"`
+	RFC3161Timestamp *bundle.RFC3161Timestamp `json:"rfc3161Timestamp,omitempty"`
 }
 
 type Signatures struct {
@@ -101,6 +103,12 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 			if err != nil {
 				return err
 			}
+
+			signatures[i].RFC3161Timestamp, err = sig.RFC3161Timestamp()
+			if err != nil {
+				return err
+			}
+
 			signatures[i].Bundle, err = sig.Bundle()
 			return err
 		})

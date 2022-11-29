@@ -63,6 +63,8 @@ type PolicySignOptions struct {
 	Fulcio           FulcioOptions
 	Rekor            RekorOptions
 	SkipConfirmation bool
+	TlogUpload       bool
+	TSAServerURL     string
 
 	OIDC OIDCOptions
 }
@@ -79,6 +81,12 @@ func (o *PolicySignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
+
+	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", false,
+		"whether or not to upload to the tlog")
+
+	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
+		"url to the Timestamp RFC3161 server, default none")
 
 	o.Registry.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)

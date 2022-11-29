@@ -33,6 +33,9 @@ type KeyOpts struct {
 	OIDCProvider         string // Specify which OIDC credential provider to use for keyless signer
 	BundlePath           string
 	SkipConfirmation     bool
+	TSAServerURL         string
+	RFC3161TimestampPath string
+	TSACertChainPath     string
 
 	// FulcioAuthFlow is the auth flow to use when authenticating against
 	// Fulcio. See https://pkg.go.dev/github.com/sigstore/cosign/cmd/cosign/cli/fulcio#pkg-constants

@@ -20,12 +20,20 @@ import (
 )
 
 type CommonVerifyOptions struct {
-	Offline bool // Force offline verification
+	Offline          bool // Force offline verification
+	TSACertChainPath string
+	SkipTlogVerify   bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Offline, "offline", false,
 		"only allow offline verification")
+
+	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
+		"path to certificate chain PEM file for the Timestamp Authority")
+
+	cmd.Flags().BoolVar(&o.SkipTlogVerify, "insecure-skip-tlog-verify", false,
+		"skip tlog verification")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.
@@ -43,6 +51,7 @@ type VerifyOptions struct {
 	Rekor               RekorOptions
 	Registry            RegistryOptions
 	SignatureDigest     SignatureDigestOptions
+
 	AnnotationOptions
 }
 
@@ -132,6 +141,8 @@ type VerifyBlobOptions struct {
 	Rekor               RekorOptions
 	Registry            RegistryOptions
 	CommonVerifyOptions CommonVerifyOptions
+
+	RFC3161TimestampPath string
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)
@@ -152,6 +163,9 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
+
+	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
+		"path to timestamp bundle FILE")
 }
 
 // VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.

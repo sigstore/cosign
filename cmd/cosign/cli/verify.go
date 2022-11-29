@@ -17,6 +17,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 
@@ -116,10 +117,16 @@ against the transparency log.`,
 				SignatureRef:                 o.SignatureRef,
 				LocalImage:                   o.LocalImage,
 				Offline:                      o.CommonVerifyOptions.Offline,
+				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
 
 			if o.Registry.AllowInsecure {
 				v.NameOptions = append(v.NameOptions, name.Insecure)
+			}
+
+			if o.CommonVerifyOptions.SkipTlogVerify {
+				fmt.Fprintln(os.Stderr, "**Warning** Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the signature.")
 			}
 
 			return v.Exec(cmd.Context(), args)
@@ -140,7 +147,7 @@ func VerifyAttestation() *cobra.Command {
 against the transparency log.`,
 		Example: `  cosign verify-attestation --key <key path>|<key url>|<kms uri> <image uri> [<image uri> ...]
 
-  # verify cosign attestations on the image
+  # verify cosign attestations on the image against the transparency log
   cosign verify-attestation <IMAGE>
 
   # verify multiple images
@@ -148,9 +155,6 @@ against the transparency log.`,
 
   # additionally verify specified annotations
   cosign verify-attestation -a key1=val1 -a key2=val2 <IMAGE>
-
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign verify-attestation <IMAGE>
 
   # verify image with public key
   cosign verify-attestation --key cosign.pub <IMAGE>
@@ -204,6 +208,8 @@ against the transparency log.`,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
 				Offline:                      o.CommonVerifyOptions.Offline,
+				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
 
 			return v.Exec(cmd.Context(), args)
@@ -266,11 +272,13 @@ The blob may be specified as a path to a file or - for stdin.`,
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := options.KeyOpts{
-				KeyRef:     o.Key,
-				Sk:         o.SecurityKey.Use,
-				Slot:       o.SecurityKey.Slot,
-				RekorURL:   o.Rekor.URL,
-				BundlePath: o.BundlePath,
+				KeyRef:               o.Key,
+				Sk:                   o.SecurityKey.Use,
+				Slot:                 o.SecurityKey.Slot,
+				RekorURL:             o.Rekor.URL,
+				BundlePath:           o.BundlePath,
+				RFC3161TimestampPath: o.RFC3161TimestampPath,
+				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
 			}
 			verifyBlobCmd := &verify.VerifyBlobCmd{
 				KeyOpts:                      ko,

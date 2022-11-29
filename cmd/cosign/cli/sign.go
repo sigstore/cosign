@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -86,7 +85,7 @@ race conditions or (worse) malicious tampering.
 			case "sbom", "":
 				break
 			default:
-				return flag.ErrHelp
+				return fmt.Errorf("specified image attachment %s not specified. Can be 'sbom'", o.Attachment)
 			}
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
@@ -108,6 +107,7 @@ race conditions or (worse) malicious tampering.
 				OIDCDisableProviders:     o.OIDC.DisableAmbientProviders,
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
+				TSAServerURL:             o.TSAServerURL,
 			}
 			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {

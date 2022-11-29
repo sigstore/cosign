@@ -36,7 +36,9 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
+	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	"github.com/sigstore/cosign/pkg/cosign"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
@@ -181,7 +183,7 @@ func signPolicy() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sv, err := sign.SignerFromKeyOpts(ctx, "", "", options.KeyOpts{
+			ko := options.KeyOpts{
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
@@ -192,7 +194,9 @@ func signPolicy() *cobra.Command {
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
-			})
+				TSAServerURL:             o.TSAServerURL,
+			}
+			sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
 
 			if err != nil {
 				return err
@@ -259,8 +263,20 @@ func signPolicy() *cobra.Command {
 				return err
 			}
 
+			if o.TSAServerURL != "" {
+				clientTSA, err := tsaclient.GetTimestampClient(o.TSAServerURL)
+				if err != nil {
+					return fmt.Errorf("failed to create TSA client: %w", err)
+				}
+				// Here we get the response from the timestamped authority server
+				_, err = tsa.GetTimestampedSignature(signed.Signed, clientTSA)
+				if err != nil {
+					return err
+				}
+			}
+
 			// Upload to rekor
-			if options.EnableExperimental() {
+			if sign.ShouldUploadToTlog(ctx, ko, ref, o.TlogUpload) {
 				// TODO: Refactor with sign.go
 				rekorBytes := sv.Cert
 				rekorClient, err := rekor.NewClient(o.Rekor.URL)

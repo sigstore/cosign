@@ -80,6 +80,7 @@ cosign verify [flags]
       --check-claims                                                                             whether to check the claims found (default true)
   -h, --help                                                                                     help for verify
       --insecure-ignore-sct                                                                      when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
+      --insecure-skip-tlog-verify                                                                skip tlog verification
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
@@ -91,6 +92,7 @@ cosign verify [flags]
       --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-cert-chain string                                                              path to certificate chain PEM file for the Timestamp Authority
 ```
 
 ### Options inherited from parent commands

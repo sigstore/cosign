@@ -21,12 +21,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
 func TestOptions(t *testing.T) {
-	bundle := &bundle.RekorBundle{}
+	bundle := &cbundle.RekorBundle{}
+	rfc3161Timestamp := &cbundle.RFC3161Timestamp{}
 
 	tests := []struct {
 		name string
@@ -90,6 +91,43 @@ func TestOptions(t *testing.T) {
 				BundleAnnotationKey: "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
 			},
 			Bundle: bundle,
+		},
+	}, {
+		name: "with RFC3161 timestamp bundle",
+		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp)},
+		want: &options{
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
+			Annotations: map[string]string{
+				RFC3161TimestampAnnotationKey: "{\"SignedRFC3161Timestamp\":null}",
+			},
+			RFC3161Timestamp: rfc3161Timestamp,
+		},
+	}, {
+		name: "with RFC3161Timestamp and Rekor bundle",
+		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
+		want: &options{
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
+			Annotations: map[string]string{
+				RFC3161TimestampAnnotationKey: "{\"SignedRFC3161Timestamp\":null}",
+				BundleAnnotationKey:           "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
+			},
+			RFC3161Timestamp: rfc3161Timestamp,
+			Bundle:           bundle,
+		},
+	}, {
+		name: "with RFC3161Timestamp and Rekor bundle",
+		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
+		want: &options{
+			LayerMediaType:  ctypes.SimpleSigningMediaType,
+			ConfigMediaType: types.OCIConfigJSON,
+			Annotations: map[string]string{
+				RFC3161TimestampAnnotationKey: "{\"SignedRFC3161Timestamp\":null}",
+				BundleAnnotationKey:           "{\"SignedEntryTimestamp\":null,\"Payload\":{\"body\":null,\"integratedTime\":0,\"logIndex\":0,\"logID\":\"\"}}",
+			},
+			RFC3161Timestamp: rfc3161Timestamp,
+			Bundle:           bundle,
 		},
 	}}
 

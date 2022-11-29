@@ -30,17 +30,19 @@ on:
       - "main"
   workflow_dispatch:
 
-permissions: read-all
-
 jobs:
   e2e-tests:
     # Skip if running in a fork that might not have secrets configured.
     if: ${{ github.repository == 'sigstore/cosign' }}
     name: Run tests
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
@@ -48,16 +50,21 @@ jobs:
         with:
           go-version: '1.19'
           check-latest: true
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@d51b5346f85640ec2aa2fa057354d2b82c2fcbce # v1.0.1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d # v1.0.0
         with:
-          project_id: projectsigstore
-          service_account_key: ${{ secrets.GCP_CI_SERVICE_ACCOUNT }}
-          export_default_credentials: true
-      - name: Set up `crane`
-        run: go install github.com/google/go-containerregistry/cmd/crane@v0.8.0
+          workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
+          service_account: 'github-actions-e2e@projectsigstore.iam.gserviceaccount.com'
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@d51b5346f85640ec2aa2fa057354d2b82c2fcbce # v1.0.1
+
+      - uses: imjasonh/setup-crane@e82f1b9a8007d399333baba4d75915558e9fb6a4 # v0.2
+
       - name: gcloud auth configure-docker
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
       - name: Run e2e_test_secrets.sh
         shell: bash
         run: ./test/e2e_test_secrets.sh

@@ -25,6 +25,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/digitorus/timestamp"
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/sigstore/pkg/tuf"
@@ -55,6 +57,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+	tsaverification "github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
 // Identity specifies an issuer/subject to verify a signature against.
@@ -117,6 +120,12 @@ type CheckOpts struct {
 
 	// Force offline verification of the signature
 	Offline bool
+
+	// TSACerts are the intermediate CA certs used to verify a time-stamping data.
+	TSACerts *x509.CertPool
+
+	// SkipTlogVerify skip tlog verification
+	SkipTlogVerify bool
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -384,33 +393,8 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub crypto.PublicKey, sig oci.Signature) error {
-	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pub)
-	if err != nil {
-		return err
-	}
-	_, err = tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
-	return err
-}
-
-func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig oci.Signature) error {
-	cert, err := sig.Cert()
-	if err != nil {
-		return err
-	}
-	pemBytes, err := cryptoutils.MarshalCertificateToPEM(cert)
-	if err != nil {
-		return err
-	}
-	e, err := tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
-	if err != nil {
-		return err
-	}
-	// if we have a cert, we should check expiry
-	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
-}
-
-func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signature, pem []byte) (
+	*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
 		return nil, err
@@ -574,9 +558,13 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	return checkedSignatures, bundleVerified, nil
 }
 
-// verifyInternal holds the main verification flow for blobs and attestations.
-// It verifies the certificate chain, the signature, claims, a bundle or the online
-// Rekor client.
+// verifyInternal holds the main verification flow for signatures and attestations.
+//  1. Verifies the signature using the provided verifier.
+//  2. Checks for transparency log entry presence:
+//     a. Verifies the Rekor entry in the bundle, if provided. This works offline OR
+//     b. If we don't have a Rekor entry retrieved via cert, do an online lookup (assuming
+//     we are in experimental mode).
+//  3. If a certificate is provided, check it's expiration using the transparency log timestamp.
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
@@ -595,16 +583,18 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if err != nil {
 			return bundleVerified, err
 		}
-		// If the chain annotation is not present or there is only a root
-		if chain == nil || len(chain) <= 1 {
-			co.IntermediateCerts = nil
-		} else if co.IntermediateCerts == nil {
-			// If the intermediate certs have not been loaded in by TUF
-			pool := x509.NewCertPool()
-			for _, cert := range chain[:len(chain)-1] {
-				pool.AddCert(cert)
+		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
+		if len(chain) > 0 {
+			if len(chain) == 1 {
+				co.IntermediateCerts = nil
+			} else if co.IntermediateCerts == nil {
+				// If the intermediate certs have not been loaded in by TUF
+				pool := x509.NewCertPool()
+				for _, cert := range chain[:len(chain)-1] {
+					pool.AddCert(cert)
+				}
+				co.IntermediateCerts = pool
 			}
-			co.IntermediateCerts = pool
 		}
 		verifier, err = ValidateAndUnpackCert(cert, co)
 		if err != nil {
@@ -612,6 +602,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 
+	// 1. Perform cryptographic verification of the signature using the certificate's public key.
 	if err := verifyFn(ctx, verifier, sig); err != nil {
 		return bundleVerified, err
 	}
@@ -622,34 +613,93 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return bundleVerified, err
 		}
 	}
+	if co.TSACerts != nil {
+		bundleVerified, err = VerifyRFC3161Timestamp(ctx, sig, co.TSACerts)
+		if err != nil {
+			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
+		}
+	}
+	if co.SkipTlogVerify {
+		return bundleVerified, err
+	}
 
-	bundleVerified, err = VerifyBundle(ctx, sig, co.RekorClient)
+	// 2. Check the validity time of the signature.
+	// This is the signature creation time. As a default upper bound, use the current
+	// time.
+	validityTime := time.Now()
+
+	bundleVerified, err = VerifyBundle(ctx, sig, co, co.RekorClient)
 	if err != nil {
 		return false, fmt.Errorf("error verifying bundle: %w", err)
 	}
 
-	// If the --offline flag was specified, fail here
+	if bundleVerified {
+		// Update with the verified bundle's integrated time.
+		validityTime, err = getBundleIntegratedTime(sig)
+		if err != nil {
+			return false, fmt.Errorf("error getting bundle integrated time: %w", err)
+		}
+	}
+
+	// If the --offline flag was specified, fail here. bundleVerified returns false with
+	// no error when there was no bundle provided.
+	// TODO: You can be offline when you are verifying with a public key. This shouldn't
+	// error out, but maybe should be a log message.
 	if !bundleVerified && co.Offline {
 		return false, fmt.Errorf("offline verification failed")
 	}
 
-	if !bundleVerified && co.RekorClient != nil {
-		if co.SigVerifier != nil {
-			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
-			if err != nil {
-				return bundleVerified, err
-			}
-			return bundleVerified, tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
+	cert, err := sig.Cert()
+	if err != nil {
+		return false, err
+	}
+	if !bundleVerified && co.RekorClient != nil && !co.Offline {
+		pemBytes, err := keyBytes(sig, co)
+		if err != nil {
+			return bundleVerified, err
 		}
 
-		return bundleVerified, tlogValidateCertificate(ctx, co.RekorClient, sig)
+		e, err := tlogValidateEntry(ctx, co.RekorClient, sig, pemBytes)
+		if err != nil {
+			return bundleVerified, err
+		}
+		validityTime = time.Unix(*e.IntegratedTime, 0)
 	}
+
+	// 3. if a certificate was used, verify the cert against the integrated time.
+	if cert != nil {
+		if err := CheckExpiry(cert, validityTime); err != nil {
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		}
+	}
+
 	return bundleVerified, nil
 }
 
+func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
+	cert, err := sig.Cert()
+	if err != nil {
+		return nil, err
+	}
+	// We have a public key.
+	if co.SigVerifier != nil {
+		pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
+		if err != nil {
+			return nil, err
+		}
+		return cryptoutils.MarshalPublicKeyToPEM(pub)
+	}
+	return cryptoutils.MarshalCertificateToPEM(cert)
+}
+
+// VerifyBlobSignature verifies a blob signature.
+func VerifyBlobSignature(ctx context.Context, sig oci.Signature, co *CheckOpts) (bundleVerified bool, err error) {
+	// The hash of the artifact is unused.
+	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co)
+}
+
 // VerifyImageSignature verifies a signature
-func VerifyImageSignature(ctx context.Context, sig oci.Signature,
-	h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
+func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
 	return verifyInternal(ctx, sig, h, verifyOCISignature, co)
 }
 
@@ -768,6 +818,13 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	return verifyImageAttestations(ctx, atts, h, co)
 }
 
+func VerifyBlobAttestation(ctx context.Context, att oci.Signature, co *CheckOpts) (
+	bool, error) {
+	// A blob attestation does not have an associated artifact (currently) to check the claims against.
+	// So we can safely add a nil hash.
+	return verifyInternal(ctx, att, v1.Hash{}, verifyOCIAttestation, co)
+}
+
 func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	sl, err := atts.Get()
 	if err != nil {
@@ -815,7 +872,17 @@ func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 	return nil
 }
 
-func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Rekor) (bool, error) {
+func getBundleIntegratedTime(sig oci.Signature) (time.Time, error) {
+	bundle, err := sig.Bundle()
+	if err != nil {
+		return time.Now(), err
+	} else if bundle == nil {
+		return time.Now(), nil
+	}
+	return time.Unix(bundle.Payload.IntegratedTime, 0), nil
+}
+
+func VerifyBundle(ctx context.Context, sig oci.Signature, co *CheckOpts, rekorClient *client.Rekor) (bool, error) {
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return false, err
@@ -824,6 +891,10 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 	}
 
 	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
+		return false, err
+	}
+
+	if err := comparePublicKey(bundle.Payload.Body.(string), sig, co); err != nil {
 		return false, err
 	}
 
@@ -844,19 +915,6 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
-	cert, err := sig.Cert()
-	if err != nil {
-		return false, err
-	}
-
-	if cert != nil {
-		// Verify the cert against the integrated time.
-		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
-		if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
-			return false, fmt.Errorf("checking expiry on cert: %w", err)
-		}
-	}
-
 	payload, err := sig.Payload()
 	if err != nil {
 		return false, fmt.Errorf("reading payload: %w", err)
@@ -873,6 +931,54 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, rekorClient *client.Re
 	if alg != "sha256" || bundlehash != payloadHash {
 		return false, fmt.Errorf("matching bundle to payload: %w", err)
 	}
+	return true, nil
+}
+
+func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x509.CertPool) (bool, error) {
+	bundle, err := sig.RFC3161Timestamp()
+	if err != nil {
+		return false, err
+	} else if bundle == nil {
+		return false, nil
+	}
+
+	b64Sig, err := sig.Base64Signature()
+	if err != nil {
+		return false, fmt.Errorf("reading base64signature: %w", err)
+	}
+
+	cert, err := sig.Cert()
+	if err != nil {
+		return false, err
+	}
+
+	verifiedBytes := []byte(b64Sig)
+	if len(b64Sig) == 0 {
+		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
+		signedPayload, err := sig.Payload()
+		if err != nil {
+			return false, fmt.Errorf("reading the payload: %w", err)
+		}
+		verifiedBytes = signedPayload
+	}
+
+	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(verifiedBytes), tsaCerts)
+	if err != nil {
+		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
+	}
+
+	if cert != nil {
+		ts, err := timestamp.ParseResponse(bundle.SignedRFC3161Timestamp)
+		if err != nil {
+			return false, fmt.Errorf("error parsing response into timestamp: %w", err)
+		}
+		// Verify the cert against the integrated time.
+		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
+		if err := CheckExpiry(cert, ts.Time); err != nil {
+			return false, fmt.Errorf("checking expiry on cert: %w", err)
+		}
+	}
+
 	return true, nil
 }
 
@@ -898,6 +1004,40 @@ func compareSigs(bundleBody string, sig oci.Signature) error {
 	if bundleSignature != actualSig {
 		return &VerificationError{"signature in bundle does not match signature being verified"}
 	}
+	return nil
+}
+
+func comparePublicKey(bundleBody string, sig oci.Signature, co *CheckOpts) error {
+	pemBytes, err := keyBytes(sig, co)
+	if err != nil {
+		return err
+	}
+
+	bundleKey, err := bundleKey(bundleBody)
+	if err != nil {
+		return fmt.Errorf("failed to extract key from bundle: %w", err)
+	}
+
+	decodeSecond, err := base64.StdEncoding.DecodeString(bundleKey)
+	if err != nil {
+		return fmt.Errorf("decoding base64 string %s", bundleKey)
+	}
+
+	// Compare the PEM bytes, to ignore spurious newlines in the public key bytes.
+	pemFirst, rest := pem.Decode(pemBytes)
+	if len(rest) > 0 {
+		return fmt.Errorf("unexpected PEM block: %s", rest)
+	}
+	pemSecond, rest := pem.Decode(decodeSecond)
+	if len(rest) > 0 {
+		return fmt.Errorf("unexpected PEM block: %s", rest)
+	}
+
+	if !bytes.Equal(pemFirst.Bytes, pemSecond.Bytes) {
+		return fmt.Errorf("comparing public key PEMs, expected %s, got %s",
+			pemBytes, decodeSecond)
+	}
+
 	return nil
 }
 
@@ -998,6 +1138,58 @@ func bundleSig(bundleBody string) (string, error) {
 		return "", err
 	}
 	return hrekordObj.Signature.Content.String(), nil
+}
+
+// bundleKey extracts the key from the rekor bundle body
+func bundleKey(bundleBody string) (string, error) {
+	var rekord models.Rekord
+	var hrekord models.Hashedrekord
+	var intotod models.Intoto
+	var rekordObj models.RekordV001Schema
+	var hrekordObj models.HashedrekordV001Schema
+	var intotodObj models.IntotoV001Schema
+
+	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
+	if err != nil {
+		return "", fmt.Errorf("decoding bundleBody: %w", err)
+	}
+
+	// Try Rekord
+	if err := json.Unmarshal(bodyDecoded, &rekord); err == nil {
+		specMarshal, err := json.Marshal(rekord.Spec)
+		if err != nil {
+			return "", err
+		}
+		if err := json.Unmarshal(specMarshal, &rekordObj); err != nil {
+			return "", err
+		}
+		return rekordObj.Signature.PublicKey.Content.String(), nil
+	}
+
+	// Try hashedRekordObj
+	if err := json.Unmarshal(bodyDecoded, &hrekord); err == nil {
+		specMarshal, err := json.Marshal(hrekord.Spec)
+		if err != nil {
+			return "", err
+		}
+		if err := json.Unmarshal(specMarshal, &hrekordObj); err != nil {
+			return "", err
+		}
+		return hrekordObj.Signature.PublicKey.Content.String(), nil
+	}
+
+	// Try Intoto
+	if err := json.Unmarshal(bodyDecoded, &intotod); err != nil {
+		return "", err
+	}
+	specMarshal, err := json.Marshal(intotod.Spec)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(specMarshal, &intotodObj); err != nil {
+		return "", err
+	}
+	return intotodObj.PublicKey.String(), nil
 }
 
 func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {

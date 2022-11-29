@@ -11,8 +11,8 @@ cosign attest [flags]
 ```
   cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--f] [--r] <image uri>
 
-  # attach an attestation to a container image Google sign-in (experimental)
-  COSIGN_EXPERIMENTAL=1 cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
+  # attach an attestation to a container image Google sign-in
+  cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
 
   # attach an attestation to a container image with a local key pair file
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key <IMAGE>
@@ -63,6 +63,7 @@ cosign attest [flags]
       --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none
       --tlog-upload                                                                              whether or not to upload to the tlog
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations

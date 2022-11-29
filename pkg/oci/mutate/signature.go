@@ -32,12 +32,12 @@ import (
 type sigWrapper struct {
 	wrapped oci.Signature
 
-	annotations map[string]string
-	bundle      *bundle.RekorBundle
-	tsaBundle   *bundle.TSABundle
-	cert        *x509.Certificate
-	chain       []*x509.Certificate
-	mediaType   types.MediaType
+	annotations      map[string]string
+	bundle           *bundle.RekorBundle
+	rfc3161Timestamp *bundle.RFC3161Timestamp
+	cert             *x509.Certificate
+	chain            []*x509.Certificate
+	mediaType        types.MediaType
 }
 
 var _ v1.Layer = (*sigWrapper)(nil)
@@ -93,12 +93,12 @@ func (sw *sigWrapper) Bundle() (*bundle.RekorBundle, error) {
 	return sw.wrapped.Bundle()
 }
 
-// TSABundle implements oci.Signature.
-func (sw *sigWrapper) TSABundle() (*bundle.TSABundle, error) {
-	if sw.tsaBundle != nil {
-		return sw.tsaBundle, nil
+// RFC3161Timestamp implements oci.Signature.
+func (sw *sigWrapper) RFC3161Timestamp() (*bundle.RFC3161Timestamp, error) {
+	if sw.rfc3161Timestamp != nil {
+		return sw.rfc3161Timestamp, nil
 	}
-	return sw.wrapped.TSABundle()
+	return sw.wrapped.RFC3161Timestamp()
 }
 
 // MediaType implements v1.Layer
@@ -148,7 +148,7 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 	if so.annotations != nil {
 		newAnn = copyAnnotations(so.annotations)
 		newAnn[static.SignatureAnnotationKey] = oldAnn[static.SignatureAnnotationKey]
-		for _, key := range []string{static.BundleAnnotationKey, static.CertificateAnnotationKey, static.ChainAnnotationKey, static.TSABundleAnnotationKey} {
+		for _, key := range []string{static.BundleAnnotationKey, static.CertificateAnnotationKey, static.ChainAnnotationKey, static.RFC3161TimestampAnnotationKey} {
 			if val, isSet := oldAnn[key]; isSet {
 				newAnn[key] = val
 			} else {
@@ -168,13 +168,13 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 		newAnn[static.BundleAnnotationKey] = string(b)
 	}
 
-	if so.tsaBundle != nil {
-		newSig.tsaBundle = so.tsaBundle
-		b, err := json.Marshal(so.tsaBundle)
+	if so.rfc3161Timestamp != nil {
+		newSig.rfc3161Timestamp = so.rfc3161Timestamp
+		b, err := json.Marshal(so.rfc3161Timestamp)
 		if err != nil {
 			return nil, err
 		}
-		newAnn[static.TSABundleAnnotationKey] = string(b)
+		newAnn[static.RFC3161TimestampAnnotationKey] = string(b)
 	}
 
 	if so.cert != nil {

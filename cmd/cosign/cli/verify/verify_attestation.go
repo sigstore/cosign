@@ -17,6 +17,7 @@ package verify
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"flag"
 	"fmt"
@@ -63,6 +64,8 @@ type VerifyAttestationCommand struct {
 	LocalImage                   bool
 	NameOptions                  []name.Option
 	Offline                      bool
+	TSACertChainPath             string
+	SkipTlogVerify               bool
 }
 
 // Exec runs the verification command
@@ -71,8 +74,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return flag.ErrHelp
 	}
 
-	if !options.OneOf(c.KeyRef, c.Sk, c.CertRef) && !options.EnableExperimental() {
-		return &options.PubKeyParseError{}
+	// We can't have both a key and a security key
+	if options.NOf(c.KeyRef, c.Sk) > 1 {
+		return &options.KeyParseError{}
 	}
 
 	var identities []cosign.Identity
@@ -98,11 +102,31 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
 		Offline:                      c.Offline,
+		SkipTlogVerify:               c.SkipTlogVerify,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
-	if options.EnableExperimental() {
+	if c.TSACertChainPath != "" {
+		_, err := os.Stat(c.TSACertChainPath)
+		if err != nil {
+			return fmt.Errorf("unable to open timestamp certificate chain file '%s: %w", c.TSACertChainPath, err)
+		}
+		// TODO: Add support for TUF certificates.
+		pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
+		if err != nil {
+			return fmt.Errorf("error reading certification chain path file: %w", err)
+		}
+		// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
+		// This relies on untrusted leaf certificate.
+		tsaCertPool := x509.NewCertPool()
+		ok := tsaCertPool.AppendCertsFromPEM(pemBytes)
+		if !ok {
+			return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+		}
+		co.TSACerts = tsaCertPool
+	}
+	if keylessVerification(c.KeyRef, c.Sk) {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {

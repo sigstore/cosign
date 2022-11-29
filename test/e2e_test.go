@@ -67,6 +67,9 @@ import (
 	"github.com/sigstore/cosign/pkg/sget"
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
+	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -88,6 +91,22 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
 		Attachment:    attachment,
 		HashAlgorithm: crypto.SHA256,
+	}
+
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
+var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaCertChain string, skipTlogVerify bool) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:           keyRef,
+		CheckClaims:      checkClaims,
+		Annotations:      sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:       attachment,
+		HashAlgorithm:    crypto.SHA256,
+		TSACertChainPath: tsaCertChain,
+		SkipTlogVerify:   skipTlogVerify,
 	}
 
 	args := []string{imageRef}
@@ -473,6 +492,95 @@ func TestAttestationReplace(t *testing.T) {
 	}
 }
 
+func TestAttestationRFC3161Timestamp(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-timestamp-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest with TSA and skipping tlog creating an attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		TSAServerURL:  server.URL,
+		TlogUpload:    false,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Download and count the attestations
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	verifyAttestation := cliverify.VerifyAttestationCommand{
+		KeyRef:           pubKeyPath,
+		TSACertChainPath: file.Name(),
+		SkipTlogVerify:   true,
+		PredicateType:    "slsaprovenance",
+	}
+
+	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+}
+
 func TestRekorBundle(t *testing.T) {
 	// turn on the tlog
 	defer setenv(t, env.VariableExperimental.String(), "1")()
@@ -506,6 +614,119 @@ func TestRekorBundle(t *testing.T) {
 	// use rekor prod since we have hardcoded the public key
 	os.Setenv(serverEnv, "notreal")
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
+func TestRFC3161Timestamp(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		TSAServerURL: server.URL,
+	}
+	so := options.SignOptions{
+		Upload:     true,
+		TlogUpload: false,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works against the TSA server
+	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), true), t)
+}
+
+func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		TSAServerURL: server.URL,
+		RekorURL:     rekorURL,
+	}
+	so := options.SignOptions{
+		Upload:     true,
+		TlogUpload: true,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works against the Rekor and TSA clients
+	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), false), t)
 }
 
 func TestDuplicateSign(t *testing.T) {
@@ -737,6 +958,86 @@ func TestSignBlobBundle(t *testing.T) {
 		PassFunc:   passFunc,
 		BundlePath: bundlePath,
 		RekorURL:   rekorURL,
+	}
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+	// Now verify should work
+	must(verifyBlobCmd.Exec(ctx, bp), t)
+
+	// Now we turn on the tlog and sign again
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Point to a fake rekor server to make sure offline verification of the tlog entry works
+	os.Setenv(serverEnv, "notreal")
+	must(verifyBlobCmd.Exec(ctx, bp), t)
+}
+
+func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
+	// turn on the tlog
+	defer setenv(t, env.VariableExperimental.String(), "1")()
+	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	blob := "someblob"
+	td1 := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td1)
+	})
+	bp := filepath.Join(td1, blob)
+	bundlePath := filepath.Join(td1, "rfc3161TimestampBundle.sig")
+
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+
+	ctx := context.Background()
+
+	ko1 := options.KeyOpts{
+		KeyRef:               pubKeyPath1,
+		RFC3161TimestampPath: bundlePath,
+		TSACertChainPath:     file.Name(),
+	}
+	// Verify should fail on a bad input
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko1,
+	}
+	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
+
+	// Now sign the blob with one key
+	ko := options.KeyOpts{
+		KeyRef:               privKeyPath1,
+		PassFunc:             passFunc,
+		RFC3161TimestampPath: bundlePath,
+		TSAServerURL:         server.URL,
 	}
 	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
