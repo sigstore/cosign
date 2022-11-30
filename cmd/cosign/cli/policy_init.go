@@ -146,7 +146,10 @@ func initPolicy() *cobra.Command {
 					return err
 				}
 				outfile = tempFile.Name()
-				defer os.Remove(tempFile.Name())
+				defer func() {
+					tempFile.Close()
+					os.Remove(tempFile.Name())
+				}()
 			}
 
 			files := []cremote.File{
@@ -309,7 +312,10 @@ func signPolicy() *cobra.Command {
 					return err
 				}
 				outfile = tempFile.Name()
-				defer os.Remove(tempFile.Name())
+				defer func() {
+					tempFile.Close()
+					os.Remove(tempFile.Name())
+				}()
 			}
 
 			files := []cremote.File{
