@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -127,7 +126,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return errors.Wrap(err, "signing")
 	}
 
-	sig = []byte(base64.StdEncoding.EncodeToString(sig))
 	if c.OutputSignature != "" {
 		if err := os.WriteFile(c.OutputSignature, sig, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
@@ -142,8 +140,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return fmt.Errorf("create signature file: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", c.OutputAttestation)
-	} else {
-		fmt.Fprintln(os.Stdout, string(payload))
 	}
 
 	return nil
