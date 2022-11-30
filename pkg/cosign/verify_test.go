@@ -466,7 +466,7 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		SigVerifier:    sv,
 		TSACerts:       tsaCertPool,
 		SkipTlogVerify: true,
-	}); err != nil || !bundleVerified {
+	}); err != nil || bundleVerified { // bundle is not verified since there's no Rekor bundle
 		t.Fatalf("unexpected error while verifying signature, got %v", err)
 	}
 }
