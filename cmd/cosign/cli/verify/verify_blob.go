@@ -33,6 +33,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/pkg/blob"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -73,8 +74,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	opts := make([]static.Option, 0)
 
 	// Require a certificate/key OR a local bundle file that has the cert.
-	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath, c.RFC3161TimestampPath) == 0 {
-		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle or --rfc3161-timestamp-bundle")
+	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
+		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle")
 	}
 
 	// Key, sk, and cert are mutually exclusive.
@@ -82,7 +83,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.KeyParseError{}
 	}
 
-	sig, err := base64signature(c.SigRef, c.BundlePath, c.RFC3161TimestampPath)
+	sig, err := base64signature(c.SigRef, c.BundlePath)
 	if err != nil {
 		return err
 	}
@@ -208,29 +209,15 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		opts = append(opts, static.WithBundle(b.Bundle))
 	}
 	if c.RFC3161TimestampPath != "" {
-		b, err := cosign.FetchLocalSignedPayloadFromPath(c.RFC3161TimestampPath)
+		var rfc3161Timestamp bundle.RFC3161Timestamp
+		ts, err := blob.LoadFileOrURL(c.RFC3161TimestampPath)
 		if err != nil {
 			return err
 		}
-		// Note: RFC3161 timestamp does not set the certificate.
-		// We have to condition on this because sign-blob may not output the signing
-		// key to the bundle when there is no tlog upload.
-		if b.Cert != "" {
-			// b.Cert can either be a certificate or public key
-			certBytes := []byte(b.Cert)
-			if isb64(certBytes) {
-				certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
-			}
-			cert, err = loadCertFromPEM(certBytes)
-			if err != nil {
-				// check if cert is actually a public key
-				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
-				if err != nil {
-					return fmt.Errorf("loading verifier from rfc3161 timestamp bundle: %w", err)
-				}
-			}
+		if err := json.Unmarshal(ts, &rfc3161Timestamp); err != nil {
+			return err
 		}
-		opts = append(opts, static.WithRFC3161Timestamp(b.RFC3161Timestamp))
+		opts = append(opts, static.WithRFC3161Timestamp(&rfc3161Timestamp))
 	}
 	// Set an SCT if provided via the CLI.
 	if c.SCTRef != "" {
@@ -306,7 +293,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 }
 
 // base64signature returns the base64 encoded signature
-func base64signature(sigRef string, bundlePath, rfc3161TimestampPath string) (string, error) {
+func base64signature(sigRef, bundlePath string) (string, error) {
 	var targetSig []byte
 	var err error
 	switch {
@@ -321,12 +308,6 @@ func base64signature(sigRef string, bundlePath, rfc3161TimestampPath string) (st
 		}
 	case bundlePath != "":
 		b, err := cosign.FetchLocalSignedPayloadFromPath(bundlePath)
-		if err != nil {
-			return "", err
-		}
-		targetSig = []byte(b.Base64Signature)
-	case rfc3161TimestampPath != "":
-		b, err := cosign.FetchLocalSignedPayloadFromPath(rfc3161TimestampPath)
 		if err != nil {
 			return "", err
 		}

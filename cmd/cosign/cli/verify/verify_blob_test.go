@@ -87,7 +87,7 @@ func TestSignaturesRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			gotSig, err := base64signature(test.sigRef, "", "")
+			gotSig, err := base64signature(test.sigRef, "")
 			if test.shouldErr && err != nil {
 				return
 			}
@@ -119,34 +119,7 @@ func TestSignaturesBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gotSig, err := base64signature("", fp, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if gotSig != b64sig {
-		t.Fatalf("unexpected signature, expected: %s got: %s", b64sig, gotSig)
-	}
-}
-
-func TestSignaturesRFC3161TimestampBundle(t *testing.T) {
-	td := t.TempDir()
-	fp := filepath.Join(td, "file")
-
-	b64sig := "YT09"
-
-	// save as a LocalSignedPayload to the file
-	lsp := cosign.LocalSignedPayload{
-		Base64Signature: b64sig,
-	}
-	contents, err := json.Marshal(lsp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(fp, contents, 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	gotSig, err := base64signature("", "", fp)
+	gotSig, err := base64signature("", fp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1015,12 +988,6 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		// Create blob
 		blob := "someblob"
 
-		// Sign blob with private key
-		sig, err := signer.SignMessage(bytes.NewReader([]byte(blob)))
-		if err != nil {
-			t.Fatal(err)
-		}
-
 		// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
 		viper.Set("timestamp-signer", "memory")
 		apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
@@ -1032,8 +999,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Error(err)
 		}
 
-		payloadSigner := payload.NewSigner(keyless.rekorSigner)
-
+		payloadSigner := payload.NewSigner(signer)
 		tsaSigner := tsa.NewSigner(payloadSigner, client)
 		var sigTSA oci.Signature
 		sigTSA, _, err = tsaSigner.Sign(context.Background(), bytes.NewReader([]byte(blob)))
@@ -1045,6 +1011,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error getting rfc3161 timestamp bundle: %v", err)
 		}
+		tsPath := writeTimestampFile(t, keyless.td, rfc3161Timestamp, "rfc3161TS.json")
 
 		chain, err := client.Timestamp.GetTimestampCertChain(nil)
 		if err != nil {
@@ -1058,8 +1025,16 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		defer os.Remove(tsaCertChainPath)
 
 		// Create bundle
+		b64Sig, err := sigTSA.Base64Signature()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sig, err := base64.StdEncoding.DecodeString(b64Sig)
+		if err != nil {
+			t.Fatal(err)
+		}
 		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createRFC3161TimestampAndOrRekorBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry, rfc3161Timestamp.SignedRFC3161Timestamp)
+		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1070,12 +1045,12 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertEmail:      identity,
 			CertChain:      os.Getenv("SIGSTORE_ROOT_FILE"),
 			SigRef:         "", // Sig is fetched from bundle
-			KeyOpts:        options.KeyOpts{BundlePath: bundlePath, TSACertChainPath: tsaCertChainPath},
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath, TSACertChainPath: tsaCertChainPath, RFC3161TimestampPath: tsPath},
 			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err != nil {
-			t.Fatalf("expected success specifying the intermediates, got %v", err)
+			t.Fatalf("expected success verifying with timestamp, got %v", err)
 		}
 	})
 	t.Run("Explicit Fulcio chain with bundle in non-experimental mode", func(t *testing.T) {
@@ -1384,37 +1359,6 @@ func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integr
 	return b
 }
 
-func createRFC3161TimestampAndOrRekorBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string, rfc3161timestamp []byte) *cosign.LocalSignedPayload {
-	// Create bundle with:
-	// * Blob signature
-	// * Signing certificate
-	b := &cosign.LocalSignedPayload{
-		Base64Signature: base64.StdEncoding.EncodeToString(sig),
-		Cert:            string(certPem),
-	}
-
-	if rekorEntry != "" {
-		// * Bundle with a payload and signature over the payload
-		b.Bundle = &bundle.RekorBundle{
-			SignedEntryTimestamp: []byte{},
-			Payload: bundle.RekorPayload{
-				LogID:          logID,
-				IntegratedTime: integratedTime,
-				LogIndex:       1,
-				Body:           rekorEntry,
-			},
-		}
-	}
-
-	if rfc3161timestamp != nil {
-		b.RFC3161Timestamp = &bundle.RFC3161Timestamp{
-			SignedRFC3161Timestamp: rfc3161timestamp,
-		}
-	}
-
-	return b
-}
-
 func createEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBytes, sigBytes []byte) (types.EntryImpl, error) {
 	props := types.ArtifactProperties{
 		PublicKeyBytes: [][]byte{certBytes},
@@ -1474,4 +1418,16 @@ func writeBlobFile(t *testing.T, td string, blob string, name string) string {
 		t.Fatal(err)
 	}
 	return blobPath
+}
+
+func writeTimestampFile(t *testing.T, td string, ts *bundle.RFC3161Timestamp, name string) string {
+	jsonBundle, err := json.Marshal(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(td, name)
+	if err := os.WriteFile(path, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }

@@ -33,29 +33,29 @@ cosign sign-blob [flags]
 ### Options
 
 ```
-      --b64                               whether to base64 encode the output (default true)
-      --bundle string                     write everything required to verify the blob to a FILE
-      --fulcio-url string                 [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
-  -h, --help                              help for sign-blob
-      --identity-token string             [EXPERIMENTAL] identity token to use for certificate from fulcio
-      --insecure-skip-verify              [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
-      --key string                        path to the private key file, KMS URI or Kubernetes Secret
-      --oidc-client-id string             [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
-      --oidc-client-secret-file string    [EXPERIMENTAL] Path to file containing OIDC client secret for application
-      --oidc-disable-ambient-providers    [EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read
-      --oidc-issuer string                [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
-      --oidc-provider string              [EXPERIMENTAL] Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem]
-      --oidc-redirect-url string          [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
-      --output string                     write the signature to FILE
-      --output-certificate string         write the certificate to FILE
-      --output-signature string           write the signature to FILE
-      --rekor-url string                  [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
-      --rfc3161-timestamp-bundle string   write everything required to verify the blob to a FILE
-      --sk                                whether to use a hardware security key
-      --slot string                       security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --timestamp-server-url string       url to the Timestamp RFC3161 server, default none
-      --tlog-upload                       whether or not to upload to the tlog (default true)
-  -y, --yes                               skip confirmation prompts for non-destructive operations
+      --b64                              whether to base64 encode the output (default true)
+      --bundle string                    write everything required to verify the blob to a FILE
+      --fulcio-url string                [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+  -h, --help                             help for sign-blob
+      --identity-token string            [EXPERIMENTAL] identity token to use for certificate from fulcio
+      --insecure-skip-verify             [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
+      --key string                       path to the private key file, KMS URI or Kubernetes Secret
+      --oidc-client-id string            [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
+      --oidc-client-secret-file string   [EXPERIMENTAL] Path to file containing OIDC client secret for application
+      --oidc-disable-ambient-providers   [EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read
+      --oidc-issuer string               [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
+      --oidc-provider string             [EXPERIMENTAL] Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem]
+      --oidc-redirect-url string         [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
+      --output string                    write the signature to FILE
+      --output-certificate string        write the certificate to FILE
+      --output-signature string          write the signature to FILE
+      --rekor-url string                 [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --rfc3161-timestamp string         write the RFC3161 timestamp to a file
+      --sk                               whether to use a hardware security key
+      --slot string                      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-server-url string      url to the Timestamp RFC3161 server, default none
+      --tlog-upload                      whether or not to upload to the tlog (default true)
+  -y, --yes                              skip confirmation prompts for non-destructive operations
 ```
 
 ### Options inherited from parent commands

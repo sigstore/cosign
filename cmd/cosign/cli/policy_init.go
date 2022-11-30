@@ -273,8 +273,7 @@ func signPolicy() *cobra.Command {
 					return fmt.Errorf("failed to create TSA client: %w", err)
 				}
 				// Here we get the response from the timestamped authority server
-				_, err = tsa.GetTimestampedSignature(signed.Signed, clientTSA)
-				if err != nil {
+				if _, err := tsa.GetTimestampedSignature(signed.Signed, clientTSA); err != nil {
 					return err
 				}
 			}

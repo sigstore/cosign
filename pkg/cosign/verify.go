@@ -1004,17 +1004,24 @@ func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x5
 		return false, err
 	}
 
-	verifiedBytes := []byte(b64Sig)
+	var tsBytes []byte
 	if len(b64Sig) == 0 {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
 		signedPayload, err := sig.Payload()
 		if err != nil {
 			return false, fmt.Errorf("reading the payload: %w", err)
 		}
-		verifiedBytes = signedPayload
+		tsBytes = signedPayload
+	} else {
+		// create timestamp over raw bytes of signature
+		rawSig, err := base64.StdEncoding.DecodeString(b64Sig)
+		if err != nil {
+			return false, err
+		}
+		tsBytes = rawSig
 	}
 
-	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(verifiedBytes), tsaCerts)
+	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(tsBytes), tsaCerts)
 	if err != nil {
 		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}
