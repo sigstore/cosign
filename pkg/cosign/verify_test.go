@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -1285,5 +1286,115 @@ func Test_getSubjectAltnernativeNames(t *testing.T) {
 	}
 	if sans[3] != "testURL" {
 		t.Fatalf("unexpected URL SAN value")
+	}
+}
+
+func TestVerifyRFC3161Timestamp(t *testing.T) {
+	// generate signed artifact
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	// TODO: Replace with a TSA mock client, blocked by https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(chain.Payload)) {
+		t.Fatalf("error creating trust root pool")
+	}
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+
+	// success, signing over signature
+	err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err != nil {
+		t.Fatalf("unexpected error verifying timestamp with signature: %v", err)
+	}
+
+	// success, signing over payload
+	tsBytes, err = tsa.GetTimestampedSignature(payload, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	ociSig, _ = static.NewSignature(payload,
+		"", /*signature*/
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err != nil {
+		t.Fatalf("unexpected error verifying timestamp with payload: %v", err)
+	}
+
+	// failure with non-base64 encoded signature
+	ociSig, _ = static.NewSignature(payload,
+		string(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err == nil || !strings.Contains(err.Error(), "base64 data") {
+		t.Fatalf("expected error verifying timestamp with raw signature, got: %v", err)
+	}
+
+	// failure with mismatched signature
+	tsBytes, err = tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	// regenerate signature
+	signature, _ = privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	ociSig, _ = static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err == nil || !strings.Contains(err.Error(), "hashed messages don't match") {
+		t.Fatalf("expected error verifying mismatched signatures, got: %v", err)
+	}
+
+	// failure with old certificate
+	leafPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// generate old certificate
+	leafCert, _ = test.GenerateLeafCertWithExpiration("subject", "oidc-issuer", time.Now().AddDate(-1, 0, 0), leafPriv, rootCert, rootKey)
+	pemLeaf = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	tsBytes, err = tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	ociSig, _ = static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err == nil || !strings.Contains(err.Error(), "checking expiry on certificate") {
+		t.Fatalf("expected error verifying old certificate, got: %v", err)
 	}
 }

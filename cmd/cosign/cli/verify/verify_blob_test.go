@@ -523,6 +523,10 @@ func TestVerifyBlob(t *testing.T) {
 				expiredLeafPem, true)},
 			shouldErr: true,
 		},
+		// TODO: Add tests for TSA:
+		// * With or without bundle
+		// * Mismatched signature
+		// * Unexpired and expired certificate
 	}
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
