@@ -188,8 +188,13 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		opts = append(opts, static.WithRFC3161Timestamp(bundle))
 	}
 
+	predicateType, err := options.ParsePredicateType(c.PredicateType)
+	if err != nil {
+		return err
+	}
+
 	predicateTypeAnnotation := map[string]string{
-		"predicateType": c.PredicateType,
+		"predicateType": predicateType,
 	}
 	// Add predicateType as manifest annotation
 	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))

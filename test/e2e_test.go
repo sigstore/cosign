@@ -356,12 +356,12 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 }
 
-func TestAttestationReplaceCreate(t *testing.T) {
+func TestAttestationDownload(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
 
-	imgName := path.Join(repo, "cosign-attest-replace-e2e")
+	imgName := path.Join(repo, "cosign-attest-download-e2e")
 
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
@@ -377,6 +377,34 @@ func TestAttestationReplaceCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	vulnAttestation := `
+	{
+    "invocation": {
+      "parameters": null,
+      "uri": "invocation.example.com/cosign-testing",
+      "event_id": "",
+      "builder.id": ""
+    },
+    "scanner": {
+      "uri": "fakescanner.example.com/cosign-testing",
+      "version": "",
+      "db": {
+        "uri": "",
+        "version": ""
+      },
+      "result": null
+    },
+    "metadata": {
+      "scanStartedOn": "2022-04-12T00:00:00Z",
+      "scanFinishedOn": "2022-04-12T00:10:00Z"
+    }
+}
+`
+	vulnAttestationPath := filepath.Join(td, "attestation.vuln.json")
+	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
 	ref, err := name.ParseReference(imgName)
 	if err != nil {
 		t.Fatal(err)
@@ -387,7 +415,7 @@ func TestAttestationReplaceCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Attest with replace=true to create an attestation
+	// Attest to create a slsa attestation
 	attestCommand := attest.AttestCommand{
 		KeyOpts:       ko,
 		PredicatePath: slsaAttestationPath,
@@ -397,14 +425,162 @@ func TestAttestationReplaceCreate(t *testing.T) {
 	}
 	must(attestCommand.Exec(ctx, imgName), t)
 
-	// Download and count the attestations
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	// Attest to create a vuln attestation
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: vulnAttestationPath,
+		PredicateType: "vuln",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Call download.AttestationCmd() to ensure success
+	attOpts := options.AttestationDownloadOptions{}
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 2 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 2, got %d", len(attestations)))
+	}
+}
+
+func TestAttestationDownloadWithPredicateType(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-download-predicate-type-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	vulnAttestation := `
+	{
+    "invocation": {
+      "parameters": null,
+      "uri": "invocation.example.com/cosign-testing",
+      "event_id": "",
+      "builder.id": ""
+    },
+    "scanner": {
+      "uri": "fakescanner.example.com/cosign-testing",
+      "version": "",
+      "db": {
+        "uri": "",
+        "version": ""
+      },
+      "result": null
+    },
+    "metadata": {
+      "scanStartedOn": "2022-04-12T00:00:00Z",
+      "scanFinishedOn": "2022-04-12T00:10:00Z"
+    }
+}
+`
+	vulnAttestationPath := filepath.Join(td, "attestation.vuln.json")
+	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest to create a slsa attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Attest to create a vuln attestation
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: vulnAttestationPath,
+		PredicateType: "vuln",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Call download.AttestationCmd() to ensure success with --predicate-type
+	attOpts := options.AttestationDownloadOptions{
+		PredicateType: "vuln",
+	}
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+
+	predicateType, _ := options.ParsePredicateType(attOpts.PredicateType)
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, predicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(attestations) != 1 {
 		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
 	}
+}
+
+func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-download-bad-type-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	regOpts := options.RegistryOptions{}
+
+	// Attest to create a slsa attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Call download.AttestationCmd() to ensure failure with non-existant --predicate-type
+	attOpts := options.AttestationDownloadOptions{
+		PredicateType: "vuln",
+	}
+	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
 }
 
 func TestAttestationReplace(t *testing.T) {
@@ -448,7 +624,8 @@ func TestAttestationReplace(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attOpts := options.AttestationDownloadOptions{}
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -465,7 +642,7 @@ func TestAttestationReplace(t *testing.T) {
 		Timeout:       30 * time.Second,
 	}
 	must(attestCommand.Exec(ctx, imgName), t)
-	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 
 	// Download and count the attestations
 	if err != nil {
@@ -486,7 +663,7 @@ func TestAttestationReplace(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
-	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -544,7 +721,8 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attOpts := options.AttestationDownloadOptions{}
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}

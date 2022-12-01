@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -138,6 +139,8 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, pred
 	}
 
 	attestations := make([]AttestationPayload, 0, len(l))
+	var attMu sync.Mutex
+
 	var g errgroup.Group
 	g.SetLimit(runtime.NumCPU())
 
@@ -161,6 +164,8 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, pred
 			if err != nil {
 				return err
 			}
+			attMu.Lock()
+			defer attMu.Unlock()
 			attestations = append(attestations, a)
 			return nil
 		})

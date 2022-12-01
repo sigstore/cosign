@@ -20,7 +20,7 @@ cosign download attestation [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
   -h, --help                                                                                     help for attestation
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
-      --predicate-type string                                                                    download attestation matching supplied predicate type
+      --predicate-type string                                                                    download attestation with matching predicateType annotation
 ```
 
 ### Options inherited from parent commands
