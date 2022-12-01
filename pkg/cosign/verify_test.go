@@ -51,6 +51,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rtypes "github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
@@ -740,7 +741,7 @@ func TestValidateAndUnpackCertSuccessWithUriSan(t *testing.T) {
 func TestValidateAndUnpackCertSuccessWithOtherNameSan(t *testing.T) {
 	// generate with OtherName, which will override other SANs
 	subject := "subject-othername"
-	ext, err := MarshalOtherNameSAN(subject, true)
+	ext, err := cryptoutils.MarshalOtherNameSAN(subject, true)
 	if err != nil {
 		t.Fatalf("error marshalling SANs: %v", err)
 	}
@@ -1118,7 +1119,7 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 			leafCert, _, _ = test.GenerateLeafCertWithSubjectAlternateNames(tc.dnsNames, tc.emailAddresses, tc.ipAddresses, tc.uris, oidcIssuer, rootCert, rootKey)
 		} else {
 			// generate with OtherName, which will override other SANs
-			ext, err := MarshalOtherNameSAN(tc.otherName, true)
+			ext, err := cryptoutils.MarshalOtherNameSAN(tc.otherName, true)
 			if err != nil {
 				t.Fatalf("error marshalling SANs: %v", err)
 			}
@@ -1252,7 +1253,7 @@ func Test_getSubjectAltnernativeNames(t *testing.T) {
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 
 	// generate with OtherName, which will override other SANs
-	ext, err := MarshalOtherNameSAN("subject-othername", true)
+	ext, err := cryptoutils.MarshalOtherNameSAN("subject-othername", true)
 	if err != nil {
 		t.Fatalf("error marshalling SANs: %v", err)
 	}
