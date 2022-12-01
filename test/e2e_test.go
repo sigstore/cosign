@@ -583,6 +583,58 @@ func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
 	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
 }
 
+func TestAttestationReplaceCreate(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-replace-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest with replace=true to create an attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Download and count the attestations
+	attOpts := options.AttestationDownloadOptions{}
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+}
+
 func TestAttestationReplace(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
