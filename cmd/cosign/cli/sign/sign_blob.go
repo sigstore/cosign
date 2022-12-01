@@ -16,12 +16,11 @@
 package sign
 
 import (
-	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -31,21 +30,26 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
+	internal "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // nolint
 func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
-	var payload []byte
+	var payload internal.HashReader
 	var err error
 	var rekorBytes []byte
 
 	if payloadPath == "-" {
-		payload, err = io.ReadAll(os.Stdin)
+		payload = internal.NewHashReader(os.Stdin, sha256.New())
 	} else {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		payload, err = os.ReadFile(filepath.Clean(payloadPath))
+		f, err := os.Open(filepath.Clean(payloadPath))
+		if err != nil {
+			return nil, err
+		}
+		payload = internal.NewHashReader(f, sha256.New())
 	}
 	if err != nil {
 		return nil, err
@@ -60,7 +64,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 	}
 	defer sv.Close()
 
-	sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("signing blob: %w", err)
 	}
@@ -90,7 +94,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 		if err != nil {
 			return nil, err
 		}
-		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, payload, rekorBytes)
+		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, &payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}

@@ -17,6 +17,7 @@ package rekor
 import (
 	"context"
 	"crypto"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -90,7 +91,11 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	}
 
 	bundle, err := uploadToTlog(rekorBytes, rs.rClient, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		return cosignv1.TLogUpload(ctx, r, sigBytes, payloadBytes, b)
+		checkSum := sha256.New()
+		if _, err := checkSum.Write(payloadBytes); err != nil {
+			return nil, err
+		}
+		return cosignv1.TLogUpload(ctx, r, sigBytes, checkSum, b)
 	})
 	if err != nil {
 		return nil, nil, err
