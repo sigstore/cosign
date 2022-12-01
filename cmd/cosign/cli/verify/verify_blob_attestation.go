@@ -84,14 +84,10 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", c.SignaturePath, err)
 	}
-	decodedSig, err := base64.StdEncoding.DecodeString(string(encodedSig))
-	if err != nil {
-		return fmt.Errorf("decoding signature: %w", err)
-	}
 
 	// Verify the signature on the attestation against the provided public key
 	env := ssldsse.Envelope{}
-	if err := json.Unmarshal(decodedSig, &env); err != nil {
+	if err := json.Unmarshal(encodedSig, &env); err != nil {
 		return fmt.Errorf("marshaling envelope: %w", err)
 	}
 
