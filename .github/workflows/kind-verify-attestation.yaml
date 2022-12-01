@@ -120,7 +120,7 @@ jobs:
     - name: Verify custom attestation with cosign, works
       run: |
         echo '::group:: test custom verify-attestation success'
-        if ! ./cosign verify-attestation --policy ./test/testdata/policies/cue-works.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
+        if ! ./cosign verify-attestation --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" --policy ./test/testdata/policies/cue-works.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} ; then
           echo Failed to verify attestation with a valid policy
           exit 1
         else
