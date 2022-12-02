@@ -666,6 +666,8 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				}
 				t := time.Unix(*e.IntegratedTime, 0)
 				acceptableRekorBundleTime = &t
+			} else {
+				return false, fmt.Errorf("rekor client not provided for online verification")
 			}
 		}
 	}
