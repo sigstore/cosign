@@ -77,7 +77,7 @@ race conditions or (worse) malicious tampering.
 
   # sign a container image and upload to the transparency log
   cosign sign --key cosign.key <IMAGE DIGEST>
-  
+
   # sign a container image and skip uploading to the transparency log
   cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>`,
 
