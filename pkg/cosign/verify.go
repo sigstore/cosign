@@ -648,8 +648,6 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		} else {
 			// If the --offline flag was specified, fail here. bundleVerified returns false with
 			// no error when there was no bundle provided.
-			// TODO: You can be offline when you are verifying with a public key. This shouldn't
-			// error out, but maybe should be a log message.
 			if co.Offline {
 				return false, fmt.Errorf("offline verification failed")
 			}
