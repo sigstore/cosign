@@ -536,13 +536,3 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	}
 	return pemBytes, nil
 }
-
-func keylessSigning(ko options.KeyOpts) bool {
-	if ko.KeyRef != "" {
-		return false
-	}
-	if ko.Sk {
-		return false
-	}
-	return true
-}
