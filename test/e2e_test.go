@@ -1053,6 +1053,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println(bp)
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
@@ -1061,6 +1062,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
+	os.Setenv(serverEnv, "notreal")
 	verifyBlobCmd.SkipTlogVerify = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
