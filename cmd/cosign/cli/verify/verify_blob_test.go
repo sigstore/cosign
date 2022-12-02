@@ -458,7 +458,7 @@ func TestVerifyBlob(t *testing.T) {
 			shouldErr:    true,
 		},
 		{
-			name:           "valid signature with expired certificatem, no Rekor",
+			name:           "valid signature with expired certificate, no Rekor",
 			blob:           blobBytes,
 			signature:      blobSignature,
 			cert:           expiredLeafCert,

@@ -628,7 +628,6 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
 		}
 		if acceptableRFC3161Timestamp != nil {
-			bundleVerified = true
 			acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
 		}
 	}
@@ -729,7 +728,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		validityTime := time.Now()
 
 		if acceptableRFC3161Time != nil {
-			// Verify the cert against the integrated time.
+			// Verify the cert against the timestamp time.
 			if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
 				return false, fmt.Errorf("checking expiry on cert: %w", err)
 			}
