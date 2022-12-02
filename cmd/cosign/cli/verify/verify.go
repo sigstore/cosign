@@ -142,7 +142,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.TSACerts = tsaCertPool
 	}
 
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if !c.SkipTlogVerify {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -436,14 +436,4 @@ func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 	return certs, nil
-}
-
-func keylessVerification(keyRef string, sk bool) bool {
-	if keyRef != "" {
-		return false
-	}
-	if sk {
-		return false
-	}
-	return true
 }

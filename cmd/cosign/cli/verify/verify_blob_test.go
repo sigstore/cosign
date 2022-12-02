@@ -276,16 +276,18 @@ func TestVerifyBlob(t *testing.T) {
 		// If online lookups to Rekor are enabled
 		experimental bool
 		// The rekor entry response when Rekor is enabled
-		rekorEntry []*models.LogEntry
-		shouldErr  bool
+		rekorEntry     []*models.LogEntry
+		skipTlogVerify bool
+		shouldErr      bool
 	}{
 		{
-			name:         "valid signature with public key",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: false,
-			shouldErr:    false,
+			name:           "valid signature with public key",
+			blob:           blobBytes,
+			signature:      blobSignature,
+			key:            pubKeyBytes,
+			experimental:   false,
+			shouldErr:      false,
+			skipTlogVerify: true,
 		},
 		/* TODO:
 		This currently passes without error because we don't require an experimental
@@ -327,7 +329,7 @@ func TestVerifyBlob(t *testing.T) {
 			key:          pubKeyBytes,
 			experimental: false,
 			bundlePath:   makeLocalBundleWithoutRekorBundle(t, []byte(blobSignature), pubKeyBytes),
-			shouldErr:    false,
+			shouldErr:    true,
 		},
 		{
 			name:         "valid signature with public key - bad bundle SET",
@@ -576,6 +578,7 @@ func TestVerifyBlob(t *testing.T) {
 				CertOIDCIssuer: issuer,
 				IgnoreSCT:      true,
 				CertChain:      chainPath,
+				SkipTlogVerify: tt.skipTlogVerify,
 			}
 			blobPath := writeBlobFile(t, td, string(blobBytes), "blob.txt")
 			if tt.signature != "" {

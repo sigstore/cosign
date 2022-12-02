@@ -13,9 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e
-// +build e2e
-
 package test
 
 import (
@@ -85,12 +82,13 @@ var passFunc = func(_ bool) ([]byte, error) {
 
 var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
+		KeyRef:         keyRef,
+		RekorURL:       rekorURL,
+		CheckClaims:    checkClaims,
+		Annotations:    sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:     attachment,
+		HashAlgorithm:  crypto.SHA256,
+		SkipTlogVerify: true,
 	}
 
 	args := []string{imageRef}
@@ -117,12 +115,13 @@ var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[
 // Used to verify local images stored on disk
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		LocalImage:    true,
+		KeyRef:         keyRef,
+		CheckClaims:    checkClaims,
+		Annotations:    sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:     attachment,
+		HashAlgorithm:  crypto.SHA256,
+		LocalImage:     true,
+		SkipTlogVerify: true,
 	}
 
 	args := []string{path}
@@ -312,7 +311,8 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Verify should fail at first
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		KeyRef: pubKeyPath,
+		KeyRef:         pubKeyPath,
+		SkipTlogVerify: true,
 	}
 
 	// Fail case when using without type and policy flag
@@ -899,12 +899,14 @@ func TestSignBlob(t *testing.T) {
 	}
 	// Verify should fail on a bad input
 	cmd1 := cliverify.VerifyBlobCmd{
-		KeyOpts: ko1,
-		SigRef:  "badsig",
+		KeyOpts:        ko1,
+		SigRef:         "badsig",
+		SkipTlogVerify: true,
 	}
 	cmd2 := cliverify.VerifyBlobCmd{
-		KeyOpts: ko2,
-		SigRef:  "badsig",
+		KeyOpts:        ko2,
+		SigRef:         "badsig",
+		SkipTlogVerify: true,
 	}
 	mustErr(cmd1.Exec(ctx, blob), t)
 	mustErr(cmd2.Exec(ctx, blob), t)
@@ -948,7 +950,8 @@ func TestSignBlobBundle(t *testing.T) {
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts: ko1,
+		KeyOpts:        ko1,
+		SkipTlogVerify: true,
 	}
 	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
@@ -966,13 +969,13 @@ func TestSignBlobBundle(t *testing.T) {
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
+	verifyBlobCmd.SkipTlogVerify = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
@@ -991,7 +994,8 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		os.RemoveAll(td1)
 	})
 	bp := filepath.Join(td1, blob)
-	bundlePath := filepath.Join(td1, "rfc3161TimestampBundle.sig")
+	tsPath := filepath.Join(td1, "rfc3161TimestampBundle.sig")
+	bundlePath := filepath.Join(td1, "bundle.sig")
 
 	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
 		t.Fatal(err)
@@ -1023,12 +1027,14 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 
 	ko1 := options.KeyOpts{
 		KeyRef:               pubKeyPath1,
-		RFC3161TimestampPath: bundlePath,
+		RFC3161TimestampPath: tsPath,
 		TSACertChainPath:     file.Name(),
+		BundlePath:           bundlePath,
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts: ko1,
+		KeyOpts:        ko1,
+		SkipTlogVerify: true,
 	}
 	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
@@ -1036,23 +1042,24 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:               privKeyPath1,
 		PassFunc:             passFunc,
-		RFC3161TimestampPath: bundlePath,
+		RFC3161TimestampPath: tsPath,
 		TSAServerURL:         server.URL,
+		RekorURL:             rekorURL,
+		BundlePath:           bundlePath,
 	}
 	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println(bp)
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
-
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
-	os.Setenv(serverEnv, "notreal")
+	verifyBlobCmd.SkipTlogVerify = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
@@ -1410,7 +1417,8 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Use cue to verify attestation on the new image
 	policyPath := filepath.Join(td, "policy.cue")
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		KeyRef: pubKeyPath,
+		KeyRef:         pubKeyPath,
+		SkipTlogVerify: true,
 	}
 	verifyAttestation.PredicateType = "slsaprovenance"
 	verifyAttestation.Policies = []string{policyPath}
@@ -1806,7 +1814,14 @@ func TestInvalidBundle(t *testing.T) {
 	}
 
 	// veriyfing image2 now should fail
-	mustErr(verify(pubKeyPath, img2, true, nil, ""), t)
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        pubKeyPath,
+		RekorURL:      rekorURL,
+		CheckClaims:   true,
+		HashAlgorithm: crypto.SHA256,
+	}
+	args := []string{img2}
+	mustErr(cmd.Exec(context.Background(), args), t)
 }
 
 func TestAttestBlobSignVerify(t *testing.T) {
