@@ -18,6 +18,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -286,7 +287,11 @@ func signPolicy() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, signed.Signed, rekorBytes)
+				checkSum := sha256.New()
+				if _, err := checkSum.Write(signed.Signed); err != nil {
+					return err
+				}
+				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, checkSum, rekorBytes)
 				if err != nil {
 					return err
 				}
