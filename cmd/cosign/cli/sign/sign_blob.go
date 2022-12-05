@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
 	internal "github.com/sigstore/cosign/internal/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -151,15 +152,23 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 		}
 	}
 
-	if outputCertificate != "" && len(rekorBytes) > 0 {
-		bts := rekorBytes
-		if b64 {
-			bts = []byte(base64.StdEncoding.EncodeToString(rekorBytes))
+	if outputCertificate != "" {
+		signer, err := sv.Bytes(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error getting signer: %w", err)
 		}
-		if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
-			return nil, fmt.Errorf("create certificate file: %w", err)
+		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+		// signer is a certificate
+		if err == nil && len(cert) == 1 {
+			bts := signer
+			if b64 {
+				bts = []byte(base64.StdEncoding.EncodeToString(signer))
+			}
+			if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
+				return nil, fmt.Errorf("create certificate file: %w", err)
+			}
+			fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 		}
-		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}
 
 	return sig, nil
