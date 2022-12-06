@@ -76,7 +76,10 @@ race conditions or (worse) malicious tampering.
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
 
   # sign a container image and upload to the transparency log
-  cosign sign --key cosign.key --tlog-upload=true <IMAGE DIGEST>`,
+  cosign sign --key cosign.key <IMAGE DIGEST>
+
+  # sign a container image and skip uploading to the transparency log
+  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,

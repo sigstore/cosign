@@ -121,7 +121,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 		co.TSACerts = tsaCertPool
 	}
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if !c.SkipTlogVerify {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -129,6 +129,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 			co.RekorClient = rekorClient
 		}
+	}
+	if keylessVerification(c.KeyRef, c.Sk) {
 		co.RootCerts, err = fulcio.GetRoots()
 		if err != nil {
 			return fmt.Errorf("getting Fulcio roots: %w", err)

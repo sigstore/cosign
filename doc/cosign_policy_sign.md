@@ -33,7 +33,7 @@ cosign policy sign [flags]
       --out string                                                                               output policy locally (default "o")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none
-      --tlog-upload                                                                              whether or not to upload to the tlog
+      --tlog-upload                                                                              whether or not to upload to the tlog (default true)
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 

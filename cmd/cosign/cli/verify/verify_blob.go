@@ -128,7 +128,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		co.TSACerts = tsaCertPool
 	}
 
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if !c.SkipTlogVerify {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -136,6 +136,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			}
 			co.RekorClient = rekorClient
 		}
+	}
+	if keylessVerification(c.KeyRef, c.Sk) {
 		// Use default TUF roots if a cert chain is not provided.
 		if c.CertChain == "" {
 			co.RootCerts, err = fulcio.GetRoots()

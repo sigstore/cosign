@@ -69,13 +69,8 @@ const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not 
 `
 
 func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
-	// Check if TSA signing is enabled and tlog upload is disabled
-	if !tlogUpload && ko.TSAServerURL != "" {
-		fmt.Fprintln(os.Stderr, "\nWARNING: skipping transparency log upload")
-		return false
-	}
-	// If we aren't using keyless signing and --tlog-upload=false, return
-	if !keylessSigning(ko) && !tlogUpload {
+	// return false if not uploading to the tlog has been requested
+	if !tlogUpload {
 		return false
 	}
 
@@ -540,14 +535,4 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return pemBytes, nil
-}
-
-func keylessSigning(ko options.KeyOpts) bool {
-	if ko.KeyRef != "" {
-		return false
-	}
-	if ko.Sk {
-		return false
-	}
-	return true
 }
