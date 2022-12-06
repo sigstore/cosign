@@ -47,7 +47,6 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Fulcio.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
-	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
