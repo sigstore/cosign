@@ -1053,7 +1053,6 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(bp)
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
