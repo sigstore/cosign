@@ -99,9 +99,9 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			return nil, err
 		}
 		if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
-			return nil, fmt.Errorf("create rfc3161 timestamp file: %w", err)
+			return nil, fmt.Errorf("create RFC3161 timestamp file: %w", err)
 		}
-		fmt.Printf("RFC3161 timestamp bundle written to file %s\n", ko.RFC3161TimestampPath)
+		fmt.Fprintf(os.Stderr, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 	}
 	if ShouldUploadToTlog(ctx, ko, nil, tlogUpload) {
 		rekorBytes, err = sv.Bytes(ctx)

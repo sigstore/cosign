@@ -75,7 +75,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
-		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle")
+		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --certificate, or a bundle with --bundle")
 	}
 
 	// Key, sk, and cert are mutually exclusive.
