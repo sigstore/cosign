@@ -188,7 +188,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntry(e, rekorPubsFromAPI)
+			return e, VerifyTLogEntryOffline(e, rekorPubsFromAPI)
 		}
 		return nil, err
 	}
@@ -404,9 +404,9 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 	return results, nil
 }
 
-// VerityTLogEntry verifies a TLog entry against a map of trusted rekorPubKeys indexed
+// VerifyTLogEntryOffline verifies a TLog entry against a map of trusted rekorPubKeys indexed
 // by log id.
-func VerifyTLogEntry(e *models.LogEntryAnon, rekorPubKeys *TrustedRekorPubKeys) error {
+func VerifyTLogEntryOffline(e *models.LogEntryAnon, rekorPubKeys *TrustedRekorPubKeys) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
