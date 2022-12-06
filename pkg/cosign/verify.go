@@ -1036,11 +1036,7 @@ func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x5
 	acceptedTimestamp := bundle
 
 	// FIXME: tsaverification.VerifyTimestampResponse has done this parsing; we shouldn’t parse again.
-	acceptableTS, err := timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing response into timestamp: %w", err)
-	}
-	return acceptableTS, nil
+	return timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
 }
 
 // compare bundle signature to the signature we are verifying
