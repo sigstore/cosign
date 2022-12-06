@@ -1033,7 +1033,6 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		BundlePath:           bundlePath,
 		RFC3161TimestampPath: tsPath,
 		TSACertChainPath:     file.Name(),
-		BundlePath:           bundlePath,
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
@@ -1050,7 +1049,6 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		RFC3161TimestampPath: tsPath,
 		TSAServerURL:         server.URL,
 		RekorURL:             rekorURL,
-		BundlePath:           bundlePath,
 	}
 	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
