@@ -131,7 +131,7 @@ For instructions on using the `bundle` for verification, see [USAGE.md](../USAGE
 
 * `rfc3161timestamp` string
 
-  This OPTIONAL property contains a JSON formatted `RFC3161Timestamp` bundle containing the timestamp response from a
+  This OPTIONAL property contains a JSON formatted `RFC3161Timestamp` containing the timestamp response from a
   timestamp authority.
 
 ## Storage

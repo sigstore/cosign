@@ -165,7 +165,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 		"path to bundle FILE")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
-		"path to rfc3161 timestamp FILE")
+		"path to RFC3161 timestamp FILE")
 }
 
 // VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.

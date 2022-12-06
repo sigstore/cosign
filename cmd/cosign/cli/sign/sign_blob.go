@@ -74,6 +74,10 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	if ko.TSAServerURL != "" {
+		if ko.RFC3161TimestampPath == "" {
+			return nil, fmt.Errorf("timestamp output path must be set")
+		}
+
 		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create TSA client: %w", err)
@@ -86,6 +90,18 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 
 		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
 		// TODO: Consider uploading RFC3161 TS to Rekor
+
+		if rfc3161Timestamp == nil {
+			return nil, fmt.Errorf("rfc3161 timestamp is nil")
+		}
+		ts, err := json.Marshal(rfc3161Timestamp)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
+			return nil, fmt.Errorf("create rfc3161 timestamp file: %w", err)
+		}
+		fmt.Printf("RFC3161 timestamp bundle written to file %s\n", ko.RFC3161TimestampPath)
 	}
 	if ShouldUploadToTlog(ctx, ko, nil, tlogUpload) {
 		rekorBytes, err = sv.Bytes(ctx)
@@ -102,17 +118,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
-	}
-
-	if ko.RFC3161TimestampPath != "" && rfc3161Timestamp != nil {
-		ts, err := json.Marshal(rfc3161Timestamp)
-		if err != nil {
-			return nil, err
-		}
-		if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
-			return nil, fmt.Errorf("create rfc3161 timestamp file: %w", err)
-		}
-		fmt.Printf("RFC3161 timestamp bundle written to file %s\n", ko.RFC3161TimestampPath)
 	}
 
 	// if bundle is specified, just do that and ignore the rest
