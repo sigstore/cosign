@@ -289,9 +289,6 @@ func TestVerifyBlob(t *testing.T) {
 			shouldErr:      false,
 			skipTlogVerify: true,
 		},
-		/* TODO:
-		This currently passes without error because we don't require an experimental
-		lookup for public keys. Add this test back in when we have a --verify-tlog-online
 		{
 			name:         "valid signature with public key - experimental no rekor fail",
 			blob:         blobBytes,
@@ -301,7 +298,6 @@ func TestVerifyBlob(t *testing.T) {
 			rekorEntry:   nil,
 			shouldErr:    true,
 		},
-		*/
 		{
 			name:         "valid signature with public key - experimental rekor entry success",
 			blob:         blobBytes,

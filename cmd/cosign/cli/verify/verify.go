@@ -150,6 +150,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 			co.RekorClient = rekorClient
 		}
+	}
+	if keylessVerification(c.KeyRef, c.Sk) {
 		co.RootCerts, err = fulcio.GetRoots()
 		if err != nil {
 			return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -436,4 +438,14 @@ func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 	return certs, nil
+}
+
+func keylessVerification(keyRef string, sk bool) bool {
+	if keyRef != "" {
+		return false
+	}
+	if sk {
+		return false
+	}
+	return true
 }
