@@ -81,8 +81,13 @@ type CheckOpts struct {
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
 	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
 
-	// RekorClient, if set, is used to use to verify signatures and public keys.
+	// RekorClient, if set, is used to make online tlog calls use to verify signatures and public keys.
 	RekorClient *client.Rekor
+	// TrustedRekorPubKeys, if set, is used to validate signatures on log entries from Rekor.
+	// It is a map from log id to RekorPubKey.
+	// Note: The RekorPubKey values contains information like status along with the
+	// raw public key information.
+	RekorPubKeys *TrustedRekorPubKeys
 
 	// SigVerifier is used to verify signatures.
 	SigVerifier signature.Verifier
@@ -445,8 +450,8 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signature, pem []byte) (
-	*models.LogEntryAnon, error) {
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedRekorPubKeys,
+	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
 		return nil, err
@@ -469,7 +474,7 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signat
 	entryVerificationErrs := make([]string, 0)
 	for _, e := range tlogEntries {
 		entry := e
-		if err := VerifyTLogEntry(ctx, nil, &entry); err != nil {
+		if err := VerifyTLogEntryOffline(&entry, rekorPubKeys); err != nil {
 			entryVerificationErrs = append(entryVerificationErrs, err.Error())
 			continue
 		}
@@ -680,7 +685,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	// time.
 	validityTime := time.Now()
 
-	bundleVerified, err = VerifyBundle(ctx, sig, co, co.RekorClient)
+	bundleVerified, err = VerifyBundle(sig, co)
 	if err != nil {
 		return false, fmt.Errorf("error verifying bundle: %w", err)
 	}
@@ -711,7 +716,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return bundleVerified, err
 		}
 
-		e, err := tlogValidateEntry(ctx, co.RekorClient, sig, pemBytes)
+		e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, sig, pemBytes)
 		if err != nil {
 			return bundleVerified, err
 		}
@@ -934,12 +939,18 @@ func getBundleIntegratedTime(sig oci.Signature) (time.Time, error) {
 	return time.Unix(bundle.Payload.IntegratedTime, 0), nil
 }
 
-func VerifyBundle(ctx context.Context, sig oci.Signature, co *CheckOpts, rekorClient *client.Rekor) (bool, error) {
+// This verifies an offline bundle contained in the sig against the trusted
+// Rekor publicKeys.
+func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return false, err
 	} else if bundle == nil {
 		return false, nil
+	}
+
+	if co.RekorPubKeys == nil || co.RekorPubKeys.Keys == nil {
+		return false, errors.New("no trusted rekor public keys provided")
 	}
 
 	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
@@ -950,14 +961,9 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, co *CheckOpts, rekorCl
 		return false, err
 	}
 
-	publicKeys, err := GetRekorPubs(ctx, nil)
-	if err != nil {
-		return false, fmt.Errorf("retrieving rekor public key: %w", err)
-	}
-
-	pubKey, ok := publicKeys[bundle.Payload.LogID]
+	pubKey, ok := co.RekorPubKeys.Keys[bundle.Payload.LogID]
 	if !ok {
-		return false, &VerificationError{"rekor log public key not found for payload"}
+		return false, &VerificationError{"verifying bundle: rekor log public key not found for payload"}
 	}
 	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
 	if err != nil {
