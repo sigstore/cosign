@@ -129,6 +129,11 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
 
 For instructions on using the `bundle` for verification, see [USAGE.md](../USAGE.md#verify-a-signature-was-added-to-the-transparency-log).
 
+* `rfc3161timestamp` string
+
+  This OPTIONAL property contains a JSON formatted `RFC3161Timestamp` containing the timestamp response from a
+  timestamp authority.
+
 ## Storage
 
 `cosign` image signatures are stored in an OCI registry and are designed to make use of the existing specifications.

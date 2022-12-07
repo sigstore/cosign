@@ -72,19 +72,36 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 
 	signedPayload := cosign.LocalSignedPayload{}
 
+	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	if ko.TSAServerURL != "" {
+		if ko.RFC3161TimestampPath == "" {
+			return nil, fmt.Errorf("timestamp output path must be set")
+		}
+
 		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create TSA client: %w", err)
 		}
-		b64Sig := []byte(base64.StdEncoding.EncodeToString(sig))
 
-		respBytes, err := tsa.GetTimestampedSignature(b64Sig, clientTSA)
+		respBytes, err := tsa.GetTimestampedSignature(sig, clientTSA)
 		if err != nil {
 			return nil, err
 		}
 
-		signedPayload.RFC3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
+		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
+		// TODO: Consider uploading RFC3161 TS to Rekor
+
+		if rfc3161Timestamp == nil {
+			return nil, fmt.Errorf("rfc3161 timestamp is nil")
+		}
+		ts, err := json.Marshal(rfc3161Timestamp)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
+			return nil, fmt.Errorf("create RFC3161 timestamp file: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 	}
 	if ShouldUploadToTlog(ctx, ko, nil, tlogUpload) {
 		rekorBytes, err = sv.Bytes(ctx)
@@ -101,20 +118,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
-	}
-
-	// if bundle is specified, just do that and ignore the rest
-	if ko.RFC3161TimestampPath != "" {
-		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-
-		contents, err := json.Marshal(signedPayload)
-		if err != nil {
-			return nil, err
-		}
-		if err := os.WriteFile(ko.RFC3161TimestampPath, contents, 0600); err != nil {
-			return nil, fmt.Errorf("create rfc3161 timestamp file: %w", err)
-		}
-		fmt.Printf("RF3161 timestamp bundle wrote in the file %s\n", ko.RFC3161TimestampPath)
 	}
 
 	// if bundle is specified, just do that and ignore the rest

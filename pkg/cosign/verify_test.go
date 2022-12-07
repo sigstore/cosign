@@ -54,6 +54,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/spf13/viper"
@@ -253,18 +254,23 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	entry, _ := rtypes.UnmarshalEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	rekorPubKeys := NewTrustedRekorPubKeys()
+	rekorPubKeys.AddRekorPubKey(pemBytes, tuf.Active)
 
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
 
-	// TODO(asraa): Re-enable passing test when Rekor public keys can be set in CheckOpts,
-	// instead of relying on the singleton TUF instance.
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true})
-	if err == nil {
-		t.Fatalf("expected error due to custom Rekor public key")
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:    rootPool,
+			IgnoreSCT:    true,
+			RekorPubKeys: &rekorPubKeys})
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
 	}
-	if verified == true {
-		t.Fatalf("expected verified=false, got verified=true")
+	if verified == false {
+		t.Fatalf("expected verified=true, got verified=false")
 	}
 }
 
@@ -392,6 +398,10 @@ func uuid(e models.LogEntryAnon) string {
 
 // This test ensures that image signature validation fails properly if we are
 // using a SigVerifier with Rekor.
+// In other words, we require checking against RekorPubKeys when verifying
+// image signature.
+// This could be made more robust with supplying a mismatched trusted RekorPubKeys
+// rather than none.
 // See https://github.com/sigstore/cosign/issues/1816 for more details.
 func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	sv, privKey, err := signature.NewDefaultECDSASignerVerifier()
@@ -415,14 +425,10 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		SigVerifier: sv,
 		RekorClient: mClient,
-	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
-		// TODO(wlynch): This is a weak test, since this is really failing because
-		// there is no inclusion proof for the Rekor entry rather than failing to
-		// validate the Rekor public key itself. At the very least this ensures
-		// that we're hitting tlog validation during signature checking,
-		// but we should look into improving this once there is an in-memory
-		// Rekor client that is capable of performing inclusion proof validation
-		// in unit tests.
+	}); err == nil || !strings.Contains(err.Error(), "no valid tlog entries found no trusted rekor public keys provided") {
+		// This is failing to validate the Rekor public key itself.
+		// At the very least this ensures
+		// that we're hitting tlog validation during signature checking.
 		t.Fatalf("expected error while verifying signature, got %s", err)
 	}
 }
@@ -465,7 +471,7 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		SigVerifier:    sv,
 		TSACerts:       tsaCertPool,
 		SkipTlogVerify: true,
-	}); err != nil || bundleVerified { // Rekor bundle should not be verified with timestamp
+	}); err != nil || bundleVerified { // bundle is not verified since there's no Rekor bundle
 		t.Fatalf("unexpected error while verifying signature, got %v", err)
 	}
 }
@@ -516,7 +522,7 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		SigVerifier: sv,
 		TSACerts:    tsaCertPool,
 		RekorClient: mClient,
-	}); err == nil || !strings.Contains(err.Error(), "verifying inclusion proof") {
+	}); err == nil || !strings.Contains(err.Error(), "no trusted rekor public keys provided") {
 		// TODO(wlynch): This is a weak test, since this is really failing because
 		// there is no inclusion proof for the Rekor entry rather than failing to
 		// validate the Rekor public key itself. At the very least this ensures
@@ -1285,5 +1291,96 @@ func Test_getSubjectAltnernativeNames(t *testing.T) {
 	}
 	if sans[3] != "testURL" {
 		t.Fatalf("unexpected URL SAN value")
+	}
+}
+
+func TestVerifyRFC3161Timestamp(t *testing.T) {
+	// generate signed artifact
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	// TODO: Replace with a TSA mock client, blocked by https://github.com/sigstore/timestamp-authority/issues/146
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(chain.Payload)) {
+		t.Fatalf("error creating trust root pool")
+	}
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+
+	// success, signing over signature
+	ts, err := VerifyRFC3161Timestamp(ociSig, pool)
+	if err != nil {
+		t.Fatalf("unexpected error verifying timestamp with signature: %v", err)
+	}
+	if err := CheckExpiry(leafCert, ts.Time); err != nil {
+		t.Fatalf("unexpected error using time from timestamp to verify certificate: %v", err)
+	}
+
+	// success, signing over payload
+	tsBytes, err = tsa.GetTimestampedSignature(payload, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	ociSig, _ = static.NewSignature(payload,
+		"", /*signature*/
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	_, err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err != nil {
+		t.Fatalf("unexpected error verifying timestamp with payload: %v", err)
+	}
+
+	// failure with non-base64 encoded signature
+	ociSig, _ = static.NewSignature(payload,
+		string(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	_, err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err == nil || !strings.Contains(err.Error(), "base64 data") {
+		t.Fatalf("expected error verifying timestamp with raw signature, got: %v", err)
+	}
+
+	// failure with mismatched signature
+	tsBytes, err = tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	// regenerate signature
+	signature, _ = privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	ociSig, _ = static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	_, err = VerifyRFC3161Timestamp(ociSig, pool)
+	if err == nil || !strings.Contains(err.Error(), "hashed messages don't match") {
+		t.Fatalf("expected error verifying mismatched signatures, got: %v", err)
 	}
 }

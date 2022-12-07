@@ -87,7 +87,7 @@ func TestSignaturesRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			gotSig, err := base64signature(test.sigRef, "", "")
+			gotSig, err := base64signature(test.sigRef, "")
 			if test.shouldErr && err != nil {
 				return
 			}
@@ -119,34 +119,7 @@ func TestSignaturesBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gotSig, err := base64signature("", fp, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if gotSig != b64sig {
-		t.Fatalf("unexpected signature, expected: %s got: %s", b64sig, gotSig)
-	}
-}
-
-func TestSignaturesRFC3161TimestampBundle(t *testing.T) {
-	td := t.TempDir()
-	fp := filepath.Join(td, "file")
-
-	b64sig := "YT09"
-
-	// save as a LocalSignedPayload to the file
-	lsp := cosign.LocalSignedPayload{
-		Base64Signature: b64sig,
-	}
-	contents, err := json.Marshal(lsp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(fp, contents, 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	gotSig, err := base64signature("", "", fp)
+	gotSig, err := base64signature("", fp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,8 +246,6 @@ func TestVerifyBlob(t *testing.T) {
 		key        []byte
 		cert       *x509.Certificate
 		bundlePath string
-		// If online lookups to Rekor are enabled
-		experimental bool
 		// The rekor entry response when Rekor is enabled
 		rekorEntry     []*models.LogEntry
 		skipTlogVerify bool
@@ -285,280 +256,255 @@ func TestVerifyBlob(t *testing.T) {
 			blob:           blobBytes,
 			signature:      blobSignature,
 			key:            pubKeyBytes,
-			experimental:   false,
 			shouldErr:      false,
 			skipTlogVerify: true,
 		},
 		{
-			name:         "valid signature with public key - experimental no rekor fail",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: true,
-			rekorEntry:   nil,
-			shouldErr:    true,
+			name:       "valid signature with public key - experimental no rekor fail",
+			blob:       blobBytes,
+			signature:  blobSignature,
+			key:        pubKeyBytes,
+			rekorEntry: nil,
+			shouldErr:  true,
 		},
 		{
-			name:         "valid signature with public key - experimental rekor entry success",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: true,
+			name:      "valid signature with public key - experimental rekor entry success",
+			blob:      blobBytes,
+			signature: blobSignature,
+			key:       pubKeyBytes,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				pubKeyBytes, true)},
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with public key - good bundle provided",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: false,
+			name:      "valid signature with public key - good bundle provided",
+			blob:      blobBytes,
+			signature: blobSignature,
+			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				pubKeyBytes, true),
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with public key - bundle without rekor bundle fails",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: false,
-			bundlePath:   makeLocalBundleWithoutRekorBundle(t, []byte(blobSignature), pubKeyBytes),
-			shouldErr:    true,
+			name:       "valid signature with public key - bundle without rekor bundle fails",
+			blob:       blobBytes,
+			signature:  blobSignature,
+			key:        pubKeyBytes,
+			bundlePath: makeLocalBundleWithoutRekorBundle(t, []byte(blobSignature), pubKeyBytes),
+			shouldErr:  true,
 		},
 		{
-			name:         "valid signature with public key - bad bundle SET",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: false,
+			name:      "valid signature with public key - bad bundle SET",
+			blob:      blobBytes,
+			signature: blobSignature,
+			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *signer, blobBytes, []byte(blobSignature),
 				unexpiredCertPem, true),
 			shouldErr: true,
 		},
 		{
-			name:         "valid signature with public key - bad bundle cert mismatch",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: false,
+			name:      "valid signature with public key - bad bundle cert mismatch",
+			blob:      blobBytes,
+			signature: blobSignature,
+			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				unexpiredCertPem, true),
 			shouldErr: true,
 		},
 		{
-			name:         "valid signature with public key - bad bundle signature mismatch",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: false,
+			name:      "valid signature with public key - bad bundle signature mismatch",
+			blob:      blobBytes,
+			signature: blobSignature,
+			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(makeSignature(blobBytes)),
 				pubKeyBytes, true),
 			shouldErr: true,
 		},
 		{
-			name:         "valid signature with public key - bad bundle msg & signature mismatch",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			key:          pubKeyBytes,
-			experimental: false,
+			name:      "valid signature with public key - bad bundle msg & signature mismatch",
+			blob:      blobBytes,
+			signature: blobSignature,
+			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, otherBytes, []byte(otherSignature),
 				pubKeyBytes, true),
 			shouldErr: true,
 		},
 		{
-			name:         "invalid signature with public key",
-			blob:         blobBytes,
-			signature:    otherSignature,
-			key:          pubKeyBytes,
-			experimental: false,
-			shouldErr:    true,
+			name:      "invalid signature with public key",
+			blob:      blobBytes,
+			signature: otherSignature,
+			key:       pubKeyBytes,
+			shouldErr: true,
 		},
 		{
-			name:         "invalid signature with public key - experimental",
-			blob:         blobBytes,
-			signature:    otherSignature,
-			key:          pubKeyBytes,
-			experimental: true,
-			shouldErr:    true,
+			name:      "invalid signature with public key - experimental",
+			blob:      blobBytes,
+			signature: otherSignature,
+			key:       pubKeyBytes,
+			shouldErr: true,
 		},
 		{
-			name:         "valid signature with unexpired certificate - no rekor entry",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         unexpiredLeafCert,
-			experimental: false,
-			shouldErr:    true,
+			name:      "valid signature with unexpired certificate - no rekor entry",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      unexpiredLeafCert,
+			shouldErr: true,
 		},
 		{
-			name:         "valid signature with unexpired certificate - bad bundle cert mismatch",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			experimental: false,
-			key:          pubKeyBytes,
+			name:      "valid signature with unexpired certificate - bad bundle cert mismatch",
+			blob:      blobBytes,
+			signature: blobSignature,
+			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				unexpiredCertPem, true),
 			shouldErr: true,
 		},
 		{
-			name:         "valid signature with unexpired certificate - bad bundle signature mismatch",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			experimental: false,
-			cert:         unexpiredLeafCert,
+			name:      "valid signature with unexpired certificate - bad bundle signature mismatch",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      unexpiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(makeSignature(blobBytes)),
 				unexpiredCertPem, true),
 			shouldErr: true,
 		},
 		{
-			name:         "valid signature with unexpired certificate - bad bundle msg & signature mismatch",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			experimental: false,
-			cert:         unexpiredLeafCert,
+			name:      "valid signature with unexpired certificate - bad bundle msg & signature mismatch",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      unexpiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, otherBytes, []byte(otherSignature),
 				unexpiredCertPem, true),
 			shouldErr: true,
 		},
 		{
-			name:         "invalid signature with unexpired certificate",
-			blob:         blobBytes,
-			signature:    otherSignature,
-			cert:         unexpiredLeafCert,
-			experimental: false,
-			shouldErr:    true,
+			name:      "invalid signature with unexpired certificate",
+			blob:      blobBytes,
+			signature: otherSignature,
+			cert:      unexpiredLeafCert,
+			shouldErr: true,
 		},
 		{
-			name:         "valid signature with unexpired certificate - experimental",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         unexpiredLeafCert,
-			experimental: true,
+			name:      "valid signature with unexpired certificate - experimental",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      unexpiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				unexpiredCertPem, true)},
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with unexpired certificate - experimental & rekor entry found",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         unexpiredLeafCert,
-			experimental: true,
+			name:      "valid signature with unexpired certificate - experimental & rekor entry found",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      unexpiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				unexpiredCertPem, true)},
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with expired certificate + Rekor",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: false,
-			shouldErr:    true,
+			name:      "valid signature with expired certificate + Rekor",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
+			shouldErr: true,
 		},
 		{
 			name:           "valid signature with expired certificate, no Rekor",
 			blob:           blobBytes,
 			signature:      blobSignature,
 			cert:           expiredLeafCert,
-			experimental:   false,
 			skipTlogVerify: true,
 			shouldErr:      true,
 		},
 		{
-			name:         "valid signature with expired certificate - experimental good rekor lookup",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: true,
+			name:      "valid signature with expired certificate - experimental good rekor lookup",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				expiredLeafPem, true)},
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with expired certificate - experimental multiple rekor entries",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: true,
+			name:      "valid signature with expired certificate - experimental multiple rekor entries",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				expiredLeafPem, true), makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				expiredLeafPem, false)},
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with expired certificate - experimental bad rekor integrated time",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: true,
+			name:      "valid signature with expired certificate - experimental bad rekor integrated time",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				expiredLeafPem, false)},
 			shouldErr: true,
 		},
 
 		{
-			name:         "valid signature with unexpired certificate - good bundle, nonexperimental",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         unexpiredLeafCert,
-			experimental: false,
+			name:      "valid signature with unexpired certificate - good bundle, nonexperimental",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      unexpiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				unexpiredCertPem, true),
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with expired certificate - good bundle, nonexperimental",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: false,
+			name:      "valid signature with expired certificate - good bundle, nonexperimental",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				expiredLeafPem, true),
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with expired certificate - bundle with bad expiration",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: false,
+			name:      "valid signature with expired certificate - bundle with bad expiration",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				expiredLeafPem, false),
 			shouldErr: true,
 		},
 		{
-			name:         "valid signature with expired certificate - bundle with bad SET",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: false,
+			name:      "valid signature with expired certificate - bundle with bad SET",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *signer, blobBytes, []byte(blobSignature),
 				expiredLeafPem, true),
 			shouldErr: true,
 		},
 		{
-			name:         "valid signature with expired certificate - experimental good bundle",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: true,
+			name:      "valid signature with expired certificate - experimental good bundle",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
 				expiredLeafPem, true),
 			shouldErr: false,
 		},
 		{
-			name:         "valid signature with expired certificate - experimental bad rekor entry",
-			blob:         blobBytes,
-			signature:    blobSignature,
-			cert:         expiredLeafCert,
-			experimental: true,
+			name:      "valid signature with expired certificate - experimental bad rekor entry",
+			blob:      blobBytes,
+			signature: blobSignature,
+			cert:      expiredLeafCert,
 			// This is the wrong signer for the SET!
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *signer, blobBytes, []byte(blobSignature),
 				expiredLeafPem, true)},
 			shouldErr: true,
 		},
+		// TODO: Add tests for TSA:
+		// * With or without bundle
+		// * Mismatched signature
+		// * Unexpired and expired certificate
 	}
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1024,12 +970,6 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		// Create blob
 		blob := "someblob"
 
-		// Sign blob with private key
-		sig, err := signer.SignMessage(bytes.NewReader([]byte(blob)))
-		if err != nil {
-			t.Fatal(err)
-		}
-
 		// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
 		viper.Set("timestamp-signer", "memory")
 		apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
@@ -1041,8 +981,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Error(err)
 		}
 
-		payloadSigner := payload.NewSigner(keyless.rekorSigner)
-
+		payloadSigner := payload.NewSigner(signer)
 		tsaSigner := tsa.NewSigner(payloadSigner, client)
 		var sigTSA oci.Signature
 		sigTSA, _, err = tsaSigner.Sign(context.Background(), bytes.NewReader([]byte(blob)))
@@ -1054,6 +993,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error getting rfc3161 timestamp bundle: %v", err)
 		}
+		tsPath := writeTimestampFile(t, keyless.td, rfc3161Timestamp, "rfc3161TS.json")
 
 		chain, err := client.Timestamp.GetTimestampCertChain(nil)
 		if err != nil {
@@ -1067,8 +1007,16 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		defer os.Remove(tsaCertChainPath)
 
 		// Create bundle
+		b64Sig, err := sigTSA.Base64Signature()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sig, err := base64.StdEncoding.DecodeString(b64Sig)
+		if err != nil {
+			t.Fatal(err)
+		}
 		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createRFC3161TimestampAndOrRekorBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry, rfc3161Timestamp.SignedRFC3161Timestamp)
+		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1079,12 +1027,12 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertEmail:      identity,
 			CertChain:      os.Getenv("SIGSTORE_ROOT_FILE"),
 			SigRef:         "", // Sig is fetched from bundle
-			KeyOpts:        options.KeyOpts{BundlePath: bundlePath, TSACertChainPath: tsaCertChainPath},
+			KeyOpts:        options.KeyOpts{BundlePath: bundlePath, TSACertChainPath: tsaCertChainPath, RFC3161TimestampPath: tsPath},
 			IgnoreSCT:      true,
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err != nil {
-			t.Fatalf("expected success specifying the intermediates, got %v", err)
+			t.Fatalf("expected success verifying with timestamp, got %v", err)
 		}
 	})
 	t.Run("Explicit Fulcio chain with bundle in non-experimental mode", func(t *testing.T) {
@@ -1393,37 +1341,6 @@ func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integr
 	return b
 }
 
-func createRFC3161TimestampAndOrRekorBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string, rfc3161timestamp []byte) *cosign.LocalSignedPayload {
-	// Create bundle with:
-	// * Blob signature
-	// * Signing certificate
-	b := &cosign.LocalSignedPayload{
-		Base64Signature: base64.StdEncoding.EncodeToString(sig),
-		Cert:            string(certPem),
-	}
-
-	if rekorEntry != "" {
-		// * Bundle with a payload and signature over the payload
-		b.Bundle = &bundle.RekorBundle{
-			SignedEntryTimestamp: []byte{},
-			Payload: bundle.RekorPayload{
-				LogID:          logID,
-				IntegratedTime: integratedTime,
-				LogIndex:       1,
-				Body:           rekorEntry,
-			},
-		}
-	}
-
-	if rfc3161timestamp != nil {
-		b.RFC3161Timestamp = &bundle.RFC3161Timestamp{
-			SignedRFC3161Timestamp: rfc3161timestamp,
-		}
-	}
-
-	return b
-}
-
 func createEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBytes, sigBytes []byte) (types.EntryImpl, error) {
 	props := types.ArtifactProperties{
 		PublicKeyBytes: [][]byte{certBytes},
@@ -1483,4 +1400,16 @@ func writeBlobFile(t *testing.T, td string, blob string, name string) string {
 		t.Fatal(err)
 	}
 	return blobPath
+}
+
+func writeTimestampFile(t *testing.T, td string, ts *bundle.RFC3161Timestamp, name string) string {
+	jsonBundle, err := json.Marshal(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(td, name)
+	if err := os.WriteFile(path, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }

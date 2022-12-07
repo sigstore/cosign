@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -36,12 +37,13 @@ import (
 	ts "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 )
 
+// GetTimestampedSignature queries a timestamp authority to fetch an RFC3161 timestamp. sigBytes is an
+// opaque blob, but is typically a signature over an artifact.
 func GetTimestampedSignature(sigBytes []byte, tsaClient *tsaclient.TimestampAuthority) ([]byte, error) {
 	requestBytes, err := createTimestampAuthorityRequest(sigBytes, crypto.SHA256, "")
 	if err != nil {
 		return nil, err
 	}
-	fmt.Fprintln(os.Stderr, "Calling TSA authority ...")
 	params := ts.NewGetTimestampResponseParams()
 	params.SetTimeout(time.Second * 10)
 	params.Request = io.NopCloser(bytes.NewReader(requestBytes))
@@ -58,7 +60,7 @@ func GetTimestampedSignature(sigBytes []byte, tsaClient *tsaclient.TimestampAuth
 		return nil, err
 	}
 
-	fmt.Fprintln(os.Stderr, "Timestamp fetched with time:", ts.Time)
+	fmt.Fprintln(os.Stderr, "Timestamp fetched with time: ", ts.Time)
 
 	return respBytes.Bytes(), nil
 }
@@ -84,8 +86,14 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	// Here we get the response from the timestamped authority server
-	responseBytes, err := GetTimestampedSignature([]byte(b64Sig), rs.tsaClient)
+	// create timestamp over raw bytes of signature
+	rawSig, err := base64.StdEncoding.DecodeString(b64Sig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// fetch rfc3161 timestamp from timestamp authority
+	responseBytes, err := GetTimestampedSignature(rawSig, rs.tsaClient)
 	if err != nil {
 		return nil, nil, err
 	}
