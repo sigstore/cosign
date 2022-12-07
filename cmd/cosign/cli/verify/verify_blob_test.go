@@ -246,8 +246,6 @@ func TestVerifyBlob(t *testing.T) {
 		key        []byte
 		cert       *x509.Certificate
 		bundlePath string
-		// If online lookups to Rekor are enabled
-		skiptlog bool
 		// The rekor entry response when Rekor is enabled
 		rekorEntry     []*models.LogEntry
 		skipTlogVerify bool
