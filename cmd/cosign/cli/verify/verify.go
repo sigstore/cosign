@@ -150,6 +150,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 			co.RekorClient = rekorClient
 		}
+		// This performs an online fetch of the Rekor public keys, but this is needed
+		// for verifying tlog entries (both online and offline).
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting Rekor public keys: %w", err)
+		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
 		// This performs an online fetch of the Fulcio roots. This is needed
@@ -161,21 +167,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.IntermediateCerts, err = fulcio.GetIntermediates()
 		if err != nil {
 			return fmt.Errorf("getting Fulcio intermediates: %w", err)
-		}
-	}
-	if !co.SkipTlogVerify {
-		if c.RekorURL != "" {
-			rekorClient, err := rekor.NewClient(c.RekorURL)
-			if err != nil {
-				return fmt.Errorf("creating Rekor client: %w", err)
-			}
-			co.RekorClient = rekorClient
-		}
-		// This performs an online fetch of the Rekor public keys, but this is needed
-		// for verifying tlog entries (both online and offline).
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Rekor public keys: %w", err)
 		}
 	}
 	keyRef := c.KeyRef
