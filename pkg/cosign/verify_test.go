@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -156,7 +155,7 @@ func TestVerifyImageSignature(t *testing.T) {
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true, SkipTlogVerify: true})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -187,7 +186,7 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub3, pemSub2, pemSub1, pemRoot})))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true, SkipTlogVerify: true})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -289,7 +288,7 @@ func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true, SkipTlogVerify: true})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -314,7 +313,7 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IgnoreSCT: true, SkipTlogVerify: true})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")
 	}
@@ -350,7 +349,7 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
-	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IntermediateCerts: subPool, IgnoreSCT: true})
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{RootCerts: rootPool, IntermediateCerts: subPool, IgnoreSCT: true, SkipTlogVerify: true})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")
 	}
@@ -1335,9 +1334,12 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		static.WithRFC3161Timestamp(&rfc3161TS))
 
 	// success, signing over signature
-	err = VerifyRFC3161Timestamp(ociSig, pool)
+	ts, err := VerifyRFC3161Timestamp(ociSig, pool)
 	if err != nil {
 		t.Fatalf("unexpected error verifying timestamp with signature: %v", err)
+	}
+	if err := CheckExpiry(leafCert, ts.Time); err != nil {
+		t.Fatalf("unexpected error using time from timestamp to verify certificate: %v", err)
 	}
 
 	// success, signing over payload
@@ -1350,7 +1352,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		"", /*signature*/
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
-	err = VerifyRFC3161Timestamp(ociSig, pool)
+	_, err = VerifyRFC3161Timestamp(ociSig, pool)
 	if err != nil {
 		t.Fatalf("unexpected error verifying timestamp with payload: %v", err)
 	}
@@ -1360,7 +1362,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		string(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
-	err = VerifyRFC3161Timestamp(ociSig, pool)
+	_, err = VerifyRFC3161Timestamp(ociSig, pool)
 	if err == nil || !strings.Contains(err.Error(), "base64 data") {
 		t.Fatalf("expected error verifying timestamp with raw signature, got: %v", err)
 	}
@@ -1377,30 +1379,8 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
-	err = VerifyRFC3161Timestamp(ociSig, pool)
+	_, err = VerifyRFC3161Timestamp(ociSig, pool)
 	if err == nil || !strings.Contains(err.Error(), "hashed messages don't match") {
 		t.Fatalf("expected error verifying mismatched signatures, got: %v", err)
-	}
-
-	// failure with old certificate
-	leafPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// generate old certificate
-	leafCert, _ = test.GenerateLeafCertWithExpiration("subject", "oidc-issuer", time.Now().AddDate(-1, 0, 0), leafPriv, rootCert, rootKey)
-	pemLeaf = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-	tsBytes, err = tsa.GetTimestampedSignature(signature, client)
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
-	}
-	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
-	ociSig, _ = static.NewSignature(payload,
-		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
-		static.WithRFC3161Timestamp(&rfc3161TS))
-	err = VerifyRFC3161Timestamp(ociSig, pool)
-	if err == nil || !strings.Contains(err.Error(), "checking expiry on certificate") {
-		t.Fatalf("expected error verifying old certificate, got: %v", err)
 	}
 }

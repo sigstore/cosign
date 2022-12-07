@@ -625,20 +625,71 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
+	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
+
+	if co.TSACerts != nil {
+		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co.TSACerts)
+		if err != nil {
+			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
+		}
+		if acceptableRFC3161Timestamp != nil {
+			acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
+		}
+	}
+
+	if !co.SkipTlogVerify {
+		bundleVerified, err = VerifyBundle(sig, co)
+		if err != nil {
+			return false, fmt.Errorf("error verifying bundle: %w", err)
+		}
+
+		if bundleVerified {
+			// Update with the verified bundle's integrated time.
+			t, err := getBundleIntegratedTime(sig)
+			if err != nil {
+				return false, fmt.Errorf("error getting bundle integrated time: %w", err)
+			}
+			acceptableRekorBundleTime = &t
+		} else {
+			// If the --offline flag was specified, fail here. bundleVerified returns false with
+			// no error when there was no bundle provided.
+			if co.Offline {
+				return false, fmt.Errorf("offline verification failed")
+			}
+
+			// no Rekor client provided for an online lookup
+			if co.RekorClient == nil {
+				return false, fmt.Errorf("rekor client not provided for online verification")
+			}
+
+			pemBytes, err := keyBytes(sig, co)
+			if err != nil {
+				return false, err
+			}
+
+			e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, sig, pemBytes)
+			if err != nil {
+				return false, err
+			}
+			t := time.Unix(*e.IntegratedTime, 0)
+			acceptableRekorBundleTime = &t
+		}
+	}
+
 	verifier := co.SigVerifier
 	if verifier == nil {
 		// If we don't have a public key to check against, we can try a root cert.
 		cert, err := sig.Cert()
 		if err != nil {
-			return bundleVerified, err
+			return false, err
 		}
 		if cert == nil {
-			return bundleVerified, &VerificationError{"no certificate found on signature"}
+			return false, &VerificationError{"no certificate found on signature"}
 		}
 		// Create a certificate pool for intermediate CA certificates, excluding the root
 		chain, err := sig.Chain()
 		if err != nil {
-			return bundleVerified, err
+			return false, err
 		}
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
 		if len(chain) > 0 {
@@ -655,76 +706,43 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 		verifier, err = ValidateAndUnpackCert(cert, co)
 		if err != nil {
-			return bundleVerified, err
+			return false, err
 		}
 	}
 
 	// 1. Perform cryptographic verification of the signature using the certificate's public key.
 	if err := verifyFn(ctx, verifier, sig); err != nil {
-		return bundleVerified, err
+		return false, err
 	}
 
 	// We can't check annotations without claims, both require unmarshalling the payload.
 	if co.ClaimVerifier != nil {
 		if err := co.ClaimVerifier(sig, h, co.Annotations); err != nil {
-			return bundleVerified, err
-		}
-	}
-	if co.TSACerts != nil {
-		err = VerifyRFC3161Timestamp(sig, co.TSACerts)
-		if err != nil {
-			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
-		}
-	}
-	if co.SkipTlogVerify {
-		return bundleVerified, err
-	}
-
-	// 2. Check the validity time of the signature.
-	// This is the signature creation time. As a default upper bound, use the current
-	// time.
-	validityTime := time.Now()
-
-	bundleVerified, err = VerifyBundle(sig, co)
-	if err != nil {
-		return false, fmt.Errorf("error verifying bundle: %w", err)
-	}
-
-	if bundleVerified {
-		// Update with the verified bundle's integrated time.
-		validityTime, err = getBundleIntegratedTime(sig)
-		if err != nil {
-			return false, fmt.Errorf("error getting bundle integrated time: %w", err)
+			return false, err
 		}
 	}
 
-	// If the --offline flag was specified, fail here. bundleVerified returns false with
-	// no error when there was no bundle provided.
-	// TODO: You can be offline when you are verifying with a public key. This shouldn't
-	// error out, but maybe should be a log message.
-	if !bundleVerified && co.Offline {
-		return false, fmt.Errorf("offline verification failed")
-	}
-
+	// 3. if a certificate was used, verify the cert against the integrated time.
 	cert, err := sig.Cert()
 	if err != nil {
 		return false, err
 	}
-	if !bundleVerified && co.RekorClient != nil && !co.Offline {
-		pemBytes, err := keyBytes(sig, co)
-		if err != nil {
-			return bundleVerified, err
-		}
-
-		e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, sig, pemBytes)
-		if err != nil {
-			return bundleVerified, err
-		}
-		validityTime = time.Unix(*e.IntegratedTime, 0)
-	}
-
-	// 3. if a certificate was used, verify the cert against the integrated time.
 	if cert != nil {
+		// 2. Check the validity time of the signature.
+		// This is the signature creation time. As a default upper bound, use the current
+		// time.
+		validityTime := time.Now()
+
+		if acceptableRFC3161Time != nil {
+			// Verify the cert against the timestamp time.
+			if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
+				return false, fmt.Errorf("checking expiry on cert: %w", err)
+			}
+		}
+
+		if acceptableRekorBundleTime != nil {
+			validityTime = *acceptableRekorBundleTime
+		}
 		if err := CheckExpiry(cert, validityTime); err != nil {
 			return false, fmt.Errorf("checking expiry on cert: %w", err)
 		}
@@ -992,22 +1010,20 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	return true, nil
 }
 
-func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) error {
+// VerifyRFC3161Timestamp verifies that the timestamp in untrustedSig is correctly signed, and if so,
+// returns the timestamp value.
+// It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp.
+func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) (*timestamp.Timestamp, error) {
 	ts, err := sig.RFC3161Timestamp()
 	if err != nil {
-		return err
+		return nil, err
 	} else if ts == nil {
-		return nil
+		return nil, nil
 	}
 
 	b64Sig, err := sig.Base64Signature()
 	if err != nil {
-		return fmt.Errorf("reading base64signature: %w", err)
-	}
-
-	cert, err := sig.Cert()
-	if err != nil {
-		return err
+		return nil, fmt.Errorf("reading base64signature: %w", err)
 	}
 
 	var tsBytes []byte
@@ -1015,36 +1031,26 @@ func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) error {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
 		signedPayload, err := sig.Payload()
 		if err != nil {
-			return fmt.Errorf("reading the payload: %w", err)
+			return nil, fmt.Errorf("reading the payload: %w", err)
 		}
 		tsBytes = signedPayload
 	} else {
 		// create timestamp over raw bytes of signature
 		rawSig, err := base64.StdEncoding.DecodeString(b64Sig)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		tsBytes = rawSig
 	}
 
 	err = tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes), tsaCerts)
 	if err != nil {
-		return fmt.Errorf("unable to verify TimestampResponse: %w", err)
+		return nil, fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}
+	acceptedTimestamp := ts
 
-	if cert != nil {
-		ts, err := timestamp.ParseResponse(ts.SignedRFC3161Timestamp)
-		if err != nil {
-			return fmt.Errorf("error parsing response into timestamp: %w", err)
-		}
-		// Verify the cert against the integrated time.
-		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
-		if err := CheckExpiry(cert, ts.Time); err != nil {
-			return fmt.Errorf("checking expiry on certificate: %w", err)
-		}
-	}
-
-	return nil
+	// FIXME: tsaverification.VerifyTimestampResponse has done this parsing; we shouldn’t parse again.
+	return timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
 }
 
 // compare bundle signature to the signature we are verifying

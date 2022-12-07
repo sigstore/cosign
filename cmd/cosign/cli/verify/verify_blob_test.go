@@ -403,11 +403,19 @@ func TestVerifyBlob(t *testing.T) {
 			shouldErr: false,
 		},
 		{
-			name:      "valid signature with expired certificate",
+			name:      "valid signature with expired certificate + Rekor",
 			blob:      blobBytes,
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			shouldErr: true,
+		},
+		{
+			name:           "valid signature with expired certificate, no Rekor",
+			blob:           blobBytes,
+			signature:      blobSignature,
+			cert:           expiredLeafCert,
+			skipTlogVerify: true,
+			shouldErr:      true,
 		},
 		{
 			name:      "valid signature with expired certificate - experimental good rekor lookup",
@@ -1113,7 +1121,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 	keyless := newKeylessStack(t)
 	// Change the keyless stack.
-	_ = newKeylessStack(t)
+	newKeyless := newKeylessStack(t)
 	t.Run("Invalid certificate root when specifying cert via certRef", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
@@ -1130,8 +1138,8 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 
 		// Create bundle
 		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
-		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
+		b := createBundle(t, sig, leafPemCert, newKeyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		b.Bundle.SignedEntryTimestamp = newKeyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 		certPath := writeBlobFile(t, keyless.td, string(leafPemCert), "cert.pem")
@@ -1148,7 +1156,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
-			t.Fatalf("expected error with invalid root CA, got %v", err)
+			t.Fatalf("expected error with certificate signed by unknown authority, got %v", err)
 		}
 	})
 	t.Run("Invalid certificate root when specifying cert in bundle", func(t *testing.T) {
@@ -1167,8 +1175,8 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 
 		// Create bundle
 		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
-		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
+		b := createBundle(t, sig, leafPemCert, newKeyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		b.Bundle.SignedEntryTimestamp = newKeyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
 
@@ -1184,7 +1192,7 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 		}
 		err = cmd.Exec(context.Background(), blobPath)
 		if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
-			t.Fatalf("expected error with invalid root CA, got %v", err)
+			t.Fatalf("expected error with certificate signed by unknown authority, got %v", err)
 		}
 	})
 }
