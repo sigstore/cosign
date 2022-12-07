@@ -997,8 +997,8 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		os.RemoveAll(td1)
 	})
 	bp := filepath.Join(td1, blob)
-	tsPath := filepath.Join(td1, "rfc3161TimestampBundle.sig")
 	bundlePath := filepath.Join(td1, "bundle.sig")
+	tsPath := filepath.Join(td1, "rfc3161Timestamp.json")
 
 	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
 		t.Fatal(err)
@@ -1030,9 +1030,9 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 
 	ko1 := options.KeyOpts{
 		KeyRef:               pubKeyPath1,
+		BundlePath:           bundlePath,
 		RFC3161TimestampPath: tsPath,
 		TSACertChainPath:     file.Name(),
-		BundlePath:           bundlePath,
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
@@ -1045,10 +1045,10 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:               privKeyPath1,
 		PassFunc:             passFunc,
+		BundlePath:           bundlePath,
 		RFC3161TimestampPath: tsPath,
 		TSAServerURL:         server.URL,
 		RekorURL:             rekorURL,
-		BundlePath:           bundlePath,
 	}
 	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)

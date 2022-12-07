@@ -666,7 +666,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 	if co.TSACerts != nil {
-		bundleVerified, err = VerifyRFC3161Timestamp(ctx, sig, co.TSACerts)
+		err = VerifyRFC3161Timestamp(sig, co.TSACerts)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
 		}
@@ -986,52 +986,59 @@ func VerifyBundle(ctx context.Context, sig oci.Signature, co *CheckOpts, rekorCl
 	return true, nil
 }
 
-func VerifyRFC3161Timestamp(ctx context.Context, sig oci.Signature, tsaCerts *x509.CertPool) (bool, error) {
-	bundle, err := sig.RFC3161Timestamp()
+func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) error {
+	ts, err := sig.RFC3161Timestamp()
 	if err != nil {
-		return false, err
-	} else if bundle == nil {
-		return false, nil
+		return err
+	} else if ts == nil {
+		return nil
 	}
 
 	b64Sig, err := sig.Base64Signature()
 	if err != nil {
-		return false, fmt.Errorf("reading base64signature: %w", err)
+		return fmt.Errorf("reading base64signature: %w", err)
 	}
 
 	cert, err := sig.Cert()
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	verifiedBytes := []byte(b64Sig)
+	var tsBytes []byte
 	if len(b64Sig) == 0 {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
 		signedPayload, err := sig.Payload()
 		if err != nil {
-			return false, fmt.Errorf("reading the payload: %w", err)
+			return fmt.Errorf("reading the payload: %w", err)
 		}
-		verifiedBytes = signedPayload
+		tsBytes = signedPayload
+	} else {
+		// create timestamp over raw bytes of signature
+		rawSig, err := base64.StdEncoding.DecodeString(b64Sig)
+		if err != nil {
+			return err
+		}
+		tsBytes = rawSig
 	}
 
-	err = tsaverification.VerifyTimestampResponse(bundle.SignedRFC3161Timestamp, bytes.NewReader(verifiedBytes), tsaCerts)
+	err = tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes), tsaCerts)
 	if err != nil {
-		return false, fmt.Errorf("unable to verify TimestampResponse: %w", err)
+		return fmt.Errorf("unable to verify TimestampResponse: %w", err)
 	}
 
 	if cert != nil {
-		ts, err := timestamp.ParseResponse(bundle.SignedRFC3161Timestamp)
+		ts, err := timestamp.ParseResponse(ts.SignedRFC3161Timestamp)
 		if err != nil {
-			return false, fmt.Errorf("error parsing response into timestamp: %w", err)
+			return fmt.Errorf("error parsing response into timestamp: %w", err)
 		}
 		// Verify the cert against the integrated time.
 		// Note that if the caller requires the certificate to be present, it has to ensure that itself.
 		if err := CheckExpiry(cert, ts.Time); err != nil {
-			return false, fmt.Errorf("checking expiry on cert: %w", err)
+			return fmt.Errorf("checking expiry on certificate: %w", err)
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 // compare bundle signature to the signature we are verifying

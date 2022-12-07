@@ -301,6 +301,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				SCTRef:                       o.CertVerify.SCT,
 				Offline:                      o.CommonVerifyOptions.Offline,
+				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
 			if err := verifyBlobCmd.Exec(cmd.Context(), args[0]); err != nil {
 				return fmt.Errorf("verifying blob %s: %w", args, err)

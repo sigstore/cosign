@@ -39,10 +39,9 @@ type SignedPayload struct {
 }
 
 type LocalSignedPayload struct {
-	Base64Signature  string                   `json:"base64Signature"`
-	Cert             string                   `json:"cert,omitempty"`
-	Bundle           *bundle.RekorBundle      `json:"rekorBundle,omitempty"`
-	RFC3161Timestamp *bundle.RFC3161Timestamp `json:"rfc3161Timestamp,omitempty"`
+	Base64Signature string              `json:"base64Signature"`
+	Cert            string              `json:"cert,omitempty"`
+	Bundle          *bundle.RekorBundle `json:"rekorBundle,omitempty"`
 }
 
 type Signatures struct {
