@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -26,42 +27,68 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 )
 
 // nolint
 type AttestBlobCommand struct {
-	KeyRef       string
+	options.KeyOpts
+	CertPath      string
+	CertChainPath string
+
 	ArtifactHash string
 
 	PredicatePath string
 	PredicateType string
 
+	TlogUpload bool
+	Timeout    time.Duration
+
 	OutputSignature   string
 	OutputAttestation string
-
-	PassFunc cosign.PassFunc
+	OutputCertificate string
 }
 
 // nolint
 func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error {
-	// TODO: Add in experimental keyless mode
-	if !options.OneOf(c.KeyRef) {
+	// We can't have both a key and a security key
+	if options.NOf(c.KeyRef, c.Sk) > 1 {
 		return &options.KeyParseError{}
 	}
 
+	if c.Timeout != 0 {
+		var cancelFn context.CancelFunc
+		ctx, cancelFn = context.WithTimeout(ctx, c.Timeout)
+		defer cancelFn()
+	}
+
+	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" {
+		return errors.New("expected an rfc3161-timestamp path when using a TSA server")
+	}
+
+	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	if err != nil {
+		return fmt.Errorf("getting signer: %w", err)
+	}
+	defer sv.Close()
+
 	var artifact []byte
 	var hexDigest string
-	var err error
 
 	if c.ArtifactHash == "" {
 		if artifactPath == "-" {
@@ -74,17 +101,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return err
 		}
 	}
-
-	ko := options.KeyOpts{
-		KeyRef:   c.KeyRef,
-		PassFunc: c.PassFunc,
-	}
-
-	sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
-	if err != nil {
-		return errors.Wrap(err, "getting signer")
-	}
-	defer sv.Close()
 
 	if c.ArtifactHash == "" {
 		digest, _, err := signature.ComputeDigestForSigning(bytes.NewReader(artifact), crypto.SHA256, []crypto.Hash{crypto.SHA256, crypto.SHA384})
@@ -126,6 +142,52 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return errors.Wrap(err, "signing")
 	}
 
+	signedPayload := cosign.LocalSignedPayload{}
+	if c.TSAServerURL != "" {
+		clientTSA, err := tsaclient.GetTimestampClient(c.TSAServerURL)
+		if err != nil {
+			return fmt.Errorf("failed to create TSA client: %w", err)
+		}
+		rfc3161Timestamp, err := tsa.GetTimestampedSignature(sig, clientTSA)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(c.RFC3161TimestampPath, rfc3161Timestamp, 0600); err != nil {
+			return fmt.Errorf("create rfc3161 timestamp file: %w", err)
+		}
+		fmt.Printf("RF3161 timestamp bundle wrote in the file %s\n", c.RFC3161TimestampPath)
+	}
+
+	rekorBytes, err := sv.Bytes(ctx)
+	if err != nil {
+		return err
+	}
+	if sign.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload) {
+		rekorClient, err := rekor.NewClient(c.RekorURL)
+		if err != nil {
+			return err
+		}
+		entry, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+		signedPayload.Bundle = cbundle.EntryToBundle(entry)
+	}
+	if c.BundlePath != "" {
+		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+
+		contents, err := json.Marshal(signedPayload)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(c.BundlePath, contents, 0600); err != nil {
+			return fmt.Errorf("create bundle file: %w", err)
+		}
+		fmt.Fprintln(os.Stderr, "Bundle wrote in the file ", c.BundlePath)
+	}
+
 	if c.OutputSignature != "" {
 		if err := os.WriteFile(c.OutputSignature, sig, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
@@ -140,6 +202,22 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return fmt.Errorf("create signature file: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", c.OutputAttestation)
+	}
+
+	if c.OutputCertificate != "" {
+		signer, err := sv.Bytes(ctx)
+		if err != nil {
+			return fmt.Errorf("error getting signer: %w", err)
+		}
+		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+		// signer is a certificate
+		if err == nil && len(cert) == 1 {
+			bts := signer
+			if err := os.WriteFile(c.OutputCertificate, bts, 0600); err != nil {
+				return fmt.Errorf("create certificate file: %w", err)
+			}
+			fmt.Printf("Certificate wrote in the file %s\n", c.OutputCertificate)
+		}
 	}
 
 	return nil
