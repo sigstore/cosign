@@ -27,7 +27,6 @@ import (
 	"os"
 	"path/filepath"
 
-	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -40,7 +39,6 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 
-	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
@@ -288,30 +286,12 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
-	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
-	// TODO: This verifier only supports verification of a single signer/signature on
-	// the envelope. Either have the verifier validate that only one signature exists,
-	// or use a multi-signature verifier.
-	if isIntotoDSSE(blobBytes) {
-		// co.SigVerifier = dsse.WrapVerifier(co.SigVerifier)
-		signature, err := static.NewAttestation(blobBytes, opts...)
-		if err != nil {
-			return err
-		}
-		// We have no artifact the attestation is tied to, so we can't do any claim
-		// verification.
-		// TODO: Add an option to support this to populate the v1.Hash for a claim.
-		if _, err = cosign.VerifyBlobAttestation(ctx, signature, co); err != nil {
-			return err
-		}
-	} else {
-		signature, err := static.NewSignature(blobBytes, sig, opts...)
-		if err != nil {
-			return err
-		}
-		if _, err = cosign.VerifyBlobSignature(ctx, signature, co); err != nil {
-			return err
-		}
+	signature, err := static.NewSignature(blobBytes, sig, opts...)
+	if err != nil {
+		return err
+	}
+	if _, err = cosign.VerifyBlobSignature(ctx, signature, co); err != nil {
+		return err
 	}
 
 	fmt.Fprintln(os.Stderr, "Verified OK")
@@ -360,17 +340,4 @@ func payloadBytes(blobRef string) ([]byte, error) {
 		return nil, err
 	}
 	return blobBytes, nil
-}
-
-// isIntotoDSSE checks whether a payload is a Dead Simple Signing Envelope with the In-Toto format.
-func isIntotoDSSE(blobBytes []byte) bool {
-	DSSEenvelope := ssldsse.Envelope{}
-	if err := json.Unmarshal(blobBytes, &DSSEenvelope); err != nil {
-		return false
-	}
-	if DSSEenvelope.PayloadType != ctypes.IntotoPayloadType {
-		return false
-	}
-
-	return true
 }

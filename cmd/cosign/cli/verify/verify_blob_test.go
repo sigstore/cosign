@@ -38,7 +38,6 @@ import (
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/swag"
-	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -121,52 +120,6 @@ func TestSignaturesBundle(t *testing.T) {
 	}
 	if gotSig != b64sig {
 		t.Fatalf("unexpected signature, expected: %s got: %s", b64sig, gotSig)
-	}
-}
-
-func TestIsIntotoDSSEWithEnvelopes(t *testing.T) {
-	tts := []struct {
-		envelope     ssldsse.Envelope
-		isIntotoDSSE bool
-	}{
-		{
-			envelope: ssldsse.Envelope{
-				PayloadType: "application/vnd.in-toto+json",
-				Payload:     base64.StdEncoding.EncodeToString([]byte("This is a test")),
-				Signatures:  []ssldsse.Signature{},
-			},
-			isIntotoDSSE: true,
-		},
-	}
-	for _, tt := range tts {
-		envlopeBytes, _ := json.Marshal(tt.envelope)
-		got := isIntotoDSSE(envlopeBytes)
-		if got != tt.isIntotoDSSE {
-			t.Fatalf("unexpected envelope content")
-		}
-	}
-}
-
-func TestIsIntotoDSSEWithBytes(t *testing.T) {
-	tts := []struct {
-		envelope     []byte
-		isIntotoDSSE bool
-	}{
-		{
-			envelope:     []byte("This is no valid"),
-			isIntotoDSSE: false,
-		},
-		{
-			envelope:     []byte("MEUCIQDBmE1ZRFjUVic1hzukesJlmMFG1JqWWhcthnhawTeBNQIga3J9/WKsNlSZaySnl8V360bc2S8dIln2/qo186EfjHA="),
-			isIntotoDSSE: false,
-		},
-	}
-	for _, tt := range tts {
-		envlopeBytes, _ := json.Marshal(tt.envelope)
-		got := isIntotoDSSE(envlopeBytes)
-		if got != tt.isIntotoDSSE {
-			t.Fatalf("unexpected envelope content")
-		}
 	}
 }
 
@@ -808,6 +761,7 @@ func makeLocalBundleWithoutRekorBundle(t *testing.T, sig []byte, svBytes []byte)
 
 func TestVerifyBlobCmdWithBundle(t *testing.T) {
 	keyless := newKeylessStack(t)
+	defer os.RemoveAll(keyless.td)
 
 	t.Run("Normal verification", func(t *testing.T) {
 		identity := "hello@foo.com"
@@ -932,16 +886,16 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
 
 		// Verify command
-		cmd := VerifyBlobCmd{
+		cmd := VerifyBlobAttestationCommand{
 			CertVerifyOptions: options.CertVerifyOptions{
 				CertIdentity:   identity,
 				CertOidcIssuer: issuer,
 			},
-			CertRef:   "", // Cert is fetched from bundle
-			CertChain: "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			SigRef:    "", // Sig is fetched from bundle
-			KeyOpts:   options.KeyOpts{BundlePath: bundlePath},
-			IgnoreSCT: true,
+			CertRef:       "", // Cert is fetched from bundle
+			CertChain:     "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SignaturePath: "", // Sig is fetched from bundle
+			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
+			IgnoreSCT:     true,
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -1242,12 +1196,53 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatalf("expected error with mismatched root, got %v", err)
 		}
 	})
+	t.Run("Attestation with keyless", func(t *testing.T) {
+		identity := "hello@foo.com"
+		issuer := "issuer"
+		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
+
+		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"customFoo","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
+		wrapped := dsse.WrapSigner(signer, ctypes.IntotoPayloadType)
+		signedPayload, err := wrapped.SignMessage(bytes.NewReader([]byte(stmt)), signatureoptions.WithContext(context.Background()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		// intoto sig = json-serialized dsse envelope
+		sig := signedPayload
+
+		// Create bundle
+		entry := genRekorEntry(t, intoto.KIND, "0.0.1", signedPayload, leafPemCert, sig)
+		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
+		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
+		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
+
+		// Verify command with bundle
+		cmd := VerifyBlobAttestationCommand{
+			CertVerifyOptions: options.CertVerifyOptions{
+				CertOidcIssuer: issuer,
+				CertIdentity:   identity,
+			},
+			CertRef:       "", // Cert is fetched from bundle
+			CertChain:     "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SignaturePath: "", // Sig is fetched from bundle
+			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
+			IgnoreSCT:     true,
+			CheckClaims:   false, // Intentionally false. This checks the subject claim. This is tested in verify_blob_attestation_test.go
+		}
+		if err := cmd.Exec(context.Background(), blobPath); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 	keyless := newKeylessStack(t)
+	defer os.RemoveAll(keyless.td)
+
 	// Change the keyless stack.
 	newKeyless := newKeylessStack(t)
+	defer os.RemoveAll(newKeyless.td)
 	t.Run("Invalid certificate root when specifying cert via certRef", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"

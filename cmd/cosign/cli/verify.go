@@ -329,10 +329,32 @@ The blob may be specified as a path to a file.`,
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ko := options.KeyOpts{
+				KeyRef:               o.Key,
+				Sk:                   o.SecurityKey.Use,
+				Slot:                 o.SecurityKey.Slot,
+				RekorURL:             o.Rekor.URL,
+				BundlePath:           o.BundlePath,
+				RFC3161TimestampPath: o.RFC3161TimestampPath,
+				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
+			}
 			v := verify.VerifyBlobAttestationCommand{
-				KeyRef:        o.Key,
-				PredicateType: o.PredicateOptions.Type,
-				SignaturePath: o.SignaturePath,
+				KeyOpts:                      ko,
+				PredicateType:                o.PredicateOptions.Type,
+				CheckClaims:                  o.CheckClaims,
+				SignaturePath:                o.SignaturePath,
+				CertVerifyOptions:            o.CertVerify,
+				CertRef:                      o.CertVerify.Cert,
+				CertChain:                    o.CertVerify.CertChain,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
+				SCTRef:                       o.CertVerify.SCT,
+				Offline:                      o.CommonVerifyOptions.Offline,
+				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
 			}
 			if len(args) != 1 {
 				return fmt.Errorf("no path to blob passed in, run `cosign verify-blob-attestation -h` for more help")
