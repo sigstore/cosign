@@ -652,21 +652,22 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				return false, fmt.Errorf("offline verification failed")
 			}
 
-			if co.RekorClient != nil {
-				pemBytes, err := keyBytes(sig, co)
-				if err != nil {
-					return false, err
-				}
-
-				e, err := tlogValidateEntry(ctx, co.RekorClient, sig, pemBytes)
-				if err != nil {
-					return false, err
-				}
-				t := time.Unix(*e.IntegratedTime, 0)
-				acceptableRekorBundleTime = &t
-			} else {
+			// no Rekor client provided for an online lookup
+			if co.RekorClient == nil {
 				return false, fmt.Errorf("rekor client not provided for online verification")
 			}
+
+			pemBytes, err := keyBytes(sig, co)
+			if err != nil {
+				return false, err
+			}
+
+			e, err := tlogValidateEntry(ctx, co.RekorClient, sig, pemBytes)
+			if err != nil {
+				return false, err
+			}
+			t := time.Unix(*e.IntegratedTime, 0)
+			acceptableRekorBundleTime = &t
 		}
 	}
 
