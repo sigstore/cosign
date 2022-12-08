@@ -167,8 +167,9 @@ The Cosign API is versioned independently of the Cosign CLI. Version numbers are
   this policy will be updated).
 * After that point, only code in pkg/ will be covered by semver; Cosign will
   follow semver strictly.
-  * Most functionality will be in `internal/` or `cmd/` by default, and exposing it
-    publicly will be a deliberate choice.
+  * Functionality should be private (either language-private or in a "private"
+    package like `internal/` or `cmd/`) by default, and exposing it publicly
+    will be a deliberate choice.
   * In-development features will live under a new `pkg/experimental/` directory,
     which will not be covered by semver.
   * Updating a library is safer than updating a CLI tool, so we will bump major
