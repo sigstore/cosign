@@ -30,7 +30,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -44,6 +43,7 @@ import (
 	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
 	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
+	tsaMock "github.com/sigstore/cosign/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
@@ -55,9 +55,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sigstore/sigstore/pkg/tuf"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
-	"github.com/sigstore/timestamp-authority/pkg/server"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/transparency-dev/merkle/rfc6962"
 )
@@ -434,16 +431,11 @@ func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 }
 
 func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
-	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaMock.NewTSAClient((tsaMock.TSAClientOptions{Time: time.Now()}))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+
 	sv, _, err := signature.NewDefaultECDSASignerVerifier()
 	if err != nil {
 		t.Fatalf("error generating verifier: %v", err)
@@ -477,12 +469,6 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 }
 
 func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
-	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
 	// Add a fake rekor client - this makes it look like there's a matching
 	// tlog entry for the signature during validation (even though it does not
 	// match the underlying data / key)
@@ -491,9 +477,9 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		Entries: []*models.LogEntry{&data},
 	}
 
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaMock.NewTSAClient((tsaMock.TSAClientOptions{Time: time.Now()}))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	sv, _, err := signature.NewDefaultECDSASignerVerifier()
 	if err != nil {
@@ -1304,12 +1290,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	h := sha256.Sum256(payload)
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
-	// TODO: Replace with a TSA mock client, blocked by https://github.com/sigstore/timestamp-authority/issues/146
-	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaMock.NewTSAClient((tsaMock.TSAClientOptions{Time: time.Now()}))
 	if err != nil {
 		t.Fatal(err)
 	}
