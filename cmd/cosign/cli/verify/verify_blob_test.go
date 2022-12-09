@@ -268,7 +268,6 @@ func TestVerifyBlob(t *testing.T) {
 	}
 	rfc3161Timestamp = &bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsRespBytes.Bytes()}
 	unexpiredTSPath := writeTimestampFile(t, td, rfc3161Timestamp, "unexpiredrfc3161TS.json")
-	fmt.Println(unexpiredTSPath)
 	tsChain, err = tsaClient.Timestamp.GetTimestampCertChain(nil)
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
