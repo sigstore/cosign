@@ -496,9 +496,7 @@ func TestAttestationReplace(t *testing.T) {
 }
 
 func TestAttestationRFC3161Timestamp(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
@@ -620,9 +618,7 @@ func TestRekorBundle(t *testing.T) {
 }
 
 func TestRFC3161Timestamp(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
@@ -676,9 +672,7 @@ func TestRFC3161Timestamp(t *testing.T) {
 }
 
 func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
@@ -983,9 +977,7 @@ func TestSignBlobBundle(t *testing.T) {
 }
 
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())

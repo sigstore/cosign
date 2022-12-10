@@ -722,29 +722,35 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 
-	// 3. if a certificate was used, verify the cert against the integrated time.
+	// 2. if a certificate was used, verify the certificate expiration against a time
 	cert, err := sig.Cert()
 	if err != nil {
 		return false, err
 	}
 	if cert != nil {
-		// 2. Check the validity time of the signature.
-		// This is the signature creation time. As a default upper bound, use the current
-		// time.
-		validityTime := time.Now()
+		// use the provided Rekor bundle or RFC3161 timestamp to check certificate expiration
+		expirationChecked := false
 
 		if acceptableRFC3161Time != nil {
 			// Verify the cert against the timestamp time.
 			if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
-				return false, fmt.Errorf("checking expiry on cert: %w", err)
+				return false, fmt.Errorf("checking expiry on certificate with timestamp: %w", err)
 			}
+			expirationChecked = true
 		}
 
 		if acceptableRekorBundleTime != nil {
-			validityTime = *acceptableRekorBundleTime
+			if err := CheckExpiry(cert, *acceptableRekorBundleTime); err != nil {
+				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
+			}
+			expirationChecked = true
 		}
-		if err := CheckExpiry(cert, validityTime); err != nil {
-			return false, fmt.Errorf("checking expiry on cert: %w", err)
+
+		// if no timestamp has been provided, use the current time
+		if !expirationChecked {
+			if err := CheckExpiry(cert, time.Now()); err != nil {
+				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
+			}
 		}
 	}
 

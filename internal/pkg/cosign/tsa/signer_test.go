@@ -19,17 +19,14 @@ import (
 	"context"
 	"crypto"
 	"encoding/base64"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
-	"github.com/sigstore/timestamp-authority/pkg/server"
-	"github.com/spf13/viper"
 )
 
 func mustGetNewSigner(t *testing.T) signature.Signer {
@@ -46,21 +43,15 @@ func mustGetNewSigner(t *testing.T) signature.Signer {
 }
 
 func TestSigner(t *testing.T) {
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
-	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
 	// Need real cert and chain
 	payloadSigner := payload.NewSigner(mustGetNewSigner(t))
 
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	tsaClient, err := mock.NewTSAClient((mock.TSAClientOptions{Time: time.Now()}))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	testSigner := NewSigner(payloadSigner, client)
+	testSigner := NewSigner(payloadSigner, tsaClient)
 
 	testPayload := "test payload"
 
