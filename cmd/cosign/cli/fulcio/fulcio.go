@@ -18,26 +18,26 @@ package fulcio
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
 	"net/url"
 	"os"
-
-	"go.step.sm/crypto/jose"
-	"golang.org/x/term"
+	"strings"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/providers"
+	key "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/fulcio/pkg/api"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"go.step.sm/crypto/jose"
+	"golang.org/x/term"
 )
 
 const (
@@ -58,28 +58,29 @@ func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURL string) (
 	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
 }
 
-func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.LegacyClient, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*api.CertificateResponse, error) {
-	pubBytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-	if err != nil {
-		return nil, err
-	}
-
+func getCertForOauthID(sv signature.SignerVerifier, fc api.LegacyClient, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*api.CertificateResponse, error) {
 	tok, err := connector.OIDConnect(oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
 	if err != nil {
 		return nil, err
 	}
 
+	publicKey, err := sv.PublicKey()
+	if err != nil {
+		return nil, err
+	}
+	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(publicKey)
+	if err != nil {
+		return nil, err
+	}
 	// Sign the email address as part of the request
-	h := sha256.Sum256([]byte(tok.Subject))
-	proof, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
+	proof, err := sv.SignMessage(strings.NewReader(tok.Subject))
 	if err != nil {
 		return nil, err
 	}
 
 	cr := api.CertificateRequest{
 		PublicKey: api.Key{
-			Algorithm: "ecdsa",
-			Content:   pubBytes,
+			Content: pubBytes,
 		},
 		SignedEmailAddress: proof,
 	}
@@ -88,7 +89,7 @@ func getCertForOauthID(priv *ecdsa.PrivateKey, fc api.LegacyClient, connector oi
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
+func GetCert(ctx context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
 	case flowDevice:
@@ -101,15 +102,14 @@ func GetCert(ctx context.Context, priv *ecdsa.PrivateKey, idToken, flow, oidcIss
 		return nil, fmt.Errorf("unsupported oauth flow: %s", flow)
 	}
 
-	return getCertForOauthID(priv, fClient, c, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
+	return getCertForOauthID(sv, fClient, c, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
 }
 
 type Signer struct {
 	Cert  []byte
 	Chain []byte
 	SCT   []byte
-	pub   *ecdsa.PublicKey
-	*signature.ECDSASignerVerifier
+	signature.SignerVerifier
 }
 
 func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
@@ -139,13 +139,32 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		}
 	}
 
-	priv, err := cosign.GeneratePrivateKey()
-	if err != nil {
-		return nil, fmt.Errorf("generating cert: %w", err)
-	}
-	signer, err := signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
-	if err != nil {
-		return nil, err
+	var signer signature.SignerVerifier
+	switch {
+	case ko.IssueCertificate && ko.KeyRef != "":
+		signer, err = key.SignerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
+		if err != nil {
+			return nil, err
+		}
+	case ko.IssueCertificate && ko.Sk:
+		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
+		if err != nil {
+			return nil, err
+		}
+		signer, err = sk.SignerVerifier()
+		if err != nil {
+			sk.Close()
+			return nil, err
+		}
+	default:
+		priv, err := cosign.GeneratePrivateKey()
+		if err != nil {
+			return nil, fmt.Errorf("generating cert: %w", err)
+		}
+		signer, err = signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
 	}
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
@@ -175,24 +194,23 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		}
 		flow = flowNormal
 	}
-	Resp, err := GetCert(ctx, priv, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
+	Resp, err := GetCert(ctx, signer, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
 	if err != nil {
 		return nil, fmt.Errorf("retrieving cert: %w", err)
 	}
 
 	f := &Signer{
-		pub:                 &priv.PublicKey,
-		ECDSASignerVerifier: signer,
-		Cert:                Resp.CertPEM,
-		Chain:               Resp.ChainPEM,
-		SCT:                 Resp.SCT,
+		SignerVerifier: signer,
+		Cert:           Resp.CertPEM,
+		Chain:          Resp.ChainPEM,
+		SCT:            Resp.SCT,
 	}
 
 	return f, nil
 }
 
 func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
-	return &f.pub, nil
+	return f.SignerVerifier.PublicKey()
 }
 
 var _ signature.Signer = &Signer{}

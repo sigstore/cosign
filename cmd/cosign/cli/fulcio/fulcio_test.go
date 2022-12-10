@@ -16,6 +16,7 @@
 package fulcio
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -28,6 +29,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 type testFlow struct {
@@ -63,6 +65,10 @@ func TestGetCertForOauthID(t *testing.T) {
 	testKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("Could not generate ecdsa keypair for test: %v", err)
+	}
+	sv, err := signature.LoadECDSASignerVerifier(testKey, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("Could not create a signer: %v", err)
 	}
 
 	testCases := []struct {
@@ -118,7 +124,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "", "", "")
+			resp, err := getCertForOauthID(sv, tscp, &tf, "", "", "", "")
 
 			if err != nil {
 				if !tc.expectErr {

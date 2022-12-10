@@ -507,11 +507,11 @@ func keylessSigner(ctx context.Context, ko options.KeyOpts) (*SignerVerifier, er
 }
 
 func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
-	if ko.Sk {
+	if ko.Sk && !ko.IssueCertificate {
 		return signerFromSecurityKey(ctx, ko.Slot)
 	}
 
-	if ko.KeyRef != "" {
+	if ko.KeyRef != "" && !ko.IssueCertificate {
 		return signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
 	}
 

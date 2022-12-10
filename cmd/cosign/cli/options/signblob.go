@@ -37,6 +37,7 @@ type SignBlobOptions struct {
 	TlogUpload           bool
 	TSAServerURL         string
 	RFC3161TimestampPath string
+	IssueCertificate     bool
 }
 
 var _ Interface = (*SignBlobOptions)(nil)
@@ -82,4 +83,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"write the RFC3161 timestamp to a file")
 	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp", cobra.BashCompFilenameExt, []string{})
+
+	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
+		"when set and a key is provided, issue a code signing certificate from Fulcio")
 }

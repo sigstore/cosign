@@ -39,6 +39,7 @@ cosign sign-blob [flags]
   -h, --help                             help for sign-blob
       --identity-token string            [EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify             [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
+      --issue-certificate                when set and a key is provided, issue a code signing certificate from Fulcio
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
       --oidc-client-id string            [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string   [EXPERIMENTAL] Path to file containing OIDC client secret for application

@@ -77,6 +77,7 @@ cosign sign [flags]
   -h, --help                                                                                     help for sign
       --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
+      --issue-certificate                                                                        whether or not to issue code signing certificate from Fulcio
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
       --oidc-client-id string                                                                    [EXPERIMENTAL] OIDC client ID for application (default "sigstore")

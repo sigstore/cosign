@@ -75,6 +75,7 @@ import (
 const (
 	serverEnv = "REKOR_SERVER"
 	rekorURL  = "https://rekor.sigstore.dev"
+	fulcioURL = "https://fulcio.sigstore.dev"
 )
 
 var keyPass = []byte("hello")
@@ -604,6 +605,40 @@ func TestRekorBundle(t *testing.T) {
 	}
 	so := options.SignOptions{
 		Upload: true,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Make sure offline verification works with bundling
+	// use rekor prod since we have hardcoded the public key
+	os.Setenv(serverEnv, "notreal")
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
+func TestFulcioBundle(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:    privKeyPath,
+		PassFunc:  passFunc,
+		RekorURL:  rekorURL,
+		FulcioURL: fulcioURL,
+	}
+	so := options.SignOptions{
+		Upload:           true,
+		IssueCertificate: true,
 	}
 
 	// Sign the image

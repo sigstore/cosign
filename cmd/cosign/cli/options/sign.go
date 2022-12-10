@@ -34,6 +34,7 @@ type SignOptions struct {
 	SkipConfirmation  bool
 	TlogUpload        bool
 	TSAServerURL      string
+	IssueCertificate  bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -98,4 +99,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none")
+
+	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
+		"whether or not to issue code signing certificate from Fulcio")
 }
