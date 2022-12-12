@@ -18,11 +18,11 @@ set -ex
 
 go build -o cosign ./cmd/cosign
 go build -o sget ./cmd/sget
-tmp=$(mktemp -d -t cosign-e2e-secrets.XXXX)
+tmp=$(mktemp -d -t cosign-e2e-secrets.XXXXXX)
 cp cosign $tmp/
 cp sget $tmp/
 
-pushd $tmp
+cd $tmp
 
 pass="$RANDOM"
 export COSIGN_PASSWORD=$pass
@@ -30,24 +30,28 @@ export COSIGN_PASSWORD=$pass
 BASE_TEST_REPO=${BASE_TEST_REPO:-ttl.sh/cosign-ci}
 TEST_INSTANCE_REPO="${BASE_TEST_REPO}/$(date +'%Y/%m/%d')/$RANDOM"
 
+img="${TEST_INSTANCE_REPO}/test-${RANDOM}"
+crane cp busybox "${img}"
+
 ## KMS using env variables!
-TEST_KMS=${TEST_KMS:-gcpkms://projects/projectsigstore/locations/global/keyRings/e2e-test/cryptoKeys/test}
+TEST_KMS=${TEST_KMS:-hashivault://transit}
 (crane delete $(./cosign triangulate $img)) || true
 COSIGN_KMS=$TEST_KMS ./cosign generate-key-pair
 signing_key=$TEST_KMS
+verification_key=cosign.pub
 
 if (./cosign verify --key ${verification_key} $img); then false; fi
-COSIGN_KEY=${signing_key} ./cosign sign $img
+COSIGN_KEY=${signing_key} ./cosign sign --tlog-upload=true $img
 COSIGN_KEY=${verification_key} ./cosign verify $img
 
 if (./cosign verify -a foo=bar --key ${verification_key} $img); then false; fi
-COSIGN_KEY=${signing_key} ./cosign sign -a foo=bar $img
+COSIGN_KEY=${signing_key} ./cosign sign -a foo=bar --tlog-upload=true $img
 COSIGN_KEY=${verification_key} ./cosign verify -a foo=bar $img
 
 # store signatures in a different repo
 export COSIGN_REPOSITORY=${TEST_INSTANCE_REPO}/subbedrepo
 (crane delete $(./cosign triangulate $img)) || true
-COSIGN_KEY=${signing_key} ./cosign sign $img
+COSIGN_KEY=${signing_key} ./cosign sign --tlog-upload=true $img
 COSIGN_KEY=${verification_key} ./cosign verify $img
 unset COSIGN_REPOSITORY
 

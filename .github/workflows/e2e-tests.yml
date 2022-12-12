@@ -32,8 +32,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  e2e-tests:
-    name: Run tests
+  e2e-secrets:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]

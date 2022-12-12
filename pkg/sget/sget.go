@@ -100,7 +100,6 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 	}
 
 	if co.SigVerifier != nil || options.EnableExperimental() {
-		fmt.Println("2>>>>")
 		// NB: There are only 2 kinds of verification right now:
 		// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
 		// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
