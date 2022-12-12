@@ -239,7 +239,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			result := &bytes.Buffer{}
-			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
+			if err := sget.New(imgName+"@"+dgst.String(), "", o.Rekor.URL, result).Do(ctx); err != nil {
 				return fmt.Errorf("error getting result: %w", err)
 			}
 			b, err := io.ReadAll(result)

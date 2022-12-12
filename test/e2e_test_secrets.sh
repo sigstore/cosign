@@ -137,7 +137,7 @@ cat /dev/urandom | head -n 10 | base64 > randomblob
 
 # upload blob and sign it
 dgst=$(./cosign upload blob -f randomblob ${blobimg})
-./cosign sign --key ${signing_key} ${dgst}
+./cosign sign --key ${signing_key} --tlog-upload=true ${dgst}
 ./cosign verify --key ${verification_key} ${dgst} # For sanity
 
 # sget w/ signature verification should work via tag or digest
