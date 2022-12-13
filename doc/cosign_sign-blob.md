@@ -37,7 +37,7 @@ cosign sign-blob [flags]
       --bundle string                    write everything required to verify the blob to a FILE
       --fulcio-url string                [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                             help for sign-blob
-      --identity-token string            [EXPERIMENTAL] identity token to use for certificate from fulcio
+      --identity-token string            [EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify             [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
       --oidc-client-id string            [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
