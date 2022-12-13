@@ -28,10 +28,10 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/test"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/theupdateframework/go-tuf/encrypted"
 )

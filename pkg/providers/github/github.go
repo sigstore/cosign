@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/sigstore/cosign/pkg/cosign/env"
-	"github.com/sigstore/cosign/pkg/providers"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/providers"
 )
 
 const (

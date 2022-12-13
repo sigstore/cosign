@@ -18,8 +18,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/importkeypair"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/importkeypair"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 )
 
 func ImportKeyPair() *cobra.Command {

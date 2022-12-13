@@ -22,9 +22,9 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/oci/static"
-	"github.com/sigstore/cosign/pkg/types"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	"github.com/sigstore/cosign/v2/pkg/types"
 )
 
 func WasmCmd(ctx context.Context, regOpts options.RegistryOptions, wasmPath, imageRef string) error {

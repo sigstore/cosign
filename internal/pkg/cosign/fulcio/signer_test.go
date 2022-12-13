@@ -22,8 +22,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
-	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 

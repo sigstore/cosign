@@ -34,7 +34,7 @@ import (
 
 	"github.com/ThalesIgnite/crypto11"
 	"github.com/miekg/pkcs11"
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/term"
 )
