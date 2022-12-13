@@ -139,10 +139,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return fmt.Errorf("error splitting certificates: %w", err)
 		}
-		if len(leaves) != 1 {
-			return fmt.Errorf("certificate chain must contain only one TSA certificate")
+		if len(leaves) > 1 {
+			return fmt.Errorf("certificate chain must contain at most one TSA certificate")
 		}
-		co.TSACertificate = leaves[0]
+		if len(leaves) == 1 {
+			co.TSACertificate = leaves[0]
+		}
 		co.TSAIntermediateCertificates = intermediates
 		co.TSARootCertificates = roots
 	}
