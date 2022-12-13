@@ -1283,7 +1283,7 @@ func TestUploadBlob(t *testing.T) {
 	}
 
 	// Now download it with sget (this should fail by tag)
-	if err := sget.New(imgName, "", os.Stdout).Do(ctx); err == nil {
+	if err := sget.New(imgName, "", "", os.Stdout).Do(ctx); err == nil {
 		t.Error("expected download to fail")
 	}
 
@@ -1299,7 +1299,7 @@ func TestUploadBlob(t *testing.T) {
 	result := &bytes.Buffer{}
 
 	// But pass by digest
-	if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
+	if err := sget.New(imgName+"@"+dgst.String(), "", "", result).Do(ctx); err != nil {
 		t.Fatal(err)
 	}
 	b, err := io.ReadAll(result)

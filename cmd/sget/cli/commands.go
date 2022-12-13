@@ -51,7 +51,7 @@ func New() *cobra.Command {
 				return err
 			}
 			defer wc.Close()
-			return sget.New(ro.ImageRef, ro.PublicKey, wc).Do(cmd.Context())
+			return sget.New(ro.ImageRef, ro.PublicKey, ro.RekorURL, wc).Do(cmd.Context())
 		},
 	}
 	ro.AddFlags(cmd)
