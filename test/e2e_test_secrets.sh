@@ -137,7 +137,7 @@ cat /dev/urandom | head -n 10 | base64 > randomblob
 
 # upload blob and sign it
 dgst=$(./cosign upload blob -f randomblob ${blobimg})
-./cosign sign --key ${signing_key} --tlog-upload=true ${dgst}
+./cosign sign --key ${signing_key} ${dgst}
 ./cosign verify --key ${verification_key} ${dgst} # For sanity
 
 # sget w/ signature verification should work via tag or digest
@@ -157,7 +157,19 @@ if ( ! cmp -s randomblob verified_randomblob_from_digest ); then false; fi
 if ( ! cmp -s randomblob verified_randomblob_from_tag ); then false; fi
 if ( ! cmp -s randomblob randomblob_from_digest ); then false; fi
 
-# TODO: tlog
+# clean up a bit
+crane delete $blobimg || true
+crane delete $dgst || true
+
+# upload blob and sign it
+cat /dev/urandom | head -n 10 | base64 > randomblob
+dgst=$(./cosign upload blob -f randomblob ${blobimg})
+./cosign sign --key ${signing_key} --tlog-upload=false ${dgst}
+./cosign verify --key ${verification_key} --insecure-skip-tlog-verify=true ${dgst} # For sanity
+
+# clean up a bit
+crane delete $blobimg || true
+crane delete $dgst || true
 
 # What else needs auth?
 echo "SUCCESS"
