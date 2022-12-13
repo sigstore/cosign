@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -108,7 +109,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		SkipTlogVerify:               c.SkipTlogVerify,
 	}
 	if c.RFC3161TimestampPath != "" && c.KeyOpts.TSACertChainPath == "" {
-		return fmt.Errorf("timestamp-cert-chain is required to validate a rfc3161 timestamp bundle")
+		return fmt.Errorf("timestamp-certificate-chain is required to validate a RFC3161 timestamp")
 	}
 	if c.KeyOpts.TSACertChainPath != "" {
 		_, err := os.Stat(c.KeyOpts.TSACertChainPath)
@@ -120,14 +121,17 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return fmt.Errorf("error reading certification chain path file: %w", err)
 		}
-		// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
-		// This relies on untrusted leaf certificate.
-		tsaCertPool := x509.NewCertPool()
-		ok := tsaCertPool.AppendCertsFromPEM(pemBytes)
-		if !ok {
-			return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+
+		leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(pemBytes)
+		if err != nil {
+			return fmt.Errorf("error splitting certificates: %w", err)
 		}
-		co.TSACerts = tsaCertPool
+		if len(leaves) != 1 {
+			return fmt.Errorf("certificate chain must contain only one TSA certificate")
+		}
+		co.TSACertificate = leaves[0]
+		co.TSAIntermediateCertificates = intermediates
+		co.TSARootCertificates = roots
 	}
 
 	if !c.SkipTlogVerify {
