@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"

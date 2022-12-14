@@ -21,8 +21,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
-	ctypes "github.com/sigstore/cosign/pkg/types"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 )
 
 func TestOptions(t *testing.T) {

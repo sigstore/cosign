@@ -29,8 +29,8 @@ import (
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/oauth2"
 
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 )
 
 const (

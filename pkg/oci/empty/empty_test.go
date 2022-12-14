@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 )
 
 func TestEmptyImage(t *testing.T) {

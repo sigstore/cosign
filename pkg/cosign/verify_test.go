@@ -40,14 +40,14 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/internal/pkg/cosign/payload"
-	"github.com/sigstore/cosign/internal/pkg/cosign/rekor/mock"
-	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
-	tsaMock "github.com/sigstore/cosign/internal/pkg/cosign/tsa/mock"
-	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/oci/static"
-	"github.com/sigstore/cosign/pkg/types"
-	"github.com/sigstore/cosign/test"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/rekor/mock"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	tsaMock "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/mock"
+	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rtypes "github.com/sigstore/rekor/pkg/types"
@@ -399,7 +399,7 @@ func uuid(e models.LogEntryAnon) string {
 // image signature.
 // This could be made more robust with supplying a mismatched trusted RekorPubKeys
 // rather than none.
-// See https://github.com/sigstore/cosign/issues/1816 for more details.
+// See https://github.com/sigstore/cosign/v2/issues/1816 for more details.
 func TestVerifyImageSignatureWithSigVerifierAndRekor(t *testing.T) {
 	sv, privKey, err := signature.NewDefaultECDSASignerVerifier()
 	if err != nil {

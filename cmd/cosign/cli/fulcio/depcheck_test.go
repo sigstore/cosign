@@ -23,7 +23,7 @@ import (
 
 func TestNoDeps(t *testing.T) {
 	depcheck.AssertNoDependency(t, map[string][]string{
-		"github.com/sigstore/cosign/cmd/cosign/cli/fulcio": {
+		"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio": {
 			// Avoid pulling in a variety of things that are massive dependencies.
 			"github.com/google/trillian",
 			"github.com/envoyproxy/go-control-plane",
