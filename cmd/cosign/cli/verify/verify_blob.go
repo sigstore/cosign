@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -268,6 +269,11 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return err
 		}
 		opts = append(opts, static.WithCertChain(certPEM, chainPEM))
+	}
+
+	co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+	if err != nil {
+		return fmt.Errorf("getting ctlog public keys: %w", err)
 	}
 
 	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.

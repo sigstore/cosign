@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
 	"github.com/sigstore/cosign/v2/pkg/oci"
@@ -102,6 +103,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
+	co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+	if err != nil {
+		return fmt.Errorf("getting ctlog public keys: %w", err)
+	}
+
 	if c.TSACertChainPath != "" {
 		_, err := os.Stat(c.TSACertChainPath)
 		if err != nil {
