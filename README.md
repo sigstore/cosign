@@ -223,7 +223,7 @@ We also include the `sget` command for safer, automatic verification of signatur
 
 To install `sget`, if you have Go 1.16+, you can directly run:
 
-    $ go install github.com/sigstore/cosign/cmd/sget@latest
+    $ go install github.com/sigstore/cosign/v2/cmd/sget@latest
 
 and the resulting binary will be placed at `$GOPATH/bin/sget` (or `$GOBIN/sget`, if set).
 
