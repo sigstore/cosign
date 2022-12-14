@@ -18,12 +18,15 @@
 package cosign
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 
 	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/testdata"
@@ -40,10 +43,18 @@ func TestValidateAndUnpackCertWithSCT(t *testing.T) {
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(chain[1])
+
+	// Grab the CTLog public keys
+	pubKeys, err := ctl.GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
+
 	co := &CheckOpts{
 		RootCerts: rootPool,
 		// explicitly set to false
-		IgnoreSCT: false,
+		IgnoreSCT:    false,
+		CTLogPubKeys: pubKeys,
 	}
 
 	// write SCT verification key to disk
@@ -57,6 +68,11 @@ func TestValidateAndUnpackCertWithSCT(t *testing.T) {
 	}
 	t.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
 
+	// Grab the CTLog public keys again so we get them from env.
+	co.CTLogPubKeys, err = ctl.GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
 	_, err = ValidateAndUnpackCert(chain[0], co)
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
@@ -78,10 +94,18 @@ func TestValidateAndUnpackCertWithDetachedSCT(t *testing.T) {
 
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(chain[1])
+
+	// Grab the CTLog public keys
+	pubKeys, err := ctl.GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
+
 	co := &CheckOpts{
 		RootCerts: rootPool,
 		// explicitly set to false
-		IgnoreSCT: false,
+		IgnoreSCT:    false,
+		CTLogPubKeys: pubKeys,
 	}
 
 	// write SCT verification key to disk
@@ -94,6 +118,11 @@ func TestValidateAndUnpackCertWithDetachedSCT(t *testing.T) {
 		t.Fatalf("failed to write key file: %v", err)
 	}
 	t.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
+	// Grab the CTLog public keys again so we get them from env.
+	co.CTLogPubKeys, err = ctl.GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
 
 	// Fulcio quirk, since it returns a different SCT structure
 	var sct ct.SignedCertificateTimestamp
