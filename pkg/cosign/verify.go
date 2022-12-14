@@ -34,8 +34,8 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/sigstore/pkg/tuf"
 
 	"github.com/sigstore/cosign/v2/pkg/blob"
@@ -121,6 +121,9 @@ type CheckOpts struct {
 	IgnoreSCT bool
 	// Detached SCT. Optional, as the SCT is usually embedded in the certificate.
 	SCT []byte
+	// CTLogPubKeys, if set, is used to validate SCTs against those keys.
+	// It is a map from log id to LogIDMetadata.
+	CTLogPubKeys *ctl.TrustedCTLogPubKeys
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
@@ -239,7 +242,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
 	}
 	if contains {
-		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0]); err != nil {
+		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0], co.CTLogPubKeys); err != nil {
 			return nil, err
 		}
 	} else {
@@ -255,7 +258,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		if err != nil {
 			return nil, err
 		}
-		if err := ctl.VerifySCT(context.Background(), certPEM, chainPEM, co.SCT); err != nil {
+		if err := ctl.VerifySCT(context.Background(), certPEM, chainPEM, co.SCT, co.CTLogPubKeys); err != nil {
 			return nil, err
 		}
 	}
