@@ -72,7 +72,7 @@ cosign verify-attestation [flags]
       --check-claims                                                                             whether to check the claims found (default true)
   -h, --help                                                                                     help for verify-attestation
       --insecure-ignore-sct                                                                      when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
-      --insecure-skip-tlog-verify                                                                skip transparency log verification. used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
+      --insecure-skip-tlog-verify                                                                skip transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'

@@ -34,7 +34,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
 
 	cmd.Flags().BoolVar(&o.SkipTlogVerify, "insecure-skip-tlog-verify", false,
-		"skip transparency log verification. used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
+		"skip transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
 			"cannot be publicly verified when not included in a log")
 }
 

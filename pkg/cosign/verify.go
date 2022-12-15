@@ -137,7 +137,7 @@ type CheckOpts struct {
 	Offline bool
 
 	// Set of flags to verify an RFC3161 timestamp used for trusted timestamping
-	// TSACertificate is the leaf TSA certificate. Optional, if provided in the timestamp
+	// TSACertificate is the certificate used to sign the timestamp. Optional, if provided in the timestamp
 	TSACertificate *x509.Certificate
 	// TSARootCertificates are the set of roots to verify the TSA certificate
 	TSARootCertificates []*x509.Certificate
