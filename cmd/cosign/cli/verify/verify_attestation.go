@@ -103,9 +103,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
-	co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
-	if err != nil {
-		return fmt.Errorf("getting ctlog public keys: %w", err)
+	if !c.IgnoreSCT {
+		co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ctlog public keys: %w", err)
+		}
 	}
 
 	if c.TSACertChainPath != "" {

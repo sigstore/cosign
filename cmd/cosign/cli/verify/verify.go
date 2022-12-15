@@ -173,9 +173,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	keyRef := c.KeyRef
 	certRef := c.CertRef
 
-	co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
-	if err != nil {
-		return fmt.Errorf("getting ctlog public keys: %w", err)
+	if !c.IgnoreSCT {
+		co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ctlog public keys: %w", err)
+		}
 	}
 
 	// Keys are optional!

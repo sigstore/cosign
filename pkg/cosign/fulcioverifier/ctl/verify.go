@@ -219,7 +219,7 @@ func GetCTLogPubs(ctx context.Context) (*TrustedCTLogPubKeys, error) {
 	}
 
 	if len(publicKeys.Keys) == 0 {
-		return nil, errors.New("none of the Rekor public keys have been found")
+		return nil, errors.New("none of the CTLog public keys have been found")
 	}
 
 	return &publicKeys, nil
