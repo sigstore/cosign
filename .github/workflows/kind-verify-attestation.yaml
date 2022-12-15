@@ -114,7 +114,7 @@ jobs:
 
     - name: Sign a blob
       run: |
-        ./cosign sign-blob README.md --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --output-certificate cert.pem --output-signature sig
+        ./cosign sign-blob README.md --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --output-certificate cert.pem --output-signature sig --yes --identity-token ${{ env.OIDC_TOKEN }}
 
     - name: Verify with cosign
       run: |

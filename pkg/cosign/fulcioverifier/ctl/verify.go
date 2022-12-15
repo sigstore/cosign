@@ -17,7 +17,6 @@ package ctl
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -55,7 +54,7 @@ func NewTrustedCTLogPubKeys() TrustedCTLogPubKeys {
 // AddCTLogPubKey adds a public key with the proper index (constructed) from the
 // Public Key representing the PEM-encoded Rekor key and a status.
 func (t *TrustedCTLogPubKeys) AddCTLogPubKey(pemBytes []byte, status tuf.StatusKind) error {
-	pubKey, err := PemToECDSAKey(pemBytes)
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
 		return err
 	}
@@ -181,18 +180,6 @@ func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate, pubKeys *
 		return err
 	}
 	return VerifySCT(ctx, certPEM, chainPEM, []byte{}, pubKeys)
-}
-
-func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
-	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
-	if err != nil {
-		return nil, err
-	}
-	ecdsaPub, ok := pub.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
-	}
-	return ecdsaPub, nil
 }
 
 // This is the CT log public key target name
