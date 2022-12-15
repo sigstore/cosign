@@ -57,7 +57,7 @@ jobs:
           make cosign
           ./cosign sign-blob --output-certificate certificate.pem --output-signature README.md.sig README.md
 
-          if [ -s key.pem ]
+          if [ -s certificate.pem ]
           then
             echo "all good for key.pem"
           else
