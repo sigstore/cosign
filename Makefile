@@ -143,7 +143,7 @@ ko-sget:
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
 		--image-refs sgetImagerefs \
-		github.com/sigstore/cosign/cmd/sget
+		github.com/sigstore/cosign/v2/cmd/sget
 
 .PHONY: ko-local
 ko-local:
