@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci"
@@ -171,6 +172,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 	keyRef := c.KeyRef
 	certRef := c.CertRef
+
+	if !c.IgnoreSCT {
+		co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ctlog public keys: %w", err)
+		}
+	}
 
 	// Keys are optional!
 	var pubKey signature.Verifier

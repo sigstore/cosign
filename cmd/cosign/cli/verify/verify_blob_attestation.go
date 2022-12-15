@@ -32,6 +32,7 @@ import (
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/cosign/v2/pkg/types"
@@ -100,6 +101,10 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 	if _, err := dssev.Verify(&env); err != nil {
 		return fmt.Errorf("dsse verify: %w", err)
+	}
+	co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+	if err != nil {
+		return fmt.Errorf("getting ctlog public keys: %w", err)
 	}
 
 	// Verify the attestation is for the provided blob and the predicate type

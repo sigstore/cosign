@@ -50,12 +50,12 @@ jobs:
         with:
           go-version: '1.19'
           check-latest: true
-      - name: build cosign and check
+      - name: build cosign and check sign-blob and verify-blob
         shell: bash
         run: |
           set -e
           make cosign
-          ./cosign sign-blob --output-certificate key.pem --output-signature README.md.sig README.md
+          ./cosign sign-blob --output-certificate certificate.pem --output-signature README.md.sig README.md
 
           if [ -s key.pem ]
           then
@@ -72,3 +72,6 @@ jobs:
             echo "file does not exist, or is empty"
             exit 1
           fi
+
+          # Verify with sign-blob
+          ./cosign verify-blob README.md --certificate certificate.pem --signature README.md.sig

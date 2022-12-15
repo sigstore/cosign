@@ -33,7 +33,6 @@ import (
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio/fulcioverifier"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
@@ -42,6 +41,7 @@ import (
 	irekor "github.com/sigstore/cosign/v2/internal/pkg/cosign/rekor"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
@@ -462,10 +462,14 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 		return nil, err
 	}
 	if contains {
+		pubKeys, err := ctl.GetCTLogPubs(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("getting CTLog public keys: %w", err)
+		}
 		var chain []*x509.Certificate
 		chain = append(chain, leafCert)
 		chain = append(chain, certChain...)
-		if err := ctl.VerifyEmbeddedSCT(context.Background(), chain); err != nil {
+		if err := ctl.VerifyEmbeddedSCT(context.Background(), chain, pubKeys); err != nil {
 			return nil, err
 		}
 	}
