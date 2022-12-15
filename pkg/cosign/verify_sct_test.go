@@ -95,17 +95,10 @@ func TestValidateAndUnpackCertWithDetachedSCT(t *testing.T) {
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(chain[1])
 
-	// Grab the CTLog public keys
-	pubKeys, err := ctl.GetCTLogPubs(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
-	}
-
 	co := &CheckOpts{
 		RootCerts: rootPool,
 		// explicitly set to false
-		IgnoreSCT:    false,
-		CTLogPubKeys: pubKeys,
+		IgnoreSCT: false,
 	}
 
 	// write SCT verification key to disk
@@ -118,7 +111,7 @@ func TestValidateAndUnpackCertWithDetachedSCT(t *testing.T) {
 		t.Fatalf("failed to write key file: %v", err)
 	}
 	t.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
-	// Grab the CTLog public keys again so we get them from env.
+	// Grab the CTLog public keys so we get them from env.
 	co.CTLogPubKeys, err = ctl.GetCTLogPubs(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
