@@ -144,7 +144,7 @@ jobs:
 
     - name: Verify a blob
       run: |
-        ./cosign verify-blob README.md --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --certificate ./cert.pem --signature sig
+        ./cosign verify-blob README.md --rekor-url ${{ env.REKOR_URL }} --certificate ./cert.pem --signature sig
 
     - name: Collect diagnostics
       if: ${{ failure() }}
