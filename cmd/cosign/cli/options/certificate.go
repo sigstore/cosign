@@ -17,7 +17,7 @@ package options
 import (
 	"errors"
 
-	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
 )
 

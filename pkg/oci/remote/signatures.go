@@ -22,9 +22,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/empty"
-	"github.com/sigstore/cosign/pkg/oci/internal/signature"
+	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci/empty"
+	"github.com/sigstore/cosign/v2/pkg/oci/internal/signature"
 )
 
 // Signatures fetches the signatures image represented by the named reference.

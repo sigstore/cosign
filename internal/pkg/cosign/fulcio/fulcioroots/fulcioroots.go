@@ -22,7 +22,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/fulcioroots"
 )

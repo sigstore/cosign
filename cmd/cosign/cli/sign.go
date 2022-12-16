@@ -20,9 +20,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 )
 
 func Sign() *cobra.Command {
@@ -76,7 +76,10 @@ race conditions or (worse) malicious tampering.
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
 
   # sign a container image and upload to the transparency log
-  cosign sign --key cosign.key --tlog-upload=true <IMAGE DIGEST>`,
+  cosign sign --key cosign.key <IMAGE DIGEST>
+
+  # sign a container image and skip uploading to the transparency log
+  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,

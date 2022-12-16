@@ -18,6 +18,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -32,18 +33,18 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
-	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/upload"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
-	"github.com/sigstore/cosign/pkg/cosign"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/sget" //nolint:staticcheck
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
+	"github.com/sigstore/cosign/v2/pkg/sget" //nolint:staticcheck
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
@@ -146,7 +147,10 @@ func initPolicy() *cobra.Command {
 					return err
 				}
 				outfile = tempFile.Name()
-				defer os.Remove(tempFile.Name())
+				defer func() {
+					tempFile.Close()
+					os.Remove(tempFile.Name())
+				}()
 			}
 
 			files := []cremote.File{
@@ -235,7 +239,7 @@ func signPolicy() *cobra.Command {
 			}
 
 			result := &bytes.Buffer{}
-			if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
+			if err := sget.New(imgName+"@"+dgst.String(), "", o.Rekor.URL, result).Do(ctx); err != nil {
 				return fmt.Errorf("error getting result: %w", err)
 			}
 			b, err := io.ReadAll(result)
@@ -269,8 +273,7 @@ func signPolicy() *cobra.Command {
 					return fmt.Errorf("failed to create TSA client: %w", err)
 				}
 				// Here we get the response from the timestamped authority server
-				_, err = tsa.GetTimestampedSignature(signed.Signed, clientTSA)
-				if err != nil {
+				if _, err := tsa.GetTimestampedSignature(signed.Signed, clientTSA); err != nil {
 					return err
 				}
 			}
@@ -283,7 +286,11 @@ func signPolicy() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, signed.Signed, rekorBytes)
+				checkSum := sha256.New()
+				if _, err := checkSum.Write(signed.Signed); err != nil {
+					return err
+				}
+				entry, err := cosign.TLogUpload(ctx, rekorClient, sig, checkSum, rekorBytes)
 				if err != nil {
 					return err
 				}
@@ -309,7 +316,10 @@ func signPolicy() *cobra.Command {
 					return err
 				}
 				outfile = tempFile.Name()
-				defer os.Remove(tempFile.Name())
+				defer func() {
+					tempFile.Close()
+					os.Remove(tempFile.Name())
+				}()
 			}
 
 			files := []cremote.File{

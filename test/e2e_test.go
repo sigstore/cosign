@@ -47,25 +47,25 @@ import (
 	// Initialize all known client auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
-	"github.com/sigstore/cosign/cmd/cosign/cli/attach"
-	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
-	"github.com/sigstore/cosign/cmd/cosign/cli/download"
-	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/publickey"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/cmd/cosign/cli/upload"
-	cliverify "github.com/sigstore/cosign/cmd/cosign/cli/verify"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/cosign/env"
-	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/oci/mutate"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"github.com/sigstore/cosign/pkg/sget"
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attach"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attest"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/download"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/upload"
+	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
+	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
+	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/pkg/sget"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -85,12 +85,13 @@ var passFunc = func(_ bool) ([]byte, error) {
 
 var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
+		KeyRef:         keyRef,
+		RekorURL:       rekorURL,
+		CheckClaims:    checkClaims,
+		Annotations:    sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:     attachment,
+		HashAlgorithm:  crypto.SHA256,
+		SkipTlogVerify: true,
 	}
 
 	args := []string{imageRef}
@@ -117,12 +118,13 @@ var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[
 // Used to verify local images stored on disk
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		LocalImage:    true,
+		KeyRef:         keyRef,
+		CheckClaims:    checkClaims,
+		Annotations:    sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:     attachment,
+		HashAlgorithm:  crypto.SHA256,
+		LocalImage:     true,
+		SkipTlogVerify: true,
 	}
 
 	args := []string{path}
@@ -312,7 +314,8 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Verify should fail at first
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		KeyRef: pubKeyPath,
+		KeyRef:         pubKeyPath,
+		SkipTlogVerify: true,
 	}
 
 	// Fail case when using without type and policy flag
@@ -493,9 +496,7 @@ func TestAttestationReplace(t *testing.T) {
 }
 
 func TestAttestationRFC3161Timestamp(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
@@ -617,9 +618,7 @@ func TestRekorBundle(t *testing.T) {
 }
 
 func TestRFC3161Timestamp(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
@@ -673,9 +672,7 @@ func TestRFC3161Timestamp(t *testing.T) {
 }
 
 func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
@@ -899,12 +896,14 @@ func TestSignBlob(t *testing.T) {
 	}
 	// Verify should fail on a bad input
 	cmd1 := cliverify.VerifyBlobCmd{
-		KeyOpts: ko1,
-		SigRef:  "badsig",
+		KeyOpts:        ko1,
+		SigRef:         "badsig",
+		SkipTlogVerify: true,
 	}
 	cmd2 := cliverify.VerifyBlobCmd{
-		KeyOpts: ko2,
-		SigRef:  "badsig",
+		KeyOpts:        ko2,
+		SigRef:         "badsig",
+		SkipTlogVerify: true,
 	}
 	mustErr(cmd1.Exec(ctx, blob), t)
 	mustErr(cmd2.Exec(ctx, blob), t)
@@ -914,7 +913,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false)
+	sig, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -948,7 +947,8 @@ func TestSignBlobBundle(t *testing.T) {
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts: ko1,
+		KeyOpts:        ko1,
+		SkipTlogVerify: true,
 	}
 	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
@@ -959,27 +959,25 @@ func TestSignBlobBundle(t *testing.T) {
 		BundlePath: bundlePath,
 		RekorURL:   rekorURL,
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
+	verifyBlobCmd.SkipTlogVerify = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	// TODO: Replace with a full TSA mock client, related to https://github.com/sigstore/timestamp-authority/issues/146
+	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
@@ -991,7 +989,8 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		os.RemoveAll(td1)
 	})
 	bp := filepath.Join(td1, blob)
-	bundlePath := filepath.Join(td1, "rfc3161TimestampBundle.sig")
+	bundlePath := filepath.Join(td1, "bundle.sig")
+	tsPath := filepath.Join(td1, "rfc3161Timestamp.json")
 
 	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
 		t.Fatal(err)
@@ -1023,12 +1022,14 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 
 	ko1 := options.KeyOpts{
 		KeyRef:               pubKeyPath1,
-		RFC3161TimestampPath: bundlePath,
+		BundlePath:           bundlePath,
+		RFC3161TimestampPath: tsPath,
 		TSACertChainPath:     file.Name(),
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts: ko1,
+		KeyOpts:        ko1,
+		SkipTlogVerify: true,
 	}
 	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
@@ -1036,23 +1037,23 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:               privKeyPath1,
 		PassFunc:             passFunc,
-		RFC3161TimestampPath: bundlePath,
+		BundlePath:           bundlePath,
+		RFC3161TimestampPath: tsPath,
 		TSAServerURL:         server.URL,
+		RekorURL:             rekorURL,
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-	if _, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
-
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
-	os.Setenv(serverEnv, "notreal")
+	verifyBlobCmd.SkipTlogVerify = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
@@ -1282,7 +1283,7 @@ func TestUploadBlob(t *testing.T) {
 	}
 
 	// Now download it with sget (this should fail by tag)
-	if err := sget.New(imgName, "", os.Stdout).Do(ctx); err == nil {
+	if err := sget.New(imgName, "", "", os.Stdout).Do(ctx); err == nil {
 		t.Error("expected download to fail")
 	}
 
@@ -1298,7 +1299,7 @@ func TestUploadBlob(t *testing.T) {
 	result := &bytes.Buffer{}
 
 	// But pass by digest
-	if err := sget.New(imgName+"@"+dgst.String(), "", result).Do(ctx); err != nil {
+	if err := sget.New(imgName+"@"+dgst.String(), "", "", result).Do(ctx); err != nil {
 		t.Fatal(err)
 	}
 	b, err := io.ReadAll(result)
@@ -1410,7 +1411,8 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Use cue to verify attestation on the new image
 	policyPath := filepath.Join(td, "policy.cue")
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		KeyRef: pubKeyPath,
+		KeyRef:         pubKeyPath,
+		SkipTlogVerify: true,
 	}
 	verifyAttestation.PredicateType = "slsaprovenance"
 	verifyAttestation.Policies = []string{policyPath}
@@ -1806,7 +1808,14 @@ func TestInvalidBundle(t *testing.T) {
 	}
 
 	// veriyfing image2 now should fail
-	mustErr(verify(pubKeyPath, img2, true, nil, ""), t)
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        pubKeyPath,
+		RekorURL:      rekorURL,
+		CheckClaims:   true,
+		HashAlgorithm: crypto.SHA256,
+	}
+	args := []string{img2}
+	mustErr(cmd.Exec(context.Background(), args), t)
 }
 
 func TestAttestBlobSignVerify(t *testing.T) {

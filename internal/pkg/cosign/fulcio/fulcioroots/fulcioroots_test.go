@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sigstore/cosign/test"
+	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 

@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sigstore/cosign/pkg/blob"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/git"
-	"github.com/sigstore/cosign/pkg/cosign/git/gitlab"
-	"github.com/sigstore/cosign/pkg/cosign/kubernetes"
-	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v2/pkg/blob"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/git"
+	"github.com/sigstore/cosign/v2/pkg/cosign/git/gitlab"
+	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 
@@ -243,7 +243,7 @@ func CertSubject(c *x509.Certificate) string {
 		return c.URIs[0].String()
 	}
 	// ignore error if there's no OtherName SAN
-	otherName, _ := cosign.UnmarshalOtherNameSAN(c.Extensions)
+	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(c.Extensions)
 	if len(otherName) > 0 {
 		return otherName
 	}

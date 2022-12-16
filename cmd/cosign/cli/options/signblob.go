@@ -47,7 +47,6 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Fulcio.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
-	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
@@ -74,13 +73,13 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
 
-	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", false,
+	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
 		"whether or not to upload to the tlog")
 
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none")
 
-	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
-		"write everything required to verify the blob to a FILE")
-	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp-bundle", cobra.BashCompFilenameExt, []string{})
+	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
+		"write the RFC3161 timestamp to a file")
+	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp", cobra.BashCompFilenameExt, []string{})
 }

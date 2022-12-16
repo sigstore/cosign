@@ -26,18 +26,20 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
-	"github.com/sigstore/cosign/pkg/cosign"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
 
-func New(image, key string, out io.Writer) *SecureGet {
+func New(image, key, rekorURL string, out io.Writer) *SecureGet {
 	return &SecureGet{
 		ImageRef: image,
 		KeyRef:   key,
+		RekorURL: rekorURL,
 		Out:      out,
 	}
 }
@@ -45,6 +47,7 @@ func New(image, key string, out io.Writer) *SecureGet {
 type SecureGet struct {
 	ImageRef string
 	KeyRef   string
+	RekorURL string
 	Out      io.Writer
 }
 
@@ -63,6 +66,18 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
 		RegistryClientOpts: []ociremote.Option{ociremote.WithRemoteOptions(opts...)},
 	}
+
+	rekorClient, err := rekor.NewClient(sg.RekorURL)
+	if err != nil {
+		return fmt.Errorf("creating Rekor client: %w", err)
+	}
+	co.RekorClient = rekorClient
+
+	co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+	if err != nil {
+		return fmt.Errorf("getting Rekor public keys: %w", err)
+	}
+
 	if _, ok := ref.(name.Tag); ok {
 		if sg.KeyRef == "" && !options.EnableExperimental() {
 			return errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
@@ -100,7 +115,6 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("getting Fulcio intermediates: %w", err)
 		}
-
 		sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 		if err != nil {
 			return err

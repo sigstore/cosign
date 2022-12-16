@@ -15,8 +15,9 @@
 package cli
 
 import (
-	"github.com/sigstore/cosign/cmd/cosign/cli/attest"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attest"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/spf13/cobra"
 )
 
@@ -53,6 +54,7 @@ func AttestBlob() *cobra.Command {
 				PredicatePath:     o.Predicate.Path,
 				OutputSignature:   o.OutputSignature,
 				OutputAttestation: o.OutputAttestation,
+				PassFunc:          generate.GetPass,
 			}
 			return v.Exec(cmd.Context(), args[0])
 		},

@@ -115,7 +115,7 @@ func TestVerifySCT(t *testing.T) {
 				}
 			}
 
-			err := VerifySCT(context.Background(), []byte(test.certPEM), []byte(test.chainPEM), sctBytes)
+			err := VerifySCT(context.Background(), []byte(test.certPEM), []byte(test.chainPEM), sctBytes, nil)
 			if gotErr := err != nil; gotErr != test.wantErr && !strings.Contains(err.Error(), test.errMsg) {
 				t.Errorf("VerifySCT(_,_,_, %t) = %v, want error? %t", test.embedded, err, test.wantErr)
 			}
@@ -134,13 +134,19 @@ func TestVerifySCTError(t *testing.T) {
 		t.Fatalf("unexpected error marshalling ECDSA key: %v", err)
 	}
 	writePubKey(t, string(pemKey))
-	err = VerifySCT(context.Background(), []byte(testdata.TestEmbeddedCertPEM), []byte(testdata.CACertPEM), []byte{})
+	// Grab the keys from TUF
+	pubKeys, err := GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
+
+	err = VerifySCT(context.Background(), []byte(testdata.TestEmbeddedCertPEM), []byte(testdata.CACertPEM), []byte{}, pubKeys)
 	if err == nil || !strings.Contains(err.Error(), "ctfe public key not found") {
 		t.Fatalf("expected error verifying SCT with mismatched key: %v", err)
 	}
 
 	// verify fails without either a detached SCT or embedded SCT
-	err = VerifySCT(context.Background(), []byte(testdata.TestCertPEM), []byte(testdata.CACertPEM), []byte{})
+	err = VerifySCT(context.Background(), []byte(testdata.TestCertPEM), []byte(testdata.CACertPEM), []byte{}, pubKeys)
 	if err == nil || !strings.Contains(err.Error(), "no SCT found") {
 		t.Fatalf("expected error verifying SCT without SCT: %v", err)
 	}
@@ -152,14 +158,27 @@ func TestVerifyEmbeddedSCT(t *testing.T) {
 		t.Fatalf("error unmarshalling certificate chain: %v", err)
 	}
 
+	// Grab the keys from TUF
+	pubKeys, err := GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
+
 	// verify fails without a certificate chain
-	err = VerifyEmbeddedSCT(context.Background(), chain[:1])
+	err = VerifyEmbeddedSCT(context.Background(), chain[:1], pubKeys)
 	if err == nil || err.Error() != "certificate chain must contain at least a certificate and its issuer" {
 		t.Fatalf("expected error verifying SCT without chain: %v", err)
 	}
 
 	writePubKey(t, testdata.LogPublicKeyPEM)
-	err = VerifyEmbeddedSCT(context.Background(), chain)
+	// Above writes the key to disk and sets up an env variable, so grab the
+	// public keys again to get the env path.
+	pubKeys, err = GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
+
+	err = VerifyEmbeddedSCT(context.Background(), chain, pubKeys)
 	if err != nil {
 		t.Fatalf("unexpected error verifying embedded SCT: %v", err)
 	}

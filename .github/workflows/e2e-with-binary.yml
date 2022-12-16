@@ -45,19 +45,19 @@ jobs:
       COSIGN_EXPERIMENTAL: "true"
 
     steps:
-      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
-      - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v3.3.1
+      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
         with:
           go-version: '1.19'
           check-latest: true
-      - name: build cosign and check
+      - name: build cosign and check sign-blob and verify-blob
         shell: bash
         run: |
           set -e
           make cosign
-          ./cosign sign-blob --output-certificate key.pem --output-signature README.md.sig README.md
+          ./cosign sign-blob --output-certificate certificate.pem --output-signature README.md.sig README.md
 
-          if [ -s key.pem ]
+          if [ -s certificate.pem ]
           then
             echo "all good for key.pem"
           else
@@ -72,3 +72,6 @@ jobs:
             echo "file does not exist, or is empty"
             exit 1
           fi
+
+          # Verify with sign-blob
+          ./cosign verify-blob README.md --certificate certificate.pem --signature README.md.sig

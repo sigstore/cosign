@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/release-utils/version"
 
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 )
 

@@ -17,7 +17,7 @@
 package options
 
 import (
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/spf13/cobra"
 )
 
@@ -26,6 +26,7 @@ type RootOptions struct {
 	OutputFile string
 	PublicKey  string
 	ImageRef   string
+	RekorURL   string
 }
 
 var _ options.Interface = (*RootOptions)(nil)
@@ -37,4 +38,7 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.PublicKey, "key", "",
 		"path to the public key file, URL, or KMS URI")
+
+	cmd.Flags().StringVar(&o.RekorURL, "rekor-url", options.DefaultRekorURL,
+		"[EXPERIMENTAL] address of rekor STL server")
 }

@@ -28,17 +28,19 @@ import (
 	"path/filepath"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/pkg/blob"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
-	"github.com/sigstore/cosign/pkg/oci/static"
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/pkg/blob"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 
-	ctypes "github.com/sigstore/cosign/pkg/types"
+	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
@@ -71,8 +73,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	opts := make([]static.Option, 0)
 
 	// Require a certificate/key OR a local bundle file that has the cert.
-	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath, c.RFC3161TimestampPath) == 0 {
-		return fmt.Errorf("please provide a cert to verify against via --certificate or a bundle via --bundle or --rfc3161-timestamp-bundle")
+	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
+		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --certificate, or a bundle with --bundle")
 	}
 
 	// Key, sk, and cert are mutually exclusive.
@@ -89,7 +91,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
-	sig, err := base64signature(c.SigRef, c.BundlePath, c.RFC3161TimestampPath)
+	sig, err := base64signature(c.SigRef, c.BundlePath)
 	if err != nil {
 		return err
 	}
@@ -133,7 +135,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		co.TSACerts = tsaCertPool
 	}
 
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if !c.SkipTlogVerify {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -141,7 +143,17 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			}
 			co.RekorClient = rekorClient
 		}
+		// This performs an online fetch of the Rekor public keys, but this is needed
+		// for verifying tlog entries (both online and offline).
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting Rekor public keys: %w", err)
+		}
+	}
+	if keylessVerification(c.KeyRef, c.Sk) {
 		// Use default TUF roots if a cert chain is not provided.
+		// This performs an online fetch of the Fulcio roots. This is needed
+		// for verifying keyless certificates (both online and offline).
 		if c.CertChain == "" {
 			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
@@ -211,29 +223,15 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		opts = append(opts, static.WithBundle(b.Bundle))
 	}
 	if c.RFC3161TimestampPath != "" {
-		b, err := cosign.FetchLocalSignedPayloadFromPath(c.RFC3161TimestampPath)
+		var rfc3161Timestamp bundle.RFC3161Timestamp
+		ts, err := blob.LoadFileOrURL(c.RFC3161TimestampPath)
 		if err != nil {
 			return err
 		}
-		// Note: RFC3161 timestamp does not set the certificate.
-		// We have to condition on this because sign-blob may not output the signing
-		// key to the bundle when there is no tlog upload.
-		if b.Cert != "" {
-			// b.Cert can either be a certificate or public key
-			certBytes := []byte(b.Cert)
-			if isb64(certBytes) {
-				certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
-			}
-			cert, err = loadCertFromPEM(certBytes)
-			if err != nil {
-				// check if cert is actually a public key
-				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
-				if err != nil {
-					return fmt.Errorf("loading verifier from rfc3161 timestamp bundle: %w", err)
-				}
-			}
+		if err := json.Unmarshal(ts, &rfc3161Timestamp); err != nil {
+			return err
 		}
-		opts = append(opts, static.WithRFC3161Timestamp(b.RFC3161Timestamp))
+		opts = append(opts, static.WithRFC3161Timestamp(&rfc3161Timestamp))
 	}
 	// Set an SCT if provided via the CLI.
 	if c.SCTRef != "" {
@@ -278,6 +276,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		opts = append(opts, static.WithCertChain(certPEM, chainPEM))
 	}
 
+	if !c.IgnoreSCT {
+		co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ctlog public keys: %w", err)
+		}
+	}
+
 	// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
 	// TODO: This verifier only supports verification of a single signer/signature on
 	// the envelope. Either have the verifier validate that only one signature exists,
@@ -309,7 +314,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 }
 
 // base64signature returns the base64 encoded signature
-func base64signature(sigRef string, bundlePath, rfc3161TimestampPath string) (string, error) {
+func base64signature(sigRef, bundlePath string) (string, error) {
 	var targetSig []byte
 	var err error
 	switch {
@@ -324,12 +329,6 @@ func base64signature(sigRef string, bundlePath, rfc3161TimestampPath string) (st
 		}
 	case bundlePath != "":
 		b, err := cosign.FetchLocalSignedPayloadFromPath(bundlePath)
-		if err != nil {
-			return "", err
-		}
-		targetSig = []byte(b.Base64Signature)
-	case rfc3161TimestampPath != "":
-		b, err := cosign.FetchLocalSignedPayloadFromPath(rfc3161TimestampPath)
 		if err != nil {
 			return "", err
 		}

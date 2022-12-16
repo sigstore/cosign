@@ -31,25 +31,25 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier"
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioverifier/ctl"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
-	icos "github.com/sigstore/cosign/internal/pkg/cosign"
-	ifulcio "github.com/sigstore/cosign/internal/pkg/cosign/fulcio"
-	ipayload "github.com/sigstore/cosign/internal/pkg/cosign/payload"
-	irekor "github.com/sigstore/cosign/internal/pkg/cosign/rekor"
-	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/mutate"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"github.com/sigstore/cosign/pkg/oci/walk"
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio/fulcioverifier"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	ifulcio "github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio"
+	ipayload "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
+	irekor "github.com/sigstore/cosign/v2/internal/pkg/cosign/rekor"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
+	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/pkg/oci/walk"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -57,7 +57,7 @@ import (
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	// Loads OIDC providers
-	_ "github.com/sigstore/cosign/pkg/providers/all"
+	_ "github.com/sigstore/cosign/v2/pkg/providers/all"
 )
 
 const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not a digest, to identify the image to sign.
@@ -69,13 +69,8 @@ const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not 
 `
 
 func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
-	// Check if TSA signing is enabled and tlog upload is disabled
-	if !tlogUpload && ko.TSAServerURL != "" {
-		fmt.Fprintln(os.Stderr, "\nWARNING: skipping transparency log upload")
-		return false
-	}
-	// If we aren't using keyless signing and --tlog-upload=false, return
-	if !keylessSigning(ko) && !tlogUpload {
+	// return false if not uploading to the tlog has been requested
+	if !tlogUpload {
 		return false
 	}
 
@@ -467,10 +462,14 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 		return nil, err
 	}
 	if contains {
+		pubKeys, err := ctl.GetCTLogPubs(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("getting CTLog public keys: %w", err)
+		}
 		var chain []*x509.Certificate
 		chain = append(chain, leafCert)
 		chain = append(chain, certChain...)
-		if err := ctl.VerifyEmbeddedSCT(context.Background(), chain); err != nil {
+		if err := ctl.VerifyEmbeddedSCT(context.Background(), chain, pubKeys); err != nil {
 			return nil, err
 		}
 	}
@@ -540,14 +539,4 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return pemBytes, nil
-}
-
-func keylessSigning(ko options.KeyOpts) bool {
-	if ko.KeyRef != "" {
-		return false
-	}
-	if ko.Sk {
-		return false
-	}
-	return true
 }

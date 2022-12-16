@@ -30,11 +30,12 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
-	sigs "github.com/sigstore/cosign/pkg/signature"
-	"github.com/sigstore/cosign/pkg/types"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 )
@@ -84,14 +85,10 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", c.SignaturePath, err)
 	}
-	decodedSig, err := base64.StdEncoding.DecodeString(string(encodedSig))
-	if err != nil {
-		return fmt.Errorf("decoding signature: %w", err)
-	}
 
 	// Verify the signature on the attestation against the provided public key
 	env := ssldsse.Envelope{}
-	if err := json.Unmarshal(decodedSig, &env); err != nil {
+	if err := json.Unmarshal(encodedSig, &env); err != nil {
 		return fmt.Errorf("marshaling envelope: %w", err)
 	}
 
@@ -104,6 +101,10 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 	if _, err := dssev.Verify(&env); err != nil {
 		return fmt.Errorf("dsse verify: %w", err)
+	}
+	co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+	if err != nil {
+		return fmt.Errorf("getting ctlog public keys: %w", err)
 	}
 
 	// Verify the attestation is for the provided blob and the predicate type

@@ -134,7 +134,7 @@ ko-cosign:
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
 		$(ARTIFACT_HUB_LABELS) --image-refs cosignImagerefs \
-		github.com/sigstore/cosign/cmd/cosign
+		github.com/sigstore/cosign/v2/cmd/cosign
 
 .PHONY: ko-sget
 ko-sget:
@@ -143,7 +143,7 @@ ko-sget:
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
 		--image-refs sgetImagerefs \
-		github.com/sigstore/cosign/cmd/sget
+		github.com/sigstore/cosign/v2/cmd/sget
 
 .PHONY: ko-local
 ko-local:
@@ -152,7 +152,7 @@ ko-local:
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		$(ARTIFACT_HUB_LABELS) \
-		github.com/sigstore/cosign/cmd/cosign
+		github.com/sigstore/cosign/v2/cmd/cosign
 
 ##################
 # help

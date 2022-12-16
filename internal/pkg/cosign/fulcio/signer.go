@@ -19,9 +19,9 @@ import (
 	"crypto"
 	"io"
 
-	"github.com/sigstore/cosign/internal/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/mutate"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 )
 
 // signerWrapper still needs to actually upload keys to Fulcio and receive

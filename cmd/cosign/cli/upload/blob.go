@@ -24,8 +24,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
 )
 
 func BlobCmd(ctx context.Context, regOpts options.RegistryOptions, files []cremote.File, annotations map[string]string, contentType, imageRef string) error {

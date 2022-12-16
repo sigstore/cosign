@@ -16,9 +16,10 @@ package bundle
 
 // RFC3161Timestamp holds metadata about timestamp RFC3161 verification data.
 type RFC3161Timestamp struct {
-	// SignedRFC3161Timestamp contains a RFC3161 signed timestamp provided by a time-stamping server.
-	// Clients MUST verify the hashed message in the message imprint
-	// against the signature in the bundle. This is encoded as base64.
+	// SignedRFC3161Timestamp contains a DER encoded TimeStampResponse.
+	// See https://www.rfc-editor.org/rfc/rfc3161.html#section-2.4.2
+	// Clients MUST verify the hashed message in the message imprint,
+	// typically using the artifact signature.
 	SignedRFC3161Timestamp []byte
 }
 

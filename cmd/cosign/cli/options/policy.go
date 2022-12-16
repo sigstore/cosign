@@ -82,7 +82,7 @@ func (o *PolicySignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
 
-	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", false,
+	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
 		"whether or not to upload to the tlog")
 
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",

@@ -20,7 +20,7 @@ cosign policy sign [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign
-      --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
+      --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --namespace string                                                                         registry namespace that the root policy belongs to (default "ns")
@@ -33,7 +33,7 @@ cosign policy sign [flags]
       --out string                                                                               output policy locally (default "o")
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none
-      --tlog-upload                                                                              whether or not to upload to the tlog
+      --tlog-upload                                                                              whether or not to upload to the tlog (default true)
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 

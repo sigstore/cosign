@@ -25,18 +25,19 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/pkg/cosign/pkcs11key"
-	"github.com/sigstore/cosign/pkg/cosign/rego"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
+	"github.com/sigstore/cosign/v2/pkg/oci"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/cue"
-	"github.com/sigstore/cosign/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/pkg/policy"
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/cue"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/v2/pkg/policy"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -107,6 +108,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
+	if !c.IgnoreSCT {
+		co.CTLogPubKeys, err = ctl.GetCTLogPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ctlog public keys: %w", err)
+		}
+	}
+
 	if c.TSACertChainPath != "" {
 		_, err := os.Stat(c.TSACertChainPath)
 		if err != nil {
@@ -126,7 +134,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 		co.TSACerts = tsaCertPool
 	}
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if !c.SkipTlogVerify {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -134,6 +142,16 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 			co.RekorClient = rekorClient
 		}
+		// This performs an online fetch of the Rekor public keys, but this is needed
+		// for verifying tlog entries (both online and offline).
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting Rekor public keys: %w", err)
+		}
+	}
+	if keylessVerification(c.KeyRef, c.Sk) {
+		// This performs an online fetch of the Fulcio roots. This is needed
+		// for verifying keyless certificates (both online and offline).
 		co.RootCerts, err = fulcio.GetRoots()
 		if err != nil {
 			return fmt.Errorf("getting Fulcio roots: %w", err)

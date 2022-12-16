@@ -46,7 +46,7 @@ cosign attest [flags]
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
       --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for attest
-      --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio
+      --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
@@ -64,7 +64,7 @@ cosign attest [flags]
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none
-      --tlog-upload                                                                              whether or not to upload to the tlog
+      --tlog-upload                                                                              whether or not to upload to the tlog (default true)
       --type string                                                                              specify a predicate type (slsaprovenance|link|spdx|spdxjson|cyclonedx|vuln|custom) or an URI (default "custom")
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```

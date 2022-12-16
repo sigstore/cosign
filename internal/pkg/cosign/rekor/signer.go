@@ -17,16 +17,17 @@ package rekor
 import (
 	"context"
 	"crypto"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/sigstore/cosign/internal/pkg/cosign"
-	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
-	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/pkg/oci"
-	"github.com/sigstore/cosign/pkg/oci/mutate"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	cosignv1 "github.com/sigstore/cosign/v2/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -90,7 +91,11 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	}
 
 	bundle, err := uploadToTlog(rekorBytes, rs.rClient, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		return cosignv1.TLogUpload(ctx, r, sigBytes, payloadBytes, b)
+		checkSum := sha256.New()
+		if _, err := checkSum.Write(payloadBytes); err != nil {
+			return nil, err
+		}
+		return cosignv1.TLogUpload(ctx, r, sigBytes, checkSum, b)
 	})
 	if err != nil {
 		return nil, nil, err

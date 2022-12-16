@@ -16,11 +16,11 @@
 package cli
 
 import (
-	"github.com/sigstore/cosign/cmd/cosign/cli/manifest"
-	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/manifest"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 )
 
 func Manifest() *cobra.Command {

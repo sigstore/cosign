@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -92,7 +92,7 @@ func SignBlob() *cobra.Command {
 					o.OutputSignature = o.Output
 				}
 
-				if _, err := sign.SignBlobCmd(ro, ko, o.Registry, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
+				if _, err := sign.SignBlobCmd(ro, ko, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
 					return fmt.Errorf("signing %s: %w", blob, err)
 				}
 			}

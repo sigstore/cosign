@@ -27,12 +27,13 @@ import (
 	"net/url"
 	"os"
 
+	"go.step.sm/crypto/jose"
 	"golang.org/x/term"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/internal/pkg/cosign/fulcio/fulcioroots"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/providers"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/providers"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -122,7 +123,10 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		return nil, fmt.Errorf("creating Fulcio client: %w", err)
 	}
 
-	idToken := ko.IDToken
+	idToken, err := idToken(ko.IDToken)
+	if err != nil {
+		return nil, fmt.Errorf("getting id token: %w", err)
+	}
 	var provider providers.Interface
 	// If token is not set in the options, get one from the provders
 	if idToken == "" && providers.Enabled(ctx) && !ko.OIDCDisableProviders {
@@ -209,4 +213,17 @@ func NewClient(fulcioURL string) (api.LegacyClient, error) {
 	}
 	fClient := api.NewClient(fulcioServer, api.WithUserAgent(options.UserAgent()))
 	return fClient, nil
+}
+
+// idToken allows users to either pass in an identity token directly
+// or a path to an identity token via the --identity-token flag
+func idToken(s string) (string, error) {
+	// If this is a valid raw token or is empty, just return it
+	if _, err := jose.ParseSigned(s); err == nil || s == "" {
+		return s, nil
+	}
+
+	// Otherwise, if this is a path to a token return the contents
+	c, err := os.ReadFile(s)
+	return string(c), err
 }

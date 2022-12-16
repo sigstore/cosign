@@ -24,9 +24,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sigstore/cosign/pkg/blob"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/test"
+	"github.com/sigstore/cosign/v2/pkg/blob"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/test"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
@@ -176,7 +177,7 @@ func TestCertSubject(t *testing.T) {
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
 
 	// generate with OtherName, which will override other SANs
-	ext, err := cosign.MarshalOtherNameSAN("subject-othername", true)
+	ext, err := cryptoutils.MarshalOtherNameSAN("subject-othername", true)
 	if err != nil {
 		t.Fatalf("error marshalling SANs: %v", err)
 	}

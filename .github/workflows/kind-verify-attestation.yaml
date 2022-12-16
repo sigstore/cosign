@@ -48,8 +48,8 @@ jobs:
       COSIGN_EXPERIMENTAL: "true"
 
     steps:
-    - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
-    - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v3.3.1
+    - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+    - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
       with:
         go-version: '1.19'
         check-latest: true
@@ -58,7 +58,7 @@ jobs:
     - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
 
     - name: Install yq
-      uses: mikefarah/yq@ce9701ca3a1ac2779ff5f3857d04ee003acda066 # v4.30.2
+      uses: mikefarah/yq@42e7c3cdf08ccd664875d7ac685c7414b61962be # v4.30.5
 
     - name: build cosign
       run: |
@@ -113,6 +113,10 @@ jobs:
         echo -n 'foobar e2e test' > ./predicate-file
         ./cosign attest --predicate ./predicate-file --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --yes ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
 
+    - name: Sign a blob
+      run: |
+        ./cosign sign-blob README.md --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --output-certificate cert.pem --output-signature sig --yes --identity-token ${{ env.OIDC_TOKEN }}
+
     - name: Verify with cosign
       run: |
         ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
@@ -138,6 +142,10 @@ jobs:
           echo Successfully failed a policy that should not work
         fi
         echo '::endgroup::'
+
+    - name: Verify a blob
+      run: |
+        ./cosign verify-blob README.md --rekor-url ${{ env.REKOR_URL }} --certificate ./cert.pem --signature sig
 
     - name: Collect diagnostics
       if: ${{ failure() }}

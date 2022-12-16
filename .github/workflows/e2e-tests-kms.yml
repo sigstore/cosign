@@ -1,0 +1,66 @@
+#
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: e2e-tests
+
+# Run on every push, and allow it to be run manually.
+on:
+  push:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!doc/**'
+      - '!**.txt'
+      - '!images/**'
+      - '!LICENSE'
+      - 'test/**'
+    branches:
+      - "main"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e-kms:
+    runs-on: ubuntu-latest
+    services:
+      vault:
+        image: hashicorp/vault:latest
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: root
+        options: >-
+          --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8200:8200
+
+    env:
+      VAULT_TOKEN: "root"
+      VAULT_ADDR: "http://localhost:8200"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: innovationnorway/setup-vault@v1
+        with:
+          version: '~1.4'
+
+      - uses: imjasonh/setup-crane@e82f1b9a8007d399333baba4d75915558e9fb6a4 # v0.2
+
+      - name: enable vault transit
+        run: vault secrets enable transit
+      - name: Acceptance Tests
+        run: |
+          ./test/e2e_test_secrets_kms.sh

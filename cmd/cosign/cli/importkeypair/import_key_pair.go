@@ -21,9 +21,9 @@ import (
 	"io"
 	"os"
 
-	icos "github.com/sigstore/cosign/internal/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 )
 
 var (

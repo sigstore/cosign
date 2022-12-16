@@ -25,8 +25,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
 func Tree() *cobra.Command {

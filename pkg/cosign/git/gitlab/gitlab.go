@@ -21,8 +21,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/xanzy/go-gitlab"
 )
 

@@ -25,8 +25,8 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/cosign/cmd/sget/cli/options" //nolint:staticcheck
-	"github.com/sigstore/cosign/pkg/sget"             //nolint:staticcheck
+	"github.com/sigstore/cosign/v2/cmd/sget/cli/options" //nolint:staticcheck
+	"github.com/sigstore/cosign/v2/pkg/sget"             //nolint:staticcheck
 )
 
 var (
@@ -51,7 +51,7 @@ func New() *cobra.Command {
 				return err
 			}
 			defer wc.Close()
-			return sget.New(ro.ImageRef, ro.PublicKey, wc).Do(cmd.Context())
+			return sget.New(ro.ImageRef, ro.PublicKey, ro.RekorURL, wc).Do(cmd.Context())
 		},
 	}
 	ro.AddFlags(cmd)

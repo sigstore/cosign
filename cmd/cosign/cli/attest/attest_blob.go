@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -29,11 +28,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/cosign/attestation"
-	"github.com/sigstore/cosign/pkg/types"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
+	"github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -127,7 +126,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return errors.Wrap(err, "signing")
 	}
 
-	sig = []byte(base64.StdEncoding.EncodeToString(sig))
 	if c.OutputSignature != "" {
 		if err := os.WriteFile(c.OutputSignature, sig, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
@@ -142,8 +140,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return fmt.Errorf("create signature file: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", c.OutputAttestation)
-	} else {
-		fmt.Fprintln(os.Stdout, string(payload))
 	}
 
 	return nil

@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
 
 // AnnotationOptions is the top level wrapper for the annotations.

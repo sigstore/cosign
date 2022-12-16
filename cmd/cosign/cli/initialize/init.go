@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/sigstore/cosign/pkg/blob"
+	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
 

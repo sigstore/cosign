@@ -16,6 +16,9 @@
 package cosign
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"io"
 	"os"
 	"testing"
 )
@@ -47,5 +50,24 @@ func Test_FileExists(t *testing.T) {
 				t.Errorf("FileExists() = %v, want %v", got, tt.exists)
 			}
 		})
+	}
+}
+
+func Test_HashReader(t *testing.T) {
+	input := []byte("hello world")
+	r := NewHashReader(bytes.NewReader(input), sha256.New())
+
+	got, err := io.ReadAll(&r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(got, input) {
+		t.Errorf("io.ReadAll returned %s, want %s", got, input)
+	}
+
+	gotHash := r.Sum(nil)
+	if hash := sha256.Sum256(input); !bytes.Equal(gotHash, hash[:]) {
+		t.Errorf("Sum returned %s, want %s", gotHash, hash)
 	}
 }

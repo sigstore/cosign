@@ -24,8 +24,8 @@ import (
 	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/pkg/cosign/bundle"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -39,10 +39,9 @@ type SignedPayload struct {
 }
 
 type LocalSignedPayload struct {
-	Base64Signature  string                   `json:"base64Signature"`
-	Cert             string                   `json:"cert,omitempty"`
-	Bundle           *bundle.RekorBundle      `json:"rekorBundle,omitempty"`
-	RFC3161Timestamp *bundle.RFC3161Timestamp `json:"rfc3161Timestamp,omitempty"`
+	Base64Signature string              `json:"base64Signature"`
+	Cert            string              `json:"cert,omitempty"`
+	Bundle          *bundle.RekorBundle `json:"rekorBundle,omitempty"`
 }
 
 type Signatures struct {

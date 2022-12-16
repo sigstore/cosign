@@ -16,36 +16,41 @@
 package sign
 
 import (
-	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/sigstore/cosign/internal/pkg/cosign/tsa"
-	cbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	internal "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // nolint
-func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.RegistryOptions, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
-	var payload []byte
+func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
+	var payload internal.HashReader
 	var err error
 	var rekorBytes []byte
 
 	if payloadPath == "-" {
-		payload, err = io.ReadAll(os.Stdin)
+		payload = internal.NewHashReader(os.Stdin, sha256.New())
 	} else {
 		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
-		payload, err = os.ReadFile(filepath.Clean(payloadPath))
+		f, err := os.Open(filepath.Clean(payloadPath))
+		if err != nil {
+			return nil, err
+		}
+		payload = internal.NewHashReader(f, sha256.New())
 	}
 	if err != nil {
 		return nil, err
@@ -60,26 +65,43 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 	}
 	defer sv.Close()
 
-	sig, err := sv.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("signing blob: %w", err)
 	}
 
 	signedPayload := cosign.LocalSignedPayload{}
 
+	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	if ko.TSAServerURL != "" {
+		if ko.RFC3161TimestampPath == "" {
+			return nil, fmt.Errorf("timestamp output path must be set")
+		}
+
 		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create TSA client: %w", err)
 		}
-		b64Sig := []byte(base64.StdEncoding.EncodeToString(sig))
 
-		respBytes, err := tsa.GetTimestampedSignature(b64Sig, clientTSA)
+		respBytes, err := tsa.GetTimestampedSignature(sig, clientTSA)
 		if err != nil {
 			return nil, err
 		}
 
-		signedPayload.RFC3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
+		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
+		// TODO: Consider uploading RFC3161 TS to Rekor
+
+		if rfc3161Timestamp == nil {
+			return nil, fmt.Errorf("rfc3161 timestamp is nil")
+		}
+		ts, err := json.Marshal(rfc3161Timestamp)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
+			return nil, fmt.Errorf("create RFC3161 timestamp file: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 	}
 	if ShouldUploadToTlog(ctx, ko, nil, tlogUpload) {
 		rekorBytes, err = sv.Bytes(ctx)
@@ -90,26 +112,12 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 		if err != nil {
 			return nil, err
 		}
-		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, payload, rekorBytes)
+		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, &payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
-	}
-
-	// if bundle is specified, just do that and ignore the rest
-	if ko.RFC3161TimestampPath != "" {
-		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-
-		contents, err := json.Marshal(signedPayload)
-		if err != nil {
-			return nil, err
-		}
-		if err := os.WriteFile(ko.RFC3161TimestampPath, contents, 0600); err != nil {
-			return nil, fmt.Errorf("create rfc3161 timestamp file: %w", err)
-		}
-		fmt.Printf("RF3161 timestamp bundle wrote in the file %s\n", ko.RFC3161TimestampPath)
 	}
 
 	// if bundle is specified, just do that and ignore the rest
@@ -147,15 +155,23 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, regOpts options.Re
 		}
 	}
 
-	if outputCertificate != "" && len(rekorBytes) > 0 {
-		bts := rekorBytes
-		if b64 {
-			bts = []byte(base64.StdEncoding.EncodeToString(rekorBytes))
+	if outputCertificate != "" {
+		signer, err := sv.Bytes(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error getting signer: %w", err)
 		}
-		if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
-			return nil, fmt.Errorf("create certificate file: %w", err)
+		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+		// signer is a certificate
+		if err == nil && len(cert) == 1 {
+			bts := signer
+			if b64 {
+				bts = []byte(base64.StdEncoding.EncodeToString(signer))
+			}
+			if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
+				return nil, fmt.Errorf("create certificate file: %w", err)
+			}
+			fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 		}
-		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
 	}
 
 	return sig, nil

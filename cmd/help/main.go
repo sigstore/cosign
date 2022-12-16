@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )

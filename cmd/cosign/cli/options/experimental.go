@@ -17,7 +17,7 @@ package options
 import (
 	"strconv"
 
-	"github.com/sigstore/cosign/pkg/cosign/env"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 )
 
 func EnableExperimental() bool {
