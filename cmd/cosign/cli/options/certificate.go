@@ -89,5 +89,5 @@ func (o *CertVerifyOptions) Identities() ([]cosign.Identity, error) {
 	if o.CertOidcIssuer == "" {
 		return nil, errors.New("--certificate-oidc-issuer is required for verification in keyless mode")
 	}
-	return []cosign.Identity{{Issuer: o.CertOidcIssuer, Subject: o.CertIdentity}}, nil
+	return []cosign.Identity{{IssuerRegExp: o.CertOidcIssuer, Issuer: o.CertOidcIssuer, SubjectRegExp: o.CertIdentity, Subject: o.CertIdentity}}, nil
 }

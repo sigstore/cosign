@@ -273,6 +273,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	if len(co.Identities) > 0 {
 		for _, identity := range co.Identities {
 			issuerMatches := false
+			fmt.Printf("Issuer: %s/n", issuer)
 			switch {
 			// Check the issuer first
 			case identity.IssuerRegExp != "":
@@ -306,6 +307,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				}
 			case identity.Subject != "":
 				for _, san := range getSubjectAlternateNames(cert) {
+					fmt.Printf("Subject: %s/n", san)
 					if san == identity.Subject {
 						subjectMatches = true
 						break
