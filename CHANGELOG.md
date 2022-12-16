@@ -1,3 +1,60 @@
+# v2.0.0-rc.0
+
+_Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
+
+## Enhancements
+* Change go module name to github.com/sigstore/cosign/v2 for Cosign 2.0 (#2544)
+* Allow users to pass in a path for the --identity-token flag (#2538)
+* Breaking change: Respect tlog-upload=false, default to true (#2505)
+* Support outputing a certificate without uploading to the tlog (#2506)
+* Attestation/Blob signing and verification using a RFC3161 time-stamping server (#2464)
+* respect tlog-upload flag with TSA (#2474)
+* Better feedback if specifying incompatible argument on `cosign sign --attachment` (#2449)
+* Support TSA and Rekor verifications (#2463)
+* add support for tsa signing and verification of images (#2460)
+* cosign policy sign: remove experimental flag and make keyless signing default (#2459)
+* Remove experimental mode from cosign attest and verify-attestation (#2458)
+* Remove experimental mode from sign-blob and verify-blob (#2457)
+* Add --offline flag to force offline verification (#2427)
+* Air gap support (#2299)
+* Breaking change: Change SCT verification behavior to default to enforcement (#2400)
+* Breaking change: remove --force flag from sign and attest and rely on --yes flag to skip confirmation (#2399)
+* Breaking change: replace --no-tlog-upload flag with --tlog-upload flag (#2397)
+* Remove experimental flag from cosign sign and cosign verify (#2387)
+* verify: remove SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY test env var for using a key from rekor's API  (#2362)
+
+## Bug Fixes
+* Fix the file existence check. (#2552)
+* Fix timestamp verification, add verify-blob tests (#2527)
+* fix(verify): Consolidate certificate expiry logic (#2504)
+* Updates to Timestamp signing and verification (#2499)
+* fix: removes attestation payload from attest-blob's output & no base64 encoding (#2498)
+* Fix path for e2e-tests badge (#2490)
+* Fix spdx json media type (#2479)
+* fix sct verificaction (#2426)
+
+## Others
+* update builder image that uses go 1.19.4 (#2520)
+
+## Contributors
+* Anish Shah
+* Arnaud J Le Hors
+* Batuhan Apaydın
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Emmanuel T Odeke
+* Hayden B
+* Hector Fernandez
+* Jan Wozniak
+* Matthias Glastra
+* Miloslav Trmač
+* Puerco
+* Tom Meadows
+* Ville Aikas
+* Zack Newman
+* asraa
+* priyawadhwa
+
 # v1.13.1
 
 ## Enhancements
