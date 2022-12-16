@@ -189,6 +189,7 @@ against the transparency log.`,
 			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
 				CheckClaims:                  o.CheckClaims,
+				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
