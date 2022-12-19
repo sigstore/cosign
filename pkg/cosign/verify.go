@@ -273,17 +273,16 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	if len(co.Identities) > 0 {
 		for _, identity := range co.Identities {
 			issuerMatches := false
-			fmt.Printf("Issuer: %s/n", issuer)
 			switch {
 			// Check the issuer first
 			case identity.IssuerRegExp != "":
 				if regex, err := regexp.Compile(identity.IssuerRegExp); err != nil {
 					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRegExp, err)
-				} else if regex.MatchString(issuer) {
+				} else if regex.MatchString(issuer) || regex.MatchString(cert.Issuer.String()) {
 					issuerMatches = true
 				}
 			case identity.Issuer != "":
-				if identity.Issuer == issuer {
+				if identity.Issuer == issuer || identity.Issuer == cert.Issuer.String() {
 					issuerMatches = true
 				}
 			default:
@@ -305,13 +304,18 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 						break
 					}
 				}
+				if regex.MatchString(cert.Subject.String()) {
+					subjectMatches = true
+				}
 			case identity.Subject != "":
 				for _, san := range getSubjectAlternateNames(cert) {
-					fmt.Printf("Subject: %s/n", san)
 					if san == identity.Subject {
 						subjectMatches = true
 						break
 					}
+				}
+				if cert.Subject.String() == identity.Subject {
+					subjectMatches = true
 				}
 			default:
 				// No subject constraint on this identity, so checks out
