@@ -25,7 +25,9 @@ import (
 type CertVerifyOptions struct {
 	Cert                         string
 	CertIdentity                 string
+	CertIdentityRegexp           string
 	CertOidcIssuer               string
+	CertOidcIssuerRegexp         string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
 	CertGithubWorkflowName       string
@@ -45,10 +47,16 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
-		"Required. The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs.")
+		"The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
+
+	cmd.Flags().StringVar(&o.CertIdentityRegexp, "certificate-identity-regexp", "",
+		"A regular expression alternative to --certificate-identity. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
 
 	cmd.Flags().StringVar(&o.CertOidcIssuer, "certificate-oidc-issuer", "",
-		"Required. The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth")
+		"The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.")
+
+	cmd.Flags().StringVar(&o.CertOidcIssuerRegexp, "certificate-oidc-issuer-regexp", "",
+		"A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.")
 
 	// -- Cert extensions begin --
 	// Source: https://github.com/sigstore/fulcio/blob/main/docs/oid-info.md
@@ -83,11 +91,11 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func (o *CertVerifyOptions) Identities() ([]cosign.Identity, error) {
-	if o.CertIdentity == "" {
-		return nil, errors.New("--certificate-identity is required for verification in keyless mode")
+	if o.CertIdentity == "" && o.CertIdentityRegexp == "" {
+		return nil, errors.New("--certificate-identity or --certificate-identity-regexp is required for verification in keyless mode")
 	}
-	if o.CertOidcIssuer == "" {
-		return nil, errors.New("--certificate-oidc-issuer is required for verification in keyless mode")
+	if o.CertOidcIssuer == "" && o.CertOidcIssuerRegexp == "" {
+		return nil, errors.New("--certificate-oidc-issuer or --certificate-oidc-issuer-regexp is required for verification in keyless mode")
 	}
-	return []cosign.Identity{{IssuerRegExp: o.CertOidcIssuer, Issuer: o.CertOidcIssuer, SubjectRegExp: o.CertIdentity, Subject: o.CertIdentity}}, nil
+	return []cosign.Identity{{IssuerRegExp: o.CertOidcIssuerRegexp, Issuer: o.CertOidcIssuer, SubjectRegExp: o.CertIdentityRegexp, Subject: o.CertIdentity}}, nil
 }
