@@ -2,6 +2,15 @@
 
 _Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
 
+Critical breaking changes include:
+* Removing the COSIGN_EXPERIMENTAL environment variable, so the default signing method is now keyless signing with Fulcio
+* By default Cosign will now always upload to Rekor, this can be toggled with the `--tlog-upload` flag (defaults to true)
+
+## Breaking Changes
+* Breaking change: Change SCT verification behavior to default to enforcement (#2400)
+* Breaking change: remove --force flag from sign and attest and rely on --yes flag to skip confirmation (#2399)
+* Breaking change: replace --no-tlog-upload flag with --tlog-upload flag (#2397)
+
 ## Enhancements
 * Change go module name to github.com/sigstore/cosign/v2 for Cosign 2.0 (#2544)
 * Allow users to pass in a path for the --identity-token flag (#2538)
@@ -17,9 +26,6 @@ _Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know th
 * Remove experimental mode from sign-blob and verify-blob (#2457)
 * Add --offline flag to force offline verification (#2427)
 * Air gap support (#2299)
-* Breaking change: Change SCT verification behavior to default to enforcement (#2400)
-* Breaking change: remove --force flag from sign and attest and rely on --yes flag to skip confirmation (#2399)
-* Breaking change: replace --no-tlog-upload flag with --tlog-upload flag (#2397)
 * Remove experimental flag from cosign sign and cosign verify (#2387)
 * verify: remove SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY test env var for using a key from rekor's API  (#2362)
 
