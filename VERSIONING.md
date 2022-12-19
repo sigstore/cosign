@@ -8,7 +8,7 @@ This is the versioning policy regarding the stability of Cosign, both the API an
 
 Principles:
 
-- Provide well-versioned, very reliable things that people can write
+- Provide well-versioned, very reliable tools/libraries that people can write
   scripts/code against.
 - Provide places for experimentation and rapid-development, not covered under
   versioning guarantees.
@@ -20,18 +20,19 @@ Principles:
 ## Cosign CLI
 
 The Cosign CLI’s version numbers are of the form `MAJOR.MINOR.PATCH`, but it is
-explicitly not covered by [semantic versioning][] guarantees. Instead, you
+explicitly not covered by [semantic versioning][semver] guarantees. Instead, you
 should interpret version numbers as follows:
 
-**Major version increases.** These are "large changes:" you should expect to
+**Major version increases.** These are "large changes." You should expect to
 need to rewrite scripts after these. There are no compatibility guarantees about
 the behavior or shape of the CLI. These should be infrequent and correspond to
 big improvements in the user experience.
 
-**Minor version increases.** These are "small changes:" if you’ve been paying
-attention to and fixing deprecation warnings (see "Deprecation"), your scripts
-should continue to work (provided they only depend on explicitly guaranteed
-Cosign behavior; see "What's covered?").
+**Minor version increases.** These are "small changes." If you’ve been paying
+attention to and fixing deprecation warnings (see
+["Deprecation"](#deprecation)), your scripts should continue to work (provided
+they only depend on explicitly guaranteed Cosign behavior; see "What's
+covered?").
 
 **Patch version increases.** These are "bug fix" releases only.
 
@@ -43,7 +44,7 @@ Only behavior explicitly listed here is covered (to counter [Hyrum's
 Law][hyrums-law]).
 
 * Any documented behavior (i.e., behavior described in the output of `cosign -h`).
-  If the wording was ambiguous, the behavior may change as long as the
+  If the wording is ambiguous, the behavior may change as long as the
   corresponding documentation changes to make it less ambiguous.
 * Output to standard output, *when described in the documentation*. Each command
   should describe its default output format (ideally with examples).
@@ -68,7 +69,7 @@ an update to this versioning policy.
 
 [hyrums-law]: https://www.hyrumslaw.com/
 
-### Unstable commands
+### Feature stability
 
 It’s important to enable rapid iteration on the development of new Cosign
 features while providing stability to users of more-mature features. As such,
@@ -104,9 +105,11 @@ Deprecation requires:
 * When users invoke the deprecated behavior, print a deprecation message to
   standard error.
   * The message should look something like:
-    > WARNING: $BEHAVIOR is deprecated and will be removed in a Cosign release
-    > soon after $DEPRECATION_DATE (see $GITHUB_ISSUE_LINK). Instead, please
-    > $ALTERNATIVE.
+    ```
+    WARNING: $BEHAVIOR is deprecated and will be removed in a Cosign release
+    soon after $DEPRECATION_DATE (see $GITHUB_ISSUE_LINK). Instead, please
+    $ALTERNATIVE.
+    ```
   * If we can’t tell whether a user is using the deprecated behavior (for
     instance, if we’re going to remove a field), print the message every time.
   * There MAY be a way to turn off the message. In many cases, this will just be
@@ -118,7 +121,8 @@ Deprecation requires:
   repository should have the same information as in the message.
   * Other documentation will be updated on a best-effort basis.
 
-For a list of currently deprecated behavior, search the codebase.
+For a list of currently deprecated behavior, search the codebase (all deprecated
+behavior will use a shared "deprecation" library and therefore be easy to find).
 
 ### Rationale/background
 
