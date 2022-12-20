@@ -17,7 +17,6 @@ package verify
 
 import (
 	"context"
-	"crypto/x509"
 	"errors"
 	"flag"
 	"fmt"
@@ -25,17 +24,17 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
-	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/cue"
+	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
+	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
@@ -120,14 +119,19 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if err != nil {
 			return fmt.Errorf("error reading certification chain path file: %w", err)
 		}
-		// TODO: Update this logic once https://github.com/sigstore/timestamp-authority/issues/121 gets merged.
-		// This relies on untrusted leaf certificate.
-		tsaCertPool := x509.NewCertPool()
-		ok := tsaCertPool.AppendCertsFromPEM(pemBytes)
-		if !ok {
-			return fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+
+		leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(pemBytes)
+		if err != nil {
+			return fmt.Errorf("error splitting certificates: %w", err)
 		}
-		co.TSACerts = tsaCertPool
+		if len(leaves) > 1 {
+			return fmt.Errorf("certificate chain must contain at most one TSA certificate")
+		}
+		if len(leaves) == 1 {
+			co.TSACertificate = leaves[0]
+		}
+		co.TSAIntermediateCertificates = intermediates
+		co.TSARootCertificates = roots
 	}
 	if !c.SkipTlogVerify {
 		if c.RekorURL != "" {

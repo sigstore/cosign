@@ -29,11 +29,13 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Offline, "offline", false,
 		"only allow offline verification")
 
-	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-cert-chain", "",
-		"path to certificate chain PEM file for the Timestamp Authority")
+	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
+		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
+			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
 
 	cmd.Flags().BoolVar(&o.SkipTlogVerify, "insecure-skip-tlog-verify", false,
-		"skip tlog verification")
+		"skip transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
+			"cannot be publicly verified when not included in a log")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.
