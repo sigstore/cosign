@@ -129,8 +129,13 @@ type CheckOpts struct {
 	// Force offline verification of the signature
 	Offline bool
 
-	// TSACerts are the intermediate CA certs used to verify a time-stamping data.
-	TSACerts *x509.CertPool
+	// Set of flags to verify an RFC3161 timestamp used for trusted timestamping
+	// TSACertificate is the certificate used to sign the timestamp. Optional, if provided in the timestamp
+	TSACertificate *x509.Certificate
+	// TSARootCertificates are the set of roots to verify the TSA certificate
+	TSARootCertificates []*x509.Certificate
+	// TSAIntermediateCertificates are the set of intermediates for chain building
+	TSAIntermediateCertificates []*x509.Certificate
 
 	// SkipTlogVerify skip tlog verification
 	SkipTlogVerify bool
@@ -578,8 +583,8 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
-	if co.TSACerts != nil {
-		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co.TSACerts)
+	if co.TSARootCertificates != nil {
+		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
 		}
@@ -967,10 +972,10 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	return true, nil
 }
 
-// VerifyRFC3161Timestamp verifies that the timestamp in untrustedSig is correctly signed, and if so,
+// VerifyRFC3161Timestamp verifies that the timestamp in sig is correctly signed, and if so,
 // returns the timestamp value.
 // It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp.
-func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) (*timestamp.Timestamp, error) {
+func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
 	ts, err := sig.RFC3161Timestamp()
 	if err != nil {
 		return nil, err
@@ -1000,14 +1005,12 @@ func VerifyRFC3161Timestamp(sig oci.Signature, tsaCerts *x509.CertPool) (*timest
 		tsBytes = rawSig
 	}
 
-	err = tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes), tsaCerts)
-	if err != nil {
-		return nil, fmt.Errorf("unable to verify TimestampResponse: %w", err)
-	}
-	acceptedTimestamp := ts
-
-	// FIXME: tsaverification.VerifyTimestampResponse has done this parsing; we shouldn’t parse again.
-	return timestamp.ParseResponse(acceptedTimestamp.SignedRFC3161Timestamp)
+	return tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
+		tsaverification.VerifyOpts{
+			TSACertificate: co.TSACertificate,
+			Intermediates:  co.TSAIntermediateCertificates,
+			Roots:          co.TSARootCertificates,
+		})
 }
 
 // compare bundle signature to the signature we are verifying

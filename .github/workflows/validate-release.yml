@@ -25,47 +25,19 @@ on:
 jobs:
   validate-release-job:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/gythialy/golang-cross:v1.19.4-0@sha256:53ee894818ac14377996a6fe7c8fe6156d018a20f82aaf69f2519fc45d897bec
 
-    permissions:
-      actions: none
-      checks: none
-      contents: none
-      deployments: none
-      issues: none
-      packages: none
-      pull-requests: none
-      repository-projects: none
-      security-events: none
-      statuses: none
-
-    env:
-      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.19.4-0@sha256:53ee894818ac14377996a6fe7c8fe6156d018a20f82aaf69f2519fc45d897bec
-      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.13.1@sha256:fd5b09be23ef1027e1bdd490ce78dcc65d2b15902e1f4ba8e04f3b4019cc1057
+    permissions: {}
 
     steps:
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
 
-      - name: Check Signature
-        run: |
-          docker run --rm \
-          -e COSIGN_EXPERIMENTAL=true \
-          -e TUF_ROOT=/tmp \
-          $COSIGN_IMAGE \
-          verify \
-          $CROSS_BUILDER_IMAGE
-
       - name: goreleaser snapshot
-        run: |
-          docker run --rm --privileged \
-          -e PROJECT_ID=honk-fake-project \
-          -e CI=$CI \
-          -e RUNTIME_IMAGE=gcr.io/distroless/static:debug-nonroot \
-          -v ${PWD}:/go/src/sigstore/cosign \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -w /go/src/sigstore/cosign \
-          --entrypoint="" \
-          $CROSS_BUILDER_IMAGE \
-          make snapshot
+        run: make snapshot
+        env:
+          PROJECT_ID: honk-fake-project
+          RUNTIME_IMAGE: gcr.io/distroless/static:debug-nonroot
 
       - name: check binaries
         run: |

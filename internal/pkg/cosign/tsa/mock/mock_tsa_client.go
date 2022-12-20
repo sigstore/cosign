@@ -16,7 +16,6 @@ package mock
 
 import (
 	"bytes"
-	"context"
 	"crypto"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -68,7 +67,7 @@ func NewTSAClient(o TSAClientOptions) (*client.TimestampAuthority, error) {
 			return nil, err
 		}
 	}
-	certChain, err := signer.NewTimestampingCertWithChain(context.Background(), sv)
+	certChain, err := signer.NewTimestampingCertWithChain(sv)
 	if err != nil {
 		return nil, errors.Wrap(err, "generating timestamping cert chain")
 	}

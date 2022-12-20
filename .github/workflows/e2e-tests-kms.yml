@@ -53,9 +53,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
-      - uses: innovationnorway/setup-vault@v1
+      - uses: cpanato/vault-installer@f4fb442d3e069a8fc9f6fb0f4b98988521288f50 # v0.0.1
         with:
-          version: '~1.4'
+          version: '1.12.2'
 
       - uses: imjasonh/setup-crane@e82f1b9a8007d399333baba4d75915558e9fb6a4 # v0.2
 

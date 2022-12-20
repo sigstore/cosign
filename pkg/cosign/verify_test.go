@@ -474,10 +474,9 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	tsaCertPool := x509.NewCertPool()
-	ok := tsaCertPool.AppendCertsFromPEM([]byte(chain.Payload))
-	if !ok {
-		t.Fatal("error parsing response into Timestamp while appending certs from PEM")
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain([]byte(chain.Payload))
+	if err != nil {
+		t.Fatal("error splitting response into certificate chain")
 	}
 
 	payload := []byte{1, 2, 3, 4}
@@ -486,9 +485,11 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		t.Fatalf("error signing the payload with the tsa client server: %v", err)
 	}
 	if bundleVerified, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
-		SigVerifier:    sv,
-		TSACerts:       tsaCertPool,
-		SkipTlogVerify: true,
+		SigVerifier:                 sv,
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+		TSARootCertificates:         roots,
+		SkipTlogVerify:              true,
 	}); err != nil || bundleVerified { // bundle is not verified since there's no Rekor bundle
 		t.Fatalf("unexpected error while verifying signature, got %v", err)
 	}
@@ -519,10 +520,9 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	tsaCertPool := x509.NewCertPool()
-	ok := tsaCertPool.AppendCertsFromPEM([]byte(chain.Payload))
-	if !ok {
-		t.Fatal("error parsing response into Timestamp while appending certs from PEM")
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain([]byte(chain.Payload))
+	if err != nil {
+		t.Fatal("error splitting response into certificate chain")
 	}
 
 	payload := []byte{1, 2, 3, 4}
@@ -531,9 +531,11 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
 	}
 	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
-		SigVerifier: sv,
-		TSACerts:    tsaCertPool,
-		RekorClient: mClient,
+		SigVerifier:                 sv,
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+		TSARootCertificates:         roots,
+		RekorClient:                 mClient,
 	}); err == nil || !strings.Contains(err.Error(), "no trusted rekor public keys provided") {
 		// TODO(wlynch): This is a weak test, since this is really failing because
 		// there is no inclusion proof for the Rekor entry rather than failing to
@@ -1313,9 +1315,10 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
-	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM([]byte(chain.Payload)) {
-		t.Fatalf("error creating trust root pool")
+
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain([]byte(chain.Payload))
+	if err != nil {
+		t.Fatal("error splitting response into certificate chain")
 	}
 
 	ociSig, _ := static.NewSignature(payload,
@@ -1324,7 +1327,11 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		static.WithRFC3161Timestamp(&rfc3161TS))
 
 	// success, signing over signature
-	ts, err := VerifyRFC3161Timestamp(ociSig, pool)
+	ts, err := VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+		TSARootCertificates:         roots,
+	})
 	if err != nil {
 		t.Fatalf("unexpected error verifying timestamp with signature: %v", err)
 	}
@@ -1342,7 +1349,11 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		"", /*signature*/
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
-	_, err = VerifyRFC3161Timestamp(ociSig, pool)
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+		TSARootCertificates:         roots,
+	})
 	if err != nil {
 		t.Fatalf("unexpected error verifying timestamp with payload: %v", err)
 	}
@@ -1352,7 +1363,11 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		string(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
-	_, err = VerifyRFC3161Timestamp(ociSig, pool)
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+		TSARootCertificates:         roots,
+	})
 	if err == nil || !strings.Contains(err.Error(), "base64 data") {
 		t.Fatalf("expected error verifying timestamp with raw signature, got: %v", err)
 	}
@@ -1369,7 +1384,11 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
-	_, err = VerifyRFC3161Timestamp(ociSig, pool)
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+		TSARootCertificates:         roots,
+	})
 	if err == nil || !strings.Contains(err.Error(), "hashed messages don't match") {
 		t.Fatalf("expected error verifying mismatched signatures, got: %v", err)
 	}
