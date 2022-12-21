@@ -4,7 +4,7 @@
 
 # cosign
 
-Container Signing, Verification and Storage in an OCI registry.
+Signing OCI containers (and other artifacts) using [Sigstore](https://sigstore.dev/)!
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/sigstore/cosign)](https://goreportcard.com/report/github.com/sigstore/cosign)
 [![e2e-tests](https://github.com/sigstore/cosign/actions/workflows/e2e-tests.yml/badge.svg)](https://github.com/sigstore/cosign/actions/workflows/e2e-tests.yml)
@@ -16,6 +16,7 @@ Cosign aims to make signatures **invisible infrastructure**.
 Cosign supports:
 
 * Hardware and KMS signing
+* Container Signing, Verification and Storage in an OCI registry.
 * Bring-your-own PKI
 * Our free OIDC PKI ([Fulcio](https://github.com/sigstore/fulcio))
 * Built-in binary transparency and timestamping service ([Rekor](https://github.com/sigstore/rekor))
