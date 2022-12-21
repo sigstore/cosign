@@ -51,12 +51,10 @@ import (
 // nolint
 type VerifyCommand struct {
 	options.RegistryOptions
+	options.CertVerifyOptions
 	CheckClaims                  bool
 	KeyRef                       string
 	CertRef                      string
-	CertEmail                    string
-	CertIdentity                 string
-	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
 	CertGithubWorkflowName       string
@@ -99,6 +97,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
+	var identities []cosign.Identity
+	if c.KeyRef == "" {
+		identities, err = c.Identities()
+		if err != nil {
+			return err
+		}
+	}
+
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
@@ -107,9 +113,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	co := &cosign.CheckOpts{
 		Annotations:                  c.Annotations.Annotations,
 		RegistryClientOpts:           ociremoteOpts,
-		CertEmail:                    c.CertEmail,
-		CertIdentity:                 c.CertIdentity,
-		CertOidcIssuer:               c.CertOidcIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
@@ -117,6 +120,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
+		Identities:                   identities,
 		Offline:                      c.Offline,
 		SkipTlogVerify:               c.SkipTlogVerify,
 	}

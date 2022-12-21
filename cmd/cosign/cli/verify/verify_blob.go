@@ -53,10 +53,8 @@ func isb64(data []byte) bool {
 // nolint
 type VerifyBlobCmd struct {
 	options.KeyOpts
+	options.CertVerifyOptions
 	CertRef                      string
-	CertEmail                    string
-	CertIdentity                 string
-	CertOIDCIssuer               string
 	CertChain                    string
 	SigRef                       string
 	CertGithubWorkflowTrigger    string
@@ -85,6 +83,15 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.KeyParseError{}
 	}
 
+	var identities []cosign.Identity
+	var err error
+	if c.KeyRef == "" {
+		identities, err = c.Identities()
+		if err != nil {
+			return err
+		}
+	}
+
 	sig, err := base64signature(c.SigRef, c.BundlePath)
 	if err != nil {
 		return err
@@ -96,15 +103,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	co := &cosign.CheckOpts{
-		CertEmail:                    c.CertEmail,
-		CertIdentity:                 c.CertIdentity,
-		CertOidcIssuer:               c.CertOIDCIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSHA,
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
+		Identities:                   identities,
 		Offline:                      c.Offline,
 		SkipTlogVerify:               c.SkipTlogVerify,
 	}

@@ -43,12 +43,10 @@ import (
 // nolint
 type VerifyAttestationCommand struct {
 	options.RegistryOptions
+	options.CertVerifyOptions
 	CheckClaims                  bool
 	KeyRef                       string
 	CertRef                      string
-	CertEmail                    string
-	CertIdentity                 string
-	CertOidcIssuer               string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
 	CertGithubWorkflowName       string
@@ -81,21 +79,28 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return &options.KeyParseError{}
 	}
 
+	var identities []cosign.Identity
+	if c.KeyRef == "" {
+		identities, err = c.Identities()
+		if err != nil {
+			return err
+		}
+	}
+
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
+
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
-		CertEmail:                    c.CertEmail,
-		CertIdentity:                 c.CertIdentity,
-		CertOidcIssuer:               c.CertOidcIssuer,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
 		CertGithubWorkflowName:       c.CertGithubWorkflowName,
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
+		Identities:                   identities,
 		Offline:                      c.Offline,
 		SkipTlogVerify:               c.SkipTlogVerify,
 	}

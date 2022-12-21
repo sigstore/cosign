@@ -87,11 +87,10 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 			v := &dockerfile.VerifyDockerfileCommand{
 				VerifyCommand: verify.VerifyCommand{
 					RegistryOptions:              o.Registry,
+					CertVerifyOptions:            o.CertVerify,
 					CheckClaims:                  o.CheckClaims,
 					KeyRef:                       o.Key,
 					CertRef:                      o.CertVerify.Cert,
-					CertEmail:                    o.CertVerify.CertEmail,
-					CertOidcIssuer:               o.CertVerify.CertOidcIssuer,
 					CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 					CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 					CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,

@@ -16,6 +16,7 @@ package verify
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
@@ -33,6 +34,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/test"
@@ -159,4 +161,34 @@ func appendSlices(slices [][]byte) []byte {
 		tmp = append(tmp, s...)
 	}
 	return tmp
+}
+
+func TestVerifyCertMissingSubject(t *testing.T) {
+	ctx := context.Background()
+	verifyCommand := VerifyCommand{
+		CertRef: "cert.pem",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: "issuer",
+		},
+	}
+
+	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
+	if err == nil {
+		t.Fatal("verify expected 'need --certificate-identity'")
+	}
+}
+
+func TestVerifyCertMissingIssuer(t *testing.T) {
+	ctx := context.Background()
+	verifyCommand := VerifyCommand{
+		CertRef: "cert.pem",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentity: "identity",
+		},
+	}
+
+	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
+	if err == nil {
+		t.Fatal("verify expected 'need --certificate-oidc-issuer'")
+	}
 }

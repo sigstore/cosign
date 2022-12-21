@@ -98,12 +98,6 @@ type CheckOpts struct {
 	RootCerts *x509.CertPool
 	// IntermediateCerts are the optional intermediate CA certs used to verify a certificate chain.
 	IntermediateCerts *x509.CertPool
-	// CertEmail is the email expected for a certificate to be valid. The empty string means any certificate can be valid.
-	CertEmail string
-	// CertIdentity is the identity expected for a certificate to be valid.
-	CertIdentity string
-	// CertOidcIssuer is the OIDC issuer expected for a certificate to be valid. The empty string means any certificate can be valid.
-	CertOidcIssuer string
 
 	// CertGithubWorkflowTrigger is the GitHub Workflow Trigger name expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertGithubWorkflowTrigger string
@@ -130,7 +124,6 @@ type CheckOpts struct {
 
 	// Identities is an array of Identity (Subject, Issuer) matchers that have
 	// to be met for the signature to ve valid.
-	// Supercedes CertEmail / CertOidcIssuer
 	Identities []Identity
 
 	// Force offline verification of the signature
@@ -276,14 +269,10 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 	ce := CertExtensions{Cert: cert}
 
-	if err := validateCertIdentity(cert, co); err != nil {
-		return err
-	}
-
 	if err := validateCertExtensions(ce, co); err != nil {
 		return err
 	}
-	issuer := ce.GetIssuer()
+	oidcIssuer := ce.GetIssuer()
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
 	if len(co.Identities) > 0 {
@@ -294,11 +283,11 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			case identity.IssuerRegExp != "":
 				if regex, err := regexp.Compile(identity.IssuerRegExp); err != nil {
 					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRegExp, err)
-				} else if regex.MatchString(issuer) {
+				} else if regex.MatchString(oidcIssuer) {
 					issuerMatches = true
 				}
 			case identity.Issuer != "":
-				if identity.Issuer == issuer {
+				if identity.Issuer == oidcIssuer {
 					issuerMatches = true
 				}
 			default:
@@ -342,12 +331,6 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 }
 
 func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
-	if co.CertOidcIssuer != "" {
-		if ce.GetIssuer() != co.CertOidcIssuer {
-			return &VerificationError{"expected oidc issuer not found in certificate"}
-		}
-	}
-
 	if co.CertGithubWorkflowTrigger != "" {
 		if ce.GetCertExtensionGithubWorkflowTrigger() != co.CertGithubWorkflowTrigger {
 			return &VerificationError{"expected GitHub Workflow Trigger not found in certificate"}
@@ -378,41 +361,6 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 		}
 	}
 	return nil
-}
-
-func validateCertIdentity(cert *x509.Certificate, co *CheckOpts) error {
-	// TODO: Make it mandatory to include one of these options.
-	if co.CertEmail == "" && co.CertIdentity == "" {
-		return nil
-	}
-
-	for _, dns := range cert.DNSNames {
-		if co.CertIdentity == dns {
-			return nil
-		}
-	}
-	for _, em := range cert.EmailAddresses {
-		if co.CertIdentity == em || co.CertEmail == em {
-			return nil
-		}
-	}
-	for _, ip := range cert.IPAddresses {
-		if co.CertIdentity == ip.String() {
-			return nil
-		}
-	}
-	for _, uri := range cert.URIs {
-		if co.CertIdentity == uri.String() {
-			return nil
-		}
-	}
-
-	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
-	if len(otherName) > 0 && co.CertIdentity == otherName {
-		return nil
-	}
-
-	return &VerificationError{"expected identity not found in certificate"}
 }
 
 // getSubjectAlternateNames returns all of the following for a Certificate.
