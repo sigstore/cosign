@@ -16,7 +16,16 @@ package cosign
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
 	"testing"
+
+	ttestdata "github.com/google/certificate-transparency-go/trillian/testdata"
+)
+
+var (
+	demoLogID = [32]byte{19, 56, 222, 93, 229, 36, 102, 128, 227, 214, 3, 121, 93, 175, 126, 236, 97, 217, 34, 32, 40, 233, 98, 27, 46, 179, 164, 251, 84, 10, 60, 57}
 )
 
 func TestGetRekorPubKeys(t *testing.T) {
@@ -29,7 +38,7 @@ func TestGetRekorPubKeys(t *testing.T) {
 	}
 	// check that the mapping of key digest to key is correct
 	for logID, key := range keys.Keys {
-		expectedLogID, err := getLogID(key.PubKey)
+		expectedLogID, err := GetTransparencyLogID(key.PubKey)
 		if err != nil {
 			t.Fatalf("unexpected error generated log ID: %v", err)
 		}
@@ -125,5 +134,22 @@ func TestExpectedRekorResponse(t *testing.T) {
 				t.Errorf("isExpectedResponseUUID() = %v, want %v", got, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestGetCTLogID(t *testing.T) {
+	block, _ := pem.Decode([]byte(ttestdata.DemoPublicKey))
+	pk, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		t.Fatalf("unexpected error loading public key: %v", err)
+	}
+
+	got, err := GetTransparencyLogID(pk)
+	if err != nil {
+		t.Fatalf("error getting logid: %v", err)
+	}
+
+	if want := hex.EncodeToString(demoLogID[:]); got != want {
+		t.Errorf("logID: \n%v want \n%v", got, want)
 	}
 }

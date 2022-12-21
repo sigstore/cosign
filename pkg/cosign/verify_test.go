@@ -220,7 +220,7 @@ func signEntry(ctx context.Context, t *testing.T, signer signature.Signer, entry
 func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer, leaf []byte) *bundle.RekorBundle {
 	// generate log ID according to rekor public key
 	pk, _ := rekor.PublicKey(nil)
-	keyID, _ := getLogID(pk)
+	keyID, _ := GetTransparencyLogID(pk)
 	pyld := bundle.RekorPayload{
 		Body:           base64.StdEncoding.EncodeToString(leaf),
 		IntegratedTime: time.Now().Unix(),
@@ -260,8 +260,8 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	leaf, _ := entry.Canonicalize(ctx)
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
 	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
-	rekorPubKeys := NewTrustedRekorPubKeys()
-	rekorPubKeys.AddRekorPubKey(pemBytes, tuf.Active)
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
 
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)

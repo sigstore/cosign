@@ -212,13 +212,3 @@ func ContainsSCT(cert *x509.Certificate, sct *ct.SignedCertificateTimestamp) (bo
 	}
 	return false, nil
 }
-
-// GetCTLogID takes the key manager for a log and returns the LogID. (see RFC 6962 S3.2)
-// In CT V1 the log id is a hash of the public key.
-func GetCTLogID(pk crypto.PublicKey) ([sha256.Size]byte, error) {
-	pubBytes, err := x509.MarshalPKIXPublicKey(pk)
-	if err != nil {
-		return [sha256.Size]byte{}, err
-	}
-	return sha256.Sum256(pubBytes), nil
-}
