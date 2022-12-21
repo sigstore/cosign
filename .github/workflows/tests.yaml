@@ -38,7 +38,6 @@ jobs:
     name: Run unit tests
     permissions:
       contents: read
-      id-token: write
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -86,6 +85,8 @@ jobs:
 
   e2e-tests:
     name: Run e2e tests
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
 
     steps:
