@@ -38,6 +38,7 @@ jobs:
     name: Run unit tests
     permissions:
       contents: read
+      id-token: write
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -121,6 +122,12 @@ jobs:
           # See #2091 for the issue describing this temp workaround.
           GODEBUG: x509sha1=1
         run: ./test/e2e_test.sh
+
+      - name: Run sign-blob tests
+        env:
+          # See #2091 for the issue describing this temp workaround.
+          GODEBUG: x509sha1=1
+        run: ./test/sign_blob_test.sh
 
       - name: Collect diagnostics
         if: ${{ failure() }}
