@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ctl
+package cosign
 
 import (
 	"context"
-	"encoding/hex"
 	"os"
 	"testing"
-
-	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctutil"
 )
 
 const (
@@ -43,11 +40,10 @@ func TestGetCTLogPubKeys(t *testing.T) {
 	}
 	// check that the mapping of key digest to key is correct
 	for logID, key := range keys.Keys {
-		expectedLogIDHex, err := ctutil.GetCTLogID(key.PubKey)
+		expectedLogID, err := GetTransparencyLogID(key.PubKey)
 		if err != nil {
 			t.Fatalf("unexpected error generated log ID: %v", err)
 		}
-		expectedLogID := hex.EncodeToString(expectedLogIDHex[:])
 		if logID != expectedLogID {
 			t.Fatalf("key digests are not equal")
 		}
@@ -74,11 +70,10 @@ func TestGetCTLogPubKeysAlt(t *testing.T) {
 	}
 	// check that the mapping of key digest to key is correct
 	for logID, key := range keys.Keys {
-		expectedLogIDHex, err := ctutil.GetCTLogID(key.PubKey)
+		expectedLogID, err := GetTransparencyLogID(key.PubKey)
 		if err != nil {
 			t.Fatalf("unexpected error generated log ID: %v", err)
 		}
-		expectedLogID := hex.EncodeToString(expectedLogIDHex[:])
 		if logID != expectedLogID {
 			t.Fatalf("key digests are not equal")
 		}

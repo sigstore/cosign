@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ctl
+package cosign
 
 import (
 	"context"
-	"crypto"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -27,44 +26,11 @@ import (
 	ct "github.com/google/certificate-transparency-go"
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/google/certificate-transparency-go/x509util"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctutil"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
-
-// LogIDMetadata holds information for mapping a key ID hash (log ID) to associated data.
-type LogIDMetadata struct {
-	PubKey crypto.PublicKey
-	Status tuf.StatusKind
-}
-
-// This is the map of CTLog Public Keys indexed by log ID that's used in
-// verification of SCTs.
-type TrustedCTLogPubKeys struct {
-	// A map of Public Keys indexed by log ID
-	Keys map[string]LogIDMetadata
-}
-
-func NewTrustedCTLogPubKeys() TrustedCTLogPubKeys {
-	return TrustedCTLogPubKeys{Keys: make(map[string]LogIDMetadata, 0)}
-}
-
-// AddCTLogPubKey adds a public key with the proper index (constructed) from the
-// Public Key representing the PEM-encoded Rekor key and a status.
-func (t *TrustedCTLogPubKeys) AddCTLogPubKey(pemBytes []byte, status tuf.StatusKind) error {
-	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
-	if err != nil {
-		return err
-	}
-	keyID, err := ctutil.GetCTLogID(pubKey)
-	if err != nil {
-		return err
-	}
-	t.Keys[hex.EncodeToString(keyID[:])] = LogIDMetadata{PubKey: pubKey, Status: status}
-	return nil
-}
 
 // ContainsSCT checks if the certificate contains embedded SCTs. cert can either be
 // DER or PEM encoded.
@@ -95,7 +61,7 @@ func ContainsSCT(cert []byte) (bool, error) {
 // By default the public keys comes from TUF, but you can override this for test
 // purposes by using an env variable `SIGSTORE_CT_LOG_PUBLIC_KEY_FILE`. If using
 // an alternate, the file can be PEM, or DER format.
-func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *TrustedCTLogPubKeys) error {
+func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *TrustedTransparencyLogPubKeys) error {
 	if pubKeys == nil || len(pubKeys.Keys) == 0 {
 		return errors.New("none of the CTFE keys have been found")
 	}
@@ -167,7 +133,7 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *T
 }
 
 // VerifyEmbeddedSCT verifies an embedded SCT in a certificate.
-func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate, pubKeys *TrustedCTLogPubKeys) error {
+func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate, pubKeys *TrustedTransparencyLogPubKeys) error {
 	if len(chain) < 2 {
 		return errors.New("certificate chain must contain at least a certificate and its issuer")
 	}
@@ -180,47 +146,4 @@ func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate, pubKeys *
 		return err
 	}
 	return VerifySCT(ctx, certPEM, chainPEM, []byte{}, pubKeys)
-}
-
-// This is the CT log public key target name
-var ctPublicKeyStr = `ctfe.pub`
-
-// GetCTLogPubs retrieves trusted CTLog public keys from the embedded or cached
-// TUF root. If expired, makes a network call to retrieve the updated targets.
-// By default the public keys comes from TUF, but you can override this for test
-// purposes by using an env variable `SIGSTORE_CT_LOG_PUBLIC_KEY_FILE`. If using
-// an alternate, the file can be PEM, or DER format.
-func GetCTLogPubs(ctx context.Context) (*TrustedCTLogPubKeys, error) {
-	publicKeys := NewTrustedCTLogPubKeys()
-	altCTLogPub := env.Getenv(env.VariableSigstoreCTLogPublicKeyFile)
-
-	if altCTLogPub != "" {
-		raw, err := os.ReadFile(altCTLogPub)
-		if err != nil {
-			return nil, fmt.Errorf("error reading alternate CTLog public key file: %w", err)
-		}
-		if err := publicKeys.AddCTLogPubKey(raw, tuf.Active); err != nil {
-			return nil, fmt.Errorf("AddCTLogPubKey: %w", err)
-		}
-	} else {
-		tufClient, err := tuf.NewFromEnv(ctx)
-		if err != nil {
-			return nil, err
-		}
-		targets, err := tufClient.GetTargetsByMeta(tuf.CTFE, []string{ctPublicKeyStr})
-		if err != nil {
-			return nil, err
-		}
-		for _, t := range targets {
-			if err := publicKeys.AddCTLogPubKey(t.Target, t.Status); err != nil {
-				return nil, fmt.Errorf("AddCTLogPubKey: %w", err)
-			}
-		}
-	}
-
-	if len(publicKeys.Keys) == 0 {
-		return nil, errors.New("none of the CTLog public keys have been found")
-	}
-
-	return &publicKeys, nil
 }

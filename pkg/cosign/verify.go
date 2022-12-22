@@ -35,7 +35,6 @@ import (
 
 	"github.com/digitorus/timestamp"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/sigstore/pkg/tuf"
 
 	"github.com/sigstore/cosign/v2/pkg/blob"
@@ -83,11 +82,12 @@ type CheckOpts struct {
 
 	// RekorClient, if set, is used to make online tlog calls use to verify signatures and public keys.
 	RekorClient *client.Rekor
-	// TrustedRekorPubKeys, if set, is used to validate signatures on log entries from Rekor.
-	// It is a map from log id to RekorPubKey.
-	// Note: The RekorPubKey values contains information like status along with the
-	// raw public key information.
-	RekorPubKeys *TrustedRekorPubKeys
+	// RekorPubKeys, if set, is used to validate signatures on log entries from
+	// Rekor. It is a map from LogID to crypto.PublicKey. LogID is
+	// derived from the PublicKey (see RFC 6962 S3.2).
+	// Note that even though the type is of crypto.PublicKey, Rekor only allows
+	// for ecdsa.PublicKey: https://github.com/sigstore/cosign/issues/2540
+	RekorPubKeys *TrustedTransparencyLogPubKeys
 
 	// SigVerifier is used to verify signatures.
 	SigVerifier signature.Verifier
@@ -116,8 +116,8 @@ type CheckOpts struct {
 	// Detached SCT. Optional, as the SCT is usually embedded in the certificate.
 	SCT []byte
 	// CTLogPubKeys, if set, is used to validate SCTs against those keys.
-	// It is a map from log id to LogIDMetadata.
-	CTLogPubKeys *ctl.TrustedCTLogPubKeys
+	// It is a map from log id to LogIDMetadata. It is a map from LogID to crypto.PublicKey. LogID is derived from the PublicKey (see RFC 6962 S3.2).
+	CTLogPubKeys *TrustedTransparencyLogPubKeys
 
 	// SignatureRef is the reference to the signature file
 	SignatureRef string
@@ -228,7 +228,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	if co.IgnoreSCT {
 		return verifier, nil
 	}
-	contains, err := ctl.ContainsSCT(cert.Raw)
+	contains, err := ContainsSCT(cert.Raw)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
 	}
 	if contains {
-		if err := ctl.VerifyEmbeddedSCT(context.Background(), chains[0], co.CTLogPubKeys); err != nil {
+		if err := VerifyEmbeddedSCT(context.Background(), chains[0], co.CTLogPubKeys); err != nil {
 			return nil, err
 		}
 	} else {
@@ -256,7 +256,7 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		if err != nil {
 			return nil, err
 		}
-		if err := ctl.VerifySCT(context.Background(), certPEM, chainPEM, co.SCT, co.CTLogPubKeys); err != nil {
+		if err := VerifySCT(context.Background(), certPEM, chainPEM, co.SCT, co.CTLogPubKeys); err != nil {
 			return nil, err
 		}
 	}
@@ -406,7 +406,7 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedRekorPubKeys,
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedTransparencyLogPubKeys,
 	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
@@ -932,6 +932,12 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	if co.RekorPubKeys == nil || co.RekorPubKeys.Keys == nil {
 		return false, errors.New("no trusted rekor public keys provided")
 	}
+	// Make sure all the rekorPubKeys are ecsda.PublicKeys
+	for k, v := range co.RekorPubKeys.Keys {
+		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
+			return false, fmt.Errorf("rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
+		}
+	}
 
 	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
 		return false, err
@@ -945,7 +951,7 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	if !ok {
 		return false, &VerificationError{"verifying bundle: rekor log public key not found for payload"}
 	}
-	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey)
+	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey.(*ecdsa.PublicKey))
 	if err != nil {
 		return false, err
 	}
