@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
@@ -51,12 +51,11 @@ func Clean() *cobra.Command {
 }
 
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType options.CleanType, imageRef string, force bool) error {
-	ok, err := cosign.ConfirmPrompt(prompt(cleanType), force)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return nil
+	if !force {
+		ui.Warn(ctx, prompt(cleanType))
+		if err := ui.ConfirmContinue(ctx); err != nil {
+			return err
+		}
 	}
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
