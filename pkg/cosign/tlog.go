@@ -420,7 +420,7 @@ func VerifyTLogEntryOffline(e *models.LogEntryAnon, rekorPubKeys *TrustedTranspa
 	// Make sure all the rekorPubKeys are ecsda.PublicKeys
 	for k, v := range rekorPubKeys.Keys {
 		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
-			return fmt.Errorf("Rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
+			return fmt.Errorf("rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
 		}
 	}
 
