@@ -41,7 +41,6 @@ import (
 	irekor "github.com/sigstore/cosign/v2/internal/pkg/cosign/rekor"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctl"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
@@ -457,19 +456,19 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 		return nil, fmt.Errorf("unable to validate certificate chain: %w", err)
 	}
 	// Verify SCT if present in the leaf certificate.
-	contains, err := ctl.ContainsSCT(leafCert.Raw)
+	contains, err := cosign.ContainsSCT(leafCert.Raw)
 	if err != nil {
 		return nil, err
 	}
 	if contains {
-		pubKeys, err := ctl.GetCTLogPubs(ctx)
+		pubKeys, err := cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("getting CTLog public keys: %w", err)
 		}
 		var chain []*x509.Certificate
 		chain = append(chain, leafCert)
 		chain = append(chain, certChain...)
-		if err := ctl.VerifyEmbeddedSCT(context.Background(), chain, pubKeys); err != nil {
+		if err := cosign.VerifyEmbeddedSCT(context.Background(), chain, pubKeys); err != nil {
 			return nil, err
 		}
 	}
