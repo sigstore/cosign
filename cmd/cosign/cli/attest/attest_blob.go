@@ -81,14 +81,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return errors.New("expected an rfc3161-timestamp path when using a TSA server")
 	}
 
-	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
-	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	defer sv.Close()
-
 	var artifact []byte
 	var hexDigest string
+	var err error
 
 	if c.ArtifactHash == "" {
 		if artifactPath == "-" {
@@ -111,7 +106,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	} else {
 		hexDigest = c.ArtifactHash
 	}
-	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 
 	fmt.Fprintln(os.Stderr, "Using predicate from:", c.PredicatePath)
 	predicate, err := os.Open(c.PredicatePath)
@@ -119,6 +113,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return err
 	}
 	defer predicate.Close()
+
+	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	if err != nil {
+		return fmt.Errorf("getting signer: %w", err)
+	}
+	defer sv.Close()
+	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 
 	base := path.Base(artifactPath)
 
@@ -153,9 +154,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return err
 		}
 		if err := os.WriteFile(c.RFC3161TimestampPath, rfc3161Timestamp, 0600); err != nil {
-			return fmt.Errorf("create rfc3161 timestamp file: %w", err)
+			return fmt.Errorf("create RFC3161 timestamp file: %w", err)
 		}
-		fmt.Printf("RF3161 timestamp bundle wrote in the file %s\n", c.RFC3161TimestampPath)
+		fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
 	}
 
 	rekorBytes, err := sv.Bytes(ctx)
@@ -211,12 +212,18 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		}
 		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
 		// signer is a certificate
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Was a certificate used? ", err)
+		}
+		if len(cert) != 1 {
+			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Expected a single certificate")
+		}
 		if err == nil && len(cert) == 1 {
 			bts := signer
 			if err := os.WriteFile(c.OutputCertificate, bts, 0600); err != nil {
 				return fmt.Errorf("create certificate file: %w", err)
 			}
-			fmt.Printf("Certificate wrote in the file %s\n", c.OutputCertificate)
+			fmt.Fprintln(os.Stderr, "Certificate written to file ", c.OutputCertificate)
 		}
 	}
 

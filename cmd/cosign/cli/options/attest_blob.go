@@ -96,6 +96,6 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 		"url to the Timestamp RFC3161 server, default none")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
-		"write everything required to verify the blob to a FILE")
+		"path to an RFC 3161 timestamp bundle FILE")
 	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp-bundle", cobra.BashCompFilenameExt, []string{})
 }
