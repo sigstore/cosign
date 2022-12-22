@@ -36,10 +36,10 @@ linters:
   - whitespace
 linters-settings:
   forbidigo:
-    # Forbid using os.Getenv and os.LookupEnv with COSIGN_ variables in favor of
-    # pkg/cosign/env package
-    # Reference: https://github.com/sigstore/cosign/issues/2236
     forbid:
+      # Forbid using os.Getenv and os.LookupEnv with COSIGN_ variables in favor of
+      # pkg/cosign/env package
+      # Reference: https://github.com/sigstore/cosign/issues/2236
       - 'os\.Getenv.*'
       - 'os\.LookupEnv.*'
     exclude_godoc_examples: false
@@ -53,11 +53,6 @@ issues:
     - gosec
     # We want to allow using os.Getenv and os.Setenv in tests because it
     # might be easier (and needed in some cases)
-    - forbidigo
-  # pkg/cosign/env implements working with environment variables in cosign
-  # and is based on os.Getenv and os.LookupEnv
-  - path: pkg/cosign/env
-    linters:
     - forbidigo
   max-issues-per-linter: 0
   max-same-issues: 0
