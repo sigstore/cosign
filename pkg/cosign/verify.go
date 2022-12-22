@@ -932,6 +932,12 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	if co.RekorPubKeys == nil || co.RekorPubKeys.Keys == nil {
 		return false, errors.New("no trusted rekor public keys provided")
 	}
+	// Make sure all the rekorPubKeys are ecsda.PublicKeys
+	for k, v := range co.RekorPubKeys.Keys {
+		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
+			return false, fmt.Errorf("Rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
+		}
+	}
 
 	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
 		return false, err

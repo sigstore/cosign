@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -277,6 +278,72 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	}
 	if verified == false {
 		t.Fatalf("expected verified=true, got verified=false")
+	}
+}
+func TestVerifyImageSignatureWithInvalidPublicKeyType(t *testing.T) {
+	ctx := context.Background()
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	// Create a fake bundle
+	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
+	entry, _ := rtypes.UnmarshalEntry(pe[0])
+	leaf, _ := entry.Canonicalize(ctx)
+	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	// Add one valid key here.
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
+
+	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
+
+	// Then try to validate with keys that are not ecdsa.PublicKey and should
+	// fail.
+	var rsaPrivKey crypto.PrivateKey
+	rsaPrivKey, err = rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		t.Fatalf("Unable to create RSA test key: %v", err)
+	}
+	var signer crypto.Signer
+	var ok bool
+	if signer, ok = rsaPrivKey.(crypto.Signer); !ok {
+		t.Fatalf("Unable to create signer out of RSA test key: %v", err)
+	}
+	rsaPEM, err := cryptoutils.MarshalPublicKeyToPEM(signer.Public())
+	if err != nil {
+		t.Fatalf("Unable to marshal RSA test key: %v", err)
+	}
+	if err = rekorPubKeys.AddTransparencyLogPubKey(rsaPEM, tuf.Active); err != nil {
+		t.Fatalf("failed to add RSA key to transparency log public keys: %v", err)
+	}
+	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:    rootPool,
+			IgnoreSCT:    true,
+			Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+			RekorPubKeys: &rekorPubKeys})
+	if err == nil {
+		t.Fatal("expected error got none")
+	}
+	if !strings.Contains(err.Error(), "is not type ecdsa.PublicKey") {
+		t.Errorf("did not get expected failure message, wanted 'is not type ecdsa.PublicKey' got: %v", err)
+	}
+	if verified == true {
+		t.Fatalf("expected verified=false, got verified=true")
 	}
 }
 

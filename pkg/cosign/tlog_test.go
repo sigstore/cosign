@@ -16,12 +16,19 @@ package cosign
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"strings"
 	"testing"
 
 	ttestdata "github.com/google/certificate-transparency-go/trillian/testdata"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 var (
@@ -151,5 +158,36 @@ func TestGetCTLogID(t *testing.T) {
 
 	if want := hex.EncodeToString(demoLogID[:]); got != want {
 		t.Errorf("logID: \n%v want \n%v", got, want)
+	}
+}
+
+func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
+	// Then try to validate with keys that are not ecdsa.PublicKey and should
+	// fail.
+	var rsaPrivKey crypto.PrivateKey
+	rsaPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		t.Fatalf("Unable to create RSA test key: %v", err)
+	}
+	var signer crypto.Signer
+	var ok bool
+	if signer, ok = rsaPrivKey.(crypto.Signer); !ok {
+		t.Fatalf("Unable to create signer out of RSA test key: %v", err)
+	}
+	rsaPEM, err := cryptoutils.MarshalPublicKeyToPEM(signer.Public())
+	if err != nil {
+		t.Fatalf("Unable to marshal RSA test key: %v", err)
+	}
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	if err = rekorPubKeys.AddTransparencyLogPubKey(rsaPEM, tuf.Active); err != nil {
+		t.Fatalf("failed to add RSA key to transparency log public keys: %v", err)
+	}
+
+	err = VerifyTLogEntryOffline(&models.LogEntryAnon{Verification: &models.LogEntryAnonVerification{InclusionProof: &models.InclusionProof{}}}, &rekorPubKeys)
+	if err == nil {
+		t.Fatal("Wanted error got none")
+	}
+	if !strings.Contains(err.Error(), "is not type ecdsa.PublicKey") {
+		t.Fatalf("Did not get expected error message, wanted 'is not type ecdsa.PublicKey' got: %v", err)
 	}
 }

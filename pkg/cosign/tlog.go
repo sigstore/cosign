@@ -44,6 +44,7 @@ import (
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
@@ -416,6 +417,12 @@ func VerifyTLogEntryOffline(e *models.LogEntryAnon, rekorPubKeys *TrustedTranspa
 	if rekorPubKeys == nil || rekorPubKeys.Keys == nil {
 		return errors.New("no trusted rekor public keys provided")
 	}
+	// Make sure all the rekorPubKeys are ecsda.PublicKeys
+	for k, v := range rekorPubKeys.Keys {
+		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
+			return fmt.Errorf("Rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
+		}
+	}
 
 	hashes := [][]byte{}
 	for _, h := range e.Verification.InclusionProof.Hashes {
@@ -465,7 +472,7 @@ func NewTrustedTransparencyLogPubKeys() TrustedTransparencyLogPubKeys {
 // constructRekorPubkey returns a log ID and RekorPubKey from a given
 // byte-array representing the PEM-encoded Rekor key and a status.
 func (t *TrustedTransparencyLogPubKeys) AddTransparencyLogPubKey(pemBytes []byte, status tuf.StatusKind) error {
-	pubKey, err := PemToECDSAKey(pemBytes)
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
 		return err
 	}
