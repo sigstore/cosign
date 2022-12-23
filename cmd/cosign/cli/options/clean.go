@@ -14,11 +14,49 @@
 
 package options
 
-import "github.com/spf13/cobra"
+import (
+	"errors"
+
+	"github.com/spf13/cobra"
+)
+
+type CleanType string
+
+const (
+	CleanTypeSignature   CleanType = "signature"
+	CleanTypeAttestation CleanType = "attestation"
+	CleanTypeSbom        CleanType = "sbom"
+	CleanTypeAll         CleanType = "all"
+)
+
+func defaultCleanType() CleanType {
+	return CleanTypeAll
+}
+
+// cleanType implements github.com/spf13/pflag.Value.
+func (c *CleanType) String() string {
+	return string(*c)
+}
+
+// cleanType implements github.com/spf13/pflag.Value.
+func (c *CleanType) Set(v string) error {
+	switch v {
+	case "signature", "attestation", "sbom", "all":
+		*c = CleanType(v)
+		return nil
+	default:
+		return errors.New(`must be one of "signature", "attestation", "sbom", or "all"`)
+	}
+}
+
+// cleanType implements github.com/spf13/pflag.Value.
+func (c *CleanType) Type() string {
+	return "CLEAN_TYPE"
+}
 
 type CleanOptions struct {
 	Registry  RegistryOptions
-	CleanType string
+	CleanType CleanType
 	Force     bool
 }
 
@@ -26,7 +64,8 @@ var _ Interface = (*CleanOptions)(nil)
 
 func (c *CleanOptions) AddFlags(cmd *cobra.Command) {
 	c.Registry.AddFlags(cmd)
-	cmd.Flags().StringVarP(&c.CleanType, "type", "", "all", "a type of clean: <signature|attestation|sbom|all> (default: all)")
-	// TODO: Rename to --skip-confirmation for consistency?
+	c.CleanType = defaultCleanType()
+	cmd.Flags().Var(&c.CleanType, "type", "a type of clean: <signature|attestation|sbom|all>")
+	// TODO(#2044): Rename to --skip-confirmation for consistency?
 	cmd.Flags().BoolVarP(&c.Force, "force", "f", false, "do not prompt for confirmation")
 }

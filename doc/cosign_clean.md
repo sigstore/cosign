@@ -21,7 +21,7 @@ cosign clean [flags]
   -f, --force                                                                                    do not prompt for confirmation
   -h, --help                                                                                     help for clean
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
-      --type string                                                                              a type of clean: <signature|attestation|sbom|all> (default: all) (default "all")
+      --type CLEAN_TYPE                                                                          a type of clean: <signature|attestation|sbom|all> (default all)
 ```
 
 ### Options inherited from parent commands

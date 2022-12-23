@@ -50,7 +50,7 @@ func Clean() *cobra.Command {
 	return cmd
 }
 
-func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, imageRef string, force bool) error {
+func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType options.CleanType, imageRef string, force bool) error {
 	ok, err := cosign.ConfirmPrompt(prompt(cleanType), force)
 	if err != nil {
 		return err
@@ -82,14 +82,16 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, i
 
 	var cleanTags []name.Tag
 	switch cleanType {
-	case "signature":
+	case options.CleanTypeSignature:
 		cleanTags = []name.Tag{sigRef}
-	case "sbom":
+	case options.CleanTypeSbom:
 		cleanTags = []name.Tag{sbomRef}
-	case "attestation":
+	case options.CleanTypeAttestation:
 		cleanTags = []name.Tag{attRef}
-	case "all":
+	case options.CleanTypeAll:
 		cleanTags = []name.Tag{sigRef, attRef, sbomRef}
+	default:
+		panic("invalid CleanType value")
 	}
 
 	for _, t := range cleanTags {
@@ -110,16 +112,16 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType, i
 	return nil
 }
 
-func prompt(cleanType string) string {
+func prompt(cleanType options.CleanType) string {
 	switch cleanType {
-	case "signature":
+	case options.CleanTypeSignature:
 		return "WARNING: this will remove all signatures from the image"
-	case "sbom":
+	case options.CleanTypeSbom:
 		return "WARNING: this will remove all SBOMs from the image"
-	case "attestation":
+	case options.CleanTypeAttestation:
 		return "WARNING: this will remove all attestations from the image"
-	case "all":
+	case options.CleanTypeAll:
 		return "WARNING: this will remove all signatures, SBOMs and attestations from the image"
 	}
-	return ""
+	panic("invalid CleanType value")
 }
