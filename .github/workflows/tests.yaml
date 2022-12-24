@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@c17f4bf4666a8001b1a45c09eb7a485c41aa64c3 # v3.2.0
+      - uses: actions/cache@c1a5de879eb890d062a85ee0252d6036480b1fe2 # v3.2.1
         with:
           # In order:
           # * Module download cache
@@ -90,7 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@c17f4bf4666a8001b1a45c09eb7a485c41aa64c3 # v3.2.0
+      - uses: actions/cache@c1a5de879eb890d062a85ee0252d6036480b1fe2 # v3.2.1
         with:
           # In order:
           # * Module download cache
@@ -137,7 +137,7 @@ jobs:
           check-latest: true
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@c17f4bf4666a8001b1a45c09eb7a485c41aa64c3 # v3.2.0
+      - uses: actions/cache@c1a5de879eb890d062a85ee0252d6036480b1fe2 # v3.2.1
         with:
           # In order:
           # * Module download cache
