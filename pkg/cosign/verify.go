@@ -273,6 +273,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 		return err
 	}
 	oidcIssuer := ce.GetIssuer()
+	sans := getSubjectAlternateNames(cert)
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
 	if len(co.Identities) > 0 {
@@ -303,14 +304,14 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				if err != nil {
 					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRegExp, err)
 				}
-				for _, san := range getSubjectAlternateNames(cert) {
+				for _, san := range sans {
 					if regex.MatchString(san) {
 						subjectMatches = true
 						break
 					}
 				}
 			case identity.Subject != "":
-				for _, san := range getSubjectAlternateNames(cert) {
+				for _, san := range sans {
 					if san == identity.Subject {
 						subjectMatches = true
 						break
@@ -321,11 +322,13 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				subjectMatches = true
 			}
 			if subjectMatches && issuerMatches {
-				// If both issuer / subject match, return verifier
+				// If both issuer / subject match, return verified
 				return nil
 			}
 		}
-		return &VerificationError{"none of the expected identities matched what was in the certificate"}
+		return &VerificationError{
+			fmt.Sprintf("none of the expected identities matched what was in the certificate, got subjects [%s] with issuer %s",
+				strings.Join(sans, ", "), oidcIssuer)}
 	}
 	return nil
 }
