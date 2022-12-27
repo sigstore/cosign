@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/open-policy-agent/opa/rego"
 )
@@ -116,16 +115,12 @@ func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) (warnings 
 		return nil, err
 	}
 
-	var response []interface{}
-	var isComplaint bool
 	for _, result := range rs {
-		switch reflect.TypeOf(result.Bindings[CosignEvaluationRule]) {
-		case reflect.TypeOf(response):
-			return evaluateRegoEvalMapResult(query, result.Bindings[CosignEvaluationRule].([]interface{}))
-		case reflect.TypeOf(isComplaint):
-			fmt.Printf("isComplaint %v\n", isComplaint)
-			isComplaint, ok := result.Bindings[CosignEvaluationRule].(bool)
-			if ok && isComplaint {
+		switch response := result.Bindings[CosignEvaluationRule].(type) {
+		case []interface{}:
+			return evaluateRegoEvalMapResult(query, response)
+		case bool:
+			if response {
 				return nil, nil
 			}
 		}
