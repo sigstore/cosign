@@ -32,22 +32,24 @@ import (
 // policyType - cue|rego
 // policyBody - String representing either cue or rego language
 // jsonBytes - Bytes to evaluate against the policyBody in the given language
-func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, policyBody string, jsonBytes []byte) error {
+func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, policyBody string, jsonBytes []byte) (warnings error, errors error) {
 	switch policyType {
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
 		if cueValidationErr != nil {
-			return cosign.NewVerificationError("failed evaluating cue policy for %s: %v", name, cueValidationErr)
+			return nil, cosign.NewVerificationError("failed evaluating cue policy for %s: %v", name, cueValidationErr)
 		}
 	case "rego":
-		regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
+		regoValidationWarn, regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
 		if regoValidationErr != nil {
-			return cosign.NewVerificationError("failed evaluating rego policy for type %s: %s", name, regoValidationErr)
+			return regoValidationWarn, cosign.NewVerificationError("failed evaluating rego policy for type %s: %s", name, regoValidationErr)
 		}
+		// It is possible to return warning messages when the policy is compliant
+		return regoValidationWarn, regoValidationErr
 	default:
-		return fmt.Errorf("sorry Type %s is not supported yet", policyType)
+		return nil, fmt.Errorf("sorry Type %s is not supported yet", policyType)
 	}
-	return nil
+	return nil, nil
 }
 
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
@@ -72,7 +74,7 @@ func evaluateCue(_ context.Context, attestation []byte, evaluator string) error 
 }
 
 // evaluateRego evaluates a rego policy `evaluator` against `attestation`
-func evaluateRego(_ context.Context, attestation []byte, evaluator string) error {
+func evaluateRego(_ context.Context, attestation []byte, evaluator string) (warnings error, errors error) {
 	log.Printf("Evaluating attestation: %s", string(attestation))
 	log.Printf("Evaluating evaluator: %s", evaluator)
 
