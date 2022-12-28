@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/open-policy-agent/opa/rego"
@@ -37,9 +38,9 @@ const CosignEvaluationRule = "isCompliant"
 
 // CosignRuleResult defines a expected result object when wrapping the custom messages of the result of our cosign rego rule
 type CosignRuleResult struct {
-	Warnings string `json:"warnings,omitempty"`
-	Errors   string `json:"errors,omitempty"`
-	Result   bool   `json:"result,omitempty"`
+	Warning string `json:"warning,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Result  bool   `json:"result,omitempty"`
 }
 
 func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
@@ -129,9 +130,8 @@ func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) (warnings 
 	return nil, fmt.Errorf("policy is not compliant for query '%s'", query)
 }
 
-func evaluateRegoEvalMapResult(query string, response []interface{}) (warnings error, errors error) {
-	var warnMsg error
-	errMsg := fmt.Errorf("policy is not compliant for query '%s'", query)
+func evaluateRegoEvalMapResult(query string, response []interface{}) (warning error, error error) {
+	error = fmt.Errorf("policy is not compliant for query %q", query)
 	for _, r := range response {
 		rMap := r.(map[string]interface{})
 		mapBytes, err := json.Marshal(rMap)
@@ -147,10 +147,10 @@ func evaluateRegoEvalMapResult(query string, response []interface{}) (warnings e
 
 		// Check if it is complaint
 		if resultObject.Result {
-			return fmt.Errorf(resultObject.Warnings), nil
+			return fmt.Errorf(resultObject.Warning), nil
 		}
-		warnMsg = fmt.Errorf(resultObject.Warnings)
-		errMsg = fmt.Errorf("policy is not compliant for query '%s' with errors: %s", query, resultObject.Errors)
+		warning = errors.New(resultObject.Warning)
+		error = fmt.Errorf("policy is not compliant for query '%s' with errors: %s", query, resultObject.Error)
 	}
-	return warnMsg, errMsg
+	return warning, error
 }
