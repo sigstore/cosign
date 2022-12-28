@@ -217,8 +217,8 @@ func TestEvalPolicy(t *testing.T) {
 
 				response := {
 					"result" : result,
-					"errors" : errorMsg,
-					"warnings" : warnMsg
+					"error" : errorMsg,
+					"warning" : warnMsg
 				}
 			}`,
 		}, {
@@ -237,8 +237,8 @@ func TestEvalPolicy(t *testing.T) {
 
 				response := {
 					"result" : result,
-					"errors" : errorMsg,
-					"warnings" : warnMsg
+					"error" : errorMsg,
+					"warning" : warnMsg
 				}
 			}`,
 		}, {
@@ -261,8 +261,8 @@ func TestEvalPolicy(t *testing.T) {
 
 				response := {
 					"result" : result,
-					"errors" : errorMsg,
-					"warnings" : warnMsg
+					"error" : errorMsg,
+					"warning" : warnMsg
 				}
 			}`,
 		}}

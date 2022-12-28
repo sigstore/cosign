@@ -214,8 +214,8 @@ func TestValidateJSONWithModuleInput(t *testing.T) {
 					warnMsg := ""
 					response :={
 						"result" : result,
-						"errors" : errorMsg,
-						"warnings": warnMsg,
+						"error" : errorMsg,
+						"warning": warnMsg,
 					}
 				}
 			`,
