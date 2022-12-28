@@ -82,12 +82,13 @@ func TestEvalPolicy(t *testing.T) {
 	// TODO(vaikas): Consider moving the attestations/cue files into testdata
 	// directory.
 	tests := []struct {
-		name       string
-		json       string
-		policyType string
-		policyFile string
-		wantErr    bool
-		wantErrSub string
+		name        string
+		json        string
+		policyType  string
+		policyFile  string
+		wantErr     bool
+		wantErrSub  string
+		wantWarnSub string
 	}{{
 		name:       "custom attestation, mismatched predicateType",
 		json:       customAttestation,
@@ -198,19 +199,91 @@ func TestEvalPolicy(t *testing.T) {
 				keySignature := input.authorityMatches.keysignature.signatures
 				count(keySignature) == 1
 			}`,
+		}, {
+			name:       "Rego cluster image policy main policy succeed with empty error msg",
+			json:       cipAttestation,
+			policyType: "rego",
+			policyFile: `package sigstore
+			isCompliant[response] {
+			    attestationsKeylessATT := input.authorityMatches.keylessatt.attestations
+				result = (count(attestationsKeylessATT) == 1)
+				attestationsKeyATT := input.authorityMatches.keyatt.attestations
+				result = (count(attestationsKeyATT) == 1)
+				keySignature := input.authorityMatches.keysignature.signatures
+				result = (count(keySignature) == 1)
+
+				errorMsg = ""
+				warnMsg = ""
+
+				response := {
+					"result" : result,
+					"error" : errorMsg,
+					"warning" : warnMsg
+				}
+			}`,
+		}, {
+			name:       "Rego cluster image policy main policy, fails with custom error msg",
+			json:       cipAttestation,
+			policyType: "rego",
+			wantErr:    true,
+			wantErrSub: `Not found expected list of attestations`,
+			policyFile: `package sigstore
+			isCompliant[response] {
+			    attestationsKeylessATT := input.authorityMatches.keylessatt.attestations
+				result = (count(attestationsKeylessATT) == 1000)
+
+				errorMsg = "Not found expected list of attestations"
+				warnMsg = ""
+
+				response := {
+					"result" : result,
+					"error" : errorMsg,
+					"warning" : warnMsg
+				}
+			}`,
+		}, {
+			name:        "Rego cluster image policy main policy, returns a custom warning msg",
+			json:        cipAttestation,
+			policyType:  "rego",
+			wantErr:     false,
+			wantWarnSub: `Throw warning error even if succeeded`,
+			policyFile: `package sigstore
+			isCompliant[response] {
+				attestationsKeylessATT := input.authorityMatches.keylessatt.attestations
+				result = (count(attestationsKeylessATT) == 1)
+				attestationsKeyATT := input.authorityMatches.keyatt.attestations
+				result = (count(attestationsKeyATT) == 1)
+				keySignature := input.authorityMatches.keysignature.signatures
+				result = (count(keySignature) == 1)
+
+				errorMsg = ""
+				warnMsg = "Throw warning error even if succeeded"
+
+				response := {
+					"result" : result,
+					"error" : errorMsg,
+					"warning" : warnMsg
+				}
+			}`,
 		}}
 	for _, tc := range tests {
 		ctx := context.Background()
-		err := EvaluatePolicyAgainstJSON(ctx, tc.name, tc.policyType, tc.policyFile, []byte(tc.json))
+		warn, err := EvaluatePolicyAgainstJSON(ctx, tc.name, tc.policyType, tc.policyFile, []byte(tc.json))
 		if tc.wantErr {
 			if err == nil {
 				t.Errorf("Did not get an error, wanted %s", tc.wantErrSub)
 			} else if !strings.Contains(err.Error(), tc.wantErrSub) {
 				t.Errorf("Unexpected error, want: %s got: %s", tc.wantErrSub, err.Error())
 			}
+			if tc.wantWarnSub != "" && !strings.Contains(warn.Error(), tc.wantWarnSub) {
+				t.Errorf("Unexpected warning, want: %s got: %s", tc.wantErrSub, err.Error())
+			}
 		} else {
 			if !tc.wantErr && err != nil {
 				t.Errorf("Unexpected error, wanted none, got: %s", err.Error())
+			}
+			if tc.wantWarnSub != "" && !strings.Contains(warn.Error(), tc.wantWarnSub) {
+				t.Errorf("Unexpected warning, want: %s got: %s", tc.wantWarnSub, warn.Error())
 			}
 		}
 	}

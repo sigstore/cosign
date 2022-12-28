@@ -151,6 +151,7 @@ func TestValidateJSONWithModuleInput(t *testing.T) {
 		policy   string
 		pass     bool
 		errorMsg string
+		warnMsg  string
 	}{
 		{
 			name:     "passing policy attestations",
@@ -199,16 +200,42 @@ func TestValidateJSONWithModuleInput(t *testing.T) {
 			pass:     false,
 			errorMsg: "policy is not compliant for query 'isCompliant = data.sigstore.isCompliant'",
 		},
+		{
+			name:     "not passing policy attestations",
+			jsonBody: attestationsJSONBody,
+			policy: `
+				package sigstore
+
+				isCompliant[response] {
+					attestationsKeylessATT := input.authorityMatches.keylessatt.attestations
+					result = (count(attestationsKeylessATT) == 1000)
+
+					errorMsg := "attestationsKeylessATT is not equal to 1000"
+					warnMsg := ""
+					response :={
+						"result" : result,
+						"error" : errorMsg,
+						"warning": warnMsg,
+					}
+				}
+			`,
+			pass:     false,
+			errorMsg: "policy is not compliant for query 'isCompliant = data.sigstore.isCompliant' with errors: attestationsKeylessATT is not equal to 1000",
+		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateJSONWithModuleInput([]byte(tt.jsonBody), tt.policy); (err == nil) != tt.pass {
+			warn, err := ValidateJSONWithModuleInput([]byte(tt.jsonBody), tt.policy)
+			if (err == nil) != tt.pass {
 				t.Fatalf("Unexpected result: %v", err)
 			} else if err != nil {
 				if fmt.Sprintf("%s", err) != tt.errorMsg {
 					t.Errorf("Expected error %q, got %q", tt.errorMsg, err)
 				}
+			}
+			if warn != nil && tt.warnMsg != "" && tt.warnMsg != warn.Error() {
+				t.Errorf("Expected warning %q, got %q", tt.warnMsg, warn)
 			}
 		})
 	}
