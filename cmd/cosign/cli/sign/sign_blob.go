@@ -103,7 +103,11 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		}
 		fmt.Fprintf(os.Stderr, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 	}
-	if ShouldUploadToTlog(ctx, ko, nil, tlogUpload) {
+	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
+	if err != nil {
+		return nil, fmt.Errorf("upload to tlog: %w", err)
+	}
+	if shouldUpload {
 		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
 			return nil, err
