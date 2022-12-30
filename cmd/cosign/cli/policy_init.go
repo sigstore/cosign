@@ -199,7 +199,6 @@ func signPolicy() *cobra.Command {
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 				TSAServerURL:             o.TSAServerURL,
-				TlogUpload:               o.TlogUpload,
 			}
 			sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
 

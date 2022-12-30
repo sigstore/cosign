@@ -154,9 +154,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	}
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
-	if ko.TlogUpload {
-		fmt.Fprintln(os.Stderr, privacyStatement)
-	}
+	fmt.Fprintln(os.Stderr, privacyStatement)
 
 	var flow string
 	switch {

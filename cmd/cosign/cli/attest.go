@@ -80,7 +80,6 @@ func Attest() *cobra.Command {
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 				TSAServerURL:             o.TSAServerURL,
-				TlogUpload:               o.TlogUpload,
 			}
 			attestCommand := attest.AttestCommand{
 				KeyOpts:         ko,
