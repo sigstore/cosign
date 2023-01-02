@@ -22,7 +22,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -32,6 +31,7 @@ import (
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/providers"
 	"github.com/sigstore/fulcio/pkg/api"
@@ -167,12 +167,14 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
 		flow = flowDevice
 	default:
-		ok, err := cosign.ConfirmPrompt(privacyStatementConfirmation, ko.SkipConfirmation)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			return nil, errors.New("no confirmation")
+		if ko.SkipConfirmation {
+			// User requested to skip confirmation! We can continue.
+		} else {
+			ui.Info(ctx, privacyStatementConfirmation)
+			err := ui.ConfirmContinue(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("privacy statement not confirmed: %w", err)
+			}
 		}
 		flow = flowNormal
 	}

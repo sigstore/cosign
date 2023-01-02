@@ -22,7 +22,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +39,7 @@ import (
 	ipayload "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
 	irekor "github.com/sigstore/cosign/v2/internal/pkg/cosign/rekor"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
@@ -59,7 +59,7 @@ import (
 	_ "github.com/sigstore/cosign/v2/pkg/providers/all"
 )
 
-const TagReferenceMessage string = `WARNING: Image reference %s uses a tag, not a digest, to identify the image to sign.
+const TagReferenceMessage string = `Image reference %s uses a tag, not a digest, to identify the image to sign.
 
     This can lead you to sign a different image than the intended one. Please use a
     digest (example.com/ubuntu@sha256:abc123...) rather than tag
@@ -84,15 +84,12 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
-		fmt.Fprintf(os.Stderr, "%q appears to be a private repository, please confirm uploading to the transparency log at %q [Y/N]: ", ref.Context().String(), ko.RekorURL)
-
-		var tlogConfirmResponse string
-		if _, err := fmt.Scanln(&tlogConfirmResponse); err != nil {
-			fmt.Fprintf(os.Stderr, "\nWARNING: skipping transparency log upload (use --yes to skip confirmation: %v\n", err)
-			return false
-		}
-		if strings.ToUpper(tlogConfirmResponse) != "Y" {
-			fmt.Fprintln(os.Stderr, "not uploading to transparency log")
+		ui.Warn(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log at %q", ref.Context().String(), ko.RekorURL)
+		var errPromptDeclined *ui.ErrPromptDeclined
+		if err := ui.ConfirmContinue(ctx); errors.As(err, &errPromptDeclined) {
+			ui.Info(ctx, "not uploading to transparency log")
+		} else if err != nil {
+			ui.Warn(ctx, "skipping transparency log upload (use --yes to skip confirmation): %v\n", err)
 			return false
 		}
 	}
@@ -110,16 +107,14 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 }
 
 // ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
-func ParseOCIReference(refStr string, out io.Writer, opts ...name.Option) (name.Reference, error) {
+func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) (name.Reference, error) {
 	ref, err := name.ParseReference(refStr, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
 	if _, ok := ref.(name.Digest); !ok {
 		msg := fmt.Sprintf(TagReferenceMessage, refStr)
-		if _, err := io.WriteString(out, msg); err != nil {
-			panic("cannot write")
-		}
+		ui.Warn(ctx, msg)
 	}
 	return ref, nil
 }
@@ -165,7 +160,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	}
 	annotations := am.Annotations
 	for _, inputImg := range imgs {
-		ref, err := ParseOCIReference(inputImg, os.Stderr, regOpts.NameOptions()...)
+		ref, err := ParseOCIReference(ctx, inputImg, regOpts.NameOptions()...)
 		if err != nil {
 			return err
 		}
