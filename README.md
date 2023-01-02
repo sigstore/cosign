@@ -39,10 +39,16 @@ For Linux and macOS binaries see the [GitHub release assets](https://github.com/
 
 If you have Go 1.19+, you can setup a development environment:
 
-    $ git clone https://github.com/sigstore/cosign
-    $ cd cosign
-    $ go install ./cmd/cosign
-    $ $(go env GOPATH)/bin/cosign
+```shell
+$ git clone https://github.com/sigstore/cosign
+$ cd cosign
+$ go install ./cmd/cosign
+$ $(go env GOPATH)/bin/cosign
+```
+
+## Contributing
+
+If you are interested in contributing to `cosign`, please read the [contributing documentation](./CONTRIBUTING.md).
 
 ## Dockerfile
 
