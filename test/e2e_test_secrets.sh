@@ -57,7 +57,7 @@ crane cp ghcr.io/distroless/alpine-base $multiarch_img
 diff payload1 payload2
 
 ## sign/verify
-./cosign sign --key ${signing_key} $img
+./cosign sign --key ${signing_key} -y $img
 ./cosign verify --key ${verification_key} $img
 
 # copy
@@ -65,7 +65,7 @@ diff payload1 payload2
 ./cosign verify --key ${verification_key} $img_copy
 
 # sign recursively
-./cosign sign --key ${signing_key} -r $multiarch_img
+./cosign sign --key ${signing_key} -y -r $multiarch_img
 ./cosign verify --key ${verification_key} $multiarch_img # verify image index
 for arch in "linux/amd64" "linux/arm64" "linux/s390x"
 do
@@ -77,12 +77,12 @@ done
 crane manifest $(./cosign triangulate $img) | grep -q "application/vnd.oci.image.config.v1+json"
 
 ## sign/verify multiple images
-./cosign sign --key ${signing_key} -a multiple=true $img $img2
+./cosign sign --key ${signing_key} -y -a multiple=true $img $img2
 ./cosign verify --key ${verification_key} -a multiple=true $img $img2
 
 # annotations
 if (./cosign verify --key ${verification_key} -a foo=bar $img); then false; fi
-./cosign sign --key ${signing_key} -a foo=bar $img
+./cosign sign --key ${signing_key} -y -a foo=bar $img
 ./cosign verify --key ${verification_key} -a foo=bar $img
 
 if (./cosign verify --key ${verification_key} -a foo=bar -a bar=baz $img); then false; fi
@@ -91,7 +91,7 @@ if (./cosign verify --key ${verification_key} -a foo=bar -a bar=baz $img); then 
 ./cosign verify --key ${verification_key} -a bar=baz $img
 
 # confirm the use of legacy (Docker) media types
-COSIGN_DOCKER_MEDIA_TYPES=1 ./cosign sign --key ${signing_key} $legacy_img
+COSIGN_DOCKER_MEDIA_TYPES=1 ./cosign sign -y --key ${signing_key} $legacy_img
 ./cosign verify --key ${verification_key} $legacy_img
 legacy_manifest=$(crane manifest $(./cosign triangulate $legacy_img))
 echo $legacy_manifest | grep -q "application/vnd.docker.distribution.manifest.v2+json"
@@ -106,8 +106,8 @@ popd
 ## sign-blob
 echo "myblob" > myblob
 echo "myblob2" > myblob2
-./cosign sign-blob --key ${signing_key} myblob > myblob.sig
-./cosign sign-blob --key ${signing_key} myblob2 > myblob2.sig
+./cosign sign-blob -y --key ${signing_key} myblob > myblob.sig
+./cosign sign-blob -y --key ${signing_key} myblob2 > myblob2.sig
 
 ./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob
 # expected to fail because signature mismatch
@@ -117,12 +117,12 @@ if (./cosign verify-blob --key ${verification_key} --signature myblob.sig myblob
 if (./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob); then false; fi
 ./cosign verify-blob --key ${verification_key} --signature myblob2.sig myblob2
 
-./cosign sign-blob --key ${signing_key} --bundle bundle.sig myblob
+./cosign sign-blob -y --key ${signing_key} --bundle bundle.sig myblob
 # passes when local bundle only contains the key and signature
 ./cosign verify-blob --key ${verification_key} --bundle bundle.sig myblob
 
 ## sign and verify multiple blobs
-./cosign sign-blob --key ${signing_key} myblob myblob2 > sigs
+./cosign sign-blob -y --key ${signing_key} myblob myblob2 > sigs
 head -n 1 sigs > car.sig
 tail -n 1 sigs > cdr.sig
 ./cosign verify-blob --key ${verification_key} --signature car.sig myblob
@@ -137,7 +137,7 @@ cat /dev/urandom | head -n 10 | base64 > randomblob
 
 # upload blob and sign it
 dgst=$(./cosign upload blob -f randomblob ${blobimg})
-./cosign sign --key ${signing_key} ${dgst}
+./cosign sign -y --key ${signing_key} ${dgst}
 ./cosign verify --key ${verification_key} ${dgst} # For sanity
 
 # sget w/ signature verification should work via tag or digest
@@ -164,7 +164,7 @@ crane delete $dgst || true
 # upload blob and sign it
 cat /dev/urandom | head -n 10 | base64 > randomblob
 dgst=$(./cosign upload blob -f randomblob ${blobimg})
-./cosign sign --key ${signing_key} --tlog-upload=false ${dgst}
+./cosign sign -y --key ${signing_key} --tlog-upload=false ${dgst}
 ./cosign verify --key ${verification_key} --insecure-skip-tlog-verify=true ${dgst} # For sanity
 
 # clean up a bit
