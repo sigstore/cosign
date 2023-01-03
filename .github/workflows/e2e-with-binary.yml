@@ -43,6 +43,7 @@ jobs:
       contents: read
     env:
       COSIGN_EXPERIMENTAL: "true"
+      COSIGN_YES: "true"
 
     steps:
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
