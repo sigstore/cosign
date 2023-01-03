@@ -214,17 +214,18 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		// signer is a certificate
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Was a certificate used? ", err)
+			return nil
+
 		}
 		if len(cert) != 1 {
 			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Expected a single certificate")
+			return nil
 		}
-		if err == nil && len(cert) == 1 {
-			bts := signer
-			if err := os.WriteFile(c.OutputCertificate, bts, 0600); err != nil {
-				return fmt.Errorf("create certificate file: %w", err)
-			}
-			fmt.Fprintln(os.Stderr, "Certificate written to file ", c.OutputCertificate)
+		bts := signer
+		if err := os.WriteFile(c.OutputCertificate, bts, 0600); err != nil {
+			return fmt.Errorf("create certificate file: %w", err)
 		}
+		fmt.Fprintln(os.Stderr, "Certificate written to file ", c.OutputCertificate)
 	}
 
 	return nil
