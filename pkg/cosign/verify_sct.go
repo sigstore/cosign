@@ -45,6 +45,16 @@ func ContainsSCT(cert []byte) (bool, error) {
 	return false, nil
 }
 
+func getCTPublicKey(sct *ct.SignedCertificateTimestamp,
+	pubKeys *TrustedTransparencyLogPubKeys) (*TransparencyLogPubKey, error) {
+	keyID := hex.EncodeToString(sct.LogID.KeyID[:])
+	pubKeyMetadata, ok := pubKeys.Keys[keyID]
+	if !ok {
+		return nil, errors.New("ctfe public key not found for payload. Check your TUF root (see cosign initialize) or set a custom key with env var SIGSTORE_CT_LOG_PUBLIC_KEY_FILE")
+	}
+	return &pubKeyMetadata, nil
+}
+
 // VerifySCT verifies SCTs against the Fulcio CT log public key.
 //
 // The SCT is a `Signed Certificate Timestamp`, which promises that
@@ -92,12 +102,11 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *T
 	// check SCT embedded in certificate
 	if len(embeddedSCTs) != 0 {
 		for _, sct := range embeddedSCTs {
-			keyID := hex.EncodeToString(sct.LogID.KeyID[:])
-			pubKeyMetadata, ok := pubKeys.Keys[keyID]
-			if !ok {
-				return errors.New("ctfe public key not found for embedded SCT")
+			pubKeyMetadata, err := getCTPublicKey(sct, pubKeys)
+			if err != nil {
+				return err
 			}
-			err := ctutil.VerifySCT(pubKeyMetadata.PubKey, []*ctx509.Certificate{cert, certChain[0]}, sct, true)
+			err = ctutil.VerifySCT(pubKeyMetadata.PubKey, []*ctx509.Certificate{cert, certChain[0]}, sct, true)
 			if err != nil {
 				return fmt.Errorf("error verifying embedded SCT")
 			}
@@ -117,10 +126,9 @@ func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *T
 	if err != nil {
 		return err
 	}
-	keyID := hex.EncodeToString(sct.LogID.KeyID[:])
-	pubKeyMetadata, ok := pubKeys.Keys[keyID]
-	if !ok {
-		return errors.New("ctfe public key not found")
+	pubKeyMetadata, err := getCTPublicKey(sct, pubKeys)
+	if err != nil {
+		return err
 	}
 	err = ctutil.VerifySCT(pubKeyMetadata.PubKey, []*ctx509.Certificate{cert}, sct, false)
 	if err != nil {

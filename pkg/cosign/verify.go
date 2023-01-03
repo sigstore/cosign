@@ -1263,7 +1263,7 @@ func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x5
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cert verification failed: %w. Check your TUF root (see cosign initialize) or set a custom root with env var SIGSTORE_ROOT_FILE", err)
 	}
 	return chains, nil
 }
