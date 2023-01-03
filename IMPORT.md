@@ -1,17 +1,1 @@
-# Import RSA and EC Keypairs
-* Currently only supports RSA and ECDSA private keys
-
-### Import a keypair
-
-```shell
-$ cosign import-key-pair --key opensslrsakey.pem
-Enter password for private key:
-Enter password for private key again:
-Private key written to import-cosign.key
-Public key written to import-cosign.pub
-```
-### Sign a container with imported keypair
-
-```shell
-$ cosign sign --key import-cosign.key $IMAGE_DIGEST
-```
+> Note of deprecation: This document has been migrated into [`sigstore/docs`](https://github.com/sigstore/docs/blob/main/content/en/cosign/import-keypair.md) as part of [documentation migration](https://github.com/sigstore/cosign/issues/822) and PR: https://github.com/sigstore/docs/pull/54. To view the live docs page, go to: https://docs.sigstore.dev/cosign/import-keypair
