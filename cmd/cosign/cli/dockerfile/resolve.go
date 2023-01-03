@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/pkg/oci/remote"
 
 	"github.com/pkg/errors"
 )
