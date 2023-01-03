@@ -86,6 +86,13 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 
 func getImageFromLine(line string) string {
 	if strings.HasPrefix(strings.ToUpper(line), "COPY") {
+		// To support `COPY --from=image:latest /foo /bar` cases.
+		if strings.Contains(line, "--from") {
+			if img := getFromValue(line); img != "" {
+				return img
+			}
+		}
+		// If no value returned, it can be an environment variable or a stage name.
 		line = strings.TrimPrefix(line, "COPY") // Remove "COPY" prefix
 		line = strings.TrimSpace(line)
 		line = strings.TrimPrefix(line, "--from") // Remove "--from" prefix
@@ -93,7 +100,7 @@ func getImageFromLine(line string) string {
 		if len(foo) != 2 {
 			return ""
 		}
-		// to support `COPY --from=stage /foo/bar` cases
+		// To support `COPY --from=stage /foo/bar` cases.
 		if strings.Contains(foo[1], " ") {
 			return ""
 		}
@@ -110,4 +117,29 @@ func getImageFromLine(line string) string {
 		}
 	}
 	return fields[len(fields)-1] // The image should be the last portion of the line that remains
+}
+
+// getFromValue returns the value of the `--from=` directive in a Dockerfile.
+// If the directive is not present or the value is not a valid image reference,
+// an empty string is returned.
+func getFromValue(input string) string {
+	fromKey := "--from="
+	fromIndex := strings.Index(input, fromKey)
+	if fromIndex == -1 {
+		return ""
+	}
+
+	valueStartIndex := fromIndex + len(fromKey)
+	valueEndIndex := strings.Index(input[valueStartIndex:], " ")
+	if valueEndIndex == -1 {
+		return input[valueStartIndex:]
+	}
+
+	value := input[valueStartIndex : valueStartIndex+valueEndIndex]
+	// In order to distinguish between `--from=my-custom-stage` and `--from=image:latest` cases,
+	// we check if the value contains a `:` character to determine if it's a stage or an image.
+	if strings.Contains(value, ":") {
+		return value
+	}
+	return ""
 }
