@@ -31,7 +31,6 @@ import (
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
-	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/providers"
 	"github.com/sigstore/fulcio/pkg/api"
@@ -43,12 +42,6 @@ const (
 	flowNormal = "normal"
 	flowDevice = "device"
 	flowToken  = "token"
-	// spacing is intentional to have this indented
-	privacyStatement = `
-        Note that there may be personally identifiable information associated with this signed artifact.
-        This may include the email address associated with the account with which you authenticate.
-        This information will be used for signing this artifact and will be stored in public transparency logs and cannot be removed later.`
-	privacyStatementConfirmation = "        By typing 'y', you attest that you grant (or have permission to grant) and agree to have this information stored permanently in transparency logs."
 )
 
 type oidcConnector interface {
@@ -154,8 +147,6 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	}
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
-	fmt.Fprintln(os.Stderr, privacyStatement)
-
 	var flow string
 	switch {
 	case ko.FulcioAuthFlow != "":
@@ -167,15 +158,6 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
 		flow = flowDevice
 	default:
-		if ko.SkipConfirmation {
-			// User requested to skip confirmation! We can continue.
-		} else {
-			ui.Info(ctx, privacyStatementConfirmation)
-			err := ui.ConfirmContinue(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("privacy statement not confirmed: %w", err)
-			}
-		}
 		flow = flowNormal
 	}
 	Resp, err := GetCert(ctx, priv, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.

@@ -183,7 +183,11 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		opts = append(opts, static.WithRFC3161Timestamp(bundle))
 	}
 	// Check whether we should be uploading to the transparency log
-	if sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload) {
+	shouldUpload, err := sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
+	if err != nil {
+		return fmt.Errorf("should upload to tlog: %w", err)
+	}
+	if shouldUpload {
 		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 		})

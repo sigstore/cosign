@@ -710,10 +710,11 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	_, privKeyPath, pubKeyPath := keypair(t, td)
 
 	ko := options.KeyOpts{
-		KeyRef:       privKeyPath,
-		PassFunc:     passFunc,
-		TSAServerURL: server.URL,
-		RekorURL:     rekorURL,
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		TSAServerURL:     server.URL,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
 		Upload:     true,

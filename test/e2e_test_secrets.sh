@@ -26,6 +26,8 @@ pushd $tmp
 
 pass="$RANDOM"
 export COSIGN_PASSWORD=$pass
+# Skip confirmation for signing
+export COSIGN_YES=true
 
 BASE_TEST_REPO=${BASE_TEST_REPO:-ttl.sh/cosign-ci}
 TEST_INSTANCE_REPO="${BASE_TEST_REPO}/$(date +'%Y/%m/%d')/$RANDOM"

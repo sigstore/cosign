@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -67,7 +68,36 @@ const TagReferenceMessage string = `Image reference %s uses a tag, not a digest,
     images by tag will be removed in a future release.
 `
 
-func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
+const (
+	// spacing is intentional to have this indented
+	privacyStatement = `
+        Note that there may be personally identifiable information associated with this signed artifact.
+        This may include the email address associated with the account with which you authenticate.
+        This information will be used for signing this artifact and will be stored in public transparency logs and cannot be removed later.`
+	privacyStatementConfirmation = "By typing 'y', you attest that you grant (or have permission to grant) and agree to have this information stored permanently in transparency logs."
+)
+
+var (
+	privacyStatementOnce sync.Once
+)
+
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {
+	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
+	var statementErr error
+	if upload {
+		privacyStatementOnce.Do(func() {
+			ui.Info(ctx, privacyStatementConfirmation)
+			if !ko.SkipConfirmation {
+				if err := ui.ConfirmContinue(ctx); err != nil {
+					statementErr = err
+				}
+			}
+		})
+	}
+	return upload, statementErr
+}
+
+func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
 	// return false if not uploading to the tlog has been requested
 	if !tlogUpload {
 		return false
@@ -235,7 +265,11 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 
 		s = tsa.NewSigner(s, clientTSA)
 	}
-	if ShouldUploadToTlog(ctx, ko, digest, tlogUpload) {
+	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, tlogUpload)
+	if err != nil {
+		return fmt.Errorf("should upload to tlog: %w", err)
+	}
+	if shouldUpload {
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
 			return err
