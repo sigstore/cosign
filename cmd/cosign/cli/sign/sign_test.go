@@ -26,10 +26,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -210,26 +211,21 @@ func Test_signerFromKeyRefFailureEmptyChainFile(t *testing.T) {
 
 func Test_ParseOCIReference(t *testing.T) {
 	var tests = []struct {
-		ref      string
-		expected string
+		ref             string
+		expectedWarning string
 	}{
 		{"image:bytag", "WARNING: Image reference image:bytag uses a tag, not a digest"},
 		{"image:bytag@sha256:abcdef", ""},
 		{"image:@sha256:abcdef", ""},
 	}
 	for _, tt := range tests {
-		var buf strings.Builder
-		var opts []name.Option
-		ParseOCIReference(tt.ref, &buf, opts...)
-		actual := buf.String()
-		if len(tt.expected) == 0 {
-			if len(actual) != 0 {
-				t.Errorf("expected no warning, got %s", actual)
-			}
+		stderr := ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
+			ParseOCIReference(ctx, tt.ref)
+		})
+		if len(tt.expectedWarning) > 0 {
+			assert.Contains(t, stderr, tt.expectedWarning, stderr, "bad warning message")
 		} else {
-			if strings.Contains(tt.expected, actual) {
-				t.Errorf("bad warning: expected match for `%s`, got %s", tt.expected, actual)
-			}
+			assert.Empty(t, stderr, "expected no warning")
 		}
 	}
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/git/gitlab"
 
 	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -42,7 +43,10 @@ var (
 )
 
 // nolint
-func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error {
+func GenerateKeyPairCmd(ctx context.Context, kmsVal string, nameVal string, args []string) error {
+	privateKeyFileName := nameVal + ".key"
+	publicKeyFileName := nameVal + ".pub"
+
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal, crypto.SHA256)
 		if err != nil {
@@ -56,10 +60,10 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile("cosign.pub", pemBytes, 0600); err != nil {
+		if err := os.WriteFile(publicKeyFileName, pemBytes, 0600); err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+		fmt.Fprintln(os.Stderr, "Public key written to", publicKeyFileName)
 		return nil
 	}
 
@@ -87,34 +91,34 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, args []string) error
 		return err
 	}
 
-	fileExists, err := icos.FileExists("cosign.key")
+	fileExists, err := icos.FileExists(privateKeyFileName)
 	if err != nil {
-		return fmt.Errorf("failed checking if cosign.key exists: %w", err)
+		return fmt.Errorf("failed checking if %s exists: %w", privateKeyFileName, err)
 	}
 
 	if fileExists {
-		var overwrite string
-		fmt.Fprint(os.Stderr, "File cosign.key already exists. Overwrite (y/n)? ")
-		fmt.Scanf("%s", &overwrite)
-		switch overwrite {
-		case "y", "Y":
-		case "n", "N":
-			return nil
-		default:
-			fmt.Fprintln(os.Stderr, "Invalid input")
-			return nil
+		ui.Warn(ctx, "File %s already exists. Overwrite?", privateKeyFileName)
+		if err := ui.ConfirmContinue(ctx); err != nil {
+			return err
 		}
+		return writeKeyFiles(privateKeyFileName, publicKeyFileName, keys)
 	}
+
+	return writeKeyFiles(privateKeyFileName, publicKeyFileName, keys)
+}
+
+func writeKeyFiles(privateKeyFileName string, publicKeyFileName string, keys *cosign.KeysBytes) error {
 	// TODO: make sure the perms are locked down first.
-	if err := os.WriteFile("cosign.key", keys.PrivateBytes, 0600); err != nil {
+	if err := os.WriteFile(privateKeyFileName, keys.PrivateBytes, 0600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Private key written to cosign.key")
+	fmt.Fprintln(os.Stderr, "Private key written to", privateKeyFileName)
 
-	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0644); err != nil {
+	if err := os.WriteFile(publicKeyFileName, keys.PublicBytes, 0644); err != nil {
 		return err
 	} // #nosec G306
-	fmt.Fprintln(os.Stderr, "Public key written to cosign.pub")
+	fmt.Fprintln(os.Stderr, "Public key written to", publicKeyFileName)
+
 	return nil
 }
 

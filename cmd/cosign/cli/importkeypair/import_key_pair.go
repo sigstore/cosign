@@ -22,6 +22,7 @@ import (
 	"os"
 
 	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 )
@@ -44,16 +45,9 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, args []string) error {
 	}
 
 	if fileExists {
-		var overwrite string
-		fmt.Fprint(os.Stderr, "File import-cosign.key already exists. Overwrite (y/n)? ")
-		fmt.Scanf("%s", &overwrite)
-		switch overwrite {
-		case "y", "Y":
-		case "n", "N":
-			return nil
-		default:
-			fmt.Fprintln(os.Stderr, "Invalid input")
-			return nil
+		ui.Warn(ctx, "File import-cosign.key already exists. Overwrite?")
+		if err := ui.ConfirmContinue(ctx); err != nil {
+			return err
 		}
 	}
 	// TODO: make sure the perms are locked down first.
