@@ -58,8 +58,8 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
   # additionally verify specified annotations
   cosign dockerfile verify -a key1=val1 -a key2=val2 <path/to/Dockerfile>
 
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign dockerfile verify <path/to/Dockerfile>
+  # additionally, verify with the transparency log
+  cosign dockerfile verify <path/to/Dockerfile>
 
   # verify images with public key
   cosign dockerfile verify --key cosign.pub <path/to/Dockerfile>

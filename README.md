@@ -163,9 +163,6 @@ The following feature set is not considered stable yet, but we are committed to 
 
 #### Anything under the `COSIGN_EXPERIMENTAL` environment variable
 
-* Integration with the `Rekor` transparency log
-* Keyless signatures using the `Fulcio` CA
-
 #### Formats/Specifications
 
 While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
@@ -387,14 +384,14 @@ Please help test and file bugs if you see issues!
 Instructions can be found in the [tracking issue](https://github.com/sigstore/cosign/issues/40).
 
 ## Rekor Support
-_Note: this is an experimental feature_
 
-To publish signed artifacts to a Rekor transparency log and verify their existence in the log
-set the `COSIGN_EXPERIMENTAL=1` environment variable.
+Cosign publishes signed artifacts to a Rekor transparency log and verifies their
+existence in the log by default. You can override this behaviour with
+`--tlog-upload` and `--insecure-skip-tlog-verify` flags.
 
 ```shell
-$ COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key $IMAGE_URI_DIGEST
-$ COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub $IMAGE_URI
+$ cosign sign --key cosign.key $IMAGE_URI_DIGEST
+$ cosign verify --key cosign.pub $IMAGE_URI
 ```
 
 `cosign` defaults to using the public instance of rekor at [rekor.sigstore.dev](https://rekor.sigstore.dev).

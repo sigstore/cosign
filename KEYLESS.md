@@ -5,8 +5,8 @@ The full design document for this can be found [here](https://docs.google.com/do
 This document explains how the `keyless` signatures work in `cosign`.
 Try it out!
 
-This signature mode relies on the Sigstore Public Good Instance, which is rapidly heading toward a GA release!
-We don't have a date yet, but follow along on the [GitHub project](https://github.com/orgs/sigstore/projects/5).
+This signature mode relies on the Sigstore Public Good Instance by default, but
+one can also stand up private instances of Sigstore components.
 
 The following examples use this image:
 
@@ -20,7 +20,7 @@ $ IMAGE_DIGEST=$IMAGE@sha256:97fc222cee7991b5b061d4d4afdb5f3428fcb0c9054e1690313
 Keyless signing:
 
 ```shell
-$ COSIGN_EXPERIMENTAL=1 cosign sign $IMAGE_DIGEST
+$ cosign sign $IMAGE_DIGEST
 Generating ephemeral keys...
 Retrieving signed certificate...
 Your browser will now be opened to:
@@ -31,7 +31,7 @@ Pushing signature to: gcr.io/dlorenc-vmtest2/demo:sha256-97fc222cee7991b5b061d4d
 Keyless verifying:
 
 ```shell
-$ COSIGN_EXPERIMENTAL=1 cosign verify $IMAGE
+$ cosign verify $IMAGE
 The following checks were performed on all of these signatures:
   - The cosign claims were validated
   - The claims were present in the transparency log
@@ -54,9 +54,7 @@ Information on the `fulcio` root CA can be found in the [fulcio repository](http
 
 ### Keys
 
-The root CA keys are hard-coded in `cosign` today.
-They can only be changed by recompiling the binary.
-This will be made more configurable in the future.
+The root CA keys are embedded in `cosign` today, see below for overriding these.
 
 ### OAuth Flows
 
@@ -114,13 +112,11 @@ Signature timestamps are checked in the [rekor](https://github.com/sigstore/reko
 ## Upcoming work
 
 * Root CA hardening: We should use intermediate certs rather than the root, and support chained verification.
-* Root CA configuration: We should allow users to change the roots and add their own.
 * Other timestamps: We should allow for other timestamp attestations, including attached [RFC3161](https://www.ietf.org/rfc/rfc3161.txt) signatures.
 * Probably a lot more: This is very experimental.
 * More OIDC providers: Obvious.
 
 ## Public Staging Environment
-
 
 There is a public staging environment that is running Fulcio, Rekor and OIDC issuer.
 
@@ -142,8 +138,8 @@ To use this instance, follow the steps below:
 1. `gsutil cp -r gs://tuf-root-staging/root.json .`
 1. `cd tuf-root-staging`
 1. `cosign initialize --mirror=tuf-root-staging --root=root.json`
-1. `COSIGN_EXPERIMENTAL=1 cosign sign --oidc-issuer "https://oauth2.sigstage.dev/auth" --fulcio-url "https://fulcio.sigstage.dev" --rekor-url "https://rekor.sigstage.dev" ${IMAGE_DIGEST}`
-1. `COSIGN_EXPERIMENTAL=1 cosign verify --rekor-url "https://rekor.sigstage.dev" ${IMAGE}`
+1. `cosign sign --oidc-issuer "https://oauth2.sigstage.dev/auth" --fulcio-url "https://fulcio.sigstage.dev" --rekor-url "https://rekor.sigstage.dev" ${IMAGE_DIGEST}`
+1. `cosign verify --rekor-url "https://rekor.sigstage.dev" ${IMAGE}`
 
 * Steps 1-4 configures your local environment to use the staging keys and certificates.
 * Step 5 specify the staging environment with flags needed for signing.
@@ -161,7 +157,7 @@ We need to clear the local TUF root data and re-initialize with the default prod
 If you're running your own sigstore services flags are available to set your own endpoint's, e.g
 
 ```
- COSIGN_EXPERIMENTAL=1 cosign sign -oidc-issuer "https://oauth2.example.com/auth" \
+ cosign sign -oidc-issuer "https://oauth2.example.com/auth" \
                         -fulcio-url "https://fulcio.example.com" \
                         -rekor-url "https://rekor.example.com"  \
                         $IMAGE_DIGEST
