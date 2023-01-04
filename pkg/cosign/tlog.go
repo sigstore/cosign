@@ -453,7 +453,7 @@ func VerifyTLogEntryOffline(e *models.LogEntryAnon, rekorPubKeys *TrustedTranspa
 
 	pubKey, ok := rekorPubKeys.Keys[payload.LogID]
 	if !ok {
-		return errors.New("rekor log public key not found for payload")
+		return errors.New("rekor log public key not found for payload. Check your TUF root (see cosign initialize) or set a custom key with env var SIGSTORE_REKOR_PUBLIC_KEY")
 	}
 	err = VerifySET(payload, []byte(e.Verification.SignedEntryTimestamp), pubKey.PubKey.(*ecdsa.PublicKey))
 	if err != nil {
