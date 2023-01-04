@@ -30,7 +30,7 @@ date > $BLOB
 cat $BLOB
 
 echo "Sign the blob with cosign first and upload to rekor"
-$COSIGN_CLI sign-blob -y --output-certificate blob.cert --output-signature blob.sig $BLOB
+$COSIGN_CLI sign-blob --yes --output-certificate blob.cert --output-signature blob.sig $BLOB
 
 echo "Verifying ..."
 $COSIGN_CLI verify-blob --signature blob.sig --cert blob.cert --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' $BLOB
