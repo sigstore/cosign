@@ -143,17 +143,27 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return errors.Wrap(err, "signing")
 	}
 
-	signedPayload := cosign.LocalSignedPayload{}
+	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	if c.TSAServerURL != "" {
 		clientTSA, err := tsaclient.GetTimestampClient(c.TSAServerURL)
 		if err != nil {
 			return fmt.Errorf("failed to create TSA client: %w", err)
 		}
-		rfc3161Timestamp, err := tsa.GetTimestampedSignature(sig, clientTSA)
+		respBytes, err := tsa.GetTimestampedSignature(sig, clientTSA)
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(c.RFC3161TimestampPath, rfc3161Timestamp, 0600); err != nil {
+		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
+		// TODO: Consider uploading RFC3161 TS to Rekor
+
+		if rfc3161Timestamp == nil {
+			return fmt.Errorf("rfc3161 timestamp is nil")
+		}
+		ts, err := json.Marshal(rfc3161Timestamp)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
 			return fmt.Errorf("create RFC3161 timestamp file: %w", err)
 		}
 		fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
@@ -163,6 +173,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if err != nil {
 		return err
 	}
+	signedPayload := cosign.LocalSignedPayload{}
 	if sign.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload) {
 		rekorClient, err := rekor.NewClient(c.RekorURL)
 		if err != nil {
