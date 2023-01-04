@@ -173,8 +173,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if err != nil {
 		return err
 	}
+	shouldUpload, err := sign.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload)
+	if err != nil {
+		return fmt.Errorf("upload to tlog: %w", err)
+	}
 	signedPayload := cosign.LocalSignedPayload{}
-	if sign.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload) {
+	if shouldUpload {
 		rekorClient, err := rekor.NewClient(c.RekorURL)
 		if err != nil {
 			return err
@@ -186,6 +190,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
 	}
+
 	if c.BundlePath != "" {
 		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
