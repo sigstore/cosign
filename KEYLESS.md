@@ -111,7 +111,6 @@ Signature timestamps are checked in the [rekor](https://github.com/sigstore/reko
 
 ## Upcoming work
 
-* Root CA hardening: We should use intermediate certs rather than the root, and support chained verification.
 * Other timestamps: We should allow for other timestamp attestations, including attached [RFC3161](https://www.ietf.org/rfc/rfc3161.txt) signatures.
 * Probably a lot more: This is very experimental.
 * More OIDC providers: Obvious.
