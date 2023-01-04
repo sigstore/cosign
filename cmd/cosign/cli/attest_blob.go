@@ -47,14 +47,41 @@ func AttestBlob() *cobra.Command {
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			oidcClientSecret, err := o.OIDC.ClientSecret()
+			if err != nil {
+				return err
+			}
+			ko := options.KeyOpts{
+				KeyRef:                   o.Key,
+				PassFunc:                 generate.GetPass,
+				Sk:                       o.SecurityKey.Use,
+				Slot:                     o.SecurityKey.Slot,
+				FulcioURL:                o.Fulcio.URL,
+				IDToken:                  o.Fulcio.IdentityToken,
+				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
+				RekorURL:                 o.Rekor.URL,
+				OIDCIssuer:               o.OIDC.Issuer,
+				OIDCClientID:             o.OIDC.ClientID,
+				OIDCClientSecret:         oidcClientSecret,
+				OIDCRedirectURL:          o.OIDC.RedirectURL,
+				OIDCProvider:             o.OIDC.Provider,
+				SkipConfirmation:         o.SkipConfirmation,
+				TSAServerURL:             o.TSAServerURL,
+				RFC3161TimestampPath:     o.RFC3161TimestampPath,
+				BundlePath:               o.BundlePath,
+			}
 			v := attest.AttestBlobCommand{
-				KeyRef:            o.Key,
+				KeyOpts:           ko,
+				CertPath:          o.Cert,
+				CertChainPath:     o.CertChain,
 				ArtifactHash:      o.Hash,
+				TlogUpload:        o.TlogUpload,
 				PredicateType:     o.Predicate.Type,
 				PredicatePath:     o.Predicate.Path,
 				OutputSignature:   o.OutputSignature,
 				OutputAttestation: o.OutputAttestation,
-				PassFunc:          generate.GetPass,
+				OutputCertificate: o.OutputCertificate,
+				Timeout:           ro.Timeout,
 			}
 			return v.Exec(cmd.Context(), args[0])
 		},

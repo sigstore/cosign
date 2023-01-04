@@ -1858,12 +1858,15 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
 
 	// Now attest the blob with the private key
+	ko := options.KeyOpts{
+		KeyRef:   privKeyPath1,
+		PassFunc: passFunc,
+	}
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyRef:          privKeyPath1,
+		KeyOpts:         ko,
 		PredicatePath:   predicatePath,
 		PredicateType:   predicateType,
 		OutputSignature: outputSignature,
-		PassFunc:        passFunc,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
