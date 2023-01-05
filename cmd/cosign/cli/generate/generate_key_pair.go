@@ -43,9 +43,9 @@ var (
 )
 
 // nolint
-func GenerateKeyPairCmd(ctx context.Context, kmsVal string, nameVal string, args []string) error {
-	privateKeyFileName := nameVal + ".key"
-	publicKeyFileName := nameVal + ".pub"
+func GenerateKeyPairCmd(ctx context.Context, kmsVal string, outputKeyPrefixVal string, args []string) error {
+	privateKeyFileName := outputKeyPrefixVal + ".key"
+	publicKeyFileName := outputKeyPrefixVal + ".pub"
 
 	if kmsVal != "" {
 		k, err := kms.Get(ctx, kmsVal, crypto.SHA256)
