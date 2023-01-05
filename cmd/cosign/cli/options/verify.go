@@ -141,7 +141,6 @@ type VerifyBlobOptions struct {
 	SecurityKey         SecurityKeyOptions
 	CertVerify          CertVerifyOptions
 	Rekor               RekorOptions
-	Registry            RegistryOptions
 	CommonVerifyOptions CommonVerifyOptions
 
 	RFC3161TimestampPath string
@@ -154,7 +153,6 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
-	o.Registry.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
@@ -190,7 +188,17 @@ func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 type VerifyBlobAttestationOptions struct {
 	Key           string
 	SignaturePath string
+	BundlePath    string
+
 	PredicateOptions
+	CheckClaims bool
+
+	SecurityKey         SecurityKeyOptions
+	CertVerify          CertVerifyOptions
+	Rekor               RekorOptions
+	CommonVerifyOptions CommonVerifyOptions
+
+	RFC3161TimestampPath string
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)
@@ -198,10 +206,23 @@ var _ Interface = (*VerifyBlobOptions)(nil)
 // AddFlags implements Interface
 func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.PredicateOptions.AddFlags(cmd)
+	o.SecurityKey.AddFlags(cmd)
+	o.Rekor.AddFlags(cmd)
+	o.CertVerify.AddFlags(cmd)
+	o.CommonVerifyOptions.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().StringVar(&o.SignaturePath, "signature", "",
 		"path to base64-encoded signature over attestation in DSSE format")
+
+	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
+		"path to bundle FILE")
+
+	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
+		"whether to check the claims found")
+
+	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
+		"path to RFC3161 timestamp FILE")
 }

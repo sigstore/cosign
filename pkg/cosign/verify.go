@@ -858,11 +858,9 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	return verifyImageAttestations(ctx, atts, h, co)
 }
 
-func VerifyBlobAttestation(ctx context.Context, att oci.Signature, co *CheckOpts) (
+func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
 	bool, error) {
-	// A blob attestation does not have an associated artifact (currently) to check the claims against.
-	// So we can safely add a nil hash.
-	return verifyInternal(ctx, att, v1.Hash{}, verifyOCIAttestation, co)
+	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
 }
 
 func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {

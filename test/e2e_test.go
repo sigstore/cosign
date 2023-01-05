@@ -1849,16 +1849,21 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
 
 	ctx := context.Background()
+	ko := options.KeyOpts{
+		KeyRef: pubKeyPath1,
+	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
-		KeyRef:        pubKeyPath1,
-		SignaturePath: outputSignature,
-		PredicateType: predicateType,
+		KeyOpts:        ko,
+		SignaturePath:  outputSignature,
+		PredicateType:  predicateType,
+		SkipTlogVerify: true,
+		CheckClaims:    true,
 	}
 	// Verify should fail on a bad input
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
 
 	// Now attest the blob with the private key
-	ko := options.KeyOpts{
+	ko = options.KeyOpts{
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
