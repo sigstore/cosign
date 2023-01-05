@@ -10,157 +10,180 @@ env:
 # Prevents parallel builds from stepping on each others toes downloading modules
 before:
   hooks:
-  - go mod tidy
-  - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
-# if running a release we will generate the images in this step
-# if running in the CI the CI env va is set and we dont run the ko steps
-# this is needed because we are generating files that goreleaser was not aware to push to GH project release
-  - /bin/bash -c 'if [ -z "$CI" ]; then make sign-release-images; fi'
+    - go mod tidy
+    - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+  # if running a release we will generate the images in this step
+  # if running in the CI the CI env va is set and we dont run the ko steps
+  # this is needed because we are generating files that goreleaser was not aware to push to GH project release
+    - /bin/bash -c 'if [ -z "$CI" ]; then make sign-release-images; fi'
 
 gomod:
   proxy: true
 
 sboms:
-- artifacts: binary
+  - artifacts: binary
 
 builds:
-- id: linux
-  binary: cosign-linux-{{ .Arch }}
-  no_unique_dist_dir: true
-  main: ./cmd/cosign
-  flags:
-    - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  goos:
-    - linux
-  goarch:
-    - amd64
-    - arm64
-    - arm
-    - s390x
-    - ppc64le
-  goarm:
-    - '7'
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  env:
-    - CGO_ENABLED=0
+  - id: linux
+    binary: cosign-linux-{{ .Arch }}
+    no_unique_dist_dir: true
+    main: ./cmd/cosign
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - s390x
+      - ppc64le
+    goarm:
+      - '7'
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    env:
+      - CGO_ENABLED=0
 
-- id: linux-pivkey-pkcs11key-amd64
-  binary: cosign-linux-pivkey-pkcs11key-amd64
-  no_unique_dist_dir: true
-  main: ./cmd/cosign
-  flags:
-    - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  goos:
-    - linux
-  goarch:
-    - amd64
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  tags:
-    - pivkey
-    - pkcs11key
-  hooks:
-    pre:
-      - apt-get update
-      - apt-get -y install libpcsclite-dev
-  env:
-    - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
+  - id: linux-pivkey-pkcs11key-amd64
+    binary: cosign-linux-pivkey-pkcs11key-amd64
+    no_unique_dist_dir: true
+    main: ./cmd/cosign
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    tags:
+      - pivkey
+      - pkcs11key
+    hooks:
+      pre:
+        - apt-get update
+        - apt-get -y install libpcsclite-dev
+    env:
+      - PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig/"
 
-- id: darwin-amd64
-  binary: cosign-darwin-amd64
-  no_unique_dist_dir: true
-  env:
-    - CC=o64-clang
-    - CXX=o64-clang++
-  main: ./cmd/cosign
-  flags:
-    - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  goos:
-    - darwin
-  goarch:
-    - amd64
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  tags:
-    - pivkey
-    - pkcs11key
+  - id: linux-pivkey-pkcs11key-arm64
+    binary: cosign-linux-pivkey-pkcs11key-arm64
+    no_unique_dist_dir: true
+    main: ./cmd/cosign
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - linux
+    goarch:
+      - arm64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    tags:
+      - pivkey
+      - pkcs11key
+    hooks:
+      pre:
+        - apt-get update
+        - apt-get -y install libpcsclite-dev:arm64
+    env:
+      - PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig/"
 
-- id: darwin-arm64
-  binary: cosign-darwin-arm64
-  no_unique_dist_dir: true
-  env:
-    - CC=aarch64-apple-darwin21.4-clang
-    - CXX=aarch64-apple-darwin21.4-clang++
-  main: ./cmd/cosign
-  flags:
-    - -trimpath
-  goos:
-    - darwin
-  goarch:
-    - arm64
-  tags:
-    - pivkey
-    - pkcs11key
-  ldflags:
-    - "{{.Env.LDFLAGS}}"
+  - id: darwin-amd64
+    binary: cosign-darwin-amd64
+    no_unique_dist_dir: true
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+    main: ./cmd/cosign
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    tags:
+      - pivkey
+      - pkcs11key
 
-- id: windows-amd64
-  binary: cosign-windows-amd64
-  no_unique_dist_dir: true
-  env:
-    - CC=x86_64-w64-mingw32-gcc
-    - CXX=x86_64-w64-mingw32-g++
-  main: ./cmd/cosign
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  flags:
-    - -trimpath
-  goos:
-    - windows
-  goarch:
-    - amd64
-  ldflags:
-    - -buildmode=exe
-    - "{{ .Env.LDFLAGS }}"
-  tags:
-    - pivkey
-    - pkcs11key
+  - id: darwin-arm64
+    binary: cosign-darwin-arm64
+    no_unique_dist_dir: true
+    env:
+      - CC=aarch64-apple-darwin21.4-clang
+      - CXX=aarch64-apple-darwin21.4-clang++
+    main: ./cmd/cosign
+    flags:
+      - -trimpath
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    tags:
+      - pivkey
+      - pkcs11key
+    ldflags:
+      - "{{.Env.LDFLAGS}}"
 
-- id: sget
-  binary: sget-{{ .Os }}-{{ .Arch }}
-  no_unique_dist_dir: true
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  main: ./cmd/sget
-  flags:
-    - -trimpath
-  goos:
-    - linux
-    - darwin
-    - windows
-  goarch:
-    - amd64
-    - arm64
-    - arm
-    - s390x
-    - ppc64le
-  goarm:
-    - 7
-  ignore:
-    - goos: windows
-      goarch: arm64
-    - goos: windows
-      goarch: arm
-    - goos: windows
-      goarch: s390x
-    - goos: windows
-      goarch: ppc64le
-  ldflags:
-    - "{{ .Env.LDFLAGS }}"
-  env:
-    - CGO_ENABLED=0
+  - id: windows-amd64
+    binary: cosign-windows-amd64
+    no_unique_dist_dir: true
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    main: ./cmd/cosign
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    goos:
+      - windows
+    goarch:
+      - amd64
+    ldflags:
+      - -buildmode=exe
+      - "{{ .Env.LDFLAGS }}"
+    tags:
+      - pivkey
+      - pkcs11key
+
+  - id: sget
+    binary: sget-{{ .Os }}-{{ .Arch }}
+    no_unique_dist_dir: true
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    main: ./cmd/sget
+    flags:
+      - -trimpath
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - s390x
+      - ppc64le
+    goarm:
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: s390x
+      - goos: windows
+        goarch: ppc64le
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    env:
+      - CGO_ENABLED=0
 
 signs:
   - id: cosign
@@ -224,9 +247,9 @@ nfpms:
         type: "symlink"
 
 archives:
-- format: binary
-  name_template: "{{ .Binary }}"
-  allow_different_binary_count: true
+  - format: binary
+    name_template: "{{ .Binary }}"
+    allow_different_binary_count: true
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
