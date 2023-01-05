@@ -18,8 +18,8 @@ cosign generate-key-pair [flags]
   # generate key-pair and write to cosign.key and cosign.pub files
   cosign generate-key-pair
 
-  # generate key-pair and write tog custom named my-name.key and my-name.pub files
-  cosign generate-key-pair --name my-name
+  # generate key-pair and write to custom named my-name.key and my-name.pub files
+  cosign generate-key-pair --output-key-prefix my-name
 
   # generate a key-pair in Azure Key Vault
   cosign generate-key-pair --kms azurekms://[VAULT_NAME][VAULT_URI]/[KEY]
@@ -53,9 +53,9 @@ CAVEATS:
 ### Options
 
 ```
-  -h, --help          help for generate-key-pair
-      --kms string    create key pair in KMS service to use for signing
-      --name cosign   adds a chosen name to your .pub and .key files (defaults to cosign) (default "cosign")
+  -h, --help                       help for generate-key-pair
+      --kms string                 create key pair in KMS service to use for signing
+      --output-key-prefix cosign   name used for generated .pub and .key files (defaults to cosign) (default "cosign")
 ```
 
 ### Options inherited from parent commands
