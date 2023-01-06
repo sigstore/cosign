@@ -87,6 +87,7 @@ builds:
       - pkcs11key
     hooks:
       pre:
+        - dpkg --add-architecture arm64
         - apt-get update
         - apt-get -y install libpcsclite-dev:arm64
     env:
