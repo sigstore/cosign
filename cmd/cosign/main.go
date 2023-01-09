@@ -43,7 +43,7 @@ func main() {
 			newArg := fmt.Sprintf("-%c", arg[2])
 			ui.Warn(ctx, "the flag %s is deprecated and will be removed in a future release. Please use the flag %s.", arg, newArg)
 			os.Args[i] = newArg
-		} else if strings.HasPrefix(arg, "-") {
+		} else if strings.HasPrefix(arg, "-") && len(arg) > 1 {
 			// Handle -output, convert to --output
 			newArg := fmt.Sprintf("-%s", arg)
 			newArgType := "flag"
