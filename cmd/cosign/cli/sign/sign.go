@@ -167,7 +167,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 
 	var staticPayload []byte
 	if signOpts.PayloadPath != "" {
-		fmt.Fprintln(os.Stderr, "Using payload from:", signOpts.PayloadPath)
+		ui.Info(ctx, "Using payload from:", signOpts.PayloadPath)
 		staticPayload, err = os.ReadFile(filepath.Clean(signOpts.PayloadPath))
 		if err != nil {
 			return fmt.Errorf("payload from file: %w", err)
@@ -307,7 +307,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("create certificate file: %w", err)
 		}
 		// TODO: maybe accept a --b64 flag as well?
-		fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
+		ui.Info(ctx, "Certificate wrote in the file %s", outputCertificate)
 	}
 
 	if !upload {
@@ -329,9 +329,9 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	// Check if we are overriding the signatures repository location
 	repo, _ := ociremote.GetEnvTargetRepository()
 	if repo.RepositoryStr() == "" {
-		fmt.Fprintln(os.Stderr, "Pushing signature to:", digest.Repository)
+		ui.Info(ctx, "Pushing signature to:", digest.Repository)
 	} else {
-		fmt.Fprintln(os.Stderr, "Pushing signature to:", repo.RepositoryStr())
+		ui.Info(ctx, "Pushing signature to:", repo.RepositoryStr())
 	}
 
 	// Publish the signatures associated with this entity
@@ -342,7 +342,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	return nil
 }
 
-func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {
+func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier, error) {
 	sk, err := pivkey.GetKeyWithSlot(keySlot)
 	if err != nil {
 		return nil, err
@@ -360,7 +360,7 @@ func signerFromSecurityKey(keySlot string) (*SignerVerifier, error) {
 	certFromPIV, err := sk.Certificate()
 	var pemBytes []byte
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PIV token")
+		ui.Warn(ctx, "no x509 certificate retrieved from the PIV token")
 	} else {
 		pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPIV)
 		if err != nil {
@@ -396,7 +396,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 		certSigner.close = pkcs11Key.Close
 
 		if certFromPKCS11 == nil {
-			fmt.Fprintln(os.Stderr, "warning: no x509 certificate retrieved from the PKCS11 token")
+			ui.Warn(ctx, "no x509 certificate retrieved from the PKCS11 token")
 		} else {
 			pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
 			if err != nil {
@@ -449,7 +449,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 			return nil, fmt.Errorf("marshaling certificate to PEM: %w", err)
 		}
 		if certSigner.Cert != nil {
-			fmt.Fprintln(os.Stderr, "warning: overriding x509 certificate retrieved from the PKCS11 token")
+			ui.Warn(ctx, "overriding x509 certificate retrieved from the PKCS11 token")
 		}
 		leafCert = parsedCert
 		certSigner.Cert = pemBytes
@@ -531,7 +531,7 @@ func keylessSigner(ctx context.Context, ko options.KeyOpts) (*SignerVerifier, er
 
 func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
 	if ko.Sk {
-		return signerFromSecurityKey(ko.Slot)
+		return signerFromSecurityKey(ctx, ko.Slot)
 	}
 
 	if ko.KeyRef != "" {
@@ -539,7 +539,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	}
 
 	// Default Keyless!
-	fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
+	ui.Info(ctx, "Generating ephemeral keys...")
 	return keylessSigner(ctx, ko)
 }
 
@@ -558,7 +558,7 @@ func (c *SignerVerifier) Close() {
 
 func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	if c.Cert != nil {
-		fmt.Fprintf(os.Stderr, "using ephemeral certificate:\n%s\n", string(c.Cert))
+		ui.Info(ctx, "using ephemeral certificate:\n%s", string(c.Cert))
 		return c.Cert, nil
 	}
 

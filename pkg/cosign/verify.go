@@ -433,7 +433,7 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *
 	entryVerificationErrs := make([]string, 0)
 	for _, e := range tlogEntries {
 		entry := e
-		if err := VerifyTLogEntryOffline(&entry, rekorPubKeys); err != nil {
+		if err := VerifyTLogEntryOffline(ctx, &entry, rekorPubKeys); err != nil {
 			entryVerificationErrs = append(entryVerificationErrs, err.Error())
 			continue
 		}

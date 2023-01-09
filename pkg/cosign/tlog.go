@@ -35,6 +35,7 @@ import (
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/rekor/pkg/generated/client"
@@ -180,7 +181,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 		// Here, we display the proof and succeed.
 		var existsErr *entries.CreateLogEntryConflict
 		if errors.As(err, &existsErr) {
-			fmt.Println("Signature already exists. Displaying proof")
+			ui.Info(ctx, "Signature already exists. Displaying proof")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
 			uuid := uriSplit[len(uriSplit)-1]
 			e, err := GetTlogEntry(ctx, rekorClient, uuid)
@@ -191,7 +192,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntryOffline(e, rekorPubsFromAPI)
+			return e, VerifyTLogEntryOffline(ctx, e, rekorPubsFromAPI)
 		}
 		return nil, err
 	}
@@ -409,7 +410,7 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 
 // VerifyTLogEntryOffline verifies a TLog entry against a map of trusted rekorPubKeys indexed
 // by log id.
-func VerifyTLogEntryOffline(e *models.LogEntryAnon, rekorPubKeys *TrustedTransparencyLogPubKeys) error {
+func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPubKeys *TrustedTransparencyLogPubKeys) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
@@ -460,7 +461,7 @@ func VerifyTLogEntryOffline(e *models.LogEntryAnon, rekorPubKeys *TrustedTranspa
 		return fmt.Errorf("verifying signedEntryTimestamp: %w", err)
 	}
 	if pubKey.Status != tuf.Active {
-		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
+		ui.Info(ctx, "Successfully verified Rekor entry using an expired verification key")
 	}
 	return nil
 }
