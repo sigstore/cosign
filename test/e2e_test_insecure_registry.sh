@@ -27,6 +27,7 @@ pushd $tmp
 
 pass="$RANDOM"
 export COSIGN_PASSWORD=$pass
+export COSIGN_YES="true"
 
 ./cosign generate-key-pair
 signing_key=cosign.key
