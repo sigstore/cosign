@@ -1,0 +1,120 @@
+# Copyright 2021 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Policy Controller KinD E2E
+
+on:
+  pull_request:
+    branches: [ 'main', 'release-*' ]
+
+permissions: read-all
+
+jobs:
+  e2e-tests:
+    name: e2e tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false # Keep running if one leg fails.
+      matrix:
+        k8s-version:
+        - v1.21.x
+        - v1.22.x
+        - v1.23.x
+
+    env:
+      # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
+      # '*.local' hostnames.
+      REGISTRY_NAME: registry.local
+      REGISTRY_PORT: 5000
+      INSECURE_REGISTRY_NAME: insecure-registry.notlocal
+      INSECURE_REGISTRY_PORT: 5001
+      KO_DOCKER_REPO: registry.local:5000/policy-controller
+
+    steps:
+    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v2.4.0
+    - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v2.2.0
+      with:
+        go-version: '1.17'
+        check-latest: true
+
+    - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
+
+    - uses: imranismail/setup-kustomize@8fa954828ed3cfa7a487a2ba9f7104899bb48b2f # v1.6.1
+
+    - name: Install yq
+      uses: mikefarah/yq@70403375d7b96075bd68b40c434807cff1593568 # v4.25.1
+
+    - name: Install Cosign
+      run: |
+        go install ./cmd/cosign
+    - name: Setup mirror
+      uses: chainguard-dev/actions/setup-mirror@main
+      with:
+        mirror: mirror.gcr.io
+
+    - name: Setup kind cluster
+      uses: chainguard-dev/actions/setup-kind@main
+      with:
+        k8s-version: ${{ matrix.k8s-version }}
+        cluster-suffix: c${{ github.run_id }}.local
+
+    - name: Setup local insecure registry
+      run: |
+        # Create a self-signed SSL cert
+        mkdir -p insecure-certs
+        openssl req \
+          -subj "/C=US/ST=WA/L=Flavorton/O=Tests-R-Us/OU=Dept. of Insecurity/CN=example.com/emailAddress=testing@example.com" \
+          -newkey rsa:4096 -nodes -sha256 -keyout insecure-certs/domain.key \
+          -x509 -days 365 -out insecure-certs/domain.crt
+        # Run a registry.
+        docker run -d  --restart=always \
+          --name $INSECURE_REGISTRY_NAME \
+          -v "$(pwd)"/insecure-certs:/insecure-certs \
+          -e REGISTRY_HTTP_ADDR=0.0.0.0:$INSECURE_REGISTRY_PORT \
+          -e REGISTRY_HTTP_TLS_CERTIFICATE=/insecure-certs/domain.crt \
+          -e REGISTRY_HTTP_TLS_KEY=/insecure-certs/domain.key \
+          -p $INSECURE_REGISTRY_PORT:$INSECURE_REGISTRY_PORT \
+          registry:2
+        # Connect the registry to the KinD network.
+        docker network connect "kind" $INSECURE_REGISTRY_NAME
+        # Make the $INSECURE_REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
+        # local registry, even when pushing $INSECURE_REGISTRY_NAME:$INSECURE_REGISTRY_NAME/some/image
+        sudo echo "127.0.0.1 $INSECURE_REGISTRY_NAME" | sudo tee -a /etc/hosts
+    - name: Install policy-controller
+      env:
+        GIT_HASH: ${{ github.sha }}
+        GIT_VERSION: ci
+        LDFLAGS: ""
+        COSIGNED_YAML: policy-controller-e2e.yaml
+        KO_PREFIX: registry.local:5000/policy-controller
+        COSIGNED_ARCHS: linux/amd64
+      run: |
+        make ko-policy-controller
+        kubectl apply -f policy-controller-e2e.yaml
+        # Wait for the webhook to come up and become Ready
+        kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
+    - name: Run Insecure Registry Tests
+      run: |
+        go install github.com/google/go-containerregistry/cmd/crane
+        ./test/e2e_test_insecure_registry.sh
+    - name: Run Image Policy Tests
+      run: |
+        ./test/e2e_test_policy_crd.sh
+    - name: Run Policy Controller Tests
+      run: |
+        ./test/e2e_test_policy_controller.sh
+    - name: Collect diagnostics
+      if: ${{ failure() }}
+      uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main
