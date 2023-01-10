@@ -95,29 +95,6 @@ jobs:
         # local registry, even when pushing $INSECURE_REGISTRY_NAME:$INSECURE_REGISTRY_NAME/some/image
         sudo echo "127.0.0.1 $INSECURE_REGISTRY_NAME" | sudo tee -a /etc/hosts
 
-    - name: Check out upstream code (policy-controller)
-      uses: actions/checkout@v3
-      with:
-        repository: sigstore/policy-controller
-        path: ./src/github.com/sigstore/policy-controller
-        ref: v0.5.2
-
-    - name: Install policy-controller
-      env:
-        GIT_HASH: ${{ github.sha }}
-        GIT_VERSION: ci
-        LDFLAGS: ""
-        POLICY_CONTROLLER_YAML: policy-controller-e2e.yaml
-        KO_PREFIX: registry.local:5000/policy-controller
-        POLICY_CONTROLLER_ARCHS: linux/amd64
-      working-directory: ./src/github.com/sigstore/policy-controller
-      run: |
-        make ko-policy-controller
-        kubectl apply -f policy-controller-e2e.yaml
-        # Wait for the webhook to come up and become Ready
-        kubectl rollout status --timeout 5m --namespace cosign-system deployments/webhook
-        kubectl wait deployment -n cosign-system --for condition=Available=True --timeout=90s --all
-
     - name: Run Insecure Registry Tests
       run: |
         go install github.com/google/go-containerregistry/cmd/crane
