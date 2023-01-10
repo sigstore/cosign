@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Policy Controller KinD E2E
+name: Insecure Registry KinD E2E
 
 on:
   pull_request:
