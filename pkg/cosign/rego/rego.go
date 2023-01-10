@@ -143,7 +143,6 @@ func evaluateRegoEvalMapResult(query string, response []interface{}) (warning er
 		if err != nil {
 			return nil, fmt.Errorf("policy is not compliant for query '%s' due to parsing errors: %w", query, err)
 		}
-		fmt.Printf("resultObject %v\n", resultObject)
 
 		// Check if it is complaint
 		if resultObject.Result {
