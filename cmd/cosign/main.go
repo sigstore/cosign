@@ -15,12 +15,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
+	"github.com/sigstore/cosign/v2/internal/ui"
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
@@ -31,6 +33,7 @@ import (
 
 func main() {
 	// Fix up flags to POSIX standard flags.
+	ctx := context.Background()
 	for i, arg := range os.Args {
 		if (strings.HasPrefix(arg, "-") && len(arg) == 2) || (strings.HasPrefix(arg, "--") && len(arg) >= 4) {
 			continue
@@ -38,9 +41,9 @@ func main() {
 		if strings.HasPrefix(arg, "--") && len(arg) == 3 {
 			// Handle --o, convert to -o
 			newArg := fmt.Sprintf("-%c", arg[2])
-			fmt.Fprintf(os.Stderr, "WARNING: the flag %s is deprecated and will be removed in a future release. Please use the flag %s.\n", arg, newArg)
+			ui.Warn(ctx, "the flag %s is deprecated and will be removed in a future release. Please use the flag %s.", arg, newArg)
 			os.Args[i] = newArg
-		} else if strings.HasPrefix(arg, "-") {
+		} else if strings.HasPrefix(arg, "-") && len(arg) > 1 {
 			// Handle -output, convert to --output
 			newArg := fmt.Sprintf("-%s", arg)
 			newArgType := "flag"
@@ -48,10 +51,8 @@ func main() {
 				newArg = "version"
 				newArgType = "subcommand"
 			}
-			fmt.Fprintf(
-				os.Stderr,
-				"WARNING: the %s flag is deprecated and will be removed in a future release. "+
-					"Please use the %s %s instead.\n",
+			ui.Warn(ctx, "the %s flag is deprecated and will be removed in a future release. "+
+				"Please use the %s %s instead.",
 				arg, newArg, newArgType,
 			)
 			os.Args[i] = newArg
