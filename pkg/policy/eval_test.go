@@ -25,7 +25,7 @@ const (
 	customAttestation = `
 	{
 		"_type": "https://in-toto.io/Statement/v0.1",
-		"predicateType": "cosign.sigstore.dev/attestation/v1",
+		"predicateType": "https://cosign.sigstore.dev/attestation/v1",
 		"subject": [
 		  {
 			"name": "registry.local:5000/policy-controller/demo",
@@ -43,7 +43,7 @@ const (
 	vulnAttestation = `
 	{
 		"_type": "https://in-toto.io/Statement/v0.1",
-		"predicateType": "cosign.sigstore.dev/attestation/vuln/v1",
+		"predicateType": "https://cosign.sigstore.dev/attestation/vuln/v1",
 		"subject": [
 		  {
 			"name": "registry.local:5000/policy-controller/demo",
@@ -93,20 +93,20 @@ func TestEvalPolicy(t *testing.T) {
 		name:       "custom attestation, mismatched predicateType",
 		json:       customAttestation,
 		policyType: "cue",
-		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"`,
+		policyFile: `predicateType: "https://cosign.sigstore.dev/attestation/vuln/v1"`,
 		wantErr:    true,
-		wantErrSub: `conflicting values "cosign.sigstore.dev/attestation/v1" and "cosign.sigstore.dev/attestation/vuln/v1"`,
+		wantErrSub: `conflicting values "https://cosign.sigstore.dev/attestation/v1" and "https://cosign.sigstore.dev/attestation/vuln/v1"`,
 	}, {
 		name:       "custom attestation, predicateType and data checks out",
 		json:       customAttestation,
 		policyType: "cue",
-		policyFile: `predicateType: "cosign.sigstore.dev/attestation/v1"
+		policyFile: `predicateType: "https://cosign.sigstore.dev/attestation/v1"
 		predicate: Data: "foobar e2e test"`,
 	}, {
 		name:       "custom attestation, data mismatch",
 		json:       customAttestation,
 		policyType: "cue",
-		policyFile: `predicateType: "cosign.sigstore.dev/attestation/v1"
+		policyFile: `predicateType: "https://cosign.sigstore.dev/attestation/v1"
 		predicate: Data: "invalid data here"`,
 		wantErr:    true,
 		wantErrSub: `predicate.Data: conflicting values "foobar e2e test" and "invalid data here"`,
@@ -114,7 +114,7 @@ func TestEvalPolicy(t *testing.T) {
 		name:       "vuln attestation, wrong invocation url",
 		json:       vulnAttestation,
 		policyType: "cue",
-		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+		policyFile: `predicateType: "https://cosign.sigstore.dev/attestation/vuln/v1"
 		predicate: invocation: uri: "invocation.example.com/wrong-url-here"`,
 		wantErr:    true,
 		wantErrSub: `conflicting values "invocation.example.com/cosign-testing" and "invocation.example.com/wrong-url-here"`,
@@ -122,7 +122,7 @@ func TestEvalPolicy(t *testing.T) {
 		name:       "vuln attestation, checks out",
 		json:       vulnAttestation,
 		policyType: "cue",
-		policyFile: `predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+		policyFile: `predicateType: "https://cosign.sigstore.dev/attestation/vuln/v1"
 		predicate: invocation: uri: "invocation.example.com/cosign-testing"`,
 	}, {
 		name:       "cluster image policy main policy, checks out",

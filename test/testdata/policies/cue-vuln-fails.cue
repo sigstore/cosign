@@ -5,7 +5,7 @@ before: time.Parse(time.RFC3339, "2022-04-01T17:10:27Z")
 after: time.Parse(time.RFC3339, "2022-03-09T17:10:27Z")
 
 // The predicateType field must match this string
-predicateType: "cosign.sigstore.dev/attestation/vuln/v1"
+predicateType: "https://cosign.sigstore.dev/attestation/vuln/v1"
 
 predicate: {
   invocation: {
