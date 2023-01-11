@@ -516,7 +516,9 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	}
 
 	// Default Keyless!
-	ui.Infof(ctx, "Generating ephemeral keys...")
+	if !ko.IssueCertificate {
+		ui.Infof(ctx, "Generating ephemeral keys...")
+	}
 	return keylessSigner(ctx, ko)
 }
 

@@ -195,7 +195,7 @@ func TestNewSigner(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(pemChain))
+			_, _ = w.Write(pemChain)
 		}))
 	defer testServer.Close()
 
