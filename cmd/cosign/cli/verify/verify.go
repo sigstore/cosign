@@ -75,7 +75,7 @@ type VerifyCommand struct {
 	NameOptions                  []name.Option
 	Offline                      bool
 	TSACertChainPath             string
-	SkipTlogVerify               bool
+	IgnoreTlog                   bool
 }
 
 // Exec runs the verification command
@@ -121,7 +121,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		SignatureRef:                 c.SignatureRef,
 		Identities:                   identities,
 		Offline:                      c.Offline,
-		SkipTlogVerify:               c.SkipTlogVerify,
+		IgnoreTlog:                   c.IgnoreTlog,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
@@ -152,7 +152,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.TSARootCertificates = roots
 	}
 
-	if !c.SkipTlogVerify {
+	if !c.IgnoreTlog {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {

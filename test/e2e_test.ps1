@@ -36,7 +36,7 @@ $verification_key = "cosign.pub"
 
 $test_img = "ghcr.io/distroless/static"
 Write-Output $pass | .\cosign.exe sign --key $signing_key --output-signature interactive.sig --tlog-upload=false $test_img
-.\cosign.exe verify --key $verification_key --signature interactive.sig --insecure-skip-tlog-verify=true $test_img
+.\cosign.exe verify --key $verification_key --signature interactive.sig --insecure-ignore-tlog=true $test_img
 
 Pop-Location
 

@@ -155,10 +155,10 @@ func TestVerifyImageSignature(t *testing.T) {
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
 		&CheckOpts{
-			RootCerts:      rootPool,
-			IgnoreSCT:      true,
-			SkipTlogVerify: true,
-			Identities:     []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
+			RootCerts:  rootPool,
+			IgnoreSCT:  true,
+			IgnoreTlog: true,
+			Identities: []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -191,7 +191,7 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 		base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub3, pemSub2, pemSub1, pemRoot})))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		RootCerts: rootPool,
-		IgnoreSCT: true, SkipTlogVerify: true,
+		IgnoreSCT: true, IgnoreTlog: true,
 		Identities: []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
@@ -363,10 +363,10 @@ func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
 		&CheckOpts{
-			RootCerts:      rootPool,
-			IgnoreSCT:      true,
-			Identities:     []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
-			SkipTlogVerify: true})
+			RootCerts:  rootPool,
+			IgnoreSCT:  true,
+			Identities: []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+			IgnoreTlog: true})
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
@@ -393,10 +393,10 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, pemRoot))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
 		&CheckOpts{
-			RootCerts:      rootPool,
-			IgnoreSCT:      true,
-			Identities:     []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
-			SkipTlogVerify: true})
+			RootCerts:  rootPool,
+			IgnoreSCT:  true,
+			Identities: []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+			IgnoreTlog: true})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")
 	}
@@ -438,7 +438,7 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 			IntermediateCerts: subPool,
 			IgnoreSCT:         true,
 			Identities:        []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
-			SkipTlogVerify:    true})
+			IgnoreTlog:        true})
 	if err == nil {
 		t.Fatal("expected error while verifying signature")
 	}
@@ -556,7 +556,7 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		TSACertificate:              leaves[0],
 		TSAIntermediateCertificates: intermediates,
 		TSARootCertificates:         roots,
-		SkipTlogVerify:              true,
+		IgnoreTlog:                  true,
 	}); err != nil || bundleVerified { // bundle is not verified since there's no Rekor bundle
 		t.Fatalf("unexpected error while verifying signature, got %v", err)
 	}

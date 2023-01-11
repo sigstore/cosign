@@ -22,7 +22,7 @@ import (
 type CommonVerifyOptions struct {
 	Offline          bool // Force offline verification
 	TSACertChainPath string
-	SkipTlogVerify   bool
+	IgnoreTlog       bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -33,8 +33,8 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
 			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
 
-	cmd.Flags().BoolVar(&o.SkipTlogVerify, "insecure-skip-tlog-verify", false,
-		"skip transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
+	cmd.Flags().BoolVar(&o.IgnoreTlog, "insecure-ignore-tlog", false,
+		"ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
 			"cannot be publicly verified when not included in a log")
 }
 

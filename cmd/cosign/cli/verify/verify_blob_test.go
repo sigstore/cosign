@@ -573,9 +573,9 @@ func TestVerifyBlob(t *testing.T) {
 					CertIdentity:   identity,
 					CertOidcIssuer: issuer,
 				},
-				IgnoreSCT:      true,
-				CertChain:      chainPath,
-				SkipTlogVerify: tt.skipTlogVerify,
+				IgnoreSCT:  true,
+				CertChain:  chainPath,
+				IgnoreTlog: tt.skipTlogVerify,
 			}
 			blobPath := writeBlobFile(t, td, string(blobBytes), "blob.txt")
 			if tt.signature != "" {

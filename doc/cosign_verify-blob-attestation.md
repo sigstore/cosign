@@ -43,7 +43,7 @@ cosign verify-blob-attestation [flags]
       --check-claims                                    whether to check the claims found (default true)
   -h, --help                                            help for verify-blob-attestation
       --insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
-      --insecure-skip-tlog-verify                       skip transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
+      --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --offline                                         only allow offline verification
       --rekor-url string                                [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")

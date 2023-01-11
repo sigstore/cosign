@@ -61,10 +61,10 @@ type VerifyBlobAttestationCommand struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 
-	IgnoreSCT      bool
-	SCTRef         string
-	Offline        bool
-	SkipTlogVerify bool
+	IgnoreSCT  bool
+	SCTRef     string
+	Offline    bool
+	IgnoreTlog bool
 
 	CheckClaims   bool
 	PredicateType string
@@ -106,7 +106,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Offline:                      c.Offline,
-		SkipTlogVerify:               c.SkipTlogVerify,
+		IgnoreTlog:                   c.IgnoreTlog,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
@@ -159,7 +159,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		co.TSARootCertificates = roots
 	}
 
-	if !c.SkipTlogVerify {
+	if !c.IgnoreTlog {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
