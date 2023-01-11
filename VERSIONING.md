@@ -34,7 +34,8 @@ attention to and fixing deprecation warnings (see
 they only depend on explicitly guaranteed Cosign behavior; see "What's
 covered?").
 
-**Patch version increases.** These are "bug fix" releases only.
+**Patch version increases.** These are "bug fix" releases only, and should
+always be adopted..
 
 [semver]: https://semver.org
 
