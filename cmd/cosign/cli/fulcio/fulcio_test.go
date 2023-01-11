@@ -16,18 +16,25 @@
 package fulcio
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/fulcio/pkg/api"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -177,5 +184,69 @@ func TestNewClient(t *testing.T) {
 
 	if !requestReceived {
 		t.Fatal("no requests were received")
+	}
+}
+
+func TestNewSigner(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	pemChain, _ := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
+
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(pemChain))
+		}))
+	defer testServer.Close()
+
+	// success: a random key is generated
+	ctx := context.TODO()
+	ko := options.KeyOpts{
+		OIDCDisableProviders: true,
+		// random test token
+		IDToken:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+		FulcioURL:      testServer.URL,
+		FulcioAuthFlow: "token",
+	}
+	signer, err := NewSigner(ctx, ko)
+	if err != nil {
+		t.Fatalf("unexpected error creating signer: %v", err)
+	}
+	responsePEMChain := string(signer.Cert) + string(signer.Chain)
+	if responsePEMChain != string(pemChain) {
+		t.Fatalf("response certificates not equal, got %v, expected %v", responsePEMChain, pemChain)
+	}
+	// check that a key was generated
+	if signer.SignerVerifier == nil {
+		t.Fatalf("missing signer/verifier")
+	}
+
+	// success: a key is used when provided
+	// generate and persist key
+	keys, err := cosign.GenerateKeyPair(nil)
+	ecdsaKey, _ := cosign.LoadPrivateKey(keys.PrivateBytes, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	// privKeyBytes, _ := x509.MarshalPKCS8PrivateKey(ecdsaKey)
+	// pemKey := pem.EncodeToMemory(&pem.Block{Type: "ENCRYPTED COSIGN PRIVATE KEY", Bytes: privKeyBytes})
+	td := t.TempDir()
+	keyPath := filepath.Join(td, "key")
+	if err := os.WriteFile(keyPath, keys.PrivateBytes, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// set required KeyOpts
+	ko.IssueCertificate = true
+	ko.KeyRef = keyPath
+	ko.PassFunc = nil
+	signer, err = NewSigner(ctx, ko)
+	if err != nil {
+		t.Fatalf("unexpected error creating signer: %v", err)
+	}
+	pubKey, _ := signer.SignerVerifier.PublicKey()
+	expectedPubKey, _ := ecdsaKey.PublicKey()
+	if err := cryptoutils.EqualKeys(expectedPubKey, pubKey); err != nil {
+		t.Fatalf("keys are not equal: %v", err)
 	}
 }
