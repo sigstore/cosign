@@ -228,9 +228,6 @@ func TestNewSigner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	// privKeyBytes, _ := x509.MarshalPKCS8PrivateKey(ecdsaKey)
-	// pemKey := pem.EncodeToMemory(&pem.Block{Type: "ENCRYPTED COSIGN PRIVATE KEY", Bytes: privKeyBytes})
 	td := t.TempDir()
 	keyPath := filepath.Join(td, "key")
 	if err := os.WriteFile(keyPath, keys.PrivateBytes, 0644); err != nil {
