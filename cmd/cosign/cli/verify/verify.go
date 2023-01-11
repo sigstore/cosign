@@ -308,7 +308,7 @@ func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified
 		fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
 	}
 	if fulcioVerified {
-		fmt.Fprintln(os.Stderr, "  - Any certificates were verified against the Fulcio roots.")
+		fmt.Fprintln(os.Stderr, "  - The code-signing certificate was verified using trusted certificate authority certificates")
 	}
 }
 
