@@ -710,7 +710,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			if err := CheckExpiry(cert, time.Now()); err != nil {
 				// If certificate is expired and not signed timestamp was provided then error the following message. Otherwise throw an expiration error.
 				if co.IgnoreTlog && acceptableRFC3161Time == nil {
-					return false, &VerificationError{"expected a signed timestamp from the bundle"}
+					return false, &VerificationError{"expected a signed timestamp to verify an expired certificate"}
 				}
 				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
 			}
