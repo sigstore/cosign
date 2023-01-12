@@ -62,7 +62,7 @@ type VerifyBlobCmd struct {
 	IgnoreSCT                    bool
 	SCTRef                       string
 	Offline                      bool
-	SkipTlogVerify               bool
+	IgnoreTlog                   bool
 }
 
 // nolint
@@ -108,7 +108,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
 		Offline:                      c.Offline,
-		SkipTlogVerify:               c.SkipTlogVerify,
+		IgnoreTlog:                   c.IgnoreTlog,
 	}
 	if c.RFC3161TimestampPath != "" && c.KeyOpts.TSACertChainPath == "" {
 		return fmt.Errorf("timestamp-certificate-chain is required to validate a RFC3161 timestamp")
@@ -138,7 +138,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		co.TSARootCertificates = roots
 	}
 
-	if !c.SkipTlogVerify {
+	if !c.IgnoreTlog {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {

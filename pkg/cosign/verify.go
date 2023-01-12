@@ -137,8 +137,8 @@ type CheckOpts struct {
 	// TSAIntermediateCertificates are the set of intermediates for chain building
 	TSAIntermediateCertificates []*x509.Certificate
 
-	// SkipTlogVerify skip tlog verification
-	SkipTlogVerify bool
+	// IgnoreTlog skip tlog verification
+	IgnoreTlog bool
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -596,7 +596,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 	}
 
-	if !co.SkipTlogVerify {
+	if !co.IgnoreTlog {
 		bundleVerified, err = VerifyBundle(sig, co)
 		if err != nil {
 			return false, fmt.Errorf("error verifying bundle: %w", err)
@@ -708,6 +708,10 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		// if no timestamp has been provided, use the current time
 		if !expirationChecked {
 			if err := CheckExpiry(cert, time.Now()); err != nil {
+				// If certificate is expired and not signed timestamp was provided then error the following message. Otherwise throw an expiration error.
+				if co.IgnoreTlog && acceptableRFC3161Time == nil {
+					return false, &VerificationError{"expected a signed timestamp to verify an expired certificate"}
+				}
 				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
 			}
 		}

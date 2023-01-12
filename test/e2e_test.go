@@ -85,13 +85,13 @@ var passFunc = func(_ bool) ([]byte, error) {
 
 var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:         keyRef,
-		RekorURL:       rekorURL,
-		CheckClaims:    checkClaims,
-		Annotations:    sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:     attachment,
-		HashAlgorithm:  crypto.SHA256,
-		SkipTlogVerify: true,
+		KeyRef:        keyRef,
+		RekorURL:      rekorURL,
+		CheckClaims:   checkClaims,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
+		IgnoreTlog:    true,
 	}
 
 	args := []string{imageRef}
@@ -107,7 +107,7 @@ var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[
 		Attachment:       attachment,
 		HashAlgorithm:    crypto.SHA256,
 		TSACertChainPath: tsaCertChain,
-		SkipTlogVerify:   skipTlogVerify,
+		IgnoreTlog:       skipTlogVerify,
 	}
 
 	args := []string{imageRef}
@@ -118,13 +118,13 @@ var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[
 // Used to verify local images stored on disk
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:         keyRef,
-		CheckClaims:    checkClaims,
-		Annotations:    sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:     attachment,
-		HashAlgorithm:  crypto.SHA256,
-		LocalImage:     true,
-		SkipTlogVerify: true,
+		KeyRef:        keyRef,
+		CheckClaims:   checkClaims,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
+		LocalImage:    true,
+		IgnoreTlog:    true,
 	}
 
 	args := []string{path}
@@ -314,8 +314,8 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Verify should fail at first
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		KeyRef:         pubKeyPath,
-		SkipTlogVerify: true,
+		KeyRef:     pubKeyPath,
+		IgnoreTlog: true,
 	}
 
 	// Fail case when using without type and policy flag
@@ -575,7 +575,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 	verifyAttestation := cliverify.VerifyAttestationCommand{
 		KeyRef:           pubKeyPath,
 		TSACertChainPath: file.Name(),
-		SkipTlogVerify:   true,
+		IgnoreTlog:       true,
 		PredicateType:    "slsaprovenance",
 	}
 
@@ -897,14 +897,14 @@ func TestSignBlob(t *testing.T) {
 	}
 	// Verify should fail on a bad input
 	cmd1 := cliverify.VerifyBlobCmd{
-		KeyOpts:        ko1,
-		SigRef:         "badsig",
-		SkipTlogVerify: true,
+		KeyOpts:    ko1,
+		SigRef:     "badsig",
+		IgnoreTlog: true,
 	}
 	cmd2 := cliverify.VerifyBlobCmd{
-		KeyOpts:        ko2,
-		SigRef:         "badsig",
-		SkipTlogVerify: true,
+		KeyOpts:    ko2,
+		SigRef:     "badsig",
+		IgnoreTlog: true,
 	}
 	mustErr(cmd1.Exec(ctx, blob), t)
 	mustErr(cmd2.Exec(ctx, blob), t)
@@ -948,8 +948,8 @@ func TestSignBlobBundle(t *testing.T) {
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:        ko1,
-		SkipTlogVerify: true,
+		KeyOpts:    ko1,
+		IgnoreTlog: true,
 	}
 	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
@@ -973,7 +973,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	os.Setenv(serverEnv, "notreal")
-	verifyBlobCmd.SkipTlogVerify = false
+	verifyBlobCmd.IgnoreTlog = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
@@ -1029,8 +1029,8 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	}
 	// Verify should fail on a bad input
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:        ko1,
-		SkipTlogVerify: true,
+		KeyOpts:    ko1,
+		IgnoreTlog: true,
 	}
 	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
 
@@ -1054,7 +1054,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
-	verifyBlobCmd.SkipTlogVerify = false
+	verifyBlobCmd.IgnoreTlog = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
@@ -1412,8 +1412,8 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Use cue to verify attestation on the new image
 	policyPath := filepath.Join(td, "policy.cue")
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		KeyRef:         pubKeyPath,
-		SkipTlogVerify: true,
+		KeyRef:     pubKeyPath,
+		IgnoreTlog: true,
 	}
 	verifyAttestation.PredicateType = "slsaprovenance"
 	verifyAttestation.Policies = []string{policyPath}
@@ -1853,11 +1853,11 @@ func TestAttestBlobSignVerify(t *testing.T) {
 		KeyRef: pubKeyPath1,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:        ko,
-		SignaturePath:  outputSignature,
-		PredicateType:  predicateType,
-		SkipTlogVerify: true,
-		CheckClaims:    true,
+		KeyOpts:       ko,
+		SignaturePath: outputSignature,
+		PredicateType: predicateType,
+		IgnoreTlog:    true,
+		CheckClaims:   true,
 	}
 	// Verify should fail on a bad input
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)

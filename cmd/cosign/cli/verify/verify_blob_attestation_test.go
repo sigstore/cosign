@@ -104,11 +104,11 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			sigRef := writeBlobFile(t, td, string(decodedSig), "signature")
 
 			cmd := VerifyBlobAttestationCommand{
-				KeyOpts:        options.KeyOpts{KeyRef: keyRef},
-				SignaturePath:  sigRef,
-				SkipTlogVerify: true,
-				CheckClaims:    true,
-				PredicateType:  test.predicateType,
+				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
+				SignaturePath: sigRef,
+				IgnoreTlog:    true,
+				CheckClaims:   true,
+				PredicateType: test.predicateType,
 			}
 			err = cmd.Exec(ctx, test.blobPath)
 

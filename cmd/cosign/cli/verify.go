@@ -118,14 +118,14 @@ against the transparency log.`,
 				LocalImage:                   o.LocalImage,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
-				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
+				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
 
 			if o.Registry.AllowInsecure {
 				v.NameOptions = append(v.NameOptions, name.Insecure)
 			}
 
-			if o.CommonVerifyOptions.SkipTlogVerify {
+			if o.CommonVerifyOptions.IgnoreTlog {
 				fmt.Fprintln(os.Stderr, "**Warning** Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the signature.")
 			}
 
@@ -210,7 +210,7 @@ against the transparency log.`,
 				NameOptions:                  o.Registry.NameOptions(),
 				Offline:                      o.CommonVerifyOptions.Offline,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
-				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
+				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
 
 			return v.Exec(cmd.Context(), args)
@@ -295,7 +295,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				SCTRef:                       o.CertVerify.SCT,
 				Offline:                      o.CommonVerifyOptions.Offline,
-				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
+				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
 			if err := verifyBlobCmd.Exec(cmd.Context(), args[0]); err != nil {
 				return fmt.Errorf("verifying blob %s: %w", args, err)
@@ -354,7 +354,7 @@ The blob may be specified as a path to a file.`,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				SCTRef:                       o.CertVerify.SCT,
 				Offline:                      o.CommonVerifyOptions.Offline,
-				SkipTlogVerify:               o.CommonVerifyOptions.SkipTlogVerify,
+				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
 			if len(args) != 1 {
 				return fmt.Errorf("no path to blob passed in, run `cosign verify-blob-attestation -h` for more help")

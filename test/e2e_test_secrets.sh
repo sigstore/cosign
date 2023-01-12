@@ -167,7 +167,7 @@ crane delete $dgst || true
 cat /dev/urandom | head -n 10 | base64 > randomblob
 dgst=$(./cosign upload blob -f randomblob ${blobimg})
 ./cosign sign --key ${signing_key} --tlog-upload=false ${dgst}
-./cosign verify --key ${verification_key} --insecure-skip-tlog-verify=true ${dgst} # For sanity
+./cosign verify --key ${verification_key} --insecure-ignore-tlog=true ${dgst} # For sanity
 
 # clean up a bit
 crane delete $blobimg || true
