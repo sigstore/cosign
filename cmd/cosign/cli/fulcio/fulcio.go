@@ -30,7 +30,9 @@ import (
 	"golang.org/x/term"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/providers"
 	"github.com/sigstore/fulcio/pkg/api"
@@ -158,6 +160,19 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
 		flow = flowDevice
 	default:
+		var statementErr error
+		privacy.StatementOnce.Do(func() {
+			ui.Info(ctx, privacy.Statement)
+			ui.Info(ctx, privacy.StatementConfirmation)
+			if !ko.SkipConfirmation {
+				if err := ui.ConfirmContinue(ctx); err != nil {
+					statementErr = err
+				}
+			}
+		})
+		if statementErr != nil {
+			return nil, statementErr
+		}
 		flow = flowNormal
 	}
 	Resp, err := GetCert(ctx, priv, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
