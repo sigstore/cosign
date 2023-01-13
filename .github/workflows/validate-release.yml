@@ -26,7 +26,7 @@ jobs:
   validate-release-job:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/gythialy/golang-cross:v1.19.4-0@sha256:53ee894818ac14377996a6fe7c8fe6156d018a20f82aaf69f2519fc45d897bec
+      image: ghcr.io/gythialy/golang-cross:v1.19.5-0@sha256:76716805e9d07712f0628c36d21223874b1dd9af5e5de2d00325c00b24b238cc
 
     permissions: {}
 
