@@ -113,7 +113,7 @@ jobs:
       - name: setup kind cluster
         run: |
           # Used to test: cosign generate-key-pair k8s://...
-          go install sigs.k8s.io/kind@v0.15.0
+          go install sigs.k8s.io/kind@v0.17.0
           kind create cluster
 
       - name: Run end-to-end tests
