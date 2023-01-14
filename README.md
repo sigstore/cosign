@@ -255,7 +255,7 @@ The following checks were performed on each of these signatures:
   - The cosign claims were validated
   - Existence of the claims in the transparency log was verified offline
   - The signatures were verified against the specified public key
-  - Any certificates were verified against the Fulcio roots.
+  - The code-signing certificate was verified using trusted certificate authority certificates
 ```
 
 The signature, claims and transparency log proofs are all verified automatically by sget as part of the download.
@@ -578,7 +578,7 @@ The following checks were performed on each of these signatures:
   - The claims were present in the transparency log
   - The signatures were integrated into the transparency log when the certificate was valid
   - The signatures were verified against the specified public key
-  - Any certificates were verified against the Fulcio roots.
+  - The code-signing certificate was verified using trusted certificate authority certificates
 
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:551e6cce7ed2e5c914998f931b277bc879e675b74843e6f29bc17f3b5f692bef"},"Type":"cosign container image signature"},"Optional":null}
 ```
