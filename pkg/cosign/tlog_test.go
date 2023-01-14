@@ -183,7 +183,7 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 		t.Fatalf("failed to add RSA key to transparency log public keys: %v", err)
 	}
 
-	err = VerifyTLogEntryOffline(&models.LogEntryAnon{Verification: &models.LogEntryAnonVerification{InclusionProof: &models.InclusionProof{}}}, &rekorPubKeys)
+	err = VerifyTLogEntryOffline(context.Background(), &models.LogEntryAnon{Verification: &models.LogEntryAnonVerification{InclusionProof: &models.InclusionProof{}}}, &rekorPubKeys)
 	if err == nil {
 		t.Fatal("Wanted error got none")
 	}
