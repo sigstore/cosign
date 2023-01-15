@@ -43,6 +43,9 @@ func (fa *failingAttestation) Payload() ([]byte, error) {
 func (fa *failingAttestation) Annotations() (map[string]string, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
+func (fa *failingAttestation) Signature() ([]byte, error) {
+	return nil, fmt.Errorf("unimplemented")
+}
 func (fa *failingAttestation) Base64Signature() (string, error) {
 	return "", fmt.Errorf("unimplemented")
 }
