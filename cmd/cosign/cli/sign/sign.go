@@ -104,11 +104,8 @@ func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
 		ui.Warn(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log at %q", ref.Context().String(), ko.RekorURL)
 		var errPromptDeclined *ui.ErrPromptDeclined
-		if err := ui.ConfirmContinue(ctx); errors.As(err, &errPromptDeclined) {
+		if ui.ConfirmContinue(ctx) != nil {
 			ui.Info(ctx, "not uploading to transparency log")
-		} else if err != nil {
-			ui.Warn(ctx, "skipping transparency log upload (use --yes to skip confirmation): %v\n", err)
-			return false
 		}
 	}
 	return true
@@ -155,7 +152,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 
 	var staticPayload []byte
 	if signOpts.PayloadPath != "" {
-		ui.Info(ctx, "Using payload from:", signOpts.PayloadPath)
+		ui.Info(ctx, "Using payload from: %s", signOpts.PayloadPath)
 		staticPayload, err = os.ReadFile(filepath.Clean(signOpts.PayloadPath))
 		if err != nil {
 			return fmt.Errorf("payload from file: %w", err)
@@ -317,9 +314,9 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	// Check if we are overriding the signatures repository location
 	repo, _ := ociremote.GetEnvTargetRepository()
 	if repo.RepositoryStr() == "" {
-		ui.Info(ctx, "Pushing signature to:", digest.Repository)
+		ui.Info(ctx, "Pushing signature to: %s", digest.Repository)
 	} else {
-		ui.Info(ctx, "Pushing signature to:", repo.RepositoryStr())
+		ui.Info(ctx, "Pushing signature to: %s", repo.RepositoryStr())
 	}
 
 	// Publish the signatures associated with this entity
