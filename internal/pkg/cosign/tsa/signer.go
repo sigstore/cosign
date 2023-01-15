@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -81,13 +80,8 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 		return nil, nil, err
 	}
 
-	b64Sig, err := sig.Base64Signature()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// create timestamp over raw bytes of signature
-	rawSig, err := base64.StdEncoding.DecodeString(b64Sig)
+	rawSig, err := sig.Signature()
 	if err != nil {
 		return nil, nil, err
 	}
