@@ -725,15 +725,20 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// We have a public key.
-	if co.SigVerifier != nil {
+	switch {
+	// certificate provided from the OCI image, or via flag (--certificate or --bundle)
+	case cert != nil:
+		return cryptoutils.MarshalCertificateToPEM(cert)
+	// no certificate provided, verifier must be a public key
+	case co.SigVerifier != nil:
 		pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
 		if err != nil {
 			return nil, err
 		}
 		return cryptoutils.MarshalPublicKeyToPEM(pub)
+	default:
+		return nil, errors.New("no verifier found, must provide either certificate or public key")
 	}
-	return cryptoutils.MarshalCertificateToPEM(cert)
 }
 
 // VerifyBlobSignature verifies a blob signature.
