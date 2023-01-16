@@ -53,6 +53,8 @@ func AttestBlob() *cobra.Command {
 			}
 			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
+				Cert:                     o.Cert,
+				CertChain:                o.CertChain,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
 				Slot:                     o.SecurityKey.Slot,
@@ -72,8 +74,6 @@ func AttestBlob() *cobra.Command {
 			}
 			v := attest.AttestBlobCommand{
 				KeyOpts:           ko,
-				CertPath:          o.Cert,
-				CertChainPath:     o.CertChain,
 				ArtifactHash:      o.Hash,
 				TlogUpload:        o.TlogUpload,
 				PredicateType:     o.Predicate.Type,

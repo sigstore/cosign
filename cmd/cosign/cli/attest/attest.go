@@ -71,8 +71,6 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 type AttestCommand struct {
 	options.KeyOpts
 	options.RegistryOptions
-	CertPath      string
-	CertChainPath string
 	NoUpload      bool
 	PredicatePath string
 	PredicateType string
@@ -118,7 +116,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	// each access.
 	ref = digest // nolint
 
-	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, err := sign.SignerFromKeyOpts(ctx, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}

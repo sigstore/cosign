@@ -96,6 +96,8 @@ race conditions or (worse) malicious tampering.
 			}
 			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
+				Cert:                     o.Cert,
+				CertChain:                o.CertChain,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
 				Slot:                     o.SecurityKey.Slot,

@@ -59,7 +59,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
+	sv, err := SignerFromKeyOpts(ctx, ko)
 	if err != nil {
 		return nil, err
 	}

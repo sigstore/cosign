@@ -148,9 +148,11 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			at := AttestBlobCommand{
-				KeyOpts:       options.KeyOpts{KeyRef: tc.keyref},
-				CertPath:      tc.certref,
-				CertChainPath: tc.certchainref,
+				KeyOpts: options.KeyOpts{
+					KeyRef:    tc.keyref,
+					Cert:      tc.certref,
+					CertChain: tc.certchainref,
+				},
 				PredicatePath: predicatePath,
 				PredicateType: predicateType,
 			}

@@ -66,6 +66,8 @@ func Attest() *cobra.Command {
 			}
 			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
+				Cert:                     o.Cert,
+				CertChain:                o.CertChain,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
 				Slot:                     o.SecurityKey.Slot,
@@ -84,8 +86,6 @@ func Attest() *cobra.Command {
 			attestCommand := attest.AttestCommand{
 				KeyOpts:         ko,
 				RegistryOptions: o.Registry,
-				CertPath:        o.Cert,
-				CertChainPath:   o.CertChain,
 				NoUpload:        o.NoUpload,
 				PredicatePath:   o.Predicate.Path,
 				PredicateType:   o.Predicate.Type,

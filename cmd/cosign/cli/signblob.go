@@ -41,6 +41,9 @@ func SignBlob() *cobra.Command {
   # sign a blob with a local key pair file
   cosign sign-blob --key cosign.key <FILE>
 
+  # sign a blob with local certificate and CA bundle
+  cosign sign-blob --key cosign.key --certificate <FILE> --certificate-chain <FILE> --bundle <FILE> <FILE>
+
   # sign a blob with a key pair stored in Azure Key Vault
   cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
 
@@ -67,6 +70,8 @@ func SignBlob() *cobra.Command {
 			}
 			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
+				Cert:                     o.Cert,
+				CertChain:                o.CertChain,
 				PassFunc:                 generate.GetPass,
 				Sk:                       o.SecurityKey.Use,
 				Slot:                     o.SecurityKey.Slot,

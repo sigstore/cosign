@@ -21,6 +21,8 @@ type KeyOpts struct {
 	Sk                   bool
 	Slot                 string
 	KeyRef               string
+	Cert                 string
+	CertChain            string
 	FulcioURL            string
 	RekorURL             string
 	IDToken              string

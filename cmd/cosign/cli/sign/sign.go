@@ -146,7 +146,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	sv, err := SignerFromKeyOpts(ctx, ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
@@ -517,13 +517,13 @@ func keylessSigner(ctx context.Context, ko options.KeyOpts) (*SignerVerifier, er
 	}, nil
 }
 
-func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
+func SignerFromKeyOpts(ctx context.Context, ko options.KeyOpts) (*SignerVerifier, error) {
 	if ko.Sk {
 		return signerFromSecurityKey(ctx, ko.Slot)
 	}
 
 	if ko.KeyRef != "" {
-		return signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
+		return signerFromKeyRef(ctx, ko.Cert, ko.CertChain, ko.KeyRef, ko.PassFunc)
 	}
 
 	// Default Keyless!

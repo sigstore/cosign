@@ -48,8 +48,6 @@ import (
 // nolint
 type AttestBlobCommand struct {
 	options.KeyOpts
-	CertPath      string
-	CertChainPath string
 
 	ArtifactHash string
 
@@ -114,7 +112,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 	defer predicate.Close()
 
-	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, err := sign.SignerFromKeyOpts(ctx, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}

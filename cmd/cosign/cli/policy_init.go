@@ -188,6 +188,10 @@ func signPolicy() *cobra.Command {
 				return err
 			}
 			ko := options.KeyOpts{
+				// TODO(nsmith5): support signing keyless policy w/ BYO PKI
+				Cert:      "",
+				CertChain: "",
+
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
@@ -200,7 +204,7 @@ func signPolicy() *cobra.Command {
 				SkipConfirmation:         o.SkipConfirmation,
 				TSAServerURL:             o.TSAServerURL,
 			}
-			sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
+			sv, err := sign.SignerFromKeyOpts(ctx, ko)
 
 			if err != nil {
 				return err

@@ -17,6 +17,9 @@ cosign sign-blob [flags]
   # sign a blob with a local key pair file
   cosign sign-blob --key cosign.key <FILE>
 
+  # sign a blob with local certificate and CA bundle
+  cosign sign-blob --key cosign.key --certificate <FILE> --certificate-chain <FILE> --bundle <FILE> <FILE>
+
   # sign a blob with a key pair stored in Azure Key Vault
   cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
 
@@ -35,6 +38,8 @@ cosign sign-blob [flags]
 ```
       --b64                              whether to base64 encode the output (default true)
       --bundle string                    write everything required to verify the blob to a FILE
+      --certificate string               path to the X.509 certificate in PEM format to include in the OCI Signature
+      --certificate-chain string         path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
       --fulcio-url string                [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                             help for sign-blob
       --identity-token string            [EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
