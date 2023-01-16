@@ -168,15 +168,30 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
-		// This performs an online fetch of the Fulcio roots. This is needed
-		// for verifying keyless certificates (both online and offline).
-		co.RootCerts, err = fulcio.GetRoots()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio roots: %w", err)
-		}
-		co.IntermediateCerts, err = fulcio.GetIntermediates()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		if c.CertChain != "" {
+			chain, err := loadCertChainFromFileOrURL(c.CertChain)
+			if err != nil {
+				return err
+			}
+			co.RootCerts = x509.NewCertPool()
+			co.RootCerts.AddCert(chain[len(chain)-1])
+			if len(chain) > 1 {
+				co.IntermediateCerts = x509.NewCertPool()
+				for _, cert := range chain[:len(chain)-1] {
+					co.IntermediateCerts.AddCert(cert)
+				}
+			}
+		} else {
+			// This performs an online fetch of the Fulcio roots. This is needed
+			// for verifying keyless certificates (both online and offline).
+			co.RootCerts, err = fulcio.GetRoots()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio roots: %w", err)
+			}
+			co.IntermediateCerts, err = fulcio.GetIntermediates()
+			if err != nil {
+				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			}
 		}
 	}
 	keyRef := c.KeyRef
