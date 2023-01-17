@@ -888,8 +888,8 @@ github.com/sigstore/fulcio v1.0.0 h1:hBZW6qg9GXTtCX8jOg1hmyjYLrmsEKZGeMwAbW3XNEg
 github.com/sigstore/fulcio v1.0.0/go.mod h1:j4MzLxX/Be0rHYh3JF2dgMorkWGzEMHBqIHwFU8I/Rw=
 github.com/sigstore/rekor v1.0.1 h1:rcESXSNkAPRWFYZel9rarspdvneET60F2ngNkadi89c=
 github.com/sigstore/rekor v1.0.1/go.mod h1:ecTKdZWGWqE1pl3U1m1JebQJLU/hSjD9vYHOmHQ7w4g=
-github.com/sigstore/sigstore v1.5.1-0.20230117171511-8134411c70e1 h1:e8H0bUeGFVeKpG7fXX6lI3rGIeYg90mLdh9vwAqUrKY=
-github.com/sigstore/sigstore v1.5.1-0.20230117171511-8134411c70e1/go.mod h1:3i6UTWVNtFwOtbgG63FZZNID4vO9KcO8AszIJlaNI8k=
+github.com/sigstore/sigstore v1.5.1 h1:iUou0QJW8eQKMUkTXbFyof9ZOblDtfaW2Sn2+QI8Tcs=
+github.com/sigstore/sigstore v1.5.1/go.mod h1:3i6UTWVNtFwOtbgG63FZZNID4vO9KcO8AszIJlaNI8k=
 github.com/sigstore/timestamp-authority v0.2.1 h1:uqyamGxSXMEDt+e4t5XhR8JdJMeNBEj9V2Pol9BhuqY=
 github.com/sigstore/timestamp-authority v0.2.1/go.mod h1:i6zDth6bXY/ZaMzT5Hjd3ZuKtX85TW8fNoNWn8TxAc0=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
