@@ -21,7 +21,7 @@ cosign attach signature [flags]
   -h, --help                                                                                     help for signature
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --payload string                                                                           path to the payload covered by the signature (if using another format)
-      --signature string                                                                         the signature, path to the signature, or {-} for stdin
+      --signature string                                                                         path to the signature, or {-} for stdin
 ```
 
 ### Options inherited from parent commands

@@ -112,14 +112,7 @@ func signatureType(sigRef string) SignatureArgType {
 	switch {
 	case sigRef == "-":
 		return StdinSignature
-	case signatureFileNotExists(sigRef):
-		return RawSignature
 	default:
 		return FileSignature
 	}
-}
-
-func signatureFileNotExists(sigRef string) bool {
-	_, err := os.Stat(sigRef)
-	return os.IsNotExist(err)
 }

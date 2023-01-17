@@ -1187,6 +1187,11 @@ func TestUploadDownload(t *testing.T) {
 		signatureType attach.SignatureArgType
 		expectedErr   bool
 	}{
+		"stdin containing signature": {
+			signature:     "testsignatureraw",
+			signatureType: attach.StdinSignature,
+			expectedErr:   false,
+		},
 		"file containing signature": {
 			signature:     "testsignaturefile",
 			signatureType: attach.FileSignature,
@@ -1195,7 +1200,7 @@ func TestUploadDownload(t *testing.T) {
 		"raw signature as argument": {
 			signature:     "testsignatureraw",
 			signatureType: attach.RawSignature,
-			expectedErr:   false,
+			expectedErr:   true,
 		},
 		"empty signature as argument": {
 			signature:     "",
@@ -1211,10 +1216,14 @@ func TestUploadDownload(t *testing.T) {
 			payload := "testpayload"
 			payloadPath := mkfile(payload, td, t)
 			signature := base64.StdEncoding.EncodeToString([]byte(testCase.signature))
+			restoreStdin := func() {}
 
 			var sigRef string
 			if testCase.signatureType == attach.FileSignature {
 				sigRef = mkfile(signature, td, t)
+			} else if testCase.signatureType == attach.StdinSignature {
+				sigRef = "-"
+				restoreStdin = mockStdin(signature, td, t)
 			} else {
 				sigRef = signature
 			}
@@ -1226,6 +1235,7 @@ func TestUploadDownload(t *testing.T) {
 			} else {
 				must(err, t)
 			}
+			restoreStdin()
 
 			// Now download it!
 			se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
@@ -1492,6 +1502,97 @@ func TestAttachSBOM(t *testing.T) {
 	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom"), t)
 }
 
+func TestAttachSBOM_bom_flag(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+	ctx := context.Background()
+	bomData, err := os.ReadFile("./testdata/bom-go-mod.spdx")
+	must(err, t)
+
+	testCases := map[string]struct {
+		bom         string
+		bomType     attach.SignatureArgType
+		expectedErr bool
+	}{
+		"stdin containing bom": {
+			bom:         string(bomData),
+			bomType:     attach.StdinSignature,
+			expectedErr: false,
+		},
+		"file containing bom": {
+			bom:         string(bomData),
+			bomType:     attach.FileSignature,
+			expectedErr: false,
+		},
+		"raw bom as argument": {
+			bom:         string(bomData),
+			bomType:     attach.RawSignature,
+			expectedErr: true,
+		},
+		"empty bom as argument": {
+			bom:         "",
+			bomType:     attach.RawSignature,
+			expectedErr: true,
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			imgName := path.Join(repo, "sbom-image")
+			img, _, cleanup := mkimage(t, imgName)
+			var sbomRef string
+			restoreStdin := func() {}
+			if testCase.bomType == attach.FileSignature {
+				sbomRef = mkfile(testCase.bom, td, t)
+			} else if testCase.bomType == attach.StdinSignature {
+				sbomRef = "-"
+				restoreStdin = mockStdin(testCase.bom, td, t)
+			} else {
+				sbomRef = testCase.bom
+			}
+
+			out := bytes.Buffer{}
+			_, errPl := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{Platform: "darwin/amd64"}, img.Name(), &out)
+			if errPl == nil {
+				t.Fatalf("Expected error when passing Platform to single arch image")
+			}
+			_, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, img.Name(), &out)
+			if err == nil {
+				t.Fatal("Expected error")
+			}
+			t.Log(out.String())
+			out.Reset()
+
+			// Upload it!
+			err = attach.SBOMCmd(ctx, options.RegistryOptions{}, sbomRef, "spdx", imgName)
+			restoreStdin()
+
+			if testCase.expectedErr {
+				mustErr(err, t)
+			} else {
+				sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Log(out.String())
+				if len(sboms) != 1 {
+					t.Fatalf("Expected one sbom, got %d", len(sboms))
+				}
+				want, err := os.ReadFile("./testdata/bom-go-mod.spdx")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
+					t.Errorf("diff: %s", diff)
+				}
+			}
+
+			cleanup()
+		})
+	}
+}
+
 func setenv(t *testing.T, k, v string) func() {
 	if err := os.Setenv(k, v); err != nil {
 		t.Fatalf("error setting env: %v", err)
@@ -1601,6 +1702,19 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	output, err := os.ReadFile(outPath)
 	must(err, t)
 	equals(keys.PublicBytes, output, t)
+}
+
+func mockStdin(contents, td string, t *testing.T) func() {
+	origin := os.Stdin
+
+	p := mkfile(contents, td, t)
+	f, err := os.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdin = f
+
+	return func() { os.Stdin = origin }
 }
 
 func mkfile(contents, td string, t *testing.T) string {
