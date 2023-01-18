@@ -28,7 +28,7 @@ type testCase struct {
 	expected string
 }
 
-func TestInfo(t *testing.T) {
+func TestInfof(t *testing.T) {
 	cases := []testCase{
 		{"basic", "foo", nil, "foo\n"},
 		{"multiline", "foo\nbar", nil, "foo\nbar\n"},
@@ -36,13 +36,13 @@ func TestInfo(t *testing.T) {
 	}
 	for _, tc := range cases {
 		stderr := ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
-			ui.Info(ctx, tc.input, tc.args...)
+			ui.Infof(ctx, tc.input, tc.args...)
 		})
 		assert.Equal(t, tc.expected, stderr, "Bad output to STDERR")
 	}
 }
 
-func TestWarn(t *testing.T) {
+func TestWarnf(t *testing.T) {
 	cases := []testCase{
 		{"basic", "foo", nil, "WARNING: foo\n"},
 		{"multiline", "foo\nbar", nil, "WARNING: foo\nbar\n"},
@@ -50,7 +50,7 @@ func TestWarn(t *testing.T) {
 	}
 	for _, tc := range cases {
 		stderr := ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
-			ui.Warn(ctx, tc.input, tc.args...)
+			ui.Warnf(ctx, tc.input, tc.args...)
 		})
 		assert.Equal(t, tc.expected, stderr, "Bad output to STDERR")
 	}

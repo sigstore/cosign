@@ -48,7 +48,7 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, outputKeyPrefixVal str
 	}
 
 	if fileExists {
-		ui.Warn(ctx, "File %s already exists. Overwrite?", privateKeyFileName)
+		ui.Warnf(ctx, "File %s already exists. Overwrite?", privateKeyFileName)
 		if err := ui.ConfirmContinue(ctx); err != nil {
 			return err
 		}

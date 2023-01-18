@@ -73,8 +73,8 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 	var statementErr error
 	if upload {
 		privacy.StatementOnce.Do(func() {
-			ui.Info(ctx, privacy.Statement)
-			ui.Info(ctx, privacy.StatementConfirmation)
+			ui.Infof(ctx, privacy.Statement)
+			ui.Infof(ctx, privacy.StatementConfirmation)
 			if !ko.SkipConfirmation {
 				if err := ui.ConfirmContinue(ctx); err != nil {
 					statementErr = err
@@ -102,10 +102,10 @@ func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
-		ui.Warn(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log at %q", ref.Context().String(), ko.RekorURL)
-		var errPromptDeclined *ui.ErrPromptDeclined
+		ui.Warnf(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log at %q", ref.Context().String(), ko.RekorURL)
 		if ui.ConfirmContinue(ctx) != nil {
-			ui.Info(ctx, "not uploading to transparency log")
+			ui.Infof(ctx, "not uploading to transparency log")
+			return false
 		}
 	}
 	return true
@@ -129,7 +129,7 @@ func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) 
 	}
 	if _, ok := ref.(name.Digest); !ok {
 		msg := fmt.Sprintf(TagReferenceMessage, refStr)
-		ui.Warn(ctx, msg)
+		ui.Warnf(ctx, msg)
 	}
 	return ref, nil
 }
@@ -152,7 +152,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 
 	var staticPayload []byte
 	if signOpts.PayloadPath != "" {
-		ui.Info(ctx, "Using payload from: %s", signOpts.PayloadPath)
+		ui.Infof(ctx, "Using payload from: %s", signOpts.PayloadPath)
 		staticPayload, err = os.ReadFile(filepath.Clean(signOpts.PayloadPath))
 		if err != nil {
 			return fmt.Errorf("payload from file: %w", err)
@@ -292,7 +292,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("create certificate file: %w", err)
 		}
 		// TODO: maybe accept a --b64 flag as well?
-		ui.Info(ctx, "Certificate wrote in the file %s", outputCertificate)
+		ui.Infof(ctx, "Certificate wrote in the file %s", outputCertificate)
 	}
 
 	if !upload {
@@ -314,9 +314,9 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	// Check if we are overriding the signatures repository location
 	repo, _ := ociremote.GetEnvTargetRepository()
 	if repo.RepositoryStr() == "" {
-		ui.Info(ctx, "Pushing signature to: %s", digest.Repository)
+		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
 	} else {
-		ui.Info(ctx, "Pushing signature to: %s", repo.RepositoryStr())
+		ui.Infof(ctx, "Pushing signature to: %s", repo.RepositoryStr())
 	}
 
 	// Publish the signatures associated with this entity
@@ -345,7 +345,7 @@ func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier
 	certFromPIV, err := sk.Certificate()
 	var pemBytes []byte
 	if err != nil {
-		ui.Warn(ctx, "no x509 certificate retrieved from the PIV token")
+		ui.Warnf(ctx, "no x509 certificate retrieved from the PIV token")
 	} else {
 		pemBytes, err = cryptoutils.MarshalCertificateToPEM(certFromPIV)
 		if err != nil {
@@ -381,7 +381,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 		certSigner.close = pkcs11Key.Close
 
 		if certFromPKCS11 == nil {
-			ui.Warn(ctx, "no x509 certificate retrieved from the PKCS11 token")
+			ui.Warnf(ctx, "no x509 certificate retrieved from the PKCS11 token")
 		} else {
 			pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
 			if err != nil {
@@ -434,7 +434,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 			return nil, fmt.Errorf("marshaling certificate to PEM: %w", err)
 		}
 		if certSigner.Cert != nil {
-			ui.Warn(ctx, "overriding x509 certificate retrieved from the PKCS11 token")
+			ui.Warnf(ctx, "overriding x509 certificate retrieved from the PKCS11 token")
 		}
 		leafCert = parsedCert
 		certSigner.Cert = pemBytes
@@ -524,7 +524,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	}
 
 	// Default Keyless!
-	ui.Info(ctx, "Generating ephemeral keys...")
+	ui.Infof(ctx, "Generating ephemeral keys...")
 	return keylessSigner(ctx, ko)
 }
 
@@ -543,7 +543,7 @@ func (c *SignerVerifier) Close() {
 
 func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	if c.Cert != nil {
-		ui.Info(ctx, "using ephemeral certificate:\n%s", string(c.Cert))
+		ui.Infof(ctx, "using ephemeral certificate:\n%s", string(c.Cert))
 		return c.Cert, nil
 	}
 

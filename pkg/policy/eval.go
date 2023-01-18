@@ -54,8 +54,8 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
 func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
-	ui.Info(ctx, "Evaluating attestation: %s", string(attestation))
-	ui.Info(ctx, "Evaluator: %s", evaluator)
+	ui.Infof(ctx, "Evaluating attestation: %s", string(attestation))
+	ui.Infof(ctx, "Evaluator: %s", evaluator)
 
 	cueCtx := cuecontext.New()
 	cueEvaluator := cueCtx.CompileString(evaluator)
@@ -75,8 +75,8 @@ func evaluateCue(ctx context.Context, attestation []byte, evaluator string) erro
 
 // evaluateRego evaluates a rego policy `evaluator` against `attestation`
 func evaluateRego(ctx context.Context, attestation []byte, evaluator string) (warnings error, errors error) {
-	ui.Info(ctx, "Evaluating attestation: %s", string(attestation))
-	ui.Info(ctx, "Evaluating evaluator: %s", evaluator)
+	ui.Infof(ctx, "Evaluating attestation: %s", string(attestation))
+	ui.Infof(ctx, "Evaluating evaluator: %s", evaluator)
 
 	return rego.ValidateJSONWithModuleInput(attestation, evaluator)
 }
