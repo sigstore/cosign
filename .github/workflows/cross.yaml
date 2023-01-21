@@ -60,8 +60,8 @@ jobs:
           COSIGN_PASSWORD: ${{secrets[matrix.COSIGN_PASSWORD]}}
         if: github.event_name != 'pull_request'
         run: |
-          ./${{matrix.COSIGN_TARGET}} sign-blob --key ./.github/workflows/cosign-test.key ./${{matrix.COSIGN_TARGET}} > ${{matrix.COSIGN_TARGET}}.sig
-          ./${{matrix.COSIGN_TARGET}} sign-blob --key ./.github/workflows/cosign-test.key ./${{matrix.SGET_TARGET}} > ${{matrix.SGET_TARGET}}.sig
+          ./${{matrix.COSIGN_TARGET}} sign-blob --yes --key ./.github/workflows/cosign-test.key ./${{matrix.COSIGN_TARGET}} > ${{matrix.COSIGN_TARGET}}.sig
+          ./${{matrix.COSIGN_TARGET}} sign-blob --yes --key ./.github/workflows/cosign-test.key ./${{matrix.SGET_TARGET}} > ${{matrix.SGET_TARGET}}.sig
       - name: verify
         if: github.event_name != 'pull_request'
         run: |
