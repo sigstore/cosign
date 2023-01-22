@@ -38,7 +38,7 @@ type KeyOpts struct {
 	TSACertChainPath     string
 	// IssueCertificate controls whether to issue a certificate when a key is
 	// provided.
-	IssueCertificate bool
+	IssueCertificateForExistingKey bool
 
 	// FulcioAuthFlow is the auth flow to use when authenticating against
 	// Fulcio. See https://pkg.go.dev/github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio#pkg-constants
@@ -49,3 +49,4 @@ type KeyOpts struct {
 	// verifying the SCT.
 	InsecureSkipFulcioVerify bool
 }
+

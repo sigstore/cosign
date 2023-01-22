@@ -31,7 +31,6 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/providers"
-	key "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
@@ -112,7 +111,7 @@ type Signer struct {
 	signature.SignerVerifier
 }
 
-func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
+func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*Signer, error) {
 	fClient, err := NewClient(ko.FulcioURL)
 	if err != nil {
 		return nil, fmt.Errorf("creating Fulcio client: %w", err)
@@ -139,33 +138,6 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 		}
 	}
 
-	var signer signature.SignerVerifier
-	switch {
-	case ko.IssueCertificate && ko.KeyRef != "":
-		signer, err = key.SignerVerifierFromKeyRef(ctx, ko.KeyRef, ko.PassFunc)
-		if err != nil {
-			return nil, err
-		}
-	case ko.IssueCertificate && ko.Sk:
-		sk, err := pivkey.GetKeyWithSlot(ko.Slot)
-		if err != nil {
-			return nil, err
-		}
-		signer, err = sk.SignerVerifier()
-		if err != nil {
-			sk.Close()
-			return nil, err
-		}
-	default:
-		priv, err := cosign.GeneratePrivateKey()
-		if err != nil {
-			return nil, fmt.Errorf("generating cert: %w", err)
-		}
-		signer, err = signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
-		if err != nil {
-			return nil, err
-		}
-	}
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
 	var flow string

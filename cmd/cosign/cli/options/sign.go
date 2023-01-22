@@ -101,5 +101,5 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 		"url to the Timestamp RFC3161 server, default none")
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
-		"whether or not to issue code signing certificate from Fulcio")
+		"issue a code signing certificate from Fulcio, even if a key is provided")
 }

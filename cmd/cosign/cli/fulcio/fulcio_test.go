@@ -26,8 +26,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -199,7 +197,8 @@ func TestNewSigner(t *testing.T) {
 		}))
 	defer testServer.Close()
 
-	// success: a random key is generated
+	// success: Generate a random key and create a corresponding
+	// SignerVerifier.
 	ctx := context.TODO()
 	ko := options.KeyOpts{
 		OIDCDisableProviders: true,
@@ -208,7 +207,15 @@ func TestNewSigner(t *testing.T) {
 		FulcioURL:      testServer.URL,
 		FulcioAuthFlow: "token",
 	}
-	signer, err := NewSigner(ctx, ko)
+	privKey, err := cosign.GeneratePrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := NewSigner(ctx, ko, sv)
 	if err != nil {
 		t.Fatalf("unexpected error creating signer: %v", err)
 	}
@@ -216,34 +223,7 @@ func TestNewSigner(t *testing.T) {
 	if responsePEMChain != string(pemChain) {
 		t.Fatalf("response certificates not equal, got %v, expected %v", responsePEMChain, pemChain)
 	}
-	// check that a key was generated
 	if signer.SignerVerifier == nil {
 		t.Fatalf("missing signer/verifier")
-	}
-
-	// success: a key is used when provided
-	// generate and persist key
-	keys, err := cosign.GenerateKeyPair(nil)
-	ecdsaKey, _ := cosign.LoadPrivateKey(keys.PrivateBytes, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	td := t.TempDir()
-	keyPath := filepath.Join(td, "key")
-	if err := os.WriteFile(keyPath, keys.PrivateBytes, 0644); err != nil {
-		t.Fatal(err)
-	}
-	// set required KeyOpts
-	ko.IssueCertificate = true
-	ko.KeyRef = keyPath
-	ko.PassFunc = nil
-	signer, err = NewSigner(ctx, ko)
-	if err != nil {
-		t.Fatalf("unexpected error creating signer: %v", err)
-	}
-	pubKey, _ := signer.SignerVerifier.PublicKey()
-	expectedPubKey, _ := ecdsaKey.PublicKey()
-	if err := cryptoutils.EqualKeys(expectedPubKey, pubKey); err != nil {
-		t.Fatalf("keys are not equal: %v", err)
 	}
 }

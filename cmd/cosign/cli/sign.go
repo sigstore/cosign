@@ -111,7 +111,7 @@ race conditions or (worse) malicious tampering.
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 				TSAServerURL:             o.TSAServerURL,
-				IssueCertificate:         o.IssueCertificate,
+				IssueCertificateForExistingKey:         o.IssueCertificate,
 			}
 			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {

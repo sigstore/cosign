@@ -85,5 +85,5 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
-		"when set and a key is provided, issue a code signing certificate from Fulcio")
+		"issue a code signing certificate from Fulcio, even if a key is provided")
 }

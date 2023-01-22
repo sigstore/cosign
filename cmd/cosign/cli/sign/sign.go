@@ -18,6 +18,7 @@ package sign
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -483,18 +484,33 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func keylessSigner(ctx context.Context, ko options.KeyOpts) (*SignerVerifier, error) {
+func signerFromNewKey() (*SignerVerifier, error) {
+	privKey, err := cosign.GeneratePrivateKey()
+	if err != nil {
+		return nil, fmt.Errorf("generating cert: %w", err)
+	}
+	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SignerVerifier{
+		SignerVerifier: sv,
+	}, nil
+}
+
+func keylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) (*SignerVerifier, error) {
 	var (
 		k   *fulcio.Signer
 		err error
 	)
 
 	if ko.InsecureSkipFulcioVerify {
-		if k, err = fulcio.NewSigner(ctx, ko); err != nil {
+		if k, err = fulcio.NewSigner(ctx, ko, sv); err != nil {
 			return nil, fmt.Errorf("getting key from Fulcio: %w", err)
 		}
 	} else {
-		if k, err = fulcioverifier.NewSigner(ctx, ko); err != nil {
+		if k, err = fulcioverifier.NewSigner(ctx, ko, sv); err != nil {
 			return nil, fmt.Errorf("getting key from Fulcio: %w", err)
 		}
 	}
@@ -507,19 +523,28 @@ func keylessSigner(ctx context.Context, ko options.KeyOpts) (*SignerVerifier, er
 }
 
 func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
-	if ko.Sk && !ko.IssueCertificate {
-		return signerFromSecurityKey(ctx, ko.Slot)
-	}
-
-	if ko.KeyRef != "" && !ko.IssueCertificate {
-		return signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
-	}
-
-	// Default Keyless!
-	if !ko.IssueCertificate {
+	var sv *SignerVerifier
+	var err error
+	genKey := false
+	switch {
+	case ko.Sk:
+		sv, err = signerFromSecurityKey(ko.Slot)
+	case ko.KeyRef !=  "":
+		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
+	default:
+		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
+		sv, err = signerFromNewKey()
 	}
-	return keylessSigner(ctx, ko)
+	if err != nil {
+		return nil, err
+	}
+
+	if ko.IssueCertificateForExistingKey || genKey {
+		return keylessSigner(ctx, ko, sv)
+	}
+
+	return sv, nil
 }
 
 type SignerVerifier struct {
