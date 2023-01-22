@@ -28,8 +28,6 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/providers"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"

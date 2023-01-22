@@ -528,8 +528,8 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	genKey := false
 	switch {
 	case ko.Sk:
-		sv, err = signerFromSecurityKey(ko.Slot)
-	case ko.KeyRef !=  "":
+		sv, err = signerFromSecurityKey(ctx, ko.Slot)
+	case ko.KeyRef != "":
 		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
 	default:
 		genKey = true

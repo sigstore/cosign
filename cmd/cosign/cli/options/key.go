@@ -49,4 +49,3 @@ type KeyOpts struct {
 	// verifying the SCT.
 	InsecureSkipFulcioVerify bool
 }
-
