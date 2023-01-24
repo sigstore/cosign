@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -36,7 +37,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 	}
 
 	for _, payload := range signedPayloads {
-		if err := attachAttestation(ociremoteOpts, payload, imageRef, regOpts.NameOptions()); err != nil {
+		if err := attachAttestation(ctx, ociremoteOpts, payload, imageRef, regOpts.NameOptions()); err != nil {
 			return fmt.Errorf("attaching payload from %s: %w", payload, err)
 		}
 	}
@@ -44,7 +45,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 	return nil
 }
 
-func attachAttestation(remoteOpts []ociremote.Option, signedPayload, imageRef string, nameOpts []name.Option) error {
+func attachAttestation(ctx context.Context, remoteOpts []ociremote.Option, signedPayload, imageRef string, nameOpts []name.Option) error {
 	fmt.Fprintf(os.Stderr, "Using payload from: %s", signedPayload)
 	attestationFile, err := os.Open(signedPayload)
 	if err != nil {
@@ -74,6 +75,10 @@ func attachAttestation(remoteOpts []ociremote.Option, signedPayload, imageRef st
 		ref, err := name.ParseReference(imageRef, nameOpts...)
 		if err != nil {
 			return err
+		}
+		if _, ok := ref.(name.Digest); !ok {
+			msg := fmt.Sprintf(ui.TagReferenceMessage, imageRef)
+			ui.Warnf(ctx, msg)
 		}
 		digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
 		if err != nil {

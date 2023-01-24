@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
@@ -38,6 +39,10 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	srcRef, err := name.ParseReference(srcImg, no...)
 	if err != nil {
 		return err
+	}
+	if _, ok := srcRef.(name.Digest); !ok {
+		msg := fmt.Sprintf(ui.TagReferenceMessage, srcImg)
+		ui.Warnf(ctx, msg)
 	}
 	srcRepoRef := srcRef.Context()
 

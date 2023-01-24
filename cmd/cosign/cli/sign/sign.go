@@ -60,14 +60,6 @@ import (
 	_ "github.com/sigstore/cosign/v2/pkg/providers/all"
 )
 
-const TagReferenceMessage string = `Image reference %s uses a tag, not a digest, to identify the image to sign.
-
-    This can lead you to sign a different image than the intended one. Please use a
-    digest (example.com/ubuntu@sha256:abc123...) rather than tag
-    (example.com/ubuntu:latest) for the input to cosign. The ability to refer to
-    images by tag will be removed in a future release.
-`
-
 func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {
 	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
 	var statementErr error
@@ -128,7 +120,7 @@ func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) 
 		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
 	if _, ok := ref.(name.Digest); !ok {
-		msg := fmt.Sprintf(TagReferenceMessage, refStr)
+		msg := fmt.Sprintf(ui.TagReferenceMessage, refStr)
 		ui.Warnf(ctx, msg)
 	}
 	return ref, nil
