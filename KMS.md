@@ -68,7 +68,6 @@ $ cosign verify --key kms.pub $IMAGE
 
 This section contains the provider-specific documentation.
 
-
 ### AWS
 
 AWS KMS keys can be used in `cosign` for signing and verification.
@@ -128,8 +127,9 @@ Cosign automatically uses GCP Application Default Credentials for authentication
 See the GCP [API documentation](https://cloud.google.com/docs/authentication/production) for information on how to authenticate in different environments.
 
 The user must have the following IAM roles:
-* Safer KMS Viewer Role
-* Cloud KMS CryptoKey Signer/Verifier (`roles/cloudkms.signerVerifier`)
+
+- Safer KMS Viewer Role
+- Cloud KMS CryptoKey Signer/Verifier (`roles/cloudkms.signerVerifier`)
 
 ### Azure Key Vault
 
@@ -141,6 +141,7 @@ The URI format for Azure Key Vault is:
 where VAULT_NAME, VAULT_URI, and KEY are replaced with the correct values.
 
 The following environment variables must be set to let cosign authenticate to Azure Key Vault. (see this [reference](https://devblogs.microsoft.com/azure-sdk/authentication-and-the-azure-sdk/#environment-variables) for more details about Azure SDK Authentication)
+
 - AZURE_TENANT_ID
 - AZURE_CLIENT_ID
 - AZURE_CLIENT_SECRET
@@ -159,6 +160,8 @@ The URI format for Hashicorp Vault KMS is:
 This provider requires that the standard Vault environment variables (VAULT_ADDR, VAULT_TOKEN) are set correctly.
 This provider also requires that the `transit` secret engine is enabled
 
+> Note: If you are login in within a namespace in the `vault-action` then you have to set `VAULT_NAMESPACE` environment variable as well. Otherwise cosign is trying to use transit in the root namespace.
+
 ### Kubernetes Secret
 
 Cosign can use keys stored in Kubernetes Secrets to so sign and verify signatures. In
@@ -174,7 +177,7 @@ Public key written to cosign.pub
 ```
 
 After generating the key pair, cosign will store it in a Kubernetes secret using
-your current context. The secret will contain the private and public keys, as 
+your current context. The secret will contain the private and public keys, as
 well as the password to decrypt the private key.
 
 The secret has the following structure:
