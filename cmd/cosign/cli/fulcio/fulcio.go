@@ -162,8 +162,8 @@ func NewSigner(ctx context.Context, ko options.KeyOpts) (*Signer, error) {
 	default:
 		var statementErr error
 		privacy.StatementOnce.Do(func() {
-			ui.Info(ctx, privacy.Statement)
-			ui.Info(ctx, privacy.StatementConfirmation)
+			ui.Infof(ctx, privacy.Statement)
+			ui.Infof(ctx, privacy.StatementConfirmation)
 			if !ko.SkipConfirmation {
 				if err := ui.ConfirmContinue(ctx); err != nil {
 					statementErr = err

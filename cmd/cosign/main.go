@@ -41,7 +41,7 @@ func main() {
 		if strings.HasPrefix(arg, "--") && len(arg) == 3 {
 			// Handle --o, convert to -o
 			newArg := fmt.Sprintf("-%c", arg[2])
-			ui.Warn(ctx, "the flag %s is deprecated and will be removed in a future release. Please use the flag %s.", arg, newArg)
+			ui.Warnf(ctx, "the flag %s is deprecated and will be removed in a future release. Please use the flag %s.", arg, newArg)
 			os.Args[i] = newArg
 		} else if strings.HasPrefix(arg, "-") && len(arg) > 1 {
 			// Handle -output, convert to --output
@@ -51,7 +51,7 @@ func main() {
 				newArg = "version"
 				newArgType = "subcommand"
 			}
-			ui.Warn(ctx, "the %s flag is deprecated and will be removed in a future release. "+
+			ui.Warnf(ctx, "the %s flag is deprecated and will be removed in a future release. "+
 				"Please use the %s %s instead.",
 				arg, newArg, newArgType,
 			)

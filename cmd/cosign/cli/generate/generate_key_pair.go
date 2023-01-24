@@ -97,7 +97,7 @@ func GenerateKeyPairCmd(ctx context.Context, kmsVal string, outputKeyPrefixVal s
 	}
 
 	if fileExists {
-		ui.Warn(ctx, "File %s already exists. Overwrite?", privateKeyFileName)
+		ui.Warnf(ctx, "File %s already exists. Overwrite?", privateKeyFileName)
 		if err := ui.ConfirmContinue(ctx); err != nil {
 			return err
 		}
