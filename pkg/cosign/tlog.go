@@ -181,7 +181,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 		// Here, we display the proof and succeed.
 		var existsErr *entries.CreateLogEntryConflict
 		if errors.As(err, &existsErr) {
-			ui.Info(ctx, "Signature already exists. Displaying proof")
+			ui.Infof(ctx, "Signature already exists. Displaying proof")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
 			uuid := uriSplit[len(uriSplit)-1]
 			e, err := GetTlogEntry(ctx, rekorClient, uuid)
@@ -461,7 +461,7 @@ func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPu
 		return fmt.Errorf("verifying signedEntryTimestamp: %w", err)
 	}
 	if pubKey.Status != tuf.Active {
-		ui.Info(ctx, "Successfully verified Rekor entry using an expired verification key")
+		ui.Infof(ctx, "Successfully verified Rekor entry using an expired verification key")
 	}
 	return nil
 }

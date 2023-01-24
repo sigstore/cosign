@@ -18,24 +18,24 @@ import (
 	"fmt"
 )
 
-func (w *Env) info(msg string, a ...any) {
+func (w *Env) infof(msg string, a ...any) {
 	msg = fmt.Sprintf(msg, a...)
 	fmt.Fprintln(w.Stderr, msg)
 }
 
-// Info logs an informational message. It works like fmt.Printf, except that it
+// Infof logs an informational message. It works like fmt.Printf, except that it
 // always has a trailing newline.
-func Info(ctx context.Context, msg string, a ...any) {
-	getEnv(ctx).info(msg, a...)
+func Infof(ctx context.Context, msg string, a ...any) {
+	getEnv(ctx).infof(msg, a...)
 }
 
-func (w *Env) warn(msg string, a ...any) {
+func (w *Env) warnf(msg string, a ...any) {
 	msg = fmt.Sprintf(msg, a...)
 	fmt.Fprintf(w.Stderr, "WARNING: %s\n", msg)
 }
 
-// Warn logs a warning message (prefixed by "WARNING:"). It works like
+// Warnf logs a warning message (prefixed by "WARNING:"). It works like
 // fmt.Printf, except that it always has a trailing newline.
-func Warn(ctx context.Context, msg string, a ...any) {
-	getEnv(ctx).warn(msg, a...)
+func Warnf(ctx context.Context, msg string, a ...any) {
+	getEnv(ctx).warnf(msg, a...)
 }
