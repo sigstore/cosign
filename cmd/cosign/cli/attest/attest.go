@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -96,6 +97,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	ref, err := name.ParseReference(imageRef, c.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("parsing reference: %w", err)
+	}
+	if _, ok := ref.(name.Digest); !ok {
+		msg := fmt.Sprintf(ui.TagReferenceMessage, imageRef)
+		ui.Warnf(ctx, msg)
 	}
 
 	if c.Timeout != 0 {
