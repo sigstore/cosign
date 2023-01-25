@@ -540,6 +540,9 @@ func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts)
 	if err != nil {
 		return nil, false, err
 	}
+	if sigs == nil {
+		return nil, false, fmt.Errorf("no signatures associated with the image saved in %s", path)
+	}
 
 	return verifySignatures(ctx, sigs, h, co)
 }
