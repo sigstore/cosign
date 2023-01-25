@@ -26,6 +26,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -214,7 +215,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			if isb64(certBytes) {
 				certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
 			}
-			cert, err = loadCertFromPEM(certBytes)
+			bundleCert, err := loadCertFromPEM(certBytes)
 			if err != nil {
 				// check if cert is actually a public key
 				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
@@ -222,6 +223,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 					return fmt.Errorf("loading verifier from bundle: %w", err)
 				}
 			}
+			// if a cert was passed in, make sure it matches the cert in the bundle
+			if cert != nil {
+				if !reflect.DeepEqual(cert, bundleCert) {
+					return fmt.Errorf("the cert passed in does not match the cert in the provided bundle")
+				}
+			}
+			cert = bundleCert
 		}
 		opts = append(opts, static.WithBundle(b.Bundle))
 	}

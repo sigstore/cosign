@@ -28,6 +28,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
@@ -251,7 +252,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			if isb64(certBytes) {
 				certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
 			}
-			cert, err = loadCertFromPEM(certBytes)
+			bundleCert, err := loadCertFromPEM(certBytes)
 			if err != nil {
 				// check if cert is actually a public key
 				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
@@ -259,7 +260,15 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 					return fmt.Errorf("loading verifier from bundle: %w", err)
 				}
 			}
+			// if a cert was passed in, make sure it matches the cert in the bundle
+			if cert != nil {
+				if !reflect.DeepEqual(cert, bundleCert) {
+					return fmt.Errorf("the cert passed in does not match the cert in the provided bundle")
+				}
+			}
+			cert = bundleCert
 		}
+
 		encodedSig, err = base64.StdEncoding.DecodeString(b.Base64Signature)
 		if err != nil {
 			return fmt.Errorf("decoding signature: %w", err)
