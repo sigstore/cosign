@@ -26,7 +26,6 @@ type AttestBlobOptions struct {
 
 	SkipConfirmation     bool
 	TlogUpload           bool
-	TSAServerURL         string
 	RFC3161TimestampPath string
 
 	Hash      string
@@ -41,6 +40,7 @@ type AttestBlobOptions struct {
 	Fulcio      FulcioOptions
 	OIDC        OIDCOptions
 	SecurityKey SecurityKeyOptions
+	Timestamp   TimestampAuthorityOptions
 }
 
 var _ Interface = (*AttestOptions)(nil)
@@ -52,6 +52,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Fulcio.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
 	o.SecurityKey.AddFlags(cmd)
+	o.Timestamp.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
@@ -91,9 +92,6 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
 		"whether or not to upload to the tlog")
-
-	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
-		"url to the Timestamp RFC3161 server, default none")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
 		"path to an RFC 3161 timestamp bundle FILE")

@@ -188,17 +188,19 @@ func signPolicy() *cobra.Command {
 				return err
 			}
 			ko := options.KeyOpts{
-				FulcioURL:                o.Fulcio.URL,
-				IDToken:                  o.Fulcio.IdentityToken,
-				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
-				RekorURL:                 o.Rekor.URL,
-				OIDCIssuer:               o.OIDC.Issuer,
-				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         oidcClientSecret,
-				OIDCRedirectURL:          o.OIDC.RedirectURL,
-				OIDCProvider:             o.OIDC.Provider,
-				SkipConfirmation:         o.SkipConfirmation,
-				TSAServerURL:             o.TSAServerURL,
+				FulcioURL:                    o.Fulcio.URL,
+				IDToken:                      o.Fulcio.IdentityToken,
+				InsecureSkipFulcioVerify:     o.Fulcio.InsecureSkipFulcioVerify,
+				RekorURL:                     o.Rekor.URL,
+				OIDCIssuer:                   o.OIDC.Issuer,
+				OIDCClientID:                 o.OIDC.ClientID,
+				OIDCClientSecret:             oidcClientSecret,
+				OIDCRedirectURL:              o.OIDC.RedirectURL,
+				OIDCProvider:                 o.OIDC.Provider,
+				SkipConfirmation:             o.SkipConfirmation,
+				TSAServerURL:                 o.Timestamp.TSAServerURL,
+				TSACertChainPath:             o.Timestamp.TimestampCertChainPath,
+				InsecureSkipTSResponseVerify: o.Timestamp.InsecureSkipTSResponseVerify,
 			}
 			sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
 
@@ -267,8 +269,8 @@ func signPolicy() *cobra.Command {
 				return err
 			}
 
-			if o.TSAServerURL != "" {
-				clientTSA, err := tsaclient.GetTimestampClient(o.TSAServerURL)
+			if o.Timestamp.TSAServerURL != "" {
+				clientTSA, err := tsaclient.GetTimestampClient(o.Timestamp.TSAServerURL)
 				if err != nil {
 					return fmt.Errorf("failed to create TSA client: %w", err)
 				}

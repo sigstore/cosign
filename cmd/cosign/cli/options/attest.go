@@ -29,7 +29,6 @@ type AttestOptions struct {
 	Replace          bool
 	SkipConfirmation bool
 	TlogUpload       bool
-	TSAServerURL     string
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -37,6 +36,7 @@ type AttestOptions struct {
 	SecurityKey SecurityKeyOptions
 	Predicate   PredicateLocalOptions
 	Registry    RegistryOptions
+	Timestamp   TimestampAuthorityOptions
 }
 
 var _ Interface = (*AttestOptions)(nil)
@@ -49,6 +49,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	o.OIDC.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.Timestamp.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
@@ -79,7 +80,4 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
 		"whether or not to upload to the tlog")
-
-	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
-		"url to the Timestamp RFC3161 server, default none")
 }

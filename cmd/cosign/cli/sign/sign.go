@@ -251,6 +251,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("failed to create TSA client: %w", err)
 		}
 
+		// TODO: Might need a separate signer for signing with TSR verification
 		s = tsa.NewSigner(s, clientTSA)
 	}
 	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, tlogUpload)

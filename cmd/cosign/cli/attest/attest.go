@@ -178,6 +178,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
+
+		if !c.KeyOpts.InsecureSkipTSResponseVerify {
+		}
+
 		bundle := cbundle.TimestampToRFC3161Timestamp(responseBytes)
 
 		opts = append(opts, static.WithRFC3161Timestamp(bundle))

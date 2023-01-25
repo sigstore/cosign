@@ -35,7 +35,7 @@ type SignBlobOptions struct {
 	BundlePath           string
 	SkipConfirmation     bool
 	TlogUpload           bool
-	TSAServerURL         string
+	Timestamp            TimestampAuthorityOptions
 	RFC3161TimestampPath string
 }
 
@@ -75,9 +75,6 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
 		"whether or not to upload to the tlog")
-
-	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
-		"url to the Timestamp RFC3161 server, default none")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"write the RFC3161 timestamp to a file")

@@ -132,7 +132,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 
 	// Set up TSA, Fulcio roots and tlog public keys and clients.
 	if c.RFC3161TimestampPath != "" && c.KeyOpts.TSACertChainPath == "" {
-		return fmt.Errorf("timestamp-cert-chain is required to validate a rfc3161 timestamp bundle")
+		return fmt.Errorf("timestamp-certificate-chain is required to validate a RFC3161 timestamp")
 	}
 	if c.KeyOpts.TSACertChainPath != "" {
 		_, err := os.Stat(c.TSACertChainPath)
