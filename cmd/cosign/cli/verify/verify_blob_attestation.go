@@ -28,7 +28,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
@@ -261,10 +260,8 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 				}
 			}
 			// if a cert was passed in, make sure it matches the cert in the bundle
-			if cert != nil {
-				if !reflect.DeepEqual(cert, bundleCert) {
-					return fmt.Errorf("the cert passed in does not match the cert in the provided bundle")
-				}
+			if cert != nil && !cert.Equal(bundleCert) {
+				return fmt.Errorf("the cert passed in does not match the cert in the provided bundle")
 			}
 			cert = bundleCert
 		}

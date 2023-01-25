@@ -26,7 +26,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -224,10 +223,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 				}
 			}
 			// if a cert was passed in, make sure it matches the cert in the bundle
-			if cert != nil {
-				if !reflect.DeepEqual(cert, bundleCert) {
-					return fmt.Errorf("the cert passed in does not match the cert in the provided bundle")
-				}
+			if cert != nil && !cert.Equal(bundleCert) {
+				return fmt.Errorf("the cert passed in does not match the cert in the provided bundle")
 			}
 			cert = bundleCert
 		}
