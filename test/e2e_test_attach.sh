@@ -27,7 +27,7 @@ cp ./test/testdata/test_attach_private_key $tmp/private_key
 cp ./test/testdata/test_attach_leafcert.pem $tmp/leafcert.pem
 cp ./test/testdata/test_attach_certchain.pem $tmp/certchain.pem
 cp ./test/testdata/test_attach_rootcert.pem $tmp/rootcert.pem
- 
+
 pushd $tmp
 
 pass="$RANDOM"
@@ -43,10 +43,10 @@ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
 # `initialize`
 ./cosign initialize
 
-## Generate 
+## Generate
 ./cosign generate $IMAGE_URI_DIGEST > payload.json
 
-## Sign with Leafcert Private Key 
+## Sign with Leafcert Private Key
 openssl dgst -sha256 -sign ./private_key -out payload.sig payload.json
 cat payload.sig | base64 > payloadbase64.sig
 
@@ -59,8 +59,8 @@ echo "Payload: $PAYLOAD"
 
 
 
-## Attach Signature, payload, cert and cert-chain 
-./cosign attach signature --signature ./payloadbase64.sig --payload ./payload.json --cert ./leafcert.pem --cert-chain ./certchain.pem $IMAGE_URI_DIGEST 
+## Attach Signature, payload, cert and cert-chain
+./cosign attach signature --signature ./payloadbase64.sig --payload ./payload.json --cert ./leafcert.pem --cert-chain ./certchain.pem $IMAGE_URI_DIGEST
 
 
 ## confirm manifest conatins annotation for cert and cert chain
