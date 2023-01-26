@@ -29,9 +29,7 @@ import (
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 )
 
-var (
-	ro = &options.RootOptions{}
-)
+var ro = &options.RootOptions{}
 
 func normalizeCertificateFlags(_ *pflag.FlagSet, name string) pflag.NormalizedName {
 	switch name {
@@ -52,9 +50,7 @@ func normalizeCertificateFlags(_ *pflag.FlagSet, name string) pflag.NormalizedNa
 }
 
 func New() *cobra.Command {
-	var (
-		out, stdout *os.File
-	)
+	var out, stdout *os.File
 
 	cmd := &cobra.Command{
 		Use:               "cosign",
@@ -102,6 +98,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(GenerateKeyPair())
 	cmd.AddCommand(ImportKeyPair())
 	cmd.AddCommand(Initialize())
+	cmd.AddCommand(Inspect())
 	cmd.AddCommand(Load())
 	cmd.AddCommand(Manifest())
 	cmd.AddCommand(PIVTool())
