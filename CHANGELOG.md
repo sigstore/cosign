@@ -1,3 +1,46 @@
+# v2.0.0-rc.1
+_Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
+
+Critical breaking changes include:
+* Certificate issuer and subject are now required on `cosign verify`
+
+## Breaking Changes
+* insecure-skip-tlog-verify: rename and adapt the cert expiration check (#2620)
+* Deprecate --certificate-email flag. Make --certificate-identity and -… (#2411)
+
+## Enhancements
+* Add warning to use digest instead of tags to other cosign commands (#2650)
+* Fix up UI messages (#2629)
+* Remove hardcoded Fulcio from output (#2621)
+* Fix missing privacy statement, print in multiple locations (#2622)
+* feat: allows custom key names for import-key-pair (#2587)
+* feat: support keyless verification for verify-blob-attestation (#2525)
+* attest-blob: add functionality for keyless signing (#2515)
+* Rego: add support for custom error/warning messages when evaluating rego rules (#2577)
+* feat: add debug information to cert validation error (#2579)
+
+## Bug Fixes
+* fix: panic with unsigned local image (#2656)
+* Make sure a cert passed in via --cert matches the bundle cert (#2652)
+* fix: fix github oidc post submit test (#2594)
+* fix: add enhanced error messages for failing verification with TUF targets (#2589)
+
+## Contributors
+* Carlos Tadeu Panato Junior
+* Chris Burns
+* Hayden B
+* Hector Fernandez
+* Huang Huang
+* Kenny Leung
+* Priya Wadhwa
+* Stefan Zhelyazkov
+* Ville Aikas
+* Zack Newman
+* asraa
+* dependabot[bot]
+* kpk47
+* priyawadhwa
+
 # v2.0.0-rc.0
 
 _Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
