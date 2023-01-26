@@ -35,7 +35,7 @@ steps:
 - name: 'gcr.io/projectsigstore/cosign:v1.13.1@sha256:fd5b09be23ef1027e1bdd490ce78dcc65d2b15902e1f4ba8e04f3b4019cc1057'
   dir: "go/src/sigstore/cosign"
   env:
-  - COSIGN_EXPERIMENTAL=true
+  - COSIGN_YES=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
@@ -55,7 +55,7 @@ steps:
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
-  - COSIGN_EXPERIMENTAL=true
+  - COSIGN_YES=true
   - KO_PREFIX=gcr.io/${PROJECT_ID}
   secretEnv:
   - GITHUB_TOKEN
@@ -78,7 +78,7 @@ steps:
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   - KO_PREFIX=gcr.io/${PROJECT_ID}
-  - COSIGN_EXPERIMENTAL=true
+  - COSIGN_YES=true
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
   - GITHUB_USER=${_GITHUB_USER}
   secretEnv:
