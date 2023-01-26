@@ -23,7 +23,7 @@ If the test/testdata/test_attach_leafcert.pem or test_attach_rootcert.pem or tes
 4. Generate CSR for Intermediate certificate
    openssl req -new -key intermediateCA.key -out intermediateCA.csr
    in Certificate generation set following values
-   C = IN, ST = DEL, L = DEL, O = example.com, OU = sigstore-sub, CN = sigstore-sub, emailAddress = foo@example.com   
+   C = IN, ST = DEL, L = DEL, O = example.com, OU = sigstore-sub, CN = sigstore-sub, emailAddress = foo@example.com
 5. Create intermediate certificate config file by name "intermediateConfigFile" having content
    	subjectKeyIdentifier = hash
    	authorityKeyIdentifier = keyid:always,issuer
@@ -48,7 +48,7 @@ If the test/testdata/test_attach_leafcert.pem or test_attach_rootcert.pem or tes
 11. Generate Certificate chain by concatinating Intermediate certificate and Root certificate
     cat intermediateCA.crt rootCA.crt > certChain.crt
 12. copy private key of Leaf certificate to test/testdata/test_attach_private.key
-    cp leafCA.key test/testdata/test_attach_private.key 
+    cp leafCA.key test/testdata/test_attach_private.key
 13. copy root certificate to test/testdata/test_attach_rootcert.pem
     cp rootCA.crt test/testdata/test_attach_rootcert.pem
 14. copy cert chain to test/testdata/test_attach_certchain.pem
