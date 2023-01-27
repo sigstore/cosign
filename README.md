@@ -15,11 +15,11 @@ Cosign aims to make signatures **invisible infrastructure**.
 
 Cosign supports:
 
+* "Keyless signing" with the Sigstore public good Fulcio certificate authority and Rekor transparency log (default)
 * Hardware and KMS signing
+* Signing with a cosign generated encrypted private/public keypair
 * Container Signing, Verification and Storage in an OCI registry.
 * Bring-your-own PKI
-* Our free OIDC PKI ([Fulcio](https://github.com/sigstore/fulcio))
-* Built-in binary transparency and timestamping service ([Rekor](https://github.com/sigstore/rekor))
 
 ![intro](images/intro.gif)
 
@@ -66,38 +66,8 @@ ENTRYPOINT [ "cosign" ]
 ## Quick Start
 
 This shows how to:
-
-* generate a keypair
-* sign a container image and store that signature in the registry
-* find signatures for a container image, and verify them against a public key
-
-See the [Usage documentation](USAGE.md) for more commands!
-
-See the [FUN.md](FUN.md) documentation for some fun tips and tricks!
-
-NOTE: you will need access to a container registry for cosign to work with.
-[ttl.sh](https://ttl.sh) offers free, short-lived (ie: hours), anonymous container image
-hosting if you just want to try these commands out.
-
-For instance:
-
-```shell
-$ SRC_IMAGE=busybox
-$ SRC_DIGEST=$(crane digest busybox)
-$ IMAGE_URI=ttl.sh/$(uuidgen | head -c 8 | tr 'A-Z' 'a-z')
-$ crane cp $SRC_IMAGE@$SRC_DIGEST $IMAGE_URI:1h
-$ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
-```
-
-### Generate a keypair
-
-```shell
-$ cosign generate-key-pair
-Enter password for private key:
-Enter again:
-Private key written to cosign.key
-Public key written to cosign.pub
-```
+* sign a container image with the default "keyless signing" method (see [KEYLESS.md](./KEYLESS.md))
+* verify the container image
 
 ### Sign a container and store the signature in the registry
 
@@ -106,65 +76,53 @@ rather than a tag (`:latest`) because otherwise you might sign something you
 didn't intend to!
 
 ```shell
-$ cosign sign --key cosign.key $IMAGE_URI_DIGEST
-Enter password for private key:
-Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
+ cosign sign gcr.io/priya-chainguard/test@sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04
+
+Generating ephemeral keys...
+Retrieving signed certificate...
+
+	Note that there may be personally identifiable information associated with this signed artifact.
+	This may include the email address associated with the account with which you authenticate.
+	This information will be used for signing this artifact and will be stored in public transparency logs and cannot be removed later.
+
+By typing 'y', you attest that you grant (or have permission to grant) and agree to have this information stored permanently in transparency logs.
+Are you sure you would like to continue? [y/N] y
+Your browser will now be opened to:
+https://oauth2.sigstore.dev/auth/auth?access_type=online&client_id=sigstore&code_challenge=OrXitVKUZm2lEWHVt1oQWR4HZvn0rSlKhLcltglYxCY&code_challenge_method=S256&nonce=2KvOWeTFxYfxyzHtssvlIXmY6Jk&redirect_uri=http%3A%2F%2Flocalhost%3A57102%2Fauth%2Fcallback&response_type=code&scope=openid+email&state=2KvOWfbQJ1caqScgjwibzK2qJmb
+Successfully verified SCT...
+tlog entry created with index: 12086900
+Pushing signature to: gcr.io/priya-chainguard/test
 ```
 
-The cosign command above prompts the user to enter the password for the private key.
-The user can either manually enter the password, or if the environment variable `COSIGN_PASSWORD` is set then it is used automatically.
+Cosign will prompt you to authenticate via OIDC, where you'll sign in with your email address.
+Under the hood, cosign will request a code signing certificate from the Fulcio certificate authority.
+The subject of the certificate will match the email address you logged in with.
+Cosign will then store the signature and certificate in the Rekor transparency log, and upload the signature to the OCI registry alongside the image you're signing.
 
 
 ### Verify a container against a public key
 
-This command returns `0` if *at least one* `cosign` formatted signature for the image is found
-matching the public key.
-See the detailed usage below for information and caveats on other signature formats.
+To verify the image, you'll need to pass in the expected certificate issuer and certificate subject via the `--certificate-identity` and `--certificate-oidc-issuer` flags:
 
-Any valid payloads are printed to stdout, in json format.
-Note that these signed payloads include the digest of the container image, which is how we can be
-sure these "detached" signatures cover the correct image.
+```
+cosign verify gcr.io/priya-chainguard/test@sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04 --certificate-identity=priya@chainguard.dev --certificate-oidc-issuer=https://accounts.google.com
 
-```shell
-$ cosign verify --key cosign.pub $IMAGE_URI
-The following checks were performed on these signatures:
+Verification for gcr.io/priya-chainguard/test@sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04 --
+The following checks were performed on each of these signatures:
   - The cosign claims were validated
-  - The signatures were verified against the specified public key
-{"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
+  - Existence of the claims in the transparency log was verified offline
+  - The code-signing certificate was verified using trusted certificate authority certificates
+
+[{"critical":{"identity":{"docker-reference":"gcr.io/priya-chainguard/test"},"image":{"docker-manifest-digest":"sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04"},"type":"cosign container image signature"},"optional":{"1.3.6.1.4.1.57264.1.1":"https://accounts.google.com","Bundle":{"SignedEntryTimestamp":"MEUCIBz2eoemjPVLFA9sNIZA4gm+vGfTNYTySmDbElHPlqdKAiEA9OzNf47o+TIb0DscJjSTtnK1DjvI9rDGH0+hgGNCWMg=","Payload":{"body":"eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiIzMWU5NzIwOWJhM2RiZmZlNTc4ZTI2N2VmNWM4ZTU1MzQ0NDJhM2I2MDI2NzA4ZDZkMjc1MThjOGViOTJiYmRlIn19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUNORXVyNzZta3ZXRHZhOXRvb3N0ZVAwVi9vOStYZ0ZQY2I5dVptN1ZXbVZRSWhBS2RuTTFDL0IxRitYbzZLVEp0dEpPd1J2Zlh2K0xEamJRV3RZUktyR3pZRiIsInB1YmxpY0tleSI6eyJjb250ZW50IjoiTFMwdExTMUNSVWRKVGlCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2sxSlNVTnZWRU5EUVdsaFowRjNTVUpCWjBsVlVsQnFMMUF5TUU1cVdVVjFiV0ZsVkdWelZFMTNWMUkyVm5ocmQwTm5XVWxMYjFwSmVtb3dSVUYzVFhjS1RucEZWazFDVFVkQk1WVkZRMmhOVFdNeWJHNWpNMUoyWTIxVmRWcEhWakpOVWpSM1NFRlpSRlpSVVVSRmVGWjZZVmRrZW1SSE9YbGFVekZ3WW01U2JBcGpiVEZzV2tkc2FHUkhWWGRJYUdOT1RXcE5kMDFVU1ROTmFrRjZUWHBSTWxkb1kwNU5hazEzVFZSSk0wMXFRVEJOZWxFeVYycEJRVTFHYTNkRmQxbElDa3R2V2tsNmFqQkRRVkZaU1V0dldrbDZhakJFUVZGalJGRm5RVVZvVFRoNmVsUXZNblpTVXpGUlQxZDFkekZMTUdKTVV5czNhVTlLVDNoUllsTmpWMjhLWmtWWWRrbFRhVWRCVUN0R1JFdzVhbU52U2toVWMzUm5RamRCZW5sM1RuYzFibVZLZFhKeldIZHhabXRYZVZSTGJIRlBRMEZWVlhkblowWkNUVUUwUndwQk1WVmtSSGRGUWk5M1VVVkJkMGxJWjBSQlZFSm5UbFpJVTFWRlJFUkJTMEpuWjNKQ1owVkdRbEZqUkVGNlFXUkNaMDVXU0ZFMFJVWm5VVlZ3U1N0Q0NtOW1iM05UWjBwQmFuSnRXSHBqVGtWSlR6bFZTekE0ZDBoM1dVUldVakJxUWtKbmQwWnZRVlV6T1ZCd2VqRlphMFZhWWpWeFRtcHdTMFpYYVhocE5Ga0tXa1E0ZDBsbldVUldVakJTUVZGSUwwSkNaM2RHYjBWVlkwaEtjR1ZYUmtGWk1taG9ZVmMxYm1SWFJubGFRelZyV2xoWmQwdFJXVXRMZDFsQ1FrRkhSQXAyZWtGQ1FWRlJZbUZJVWpCalNFMDJUSGs1YUZreVRuWmtWelV3WTNrMWJtSXlPVzVpUjFWMVdUSTVkRTFKUjB0Q1oyOXlRbWRGUlVGa1dqVkJaMUZEQ2tKSWQwVmxaMEkwUVVoWlFUTlVNSGRoYzJKSVJWUktha2RTTkdOdFYyTXpRWEZLUzFoeWFtVlFTek12YURSd2VXZERPSEEzYnpSQlFVRkhSamxQSzNRS1ltZEJRVUpCVFVGU2VrSkdRV2xCWmxSTFRrWjRjVEpEUjNoeWFuTXdla3RNWlZJMU0xaHdUVXh2YURsRmEwRXJjamx4ZUhJdmFqTTJkMGxvUVV0elRncFllVFozUms1bmVXc3piamhJTURGeFpYaGpXbXRpYlV0aU5pdFNlbGRNTm5jelJ6VkVVRTFyVFVGdlIwTkRjVWRUVFRRNVFrRk5SRUV5YTBGTlIxbERDazFSUkdwdFoxWlpPRXAxVXpWSWFDOWtjU3RNV0dwRk4xVlVVVFZrVmtGeFZHRXdVa054WkRkVmRYSjNTbVpWVjFkYWRraE9aRVJaZW1aR1JuVmhUekVLUTFaelEwMVJSR04xTlV3d2NXWjBXVVZGUm1obFFqWnVNMWtyVTNOTFZrMXhSVU5aU21KWVYwaFNTbGw2U0Vad05sbEZiRThyUms5Q2VEbHpibXhpTVFveFdrRTRTbVJCUFFvdExTMHRMVVZPUkNCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2c9PSJ9fX19","integratedTime":1674851628,"logIndex":12086900,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}},"Issuer":"https://accounts.google.com","Subject":"priya@chainguard.dev"}}]
 ```
 
-## `Cosign` is 1.0!
+You can also pass in a regex for the certificate identity and issuer flags, `--certificate-identity-regexp` and `--certificate-oidc-issuer-regexp`.
 
-This means the core feature set of `cosign` is considered ready for production use.
-This core set includes:
-
-### Key Management
-
-* fixed, text-based keys generated using `cosign generate-key-pair`
-* cloud KMS-based keys generated using `cosign generate-key-pair -kms`
-* keys generated on hardware tokens using the PIV interface using `cosign piv-tool`
-* Kubernetes-secret based keys generated using `cosign generate-key-pair k8s://namespace/secretName`
-
-### Artifact Types
-
-* OCI and Docker Images
-* Other artifacts that can be stored in a container registry, including:
-  * Tekton Bundles
-  * Helm Charts
-  * WASM modules
-  * eBPF modules
-  * (probably anything else, feel free to add things to this list)
-* Text files and other binary blobs, using `cosign sign-blob`
 
 ### What ** is not ** production ready?
 
 While parts of `cosign` are stable, we are continuing to experiment and add new features.
 The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
-
-#### Anything under the `COSIGN_EXPERIMENTAL` environment variable
-
-* Integration with the `Rekor` transparency log
-* Keyless signatures using the `Fulcio` CA
 
 #### Formats/Specifications
 
@@ -386,19 +344,6 @@ COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example
 Please help test and file bugs if you see issues!
 Instructions can be found in the [tracking issue](https://github.com/sigstore/cosign/issues/40).
 
-## Rekor Support
-_Note: this is an experimental feature_
-
-To publish signed artifacts to a Rekor transparency log and verify their existence in the log
-set the `COSIGN_EXPERIMENTAL=1` environment variable.
-
-```shell
-$ COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key $IMAGE_URI_DIGEST
-$ COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub $IMAGE_URI
-```
-
-`cosign` defaults to using the public instance of rekor at [rekor.sigstore.dev](https://rekor.sigstore.dev).
-To configure the rekor server, use the -`rekor-url` flag
 
 ## Caveats
 
