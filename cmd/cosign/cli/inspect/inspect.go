@@ -274,53 +274,28 @@ func (c *InspectCommand) Exec(ctx context.Context, images []string) (err error) 
 				return err
 			}
 
-			// PrintVerificationHeader(ref.Name(), co, bundleVerified, fulcioVerified)
-			// PrintVerification(ref.Name(), verified, c.Output)
-			fmt.Printf("%s", sigs)
+			PrintInspectHeader(ref.Name(), "signature")
+			PrintInspection(ref.Name(), sigs, c.Output)
 		}
 	}
 
 	return nil
 }
 
-func PrintVerificationHeader(
-	imgRef string,
-	co *cosign.CheckOpts,
-	bundleVerified, fulcioVerified bool,
-) {
-	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
-	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
-	if co.ClaimVerifier != nil {
-		if co.Annotations != nil {
-			fmt.Fprintln(os.Stderr, "  - The specified annotations were verified.")
-		}
-		fmt.Fprintln(os.Stderr, "  - The cosign claims were validated")
-	}
-	if bundleVerified {
-		fmt.Fprintln(
-			os.Stderr,
-			"  - Existence of the claims in the transparency log was verified offline",
-		)
-	} else if co.RekorClient != nil {
-		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
-		fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
-	}
-	if co.SigVerifier != nil {
-		fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
-	}
-	if fulcioVerified {
-		fmt.Fprintln(
-			os.Stderr,
-			"  - The code-signing certificate was verified using trusted certificate authority certificates",
-		)
-	}
+// InspectHeader provides a generic output (to `stderr`) header taking the image reference and artifact kind (e.g., signature, attestation, sbom) as input
+func PrintInspectHeader(imgRef string, kind string) {
+	fmt.Fprintln(
+		os.Stderr,
+		"**Warning** This command does not verify any signatures for the image or associated artifacts (e.g., attestations, signatures etc.\nPlease use `cosign verify` to perform these actions.",
+	)
+	fmt.Fprintf(os.Stderr, "\nInspecting %s for %s --\n", kind, imgRef)
 }
 
-// PrintVerification logs details about the verification to stdout
-func PrintVerification(imgRef string, verified []oci.Signature, output string) {
+// PrintInspection outputs the details of the artifact (e.g., signature, attestation, sbom) to stdout for user inspection
+func PrintInspection(imgRef string, signatures []oci.Signature, output string) {
 	switch output {
 	case "text":
-		for _, sig := range verified {
+		for _, sig := range signatures {
 			if cert, err := sig.Cert(); err == nil && cert != nil {
 				ce := cosign.CertExtensions{Cert: cert}
 				fmt.Fprintln(os.Stderr, "Certificate subject: ", sigs.CertSubject(cert))
@@ -354,11 +329,12 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 				return
 			}
 			fmt.Println(string(p))
+
 		}
 
 	default:
 		var outputKeys []payload.SimpleContainerImage
-		for _, sig := range verified {
+		for _, sig := range signatures {
 			p, err := sig.Payload()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error fetching payload: %v", err)
@@ -420,6 +396,10 @@ func PrintVerification(imgRef string, verified []oci.Signature, output string) {
 			}
 
 			outputKeys = append(outputKeys, ss)
+
+			fmt.Println("------------------------------------------------------")
+			fmt.Printf("%+v\n", sig)
+			fmt.Println("------------------------------------------------------")
 		}
 
 		b, err := json.Marshal(outputKeys)
