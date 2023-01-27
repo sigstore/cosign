@@ -869,7 +869,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
 
-		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"customFoo","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
+		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
 		wrapped := dsse.WrapSigner(signer, ctypes.IntotoPayloadType)
 		signedPayload, err := wrapped.SignMessage(bytes.NewReader([]byte(stmt)), signatureoptions.WithContext(context.Background()))
 		if err != nil {
@@ -895,6 +895,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			CertChain:     "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
 			SignaturePath: "", // Sig is fetched from bundle
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
+			PredicateType: "slsaprovenance",
 			IgnoreSCT:     true,
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
@@ -1201,7 +1202,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
 
-		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"customFoo","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
+		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
 		wrapped := dsse.WrapSigner(signer, ctypes.IntotoPayloadType)
 		signedPayload, err := wrapped.SignMessage(bytes.NewReader([]byte(stmt)), signatureoptions.WithContext(context.Background()))
 		if err != nil {
@@ -1228,6 +1229,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			SignaturePath: "", // Sig is fetched from bundle
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
 			IgnoreSCT:     true,
+			PredicateType: "slsaprovenance",
 			CheckClaims:   false, // Intentionally false. This checks the subject claim. This is tested in verify_blob_attestation_test.go
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {

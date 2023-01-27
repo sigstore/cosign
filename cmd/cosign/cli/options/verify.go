@@ -191,6 +191,7 @@ type VerifyBlobAttestationOptions struct {
 	BundlePath    string
 
 	PredicateOptions
+	Policies    []string
 	CheckClaims bool
 
 	SecurityKey         SecurityKeyOptions
@@ -222,6 +223,9 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
+
+	cmd.Flags().StringSliceVar(&o.Policies, "policy", nil,
+		"specify CUE or Rego files will be using for validation")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")

@@ -118,3 +118,109 @@ func TestVerifyBlobAttestation(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyBlobAttestationPolicy(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+	defer os.RemoveAll(td)
+
+	blobPath := writeBlobFile(t, td, blobContents, "blob")
+	keyRef := writeBlobFile(t, td, pubkey, "cosign.pub")
+
+	validPolicy1 := writeBlobFile(t, td, "predicateType: \"https://slsa.dev/provenance/v0.2\"", "valid-policy1.cue")
+	validPolicy2 := writeBlobFile(t, td, "predicate: { builder: { id: \"2\" } }", "valid-policy2.cue")
+	invalidPolicyRef := writeBlobFile(t, td, "predicateType: \"cosign.sigstore.dev/attestation/v1\"", "invalid-policy.cue")
+
+	regoPolicy1 := writeBlobFile(t, td, `package signature
+	allow {
+	  input.predicateType == "https://slsa.dev/provenance/v0.2"
+	}`, "valid-policy1.rego")
+	invalidRegoPolicy := writeBlobFile(t, td, `package signature
+	allow {
+	  input.predicateType == "cosign.sigstore.dev/attestation/v1"
+	}`, "invalid-policy1.rego")
+
+	tests := []struct {
+		description   string
+		blobPath      string
+		signature     string
+		predicateType string
+		policies      []string
+		shouldErr     bool
+	}{
+		{
+			description:   "verify a slsaprovenance predicate with policy",
+			predicateType: "slsaprovenance",
+			blobPath:      blobPath,
+			policies:      []string{validPolicy1},
+			signature:     blobSLSAProvenanceSignature,
+		}, {
+			description:   "verify a slsaprovenance predicate with multi-policy",
+			signature:     blobSLSAProvenanceSignature,
+			blobPath:      blobPath,
+			policies:      []string{validPolicy1, validPolicy2},
+			predicateType: "slsaprovenance",
+		}, {
+			description:   "err does not match policy",
+			signature:     blobSLSAProvenanceSignature,
+			blobPath:      blobPath,
+			policies:      []string{invalidPolicyRef},
+			predicateType: "slsaprovenance",
+			shouldErr:     true,
+		},
+		{
+			description:   "err does not match one of two policy",
+			signature:     blobSLSAProvenanceSignature,
+			blobPath:      blobPath,
+			policies:      []string{invalidPolicyRef, validPolicy1},
+			predicateType: "slsaprovenance",
+			shouldErr:     true,
+		},
+		{
+			description:   "rego and cue policy",
+			signature:     blobSLSAProvenanceSignature,
+			blobPath:      blobPath,
+			policies:      []string{regoPolicy1, validPolicy1},
+			predicateType: "slsaprovenance",
+		},
+		{
+			description:   "rego policy",
+			signature:     blobSLSAProvenanceSignature,
+			blobPath:      blobPath,
+			policies:      []string{regoPolicy1},
+			predicateType: "slsaprovenance",
+		},
+		{
+			description:   "invalid rego policy",
+			signature:     blobSLSAProvenanceSignature,
+			blobPath:      blobPath,
+			policies:      []string{invalidRegoPolicy},
+			predicateType: "slsaprovenance",
+			shouldErr:     true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			decodedSig, err := base64.StdEncoding.DecodeString(test.signature)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sigRef := writeBlobFile(t, td, string(decodedSig), "signature")
+
+			cmd := VerifyBlobAttestationCommand{
+				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
+				SignaturePath: sigRef,
+				IgnoreTlog:    true,
+				CheckClaims:   true,
+				PredicateType: test.predicateType,
+				Policies:      test.policies,
+			}
+			err = cmd.Exec(ctx, test.blobPath)
+
+			if (err != nil) != test.shouldErr {
+				t.Fatalf("verifyBlobAttestation()= %s, expected shouldErr=%t ", err, test.shouldErr)
+			}
+		})
+	}
+}

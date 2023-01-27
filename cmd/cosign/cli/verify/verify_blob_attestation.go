@@ -38,8 +38,10 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/cue"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
@@ -68,7 +70,7 @@ type VerifyBlobAttestationCommand struct {
 
 	CheckClaims   bool
 	PredicateType string
-	// TODO: Add policies
+	Policies      []string
 
 	SignaturePath string // Path to the signature
 }
@@ -340,8 +342,42 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 
 	// This checks the predicate type -- if no error is returned and no payload is, then
 	// the attestation is not of the given predicate type.
-	if b, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, signature); b == nil && err == nil {
+	payloadJSON, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, signature)
+	if err != nil {
+		return fmt.Errorf("converting to consumable policy validation: %w", err)
+	}
+	if len(payloadJSON) == 0 {
+		// This is not the predicate type we're looking for.
 		return fmt.Errorf("invalid predicate type, expected %s", c.PredicateType)
+	}
+
+	var cuePolicies, regoPolicies []string
+	for _, policy := range c.Policies {
+		switch filepath.Ext(policy) {
+		case ".rego":
+			regoPolicies = append(regoPolicies, policy)
+		case ".cue":
+			cuePolicies = append(cuePolicies, policy)
+		default:
+			return errors.New("invalid policy format, expected .cue or .rego")
+		}
+	}
+
+	if len(cuePolicies) > 0 {
+		fmt.Fprintf(os.Stderr, "will be validating against CUE policies: %v\n", cuePolicies)
+		if err := cue.ValidateJSON(payloadJSON, cuePolicies); err != nil {
+			return fmt.Errorf("validating CUE policies: %w", err)
+		}
+	}
+
+	if len(regoPolicies) > 0 {
+		fmt.Fprintf(os.Stderr, "will be validating against Rego policies: %v\n", regoPolicies)
+		if errs := rego.ValidateJSON(payloadJSON, regoPolicies); len(errs) > 0 {
+			for _, v := range errs {
+				_, _ = fmt.Fprintf(os.Stderr, "- %v\n", v)
+			}
+			return fmt.Errorf("%d errors occurred validating Rego policies", len(errs))
+		}
 	}
 
 	fmt.Fprintln(os.Stderr, "Verified OK")

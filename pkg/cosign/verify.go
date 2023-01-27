@@ -616,7 +616,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			// If the --offline flag was specified, fail here. bundleVerified returns false with
 			// no error when there was no bundle provided.
 			if co.Offline {
-				return false, fmt.Errorf("offline verification failed")
+				return false, fmt.Errorf("offline verification failed: tlog presence required")
 			}
 
 			// no Rekor client provided for an online lookup
