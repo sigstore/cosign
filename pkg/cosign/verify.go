@@ -165,11 +165,7 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 	}
 
 	if env.PayloadType != types.IntotoPayloadType {
-		return NewVerificationError(
-			"invalid payloadType %s on envelope. Expected %s",
-			env.PayloadType,
-			types.IntotoPayloadType,
-		)
+		return NewVerificationError("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
 	}
 	dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
 	if err != nil {
@@ -192,11 +188,7 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	if err != nil {
 		return err
 	}
-	return verifier.VerifySignature(
-		bytes.NewReader(signature),
-		bytes.NewReader(payload),
-		options.WithContext(ctx),
-	)
+	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
 // ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
@@ -241,16 +233,11 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		return nil, err
 	}
 	if !contains && len(co.SCT) == 0 {
-		return nil, &VerificationError{
-			"certificate does not include required embedded SCT and no detached SCT was set",
-		}
+		return nil, &VerificationError{"certificate does not include required embedded SCT and no detached SCT was set"}
 	}
 	// handle if chains has more than one chain - grab first and print message
 	if len(chains) > 1 {
-		fmt.Fprintf(
-			os.Stderr,
-			"**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n",
-		)
+		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
 	}
 	if contains {
 		if err := VerifyEmbeddedSCT(context.Background(), chains[0], co.CTLogPubKeys); err != nil {
@@ -296,11 +283,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			// Check the issuer first
 			case identity.IssuerRegExp != "":
 				if regex, err := regexp.Compile(identity.IssuerRegExp); err != nil {
-					return fmt.Errorf(
-						"malformed issuer in identity: %s : %w",
-						identity.IssuerRegExp,
-						err,
-					)
+					return fmt.Errorf("malformed issuer in identity: %s : %w", identity.IssuerRegExp, err)
 				} else if regex.MatchString(oidcIssuer) {
 					issuerMatches = true
 				}
@@ -319,11 +302,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			case identity.SubjectRegExp != "":
 				regex, err := regexp.Compile(identity.SubjectRegExp)
 				if err != nil {
-					return fmt.Errorf(
-						"malformed subject in identity: %s : %w",
-						identity.SubjectRegExp,
-						err,
-					)
+					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRegExp, err)
 				}
 				for _, san := range sans {
 					if regex.MatchString(san) {
@@ -348,12 +327,8 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 			}
 		}
 		return &VerificationError{
-			fmt.Sprintf(
-				"none of the expected identities matched what was in the certificate, got subjects [%s] with issuer %s",
-				strings.Join(sans, ", "),
-				oidcIssuer,
-			),
-		}
+			fmt.Sprintf("none of the expected identities matched what was in the certificate, got subjects [%s] with issuer %s",
+				strings.Join(sans, ", "), oidcIssuer)}
 	}
 	return nil
 }
@@ -379,9 +354,7 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 
 	if co.CertGithubWorkflowRepository != "" {
 		if ce.GetCertExtensionGithubWorkflowRepository() != co.CertGithubWorkflowRepository {
-			return &VerificationError{
-				"expected GitHub Workflow Repository not found in certificate",
-			}
+			return &VerificationError{"expected GitHub Workflow Repository not found in certificate"}
 		}
 	}
 
@@ -419,11 +392,7 @@ func getSubjectAlternateNames(cert *x509.Certificate) []string {
 // ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
 // chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
 // Optionally verifies the subject and issuer of the certificate.
-func ValidateAndUnpackCertWithChain(
-	cert *x509.Certificate,
-	chain []*x509.Certificate,
-	co *CheckOpts,
-) (signature.Verifier, error) {
+func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	if len(chain) == 0 {
 		return nil, errors.New("no chain provided to validate certificate")
 	}
@@ -440,13 +409,8 @@ func ValidateAndUnpackCertWithChain(
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidateEntry(
-	ctx context.Context,
-	client *client.Rekor,
-	rekorPubKeys *TrustedTransparencyLogPubKeys,
-	sig oci.Signature,
-	pem []byte,
-) (*models.LogEntryAnon, error) {
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedTransparencyLogPubKeys,
+	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
 		return nil, err
@@ -480,10 +444,7 @@ func tlogValidateEntry(
 		}
 	}
 	if earliestLogEntryTime == nil {
-		return nil, fmt.Errorf(
-			"no valid tlog entries found %s",
-			strings.Join(entryVerificationErrs, ", "),
-		)
+		return nil, fmt.Errorf("no valid tlog entries found %s", strings.Join(entryVerificationErrs, ", "))
 	}
 	return &earliestLogEntry, nil
 }
@@ -499,11 +460,7 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 
 // VerifyImageSignatures does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error.
-func VerifyImageSignatures(
-	ctx context.Context,
-	signedImgRef name.Reference,
-	co *CheckOpts,
-) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -543,11 +500,7 @@ func VerifyImageSignatures(
 
 // VerifyLocalImageSignatures verifies signatures from a saved, local image, without any network calls, returning the verified signatures.
 // If there were no valid signatures, we return an error.
-func VerifyLocalImageSignatures(
-	ctx context.Context,
-	path string,
-	co *CheckOpts,
-) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -594,12 +547,7 @@ func VerifyLocalImageSignatures(
 	return verifySignatures(ctx, sigs, h, co)
 }
 
-func verifySignatures(
-	ctx context.Context,
-	sigs oci.Signatures,
-	h v1.Hash,
-	co *CheckOpts,
-) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	sl, err := sigs.Get()
 	if err != nil {
 		return nil, false, err
@@ -624,11 +572,7 @@ func verifySignatures(
 		checkedSignatures = append(checkedSignatures, sig)
 	}
 	if len(checkedSignatures) == 0 {
-		return nil, false, fmt.Errorf(
-			"%w:\n%s",
-			ErrNoMatchingSignatures,
-			strings.Join(validationErrs, "\n "),
-		)
+		return nil, false, fmt.Errorf("%w:\n%s", ErrNoMatchingSignatures, strings.Join(validationErrs, "\n "))
 	}
 	return checkedSignatures, bundleVerified, nil
 }
@@ -642,8 +586,7 @@ func verifySignatures(
 //  3. If a certificate is provided, check it's expiration using the transparency log timestamp.
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
-	bundleVerified bool, err error,
-) {
+	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
 	if co.TSARootCertificates != nil {
@@ -770,9 +713,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			if err := CheckExpiry(cert, time.Now()); err != nil {
 				// If certificate is expired and not signed timestamp was provided then error the following message. Otherwise throw an expiration error.
 				if co.IgnoreTlog && acceptableRFC3161Time == nil {
-					return false, &VerificationError{
-						"expected a signed timestamp to verify an expired certificate",
-					}
+					return false, &VerificationError{"expected a signed timestamp to verify an expired certificate"}
 				}
 				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
 			}
@@ -799,30 +740,17 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 }
 
 // VerifyBlobSignature verifies a blob signature.
-func VerifyBlobSignature(
-	ctx context.Context,
-	sig oci.Signature,
-	co *CheckOpts,
-) (bundleVerified bool, err error) {
+func VerifyBlobSignature(ctx context.Context, sig oci.Signature, co *CheckOpts) (bundleVerified bool, err error) {
 	// The hash of the artifact is unused.
 	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co)
 }
 
 // VerifyImageSignature verifies a signature
-func VerifyImageSignature(
-	ctx context.Context,
-	sig oci.Signature,
-	h v1.Hash,
-	co *CheckOpts,
-) (bundleVerified bool, err error) {
+func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
 	return verifyInternal(ctx, sig, h, verifyOCISignature, co)
 }
 
-func loadSignatureFromFile(
-	sigRef string,
-	signedImgRef name.Reference,
-	co *CheckOpts,
-) (oci.Signatures, error) {
+func loadSignatureFromFile(sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
 	var b64sig string
 	targetSig, err := blob.LoadFileOrURL(sigRef)
 	if err != nil {
@@ -846,6 +774,7 @@ func loadSignatureFromFile(
 	}
 
 	payload, err := (&sigPayload.Cosign{Image: digest}).MarshalJSON()
+
 	if err != nil {
 		return nil, err
 	}
@@ -861,11 +790,7 @@ func loadSignatureFromFile(
 
 // VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
-func VerifyImageAttestations(
-	ctx context.Context,
-	signedImgRef name.Reference,
-	co *CheckOpts,
-) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -897,11 +822,7 @@ func VerifyImageAttestations(
 // VerifyLocalImageAttestations verifies attestations from a saved, local image, without any network calls,
 // returning the verified attestations.
 // If there were no valid signatures, we return an error.
-func VerifyLocalImageAttestations(
-	ctx context.Context,
-	path string,
-	co *CheckOpts,
-) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -945,17 +866,11 @@ func VerifyLocalImageAttestations(
 }
 
 func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
-	bool, error,
-) {
+	bool, error) {
 	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
 }
 
-func verifyImageAttestations(
-	ctx context.Context,
-	atts oci.Signatures,
-	h v1.Hash,
-	co *CheckOpts,
-) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err
@@ -981,11 +896,7 @@ func verifyImageAttestations(
 		checkedAttestations = append(checkedAttestations, att)
 	}
 	if len(checkedAttestations) == 0 {
-		return nil, false, fmt.Errorf(
-			"%w:\n%s",
-			ErrNoMatchingAttestations,
-			strings.Join(validationErrs, "\n "),
-		)
+		return nil, false, fmt.Errorf("%w:\n%s", ErrNoMatchingAttestations, strings.Join(validationErrs, "\n "))
 	}
 	return checkedAttestations, bundleVerified, nil
 }
@@ -996,18 +907,12 @@ func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 		return t.Format(time.RFC3339)
 	}
 	if cert.NotAfter.Before(it) {
-		return NewVerificationError(
-			"certificate expired before signatures were entered in log: %s is before %s",
-			ft(cert.NotAfter),
-			ft(it),
-		)
+		return NewVerificationError("certificate expired before signatures were entered in log: %s is before %s",
+			ft(cert.NotAfter), ft(it))
 	}
 	if cert.NotBefore.After(it) {
-		return NewVerificationError(
-			"certificate was issued after signatures were entered in log: %s is after %s",
-			ft(cert.NotAfter),
-			ft(it),
-		)
+		return NewVerificationError("certificate was issued after signatures were entered in log: %s is after %s",
+			ft(cert.NotAfter), ft(it))
 	}
 	return nil
 }
@@ -1052,19 +957,14 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 
 	pubKey, ok := co.RekorPubKeys.Keys[bundle.Payload.LogID]
 	if !ok {
-		return false, &VerificationError{
-			"verifying bundle: rekor log public key not found for payload",
-		}
+		return false, &VerificationError{"verifying bundle: rekor log public key not found for payload"}
 	}
 	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey.(*ecdsa.PublicKey))
 	if err != nil {
 		return false, err
 	}
 	if pubKey.Status != tuf.Active {
-		fmt.Fprintf(
-			os.Stderr,
-			"**Info** Successfully verified Rekor entry using an expired verification key\n",
-		)
+		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
 	payload, err := sig.Payload()
@@ -1119,15 +1019,12 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		tsBytes = rawSig
 	}
 
-	return tsaverification.VerifyTimestampResponse(
-		ts.SignedRFC3161Timestamp,
-		bytes.NewReader(tsBytes),
+	return tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
 		tsaverification.VerifyOpts{
 			TSACertificate: co.TSACertificate,
 			Intermediates:  co.TSAIntermediateCertificates,
 			Roots:          co.TSARootCertificates,
-		},
-	)
+		})
 }
 
 // compare bundle signature to the signature we are verifying
@@ -1358,11 +1255,7 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	return nil
 }
 
-func TrustedCert(
-	cert *x509.Certificate,
-	roots *x509.CertPool,
-	intermediates *x509.CertPool,
-) ([][]*x509.Certificate, error) {
+func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x509.CertPool) ([][]*x509.Certificate, error) {
 	chains, err := cert.Verify(x509.VerifyOptions{
 		// THIS IS IMPORTANT: WE DO NOT CHECK TIMES HERE
 		// THE CERTIFICATE IS TREATED AS TRUSTED FOREVER
@@ -1375,10 +1268,7 @@ func TrustedCert(
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf(
-			"cert verification failed: %w. Check your TUF root (see cosign initialize) or set a custom root with env var SIGSTORE_ROOT_FILE",
-			err,
-		)
+		return nil, fmt.Errorf("cert verification failed: %w. Check your TUF root (see cosign initialize) or set a custom root with env var SIGSTORE_ROOT_FILE", err)
 	}
 	return chains, nil
 }
