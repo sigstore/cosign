@@ -22,9 +22,6 @@ cosign manifest verify [flags]
   # additionally verify specified annotations
   cosign manifest verify -a key1=val1 -a key2=val2 <path/to/my-deployment.yaml>
 
-  # (experimental) additionally, verify with the transparency log
-  COSIGN_EXPERIMENTAL=1 cosign manifest verify <path/to/my-deployment.yaml>
-
   # verify images with public key
   cosign manifest verify --key cosign.pub <path/to/my-deployment.yaml>
 

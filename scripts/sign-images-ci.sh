@@ -22,7 +22,6 @@ set -o pipefail
 : "${GITHUB_RUN_ID:?Environment variable empty or not defined.}"
 : "${GITHUB_RUN_ATTEMPT:?Environment variable empty or not defined.}"
 
-export COSIGN_EXPERIMENTAL=1
 COSIGN_CLI=./cosign
 
 if [[ ! -f cosignImagerefs ]]; then
