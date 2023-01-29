@@ -50,7 +50,7 @@ func (w *Env) prompt() error {
 		return err
 	}
 
-	value := strings.Trim(r, "\n")
+	value := strings.Trim(r, "\r\n")
 	switch strings.ToLower(value) {
 	case "y":
 		return nil

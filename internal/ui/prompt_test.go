@@ -37,6 +37,10 @@ func TestConfirm(t *testing.T) {
 		{"default", "\n", &ui.ErrPromptDeclined{}, "user declined"},
 		{"empty", "", &ui.ErrPromptDeclined{}, "user declined"},
 		{"invalid", "yy", &ui.ErrInvalidInput{Got: "yy", Allowed: "y, n"}, "invalid input"},
+		{"no-windows", "n\r\n", &ui.ErrPromptDeclined{}, "user declined"},
+		{"yes-windows", "y\r\n", nil, ""},
+		{"default-windows", "\r\n", &ui.ErrPromptDeclined{}, "user declined"},
+		{"invalid", "yy\r\n", &ui.ErrInvalidInput{Got: "yy", Allowed: "y, n"}, "invalid input"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
