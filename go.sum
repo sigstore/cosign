@@ -983,8 +983,8 @@ github.com/vmihailenco/msgpack/v5 v5.3.5 h1:5gO0H1iULLWGhs2H5tbAHIZTV8/cYafcFOr9
 github.com/vmihailenco/tagparser/v2 v2.0.0 h1:y09buUbR+b5aycVFQs/g70pqKVZNBmxwAhO7/IwNM9g=
 github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1 h1:+dBg5k7nuTE38VVdoroRsT0Z88fmvdYrI2EjzJst35I=
 github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1/go.mod h1:nmuySobZb4kFgFy6BptpXp/BBw+xFSyvVPP6auoJB4k=
-github.com/xanzy/go-gitlab v0.79.0 h1:mIxGAHJbGkM/eWspvUXA6MgnYKYTFPDcunz2/uEJg1Y=
-github.com/xanzy/go-gitlab v0.79.0/go.mod h1:DlByVTSXhPsJMYL6+cm8e8fTJjeBmhrXdC/yvkKKt6M=
+github.com/xanzy/go-gitlab v0.79.1 h1:ZmEei8RZYlqk4D7nYrWWZqywmKBOd7vmPMlJbueZXUU=
+github.com/xanzy/go-gitlab v0.79.1/go.mod h1:DlByVTSXhPsJMYL6+cm8e8fTJjeBmhrXdC/yvkKKt6M=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
 github.com/xdg-go/scram v1.0.2/go.mod h1:1WAq6h33pAW+iRreB34OORO2Nf7qel3VV3fjBj+hCSs=
 github.com/xdg-go/scram v1.1.1/go.mod h1:RaEWvsqvNKKvBPvcKeFjrG2cJqOkHTiyTpzz23ni57g=
