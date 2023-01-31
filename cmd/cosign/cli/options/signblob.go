@@ -20,7 +20,6 @@ import (
 )
 
 // SignBlobOptions is the top level wrapper for the sign-blob command.
-// The new output-certificate flag is only in use when COSIGN_EXPERIMENTAL is enabled
 type SignBlobOptions struct {
 	Key                  string
 	Base64Output         bool

@@ -44,8 +44,6 @@ jobs:
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
-      # We are only testing keyless here, so set it.
-      COSIGN_EXPERIMENTAL: "true"
       COSIGN_YES: "true"
 
     steps:

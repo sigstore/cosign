@@ -35,7 +35,6 @@ jobs:
       packages: write
       contents: read
     env:
-      COSIGN_EXPERIMENTAL: "true"
       GIT_HASH: ${{ github.sha }}
       GIT_VERSION: unstable
       GITHUB_RUN_ID: ${{ github.run_id }}

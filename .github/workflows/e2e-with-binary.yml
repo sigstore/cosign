@@ -42,7 +42,6 @@ jobs:
       id-token: write
       contents: read
     env:
-      COSIGN_EXPERIMENTAL: "true"
       COSIGN_YES: "true"
 
     steps:
