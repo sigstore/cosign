@@ -1,4 +1,5 @@
-// Copyright 2021 The Sigstore Authors.
+//
+// Copyright 2023 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package remote
 
 import (
-	"strconv"
-
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-func EnableExperimental() bool {
-	if b, err := strconv.ParseBool(env.Getenv(env.VariableExperimental)); err == nil {
-		return b
-	}
-	return false
-}
-
-func EnableOCIExperimental() bool {
-	if b, err := strconv.ParseBool(env.Getenv(env.VariableOCIExperimental)); err == nil {
-		return b
-	}
-	return false
+// Referrers fetches references using registry options.
+func Referrers(d name.Digest, artifactType string, opts ...Option) (*v1.IndexManifest, error) {
+	o := makeOptions(name.Repository{}, opts...)
+	rOpt := o.ROpt
+	rOpt = append(rOpt, remote.WithFilter("artifactType", artifactType))
+	return remote.Referrers(d, rOpt...)
 }

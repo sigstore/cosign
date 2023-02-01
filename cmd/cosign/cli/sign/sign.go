@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -42,6 +43,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
@@ -309,6 +311,11 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
 	} else {
 		ui.Infof(ctx, "Pushing signature to: %s", repo.RepositoryStr())
+	}
+
+	// Publish the signatures associated with this entity (using OCI 1.1+ behavior)
+	if b, err := strconv.ParseBool(env.Getenv(env.VariableOCIExperimental)); err == nil && b {
+		return ociremote.WriteSignaturesExperimentalOCI(digest, newSE, walkOpts...)
 	}
 
 	// Publish the signatures associated with this entity

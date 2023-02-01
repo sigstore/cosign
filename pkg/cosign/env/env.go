@@ -50,6 +50,7 @@ const (
 	VariablePKCS11Pin        Variable = "COSIGN_PKCS11_PIN"
 	VariablePKCS11ModulePath Variable = "COSIGN_PKCS11_MODULE_PATH"
 	VariableRepository       Variable = "COSIGN_REPOSITORY"
+	VariableOCIExperimental  Variable = "COSIGN_OCI_EXPERIMENTAL"
 
 	// Sigstore environment variables
 	VariableSigstoreCTLogPublicKeyFile Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
@@ -73,6 +74,11 @@ var (
 		VariableExperimental: {
 			Description: "enables experimental cosign features",
 			Expects:     "1 if experimental features should be enabled (0 by default)",
+			Sensitive:   false,
+		},
+		VariableOCIExperimental: {
+			Description: "enables experimental cosign features for OCI (1.1+)",
+			Expects:     "1 if experimental OCI features should be enabled (0 by default)",
 			Sensitive:   false,
 		},
 		VariableDockerMediaTypes: {
