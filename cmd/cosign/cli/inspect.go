@@ -61,8 +61,8 @@ against the transparency log.`,
 				// SCTRef:                       o.CertVerify.SCT,
 				// Sk:                           o.SecurityKey.Use,
 				// Slot:                         o.SecurityKey.Slot,
-				Output: o.Output,
-				// RekorURL:                     o.Rekor.URL,
+				Output:     o.Output,
+				RekorURL:   o.Rekor.URL,
 				Attachment: o.Attachment,
 				// Annotations:                  annotations,
 				// HashAlgorithm:                hashAlgorithm,
@@ -92,7 +92,6 @@ against the transparency log.`,
 	return cmd
 }
 
-//
 // func InspectAttestation() *cobra.Command {
 // 	o := &options.InspectAttestationOptions{}
 //
@@ -112,7 +111,7 @@ against the transparency log.`,
 // 		Args:             cobra.MinimumNArgs(1),
 // 		PersistentPreRun: options.BindViper,
 // 		RunE: func(cmd *cobra.Command, args []string) error {
-// 			v := &inspect.InspectAttestationCommand{
+// 			v := &inspect.VerifyAttestationCommand{
 // 				RegistryOptions: o.Registry,
 // 				// CheckClaims:                  o.CheckClaims,
 // 				// CertVerifyOptions:            o.CertVerify,
@@ -128,9 +127,9 @@ against the transparency log.`,
 // 				// KeyRef:                       o.Key,
 // 				// Sk:                           o.SecurityKey.Use,
 // 				// Slot:                         o.SecurityKey.Slot,
-// 				Output:        o.Output,
-// 				RekorURL:      o.Rekor.URL,
-// 				PredicateType: o.Predicate.Type,
+// 				Output:   o.Output,
+// 				RekorURL: o.Rekor.URL,
+// 				// PredicateType: o.Predicate.Type,
 // 				// Policies:                     o.Policies,
 // 				LocalImage:       o.LocalImage,
 // 				NameOptions:      o.Registry.NameOptions(),
@@ -146,7 +145,7 @@ against the transparency log.`,
 // 	o.AddFlags(cmd)
 // 	return cmd
 // }
-//
+
 // func InspectBlob() *cobra.Command {
 // 	o := &options.InspectBlobOptions{}
 //

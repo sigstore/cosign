@@ -41,15 +41,13 @@ type InspectOptions struct {
 	Attachment string
 	Output     string
 	// SignatureRef string
-	LocalImage bool
-
+	LocalImage           bool
 	CommonInspectOptions CommonVerifyOptions
 	SecurityKey          SecurityKeyOptions
 	// CertVerify           CertVerifyOptions
 	Rekor    RekorOptions
 	Registry RegistryOptions
 	// SignatureDigest      SignatureDigestOptions
-
 	AnnotationOptions
 }
 

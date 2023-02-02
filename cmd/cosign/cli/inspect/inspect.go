@@ -16,12 +16,8 @@
 package inspect
 
 import (
-	"bytes"
 	"context"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -29,16 +25,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-// InspectCommand verifies a signature on a supplied container image
+// InspectCommand provides signature data associated to a supplied container image
 // nolint
 type InspectCommand struct {
 	options.RegistryOptions
@@ -83,22 +79,17 @@ func (c *InspectCommand) Exec(ctx context.Context, images []string) (err error) 
 		return flag.ErrHelp
 	}
 
-	// // always default to sha256 if the algorithm hasn't been explicitly set
-	// if c.HashAlgorithm == 0 {
-	// 	c.HashAlgorithm = crypto.SHA256
-	// }
-
-	// var identities []cosign.Identity
-	// if c.KeyRef == "" {
-	// 	identities, err = c.Identities()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	ociremoteOpts, err := c.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
+	}
+
+	var client *client.Rekor
+	if c.RekorURL != "" && c.IgnoreTlog != true {
+		client, err = rekor.NewClient(c.RekorURL)
+		if err != nil {
+			return fmt.Errorf("failed to initiate Rekor client: %s", err.Error())
+		}
 	}
 
 	co := &cosign.CheckOpts{
@@ -106,149 +97,16 @@ func (c *InspectCommand) Exec(ctx context.Context, images []string) (err error) 
 		RegistryClientOpts: ociremoteOpts,
 		// CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		// CertGithubWorkflowSha:        c.CertGithubWorkflowSha,
-		// CertGithubWorkflowName:       c.CertGithubWorkflowName,
+		// CertGithubWorkflowN`1ame:       c.CertGithubWorkflowName,
 		// CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		// CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		// IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef: c.SignatureRef,
 		// Identities:                   identities,
-		Offline:    c.Offline,
-		IgnoreTlog: c.IgnoreTlog,
+		Offline:     c.Offline,
+		IgnoreTlog:  c.IgnoreTlog,
+		RekorClient: client,
 	}
-	// if c.CheckClaims {
-	// 	co.ClaimVerifier = cosign.SimpleClaimVerifier
-	// }
-
-	// if c.TSACertChainPath != "" {
-	// 	_, err := os.Stat(c.TSACertChainPath)
-	// 	if err != nil {
-	// 		return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
-	// 	}
-	// 	// TODO: Add support for TUF certificates.
-	// 	pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
-	// 	if err != nil {
-	// 		return fmt.Errorf("error reading certification chain path file: %w", err)
-	// 	}
-	//
-	// 	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(pemBytes)
-	// 	if err != nil {
-	// 		return fmt.Errorf("error splitting certificates: %w", err)
-	// 	}
-	// 	if len(leaves) > 1 {
-	// 		return fmt.Errorf("certificate chain must contain at most one TSA certificate")
-	// 	}
-	// 	if len(leaves) == 1 {
-	// 		co.TSACertificate = leaves[0]
-	// 	}
-	// 	co.TSAIntermediateCertificates = intermediates
-	// 	co.TSARootCertificates = roots
-	// }
-	//
-	// if !c.IgnoreTlog {
-	// 	if c.RekorURL != "" {
-	// 		rekorClient, err := rekor.NewClient(c.RekorURL)
-	// 		if err != nil {
-	// 			return fmt.Errorf("creating Rekor client: %w", err)
-	// 		}
-	// 		co.RekorClient = rekorClient
-	// 	}
-	// 	// This performs an online fetch of the Rekor public keys, but this is needed
-	// 	// for verifying tlog entries (both online and offline).
-	// 	co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-	// 	if err != nil {
-	// 		return fmt.Errorf("getting Rekor public keys: %w", err)
-	// 	}
-	// }
-	// if keylessVerification(c.KeyRef, c.Sk) {
-	// 	// This performs an online fetch of the Fulcio roots. This is needed
-	// 	// for verifying keyless certificates (both online and offline).
-	// 	co.RootCerts, err = fulcio.GetRoots()
-	// 	if err != nil {
-	// 		return fmt.Errorf("getting Fulcio roots: %w", err)
-	// 	}
-	// 	co.IntermediateCerts, err = fulcio.GetIntermediates()
-	// 	if err != nil {
-	// 		return fmt.Errorf("getting Fulcio intermediates: %w", err)
-	// 	}
-	// }
-	// keyRef := c.KeyRef
-	// certRef := c.CertRef
-
-	// if !c.IgnoreSCT {
-	// 	co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
-	// 	if err != nil {
-	// 		return fmt.Errorf("getting ctlog public keys: %w", err)
-	// 	}
-	// }
-	//
-	// Keys are optional!
-	// var pubKey signature.Verifier
-	// switch {
-	// case keyRef != "":
-	// 	pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
-	// 	if err != nil {
-	// 		return fmt.Errorf("loading public key: %w", err)
-	// 	}
-	// 	pkcs11Key, ok := pubKey.(*pkcs11key.Key)
-	// 	if ok {
-	// 		defer pkcs11Key.Close()
-	// 	}
-	// case c.Sk:
-	// 	sk, err := pivkey.GetKeyWithSlot(c.Slot)
-	// 	if err != nil {
-	// 		return fmt.Errorf("opening piv token: %w", err)
-	// 	}
-	// 	defer sk.Close()
-	// 	pubKey, err = sk.Verifier()
-	// 	if err != nil {
-	// 		return fmt.Errorf("initializing piv token verifier: %w", err)
-	// 	}
-	// case certRef != "":
-	// 	cert, err := loadCertFromFileOrURL(c.CertRef)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if c.CertChain == "" {
-	// 		// If no certChain is passed, the Fulcio root certificate will be used
-	// 		co.RootCerts, err = fulcio.GetRoots()
-	// 		if err != nil {
-	// 			return fmt.Errorf("getting Fulcio roots: %w", err)
-	// 		}
-	// 		co.IntermediateCerts, err = fulcio.GetIntermediates()
-	// 		if err != nil {
-	// 			return fmt.Errorf("getting Fulcio intermediates: %w", err)
-	// 		}
-	// 		pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	} else {
-	// 		// Verify certificate with chain
-	// 		chain, err := loadCertChainFromFileOrURL(c.CertChain)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// 	if c.SCTRef != "" {
-	// 		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
-	// 		if err != nil {
-	// 			return fmt.Errorf("reading sct from file: %w", err)
-	// 		}
-	// 		co.SCT = sct
-	// 	}
-	// }
-	// co.SigVerifier = pubKey
-
-	// NB: There are only 2 kinds of verification right now:
-	// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
-	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
-	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
-	// was performed so we don't need to use this fragile logic here.
-	// fulcioVerified := (co.SigVerifier == nil)
 
 	for _, img := range images {
 		if c.LocalImage {
@@ -256,9 +114,8 @@ func (c *InspectCommand) Exec(ctx context.Context, images []string) (err error) 
 			if err != nil {
 				return err
 			}
-			// PrintVerificationHeader(img, co, bundleVerified, fulcioVerified)
-			// PrintVerification(img, verified, c.Output)
-			fmt.Printf("%v", sigs)
+			PrintInspectionHeader(img, "signature")
+			PrintInspection(ctx, img, sigs, co, c.Output)
 		} else {
 			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
@@ -274,16 +131,40 @@ func (c *InspectCommand) Exec(ctx context.Context, images []string) (err error) 
 				return err
 			}
 
-			PrintInspectHeader(ref.Name(), "signature")
-			PrintInspection(ref.Name(), sigs, c.Output)
+			PrintInspectionHeader(ref.Name(), "signature")
+			PrintInspection(ctx, ref.Name(), sigs, co, c.Output)
 		}
 	}
 
 	return nil
 }
 
+func PrintTlogInspection(
+	ctx context.Context,
+	imgRef string,
+	signatures []oci.Signature,
+	co *cosign.CheckOpts,
+) error {
+	for _, sig := range signatures {
+		// no rekor client provided for an online lookup
+		if co.RekorClient == nil {
+			err := fmt.Errorf("rekor client not initiated.")
+			return err
+		}
+
+		pemBytes, err := cosign.KeyBytes(sig, co)
+		if err != nil {
+			return err
+		}
+
+		tlogEntries, err := cosign.InspectTlogEntries(ctx, co.RekorClient, sig, pemBytes)
+		fmt.Printf("TlogEntries: %v", tlogEntries)
+	}
+	return nil
+}
+
 // InspectHeader provides a generic output (to `stderr`) header taking the image reference and artifact kind (e.g., signature, attestation, sbom) as input
-func PrintInspectHeader(imgRef string, kind string) {
+func PrintInspectionHeader(imgRef string, kind string) {
 	fmt.Fprintln(
 		os.Stderr,
 		"**Warning** This command does not verify any signatures for the image or associated artifacts (e.g., attestations, signatures etc.\nPlease use `cosign verify` to perform these actions.",
@@ -292,7 +173,13 @@ func PrintInspectHeader(imgRef string, kind string) {
 }
 
 // PrintInspection outputs the details of the artifact (e.g., signature, attestation, sbom) to stdout for user inspection
-func PrintInspection(imgRef string, signatures []oci.Signature, output string) {
+func PrintInspection(
+	ctx context.Context,
+	imgRef string,
+	signatures []oci.Signature,
+	co *cosign.CheckOpts,
+	output string,
+) {
 	switch output {
 	case "text":
 		for _, sig := range signatures {
@@ -328,6 +215,7 @@ func PrintInspection(imgRef string, signatures []oci.Signature, output string) {
 				fmt.Fprintf(os.Stderr, "Error fetching payload: %v", err)
 				return
 			}
+
 			fmt.Println(string(p))
 
 		}
@@ -397,9 +285,6 @@ func PrintInspection(imgRef string, signatures []oci.Signature, output string) {
 
 			outputKeys = append(outputKeys, ss)
 
-			fmt.Println("------------------------------------------------------")
-			fmt.Printf("%+v\n", sig)
-			fmt.Println("------------------------------------------------------")
 		}
 
 		b, err := json.Marshal(outputKeys)
@@ -409,53 +294,12 @@ func PrintInspection(imgRef string, signatures []oci.Signature, output string) {
 		}
 
 		fmt.Printf("\n%s\n", string(b))
+		// TM: Commented out for now as not certain whether this is a desired functionality
+		// if co.IgnoreTlog == false {
+		// 	err := PrintTlogInspection(ctx, imgRef, signatures, co)
+		// 	if err != nil {
+		// 		fmt.Println("Error generating transparency log output:", err.Error())
+		// 	}
+		// }
 	}
-}
-
-func loadCertFromFileOrURL(path string) (*x509.Certificate, error) {
-	pems, err := blob.LoadFileOrURL(path)
-	if err != nil {
-		return nil, err
-	}
-	return loadCertFromPEM(pems)
-}
-
-func loadCertFromPEM(pems []byte) (*x509.Certificate, error) {
-	var out []byte
-	out, err := base64.StdEncoding.DecodeString(string(pems))
-	if err != nil {
-		// not a base64
-		out = pems
-	}
-
-	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(out)
-	if err != nil {
-		return nil, err
-	}
-	if len(certs) == 0 {
-		return nil, errors.New("no certs found in pem file")
-	}
-	return certs[0], nil
-}
-
-func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
-	pems, err := blob.LoadFileOrURL(path)
-	if err != nil {
-		return nil, err
-	}
-	certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(pems))
-	if err != nil {
-		return nil, err
-	}
-	return certs, nil
-}
-
-func keylessVerification(keyRef string, sk bool) bool {
-	if keyRef != "" {
-		return false
-	}
-	if sk {
-		return false
-	}
-	return true
 }
