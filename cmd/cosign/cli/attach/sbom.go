@@ -34,13 +34,14 @@ import (
 	ocistatic "github.com/google/go-containerregistry/pkg/v1/static"
 	ocitypes "github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
 func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef string, sbomType ocitypes.MediaType, imageRef string) error {
 	if options.EnableOCIExperimental() {
-		return SBOMCmdOCIExperimental(ctx, regOpts, sbomRef, sbomType, imageRef)
+		return sbomCmdOCIExperimental(ctx, regOpts, sbomRef, sbomType, imageRef)
 	}
 
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
@@ -71,7 +72,7 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef strin
 	return remote.Write(dstRef, img, regOpts.GetRegistryClientOpts(ctx)...)
 }
 
-func SBOMCmdOCIExperimental(ctx context.Context, regOpts options.RegistryOptions, sbomRef string, sbomType ocitypes.MediaType, imageRef string) error {
+func sbomCmdOCIExperimental(ctx context.Context, regOpts options.RegistryOptions, sbomRef string, sbomType ocitypes.MediaType, imageRef string) error {
 	var dig name.Digest
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
@@ -87,7 +88,7 @@ func SBOMCmdOCIExperimental(ctx context.Context, regOpts options.RegistryOptions
 		dig = ref.Context().Digest(desc.Digest.String())
 	}
 
-	artifactType := ociremote.ArtifactType("sbom")
+	artifactType := ociexperimental.ArtifactType("sbom")
 
 	desc, err := remote.Head(dig, regOpts.GetRegistryClientOpts(ctx)...)
 	var terr *transport.Error

@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
@@ -104,11 +105,6 @@ func AttestationTag(ref name.Reference, opts ...Option) (name.Tag, error) {
 func SBOMTag(ref name.Reference, opts ...Option) (name.Tag, error) {
 	o := makeOptions(ref.Context(), opts...)
 	return suffixTag(ref, o.SBOMSuffix, o)
-}
-
-// ArtifactType converts a attachment name (sig/sbom/att/etc.) into a valid artifactType (OCI 1.1+).
-func ArtifactType(attName string) string {
-	return fmt.Sprintf("application/vnd.dev.cosign.artifact.%s.v1+json", attName)
 }
 
 func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) {
@@ -216,7 +212,7 @@ func attachmentExperimentalOCI(digestable digestable, attName string, o *options
 	}
 	d := o.TargetRepository.Digest(h.String())
 
-	artifactType := ArtifactType(attName)
+	artifactType := ociexperimental.ArtifactType(attName)
 	index, err := Referrers(d, artifactType, o.OriginalOptions...)
 	if err != nil {
 		return nil, err

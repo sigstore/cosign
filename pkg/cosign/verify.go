@@ -48,6 +48,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
+	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/layout"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
@@ -464,7 +465,7 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 // If there were no valid signatures, we return an error.
 func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	if b, err := strconv.ParseBool(env.Getenv(env.VariableOCIExperimental)); err == nil && b {
-		verified, bundleVerified, err := VerifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co)
+		verified, bundleVerified, err := verifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co)
 		if err == nil {
 			return verified, bundleVerified, nil
 		}
@@ -1292,9 +1293,9 @@ func correctAnnotations(wanted, have map[string]interface{}) bool {
 	return true
 }
 
-// VerifyImageSignaturesExperimentalOCI does all the main cosign checks in a loop, returning the verified signatures.
+// verifyImageSignaturesExperimentalOCI does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error, using OCI 1.1+ behavior.
-func VerifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -1314,7 +1315,7 @@ func VerifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	var sigs oci.Signatures
 	sigRef := co.SignatureRef
 	if sigRef == "" {
-		artifactType := ociremote.ArtifactType("sig")
+		artifactType := ociexperimental.ArtifactType("sig")
 		index, err := ociremote.Referrers(digest, artifactType, co.RegistryClientOpts...)
 		if err != nil {
 			return nil, false, err

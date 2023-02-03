@@ -25,6 +25,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 )
@@ -171,7 +172,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err
 	}
-	artifactType := ArtifactType("sig")
+	artifactType := ociexperimental.ArtifactType("sig")
 	m.Config.MediaType = types.MediaType(artifactType)
 	m.Subject = desc
 	b, err = json.Marshal(&m)
