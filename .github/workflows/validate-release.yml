@@ -23,15 +23,43 @@ on:
   pull_request:
 
 jobs:
-  validate-release-job:
+  check-signature:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/gythialy/golang-cross:v1.19.5-0@sha256:76716805e9d07712f0628c36d21223874b1dd9af5e5de2d00325c00b24b238cc
+      image: gcr.io/projectsigstore/cosign:v2.0.0-rc.1@sha256:12d365ed4ee9bb32ba8a0fd16f6c5eae5229dc50e8d62460312cca0b5b7e0457
+
+    steps:
+      - name: Check Signature
+        run: |
+          cosign verify ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae \
+          --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.20.0-0"
+        env:
+          TUF_ROOT: /tmp
+
+  validate-release-job:
+    runs-on: ubuntu-latest
+    needs:
+      - check-signature
+
+    container:
+      image: ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae
 
     permissions: {}
 
     steps:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
+      # Error: fatal: detected dubious ownership in repository at '/__w/cosign/cosign'
+      #      To add an exception for this directory, call:
+      #          git config --system --add safe.directory /__w/cosign/cosign
+      # Reason: Recent versions of git require the .git folder to be owned
+      # by the same user (see https://github.blog/2022-04-12-git-security-vulnerability-announced/).
+      # Related
+      # - https://github.com/actions/runner/issues/2033
+      # - https://github.com/actions/checkout/issues/1048
+      # - https://github.com/actions/runner-images/issues/6775
+      - run: git config --system --add safe.directory /__w/cosign/cosign
 
       - name: goreleaser snapshot
         run: make snapshot
