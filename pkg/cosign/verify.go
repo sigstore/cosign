@@ -233,7 +233,8 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 		return nil, err
 	}
 	if !contains && len(co.SCT) == 0 {
-		return nil, &VerificationError{"certificate does not include required embedded SCT and no detached SCT was set"}
+		// TODO: add error type instead of blank string
+		return nil, &VerificationError{"", "certificate does not include required embedded SCT and no detached SCT was set"}
 	}
 	// handle if chains has more than one chain - grab first and print message
 	if len(chains) > 1 {
@@ -326,7 +327,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				return nil
 			}
 		}
-		return &VerificationError{
+		return &VerificationError{"",
 			fmt.Sprintf("none of the expected identities matched what was in the certificate, got subjects [%s] with issuer %s",
 				strings.Join(sans, ", "), oidcIssuer)}
 	}
@@ -336,31 +337,36 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 	if co.CertGithubWorkflowTrigger != "" {
 		if ce.GetCertExtensionGithubWorkflowTrigger() != co.CertGithubWorkflowTrigger {
-			return &VerificationError{"expected GitHub Workflow Trigger not found in certificate"}
+			// TODO: add error type instead of blank string
+			return &VerificationError{"", "expected GitHub Workflow Trigger not found in certificate"}
 		}
 	}
 
 	if co.CertGithubWorkflowSha != "" {
 		if ce.GetExtensionGithubWorkflowSha() != co.CertGithubWorkflowSha {
-			return &VerificationError{"expected GitHub Workflow SHA not found in certificate"}
+			// TODO: add error type instead of blank string
+			return &VerificationError{"", "expected GitHub Workflow SHA not found in certificate"}
 		}
 	}
 
 	if co.CertGithubWorkflowName != "" {
 		if ce.GetCertExtensionGithubWorkflowName() != co.CertGithubWorkflowName {
-			return &VerificationError{"expected GitHub Workflow Name not found in certificate"}
+			// TODO: add error type instead of blank string
+			return &VerificationError{"", "expected GitHub Workflow Name not found in certificate"}
 		}
 	}
 
 	if co.CertGithubWorkflowRepository != "" {
 		if ce.GetCertExtensionGithubWorkflowRepository() != co.CertGithubWorkflowRepository {
-			return &VerificationError{"expected GitHub Workflow Repository not found in certificate"}
+			// TODO: add error type instead of blank string
+			return &VerificationError{"", "expected GitHub Workflow Repository not found in certificate"}
 		}
 	}
 
 	if co.CertGithubWorkflowRef != "" {
 		if ce.GetCertExtensionGithubWorkflowRef() != co.CertGithubWorkflowRef {
-			return &VerificationError{"expected GitHub Workflow Ref not found in certificate"}
+			// TODO: add error type instead of blank string
+			return &VerificationError{"", "expected GitHub Workflow Ref not found in certificate"}
 		}
 	}
 	return nil
@@ -572,7 +578,10 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 		checkedSignatures = append(checkedSignatures, sig)
 	}
 	if len(checkedSignatures) == 0 {
-		return nil, false, fmt.Errorf("%w:\n%s", ErrNoMatchingSignatures, strings.Join(validationErrs, "\n "))
+		return nil, false, &VerificationError{
+			errorType: ErrNoMatchingSignaturesType,
+			message:   fmt.Sprintf("%s:\n%s", ErrNoMatchingSignaturesMessage, strings.Join(validationErrs, "\n ")),
+		}
 	}
 	return checkedSignatures, bundleVerified, nil
 }
@@ -646,7 +655,8 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, err
 		}
 		if cert == nil {
-			return false, &VerificationError{"no certificate found on signature"}
+			// TODO: add error type instead of blank string
+			return false, &VerificationError{"", "no certificate found on signature"}
 		}
 		// Create a certificate pool for intermediate CA certificates, excluding the root
 		chain, err := sig.Chain()
@@ -713,7 +723,8 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			if err := CheckExpiry(cert, time.Now()); err != nil {
 				// If certificate is expired and not signed timestamp was provided then error the following message. Otherwise throw an expiration error.
 				if co.IgnoreTlog && acceptableRFC3161Time == nil {
-					return false, &VerificationError{"expected a signed timestamp to verify an expired certificate"}
+					// TODO: add error type instead of blank string
+					return false, &VerificationError{"", "expected a signed timestamp to verify an expired certificate"}
 				}
 				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
 			}
@@ -896,7 +907,10 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 		checkedAttestations = append(checkedAttestations, att)
 	}
 	if len(checkedAttestations) == 0 {
-		return nil, false, fmt.Errorf("%w:\n%s", ErrNoMatchingAttestations, strings.Join(validationErrs, "\n "))
+		return nil, false, &VerificationError{
+			errorType: ErrNoMatchingAttestationsType,
+			message:   fmt.Sprintf("%s:\n%s", ErrNoMatchingAttestationsMessage, strings.Join(validationErrs, "\n ")),
+		}
 	}
 	return checkedAttestations, bundleVerified, nil
 }
@@ -957,7 +971,8 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 
 	pubKey, ok := co.RekorPubKeys.Keys[bundle.Payload.LogID]
 	if !ok {
-		return false, &VerificationError{"verifying bundle: rekor log public key not found for payload"}
+		// TODO: add error type instead of blank string
+		return false, &VerificationError{"", "verifying bundle: rekor log public key not found for payload"}
 	}
 	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey.(*ecdsa.PublicKey))
 	if err != nil {
@@ -1047,7 +1062,8 @@ func compareSigs(bundleBody string, sig oci.Signature) error {
 		return nil
 	}
 	if bundleSignature != actualSig {
-		return &VerificationError{"signature in bundle does not match signature being verified"}
+		// TODO: add error type instead of blank string
+		return &VerificationError{"", "signature in bundle does not match signature being verified"}
 	}
 	return nil
 }
@@ -1250,7 +1266,8 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	// verify the SET against the public key
 	hash := sha256.Sum256(canonicalized)
 	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
-		return &VerificationError{"unable to verify SET"}
+		// TODO: add error type instead of blank string
+		return &VerificationError{"", "unable to verify SET"}
 	}
 	return nil
 }

@@ -17,20 +17,21 @@ package cosign
 import "fmt"
 
 var (
-	// ErrNoMatchingSignatures is the error returned when there are no matching
-	// signatures during verification.
-	ErrNoMatchingSignatures = &VerificationError{"no matching signatures"}
+	// NoMatchingAttestations
+	ErrNoMatchingAttestationsMessage = "no matching attestations"
+	ErrNoMatchingAttestationsType    = "NoMatchingAttestations"
 
-	// ErrNoMatchingAttestations is the error returned when there are no
-	// matching attestations during verification.
-	ErrNoMatchingAttestations = &VerificationError{"no matching attestations"}
+	// NoMatchingSignatures
+	ErrNoMatchingSignaturesType    = "NoMatchingSignatures"
+	ErrNoMatchingSignaturesMessage = "no matching signatures"
 )
 
 // VerificationError is the type of Go error that is used by cosign to surface
 // errors actually related to verification (vs. transient, misconfiguration,
 // transport, or authentication related issues).
 type VerificationError struct {
-	message string
+	errorType string
+	message   string
 }
 
 // NewVerificationError constructs a new VerificationError in a manner similar
@@ -47,4 +48,13 @@ var _ error = (*VerificationError)(nil)
 // Error implements error
 func (ve *VerificationError) Error() string {
 	return ve.message
+}
+
+// Error implements error
+func (ve *VerificationError) ErrorType() string {
+	return ve.errorType
+}
+
+func (ve *VerificationError) SetErrorType(errorType string) {
+	ve.errorType = errorType
 }

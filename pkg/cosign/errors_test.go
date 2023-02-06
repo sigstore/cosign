@@ -22,10 +22,8 @@ import (
 
 func TestErrors(t *testing.T) {
 	for _, want := range []error{
-		ErrNoMatchingAttestations,
-		ErrNoMatchingSignatures,
 		NewVerificationError("not a constant %d", 3),
-		fmt.Errorf("wrapped errors: %w", ErrNoMatchingSignatures),
+		NewVerificationError("not a string %s", "i am a string"),
 	} {
 		t.Run(want.Error(), func(t *testing.T) {
 			verr := &VerificationError{}
