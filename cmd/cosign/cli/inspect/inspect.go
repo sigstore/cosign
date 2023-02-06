@@ -114,8 +114,8 @@ func (c *InspectCommand) Exec(ctx context.Context, images []string) (err error) 
 			if err != nil {
 				return err
 			}
-			PrintInspectionHeader(img, "signature")
-			PrintInspection(ctx, img, sigs, co, c.Output)
+			PrintInspectHeader(img, "signature")
+			PrintInspect(ctx, img, sigs, co, c.Output)
 		} else {
 			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
@@ -131,8 +131,8 @@ func (c *InspectCommand) Exec(ctx context.Context, images []string) (err error) 
 				return err
 			}
 
-			PrintInspectionHeader(ref.Name(), "signature")
-			PrintInspection(ctx, ref.Name(), sigs, co, c.Output)
+			PrintInspectHeader(ref.Name(), "signature")
+			PrintInspect(ctx, ref.Name(), sigs, co, c.Output)
 		}
 	}
 
@@ -163,8 +163,8 @@ func PrintTlogInspection(
 	return nil
 }
 
-// InspectHeader provides a generic output (to `stderr`) header taking the image reference and artifact kind (e.g., signature, attestation, sbom) as input
-func PrintInspectionHeader(imgRef string, kind string) {
+// PrintInspectHeader provides a generic output (to `stderr`) header taking the image reference and artifact kind (e.g., signature, attestation, sbom) as input
+func PrintInspectHeader(imgRef string, kind string) {
 	fmt.Fprintln(
 		os.Stderr,
 		"**Warning** This command does not verify any signatures for the image or associated artifacts (e.g., attestations, signatures etc.\nPlease use `cosign verify` to perform these actions.",
@@ -172,8 +172,8 @@ func PrintInspectionHeader(imgRef string, kind string) {
 	fmt.Fprintf(os.Stderr, "\nInspecting %s for %s --\n", kind, imgRef)
 }
 
-// PrintInspection outputs the details of the artifact (e.g., signature, attestation, sbom) to stdout for user inspection
-func PrintInspection(
+// PrintInspect outputs the details of the artifact (e.g., signature, attestation, sbom) to stdout for user inspection
+func PrintInspect(
 	ctx context.Context,
 	imgRef string,
 	signatures []oci.Signature,
