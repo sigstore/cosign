@@ -126,7 +126,7 @@ Note that these signed payloads include the digest of the container image, which
 sure these "detached" signatures cover the correct image.
 
 ```shell
-$ cosign verify --key cosign.pub $IMAGE_URI
+$ cosign verify --key cosign.pub $IMAGE_URI:1h
 The following checks were performed on these signatures:
   - The cosign claims were validated
   - The signatures were verified against the specified public key
