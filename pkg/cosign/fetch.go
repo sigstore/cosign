@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -119,7 +120,7 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 	return signatures, nil
 }
 
-func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]AttestationPayload, error) {
+func FetchAttestationsForReference(ctx context.Context, ref name.Reference, predicateType string, opts ...ociremote.Option) ([]AttestationPayload, error) {
 	simg, err := ociremote.SignedEntity(ref, opts...)
 	if err != nil {
 		return nil, err
@@ -137,18 +138,44 @@ func FetchAttestationsForReference(ctx context.Context, ref name.Reference, opts
 		return nil, fmt.Errorf("no attestations associated with %s", ref)
 	}
 
-	attestations := make([]AttestationPayload, len(l))
+	attestations := make([]AttestationPayload, 0, len(l))
+	var attMu sync.Mutex
+
 	var g errgroup.Group
 	g.SetLimit(runtime.NumCPU())
-	for i, att := range l {
-		i, att := i, att
+
+	for _, att := range l {
+		if predicateType != "" {
+			anns, err := att.Annotations()
+			if err != nil {
+				return nil, err
+			}
+			pt, ok := anns["predicateType"]
+			// Skip attestation if predicateType annotation is not present or predicateType annotation does not match supplied predicate type
+			if !ok || pt != predicateType {
+				continue
+			}
+		}
+		att := att
+		var a AttestationPayload
 		g.Go(func() error {
 			attestPayload, _ := att.Payload()
-			return json.Unmarshal(attestPayload, &attestations[i])
+			err := json.Unmarshal(attestPayload, &a)
+			if err != nil {
+				return err
+			}
+			attMu.Lock()
+			defer attMu.Unlock()
+			attestations = append(attestations, a)
+			return nil
 		})
 	}
 	if err := g.Wait(); err != nil {
 		return nil, err
+	}
+
+	if len(attestations) == 0 && predicateType != "" {
+		return nil, fmt.Errorf("no attestations with predicate type '%s' found", predicateType)
 	}
 
 	return attestations, nil
