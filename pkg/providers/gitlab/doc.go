@@ -13,22 +13,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package all
-
-import (
-	"github.com/sigstore/cosign/v2/pkg/providers"
-
-	// Link in all of the providers.
-	_ "github.com/sigstore/cosign/v2/pkg/providers/filesystem"
-	_ "github.com/sigstore/cosign/v2/pkg/providers/github"
-	_ "github.com/sigstore/cosign/v2/pkg/providers/gitlab"
-	_ "github.com/sigstore/cosign/v2/pkg/providers/google"
-	_ "github.com/sigstore/cosign/v2/pkg/providers/spiffe"
-)
-
-// Alias these methods, so that folks can import this to get all providers.
-var (
-	Enabled     = providers.Enabled
-	Provide     = providers.Provide
-	ProvideFrom = providers.ProvideFrom
-)
+// Package github defines a github implementation of the providers.Interface.
+package gitlab

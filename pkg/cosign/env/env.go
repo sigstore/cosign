@@ -64,6 +64,7 @@ const (
 	VariableGoogleServiceAccountName Variable = "GOOGLE_SERVICE_ACCOUNT_NAME"
 	VariableGitLabHost               Variable = "GITLAB_HOST"
 	VariableGitLabToken              Variable = "GITLAB_TOKEN"
+	VariableGitLabJWTToken           Variable = "CI_JOB_JWT_V2" //nolint:gosec
 )
 
 var (
@@ -159,6 +160,12 @@ var (
 		VariableGitLabToken: {
 			Description: "is a token used to authenticate with GitLab",
 			Expects:     "string with a token",
+			Sensitive:   true,
+			External:    true,
+		},
+		VariableGitLabJWTToken: {
+			Description: "is a GitLab JWT job token",
+			Expects:     "string with a JWT token",
 			Sensitive:   true,
 			External:    true,
 		},
