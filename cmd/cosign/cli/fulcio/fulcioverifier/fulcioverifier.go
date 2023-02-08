@@ -23,10 +23,11 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func NewSigner(ctx context.Context, ko options.KeyOpts) (*fulcio.Signer, error) {
-	fs, err := fulcio.NewSigner(ctx, ko)
+func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*fulcio.Signer, error) {
+	fs, err := fulcio.NewSigner(ctx, ko, signer)
 	if err != nil {
 		return nil, err
 	}
