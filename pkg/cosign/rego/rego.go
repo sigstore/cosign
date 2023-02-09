@@ -146,7 +146,10 @@ func evaluateRegoEvalMapResult(query string, response []interface{}) (warning er
 
 		// Check if it is complaint
 		if resultObject.Result {
-			return fmt.Errorf(resultObject.Warning), nil
+			if resultObject.Warning == "" {
+				return nil, nil
+			}
+			return fmt.Errorf("warning: %s", resultObject.Warning), nil
 		}
 		warning = errors.New(resultObject.Warning)
 		error = fmt.Errorf("policy is not compliant for query '%s' with errors: %s", query, resultObject.Error)
