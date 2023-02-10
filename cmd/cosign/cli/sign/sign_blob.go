@@ -193,7 +193,6 @@ func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error)
 	// signer is a certificate
 	if err == nil && len(cert) == 1 {
 		return signer, nil
-	} else {
-		return nil, nil
 	}
+	return nil, nil
 }
