@@ -32,7 +32,7 @@ steps:
         echo "Checking out ${_GIT_TAG}"
         git checkout ${_GIT_TAG}
 
-  - name: 'gcr.io/projectsigstore/cosign:v2.0.0-rc.1@sha256:12d365ed4ee9bb32ba8a0fd16f6c5eae5229dc50e8d62460312cca0b5b7e0457'
+  - name: 'gcr.io/projectsigstore/cosign:v2.0.0-rc.2@sha256:3c62b38a5b7eaa4db90c328d430a705d086792869aece919559ecf381a23a4e8'
     dir: "go/src/sigstore/cosign"
     env:
       - TUF_ROOT=/tmp
@@ -59,6 +59,7 @@ steps:
       - GIT_TAG=${_GIT_TAG}
       - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
       - COSIGN_YES=true
+      - COSIGN_EXPERIMENTAL=true
       - KO_PREFIX=gcr.io/${PROJECT_ID}
     secretEnv:
       - GITHUB_TOKEN
@@ -82,6 +83,7 @@ steps:
       - GIT_TAG=${_GIT_TAG}
       - KO_PREFIX=gcr.io/${PROJECT_ID}
       - COSIGN_YES=true
+      - COSIGN_EXPERIMENTAL=true
       - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
       - GITHUB_USER=${_GITHUB_USER}
     secretEnv:
