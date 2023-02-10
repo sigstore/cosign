@@ -71,15 +71,15 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		return err
 	}
 
-	var cert  []byte
-	var certChain  []byte
+	var cert []byte
+	var certChain []byte
 
 	if certRef != "" {
 		cert, err = os.ReadFile(filepath.Clean(certRef))
 		if err != nil {
 			return err
 		}
-	}	
+	}
 
 	if certChainRef != "" {
 		certChain, err = os.ReadFile(filepath.Clean(certChainRef))
@@ -87,13 +87,11 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 			return err
 		}
 	}
-	
 
-	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert,certChain))
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain))
 	if err != nil {
-		return  err
-	}	
-	
+		return err
+	}
 
 	se, err := ociremote.SignedEntity(digest, ociremoteOpts...)
 	if err != nil {

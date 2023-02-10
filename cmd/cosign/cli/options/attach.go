@@ -51,9 +51,9 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+
-		"when building the certificate chain for the signing certificate. "+
-		"Must start with the parent intermediate CA certificate of the "+
-		"signing certificate and end with the root certificate. Included in the OCI Signature")
+			"when building the certificate chain for the signing certificate. "+
+			"Must start with the parent intermediate CA certificate of the "+
+			"signing certificate and end with the root certificate. Included in the OCI Signature")
 }
 
 // AttachSBOMOptions is the top level wrapper for the attach sbom command.
