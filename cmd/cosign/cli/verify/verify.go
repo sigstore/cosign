@@ -29,11 +29,11 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -278,7 +278,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 
 			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
 			if err != nil {
-				return err
+				return cosignError.WrapError(err)
 			}
 
 			PrintVerificationHeader(ref.Name(), co, bundleVerified, fulcioVerified)
