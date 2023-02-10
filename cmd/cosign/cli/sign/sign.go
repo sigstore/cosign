@@ -236,7 +236,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	if ko.TSAServerURL != "" {
-		s = tsa.NewSigner(s, &client.TimestampAuthorityClient{URL: ko.TSAServerURL})
+		s = tsa.NewSigner(s, client.NewTSAClient(ko.TSAServerURL))
 	}
 	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, tlogUpload)
 	if err != nil {

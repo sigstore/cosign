@@ -536,7 +536,7 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 	payloadSigner := payload.NewSigner(sv)
 	testSigner := tsa.NewSigner(payloadSigner, client)
 
-	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertificateChain)
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
@@ -582,7 +582,7 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	payloadSigner := payload.NewSigner(sv)
 	tsaSigner := tsa.NewSigner(payloadSigner, client)
 
-	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertificateChain)
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
@@ -1379,7 +1379,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	}
 	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
 
-	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertificateChain)
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}

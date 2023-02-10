@@ -16,7 +16,6 @@ package client
 
 import (
 	"bytes"
-	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,27 +26,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TimestampAuthorityClient should be implemented by clients that want to request timestamp responses
+type TimestampAuthorityClient interface {
+	GetTimestampResponse(tsq []byte) ([]byte, error)
+}
+
 // TimestampAuthorityClient provides a client to query RFC 3161 timestamp authorities
-type TimestampAuthorityClient struct {
-	Timestamp TimestampAuthorityService
+type TimestampAuthorityClientImpl struct {
+	TimestampAuthorityClient
 
 	// URL is the path to the API to request timestamp responses
 	URL string
 
-	// CertificateChain contains an optional certificate chain used to verify timestamp responses
-	CertificateChain []*x509.Certificate
-}
-
-// TimestampAuthorityService should be implemented by clients that want to request timestamp responses
-type TimestampAuthorityService interface {
-	GetTimestampResponse(tsq []byte) ([]byte, error)
+	// Timeout is the request timeout
+	Timeout time.Duration
 }
 
 // GetTimestampResponse sends a timestamp query to a timestamp authority, returning a timestamp response.
 // The query and response are defined by RFC 3161.
-func (t *TimestampAuthorityClient) GetTimestampResponse(tsq []byte) ([]byte, error) {
+func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte, error) {
 	client := http.Client{
-		Timeout: time.Second * 5,
+		Timeout: t.Timeout,
 	}
 	req, err := http.NewRequest("POST", t.URL, bytes.NewReader(tsq))
 	if err != nil {
@@ -59,7 +58,7 @@ func (t *TimestampAuthorityClient) GetTimestampResponse(tsq []byte) ([]byte, err
 	if err != nil {
 		return nil, errors.Wrap(err, "error making request to timestamp authority")
 	}
-	if tsr.StatusCode != 200 {
+	if tsr.StatusCode != 200 && tsr.StatusCode != 201 {
 		return nil, fmt.Errorf("request to timestamp authority failed with status code %d", tsr.StatusCode)
 	}
 
@@ -77,4 +76,8 @@ func (t *TimestampAuthorityClient) GetTimestampResponse(tsq []byte) ([]byte, err
 	fmt.Fprintln(os.Stderr, "Timestamp fetched with time: ", ts.Time)
 
 	return resp, nil
+}
+
+func NewTSAClient(url string) *TimestampAuthorityClientImpl {
+	return &TimestampAuthorityClientImpl{URL: url, Timeout: 10 * time.Second}
 }

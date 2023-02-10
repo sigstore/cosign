@@ -174,7 +174,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 	if c.KeyOpts.TSAServerURL != "" {
 		// Here we get the response from the timestamped authority server
-		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, &tsaclient.TimestampAuthorityClient{URL: c.KeyOpts.TSAServerURL})
+		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL))
 		if err != nil {
 			return err
 		}

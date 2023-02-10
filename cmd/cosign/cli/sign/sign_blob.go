@@ -78,7 +78,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			return nil, fmt.Errorf("timestamp output path must be set")
 		}
 
-		respBytes, err := tsa.GetTimestampedSignature(sig, &client.TimestampAuthorityClient{URL: ko.TSAServerURL})
+		respBytes, err := tsa.GetTimestampedSignature(sig, client.NewTSAClient(ko.TSAServerURL))
 		if err != nil {
 			return nil, err
 		}

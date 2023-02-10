@@ -36,6 +36,8 @@ import (
 // Time can be provided in the initializer, or defaults to time.Now().
 // All other timestamp parameters are hardcoded.
 type TSAClient struct {
+	client.TimestampAuthorityClient
+
 	Signer    crypto.Signer
 	CertChain []*x509.Certificate
 	Time      time.Time
@@ -52,7 +54,7 @@ type TSAClientOptions struct {
 	Signer crypto.Signer
 }
 
-func NewTSAClient(o TSAClientOptions) (*client.TimestampAuthorityClient, error) {
+func NewTSAClient(o TSAClientOptions) (*TSAClient, error) {
 	sv := o.Signer
 	if sv == nil {
 		var err error
@@ -66,14 +68,11 @@ func NewTSAClient(o TSAClientOptions) (*client.TimestampAuthorityClient, error) 
 		return nil, errors.Wrap(err, "generating timestamping cert chain")
 	}
 
-	return &client.TimestampAuthorityClient{
-		Timestamp: &TSAClient{
-			Signer:    sv,
-			CertChain: certChain,
-			Time:      o.Time,
-			Message:   o.Message,
-		},
-		CertificateChain: certChain,
+	return &TSAClient{
+		Signer:    sv,
+		CertChain: certChain,
+		Time:      o.Time,
+		Message:   o.Message,
 	}, nil
 }
 

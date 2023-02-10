@@ -145,7 +145,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	if c.TSAServerURL != "" {
-		respBytes, err := tsa.GetTimestampedSignature(sig, &client.TimestampAuthorityClient{URL: c.TSAServerURL})
+		respBytes, err := tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
 		if err != nil {
 			return err
 		}

@@ -194,7 +194,7 @@ func TestVerifyBlob(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(tsaClient.CertificateChain)
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(tsaClient.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestVerifyBlob(t *testing.T) {
 	if err := os.WriteFile(expiredTSACertChainPath, certChainPEM, 0644); err != nil {
 		t.Fatal(err)
 	}
-	tsr, err := tsaClient.Timestamp.GetTimestampResponse(nil)
+	tsr, err := tsaClient.GetTimestampResponse(nil)
 	if err != nil {
 		t.Fatalf("unable to generate a timestamp response: %v", err)
 	}
@@ -212,13 +212,13 @@ func TestVerifyBlob(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tsr, err = tsaClient.Timestamp.GetTimestampResponse(nil)
+	tsr, err = tsaClient.GetTimestampResponse(nil)
 	if err != nil {
 		t.Fatalf("unable to generate a timestamp response: %v", err)
 	}
 	rfc3161Timestamp = &bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsr}
 	unexpiredTSPath := writeTimestampFile(t, td, rfc3161Timestamp, "unexpiredrfc3161TS.json")
-	certChainPEM, err = cryptoutils.MarshalCertificatesToPEM(tsaClient.CertificateChain)
+	certChainPEM, err = cryptoutils.MarshalCertificatesToPEM(tsaClient.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
@@ -1070,7 +1070,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(tsaClient.CertificateChain)
+		certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(tsaClient.CertChain)
 		if err != nil {
 			t.Fatalf("unexpected error marshalling cert chain: %v", err)
 		}
@@ -1078,7 +1078,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		if err := os.WriteFile(tsaCertChainPath, certChainPEM, 0644); err != nil {
 			t.Fatal(err)
 		}
-		tsr, err := tsaClient.Timestamp.GetTimestampResponse(nil)
+		tsr, err := tsaClient.GetTimestampResponse(nil)
 		if err != nil {
 			t.Fatalf("unable to generate a timestamp response: %v", err)
 		}

@@ -269,7 +269,7 @@ func signPolicy() *cobra.Command {
 
 			if o.TSAServerURL != "" {
 				// Here we get the response from the timestamped authority server
-				if _, err := tsa.GetTimestampedSignature(signed.Signed, &client.TimestampAuthorityClient{URL: o.TSAServerURL}); err != nil {
+				if _, err := tsa.GetTimestampedSignature(signed.Signed, client.NewTSAClient(o.TSAServerURL)); err != nil {
 					return err
 				}
 			}
