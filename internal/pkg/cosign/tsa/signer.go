@@ -18,57 +18,37 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/digitorus/timestamp"
+	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/generated/client"
-	ts "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 )
 
 // GetTimestampedSignature queries a timestamp authority to fetch an RFC3161 timestamp. sigBytes is an
 // opaque blob, but is typically a signature over an artifact.
-func GetTimestampedSignature(sigBytes []byte, tsaClient *tsaclient.TimestampAuthority) ([]byte, error) {
+func GetTimestampedSignature(sigBytes []byte, tsaClient *client.TimestampAuthorityClient) ([]byte, error) {
 	requestBytes, err := createTimestampAuthorityRequest(sigBytes, crypto.SHA256, "")
 	if err != nil {
-		return nil, err
-	}
-	params := ts.NewGetTimestampResponseParams()
-	params.SetTimeout(time.Second * 10)
-	params.Request = io.NopCloser(bytes.NewReader(requestBytes))
-
-	var respBytes bytes.Buffer
-	_, err = tsaClient.Timestamp.GetTimestampResponse(params, &respBytes)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get the response: %w", err)
+		return nil, errors.Wrap(err, "error creating timestamp request")
 	}
 
-	// validate that timestamp is parseable
-	ts, err := timestamp.ParseResponse(respBytes.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Fprintln(os.Stderr, "Timestamp fetched with time: ", ts.Time)
-
-	return respBytes.Bytes(), nil
+	return tsaClient.Timestamp.GetTimestampResponse(requestBytes)
 }
 
 // signerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`
 type signerWrapper struct {
 	inner cosign.Signer
 
-	tsaClient *tsaclient.TimestampAuthority
+	tsaClient *client.TimestampAuthorityClient
 }
 
 var _ cosign.Signer = (*signerWrapper)(nil)
@@ -126,7 +106,7 @@ func createTimestampAuthorityRequest(artifactBytes []byte, hash crypto.Hash, pol
 }
 
 // NewSigner returns a `cosign.Signer` which uploads the signature to a TSA
-func NewSigner(inner cosign.Signer, tsaClient *tsaclient.TimestampAuthority) cosign.Signer {
+func NewSigner(inner cosign.Signer, tsaClient *client.TimestampAuthorityClient) cosign.Signer {
 	return &signerWrapper{
 		inner:     inner,
 		tsaClient: tsaClient,

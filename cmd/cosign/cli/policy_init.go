@@ -38,8 +38,8 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/upload"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
@@ -268,12 +268,8 @@ func signPolicy() *cobra.Command {
 			}
 
 			if o.TSAServerURL != "" {
-				clientTSA, err := tsaclient.GetTimestampClient(o.TSAServerURL)
-				if err != nil {
-					return fmt.Errorf("failed to create TSA client: %w", err)
-				}
 				// Here we get the response from the timestamped authority server
-				if _, err := tsa.GetTimestampedSignature(signed.Signed, clientTSA); err != nil {
+				if _, err := tsa.GetTimestampedSignature(signed.Signed, &client.TimestampAuthorityClient{URL: o.TSAServerURL}); err != nil {
 					return err
 				}
 			}
