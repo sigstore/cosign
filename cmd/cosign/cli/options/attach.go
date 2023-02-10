@@ -29,6 +29,8 @@ import (
 type AttachSignatureOptions struct {
 	Signature string
 	Payload   string
+	Cert      string
+	CertChain string
 	Registry  RegistryOptions
 }
 
@@ -43,6 +45,15 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Payload, "payload", "",
 		"path to the payload covered by the signature (if using another format)")
+
+	cmd.Flags().StringVar(&o.Cert, "certificate", "",
+		"path to the X.509 certificate in PEM format to include in the OCI Signature")
+
+	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
+		"path to a list of CA X.509 certificates in PEM format which will be needed "+
+		"when building the certificate chain for the signing certificate. "+
+		"Must start with the parent intermediate CA certificate of the "+
+		"signing certificate and end with the root certificate. Included in the OCI Signature")
 }
 
 // AttachSBOMOptions is the top level wrapper for the attach sbom command.

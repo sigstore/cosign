@@ -49,7 +49,7 @@ func attachSignature() *cobra.Command {
 		PersistentPreRun: options.BindViper,
 		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return attach.SignatureCmd(cmd.Context(), o.Registry, o.Signature, o.Payload, args[0])
+			return attach.SignatureCmd(cmd.Context(), o.Registry, o.Signature, o.Payload, o.Cert, o.CertChain, args[0])
 		},
 	}
 
