@@ -260,8 +260,8 @@ func TestAttestVerifySPDXJSON(t *testing.T) {
 	attestVerify(t,
 		"spdxjson",
 		string(attestationBytes),
-		`predicate: Data: spdxVersion: "SPDX-2.2"`,
-		`predicate: Data: spdxVersion: "SPDX-9.9"`,
+		`predicate: spdxVersion: "SPDX-2.2"`,
+		`predicate: spdxVersion: "SPDX-9.9"`,
 	)
 }
 
@@ -273,8 +273,8 @@ func TestAttestVerifyCycloneDXJSON(t *testing.T) {
 	attestVerify(t,
 		"cyclonedx",
 		string(attestationBytes),
-		`predicate: Data: specVersion: "1.4"`,
-		`predicate: Data: specVersion: "7.7"`,
+		`predicate: specVersion: "1.4"`,
+		`predicate: specVersion: "7.7"`,
 	)
 }
 
