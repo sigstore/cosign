@@ -30,10 +30,10 @@ import (
 
 const (
 	// CosignCustomProvenanceV01 specifies the type of the Predicate.
-	CosignCustomProvenanceV01 = "cosign.sigstore.dev/attestation/v1"
+	CosignCustomProvenanceV01 = "https://cosign.sigstore.dev/attestation/v1"
 
 	// CosignVulnProvenanceV01 specifies the type of VulnerabilityScan Predicate
-	CosignVulnProvenanceV01 = "cosign.sigstore.dev/attestation/vuln/v1"
+	CosignVulnProvenanceV01 = "https://cosign.sigstore.dev/attestation/vuln/v1"
 )
 
 // CosignPredicate specifies the format of the Custom Predicate.

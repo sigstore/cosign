@@ -150,13 +150,13 @@ func TestAttestationToPayloadJson(t *testing.T) {
 		case "custom":
 			var intoto in_toto.Statement
 			if err := json.Unmarshal(jsonBytes, &intoto); err != nil {
-				t.Fatal("Wanted custom statement, can't unmarshal to it: ", err)
+				t.Fatalf("[%s] Wanted custom statement, can't unmarshal to it: %v", fileName, err)
 			}
 			checkPredicateType(t, attestation.CosignCustomProvenanceV01, intoto.PredicateType)
 		case "vuln":
 			var vulnStatement attestation.CosignVulnStatement
 			if err := json.Unmarshal(jsonBytes, &vulnStatement); err != nil {
-				t.Fatal("Wanted vuln statement, can't unmarshal to it: ", err)
+				t.Fatalf("[%s] Wanted vuln statement, can't unmarshal to it: %v", fileName, err)
 			}
 			checkPredicateType(t, attestation.CosignVulnProvenanceV01, vulnStatement.PredicateType)
 		case "default":

@@ -14,7 +14,7 @@ Here is an example attestation containing a data file containing `foo`:
 ```json
 {
   "_type": "https://in-toto.io/Statement/v0.1",
-  "predicateType": "cosign.sigstore.dev/attestation/v1",
+  "predicateType": "https://cosign.sigstore.dev/attestation/v1",
   "subject": [
     {
       "name": "us.gcr.io/dlorenc-vmtest2/demo",

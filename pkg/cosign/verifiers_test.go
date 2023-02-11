@@ -25,7 +25,7 @@ import (
 The following JSON is the payload in valid attestation:
 {
   "_type": "https://in-toto.io/Statement/v0.1",
-  "predicateType": "cosign.sigstore.dev/attestation/v1",
+  "predicateType": "https://cosign.sigstore.dev/attestation/v1",
   "subject": [
     {
       "name": "registry.local:5000/knative/demo",
