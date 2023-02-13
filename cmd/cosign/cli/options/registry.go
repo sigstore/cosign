@@ -17,6 +17,8 @@ package options
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -110,4 +112,48 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 		opts = append(opts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
 	}
 	return opts
+}
+
+type RegistryReferrersMode string
+
+const (
+	RegistryReferrersModeLegacy RegistryReferrersMode = "legacy"
+	RegistryReferrersModeOCI11  RegistryReferrersMode = "oci-1-1"
+)
+
+func (e *RegistryReferrersMode) String() string {
+	return string(*e)
+}
+
+func (e *RegistryReferrersMode) Set(v string) error {
+	switch v {
+	case "legacy":
+		*e = RegistryReferrersMode(v)
+		return nil
+	case "oci-1-1":
+		if !EnableExperimental() {
+			return fmt.Errorf(`in order to use  mode "%s", you must set COSIGN_EXPERIMENTAL=1`, v)
+		}
+		*e = RegistryReferrersMode(v)
+		return nil
+	default:
+		return errors.New(`must be one of "legacy", "oci-1-1"`)
+	}
+}
+
+func (e *RegistryReferrersMode) Type() string {
+	return "registryReferrersMode"
+}
+
+// RegistryExperimentalOptions is the wrapper for the registry experimental options.
+type RegistryExperimentalOptions struct {
+	RegistryReferrersMode RegistryReferrersMode
+}
+
+var _ Interface = (*RegistryExperimentalOptions)(nil)
+
+// AddFlags implements Interface
+func (o *RegistryExperimentalOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().Var(&o.RegistryReferrersMode, "registry-referrers-mode",
+		"mode for fetching references from the registry. allowed: legacy, oci-1-1")
 }

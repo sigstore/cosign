@@ -172,6 +172,9 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err
 	}
+
+	// TODO: write the config blob
+
 	artifactType := ociexperimental.ArtifactType("sig")
 	m.Config.MediaType = types.MediaType(artifactType)
 	m.Subject = desc

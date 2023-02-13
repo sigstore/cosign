@@ -47,10 +47,11 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 
 // AttachSBOMOptions is the top level wrapper for the attach sbom command.
 type AttachSBOMOptions struct {
-	SBOM            string
-	SBOMType        string
-	SBOMInputFormat string
-	Registry        RegistryOptions
+	SBOM                 string
+	SBOMType             string
+	SBOMInputFormat      string
+	Registry             RegistryOptions
+	RegistryExperimental RegistryExperimentalOptions
 }
 
 var _ Interface = (*AttachSBOMOptions)(nil)
@@ -58,6 +59,7 @@ var _ Interface = (*AttachSBOMOptions)(nil)
 // AddFlags implements Interface
 func (o *AttachSBOMOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
+	o.RegistryExperimental.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.SBOM, "sbom", "",
 		"path to the sbom, or {-} for stdin")

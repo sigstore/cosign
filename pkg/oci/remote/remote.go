@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -28,7 +27,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
 
@@ -149,10 +147,9 @@ func attestations(digestable digestable, o *options) (oci.Signatures, error) {
 
 // attachment is a shared implementation of the oci.Signed* Attachment method.
 func attachment(digestable digestable, attName string, o *options) (oci.File, error) {
-	if b, err := strconv.ParseBool(env.Getenv(env.VariableOCIExperimental)); err == nil && b {
-		if file, err := attachmentExperimentalOCI(digestable, attName, o); err == nil {
-			return file, nil
-		}
+	// Try using OCI 1.1 behavior
+	if file, err := attachmentExperimentalOCI(digestable, attName, o); err == nil {
+		return file, nil
 	}
 
 	h, err := digestable.Digest()

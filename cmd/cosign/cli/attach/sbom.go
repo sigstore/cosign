@@ -40,8 +40,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
-func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef string, sbomType ocitypes.MediaType, imageRef string) error {
-	if options.EnableOCIExperimental() {
+func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts options.RegistryExperimentalOptions, sbomRef string, sbomType ocitypes.MediaType, imageRef string) error {
+	if regExpOpts.RegistryReferrersMode == options.RegistryReferrersModeOCI11 {
 		return sbomCmdOCIExperimental(ctx, regOpts, sbomRef, sbomType, imageRef)
 	}
 
