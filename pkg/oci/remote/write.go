@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci"
@@ -163,6 +164,20 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		}
 	}
 
+	// Write the config
+	configBytes, err := sigs.RawConfigFile()
+	if err != nil {
+		return err
+	}
+	var configDesc v1.Descriptor
+	if err := json.Unmarshal(configBytes, &configDesc); err != nil {
+		return err
+	}
+	configLayer := static.NewLayer(configBytes, configDesc.MediaType)
+	if err := remote.WriteLayer(d.Repository, configLayer, o.ROpt...); err != nil {
+		return err
+	}
+
 	// Write the manifest containing a subject
 	b, err := sigs.RawManifest()
 	if err != nil {
@@ -172,8 +187,6 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err
 	}
-
-	// TODO: write the config blob
 
 	artifactType := ociexperimental.ArtifactType("sig")
 	m.Config.MediaType = types.MediaType(artifactType)
