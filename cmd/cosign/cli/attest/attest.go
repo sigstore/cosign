@@ -187,6 +187,18 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 
 		opts = append(opts, static.WithRFC3161Timestamp(bundle))
 	}
+
+	predicateType, err := options.ParsePredicateType(c.PredicateType)
+	if err != nil {
+		return err
+	}
+
+	predicateTypeAnnotation := map[string]string{
+		"predicateType": predicateType,
+	}
+	// Add predicateType as manifest annotation
+	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
+
 	// Check whether we should be uploading to the transparency log
 	shouldUpload, err := sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
 	if err != nil {

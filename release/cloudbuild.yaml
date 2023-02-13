@@ -16,98 +16,104 @@
 timeout: 3600s
 
 steps:
-- name: gcr.io/cloud-builders/git
-  dir: "go/src/sigstore"
-  args:
-  - "clone"
-  - "https://github.com/${_TOOL_ORG}/${_TOOL_REPO}"
+  - name: gcr.io/cloud-builders/git
+    dir: "go/src/sigstore"
+    args:
+      - "clone"
+      - "https://github.com/${_TOOL_ORG}/${_TOOL_REPO}"
 
-- name: gcr.io/cloud-builders/git
-  entrypoint: "bash"
-  dir: "go/src/sigstore/cosign"
-  args:
-  - '-c'
-  - |
-    git fetch
-    echo "Checking out ${_GIT_TAG}"
-    git checkout ${_GIT_TAG}
+  - name: gcr.io/cloud-builders/git
+    entrypoint: "bash"
+    dir: "go/src/sigstore/cosign"
+    args:
+      - '-c'
+      - |
+        git fetch
+        echo "Checking out ${_GIT_TAG}"
+        git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v2.0.0-rc.0@sha256:e00fc7df9a494b5060c409d7cefab899c8a6e7283a42497a76f5eb3ac57a0450'
-  dir: "go/src/sigstore/cosign"
-  env:
-  - TUF_ROOT=/tmp
-  args:
-  - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.19.5-0@sha256:76716805e9d07712f0628c36d21223874b1dd9af5e5de2d00325c00b24b238cc'
+  - name: 'gcr.io/projectsigstore/cosign:v2.0.0-rc.2@sha256:3c62b38a5b7eaa4db90c328d430a705d086792869aece919559ecf381a23a4e8'
+    dir: "go/src/sigstore/cosign"
+    env:
+      - TUF_ROOT=/tmp
+    args:
+      - 'verify'
+      - 'ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae'
+      - '--certificate-oidc-issuer'
+      - "https://token.actions.githubusercontent.com"
+      - '--certificate-identity'
+      - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.20.0-0"
 
-# maybe we can build our own image and use that to be more in a safe side
-- name: ghcr.io/gythialy/golang-cross:v1.19.5-0@sha256:76716805e9d07712f0628c36d21223874b1dd9af5e5de2d00325c00b24b238cc
-  entrypoint: /bin/sh
-  dir: "go/src/sigstore/cosign"
-  env:
-  - "GOPATH=/workspace/go"
-  - "GOBIN=/workspace/bin"
-  - PROJECT_ID=${PROJECT_ID}
-  - KEY_LOCATION=${_KEY_LOCATION}
-  - KEY_RING=${_KEY_RING}
-  - KEY_NAME=${_KEY_NAME}
-  - KEY_VERSION=${_KEY_VERSION}
-  - GIT_TAG=${_GIT_TAG}
-  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
-  - COSIGN_YES=true
-  - KO_PREFIX=gcr.io/${PROJECT_ID}
-  secretEnv:
-  - GITHUB_TOKEN
-  args:
-    - '-c'
-    - |
-      gcloud auth configure-docker \
-      && make release
+  # maybe we can build our own image and use that to be more in a safe side
+  - name: ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae
+    entrypoint: /bin/sh
+    dir: "go/src/sigstore/cosign"
+    env:
+      - "GOPATH=/workspace/go"
+      - "GOBIN=/workspace/bin"
+      - PROJECT_ID=${PROJECT_ID}
+      - KEY_LOCATION=${_KEY_LOCATION}
+      - KEY_RING=${_KEY_RING}
+      - KEY_NAME=${_KEY_NAME}
+      - KEY_VERSION=${_KEY_VERSION}
+      - GIT_TAG=${_GIT_TAG}
+      - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+      - COSIGN_YES=true
+      - COSIGN_EXPERIMENTAL=true
+      - KO_PREFIX=gcr.io/${PROJECT_ID}
+    secretEnv:
+      - GITHUB_TOKEN
+    args:
+      - '-c'
+      - |
+        gcloud auth configure-docker \
+        && make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.19.5-0@sha256:76716805e9d07712f0628c36d21223874b1dd9af5e5de2d00325c00b24b238cc
-  entrypoint: 'bash'
-  dir: "go/src/sigstore/cosign"
-  env:
-  - "GOPATH=/workspace/go"
-  - "GOBIN=/workspace/bin"
-  - PROJECT_ID=${PROJECT_ID}
-  - KEY_LOCATION=${_KEY_LOCATION}
-  - KEY_RING=${_KEY_RING}
-  - KEY_NAME=${_KEY_NAME}
-  - KEY_VERSION=${_KEY_VERSION}
-  - GIT_TAG=${_GIT_TAG}
-  - KO_PREFIX=gcr.io/${PROJECT_ID}
-  - COSIGN_YES=true
-  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
-  - GITHUB_USER=${_GITHUB_USER}
-  secretEnv:
-  - GITHUB_TOKEN
-  args:
-    - '-c'
-    - |
-      echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
-      && make copy-signed-release-to-ghcr || true
+  - name: ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae
+    entrypoint: 'bash'
+    dir: "go/src/sigstore/cosign"
+    env:
+      - "GOPATH=/workspace/go"
+      - "GOBIN=/workspace/bin"
+      - PROJECT_ID=${PROJECT_ID}
+      - KEY_LOCATION=${_KEY_LOCATION}
+      - KEY_RING=${_KEY_RING}
+      - KEY_NAME=${_KEY_NAME}
+      - KEY_VERSION=${_KEY_VERSION}
+      - GIT_TAG=${_GIT_TAG}
+      - KO_PREFIX=gcr.io/${PROJECT_ID}
+      - COSIGN_YES=true
+      - COSIGN_EXPERIMENTAL=true
+      - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+      - GITHUB_USER=${_GITHUB_USER}
+    secretEnv:
+      - GITHUB_TOKEN
+    args:
+      - '-c'
+      - |
+        echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
+        && make copy-signed-release-to-ghcr || true
 
 availableSecrets:
   secretManager:
-  - versionName: projects/${PROJECT_NUMBER}/secrets/GITHUB_TOKEN/versions/latest
-    env: GITHUB_TOKEN
+    - versionName: projects/${PROJECT_NUMBER}/secrets/GITHUB_TOKEN/versions/latest
+      env: GITHUB_TOKEN
 
 artifacts:
   objects:
     location: 'gs://${_STORAGE_LOCATION}/${_GIT_TAG}'
     paths:
-    - "go/src/sigstore/cosign/dist/*"
-    - "go/src/sigstore/cosign/release/release-cosign.pub"
+      - "go/src/sigstore/cosign/dist/*"
+      - "go/src/sigstore/cosign/release/release-cosign.pub"
 
 options:
   machineType: E2_HIGHCPU_32
 
 tags:
-- cosign-release
-- ${_GIT_TAG}
-- ${_TOOL_ORG}
-- ${_TOOL_REPO}
+  - cosign-release
+  - ${_GIT_TAG}
+  - ${_TOOL_ORG}
+  - ${_TOOL_REPO}
 
 substitutions:
   _GIT_TAG: 'v1.23.45'

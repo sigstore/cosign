@@ -16,9 +16,12 @@
 package fulcio
 
 import (
+	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"net/http"
@@ -26,8 +29,12 @@ import (
 	"testing"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/fulcio/pkg/api"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 type testFlow struct {
@@ -63,6 +70,10 @@ func TestGetCertForOauthID(t *testing.T) {
 	testKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("Could not generate ecdsa keypair for test: %v", err)
+	}
+	sv, err := signature.LoadECDSASignerVerifier(testKey, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("Could not create a signer: %v", err)
 	}
 
 	testCases := []struct {
@@ -118,7 +129,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.tokenGetterErr,
 			}
 
-			resp, err := getCertForOauthID(testKey, tscp, &tf, "", "", "", "")
+			resp, err := getCertForOauthID(sv, tscp, &tf, "", "", "", "")
 
 			if err != nil {
 				if !tc.expectErr {
@@ -171,5 +182,48 @@ func TestNewClient(t *testing.T) {
 
 	if !requestReceived {
 		t.Fatal("no requests were received")
+	}
+}
+
+func TestNewSigner(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	pemChain, _ := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
+
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write(pemChain)
+		}))
+	defer testServer.Close()
+
+	// success: Generate a random key and create a corresponding
+	// SignerVerifier.
+	ctx := context.TODO()
+	ko := options.KeyOpts{
+		OIDCDisableProviders: true,
+		// random test token
+		IDToken:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+		FulcioURL:      testServer.URL,
+		FulcioAuthFlow: "token",
+	}
+	privKey, err := cosign.GeneratePrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := NewSigner(ctx, ko, sv)
+	if err != nil {
+		t.Fatalf("unexpected error creating signer: %v", err)
+	}
+	responsePEMChain := string(signer.Cert) + string(signer.Chain)
+	if responsePEMChain != string(pemChain) {
+		t.Fatalf("response certificates not equal, got %v, expected %v", responsePEMChain, pemChain)
+	}
+	if signer.SignerVerifier == nil {
+		t.Fatalf("missing signer/verifier")
 	}
 }

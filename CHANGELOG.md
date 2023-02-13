@@ -1,3 +1,29 @@
+# v2.0.0-rc.2
+_Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
+
+## Enhancements
+* add generate-key-pair GitHub Enterprise server support (#2676)
+* add in format string for warning (#2699)
+* Support for fetching Fulcio certs with self-managed key (#2532)
+* 2476 predicate type download (#2484)
+* Upgrade to go1.20 (#2689)
+
+## Bug Fixes
+* Fix prompts with Windows line endings (#2674)
+
+## Documentation
+
+* docs(README): verify example failing on latest (#2694)
+
+## Contributors
+* Anish Shah
+* Arthur Lutz
+* Carlos Tadeu Panato Junior
+* Christian Loos
+* Tim Seagren
+* Zack Newman
+* priyawadhwa
+
 # v2.0.0-rc.1
 _Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
 

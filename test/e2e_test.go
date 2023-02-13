@@ -75,6 +75,7 @@ import (
 const (
 	serverEnv = "REKOR_SERVER"
 	rekorURL  = "https://rekor.sigstore.dev"
+	fulcioURL = "https://fulcio.sigstore.dev"
 )
 
 var keyPass = []byte("hello")
@@ -356,6 +357,233 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, ""), t)
 }
 
+func TestAttestationDownload(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-download-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	vulnAttestation := `
+	{
+    "invocation": {
+      "parameters": null,
+      "uri": "invocation.example.com/cosign-testing",
+      "event_id": "",
+      "builder.id": ""
+    },
+    "scanner": {
+      "uri": "fakescanner.example.com/cosign-testing",
+      "version": "",
+      "db": {
+        "uri": "",
+        "version": ""
+      },
+      "result": null
+    },
+    "metadata": {
+      "scanStartedOn": "2022-04-12T00:00:00Z",
+      "scanFinishedOn": "2022-04-12T00:10:00Z"
+    }
+}
+`
+	vulnAttestationPath := filepath.Join(td, "attestation.vuln.json")
+	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest to create a slsa attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Attest to create a vuln attestation
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: vulnAttestationPath,
+		PredicateType: "vuln",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Call download.AttestationCmd() to ensure success
+	attOpts := options.AttestationDownloadOptions{}
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 2 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 2, got %d", len(attestations)))
+	}
+}
+
+func TestAttestationDownloadWithPredicateType(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-download-predicate-type-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	vulnAttestation := `
+	{
+    "invocation": {
+      "parameters": null,
+      "uri": "invocation.example.com/cosign-testing",
+      "event_id": "",
+      "builder.id": ""
+    },
+    "scanner": {
+      "uri": "fakescanner.example.com/cosign-testing",
+      "version": "",
+      "db": {
+        "uri": "",
+        "version": ""
+      },
+      "result": null
+    },
+    "metadata": {
+      "scanStartedOn": "2022-04-12T00:00:00Z",
+      "scanFinishedOn": "2022-04-12T00:10:00Z"
+    }
+}
+`
+	vulnAttestationPath := filepath.Join(td, "attestation.vuln.json")
+	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attest to create a slsa attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Attest to create a vuln attestation
+	attestCommand = attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: vulnAttestationPath,
+		PredicateType: "vuln",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Call download.AttestationCmd() to ensure success with --predicate-type
+	attOpts := options.AttestationDownloadOptions{
+		PredicateType: "vuln",
+	}
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+
+	predicateType, _ := options.ParsePredicateType(attOpts.PredicateType)
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, predicateType, ociremoteOpts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attestations) != 1 {
+		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
+	}
+}
+
+func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-download-bad-type-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	regOpts := options.RegistryOptions{}
+
+	// Attest to create a slsa attestation
+	attestCommand := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		Replace:       true,
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Call download.AttestationCmd() to ensure failure with non-existant --predicate-type
+	attOpts := options.AttestationDownloadOptions{
+		PredicateType: "vuln",
+	}
+	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+}
+
 func TestAttestationReplaceCreate(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
@@ -398,7 +626,8 @@ func TestAttestationReplaceCreate(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attOpts := options.AttestationDownloadOptions{}
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -448,7 +677,8 @@ func TestAttestationReplace(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attOpts := options.AttestationDownloadOptions{}
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -465,7 +695,7 @@ func TestAttestationReplace(t *testing.T) {
 		Timeout:       30 * time.Second,
 	}
 	must(attestCommand.Exec(ctx, imgName), t)
-	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 
 	// Download and count the attestations
 	if err != nil {
@@ -486,7 +716,7 @@ func TestAttestationReplace(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
-	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -544,7 +774,8 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download and count the attestations
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+	attOpts := options.AttestationDownloadOptions{}
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,6 +835,40 @@ func TestRekorBundle(t *testing.T) {
 	}
 	so := options.SignOptions{
 		Upload: true,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	// Make sure offline verification works with bundling
+	// use rekor prod since we have hardcoded the public key
+	os.Setenv(serverEnv, "notreal")
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
+func TestFulcioBundle(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:    privKeyPath,
+		PassFunc:  passFunc,
+		RekorURL:  rekorURL,
+		FulcioURL: fulcioURL,
+	}
+	so := options.SignOptions{
+		Upload:           true,
+		IssueCertificate: true,
 	}
 
 	// Sign the image
@@ -1187,6 +1452,11 @@ func TestUploadDownload(t *testing.T) {
 		signatureType attach.SignatureArgType
 		expectedErr   bool
 	}{
+		"stdin containing signature": {
+			signature:     "testsignatureraw",
+			signatureType: attach.StdinSignature,
+			expectedErr:   false,
+		},
 		"file containing signature": {
 			signature:     "testsignaturefile",
 			signatureType: attach.FileSignature,
@@ -1195,7 +1465,7 @@ func TestUploadDownload(t *testing.T) {
 		"raw signature as argument": {
 			signature:     "testsignatureraw",
 			signatureType: attach.RawSignature,
-			expectedErr:   false,
+			expectedErr:   true,
 		},
 		"empty signature as argument": {
 			signature:     "",
@@ -1211,10 +1481,14 @@ func TestUploadDownload(t *testing.T) {
 			payload := "testpayload"
 			payloadPath := mkfile(payload, td, t)
 			signature := base64.StdEncoding.EncodeToString([]byte(testCase.signature))
+			restoreStdin := func() {}
 
 			var sigRef string
 			if testCase.signatureType == attach.FileSignature {
 				sigRef = mkfile(signature, td, t)
+			} else if testCase.signatureType == attach.StdinSignature {
+				sigRef = "-"
+				restoreStdin = mockStdin(signature, td, t)
 			} else {
 				sigRef = signature
 			}
@@ -1226,6 +1500,7 @@ func TestUploadDownload(t *testing.T) {
 			} else {
 				must(err, t)
 			}
+			restoreStdin()
 
 			// Now download it!
 			se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
@@ -1492,6 +1767,97 @@ func TestAttachSBOM(t *testing.T) {
 	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom"), t)
 }
 
+func TestAttachSBOM_bom_flag(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+	ctx := context.Background()
+	bomData, err := os.ReadFile("./testdata/bom-go-mod.spdx")
+	must(err, t)
+
+	testCases := map[string]struct {
+		bom         string
+		bomType     attach.SignatureArgType
+		expectedErr bool
+	}{
+		"stdin containing bom": {
+			bom:         string(bomData),
+			bomType:     attach.StdinSignature,
+			expectedErr: false,
+		},
+		"file containing bom": {
+			bom:         string(bomData),
+			bomType:     attach.FileSignature,
+			expectedErr: false,
+		},
+		"raw bom as argument": {
+			bom:         string(bomData),
+			bomType:     attach.RawSignature,
+			expectedErr: true,
+		},
+		"empty bom as argument": {
+			bom:         "",
+			bomType:     attach.RawSignature,
+			expectedErr: true,
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			imgName := path.Join(repo, "sbom-image")
+			img, _, cleanup := mkimage(t, imgName)
+			var sbomRef string
+			restoreStdin := func() {}
+			if testCase.bomType == attach.FileSignature {
+				sbomRef = mkfile(testCase.bom, td, t)
+			} else if testCase.bomType == attach.StdinSignature {
+				sbomRef = "-"
+				restoreStdin = mockStdin(testCase.bom, td, t)
+			} else {
+				sbomRef = testCase.bom
+			}
+
+			out := bytes.Buffer{}
+			_, errPl := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{Platform: "darwin/amd64"}, img.Name(), &out)
+			if errPl == nil {
+				t.Fatalf("Expected error when passing Platform to single arch image")
+			}
+			_, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, img.Name(), &out)
+			if err == nil {
+				t.Fatal("Expected error")
+			}
+			t.Log(out.String())
+			out.Reset()
+
+			// Upload it!
+			err = attach.SBOMCmd(ctx, options.RegistryOptions{}, sbomRef, "spdx", imgName)
+			restoreStdin()
+
+			if testCase.expectedErr {
+				mustErr(err, t)
+			} else {
+				sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Log(out.String())
+				if len(sboms) != 1 {
+					t.Fatalf("Expected one sbom, got %d", len(sboms))
+				}
+				want, err := os.ReadFile("./testdata/bom-go-mod.spdx")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
+					t.Errorf("diff: %s", diff)
+				}
+			}
+
+			cleanup()
+		})
+	}
+}
+
 func setenv(t *testing.T, k, v string) func() {
 	if err := os.Setenv(k, v); err != nil {
 		t.Fatalf("error setting env: %v", err)
@@ -1601,6 +1967,19 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	output, err := os.ReadFile(outPath)
 	must(err, t)
 	equals(keys.PublicBytes, output, t)
+}
+
+func mockStdin(contents, td string, t *testing.T) func() {
+	origin := os.Stdin
+
+	p := mkfile(contents, td, t)
+	f, err := os.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdin = f
+
+	return func() { os.Stdin = origin }
 }
 
 func mkfile(contents, td string, t *testing.T) string {

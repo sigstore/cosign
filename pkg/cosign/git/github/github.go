@@ -51,9 +51,19 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		)
 		httpClient = oauth2.NewClient(ctx, ts)
 	} else {
-		return fmt.Errorf("could not find %q environment variable", env.VariableGitHubRequestToken.String())
+		return fmt.Errorf("could not find %q environment variable", env.VariableGitHubToken.String())
 	}
-	client := github.NewClient(httpClient)
+
+	var client *github.Client
+	if host, ok := env.LookupEnv(env.VariableGitHubHost); ok {
+		var err error
+		client, err = github.NewEnterpriseClient(host, host, httpClient)
+		if err != nil {
+			return fmt.Errorf("could not create github enterprise client: %w", err)
+		}
+	} else {
+		client = github.NewClient(httpClient)
+	}
 
 	keys, err := cosign.GenerateKeyPair(pf)
 	if err != nil {

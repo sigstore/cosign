@@ -16,12 +16,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
+	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
 	"github.com/sigstore/cosign/v2/internal/ui"
 
 	// Register the provider-specific plugins
@@ -60,6 +62,15 @@ func main() {
 	}
 
 	if err := cli.New().Execute(); err != nil {
+		// if the error is a `CosignError` then we want to use the exit code that
+		// is related to the type of error that has occurred.
+		var cosignError *cosignError.CosignError
+		if errors.As(err, &cosignError) {
+			log.Printf("error during command execution: %v", err)
+			os.Exit(cosignError.ExitCode())
+		}
+
+		// we don't call os.Exit as Fatalf does both PrintF and os.Exit(1)
 		log.Fatalf("error during command execution: %v", err)
 	}
 }

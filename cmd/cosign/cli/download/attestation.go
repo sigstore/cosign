@@ -26,7 +26,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
-func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
+func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOptions options.AttestationDownloadOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
@@ -39,10 +39,20 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, imageR
 	if err != nil {
 		return err
 	}
-	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, ociremoteOpts...)
+
+	var predicateType string
+	if attOptions.PredicateType != "" {
+		predicateType, err = options.ParsePredicateType(attOptions.PredicateType)
+		if err != nil {
+			return err
+		}
+	}
+
+	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, predicateType, ociremoteOpts...)
 	if err != nil {
 		return err
 	}
+
 	for _, att := range attestations {
 		b, err := json.Marshal(att)
 		if err != nil {

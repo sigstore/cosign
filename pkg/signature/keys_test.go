@@ -86,6 +86,7 @@ func TestSignerFromPrivateKeyFileRef(t *testing.T) {
 	}}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			tc := tc
 			t.Parallel()
 			testFile, _ := generateKeyFile(t, tmpDir, tc.writePw)
 
