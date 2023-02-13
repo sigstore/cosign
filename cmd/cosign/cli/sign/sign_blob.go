@@ -40,7 +40,6 @@ import (
 func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
 	var payload internal.HashReader
 	var err error
-	var rekorBytes []byte
 
 	if payloadPath == "-" {
 		payload = internal.NewHashReader(os.Stdin, sha256.New())
@@ -108,7 +107,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		return nil, fmt.Errorf("upload to tlog: %w", err)
 	}
 	if shouldUpload {
-		rekorBytes, err = sv.Bytes(ctx)
+		rekorBytes, err := sv.Bytes(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +126,12 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	// if bundle is specified, just do that and ignore the rest
 	if ko.BundlePath != "" {
 		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+
+		certBytes, err := extractCertificate(ctx, sv)
+		if err != nil {
+			return nil, err
+		}
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(certBytes)
 
 		contents, err := json.Marshal(signedPayload)
 		if err != nil {
@@ -160,16 +164,14 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	}
 
 	if outputCertificate != "" {
-		signer, err := sv.Bytes(ctx)
+		certBytes, err := extractCertificate(ctx, sv)
 		if err != nil {
-			return nil, fmt.Errorf("error getting signer: %w", err)
+			return nil, err
 		}
-		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
-		// signer is a certificate
-		if err == nil && len(cert) == 1 {
-			bts := signer
+		if certBytes != nil {
+			bts := certBytes
 			if b64 {
-				bts = []byte(base64.StdEncoding.EncodeToString(signer))
+				bts = []byte(base64.StdEncoding.EncodeToString(certBytes))
 			}
 			if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
 				return nil, fmt.Errorf("create certificate file: %w", err)
@@ -179,4 +181,18 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	}
 
 	return sig, nil
+}
+
+// Extract an encoded certificate from the SignerVerifier. Returns (nil, nil) if verifier is not a certificate.
+func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error) {
+	signer, err := sv.Bytes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting signer: %w", err)
+	}
+	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+	// signer is a certificate
+	if err == nil && len(cert) == 1 {
+		return signer, nil
+	}
+	return nil, nil
 }
