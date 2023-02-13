@@ -153,8 +153,6 @@ func attachment(digestable digestable, attName string, o *options) (oci.File, er
 		if file, err := attachmentExperimentalOCI(digestable, attName, o); err == nil {
 			return file, nil
 		}
-		// TODO: use ui.Infof
-		fmt.Printf("Unable to locate %s attachment using digest tag, trying older scheme\n", attName)
 	}
 
 	h, err := digestable.Digest()

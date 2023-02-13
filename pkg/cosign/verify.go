@@ -476,7 +476,6 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		if err == nil {
 			return verified, bundleVerified, nil
 		}
-		ui.Infof(ctx, "Unable to locate sig attachment using digest tag, trying older scheme\n")
 	}
 
 	// Enforce this up front.
