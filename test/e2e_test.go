@@ -1726,7 +1726,7 @@ func TestAttachSBOM(t *testing.T) {
 	out.Reset()
 
 	// Upload it!
-	must(attach.SBOMCmd(ctx, options.RegistryOptions{}, "./testdata/bom-go-mod.spdx", "spdx", imgName), t)
+	must(attach.SBOMCmd(ctx, options.RegistryOptions{}, options.RegistryExperimentalOptions{}, "./testdata/bom-go-mod.spdx", "spdx", imgName), t)
 
 	sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
 	if err != nil {
@@ -1830,7 +1830,7 @@ func TestAttachSBOM_bom_flag(t *testing.T) {
 			out.Reset()
 
 			// Upload it!
-			err = attach.SBOMCmd(ctx, options.RegistryOptions{}, sbomRef, "spdx", imgName)
+			err = attach.SBOMCmd(ctx, options.RegistryOptions{}, options.RegistryExperimentalOptions{}, sbomRef, "spdx", imgName)
 			restoreStdin()
 
 			if testCase.expectedErr {
