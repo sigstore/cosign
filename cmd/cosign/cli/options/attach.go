@@ -39,7 +39,7 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Signature, "signature", "",
-		"the signature, path to the signature, or {-} for stdin")
+		"path to the signature, or {-} for stdin")
 
 	cmd.Flags().StringVar(&o.Payload, "payload", "",
 		"path to the payload covered by the signature (if using another format)")
