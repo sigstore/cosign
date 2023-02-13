@@ -241,9 +241,7 @@ func generateSPDXStatement(rawPayload []byte, digest string, repo string, parseJ
 	}
 	return in_toto.SPDXStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateSPDX),
-		Predicate: CosignPredicate{
-			Data: data,
-		},
+		Predicate:       data,
 	}, nil
 }
 
@@ -254,9 +252,7 @@ func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (
 	}
 	return in_toto.SPDXStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateCycloneDX),
-		Predicate: CosignPredicate{
-			Data: data,
-		},
+		Predicate:       data,
 	}, nil
 }
 
