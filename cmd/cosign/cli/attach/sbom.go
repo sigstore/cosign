@@ -35,6 +35,7 @@ import (
 	ocitypes "github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
@@ -64,7 +65,7 @@ func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, sbomRef strin
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
+	ui.Infof(ctx, "Uploading SBOM file for [%s] to [%s] with mediaType [%s].\n", ref.Name(), dstRef.Name(), sbomType)
 	img, err := static.NewFile(b, static.WithLayerMediaType(sbomType))
 	if err != nil {
 		return err

@@ -49,6 +49,7 @@ import (
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/layout"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
@@ -475,7 +476,7 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		if err == nil {
 			return verified, bundleVerified, nil
 		}
-		fmt.Println("Unable to locate sig attachment using digest tag, trying older scheme")
+		ui.Infof(ctx, "Unable to locate sig attachment using digest tag, trying older scheme\n")
 	}
 
 	// Enforce this up front.
@@ -1343,7 +1344,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 			return nil, false, fmt.Errorf("unable to locate reference with artifactType %s", artifactType)
 		} else if numResults > 1 {
 			// TODO: if there is more than 1 result.. what does that even mean?
-			fmt.Printf("WARNING: there were a total of %d references with artifactType %s\n", numResults, artifactType)
+			ui.Warnf(ctx, "there were a total of %d references with artifactType %s\n", numResults, artifactType)
 		}
 		lastResult := results[numResults-1]
 		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, lastResult.Digest.String()))

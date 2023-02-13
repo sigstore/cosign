@@ -153,6 +153,7 @@ func attachment(digestable digestable, attName string, o *options) (oci.File, er
 		if file, err := attachmentExperimentalOCI(digestable, attName, o); err == nil {
 			return file, nil
 		}
+		// TODO: use ui.Infof
 		fmt.Printf("Unable to locate %s attachment using digest tag, trying older scheme\n", attName)
 	}
 
@@ -224,6 +225,7 @@ func attachmentExperimentalOCI(digestable digestable, attName string, o *options
 		return nil, fmt.Errorf("unable to locate reference with artifactType %s", artifactType)
 	} else if numResults > 1 {
 		// TODO: if there is more than 1 result.. what does that even mean?
+		// TODO: use ui.Warn
 		fmt.Printf("WARNING: there were a total of %d references with artifactType %s\n", numResults, artifactType)
 	}
 	lastResult := results[numResults-1]

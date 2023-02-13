@@ -187,6 +187,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	if err != nil {
 		return err
 	}
+	// TODO: use ui.Infof
 	fmt.Fprintf(os.Stderr, "Uploading signature for [%s] to [%s] with config.mediaType [%s] layers[0].mediaType [%s].\n",
 		d.String(), targetRef.String(), artifactType, ctypes.SimpleSigningMediaType)
 	return remote.Put(targetRef, &taggableManifest{raw: b, mediaType: m.MediaType}, o.ROpt...)
