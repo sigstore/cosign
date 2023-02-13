@@ -1346,6 +1346,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 			// TODO: if there is more than 1 result.. what does that even mean?
 			ui.Warnf(ctx, "there were a total of %d references with artifactType %s\n", numResults, artifactType)
 		}
+		// TODO: do this smarter using "created" annotations
 		lastResult := results[numResults-1]
 		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, lastResult.Digest.String()))
 		if err != nil {

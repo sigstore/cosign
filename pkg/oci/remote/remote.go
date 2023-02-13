@@ -228,6 +228,7 @@ func attachmentExperimentalOCI(digestable digestable, attName string, o *options
 		// TODO: use ui.Warn
 		fmt.Printf("WARNING: there were a total of %d references with artifactType %s\n", numResults, artifactType)
 	}
+	// TODO: do this smarter using "created" annotations
 	lastResult := results[numResults-1]
 
 	img, err := SignedImage(o.TargetRepository.Digest(lastResult.Digest.String()), o.OriginalOptions...)
