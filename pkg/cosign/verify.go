@@ -624,7 +624,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				return false, fmt.Errorf("rekor client not provided for online verification")
 			}
 
-			pemBytes, err := keyBytes(sig, co)
+			pemBytes, err := KeyBytes(sig, co)
 			if err != nil {
 				return false, err
 			}
@@ -1053,7 +1053,7 @@ func compareSigs(bundleBody string, sig oci.Signature) error {
 }
 
 func comparePublicKey(bundleBody string, sig oci.Signature, co *CheckOpts) error {
-	pemBytes, err := keyBytes(sig, co)
+	pemBytes, err := KeyBytes(sig, co)
 	if err != nil {
 		return err
 	}
