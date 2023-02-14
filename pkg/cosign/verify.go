@@ -723,7 +723,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	return bundleVerified, nil
 }
 
-func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
+func KeyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 	cert, err := sig.Cert()
 	if err != nil {
 		return nil, err
