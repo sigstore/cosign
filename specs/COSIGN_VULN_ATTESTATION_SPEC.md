@@ -21,7 +21,7 @@ And the final format for this is defined as follows:
     }
   ],
   // Predicate:
-  "predicateType": "cosign.sigstore.dev/attestation/vuln/v1",
+  "predicateType": "https://cosign.sigstore.dev/attestation/vuln/v1",
   "predicate": {
     "invocation": {
       "parameters": [],
