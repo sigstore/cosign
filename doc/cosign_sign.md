@@ -90,6 +90,7 @@ cosign sign [flags]
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
+      --registry-referrers-mode registryReferrersMode                                            mode for fetching references from the registry. allowed: legacy, oci-1-1
       --rekor-url string                                                                         [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)

@@ -41,7 +41,8 @@ type SignOptions struct {
 	OIDC        OIDCOptions
 	SecurityKey SecurityKeyOptions
 	AnnotationOptions
-	Registry RegistryOptions
+	Registry             RegistryOptions
+	RegistryExperimental RegistryExperimentalOptions
 }
 
 var _ Interface = (*SignOptions)(nil)
@@ -54,6 +55,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+	o.RegistryExperimental.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
