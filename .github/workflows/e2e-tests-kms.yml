@@ -58,7 +58,7 @@ jobs:
         with:
           vault-release: '1.12.2'
 
-      - uses: imjasonh/setup-crane@e82f1b9a8007d399333baba4d75915558e9fb6a4 # v0.2
+      - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
 
       - name: enable vault transit
         run: vault secrets enable transit
