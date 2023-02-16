@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	tsaclient "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
@@ -45,7 +46,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 )
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
@@ -173,13 +173,8 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
 	if c.KeyOpts.TSAServerURL != "" {
-		clientTSA, err := tsaclient.GetTimestampClient(c.KeyOpts.TSAServerURL)
-		if err != nil {
-			return fmt.Errorf("failed to create TSA client: %w", err)
-		}
-
 		// Here we get the response from the timestamped authority server
-		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, clientTSA)
+		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL))
 		if err != nil {
 			return err
 		}

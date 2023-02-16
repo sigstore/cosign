@@ -768,7 +768,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 		PredicatePath: slsaAttestationPath,
 		PredicateType: "slsaprovenance",
 		Timeout:       30 * time.Second,
-		TSAServerURL:  server.URL,
+		TSAServerURL:  server.URL + "/api/v1/timestamp",
 		TlogUpload:    false,
 	}
 	must(attestCommand.Exec(ctx, imgName), t)
@@ -923,7 +923,7 @@ func TestRFC3161Timestamp(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:       privKeyPath,
 		PassFunc:     passFunc,
-		TSAServerURL: server.URL,
+		TSAServerURL: server.URL + "/api/v1/timestamp",
 	}
 	so := options.SignOptions{
 		Upload:     true,
@@ -977,7 +977,7 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
-		TSAServerURL:     server.URL,
+		TSAServerURL:     server.URL + "/api/v1/timestamp",
 		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
@@ -1220,10 +1220,11 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
-		KeyRef:     privKeyPath1,
-		PassFunc:   passFunc,
-		BundlePath: bundlePath,
-		RekorURL:   rekorURL,
+		KeyRef:           privKeyPath1,
+		PassFunc:         passFunc,
+		BundlePath:       bundlePath,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
 	}
 	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
@@ -1305,8 +1306,9 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		PassFunc:             passFunc,
 		BundlePath:           bundlePath,
 		RFC3161TimestampPath: tsPath,
-		TSAServerURL:         server.URL,
+		TSAServerURL:         server.URL + "/api/v1/timestamp",
 		RekorURL:             rekorURL,
+		SkipConfirmation:     true,
 	}
 	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)

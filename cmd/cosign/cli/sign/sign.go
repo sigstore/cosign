@@ -41,6 +41,7 @@ import (
 	ipayload "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
 	irekor "github.com/sigstore/cosign/v2/internal/pkg/cosign/rekor"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
@@ -55,7 +56,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	// Loads OIDC providers
 	_ "github.com/sigstore/cosign/v2/pkg/providers/all"
@@ -237,12 +237,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	if ko.TSAServerURL != "" {
-		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
-		if err != nil {
-			return fmt.Errorf("failed to create TSA client: %w", err)
-		}
-
-		s = tsa.NewSigner(s, clientTSA)
+		s = tsa.NewSigner(s, client.NewTSAClient(ko.TSAServerURL))
 	}
 	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, tlogUpload)
 	if err != nil {

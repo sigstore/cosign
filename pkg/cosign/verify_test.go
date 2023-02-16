@@ -536,12 +536,12 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 	payloadSigner := payload.NewSigner(sv)
 	testSigner := tsa.NewSigner(payloadSigner, client)
 
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain([]byte(chain.Payload))
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
@@ -582,12 +582,12 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	payloadSigner := payload.NewSigner(sv)
 	tsaSigner := tsa.NewSigner(payloadSigner, client)
 
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain([]byte(chain.Payload))
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
@@ -1378,12 +1378,13 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
 	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain([]byte(chain.Payload))
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}

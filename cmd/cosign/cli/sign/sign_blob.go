@@ -25,8 +25,8 @@ import (
 	"path/filepath"
 
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -77,12 +77,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			return nil, fmt.Errorf("timestamp output path must be set")
 		}
 
-		clientTSA, err := tsaclient.GetTimestampClient(ko.TSAServerURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create TSA client: %w", err)
-		}
-
-		respBytes, err := tsa.GetTimestampedSignature(sig, clientTSA)
+		respBytes, err := tsa.GetTimestampedSignature(sig, client.NewTSAClient(ko.TSAServerURL))
 		if err != nil {
 			return nil, err
 		}
