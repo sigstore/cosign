@@ -1,3 +1,20 @@
+# v2.0.0-rc.3
+_Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
+
+## Enhancements
+* Support non-Sigstore TSA requests (#2708)
+* Add COSIGN_OCI_EXPERIMENTAL, push .sig/.sbom using OCI 1.1+ digest tag (#2684)
+* Output certificate in bundle when entry is not uploaded to Rekor (#2715)
+* attach signature and attach sbom must use STDIN to upload raw string (#2637)
+
+## Bug Fixes
+* Fix: Add missing schemes to cosign predicate types. (#2717)
+* Fix: Drop the `CosignPredicate` wrapper around SBOM attestations. (#2718)
+
+## Documentation
+* Adds deprecation note for keyless docs (#2716)
+
+
 # v2.0.0-rc.2
 _Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
 
