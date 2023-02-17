@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"cuelang.org/go/cue/cuecontext"
-	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
 )
@@ -53,10 +52,7 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 }
 
 // evaluateCue evaluates a cue policy `evaluator` against `attestation`
-func evaluateCue(ctx context.Context, attestation []byte, evaluator string) error {
-	ui.Infof(ctx, "Evaluating attestation: %s", string(attestation))
-	ui.Infof(ctx, "Evaluator: %s", evaluator)
-
+func evaluateCue(_ context.Context, attestation []byte, evaluator string) error {
 	cueCtx := cuecontext.New()
 	cueEvaluator := cueCtx.CompileString(evaluator)
 	if cueEvaluator.Err() != nil {
@@ -74,9 +70,6 @@ func evaluateCue(ctx context.Context, attestation []byte, evaluator string) erro
 }
 
 // evaluateRego evaluates a rego policy `evaluator` against `attestation`
-func evaluateRego(ctx context.Context, attestation []byte, evaluator string) (warnings error, errors error) {
-	ui.Infof(ctx, "Evaluating attestation: %s", string(attestation))
-	ui.Infof(ctx, "Evaluating evaluator: %s", evaluator)
-
+func evaluateRego(_ context.Context, attestation []byte, evaluator string) (warnings error, errors error) {
 	return rego.ValidateJSONWithModuleInput(attestation, evaluator)
 }
