@@ -257,6 +257,32 @@ const ed25519key = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIALEbo1EFnWFqBK/wC+hhypG/8hXEerwdNetAoFoFVdv
 -----END PRIVATE KEY-----`
 
+// COSIGN labeled key
+const pemcosignkey = `-----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----
+eyJrZGYiOnsibmFtZSI6InNjcnlwdCIsInBhcmFtcyI6eyJOIjozMjc2OCwiciI6
+OCwicCI6MX0sInNhbHQiOiJ4WWdoc09JTUxUWGNOT0RsclNIOUNKc1FlOVFnZmN1
+cmUrMXlLdHh1TlkwPSJ9LCJjaXBoZXIiOnsibmFtZSI6Im5hY2wvc2VjcmV0Ym94
+Iiwibm9uY2UiOiI0cS9PSlVmaXJkSUkrUjZ0ajZBMmcyQ0JqL25xdFNicCJ9LCJj
+aXBoZXJ0ZXh0IjoiKzB4Q3NzcFN0WStBczdKanJpOWtsbHBWd2JhcUI4ZWJNdWto
+eS9aVE1MSXRsL3B1YS9jWVJvbytLRGxMWWdmOW1kSjk4K1FnQW9oTktoYnJPMTcw
+MHdBY1JTMjFDOE4zQUNJRUVZaWpOMllBNnMraGJSbkhjUnd4eGhDMDFtb2FvL0dO
+Y1pmbEJheXZMV3pXblo4d2NDZ2ZpT1o1VXlRTEFJMHh0dnR6dEh3cTdDV1Vhd3V4
+RlhlNDZzck9TUE9SNHN6bytabWErUGovSFE9PSJ9
+-----END ENCRYPTED COSIGN PRIVATE KEY-----`
+
+// SIGSTORE labeled key
+const pemsigstorekey = `-----BEGIN ENCRYPTED SIGSTORE PRIVATE KEY-----
+eyJrZGYiOnsibmFtZSI6InNjcnlwdCIsInBhcmFtcyI6eyJOIjozMjc2OCwiciI6
+OCwicCI6MX0sInNhbHQiOiI3T3VGd2VsbWZZNXVId2NoaURSc210anNwZ2ZlZjFG
+Mk5lOGFDTjVLYVpZPSJ9LCJjaXBoZXIiOnsibmFtZSI6Im5hY2wvc2VjcmV0Ym94
+Iiwibm9uY2UiOiJQNHk4OGhCb3ZTa09MbXN0bFVBaGJwdDJ0K2xTNUxQSCJ9LCJj
+aXBoZXJ0ZXh0IjoiMnB1QzdyZldJOWh3bnJlQ2s4aUZDRlVwQlRrSzRJNlIvbFBF
+cnBDekpXUGpJWXl4eGVIL1A2VW52cFJHdVhla1NNb3JMdGhLamdoQ1JlNy82NDVH
+QWtoVm1LRC92eEF0S2EvbE1abENSQ3FlekJGUFd1dzNpeFRtZ2xhb2J1ZFVSbUVs
+bmNGOGlZbzBTMVl6Y1ZOMVFwY2J2c0dNcUlYRzVlbmdteGp5dCtBcXlyZTF0Q0Y0
+V01tU1BlaEljNlBqd2h1Q2xHaVpJUWRvTGc9PSJ9
+-----END ENCRYPTED SIGSTORE PRIVATE KEY-----`
+
 func pass(s string) PassFunc {
 	return func(_ bool) ([]byte, error) {
 		return []byte(s), nil
@@ -288,6 +314,41 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 	if _, err := LoadPrivateKey(buf[:], []byte("wrong")); err == nil {
 		t.Error("expected error decrypting key!")
 	}
+}
+
+func TestReadingPrivatePemTypes(t *testing.T) {
+	testCases := []struct {
+		pemType  string
+		pemData  []byte
+		expected error
+	}{
+		{
+			pemType:  "COSIGN PEM Type",
+			pemData:  []byte(pemcosignkey),
+			expected: nil,
+		},
+		{
+			pemType:  "SISTORE PEM Type",
+			pemData:  []byte(pemsigstorekey),
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.pemType, func(t *testing.T) {
+			_, err := LoadPrivateKey(tc.pemData, []byte("hello"))
+			require.Equal(t, tc.expected, err)
+		})
+	}
+}
+
+func TestWritingPrivatePemTypes(t *testing.T) {
+	keys, err := GenerateKeyPair(pass("hello"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	require.Contains(t, string(keys.PrivateBytes), SigstorePrivateKeyPemType)
 }
 
 func TestImportPrivateKey(t *testing.T) {

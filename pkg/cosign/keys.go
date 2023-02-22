@@ -38,7 +38,8 @@ import (
 )
 
 const (
-	CosignPrivateKeyPemType = "ENCRYPTED COSIGN PRIVATE KEY"
+	CosignPrivateKeyPemType   = "ENCRYPTED COSIGN PRIVATE KEY"
+	SigstorePrivateKeyPemType = "ENCRYPTED SIGSTORE PRIVATE KEY"
 	// PEM-encoded PKCS #1 RSA private key
 	RSAPrivateKeyPemType = "RSA PRIVATE KEY"
 	// PEM-encoded ECDSA private key
@@ -134,10 +135,10 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	default:
 		return nil, fmt.Errorf("unsupported private key")
 	}
-	return marshalKeyPair(Keys{pk, pk.Public()}, pf)
+	return marshalKeyPair(p.Type, Keys{pk, pk.Public()}, pf)
 }
 
-func marshalKeyPair(keypair Keys, pf PassFunc) (key *KeysBytes, err error) {
+func marshalKeyPair(ptype string, keypair Keys, pf PassFunc) (key *KeysBytes, err error) {
 	x509Encoded, err := x509.MarshalPKCS8PrivateKey(keypair.private)
 	if err != nil {
 		return nil, fmt.Errorf("x509 encoding private key: %w", err)
@@ -156,10 +157,15 @@ func marshalKeyPair(keypair Keys, pf PassFunc) (key *KeysBytes, err error) {
 		return nil, err
 	}
 
+	// default to SIGSTORE, but keep support of COSIGN
+	if ptype != CosignPrivateKeyPemType {
+		ptype = SigstorePrivateKeyPemType
+	}
+
 	// store in PEM format
 	privBytes := pem.EncodeToMemory(&pem.Block{
 		Bytes: encBytes,
-		Type:  CosignPrivateKeyPemType,
+		Type:  ptype,
 	})
 
 	// Now do the public key
@@ -182,7 +188,8 @@ func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 		return nil, err
 	}
 
-	return marshalKeyPair(Keys{priv, priv.Public()}, pf)
+	// Emit SIGSTORE keys by default
+	return marshalKeyPair(SigstorePrivateKeyPemType, Keys{priv, priv.Public()}, pf)
 }
 
 // TODO(jason): Move this to an internal package.
@@ -205,7 +212,7 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if p == nil {
 		return nil, errors.New("invalid pem block")
 	}
-	if p.Type != CosignPrivateKeyPemType {
+	if p.Type != CosignPrivateKeyPemType && p.Type != SigstorePrivateKeyPemType {
 		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
 	}
 
