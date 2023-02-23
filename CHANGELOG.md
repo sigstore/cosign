@@ -1,3 +1,28 @@
+# v2.0.0
+This is the official 2.0.0 release of cosign!
+There are many new features and breaking changes from version 1.x, for a full explanation please read the Cosign 2.0 [blog post](https://blog.sigstore.dev/).
+
+## Breaking Changes
+
+## Enhancements
+* Loosen verification predicate type + better error messages (#2737)
+* Added support for attaching cert and cert chain in attach command Git… (#2602)
+* Support non-Sigstore TSA requests (#2708)
+* Add COSIGN_OCI_EXPERIMENTAL, push .sig/.sbom using OCI 1.1+ digest tag (#2684)
+* Output certificate in bundle when entry is not uploaded to Rekor (#2715)
+* attach signature and attach sbom must use STDIN to upload raw string (#2637)
+  
+  
+## Bug Fixes
+* Fix: Add missing schemes to cosign predicate types. (#2717)
+* Fix: Drop the `CosignPredicate` wrapper around SBOM attestations. (#2718)
+
+
+## Documentation
+* Adds deprecation note for keyless docs (#2716)
+
+
+
 # v2.0.0-rc.3
 _Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
 
