@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
@@ -38,13 +39,9 @@ import (
 // If there's no error, and payload is empty means the predicateType did not
 // match the attestation.
 func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifiedAttestation oci.Signature) ([]byte, error) {
-	// Check the predicate up front, no point in wasting time if it's invalid.
-	predicateURI, err := options.ParsePredicateType(predicateType)
-
-	if err != nil {
-		return nil, fmt.Errorf("invalid predicate type: %s", predicateType)
+	if predicateType == "" {
+		return nil, errors.New("missing predicate type")
 	}
-
 	var payloadData map[string]interface{}
 
 	p, err := verifiedAttestation.Payload()
@@ -72,7 +69,7 @@ func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifie
 	if err := json.Unmarshal(decodedPayload, &statement); err != nil {
 		return nil, fmt.Errorf("unmarshal in-toto statement: %w", err)
 	}
-	if statement.PredicateType != predicateURI {
+	if statement.PredicateType != predicateType {
 		// This is not the predicate we're looking for, so skip it.
 		return nil, nil
 	}
