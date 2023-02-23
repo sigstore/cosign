@@ -1496,7 +1496,7 @@ func TestUploadDownload(t *testing.T) {
 			}
 
 			// Upload it!
-			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, imgName)
+			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, "", "", imgName)
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {

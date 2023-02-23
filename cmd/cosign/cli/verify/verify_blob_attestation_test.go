@@ -87,6 +87,12 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			signature:     dssePredicateMultipleSubjects,
 			blobPath:      blobPath,
 		}, {
+			description:   "dsse envelope has multiple subjects, one is valid, but we are looking for different predicatetype",
+			predicateType: "notreallyslsaprovenance",
+			signature:     dssePredicateMultipleSubjects,
+			blobPath:      blobPath,
+			shouldErr:     true,
+		}, {
 			description:   "dsse envelope has multiple subjects, none has correct sha256 digest",
 			predicateType: "slsaprovenance",
 			signature:     dssePredicateMultipleSubjectsInvalid,

@@ -21,7 +21,6 @@
 
 set -ex
 
-export COSIGN_EXPERIMENTAL=1
 COSIGN_CLI=./cosign
 
 echo "Creating a unique blob"

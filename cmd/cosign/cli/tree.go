@@ -115,7 +115,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef stri
 
 	if len(scsaMap) == 0 {
 		fmt.Fprintf(os.Stdout, "No Supply Chain Security Related Artifacts artifacts found for image %s\n, start creating one with simply running"+
-			"$ COSIGN_EXPERIMENTAL=1 cosign sign <img>", ref.String())
+			"$ cosign sign <img>", ref.String())
 		return nil
 	}
 

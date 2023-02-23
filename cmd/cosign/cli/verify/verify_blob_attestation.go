@@ -340,8 +340,8 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 
 	// This checks the predicate type -- if no error is returned and no payload is, then
 	// the attestation is not of the given predicate type.
-	if b, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, signature); b == nil && err == nil {
-		return fmt.Errorf("invalid predicate type, expected %s", c.PredicateType)
+	if b, gotPredicateType, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, signature); b == nil && err == nil {
+		return fmt.Errorf("invalid predicate type, expected %s got %s", c.PredicateType, gotPredicateType)
 	}
 
 	fmt.Fprintln(os.Stderr, "Verified OK")

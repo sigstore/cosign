@@ -31,7 +31,7 @@ import (
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -71,13 +71,35 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		return err
 	}
 
+	var cert []byte
+	var certChain []byte
+
+	if certRef != "" {
+		cert, err = os.ReadFile(filepath.Clean(certRef))
+		if err != nil {
+			return err
+		}
+	}
+
+	if certChainRef != "" {
+		certChain, err = os.ReadFile(filepath.Clean(certChainRef))
+		if err != nil {
+			return err
+		}
+	}
+
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain))
+	if err != nil {
+		return err
+	}
+
 	se, err := ociremote.SignedEntity(digest, ociremoteOpts...)
 	if err != nil {
 		return err
 	}
 
 	// Attach the signature to the entity.
-	newSE, err := mutate.AttachSignatureToEntity(se, sig)
+	newSE, err := mutate.AttachSignatureToEntity(se, newSig)
 	if err != nil {
 		return err
 	}
