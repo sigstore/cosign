@@ -76,7 +76,7 @@ rather than a tag (`:latest`) because otherwise you might sign something you
 didn't intend to!
 
 ```shell
- cosign sign gcr.io/priya-chainguard/test@sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04
+ cosign sign $IMAGE
 
 Generating ephemeral keys...
 Retrieving signed certificate...
@@ -91,7 +91,7 @@ Your browser will now be opened to:
 https://oauth2.sigstore.dev/auth/auth?access_type=online&client_id=sigstore&code_challenge=OrXitVKUZm2lEWHVt1oQWR4HZvn0rSlKhLcltglYxCY&code_challenge_method=S256&nonce=2KvOWeTFxYfxyzHtssvlIXmY6Jk&redirect_uri=http%3A%2F%2Flocalhost%3A57102%2Fauth%2Fcallback&response_type=code&scope=openid+email&state=2KvOWfbQJ1caqScgjwibzK2qJmb
 Successfully verified SCT...
 tlog entry created with index: 12086900
-Pushing signature to: gcr.io/priya-chainguard/test
+Pushing signature to: $IMAGE
 ```
 
 Cosign will prompt you to authenticate via OIDC, where you'll sign in with your email address.
@@ -105,15 +105,7 @@ Cosign will then store the signature and certificate in the Rekor transparency l
 To verify the image, you'll need to pass in the expected certificate issuer and certificate subject via the `--certificate-identity` and `--certificate-oidc-issuer` flags:
 
 ```
-cosign verify gcr.io/priya-chainguard/test@sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04 --certificate-identity=priya@chainguard.dev --certificate-oidc-issuer=https://accounts.google.com
-
-Verification for gcr.io/priya-chainguard/test@sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04 --
-The following checks were performed on each of these signatures:
-  - The cosign claims were validated
-  - Existence of the claims in the transparency log was verified offline
-  - The code-signing certificate was verified using trusted certificate authority certificates
-
-[{"critical":{"identity":{"docker-reference":"gcr.io/priya-chainguard/test"},"image":{"docker-manifest-digest":"sha256:10512065b5de01cf79f2e435cb0aef05fe13553ffc4a099114ba78052c81cc04"},"type":"cosign container image signature"},"optional":{"1.3.6.1.4.1.57264.1.1":"https://accounts.google.com","Bundle":{"SignedEntryTimestamp":"MEUCIBz2eoemjPVLFA9sNIZA4gm+vGfTNYTySmDbElHPlqdKAiEA9OzNf47o+TIb0DscJjSTtnK1DjvI9rDGH0+hgGNCWMg=","Payload":{"body":"eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiIzMWU5NzIwOWJhM2RiZmZlNTc4ZTI2N2VmNWM4ZTU1MzQ0NDJhM2I2MDI2NzA4ZDZkMjc1MThjOGViOTJiYmRlIn19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUNORXVyNzZta3ZXRHZhOXRvb3N0ZVAwVi9vOStYZ0ZQY2I5dVptN1ZXbVZRSWhBS2RuTTFDL0IxRitYbzZLVEp0dEpPd1J2Zlh2K0xEamJRV3RZUktyR3pZRiIsInB1YmxpY0tleSI6eyJjb250ZW50IjoiTFMwdExTMUNSVWRKVGlCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2sxSlNVTnZWRU5EUVdsaFowRjNTVUpCWjBsVlVsQnFMMUF5TUU1cVdVVjFiV0ZsVkdWelZFMTNWMUkyVm5ocmQwTm5XVWxMYjFwSmVtb3dSVUYzVFhjS1RucEZWazFDVFVkQk1WVkZRMmhOVFdNeWJHNWpNMUoyWTIxVmRWcEhWakpOVWpSM1NFRlpSRlpSVVVSRmVGWjZZVmRrZW1SSE9YbGFVekZ3WW01U2JBcGpiVEZzV2tkc2FHUkhWWGRJYUdOT1RXcE5kMDFVU1ROTmFrRjZUWHBSTWxkb1kwNU5hazEzVFZSSk0wMXFRVEJOZWxFeVYycEJRVTFHYTNkRmQxbElDa3R2V2tsNmFqQkRRVkZaU1V0dldrbDZhakJFUVZGalJGRm5RVVZvVFRoNmVsUXZNblpTVXpGUlQxZDFkekZMTUdKTVV5czNhVTlLVDNoUllsTmpWMjhLWmtWWWRrbFRhVWRCVUN0R1JFdzVhbU52U2toVWMzUm5RamRCZW5sM1RuYzFibVZLZFhKeldIZHhabXRYZVZSTGJIRlBRMEZWVlhkblowWkNUVUUwUndwQk1WVmtSSGRGUWk5M1VVVkJkMGxJWjBSQlZFSm5UbFpJVTFWRlJFUkJTMEpuWjNKQ1owVkdRbEZqUkVGNlFXUkNaMDVXU0ZFMFJVWm5VVlZ3U1N0Q0NtOW1iM05UWjBwQmFuSnRXSHBqVGtWSlR6bFZTekE0ZDBoM1dVUldVakJxUWtKbmQwWnZRVlV6T1ZCd2VqRlphMFZhWWpWeFRtcHdTMFpYYVhocE5Ga0tXa1E0ZDBsbldVUldVakJTUVZGSUwwSkNaM2RHYjBWVlkwaEtjR1ZYUmtGWk1taG9ZVmMxYm1SWFJubGFRelZyV2xoWmQwdFJXVXRMZDFsQ1FrRkhSQXAyZWtGQ1FWRlJZbUZJVWpCalNFMDJUSGs1YUZreVRuWmtWelV3WTNrMWJtSXlPVzVpUjFWMVdUSTVkRTFKUjB0Q1oyOXlRbWRGUlVGa1dqVkJaMUZEQ2tKSWQwVmxaMEkwUVVoWlFUTlVNSGRoYzJKSVJWUktha2RTTkdOdFYyTXpRWEZLUzFoeWFtVlFTek12YURSd2VXZERPSEEzYnpSQlFVRkhSamxQSzNRS1ltZEJRVUpCVFVGU2VrSkdRV2xCWmxSTFRrWjRjVEpEUjNoeWFuTXdla3RNWlZJMU0xaHdUVXh2YURsRmEwRXJjamx4ZUhJdmFqTTJkMGxvUVV0elRncFllVFozUms1bmVXc3piamhJTURGeFpYaGpXbXRpYlV0aU5pdFNlbGRNTm5jelJ6VkVVRTFyVFVGdlIwTkRjVWRUVFRRNVFrRk5SRUV5YTBGTlIxbERDazFSUkdwdFoxWlpPRXAxVXpWSWFDOWtjU3RNV0dwRk4xVlVVVFZrVmtGeFZHRXdVa054WkRkVmRYSjNTbVpWVjFkYWRraE9aRVJaZW1aR1JuVmhUekVLUTFaelEwMVJSR04xTlV3d2NXWjBXVVZGUm1obFFqWnVNMWtyVTNOTFZrMXhSVU5aU21KWVYwaFNTbGw2U0Vad05sbEZiRThyUms5Q2VEbHpibXhpTVFveFdrRTRTbVJCUFFvdExTMHRMVVZPUkNCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2c9PSJ9fX19","integratedTime":1674851628,"logIndex":12086900,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}},"Issuer":"https://accounts.google.com","Subject":"priya@chainguard.dev"}}]
+cosign verify $IMAGE--certificate-identity=$IDENTITY --certificate-oidc-issuer=$OIDC_ISSUER
 ```
 
 You can also pass in a regex for the certificate identity and issuer flags, `--certificate-identity-regexp` and `--certificate-oidc-issuer-regexp`.
