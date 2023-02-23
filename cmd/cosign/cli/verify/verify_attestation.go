@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
@@ -269,11 +270,16 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 		var checked []oci.Signature
 		var validationErrors []error
+		// To aid in determining if there's a mismatch in what predicateType
+		// we're looking for and what we checked, keep track of them here so
+		// that we can help the user figure out if there's a typo, etc.
+		checkedPredicateTypes := []string{}
 		for _, vp := range verified {
-			payload, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, vp)
+			payload, gotPredicateType, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, vp)
 			if err != nil {
 				return fmt.Errorf("converting to consumable policy validation: %w", err)
 			}
+			checkedPredicateTypes = append(checkedPredicateTypes, gotPredicateType)
 			if len(payload) == 0 {
 				// This is not the predicate type we're looking for.
 				continue
@@ -309,7 +315,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 
 		if len(checked) == 0 {
-			return fmt.Errorf("none of the attestations matched the predicate type: %s", c.PredicateType)
+			return fmt.Errorf("none of the attestations matched the predicate type: %s, found: %s", c.PredicateType, strings.Join(checkedPredicateTypes, ","))
 		}
 
 		// TODO: add CUE validation report to `PrintVerificationHeader`.
