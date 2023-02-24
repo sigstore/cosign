@@ -326,7 +326,7 @@ The blob may be specified as a path to a file.`,
 
 `,
 
-		Args:             cobra.ExactArgs(1),
+		Args:             cobra.MaximumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ko := options.KeyOpts{
@@ -356,10 +356,15 @@ The blob may be specified as a path to a file.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
-			if len(args) != 1 {
+			// We only use the blob if we are checking claims.
+			if len(args) == 0 && o.CheckClaims {
 				return fmt.Errorf("no path to blob passed in, run `cosign verify-blob-attestation -h` for more help")
 			}
-			return v.Exec(cmd.Context(), args[0])
+			var path string
+			if len(args) > 0 {
+				path = args[0]
+			}
+			return v.Exec(cmd.Context(), path)
 		},
 	}
 

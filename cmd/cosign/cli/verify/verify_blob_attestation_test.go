@@ -124,3 +124,58 @@ func TestVerifyBlobAttestation(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+	defer os.RemoveAll(td)
+
+	blobPath := writeBlobFile(t, td, blobContents, "blob")
+	anotherBlobPath := writeBlobFile(t, td, anotherBlobContents, "other-blob")
+	keyRef := writeBlobFile(t, td, pubkey, "cosign.pub")
+
+	tests := []struct {
+		description string
+		blobPath    string
+		signature   string
+	}{
+		{
+			description: "verify a predicate",
+			blobPath:    blobPath,
+			signature:   blobSLSAProvenanceSignature,
+		}, {
+			description: "verify a predicate no path",
+			signature:   blobSLSAProvenanceSignature,
+		}, {
+			description: "verify a predicate with another blob path",
+			signature:   blobSLSAProvenanceSignature,
+			// This works because we're not checking the claims. It doesn't matter what we put in here - it should pass so long as the DSSE signagure can be verified.
+			blobPath: anotherBlobPath,
+		}, {
+			description: "verify a predicate with /dev/null",
+			signature:   blobSLSAProvenanceSignature,
+			blobPath:    "/dev/null",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			decodedSig, err := base64.StdEncoding.DecodeString(test.signature)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sigRef := writeBlobFile(t, td, string(decodedSig), "signature")
+
+			cmd := VerifyBlobAttestationCommand{
+				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
+				SignaturePath: sigRef,
+				IgnoreTlog:    true,
+				CheckClaims:   false,
+				PredicateType: "slsaprovenance",
+			}
+			if err := cmd.Exec(ctx, test.blobPath); err != nil {
+				t.Fatalf("verifyBlobAttestation()= %v", err)
+			}
+		})
+	}
+}

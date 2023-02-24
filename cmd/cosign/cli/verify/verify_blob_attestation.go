@@ -108,26 +108,26 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 	}
+	var h v1.Hash
 	if c.CheckClaims {
+		// Get the actual digest of the blob
+		var payload internal.HashReader
+		f, err := os.Open(filepath.Clean(artifactPath))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		payload = internal.NewHashReader(f, sha256.New())
+		if _, err := io.ReadAll(&payload); err != nil {
+			return err
+		}
+		digest := payload.Sum(nil)
+		h = v1.Hash{
+			Hex:       hex.EncodeToString(digest),
+			Algorithm: "sha256",
+		}
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
-	}
-
-	// Get the actual digest of the blob
-	var payload internal.HashReader
-	f, err := os.Open(filepath.Clean(artifactPath))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	payload = internal.NewHashReader(f, sha256.New())
-	if _, err := io.ReadAll(&payload); err != nil {
-		return err
-	}
-	digest := payload.Sum(nil)
-	h := v1.Hash{
-		Hex:       hex.EncodeToString(digest),
-		Algorithm: "sha256",
 	}
 
 	// Set up TSA, Fulcio roots and tlog public keys and clients.
