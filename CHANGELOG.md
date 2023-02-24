@@ -1,3 +1,71 @@
+# v2.0.0
+This is the official 2.0.0 release of cosign!
+There are many new features and breaking changes from version 1.x, for a full explanation please read the Cosign 2.0 [blog post](https://blog.sigstore.dev/).
+
+## Breaking Changes
+* COSIGN_EXPERIMENTAL=1 is no longer required to have identity-based ("keyless") signing and transparency.
+* By default, artifact signatures will be uploaded to Rekor, for both key-based and identity-based signing. To not upload to Rekor, include --tlog-upload=false.
+  * You must also include --insecure-ignore-tlog=true when verifying an artifact that was not uploaded to Rekor.
+  * Examples of when you may want to skip uploading to the transparency log are if you have a private Sigstore deployment that does not use transparency or a private artifact.
+  * We strongly encourage all other use-cases to upload artifact signatures to Rekor. Transparency is a critical component of supply chain security, to allow artifact maintainers and consumers to monitor a public log for their artifacts and signing identities.
+* Verification now requires identity flags, --certificate-identity and --certificate-oidc-issuer. Like verifying a signature with a public key, it's critical to specify who you trust to generate a signature for identity-based signing. See sigstore/cosign#2056 for more discussion on this change.
+* --certificate-email has been removed. Use --certificate-identity, which supports not only email verification but also any identity specified in a certificate, including SPIFFE, GitHub Actions, or service account identities.
+* Cosign no longer supports providing a certificate that does not conform to the Fulcio certificate profile, which includes setting the SubjectAlternativeName and OIDC Issuer OID. To verify with a non-conformant certificate, extract the public key from the certificate and verify with cosign verify --key <key.pem>. We are actively working on more support for custom certificates for those who want to bring their existing PKI.
+* Signing OCI images by tag prints a warning and is strongly discouraged, e.g. cosign sign container.registry.io/foo:tag. This is considered insecure since tags are mutable. If you want to specify a particular image, you are recommended to do so by digest.
+* SCT verification, a proof of inclusion in a certificate transparency log, is now on by default for verifying Fulcio certificates. For private deployments without certificate transparency, use --insecure-ignore-sct=true to skip this check.
+* DSSE support in verify-blob has been removed. You can now verify attestations using verify-blob-attestation.
+* Environment variable SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY has been removed. For private deployments, if you would like to set the Rekor public key to verify transparency log entries, use either a TUF setup or set SIGSTORE_REKOR_PUBLIC_KEY with the PEM of the custom Rekor public key..
+* verify-blob no longer searches for a certificate. You must provide one with either --certificate or --bundle.
+* cosign attest --type {custom|vuln} (and cosign verify-attestation) will now use the RFC 3986 compliant URIs, adding https://, so that these predicate types are compliant with the in-toto specification.
+* The CosignPredicate envelope that wraps the predicates of SPDX and CycloneDX attestations has been removed, which was a violation of the schema specified via the predicateType field (more information).
+* `--force` has been removed. To skip any prompts, use `--yes`.
+
+## Improvements
+* Blob attestation and verification is now supported with cosign attest-blob and cosign verify-blob-attestation.
+* You can now set flags via environment variables, for example instead of --certificate-identity=email, you can set an environment variable for COSIGN_CERTIFICATE_IDENTITY=email.
+* --offline=true removes the fallback to the Rekor log when verifying an artifact. Previously, if you did not provide a bundle (a persisted response from Rekor), Cosign would fallback to querying Rekor. You can now skip this fallback for offline environments. Note that if the bundle fails to verify, Cosign will not fallback and will fail early.
+* A Fulcio certificate can now be issued for self-managed keys by providing --issue-certificate=true with a key, --key, or security key, --sk. This is useful when adopting Sigstore incrementally.
+* Experimental support for trusted timestamping has been added. Timestamping leverages a third party to provide the timestamp that will be used to verify short-lived Fulcio certificates, which distributes trust. We will be writing more about this in an upcoming blog post!
+  * To use a timestamp when signing a container, use cosign sign --timestamp-server-url=<url> <container>, such as https://freetsa.org/tsr, and to verify, cosign verify --timestamp-certificate-chain=<path-to-PEM-encodeded-chain> <other flags> <artifact>.
+  * To use a timestamp when signing a blob, use cosign sign-blob --timestamp-server-url=<url> --rfc3161-timestamp=<output-path> --bundle=<output-path> <blob>, and to verify, cosign verify-blob --rfc3161-timestamp=<output-path> --timestamp-certificate-chain=<path-to-PEM-encoded-chain> --bundle=<output-path> <other flags> <blob>.
+
+For specific PRs representing enhancements, bug fixes, documentation, and breaking changes, please see the sections below for prereleases v2.0.0-rc.0, v2.0.0-rc.1, v2.0.0-rc.2, and v2.0.0-rc.3.
+
+### Thanks to all contributors!
+
+* Anish Shah
+* Arnaud J Le Hors
+* Arthur Lutz
+* Batuhan Apaydın
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Chris Burns
+* Christian Loos
+* Emmanuel T Odeke
+* Hayden B
+* Hector Fernandez
+* Huang Huang
+* Jan Wozniak
+* Josh Dolitsky
+* Josh Wolf
+* Kenny Leung
+* Marko Mudrinić
+* Matt Moore
+* Matthias Glastra
+* Miloslav Trmač
+* Mukuls77
+* Priya Wadhwa
+* Puerco
+* Stefan Zhelyazkov
+* Tim Seagren
+* Tom Meadows
+* Ville Aikas
+* Zack Newman
+* asraa
+* kpk47
+* priyawadhwa
+
+
 # v2.0.0-rc.3
 _Note: this is a prerelease for Cosign 2.0! Feel free to try it out, but know there are many breaking changes from 1.0 and the prereleases may continue to change._
 
