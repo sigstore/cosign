@@ -15,11 +15,11 @@ Cosign aims to make signatures **invisible infrastructure**.
 
 Cosign supports:
 
+* "Keyless signing" with the Sigstore public good Fulcio certificate authority and Rekor transparency log (default)
 * Hardware and KMS signing
+* Signing with a cosign generated encrypted private/public keypair
 * Container Signing, Verification and Storage in an OCI registry.
 * Bring-your-own PKI
-* Our free OIDC PKI ([Fulcio](https://github.com/sigstore/fulcio))
-* Built-in binary transparency and timestamping service ([Rekor](https://github.com/sigstore/rekor))
 
 ![intro](images/intro.gif)
 
@@ -66,38 +66,8 @@ ENTRYPOINT [ "cosign" ]
 ## Quick Start
 
 This shows how to:
-
-* generate a keypair
-* sign a container image and store that signature in the registry
-* find signatures for a container image, and verify them against a public key
-
-See the [Usage documentation](USAGE.md) for more commands!
-
-See the [FUN.md](FUN.md) documentation for some fun tips and tricks!
-
-NOTE: you will need access to a container registry for cosign to work with.
-[ttl.sh](https://ttl.sh) offers free, short-lived (ie: hours), anonymous container image
-hosting if you just want to try these commands out.
-
-For instance:
-
-```shell
-$ SRC_IMAGE=busybox
-$ SRC_DIGEST=$(crane digest busybox)
-$ IMAGE_URI=ttl.sh/$(uuidgen | head -c 8 | tr 'A-Z' 'a-z')
-$ crane cp $SRC_IMAGE@$SRC_DIGEST $IMAGE_URI:1h
-$ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
-```
-
-### Generate a keypair
-
-```shell
-$ cosign generate-key-pair
-Enter password for private key:
-Enter again:
-Private key written to cosign.key
-Public key written to cosign.pub
-```
+* sign a container image with the default "keyless signing" method (see [KEYLESS.md](./KEYLESS.md))
+* verify the container image
 
 ### Sign a container and store the signature in the registry
 
@@ -106,14 +76,39 @@ rather than a tag (`:latest`) because otherwise you might sign something you
 didn't intend to!
 
 ```shell
-$ cosign sign --key cosign.key $IMAGE_URI_DIGEST
-Enter password for private key:
-Pushing signature to: index.docker.io/dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
+ cosign sign $IMAGE
+
+Generating ephemeral keys...
+Retrieving signed certificate...
+
+	Note that there may be personally identifiable information associated with this signed artifact.
+	This may include the email address associated with the account with which you authenticate.
+	This information will be used for signing this artifact and will be stored in public transparency logs and cannot be removed later.
+
+By typing 'y', you attest that you grant (or have permission to grant) and agree to have this information stored permanently in transparency logs.
+Are you sure you would like to continue? [y/N] y
+Your browser will now be opened to:
+https://oauth2.sigstore.dev/auth/auth?access_type=online&client_id=sigstore&code_challenge=OrXitVKUZm2lEWHVt1oQWR4HZvn0rSlKhLcltglYxCY&code_challenge_method=S256&nonce=2KvOWeTFxYfxyzHtssvlIXmY6Jk&redirect_uri=http%3A%2F%2Flocalhost%3A57102%2Fauth%2Fcallback&response_type=code&scope=openid+email&state=2KvOWfbQJ1caqScgjwibzK2qJmb
+Successfully verified SCT...
+tlog entry created with index: 12086900
+Pushing signature to: $IMAGE
 ```
 
-The cosign command above prompts the user to enter the password for the private key.
-The user can either manually enter the password, or if the environment variable `COSIGN_PASSWORD` is set then it is used automatically.
+Cosign will prompt you to authenticate via OIDC, where you'll sign in with your email address.
+Under the hood, cosign will request a code signing certificate from the Fulcio certificate authority.
+The subject of the certificate will match the email address you logged in with.
+Cosign will then store the signature and certificate in the Rekor transparency log, and upload the signature to the OCI registry alongside the image you're signing.
 
+
+### Verify a container
+
+To verify the image, you'll need to pass in the expected certificate issuer and certificate subject via the `--certificate-identity` and `--certificate-oidc-issuer` flags:
+
+```
+cosign verify $IMAGE--certificate-identity=$IDENTITY --certificate-oidc-issuer=$OIDC_ISSUER
+```
+
+You can also pass in a regex for the certificate identity and issuer flags, `--certificate-identity-regexp` and `--certificate-oidc-issuer-regexp`.
 
 ### Verify a container against a public key
 
@@ -133,38 +128,11 @@ The following checks were performed on these signatures:
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
 
-## `Cosign` is 1.0!
-
-This means the core feature set of `cosign` is considered ready for production use.
-This core set includes:
-
-### Key Management
-
-* fixed, text-based keys generated using `cosign generate-key-pair`
-* cloud KMS-based keys generated using `cosign generate-key-pair -kms`
-* keys generated on hardware tokens using the PIV interface using `cosign piv-tool`
-* Kubernetes-secret based keys generated using `cosign generate-key-pair k8s://namespace/secretName`
-
-### Artifact Types
-
-* OCI and Docker Images
-* Other artifacts that can be stored in a container registry, including:
-  * Tekton Bundles
-  * Helm Charts
-  * WASM modules
-  * eBPF modules
-  * (probably anything else, feel free to add things to this list)
-* Text files and other binary blobs, using `cosign sign-blob`
 
 ### What ** is not ** production ready?
 
 While parts of `cosign` are stable, we are continuing to experiment and add new features.
 The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
-
-#### Anything under the `COSIGN_EXPERIMENTAL` environment variable
-
-* Integration with the `Rekor` transparency log
-* Keyless signatures using the `Fulcio` CA
 
 #### Formats/Specifications
 
@@ -386,19 +354,6 @@ COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example
 Please help test and file bugs if you see issues!
 Instructions can be found in the [tracking issue](https://github.com/sigstore/cosign/issues/40).
 
-## Rekor Support
-_Note: this is an experimental feature_
-
-To publish signed artifacts to a Rekor transparency log and verify their existence in the log
-set the `COSIGN_EXPERIMENTAL=1` environment variable.
-
-```shell
-$ COSIGN_EXPERIMENTAL=1 cosign sign --key cosign.key $IMAGE_URI_DIGEST
-$ COSIGN_EXPERIMENTAL=1 cosign verify --key cosign.pub $IMAGE_URI
-```
-
-`cosign` defaults to using the public instance of rekor at [rekor.sigstore.dev](https://rekor.sigstore.dev).
-To configure the rekor server, use the -`rekor-url` flag
 
 ## Caveats
 
