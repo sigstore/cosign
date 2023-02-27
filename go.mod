@@ -25,7 +25,7 @@ require (
 	github.com/mozillazg/docker-credential-acr-helper v0.3.0
 	github.com/open-policy-agent/opa v0.49.2
 	github.com/pkg/errors v0.9.1
-	github.com/secure-systems-lab/go-securesystemslib v0.4.0
+	github.com/secure-systems-lab/go-securesystemslib v0.5.0
 	github.com/sigstore/fulcio v1.1.0
 	github.com/sigstore/rekor v1.0.1
 	github.com/sigstore/sigstore v1.5.2
