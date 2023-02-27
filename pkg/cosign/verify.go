@@ -155,7 +155,7 @@ type payloader interface {
 	Payload() ([]byte, error)
 }
 
-func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att payloader) error {
+func verifyOCIAttestation(ctx context.Context, verifier signature.Verifier, att payloader) error {
 	payload, err := att.Payload()
 	if err != nil {
 		return err
@@ -173,7 +173,7 @@ func verifyOCIAttestation(_ context.Context, verifier signature.Verifier, att pa
 	if err != nil {
 		return err
 	}
-	_, err = dssev.Verify(&env)
+	_, err = dssev.Verify(ctx, &env)
 	return err
 }
 
