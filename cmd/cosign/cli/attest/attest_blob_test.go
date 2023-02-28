@@ -237,7 +237,7 @@ func TestAttestBlob(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new envelope verifier: %v", err)
 	}
-	if _, err := dssev.Verify(env); err != nil {
+	if _, err := dssev.Verify(ctx, env); err != nil {
 		t.Fatalf("dsse verify: %v", err)
 	}
 }
