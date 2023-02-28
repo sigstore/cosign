@@ -25,10 +25,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
-	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, imageRef string) error {
@@ -58,7 +58,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 
 	var payload []byte
 	if payloadRef == "" {
-		payload, err = (&sigPayload.Cosign{Image: digest}).MarshalJSON()
+		payload, err = cosign.ObsoletePayload(ctx, digest)
 	} else {
 		payload, err = os.ReadFile(filepath.Clean(payloadRef))
 	}

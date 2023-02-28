@@ -130,18 +130,18 @@ $ cosign generate $IMAGE_DIGEST | openssl...
 
 ## Upload a generated signature
 
-The signature is passed via the `--signature` flag.
+The signature is passed via the `--signature` and `--payload` flags.
 It can be a file:
 
 ```shell
-$ cosign attach signature --signature file.sig $IMAGE_DIGEST
+$ cosign attach signature --signature file.sig --payload payload.json $IMAGE_DIGEST
 Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8.sig
 ```
 
 or, `-` for stdin for chaining from other commands:
 
 ```shell
-$ cosign generate $IMAGE_DIGEST | openssl... | cosign attach signature --signature - $IMAGE_DIGEST
+$ … | openssl... | cosign attach signature --signature - --payload ... $IMAGE_DIGEST
 Pushing signature to: dlorenc/demo:sha256-87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def.sig
 ```
 
