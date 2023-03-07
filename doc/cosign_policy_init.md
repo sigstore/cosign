@@ -17,7 +17,7 @@ cosign policy init [flags]
 ```
 
   # extract public key from private key to a specified out file.
-  cosign policy init -ns <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)
+  cosign policy init --namespace <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)
 ```
 
 ### Options

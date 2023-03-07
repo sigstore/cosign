@@ -86,7 +86,7 @@ func initPolicy() *cobra.Command {
 		Long:  "init is used to generate a root.json policy\nfor keyless signing delegation. This is used to establish a policy for a registry namespace,\na signing threshold and a list of maintainers who can sign over the body section.",
 		Example: `
   # extract public key from private key to a specified out file.
-  cosign policy init -ns <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)`,
+  cosign policy init --namespace <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)`,
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var publicKeys []*tuf.Key
