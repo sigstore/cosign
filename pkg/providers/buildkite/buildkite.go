@@ -47,9 +47,17 @@ func (ba *buildkiteAgent) Provide(ctx context.Context, audience string) (string,
 		endpoint = "https://agent.buildkite.com/v3"
 	}
 	jobID := env.Getenv(env.VariableBuildkiteJobID)
+	logLevel := env.Getenv(env.VariableBuildkiteAgentLogLevel)
+	if logLevel == "" {
+		logLevel = "notice"
+	}
 
 	l := logger.NewConsoleLogger(logger.NewTextPrinter(os.Stderr), os.Exit)
-	l.SetLevel(logger.INFO)
+	level, err := logger.LevelFromString(logLevel)
+	if err != nil {
+		return "", err
+	}
+	l.SetLevel(level)
 
 	client := api.NewClient(l, api.Config{Token: agentToken, Endpoint: endpoint})
 	token, response, err := client.OIDCToken(ctx, &api.OIDCTokenRequest{Audience: audience, Job: jobID})

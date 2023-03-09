@@ -68,6 +68,7 @@ const (
 	VariableBuildkiteAgentAccessToken Variable = "BUILDKITE_AGENT_ACCESS_TOKEN"
 	VariableBuildkiteAgentEndpoint    Variable = "BUILDKITE_AGENT_ENDPOINT"
 	VariableBuildkiteJobID            Variable = "BUILDKITE_JOB_ID"
+	VariableBuildkiteAgentLogLevel    Variable = "BUILDKITE_AGENT_LOG_LEVEL"
 )
 
 var (
@@ -181,13 +182,19 @@ var (
 		VariableBuildkiteAgentEndpoint: {
 			Description: "the Buildkite agent endpoint",
 			Expects:     "string with an endpoint",
-			Sensitive:   true,
+			Sensitive:   false,
 			External:    true,
 		},
 		VariableBuildkiteJobID: {
 			Description: "the Buildkite job ID to claim in the OIDC token",
 			Expects:     "string with a job ID",
-			Sensitive:   true,
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableBuildkiteAgentLogLevel: {
+			Description: "the log level for the Buildkite agent",
+			Expects:     "string with log level, either debug, notice, info, error, warn, fatal (default: notice)",
+			Sensitive:   false,
 			External:    true,
 		},
 	}
