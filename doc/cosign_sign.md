@@ -87,6 +87,7 @@ cosign sign [flags]
       --oidc-provider string                                                                     [EXPERIMENTAL] Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem]
       --oidc-redirect-url string                                                                 [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --output-certificate string                                                                write the certificate to FILE
+      --output-payload string                                                                    write the signed payload to FILE
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image

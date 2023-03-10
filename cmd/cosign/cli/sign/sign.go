@@ -270,6 +270,16 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("create signature file: %w", err)
 		}
 	}
+	outputPayload := signOpts.OutputPayload
+	if outputPayload != "" {
+		// Add digest to suffix to differentiate each image during recursive signing
+		if signOpts.Recursive {
+			outputPayload = fmt.Sprintf("%s-%s", outputPayload, strings.Replace(digest.DigestStr(), ":", "-", 1))
+		}
+		if err := os.WriteFile(outputPayload, payload, 0600); err != nil {
+			return fmt.Errorf("create payload file: %w", err)
+		}
+	}
 
 	if signOpts.OutputCertificate != "" {
 		rekorBytes, err := sv.Bytes(ctx)
