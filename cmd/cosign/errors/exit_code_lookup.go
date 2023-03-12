@@ -22,6 +22,8 @@ import (
 // exitCodeLookup contains a map of errorTypes and their associated exitCodes.
 var exitCodeLookup = map[string]int{
 	verificationError.ErrNoMatchingSignaturesType: NoMatchingSignature,
+	verificationError.ErrImageTagNotFoundType:     NonExistentTag,
+	verificationError.ErrNoSignaturesFoundType:    ImageWithoutSignature,
 }
 
 func LookupExitCodeForErrorType(errorType string) int {

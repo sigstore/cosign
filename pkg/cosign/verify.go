@@ -484,6 +484,12 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 	// entity that minimizes registry requests when supplied with a digest input
 	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
 	if err != nil {
+		if strings.Contains(err.Error(), "MANIFEST_UNKNOWN") {
+			return nil, false, &VerificationError{
+				errorType: ErrImageTagNotFoundType,
+				message:   fmt.Sprintf("%s: %v", ErrImageTagNotFoundMessage, err),
+			}
+		}
 		return nil, false, err
 	}
 	h, err := v1.NewHash(digest.Identifier())
@@ -565,6 +571,13 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	sl, err := sigs.Get()
 	if err != nil {
 		return nil, false, err
+	}
+
+	if len(sl) == 0 {
+		return nil, false, &VerificationError{
+			errorType: ErrNoSignaturesFoundType,
+			message:   ErrNoSignaturesFoundMessage,
+		}
 	}
 
 	validationErrs := []string{}
