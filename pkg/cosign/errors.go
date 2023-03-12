@@ -24,6 +24,14 @@ var (
 	// NoMatchingSignatures
 	ErrNoMatchingSignaturesType    = "NoMatchingSignatures"
 	ErrNoMatchingSignaturesMessage = "no matching signatures"
+
+	// NonExistingTagType
+	ErrImageTagNotFoundType    = "ImageTagNotFound"
+	ErrImageTagNotFoundMessage = "image tag not found"
+
+	// NoSignaturesFound
+	ErrNoSignaturesFoundType    = "NoSignaturesFound"
+	ErrNoSignaturesFoundMessage = "no signatures found for image"
 )
 
 // VerificationError is the type of Go error that is used by cosign to surface
