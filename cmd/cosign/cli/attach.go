@@ -94,7 +94,7 @@ func attachAttestation() *cobra.Command {
   cosign attach attestation --attestation <attestation file path> --attestation <attestation file path> <image uri>
 
   # attach attestation from bundle files in form of JSONLines to a container image
-  # https://github.com/in-toto/attestation/blob/main/spec/bundle.md
+  # https://github.com/in-toto/attestation/blob/main/spec/v1.0-draft/bundle.md
   cosign attach attestation --attestation <attestation bundle file path> <image uri>
 `,
 
