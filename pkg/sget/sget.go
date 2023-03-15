@@ -119,8 +119,8 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		verify.PrintVerificationHeader(sg.ImageRef, co, bundleVerified, fulcioVerified)
-		verify.PrintVerification(sg.ImageRef, sp, "text")
+		verify.PrintVerificationHeader(ctx, sg.ImageRef, co, bundleVerified, fulcioVerified)
+		verify.PrintVerification(ctx, sg.ImageRef, sp, "text")
 	}
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.

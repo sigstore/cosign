@@ -17,7 +17,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 
@@ -25,6 +24,7 @@ import (
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/internal/ui"
 )
 
 func Verify() *cobra.Command {
@@ -125,11 +125,13 @@ against the transparency log.`,
 				v.NameOptions = append(v.NameOptions, name.Insecure)
 			}
 
+			ctx := cmd.Context()
+
 			if o.CommonVerifyOptions.IgnoreTlog {
-				fmt.Fprintln(os.Stderr, "**Warning** Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the signature.")
+				ui.Warnf(ctx, "Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the signature.")
 			}
 
-			return v.Exec(cmd.Context(), args)
+			return v.Exec(ctx, args)
 		},
 	}
 

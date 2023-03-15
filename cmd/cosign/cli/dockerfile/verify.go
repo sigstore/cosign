@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/internal/ui"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
@@ -46,7 +47,7 @@ func (c *VerifyDockerfileCommand) Exec(ctx context.Context, args []string) error
 	}
 	defer dockerfile.Close()
 
-	images, err := getImagesFromDockerfile(dockerfile)
+	images, err := getImagesFromDockerfile(ctx, dockerfile)
 	if err != nil {
 		return fmt.Errorf("failed extracting images from Dockerfile: %w", err)
 	}
@@ -61,7 +62,7 @@ func (c *VerifyDockerfileCommand) Exec(ctx context.Context, args []string) error
 	return c.VerifyCommand.Exec(ctx, images)
 }
 
-func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
+func getImagesFromDockerfile(ctx context.Context, dockerfile io.Reader) ([]string, error) {
 	var images []string
 	fileScanner := bufio.NewScanner(dockerfile)
 	for fileScanner.Scan() {
@@ -69,7 +70,7 @@ func getImagesFromDockerfile(dockerfile io.Reader) ([]string, error) {
 		if strings.HasPrefix(strings.ToUpper(line), "FROM") {
 			switch image := getImageFromLine(line); image {
 			case "scratch":
-				fmt.Fprintln(os.Stderr, "- scratch image ignored")
+				ui.Infof(ctx, "- scratch image ignored")
 			default:
 				images = append(images, image)
 			}

@@ -14,6 +14,7 @@
 package dockerfile
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"strings"
@@ -93,7 +94,8 @@ func TestGetImagesFromDockerfile(t *testing.T) {
 				os.Setenv(k, v)
 				defer os.Unsetenv(k)
 			}
-			got, err := getImagesFromDockerfile(strings.NewReader(tc.fileContents))
+			ctx := context.Background()
+			got, err := getImagesFromDockerfile(ctx, strings.NewReader(tc.fileContents))
 			if err != nil {
 				t.Fatalf("getImagesFromDockerfile returned error: %v", err)
 			}

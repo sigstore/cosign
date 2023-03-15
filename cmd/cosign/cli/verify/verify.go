@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
@@ -264,8 +265,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
-			PrintVerificationHeader(img, co, bundleVerified, fulcioVerified)
-			PrintVerification(img, verified, c.Output)
+			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified)
+			PrintVerification(ctx, img, verified, c.Output)
 		} else {
 			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
@@ -281,66 +282,66 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return cosignError.WrapError(err)
 			}
 
-			PrintVerificationHeader(ref.Name(), co, bundleVerified, fulcioVerified)
-			PrintVerification(ref.Name(), verified, c.Output)
+			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified)
+			PrintVerification(ctx, ref.Name(), verified, c.Output)
 		}
 	}
 
 	return nil
 }
 
-func PrintVerificationHeader(imgRef string, co *cosign.CheckOpts, bundleVerified, fulcioVerified bool) {
-	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", imgRef)
-	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
+func PrintVerificationHeader(ctx context.Context, imgRef string, co *cosign.CheckOpts, bundleVerified, fulcioVerified bool) {
+	ui.Infof(ctx, "\nVerification for %s --", imgRef)
+	ui.Infof(ctx, "The following checks were performed on each of these signatures:")
 	if co.ClaimVerifier != nil {
 		if co.Annotations != nil {
-			fmt.Fprintln(os.Stderr, "  - The specified annotations were verified.")
+			ui.Infof(ctx, "  - The specified annotations were verified.")
 		}
-		fmt.Fprintln(os.Stderr, "  - The cosign claims were validated")
+		ui.Infof(ctx, "  - The cosign claims were validated")
 	}
 	if bundleVerified {
-		fmt.Fprintln(os.Stderr, "  - Existence of the claims in the transparency log was verified offline")
+		ui.Infof(ctx, "  - Existence of the claims in the transparency log was verified offline")
 	} else if co.RekorClient != nil {
-		fmt.Fprintln(os.Stderr, "  - The claims were present in the transparency log")
-		fmt.Fprintln(os.Stderr, "  - The signatures were integrated into the transparency log when the certificate was valid")
+		ui.Infof(ctx, "  - The claims were present in the transparency log")
+		ui.Infof(ctx, "  - The signatures were integrated into the transparency log when the certificate was valid")
 	}
 	if co.SigVerifier != nil {
-		fmt.Fprintln(os.Stderr, "  - The signatures were verified against the specified public key")
+		ui.Infof(ctx, "  - The signatures were verified against the specified public key")
 	}
 	if fulcioVerified {
-		fmt.Fprintln(os.Stderr, "  - The code-signing certificate was verified using trusted certificate authority certificates")
+		ui.Infof(ctx, "  - The code-signing certificate was verified using trusted certificate authority certificates")
 	}
 }
 
 // PrintVerification logs details about the verification to stdout
-func PrintVerification(imgRef string, verified []oci.Signature, output string) {
+func PrintVerification(ctx context.Context, imgRef string, verified []oci.Signature, output string) {
 	switch output {
 	case "text":
 		for _, sig := range verified {
 			if cert, err := sig.Cert(); err == nil && cert != nil {
 				ce := cosign.CertExtensions{Cert: cert}
-				fmt.Fprintln(os.Stderr, "Certificate subject: ", sigs.CertSubject(cert))
+				ui.Infof(ctx, "Certificate subject: %s", sigs.CertSubject(cert))
 				if issuerURL := ce.GetIssuer(); issuerURL != "" {
-					fmt.Fprintln(os.Stderr, "Certificate issuer URL: ", issuerURL)
+					ui.Infof(ctx, "Certificate issuer URL: %s", issuerURL)
 				}
 
 				if githubWorkflowTrigger := ce.GetCertExtensionGithubWorkflowTrigger(); githubWorkflowTrigger != "" {
-					fmt.Fprintln(os.Stderr, "GitHub Workflow Trigger:", githubWorkflowTrigger)
+					ui.Infof(ctx, "GitHub Workflow Trigger: %s", githubWorkflowTrigger)
 				}
 
 				if githubWorkflowSha := ce.GetExtensionGithubWorkflowSha(); githubWorkflowSha != "" {
-					fmt.Fprintln(os.Stderr, "GitHub Workflow SHA:", githubWorkflowSha)
+					ui.Infof(ctx, "GitHub Workflow SHA: %s", githubWorkflowSha)
 				}
 				if githubWorkflowName := ce.GetCertExtensionGithubWorkflowName(); githubWorkflowName != "" {
-					fmt.Fprintln(os.Stderr, "GitHub Workflow Name:", githubWorkflowName)
+					ui.Infof(ctx, "GitHub Workflow Name: %s", githubWorkflowName)
 				}
 
 				if githubWorkflowRepository := ce.GetCertExtensionGithubWorkflowRepository(); githubWorkflowRepository != "" {
-					fmt.Fprintln(os.Stderr, "GitHub Workflow Trigger", githubWorkflowRepository)
+					ui.Infof(ctx, "GitHub Workflow Repository: %s", githubWorkflowRepository)
 				}
 
 				if githubWorkflowRef := ce.GetCertExtensionGithubWorkflowRef(); githubWorkflowRef != "" {
-					fmt.Fprintln(os.Stderr, "GitHub Workflow Ref:", githubWorkflowRef)
+					ui.Infof(ctx, "GitHub Workflow Ref: %s", githubWorkflowRef)
 				}
 			}
 

@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -299,7 +300,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return err
 	}
 
-	fmt.Fprintln(os.Stderr, "Verified OK")
+	ui.Infof(ctx, "Verified OK")
 	return nil
 }
 

@@ -35,6 +35,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/test"
@@ -112,7 +113,7 @@ func TestPrintVerification(t *testing.T) {
 		base64.StdEncoding.EncodeToString(signature),
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
 
-	captureOutput := func(imgRef string, sigs []oci.Signature, output string, f func(string, []oci.Signature, string)) string {
+	captureOutput := func(f func()) string {
 		reader, writer, err := os.Pipe()
 		if err != nil {
 			panic(err)
@@ -137,12 +138,17 @@ func TestPrintVerification(t *testing.T) {
 			out <- buf.String()
 		}()
 		wg.Wait()
-		f(imgRef, sigs, output)
+		f()
 		writer.Close()
 		return <-out
 	}
+	_ = captureOutput
 
-	out := captureOutput("", []oci.Signature{ociSig}, "json", PrintVerification)
+	out := captureOutput(func() {
+		ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
+			PrintVerification(ctx, "", []oci.Signature{ociSig}, "json")
+		})
+	})
 	prettyPrint := func(b []byte) ([]byte, error) {
 		var out bytes.Buffer
 		err := json.Indent(&out, b, "", "    ")
