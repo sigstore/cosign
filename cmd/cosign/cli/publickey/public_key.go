@@ -19,8 +19,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
@@ -75,7 +75,7 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		return err
 	}
 	if writer.Name != "" {
-		fmt.Fprintln(os.Stderr, "Public key written to ", writer.Name)
+		ui.Infof(ctx, "Public key written to %s", writer.Name)
 	}
 	return nil
 }

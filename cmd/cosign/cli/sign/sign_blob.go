@@ -26,6 +26,7 @@ import (
 
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -41,10 +42,13 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	var payload internal.HashReader
 	var err error
 
+	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
+	defer cancel()
+
 	if payloadPath == "-" {
 		payload = internal.NewHashReader(os.Stdin, sha256.New())
 	} else {
-		fmt.Fprintln(os.Stderr, "Using payload from:", payloadPath)
+		ui.Infof(ctx, "Using payload from: %s", payloadPath)
 		f, err := os.Open(filepath.Clean(payloadPath))
 		if err != nil {
 			return nil, err
@@ -54,9 +58,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	if err != nil {
 		return nil, err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
-	defer cancel()
 
 	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
@@ -95,7 +96,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
 			return nil, fmt.Errorf("create RFC3161 timestamp file: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
+		ui.Infof(ctx, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 	}
 	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 	if err != nil {
@@ -114,7 +115,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err != nil {
 			return nil, err
 		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+		ui.Infof(ctx, "tlog entry created with index: %d", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
 	}
 
@@ -135,7 +136,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
 			return nil, fmt.Errorf("create bundle file: %w", err)
 		}
-		fmt.Printf("Bundle wrote in the file %s\n", ko.BundlePath)
+		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
 	}
 
 	if outputSignature != "" {
@@ -146,8 +147,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err := os.WriteFile(outputSignature, bts, 0600); err != nil {
 			return nil, fmt.Errorf("create signature file: %w", err)
 		}
-
-		fmt.Printf("Signature wrote in the file %s\n", outputSignature)
+		ui.Infof(ctx, "Wrote signature to file %s", outputSignature)
 	} else {
 		if b64 {
 			sig = []byte(base64.StdEncoding.EncodeToString(sig))
@@ -171,7 +171,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
 				return nil, fmt.Errorf("create certificate file: %w", err)
 			}
-			fmt.Printf("Certificate wrote in the file %s\n", outputCertificate)
+			ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
 		}
 	}
 
