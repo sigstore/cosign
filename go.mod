@@ -34,7 +34,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
-	github.com/spiffe/go-spiffe/v2 v2.1.2
+	github.com/spiffe/go-spiffe/v2 v2.1.3
 	github.com/stretchr/testify v1.8.2
 	github.com/theupdateframework/go-tuf v0.5.2
 	github.com/transparency-dev/merkle v0.0.1
