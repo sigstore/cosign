@@ -70,6 +70,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		EnvironmentScope: gitlab.String("*"),
 	})
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "WARNING: if you want to use a custom Gitlab host, set the \"GITLAB_HOST\" environment variable.")
 		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
 	}
 
