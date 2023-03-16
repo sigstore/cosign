@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/xanzy/go-gitlab"
@@ -70,7 +71,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		EnvironmentScope: gitlab.String("*"),
 	})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "WARNING: if you want to use a custom Gitlab host, set the \"GITLAB_HOST\" environment variable.")
+		ui.Infof(ctx, "WARNING: if you want to use a custom Gitlab host, set the \"GITLAB_HOST\" environment variable.")
 		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
 	}
 
@@ -79,7 +80,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Password written to \"COSIGN_PASSWORD\" variable")
+	ui.Infof(ctx, "Password written to \"COSIGN_PASSWORD\" variable")
 
 	_, privateKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
 		Key:          gitlab.String("COSIGN_PRIVATE_KEY"),
@@ -97,7 +98,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Private key written to \"COSIGN_PRIVATE_KEY\" variable")
+	ui.Infof(ctx, "Private key written to \"COSIGN_PRIVATE_KEY\" variable")
 
 	_, publicKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
 		Key:          gitlab.String("COSIGN_PUBLIC_KEY"),
@@ -115,12 +116,12 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
-	fmt.Fprintln(os.Stderr, "Public key written to \"COSIGN_PUBLIC_KEY\" variable")
+	ui.Infof(ctx, "Public key written to \"COSIGN_PUBLIC_KEY\" variable")
 
 	if err := os.WriteFile("cosign.pub", keys.PublicBytes, 0o600); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Public key also written to cosign.pub")
+	ui.Infof(ctx, "Public key also written to cosign.pub")
 
 	return nil
 }
