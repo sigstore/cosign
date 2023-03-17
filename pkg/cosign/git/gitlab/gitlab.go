@@ -71,7 +71,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		EnvironmentScope: gitlab.String("*"),
 	})
 	if err != nil {
-		ui.Infof(ctx, "WARNING: if you are using a self-hosted gitlab please set the \"GITLAB_HOST\" your server name.")
+		ui.Warnf(ctx, "if you are using a self-hosted gitlab please set the \"GITLAB_HOST\" your server name.")
 		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
 	}
 
