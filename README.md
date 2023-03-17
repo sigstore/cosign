@@ -105,7 +105,7 @@ Cosign will then store the signature and certificate in the Rekor transparency l
 To verify the image, you'll need to pass in the expected certificate issuer and certificate subject via the `--certificate-identity` and `--certificate-oidc-issuer` flags:
 
 ```
-cosign verify $IMAGE--certificate-identity=$IDENTITY --certificate-oidc-issuer=$OIDC_ISSUER
+cosign verify $IMAGE --certificate-identity=$IDENTITY --certificate-oidc-issuer=$OIDC_ISSUER
 ```
 
 You can also pass in a regex for the certificate identity and issuer flags, `--certificate-identity-regexp` and `--certificate-oidc-issuer-regexp`.
