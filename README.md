@@ -459,12 +459,12 @@ Note: different registries might expect different formats for the "repository."
 Generated private keys are stored in PEM format.
 The keys encrypted under a password using scrypt as a KDF and nacl/secretbox for encryption.
 
-They have a PEM header of `ENCRYPTED COSIGN PRIVATE KEY`:
+They have a PEM header of `ENCRYPTED SIGSTORE PRIVATE KEY`:
 
 ```shell
------BEGIN ENCRYPTED COSIGN PRIVATE KEY-----
+-----BEGIN ENCRYPTED SIGSTORE PRIVATE KEY-----
 ...
------END ENCRYPTED COSIGN PRIVATE KEY-----
+-----END ENCRYPTED SIGSTORE PRIVATE KEY-----
 ```
 
 Public keys are stored on disk in PEM-encoded standard PKIX format with a header of `PUBLIC KEY`.
