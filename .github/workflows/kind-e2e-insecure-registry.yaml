@@ -55,7 +55,7 @@ jobs:
     - uses: imranismail/setup-kustomize@a76db1c6419124d51470b1e388c4b29476f495f1 # v1.6.1
 
     - name: Install yq
-      uses: mikefarah/yq@4ee4b09e12ab319a48c6f7eae026030081cb0cc3 # v4.27.3
+      uses: mikefarah/yq@4ee4b09e12ab319a48c6f7eae026030081cb0cc3 # v4.32.2
 
     - name: Install Cosign
       run: |
