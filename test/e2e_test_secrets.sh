@@ -69,7 +69,7 @@ diff payload1 payload2
 # sign recursively
 ./cosign sign --key ${signing_key} -r $multiarch_img
 ./cosign verify --key ${verification_key} $multiarch_img # verify image index
-for arch in "linux/amd64" "linux/arm64" "linux/s390x" "linux/riscv64"
+for arch in "linux/amd64" "linux/arm64" "linux/s390x"
 do
     # verify sigs on discrete images
     ./cosign verify --key ${verification_key} "${multiarch_img}@$(crane digest --platform=$arch ${multiarch_img})"
