@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci"
+	ociempty "github.com/sigstore/cosign/v2/pkg/oci/empty"
 )
 
 // These enable mocking for unit testing without faking an entire registry.
@@ -40,13 +41,14 @@ var (
 
 // SignedEntity provides access to a remote reference, and its signatures.
 // The SignedEntity will be one of SignedImage or SignedImageIndex.
+// If the reference is not found, an empty SignedEntity will be returned.
 func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, error) {
 	o := makeOptions(ref.Context(), options...)
 
 	got, err := remoteGet(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
-		return nil, errors.New("entity not found in registry")
+		return ociempty.SignedImage(ref)
 	} else if err != nil {
 		return nil, err
 	}
