@@ -97,6 +97,10 @@ against the transparency log.`,
 					RekorURL:                     o.Rekor.URL,
 					Attachment:                   o.Attachment,
 					Annotations:                  annotations,
+					LocalImage:                   o.LocalImage,
+					Offline:                      o.CommonVerifyOptions.Offline,
+					TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				},
 			}
 			return v.Exec(cmd.Context(), args)
