@@ -102,6 +102,10 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					RekorURL:                     o.Rekor.URL,
 					Attachment:                   o.Attachment,
 					Annotations:                  annotations,
+					LocalImage:                   o.LocalImage,
+					Offline:                      o.CommonVerifyOptions.Offline,
+					TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				},
 				BaseOnly: o.BaseImageOnly,
 			}
