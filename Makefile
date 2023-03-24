@@ -18,11 +18,13 @@ else
 SHELL = bash -x
 endif
 
+GOEXE ?= go
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
+ifeq (,$(shell $(GOEXE) env GOBIN))
+GOBIN=$(shell $(GOEXE) env GOPATH)/bin
 else
-GOBIN=$(shell go env GOBIN)
+GOBIN=$(shell $(GOEXE) env GOBIN)
 endif
 
 # Set version variables for LDFLAGS
@@ -76,20 +78,20 @@ log-%:
 			}'
 
 cosign: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
+	CGO_ENABLED=0 $(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
 
 cosign-pivkey-pkcs11key: $(SRCS)
-	CGO_ENABLED=1 go build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
+	CGO_ENABLED=1 $(GOEXE) build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
 .PHONY: sget
 sget: ## Build sget binary
-	go build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/sget
+	$(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/sget
 
 .PHONY: cross
 cross:
 	$(foreach GOOS, $(PLATFORMS),\
 		$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); \
-	go build -trimpath -ldflags "$(LDFLAGS)" -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
+	$(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o cosign-$(GOOS)-$(GOARCH) ./cmd/cosign; \
 	shasum -a 256 cosign-$(GOOS)-$(GOARCH) > cosign-$(GOOS)-$(GOARCH).sha256 ))) \
 
 #####################
@@ -99,13 +101,13 @@ cross:
 golangci-lint:
 	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2 ;\
 
 lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
 
 test:
-	go test $(shell go list ./... | grep -v third_party/)
+	$(GOEXE) test $(shell $(GOEXE) list ./... | grep -v third_party/)
 
 clean:
 	rm -rf cosign
@@ -153,9 +155,9 @@ ko-sget:
 .PHONY: ko-local
 ko-local:
 	$(create_kocache_path)
-	KO_DOCKER_REPO=ko.local LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/v2/cmd/cosign
 
@@ -178,4 +180,4 @@ include test/ci.mk
 
 .PHONY: docgen
 docgen:
-	go run -tags pivkey,pkcs11key,cgo ./cmd/help/
+	$(GOEXE) run -tags pivkey,pkcs11key,cgo ./cmd/help/
