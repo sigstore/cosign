@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+GOEXE ?= go
 ifeq (,$(shell echo $$DEBUG))
 else
 SHELL = bash -x
 endif
-
-GOEXE ?= go
 
 ifeq (,$(shell echo $$DEBUG))
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
