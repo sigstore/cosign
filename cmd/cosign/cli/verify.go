@@ -27,6 +27,8 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 )
 
+const ignoreTLogMessage = "Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the %s."
+
 func Verify() *cobra.Command {
 	o := &options.VerifyOptions{}
 
@@ -128,7 +130,7 @@ against the transparency log.`,
 			ctx := cmd.Context()
 
 			if o.CommonVerifyOptions.IgnoreTlog {
-				ui.Warnf(ctx, "Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the signature.")
+				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "signature"))
 			}
 
 			return v.Exec(ctx, args)
@@ -215,7 +217,13 @@ against the transparency log.`,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
 
-			return v.Exec(cmd.Context(), args)
+			ctx := cmd.Context()
+
+			if o.CommonVerifyOptions.IgnoreTlog {
+				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "attestation"))
+			}
+
+			return v.Exec(ctx, args)
 		},
 	}
 
@@ -299,10 +307,14 @@ The blob may be specified as a path to a file or - for stdin.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
-			if err := verifyBlobCmd.Exec(cmd.Context(), args[0]); err != nil {
-				return fmt.Errorf("verifying blob %s: %w", args, err)
+
+			ctx := cmd.Context()
+
+			if o.CommonVerifyOptions.IgnoreTlog {
+				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob"))
 			}
-			return nil
+
+			return verifyBlobCmd.Exec(ctx, args[0])
 		},
 	}
 
@@ -366,7 +378,14 @@ The blob may be specified as a path to a file.`,
 			if len(args) > 0 {
 				path = args[0]
 			}
-			return v.Exec(cmd.Context(), path)
+
+			ctx := cmd.Context()
+
+			if o.CommonVerifyOptions.IgnoreTlog {
+				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob attestation"))
+			}
+
+			return v.Exec(ctx, path)
 		},
 	}
 
