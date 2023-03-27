@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GOEXE ?= go
 ifeq (,$(shell echo $$DEBUG))
 else
 SHELL = bash -x
 endif
 
-ifeq (,$(shell echo $$DEBUG))
+# allow overwriting the default `go` value with the custom path to the go executable
+GOEXE ?= go
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell $(GOEXE) env GOBIN))
 GOBIN=$(shell $(GOEXE) env GOPATH)/bin
@@ -101,7 +102,7 @@ cross:
 golangci-lint:
 	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1 ;\
 
 lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
@@ -155,9 +156,9 @@ ko-sget:
 .PHONY: ko-local
 ko-local:
 	$(create_kocache_path)
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/v2/cmd/cosign
 
