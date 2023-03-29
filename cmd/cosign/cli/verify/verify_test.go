@@ -198,3 +198,20 @@ func TestVerifyCertMissingIssuer(t *testing.T) {
 		t.Fatal("verify expected 'need --certificate-oidc-issuer'")
 	}
 }
+
+func TestVerifyKeylessVerification(t *testing.T) {
+	ctx := context.Background()
+	verifyCommand := VerifyCommand{
+		CertRef: "cert.pem",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentity:         "identity",
+			CertOidcIssuerRegexp: ".*",
+		},
+	}
+
+	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
+	t.Logf("INFO: verifyCommand error: %v", err)
+	if err == nil {
+		t.Fatal("verify expected 'need --certificate-oidc-issuer'")
+	}
+}
