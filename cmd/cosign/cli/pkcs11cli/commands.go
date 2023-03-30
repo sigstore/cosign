@@ -126,7 +126,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 	}
 
 	// Open a new session to the token.
-	session, err := ctx.OpenSession(slotID, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	session, err := ctx.OpenSession(slotID, pkcs11.CKF_SERIAL_SESSION)
 	if err != nil {
 		return nil, fmt.Errorf("open session: %w", err)
 	}
