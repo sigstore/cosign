@@ -75,7 +75,7 @@ type googleImpersonate struct{}
 var _ providers.Interface = (*googleImpersonate)(nil)
 
 // Enabled implements providers.Interface
-func (gi *googleImpersonate) Enabled(ctx context.Context) bool {
+func (gi *googleImpersonate) Enabled(_ context.Context) bool {
 	// The "impersonate" method requires a target service account to impersonate.
 	return env.Getenv(env.VariableGoogleServiceAccountName) != ""
 }

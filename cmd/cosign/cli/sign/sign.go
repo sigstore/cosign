@@ -314,11 +314,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	// Publish the signatures associated with this entity
-	if err := ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...); err != nil {
-		return err
-	}
-
-	return nil
+	return ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...)
 }
 
 func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier, error) {

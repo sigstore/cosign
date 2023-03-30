@@ -178,7 +178,7 @@ func matchPlatform(base *v1.Platform, list platformList) platformList {
 		if base.OSVersion != "" && p.platform.OSVersion != base.OSVersion {
 			if base.OS != "windows" {
 				continue
-			} else {
+			} else { //nolint: revive
 				if pcount, bcount := strings.Count(base.OSVersion, "."), strings.Count(p.platform.OSVersion, "."); pcount == 2 && bcount == 3 {
 					if base.OSVersion != p.platform.OSVersion[:strings.LastIndex(p.platform.OSVersion, ".")] {
 						continue

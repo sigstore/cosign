@@ -71,7 +71,7 @@ func getCTPublicKey(sct *ct.SignedCertificateTimestamp,
 // By default the public keys comes from TUF, but you can override this for test
 // purposes by using an env variable `SIGSTORE_CT_LOG_PUBLIC_KEY_FILE`. If using
 // an alternate, the file can be PEM, or DER format.
-func VerifySCT(ctx context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *TrustedTransparencyLogPubKeys) error {
+func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *TrustedTransparencyLogPubKeys) error {
 	if pubKeys == nil || len(pubKeys.Keys) == 0 {
 		return errors.New("none of the CTFE keys have been found")
 	}

@@ -62,7 +62,7 @@ const (
 	Attestation = "attestation"
 )
 
-func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts ...ociremote.Option) ([]SignedPayload, error) {
+func FetchSignaturesForReference(_ context.Context, ref name.Reference, opts ...ociremote.Option) ([]SignedPayload, error) {
 	simg, err := ociremote.SignedEntity(ref, opts...)
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ func FetchSignaturesForReference(ctx context.Context, ref name.Reference, opts .
 	return signatures, nil
 }
 
-func FetchAttestationsForReference(ctx context.Context, ref name.Reference, predicateType string, opts ...ociremote.Option) ([]AttestationPayload, error) {
+func FetchAttestationsForReference(_ context.Context, ref name.Reference, predicateType string, opts ...ociremote.Option) ([]AttestationPayload, error) {
 	simg, err := ociremote.SignedEntity(ref, opts...)
 	if err != nil {
 		return nil, err

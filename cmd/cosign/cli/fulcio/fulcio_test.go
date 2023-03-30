@@ -43,7 +43,7 @@ type testFlow struct {
 	err   error
 }
 
-func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
+func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) { //nolint: revive
 	if tf.err != nil {
 		return nil, tf.err
 	}
@@ -58,7 +58,7 @@ type testClient struct {
 
 var _ api.LegacyClient = (*testClient)(nil)
 
-func (p *testClient) SigningCert(cr api.CertificateRequest, token string) (*api.CertificateResponse, error) {
+func (p *testClient) SigningCert(cr api.CertificateRequest, token string) (*api.CertificateResponse, error) { //nolint: revive
 	return &p.payload, p.err
 }
 

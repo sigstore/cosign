@@ -34,15 +34,15 @@ func GetKey() (*Key, error) {
 	return nil, errors.New("unimplemented")
 }
 
-func GetKeyWithSlot(slot string) (*Key, error) {
+func GetKeyWithSlot(slot string) (*Key, error) { //nolint: revive
 	return nil, errors.New("unimplemented")
 }
 
 func (k *Key) Close() {}
 
-func (k *Key) Authenticate(pin string) {}
+func (k *Key) Authenticate(pin string) {} //nolint: revive
 
-func (k *Key) SetSlot(slot string) {}
+func (k *Key) SetSlot(slot string) {} //nolint: revive
 
 func (k *Key) Attest() (*x509.Certificate, error) {
 	return nil, errors.New("unimplemented")
@@ -52,15 +52,15 @@ func (k *Key) GetAttestationCertificate() (*x509.Certificate, error) {
 	return nil, errors.New("unimplemented")
 }
 
-func (k *Key) SetManagementKey(old, new [24]byte) error {
+func (k *Key) SetManagementKey(old, new [24]byte) error { //nolint: revive
 	return errors.New("unimplemented")
 }
 
-func (k *Key) SetPIN(old, new string) error {
+func (k *Key) SetPIN(old, new string) error { //nolint: revive
 	return errors.New("unimplemented")
 }
 
-func (k *Key) SetPUK(old, new string) error {
+func (k *Key) SetPUK(old, new string) error { //nolint: revive
 	return errors.New("unimplemented")
 }
 
@@ -68,7 +68,7 @@ func (k *Key) Reset() error {
 	return errors.New("unimplemented")
 }
 
-func (k *Key) Unblock(puk, newPIN string) error {
+func (k *Key) Unblock(puk, newPIN string) error { //nolint: revive
 	return errors.New("unimplemented")
 }
 

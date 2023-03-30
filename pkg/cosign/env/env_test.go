@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestMustRegisterEnv(t *testing.T) {
+func TestMustRegisterEnv(t *testing.T) { //nolint: revive
 	// Calling this should NOT panic
 	mustRegisterEnv(VariableExperimental)
 }

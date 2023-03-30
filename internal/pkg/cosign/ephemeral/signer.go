@@ -36,7 +36,7 @@ type ephemeralSigner struct {
 var _ icosign.Signer = ephemeralSigner{}
 
 // Sign implements `Signer`
-func (ks ephemeralSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
+func (ks ephemeralSigner) Sign(_ context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
 	pub, err := ks.signer.PublicKey()
 	if err != nil {
 		return nil, nil, fmt.Errorf("retrieving the static public key somehow failed: %w", err)

@@ -35,7 +35,7 @@ type buildkiteAgent struct{}
 var _ providers.Interface = (*buildkiteAgent)(nil)
 
 // Enabled implements providers.Interface
-func (ba *buildkiteAgent) Enabled(ctx context.Context) bool {
+func (ba *buildkiteAgent) Enabled(_ context.Context) bool {
 	return env.Getenv(env.VariableBuildkiteAgentAccessToken) != ""
 }
 

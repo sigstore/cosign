@@ -60,7 +60,7 @@ func TestConfirm(t *testing.T) {
 type BadReader struct{}
 
 // BadReader implements Reader.
-func (b *BadReader) Read(p []byte) (n int, err error) {
+func (b *BadReader) Read(p []byte) (n int, err error) { //nolint: revive
 	return 0, errors.New("my error")
 }
 

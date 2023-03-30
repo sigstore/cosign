@@ -31,7 +31,7 @@ type EntriesClient struct {
 	Entries []*models.LogEntry
 }
 
-func (m *EntriesClient) CreateLogEntry(params *entries.CreateLogEntryParams, opts ...entries.ClientOption) (*entries.CreateLogEntryCreated, error) {
+func (m *EntriesClient) CreateLogEntry(_ *entries.CreateLogEntryParams, _ ...entries.ClientOption) (*entries.CreateLogEntryCreated, error) {
 	if m.Entries != nil {
 		return &entries.CreateLogEntryCreated{
 			ETag:     "",
@@ -42,7 +42,7 @@ func (m *EntriesClient) CreateLogEntry(params *entries.CreateLogEntryParams, opt
 	return nil, errors.New("entry not provided")
 }
 
-func (m *EntriesClient) GetLogEntryByIndex(params *entries.GetLogEntryByIndexParams, opts ...entries.ClientOption) (*entries.GetLogEntryByIndexOK, error) {
+func (m *EntriesClient) GetLogEntryByIndex(_ *entries.GetLogEntryByIndexParams, _ ...entries.ClientOption) (*entries.GetLogEntryByIndexOK, error) {
 	if m.Entries != nil {
 		return &entries.GetLogEntryByIndexOK{
 			Payload: *m.Entries[0],
@@ -51,7 +51,7 @@ func (m *EntriesClient) GetLogEntryByIndex(params *entries.GetLogEntryByIndexPar
 	return nil, errors.New("entry not provided")
 }
 
-func (m *EntriesClient) GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParams, opts ...entries.ClientOption) (*entries.GetLogEntryByUUIDOK, error) {
+func (m *EntriesClient) GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParams, opts ...entries.ClientOption) (*entries.GetLogEntryByUUIDOK, error) { //nolint: revive
 	if m.Entries != nil {
 		return &entries.GetLogEntryByUUIDOK{
 			Payload: *m.Entries[0],
@@ -60,7 +60,7 @@ func (m *EntriesClient) GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParam
 	return nil, errors.New("entry not provided")
 }
 
-func (m *EntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams, opts ...entries.ClientOption) (*entries.SearchLogQueryOK, error) {
+func (m *EntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams, opts ...entries.ClientOption) (*entries.SearchLogQueryOK, error) { //nolint: revive
 	resp := []models.LogEntry{}
 	if m.Entries != nil {
 		for _, entry := range m.Entries {
@@ -73,5 +73,6 @@ func (m *EntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams, opt
 }
 
 // TODO: Implement mock
-func (m *EntriesClient) SetTransport(transport runtime.ClientTransport) {
+func (m *EntriesClient) SetTransport(transport runtime.ClientTransport) { //nolint: revive
+	// noop
 }

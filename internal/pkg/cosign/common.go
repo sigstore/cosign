@@ -61,4 +61,4 @@ func (h *HashReader) Size() int { return h.h.Size() }
 func (h *HashReader) BlockSize() int { return h.h.BlockSize() }
 
 // Write implements hash.Hash
-func (h *HashReader) Write(p []byte) (int, error) { return 0, errors.New("not implemented") }
+func (h *HashReader) Write(p []byte) (int, error) { return 0, errors.New("not implemented") } //nolint: revive

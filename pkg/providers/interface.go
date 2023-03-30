@@ -85,7 +85,7 @@ func Provide(ctx context.Context, audience string) (string, error) {
 }
 
 // ProvideFrom fetches the specified provider
-func ProvideFrom(ctx context.Context, provider string) (Interface, error) {
+func ProvideFrom(_ context.Context, provider string) (Interface, error) {
 	m.Lock()
 	defer m.Unlock()
 

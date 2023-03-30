@@ -40,7 +40,7 @@ type githubActions struct{}
 var _ providers.Interface = (*githubActions)(nil)
 
 // Enabled implements providers.Interface
-func (ga *githubActions) Enabled(ctx context.Context) bool {
+func (ga *githubActions) Enabled(_ context.Context) bool {
 	if env.Getenv(env.VariableGitHubRequestToken) == "" {
 		return false
 	}
@@ -51,7 +51,7 @@ func (ga *githubActions) Enabled(ctx context.Context) bool {
 }
 
 // Provide implements providers.Interface
-func (ga *githubActions) Provide(ctx context.Context, audience string) (string, error) {
+func (ga *githubActions) Provide(_ context.Context, audience string) (string, error) {
 	url := env.Getenv(env.VariableGitHubRequestURL) + "&audience=" + audience
 
 	req, err := http.NewRequest("GET", url, nil)

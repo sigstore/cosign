@@ -266,7 +266,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return err
 			}
 			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified)
-			PrintVerification(ctx, img, verified, c.Output)
+			PrintVerification(ctx, verified, c.Output)
 		} else {
 			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
@@ -283,7 +283,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 
 			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified)
-			PrintVerification(ctx, ref.Name(), verified, c.Output)
+			PrintVerification(ctx, verified, c.Output)
 		}
 	}
 
@@ -314,7 +314,7 @@ func PrintVerificationHeader(ctx context.Context, imgRef string, co *cosign.Chec
 }
 
 // PrintVerification logs details about the verification to stdout
-func PrintVerification(ctx context.Context, imgRef string, verified []oci.Signature, output string) {
+func PrintVerification(ctx context.Context, verified []oci.Signature, output string) {
 	switch output {
 	case "text":
 		for _, sig := range verified {

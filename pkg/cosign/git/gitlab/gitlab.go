@@ -126,7 +126,7 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	return nil
 }
 
-func (g *Gl) GetSecret(ctx context.Context, ref string, key string) (string, error) {
+func (g *Gl) GetSecret(_ context.Context, ref string, key string) (string, error) {
 	token, tokenExists := env.LookupEnv(env.VariableGitLabToken)
 	var varPubKeyValue string
 	if !tokenExists {

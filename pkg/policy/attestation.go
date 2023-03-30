@@ -45,7 +45,7 @@ import (
 // or the predicateType is not the one they are looking for. Without returning
 // this, it's hard for users to know which attestations/predicateTypes were
 // inspected.
-func AttestationToPayloadJSON(ctx context.Context, predicateType string, verifiedAttestation oci.Signature) ([]byte, string, error) {
+func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedAttestation oci.Signature) ([]byte, string, error) {
 	if predicateType == "" {
 		return nil, "", errors.New("missing predicate type")
 	}

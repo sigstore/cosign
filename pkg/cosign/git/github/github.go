@@ -146,7 +146,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 }
 
 // NOTE: GetSecret is not implemented for GitHub
-func (g *Gh) GetSecret(ctx context.Context, ref string, key string) (string, error) {
+func (g *Gh) GetSecret(ctx context.Context, ref string, key string) (string, error) { //nolint: revive
 	return "", nil
 }
 
