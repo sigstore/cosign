@@ -126,7 +126,7 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 	}
 
 	// Open a new session to the token.
-	session, err := ctx.OpenSession(slotID, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	session, err := ctx.OpenSession(slotID, pkcs11.CKF_SERIAL_SESSION)
 	if err != nil {
 		return nil, fmt.Errorf("open session: %w", err)
 	}
@@ -205,6 +205,9 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 }
 
 func ListTokensCmd(ctx context.Context, modulePath string) error {
+	if modulePath == "" {
+		return fmt.Errorf("please specify --module-path or set COSIGN_PKCS11_MODULE_PATH")
+	}
 	tokens, err := GetTokens(ctx, modulePath)
 	if err != nil {
 		return err
@@ -223,6 +226,9 @@ func ListTokensCmd(ctx context.Context, modulePath string) error {
 }
 
 func ListKeysUrisCmd(ctx context.Context, modulePath string, slotID uint, pin string) error {
+	if modulePath == "" {
+		return fmt.Errorf("please specify --module-path or set COSIGN_PKCS11_MODULE_PATH")
+	}
 	keysInfo, err := GetKeysInfo(ctx, modulePath, slotID, pin)
 	if err != nil {
 		return err
