@@ -55,6 +55,7 @@ const (
 	VariableSigstoreCTLogPublicKeyFile Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
 	VariableSigstoreRootFile           Variable = "SIGSTORE_ROOT_FILE"
 	VariableSigstoreRekorPublicKey     Variable = "SIGSTORE_REKOR_PUBLIC_KEY"
+	VariableSigstoreIDToken            Variable = "SIGSTORE_ID_TOKEN" //nolint:gosec
 
 	// Other external environment variables
 	VariableGitHubHost                Variable = "GITHUB_HOST"
@@ -195,6 +196,12 @@ var (
 			Description: "the log level for the Buildkite agent",
 			Expects:     "string with log level, either debug, notice, info, error, warn, fatal (default: notice)",
 			Sensitive:   false,
+			External:    true,
+		},
+		VariableSigstoreIDToken: {
+			Description: "is a OIDC token used to authenticate to Fulcio",
+			Expects:     "string with a OIDC token",
+			Sensitive:   true,
 			External:    true,
 		},
 	}
