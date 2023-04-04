@@ -96,7 +96,7 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	for _, t := range cleanTags {
 		if err := remote.Delete(t, remoteOpts...); err != nil {
 			var te *transport.Error
-			if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
+			if errors.As(err, &te) && te.StatusCode == http.StatusNotFound { //nolint: revive
 				// If the tag doesn't exist, some registries may
 				// respond with a 404, which shouldn't be considered an
 				// error.

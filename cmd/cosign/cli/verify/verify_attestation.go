@@ -322,7 +322,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		// TODO: add CUE validation report to `PrintVerificationHeader`.
 		PrintVerificationHeader(ctx, imageRef, co, bundleVerified, fulcioVerified)
 		// The attestations are always JSON, so use the raw "text" mode for outputting them instead of conversion
-		PrintVerification(ctx, imageRef, checked, "text")
+		PrintVerification(ctx, checked, "text")
 	}
 
 	return nil

@@ -51,7 +51,7 @@ func getSocketPath() string {
 }
 
 // Enabled implements providers.Interface
-func (ga *spiffe) Enabled(ctx context.Context) bool {
+func (ga *spiffe) Enabled(_ context.Context) bool {
 	// If we can stat the file without error then this is enabled.
 	_, err := os.Stat(getSocketPath())
 	return err == nil

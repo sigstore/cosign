@@ -64,11 +64,11 @@ type mockVerifier struct {
 	shouldErr bool
 }
 
-func (m *mockVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+func (m *mockVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) { //nolint: revive
 	return nil, nil
 }
 
-func (m *mockVerifier) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
+func (m *mockVerifier) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error { //nolint: revive
 	if m.shouldErr {
 		return errors.New("failure")
 	}

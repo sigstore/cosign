@@ -86,7 +86,7 @@ func getCertForOauthID(sv signature.SignerVerifier, fc api.LegacyClient, connect
 }
 
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(ctx context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
+func GetCert(_ context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
 	case flowDevice:
@@ -179,7 +179,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 	return f, nil
 }
 
-func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) { //nolint: revive
 	return f.SignerVerifier.PublicKey()
 }
 

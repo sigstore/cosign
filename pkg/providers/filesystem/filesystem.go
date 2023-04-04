@@ -38,14 +38,14 @@ const (
 )
 
 // Enabled implements providers.Interface
-func (ga *filesystem) Enabled(ctx context.Context) bool {
+func (ga *filesystem) Enabled(_ context.Context) bool {
 	// If we can stat the file without error then this is enabled.
 	_, err := os.Stat(FilesystemTokenPath)
 	return err == nil
 }
 
 // Provide implements providers.Interface
-func (ga *filesystem) Provide(ctx context.Context, audience string) (string, error) {
+func (ga *filesystem) Provide(ctx context.Context, audience string) (string, error) { //nolint: revive
 	b, err := os.ReadFile(FilesystemTokenPath)
 	if err != nil {
 		return "", err

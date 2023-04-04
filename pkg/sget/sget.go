@@ -120,7 +120,7 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 			return err
 		}
 		verify.PrintVerificationHeader(ctx, sg.ImageRef, co, bundleVerified, fulcioVerified)
-		verify.PrintVerification(ctx, sg.ImageRef, sp, "text")
+		verify.PrintVerification(ctx, sp, "text")
 	}
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.

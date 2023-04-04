@@ -157,10 +157,10 @@ func (r *ro) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures
 		if r.predicateURI == val {
 			fmt.Fprintln(os.Stderr, "Replacing attestation predicate:", r.predicateURI)
 			continue
-		} else {
-			fmt.Fprintln(os.Stderr, "Not replacing attestation predicate:", val)
-			sigsCopy = append(sigsCopy, s)
 		}
+
+		fmt.Fprintln(os.Stderr, "Not replacing attestation predicate:", val)
+		sigsCopy = append(sigsCopy, s)
 	}
 
 	ros.attestations = append(ros.attestations, sigsCopy...)

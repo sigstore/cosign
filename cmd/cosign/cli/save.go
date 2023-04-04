@@ -47,7 +47,7 @@ func Save() *cobra.Command {
 	return cmd
 }
 
-func SaveCmd(ctx context.Context, opts options.SaveOptions, imageRef string) error {
+func SaveCmd(_ context.Context, opts options.SaveOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return fmt.Errorf("parsing image name %s: %w", imageRef, err)
