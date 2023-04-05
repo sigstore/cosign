@@ -31,12 +31,12 @@ type envvar struct{}
 var _ providers.Interface = (*envvar)(nil)
 
 // Enabled implements providers.Interface
-func (p *envvar) Enabled(ctx context.Context) bool {
+func (p *envvar) Enabled(context.Context) bool {
 	_, ok := env.LookupEnv(env.VariableSigstoreIDToken)
 	return ok
 }
 
 // Provide implements providers.Interface
-func (p *envvar) Provide(ctx context.Context, _ string) (string, error) {
+func (p *envvar) Provide(context.Context, string) (string, error) {
 	return env.Getenv(env.VariableSigstoreIDToken), nil
 }
