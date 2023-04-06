@@ -78,7 +78,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 
 	// Key, sk, and cert are mutually exclusive.
 	if options.NOf(c.KeyRef, c.Sk, c.CertRef) > 1 {
-		return &options.KeyParseError{}
+		return &options.PubKeyParseError{}
 	}
 
 	var identities []cosign.Identity
