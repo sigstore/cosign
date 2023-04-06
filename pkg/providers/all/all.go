@@ -20,6 +20,7 @@ import (
 
 	// Link in all of the providers.
 	_ "github.com/sigstore/cosign/v2/pkg/providers/buildkite"
+	_ "github.com/sigstore/cosign/v2/pkg/providers/envvar"
 	_ "github.com/sigstore/cosign/v2/pkg/providers/filesystem"
 	_ "github.com/sigstore/cosign/v2/pkg/providers/github"
 	_ "github.com/sigstore/cosign/v2/pkg/providers/google"
