@@ -158,7 +158,6 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 		ErrDone = mutate.ErrSkipChildren
 	}
 	regOpts := signOpts.Registry
-	regExpOpts := signOpts.RegistryExperimental
 	opts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
@@ -183,7 +182,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 			if err != nil {
 				return fmt.Errorf("accessing image: %w", err)
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, regExpOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Recursive, signOpts.TlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -202,7 +201,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 				return fmt.Errorf("computing digest: %w", err)
 			}
 			digest := ref.Context().Digest(d.String())
-			err = signDigest(ctx, digest, staticPayload, ko, regOpts, regExpOpts, annotations, signOpts.Upload, signOpts.OutputSignature, signOpts.OutputCertificate, signOpts.Recursive, signOpts.TlogUpload, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -215,8 +214,8 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	return nil
 }
 
-func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts,
-	regOpts options.RegistryOptions, regExpOpts options.RegistryExperimentalOptions, annotations map[string]interface{}, upload bool, outputSignature, outputCertificate string, recursive bool, tlogUpload bool,
+func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
+	annotations map[string]interface{},
 	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
@@ -239,7 +238,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	if ko.TSAServerURL != "" {
 		s = tsa.NewSigner(s, client.NewTSAClient(ko.TSAServerURL))
 	}
-	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, tlogUpload)
+	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
 	if err != nil {
 		return fmt.Errorf("should upload to tlog: %w", err)
 	}
@@ -261,30 +260,41 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		return err
 	}
 
+	outputSignature := signOpts.OutputSignature
 	if outputSignature != "" {
 		// Add digest to suffix to differentiate each image during recursive signing
-		if recursive {
+		if signOpts.Recursive {
 			outputSignature = fmt.Sprintf("%s-%s", outputSignature, strings.Replace(digest.DigestStr(), ":", "-", 1))
 		}
 		if err := os.WriteFile(outputSignature, []byte(b64sig), 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
 	}
+	outputPayload := signOpts.OutputPayload
+	if outputPayload != "" {
+		// Add digest to suffix to differentiate each image during recursive signing
+		if signOpts.Recursive {
+			outputPayload = fmt.Sprintf("%s-%s", outputPayload, strings.Replace(digest.DigestStr(), ":", "-", 1))
+		}
+		if err := os.WriteFile(outputPayload, payload, 0600); err != nil {
+			return fmt.Errorf("create payload file: %w", err)
+		}
+	}
 
-	if outputCertificate != "" {
+	if signOpts.OutputCertificate != "" {
 		rekorBytes, err := sv.Bytes(ctx)
 		if err != nil {
 			return fmt.Errorf("create certificate file: %w", err)
 		}
 
-		if err := os.WriteFile(outputCertificate, rekorBytes, 0600); err != nil {
+		if err := os.WriteFile(signOpts.OutputCertificate, rekorBytes, 0600); err != nil {
 			return fmt.Errorf("create certificate file: %w", err)
 		}
 		// TODO: maybe accept a --b64 flag as well?
-		ui.Infof(ctx, "Certificate wrote in the file %s", outputCertificate)
+		ui.Infof(ctx, "Certificate wrote in the file %s", signOpts.OutputCertificate)
 	}
 
-	if !upload {
+	if !signOpts.Upload {
 		return nil
 	}
 
@@ -295,7 +305,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	// Publish the signatures associated with this entity
-	walkOpts, err := regOpts.ClientOpts(ctx)
+	walkOpts, err := signOpts.Registry.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
@@ -309,7 +319,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	// Publish the signatures associated with this entity (using OCI 1.1+ behavior)
-	if regExpOpts.RegistryReferrersMode == options.RegistryReferrersModeOCI11 {
+	if signOpts.RegistryExperimental.RegistryReferrersMode == options.RegistryReferrersModeOCI11 {
 		return ociremote.WriteSignaturesExperimentalOCI(digest, newSE, walkOpts...)
 	}
 

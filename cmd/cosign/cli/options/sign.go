@@ -27,6 +27,7 @@ type SignOptions struct {
 	Upload            bool
 	Output            string // deprecated: TODO remove when the output flag is fully deprecated
 	OutputSignature   string // TODO: this should be the root output file arg.
+	OutputPayload     string
 	OutputCertificate string
 	PayloadPath       string
 	Recursive         bool
@@ -78,6 +79,9 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
 	_ = cmd.Flags().SetAnnotation("output-signature", cobra.BashCompFilenameExt, []string{})
+	cmd.Flags().StringVar(&o.OutputPayload, "output-payload", "",
+		"write the signed payload to FILE")
+	_ = cmd.Flags().SetAnnotation("output-payload", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")

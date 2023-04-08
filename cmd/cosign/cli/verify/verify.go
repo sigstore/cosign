@@ -71,6 +71,7 @@ type VerifyCommand struct {
 	Attachment                   string
 	Annotations                  sigs.AnnotationsMap
 	SignatureRef                 string
+	PayloadRef                   string
 	HashAlgorithm                crypto.Hash
 	LocalImage                   bool
 	NameOptions                  []name.Option
@@ -120,6 +121,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
+		PayloadRef:                   c.PayloadRef,
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,

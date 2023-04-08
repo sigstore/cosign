@@ -22,7 +22,7 @@ cosign attach signature [flags]
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
   -h, --help                                                                                     help for signature
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
-      --payload string                                                                           path to the payload covered by the signature (if using another format)
+      --payload string                                                                           path to the payload covered by the signature
       --signature string                                                                         path to the signature, or {-} for stdin
 ```
 

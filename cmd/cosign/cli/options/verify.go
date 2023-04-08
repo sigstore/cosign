@@ -45,6 +45,7 @@ type VerifyOptions struct {
 	Attachment   string
 	Output       string
 	SignatureRef string
+	PayloadRef   string
 	LocalImage   bool
 
 	CommonVerifyOptions CommonVerifyOptions
@@ -84,6 +85,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
+
+	cmd.Flags().StringVar(&o.PayloadRef, "payload", "",
+		"payload path or remote URL")
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
