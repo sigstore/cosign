@@ -62,7 +62,7 @@ jobs:
       - name: creds
         run: gcloud auth configure-docker --quiet
 
-      - name: containers-cosign-sget
+      - name: containers-cosign
         run: make sign-ci-containers
         env:
           KO_PREFIX: gcr.io/projectsigstore/cosign/ci

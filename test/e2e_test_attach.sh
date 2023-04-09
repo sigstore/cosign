@@ -17,10 +17,8 @@
 set -ex
 
 go build -o cosign ./cmd/cosign
-go build -o sget ./cmd/sget
 tmp=$(mktemp -d -t cosign-e2e-attach.XXXX)
 cp cosign $tmp/
-cp sget $tmp/
 
 #copying key, cert, certchain and rootcert in temp folder
 cp ./test/testdata/test_attach_private_key $tmp/private_key

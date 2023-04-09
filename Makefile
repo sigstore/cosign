@@ -84,10 +84,6 @@ cosign: $(SRCS)
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 $(GOEXE) build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
-.PHONY: sget
-sget: ## Build sget binary
-	$(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/sget
-
 .PHONY: cross
 cross:
 	$(foreach GOOS, $(PLATFORMS),\
@@ -112,7 +108,6 @@ test:
 
 clean:
 	rm -rf cosign
-	rm -rf sget
 	rm -rf dist/
 
 KOCACHE_PATH=/tmp/ko
@@ -133,7 +128,7 @@ endef
 # ko build
 ##########
 .PHONY: ko
-ko: ko-cosign ko-sget
+ko: ko-cosign
 
 .PHONY: ko-cosign
 ko-cosign:
@@ -143,15 +138,6 @@ ko-cosign:
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
 		$(ARTIFACT_HUB_LABELS) --image-refs cosignImagerefs \
 		github.com/sigstore/cosign/v2/cmd/cosign
-
-.PHONY: ko-sget
-ko-sget:
-	# sget
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
-		--image-refs sgetImagerefs \
-		github.com/sigstore/cosign/v2/cmd/sget
 
 .PHONY: ko-local
 ko-local:
