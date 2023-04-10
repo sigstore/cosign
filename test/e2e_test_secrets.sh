@@ -17,10 +17,8 @@
 set -ex
 
 go build -o cosign ./cmd/cosign
-go build -o sget ./cmd/sget
 tmp=$(mktemp -d -t cosign-e2e-secrets.XXXX)
 cp cosign $tmp/
-cp sget $tmp/
 
 pushd $tmp
 
@@ -130,7 +128,7 @@ tail -n 1 sigs > cdr.sig
 ./cosign verify-blob --key ${verification_key} --signature car.sig myblob
 ./cosign verify-blob --key ${verification_key} --signature cdr.sig myblob2
 
-## upload blob/sget
+## upload blob
 blobimg="${TEST_INSTANCE_REPO}/blob"
 crane ls ${blobimg} | while read tag ; do crane delete "${blobimg}:${tag}" ; done
 
@@ -141,23 +139,6 @@ cat /dev/urandom | head -n 10 | base64 > randomblob
 dgst=$(./cosign upload blob -f randomblob ${blobimg})
 ./cosign sign --key ${signing_key} ${dgst}
 ./cosign verify --key ${verification_key} ${dgst} # For sanity
-
-# sget w/ signature verification should work via tag or digest
-./sget --key ${verification_key} -o verified_randomblob_from_digest $dgst
-./sget --key ${verification_key} -o verified_randomblob_from_tag $blobimg
-
-# sget w/o signature verification should only work for ref by digest
-./sget --key ${verification_key} -o randomblob_from_digest $dgst
-if (./sget -o randomblob_from_tag $blobimg); then false; fi
-
-# clean up a bit
-crane delete $blobimg || true
-crane delete $dgst || true
-
-# Make sure they're the same
-if ( ! cmp -s randomblob verified_randomblob_from_digest ); then false; fi
-if ( ! cmp -s randomblob verified_randomblob_from_tag ); then false; fi
-if ( ! cmp -s randomblob randomblob_from_digest ); then false; fi
 
 # clean up a bit
 crane delete $blobimg || true

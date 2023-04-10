@@ -25,7 +25,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -55,16 +54,13 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/upload"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
-	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/sget"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
@@ -1537,55 +1533,6 @@ func TestUploadDownload(t *testing.T) {
 			// Now delete it!
 			cleanup()
 		})
-	}
-}
-
-func TestUploadBlob(t *testing.T) {
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-	ctx := context.Background()
-
-	imgName := path.Join(repo, "/cosign-upload-e2e")
-	payload := "testpayload"
-	payloadPath := mkfile(payload, td, t)
-
-	// Upload it!
-	files := []cremote.File{cremote.FileFromFlag(payloadPath)}
-	must(upload.BlobCmd(ctx, options.RegistryOptions{}, files, nil, "", imgName), t)
-
-	// Check it
-	ref, err := name.ParseReference(imgName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Now download it with sget (this should fail by tag)
-	if err := sget.New(imgName, "", "", os.Stdout).Do(ctx); err == nil {
-		t.Error("expected download to fail")
-	}
-
-	img, err := remote.Image(ref)
-	if err != nil {
-		t.Fatal(err)
-	}
-	dgst, err := img.Digest()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	result := &bytes.Buffer{}
-
-	// But pass by digest
-	if err := sget.New(imgName+"@"+dgst.String(), "", "", result).Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-	b, err := io.ReadAll(result)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(b) != payload {
-		t.Errorf("expected contents to be %s, got %s", payload, string(b))
 	}
 }
 

@@ -4,7 +4,7 @@
 # used when releasing together with GCP CloudBuild
 .PHONY: release
 release:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --parallelism 1 --timeout 120m
+	LDFLAGS="$(LDFLAGS)" goreleaser release --parallelism 1 --clean --timeout 120m
 
 ######################
 # sign section
@@ -18,19 +18,12 @@ sign-release-images: ko
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist --timeout 120m --parallelism 1
+	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --clean --timeout 120m --parallelism 1
 
 ####################
 # copy image to GHCR
 ####################
 
-.PHONY: copy-cosign-signed-release-to-ghcr
-copy-cosign-signed-release-to-ghcr:
-	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:$(GIT_VERSION)
-
-.PHONY: copy-sget-signed-release-to-ghcr
-copy-sget-signed-release-to-ghcr:
-	cosign copy $(KO_PREFIX)/sget:$(GIT_VERSION) $(GHCR_PREFIX)/sget:$(GIT_VERSION)
-
 .PHONY: copy-signed-release-to-ghcr
-copy-signed-release-to-ghcr: copy-cosign-signed-release-to-ghcr copy-sget-signed-release-to-ghcr
+copy-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:$(GIT_VERSION)

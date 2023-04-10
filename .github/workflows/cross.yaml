@@ -25,15 +25,12 @@ jobs:
         include:
           - os: macos-latest
             COSIGN_TARGET: cosign-darwin-amd64
-            SGET_TARGET: sget-darwin-amd64
             COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: ubuntu-latest
             COSIGN_TARGET: cosign-linux-amd64
-            SGET_TARGET: sget-linux-amd64
             COSIGN_PASSWORD: COSIGN_PASSWORD
           - os: windows-latest
             COSIGN_TARGET: cosign-windows-amd64.exe
-            SGET_TARGET: sget-windows-amd64.exe
             COSIGN_PASSWORD: COSIGN_PASSWORD
     steps:
       - name: Install Go
@@ -46,14 +43,11 @@ jobs:
       - name: build cosign
         run: |
           make cosign && mv ./cosign ./${{matrix.COSIGN_TARGET}}
-          make sget && mv ./sget ./${{matrix.SGET_TARGET}}
       - name: Create checksum file
         shell: pwsh
         run: |
           $hash=Get-FileHash -Path ./${{matrix.COSIGN_TARGET}}
           Write-Output $($hash.Hash + " " + $(([io.fileinfo]$hash.path).basename)) | Tee-Object -Path ${{matrix.COSIGN_TARGET}}.sha256
-          $hash=Get-FileHash -Path ./${{matrix.SGET_TARGET}}
-          Write-Output $($hash.Hash + " " + $(([io.fileinfo]$hash.path).basename)) | Tee-Object -Path ${{matrix.SGET_TARGET}}.sha256
       - name: sign
         shell: bash
         env:
@@ -61,12 +55,10 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           ./${{matrix.COSIGN_TARGET}} sign-blob --yes --key ./.github/workflows/cosign-test.key ./${{matrix.COSIGN_TARGET}} > ${{matrix.COSIGN_TARGET}}.sig
-          ./${{matrix.COSIGN_TARGET}} sign-blob --yes --key ./.github/workflows/cosign-test.key ./${{matrix.SGET_TARGET}} > ${{matrix.SGET_TARGET}}.sig
       - name: verify
         if: github.event_name != 'pull_request'
         run: |
           ./${{matrix.COSIGN_TARGET}} verify-blob --key ./.github/workflows/cosign-test.pub --signature ${{matrix.COSIGN_TARGET}}.sig ./${{matrix.COSIGN_TARGET}}
-          ./${{matrix.COSIGN_TARGET}} verify-blob --key ./.github/workflows/cosign-test.pub --signature ${{matrix.SGET_TARGET}}.sig ./${{matrix.SGET_TARGET}}
       - name: Upload artifacts
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
@@ -76,6 +68,3 @@ jobs:
             cosign-*
             cosign.-*sha256
             cosign-*.sig
-            sget-*
-            sget.-*sha256
-            sget-*.sig
