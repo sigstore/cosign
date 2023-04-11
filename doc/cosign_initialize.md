@@ -8,7 +8,7 @@ Initializes SigStore root to retrieve trusted certificate and key targets for ve
 
 The following options are used by default:
  - The current trusted Sigstore TUF root is embedded inside cosign at the time of release.
- - SigStore remote TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
+ - SigStore remote TUF repository is pulled from the CDN mirror at tuf-repo-cdn.sigstore.dev.
 
 To provide an out-of-band trusted initial root.json, use the -root flag with a file or URL reference.
 This will enable you to point cosign to a separate TUF root.
@@ -41,7 +41,7 @@ cosign initialize -mirror <url> -root <url>
 
 ```
   -h, --help            help for initialize
-      --mirror string   GCS bucket to a SigStore TUF repository, or HTTP(S) base URL, or file:/// for local filestore remote (air-gap) (default "https://sigstore-tuf-root.storage.googleapis.com")
+      --mirror string   GCS bucket to a SigStore TUF repository, or HTTP(S) base URL, or file:/// for local filestore remote (air-gap) (default "https://tuf-repo-cdn.sigstore.dev")
       --root string     path to trusted initial root. defaults to embedded root
 ```
 

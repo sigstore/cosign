@@ -32,7 +32,7 @@ func Initialize() *cobra.Command {
 
 The following options are used by default:
  - The current trusted Sigstore TUF root is embedded inside cosign at the time of release.
- - SigStore remote TUF repository is pulled from the GCS mirror at sigstore-tuf-root.
+ - SigStore remote TUF repository is pulled from the CDN mirror at tuf-repo-cdn.sigstore.dev.
 
 To provide an out-of-band trusted initial root.json, use the -root flag with a file or URL reference.
 This will enable you to point cosign to a separate TUF root.
