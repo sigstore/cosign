@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -29,6 +30,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
+	"golang.org/x/sync/errgroup"
 )
 
 // CopyCmd implements the logic to copy the supplied container image and signatures.
@@ -48,12 +50,21 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	dstRepoRef := dstRef.Context()
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
+
+	pusher, err := remote.NewPusher(remoteOpts...)
+	if err != nil {
+		return err
+	}
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(runtime.GOMAXPROCS(0))
+
 	root, err := ociremote.SignedEntity(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
 	if err != nil {
 		return err
 	}
 
-	if err := walk.SignedEntity(ctx, root, func(ctx context.Context, se oci.SignedEntity) error {
+	if err := walk.SignedEntity(gctx, root, func(ctx context.Context, se oci.SignedEntity) error {
 		// Both of the SignedEntity types implement Digest()
 		h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
 		if err != nil {
@@ -61,28 +72,27 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		}
 		srcDigest := srcRepoRef.Digest(h.String())
 
-		// Copy signatures.
-		if err := copyTagImage(ociremote.SignatureTag, srcDigest, dstRepoRef, force, remoteOpts...); err != nil {
-			return err
-		}
-		if sigOnly {
-			return nil
-		}
+		for i, tm := range []tagMap{ociremote.SignatureTag, ociremote.AttestationTag, ociremote.SBOMTag} {
+			src, err := tm(srcDigest, ociremote.WithRemoteOptions(remoteOpts...))
+			if err != nil {
+				return err
+			}
 
-		// Copy attestations
-		if err := copyTagImage(ociremote.AttestationTag, srcDigest, dstRepoRef, force, remoteOpts...); err != nil {
-			return err
-		}
+			dst := dstRepoRef.Tag(src.Identifier())
+			g.Go(func() error {
+				return copyImage(ctx, pusher, src, dst, force, remoteOpts...)
+			})
 
-		// Copy SBOMs
-		if err := copyTagImage(ociremote.SBOMTag, srcDigest, dstRepoRef, force, remoteOpts...); err != nil {
-			return err
+			if i == 0 && sigOnly {
+				return nil
+			}
 		}
 
 		// Copy the entity itself.
-		if err := copyImage(srcDigest, dstRepoRef.Tag(srcDigest.Identifier()), force, remoteOpts...); err != nil {
-			return err
-		}
+		g.Go(func() error {
+			dst := dstRepoRef.Tag(srcDigest.Identifier())
+			return copyImage(ctx, pusher, srcDigest, dst, force, remoteOpts...)
+		})
 
 		return nil
 	}); err != nil {
@@ -92,12 +102,17 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		return nil
 	}
 
+	// Wait for everything to be copied over.
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
 	// Now that everything has been copied over, update the tag.
 	h, err := root.(interface{ Digest() (v1.Hash, error) }).Digest()
 	if err != nil {
 		return err
 	}
-	return copyImage(srcRepoRef.Digest(h.String()), dstRef, force, remoteOpts...)
+	return copyImage(ctx, pusher, srcRepoRef.Digest(h.String()), dstRef, force, remoteOpts...)
 }
 
 func descriptorsEqual(a, b *v1.Descriptor) bool {
@@ -109,15 +124,7 @@ func descriptorsEqual(a, b *v1.Descriptor) bool {
 
 type tagMap func(name.Reference, ...ociremote.Option) (name.Tag, error)
 
-func copyTagImage(tm tagMap, srcDigest name.Digest, dstRepo name.Repository, overwrite bool, opts ...remote.Option) error {
-	src, err := tm(srcDigest, ociremote.WithRemoteOptions(opts...))
-	if err != nil {
-		return err
-	}
-	return copyImage(src, dstRepo.Tag(src.Identifier()), overwrite, opts...)
-}
-
-func copyImage(src, dest name.Reference, overwrite bool, opts ...remote.Option) error {
+func copyImage(ctx context.Context, pusher *remote.Pusher, src, dest name.Reference, overwrite bool, opts ...remote.Option) error {
 	got, err := remote.Get(src, opts...)
 	if err != nil {
 		var te *transport.Error
@@ -141,17 +148,5 @@ func copyImage(src, dest name.Reference, overwrite bool, opts ...remote.Option) 
 	}
 
 	fmt.Fprintf(os.Stderr, "Copying %s to %s...\n", src, dest)
-	if got.MediaType.IsIndex() {
-		imgIdx, err := got.ImageIndex()
-		if err != nil {
-			return err
-		}
-		return remote.WriteIndex(dest, imgIdx, opts...)
-	}
-
-	img, err := got.Image()
-	if err != nil {
-		return err
-	}
-	return remote.Write(dest, img, opts...)
+	return pusher.Push(ctx, dest, got)
 }
