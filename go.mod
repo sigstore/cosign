@@ -3,7 +3,7 @@ module github.com/sigstore/cosign/v2
 go 1.19
 
 require (
-	cuelang.org/go v0.4.3
+	cuelang.org/go v0.5.0
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220228164355-396b2034c795
 	github.com/buildkite/agent/v3 v3.45.0
@@ -110,7 +110,7 @@ require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/clbanning/mxj/v2 v2.5.6 // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
-	github.com/cockroachdb/apd/v2 v2.0.1 // indirect
+	github.com/cockroachdb/apd/v2 v2.0.2 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/coreos/go-oidc/v3 v3.5.0 // indirect
@@ -124,7 +124,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
-	github.com/emicklei/proto v1.6.15 // indirect
+	github.com/emicklei/proto v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
@@ -181,6 +181,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -197,7 +198,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/protocolbuffers/txtpbfmt v0.0.0-20201118171849-f6a6b3f636fc // indirect
+	github.com/protocolbuffers/txtpbfmt v0.0.0-20220428173112-74888fd59c2b // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rs/cors v1.8.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
