@@ -930,8 +930,8 @@ go.opentelemetry.io/otel/sdk v1.14.0 h1:PDCppFRDq8A1jL9v6KMI6dYesaq+DFcDZvjsoGvx
 go.opentelemetry.io/otel/trace v1.14.0 h1:wp2Mmvj41tDsyAJXiWDWpfNsOiIyd38fy85pyKcFq/M=
 go.opentelemetry.io/otel/trace v1.14.0/go.mod h1:8avnQLK+CG77yNLUae4ea2JDQ6iT+gozhnZjy/rw9G8=
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
-go.step.sm/crypto v0.29.2 h1:ERUUkmz1/yKGLjD6XoFEy8gtmZ1IEtf4TSOfT2sUxII=
-go.step.sm/crypto v0.29.2/go.mod h1:0lYeIyQMJbFJ27L4BOGaq2gnuTgOShf+Ju/cTsMULq4=
+go.step.sm/crypto v0.29.3 h1:lFCsFQQGic1VZIa0B/87iMCDy67+LW8eEl119GTyeWI=
+go.step.sm/crypto v0.29.3/go.mod h1:0lYeIyQMJbFJ27L4BOGaq2gnuTgOShf+Ju/cTsMULq4=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.10.0 h1:9qC72Qh0+3MqyJbAn8YU5xVq1frD8bn3JtD2oXtafVQ=
 go.uber.org/atomic v1.10.0/go.mod h1:LUxbIzbOniOlMKjJjyPfpl4v+PKK2cNJn91OQbhoJI0=
