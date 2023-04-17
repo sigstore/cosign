@@ -17,7 +17,7 @@ require (
 	github.com/go-piv/piv-go v1.11.0
 	github.com/google/certificate-transparency-go v1.1.4
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-containerregistry v0.14.0
+	github.com/google/go-containerregistry v0.14.1-0.20230409045903-ed5c185df419
 	github.com/google/go-github/v50 v50.2.0
 	github.com/in-toto/in-toto-golang v0.7.1
 	github.com/kelseyhightower/envconfig v1.4.0
