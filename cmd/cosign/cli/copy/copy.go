@@ -72,7 +72,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		}
 		srcDigest := srcRepoRef.Digest(h.String())
 
-		for i, tm := range []tagMap{ociremote.SignatureTag, ociremote.AttestationTag, ociremote.SBOMTag} {
+		copyTag := func(tm tagMap) error {
 			src, err := tm(srcDigest, ociremote.WithRemoteOptions(remoteOpts...))
 			if err != nil {
 				return err
@@ -80,18 +80,29 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 
 			dst := dstRepoRef.Tag(src.Identifier())
 			g.Go(func() error {
-				return copyImage(ctx, pusher, src, dst, force, remoteOpts...)
+				return remoteCopy(ctx, pusher, src, dst, force, remoteOpts...)
 			})
 
-			if i == 0 && sigOnly {
-				return nil
+			return nil
+		}
+
+		if err := copyTag(ociremote.SignatureTag); err != nil {
+			return err
+		}
+		if sigOnly {
+			return nil
+		}
+
+		for _, tm := range []tagMap{ociremote.AttestationTag, ociremote.SBOMTag} {
+			if err := copyTag(tm); err != nil {
+				return err
 			}
 		}
 
 		// Copy the entity itself.
 		g.Go(func() error {
 			dst := dstRepoRef.Tag(srcDigest.Identifier())
-			return copyImage(ctx, pusher, srcDigest, dst, force, remoteOpts...)
+			return remoteCopy(ctx, pusher, srcDigest, dst, force, remoteOpts...)
 		})
 
 		return nil
@@ -112,7 +123,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	if err != nil {
 		return err
 	}
-	return copyImage(ctx, pusher, srcRepoRef.Digest(h.String()), dstRef, force, remoteOpts...)
+	return remoteCopy(ctx, pusher, srcRepoRef.Digest(h.String()), dstRef, force, remoteOpts...)
 }
 
 func descriptorsEqual(a, b *v1.Descriptor) bool {
@@ -124,7 +135,7 @@ func descriptorsEqual(a, b *v1.Descriptor) bool {
 
 type tagMap func(name.Reference, ...ociremote.Option) (name.Tag, error)
 
-func copyImage(ctx context.Context, pusher *remote.Pusher, src, dest name.Reference, overwrite bool, opts ...remote.Option) error {
+func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Reference, overwrite bool, opts ...remote.Option) error {
 	got, err := remote.Get(src, opts...)
 	if err != nil {
 		var te *transport.Error
