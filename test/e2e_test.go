@@ -2043,7 +2043,7 @@ func registryClientOpts(ctx context.Context) []remote.Option {
 	}
 }
 
-// If a signature has a bundle, but *not for that signature*, cosign verification should fail
+// If a signature has a bundle, but *not for that signature*, cosign verification should fail.
 // This test is pretty long, so here are the basic points:
 //  1. Sign image1 with a keypair, store entry in rekor
 //  2. Sign image2 with keypair, DO NOT store entry in rekor
