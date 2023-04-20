@@ -51,7 +51,7 @@ crane cp ghcr.io/distroless/alpine-base $multiarch_img
 # `initialize`
 ./cosign initialize
 
-## Generate (also test output redirection
+## Generate (also test output redirection)
 ./cosign generate $img > payload1
 ./cosign generate --output-file=payload2 $img
 diff payload1 payload2
