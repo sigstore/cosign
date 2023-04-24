@@ -18,7 +18,13 @@ set -ex
 
 echo "copying rekor repo"
 pushd $HOME
-git clone https://github.com/sigstore/rekor.git
+if [[ ! -d rekor ]]; then
+   git clone https://github.com/sigstore/rekor.git
+else
+   pushd rekor
+   git pull
+   popd
+fi
 cd rekor
 
 echo "starting services"
