@@ -39,17 +39,17 @@ cosign attest-blob [flags]
       --identity-token string             identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify              skip verifying fulcio published to the SCT (this should only be used for testing).
       --key string                        path to the private key file, KMS URI or Kubernetes Secret
-      --oidc-client-id string             [EXPERIMENTAL] OIDC client ID for application (default "sigstore")
-      --oidc-client-secret-file string    [EXPERIMENTAL] Path to file containing OIDC client secret for application
-      --oidc-disable-ambient-providers    [EXPERIMENTAL] Disable ambient OIDC providers. When true, ambient credentials will not be read
-      --oidc-issuer string                [EXPERIMENTAL] OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
-      --oidc-provider string              [EXPERIMENTAL] Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem, buildkite-agent]
-      --oidc-redirect-url string          [EXPERIMENTAL] OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
+      --oidc-client-id string             OIDC client ID for application (default "sigstore")
+      --oidc-client-secret-file string    Path to file containing OIDC client secret for application
+      --oidc-disable-ambient-providers    Disable ambient OIDC providers. When true, ambient credentials will not be read
+      --oidc-issuer string                OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
+      --oidc-provider string              Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem, buildkite-agent]
+      --oidc-redirect-url string          OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --output-attestation string         write the attestation to FILE
       --output-certificate string         write the certificate to FILE
       --output-signature string           write the signature to FILE
       --predicate string                  path to the predicate file.
-      --rekor-url string                  [EXPERIMENTAL] address of rekor STL server (default "https://rekor.sigstore.dev")
+      --rekor-url string                  address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
       --sk                                whether to use a hardware security key
       --slot string                       security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
