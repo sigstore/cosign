@@ -306,6 +306,7 @@ Today, `cosign` has been tested and works against the following registries:
 * Elastic Container Registry
 * IBM Cloud Container Registry
 * Cloudsmith Container Registry
+* The CNCF zot Registry
 
 We aim for wide registry support. To `sign` images in registries which do not yet fully support [OCI media types](https://github.com/sigstore/cosign/blob/main/SPEC.md#object-types), one may need to use `COSIGN_DOCKER_MEDIA_TYPES` to fall back to legacy equivalents. For example:
 
