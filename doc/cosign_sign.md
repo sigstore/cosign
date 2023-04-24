@@ -73,10 +73,10 @@ cosign sign [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --certificate string                                                                       path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
-      --fulcio-url string                                                                        [EXPERIMENTAL] address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+      --fulcio-url string                                                                        address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign
-      --identity-token string                                                                    [EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
-      --insecure-skip-verify                                                                     [EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).
+      --identity-token string                                                                    identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
+      --insecure-skip-verify                                                                     skip verifying fulcio published to the SCT (this should only be used for testing).
       --issue-certificate                                                                        issue a code signing certificate from Fulcio, even if a key is provided
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret

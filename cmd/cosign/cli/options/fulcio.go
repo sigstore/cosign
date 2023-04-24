@@ -34,11 +34,11 @@ var _ Interface = (*FulcioOptions)(nil)
 func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 	// TODO: change this back to api.SigstorePublicServerURL after the v1 migration is complete.
 	cmd.Flags().StringVar(&o.URL, "fulcio-url", DefaultFulcioURL,
-		"[EXPERIMENTAL] address of sigstore PKI server")
+		"address of sigstore PKI server")
 
 	cmd.Flags().StringVar(&o.IdentityToken, "identity-token", "",
-		"[EXPERIMENTAL] identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.")
+		"identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.")
 
 	cmd.Flags().BoolVar(&o.InsecureSkipFulcioVerify, "insecure-skip-verify", false,
-		"[EXPERIMENTAL] skip verifying fulcio published to the SCT (this should only be used for testing).")
+		"skip verifying fulcio published to the SCT (this should only be used for testing).")
 }
