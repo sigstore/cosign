@@ -1,3 +1,39 @@
+# v2.0.2
+
+## Enhancements
+
+* Update sigstore/sigstore to v1.6.2 to pick up TUF CDN change (#2891)
+* feat: Make cosign copy faster (#2901)
+* remove sget (#2885)
+* Require a payload to be provided with a signature (#2785)
+
+## Bug Fixes
+
+* cmd: Change error message from KeyParseError to PubKeyParseError for verify-blob. (#2876)
+* Use `SOURCE_DATE_EPOCH` for OCI CreatedAt times (#2878)
+
+## Documentation
+
+* Remove experimental warning from Fulcio flags (#2923)
+* add missing oidc provider (#2922)
+* Add zot as a supported registry (#2920)
+* deprecates `kms_support` docs (#2900)
+* chore(docs) deprecate note for usage docs (#2906)
+* adds note of deprecation for examples.md docs (#2899)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior
+* Chris Burns
+* Dmitry Savintsev
+* eiffel-fl
+* Hayden B
+* Hector Fernandez
+* Jon Johnson
+* Miloslav Trmač
+* priyawadhwa
+* Ramkumar Chinchani
+
 # v2.0.1
 
 ## Enhancements
