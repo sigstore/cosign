@@ -38,6 +38,10 @@ cosign verify [flags]
   # verify image with local certificate and certificate chain
   cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
+  # verify image using keyless verification with the given certificate
+  # chain and identity parameters, without Fulcio roots (fro BYO PKI):
+  cosign verify --cert-chain chain.crt --certificate-oidc-issuer https://issuer.example.com --certificate-identity foo@example.com <IMAGE>
+
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
 
