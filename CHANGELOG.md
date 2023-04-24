@@ -23,6 +23,17 @@
 
 ## Contributors
 
+* Carlos Tadeu Panato Junior
+* Chris Burns
+* Dmitry Savintsev
+* eiffel-fl
+* Hayden B
+* Hector Fernandez
+* Jon Johnson
+* Miloslav Trmač
+* priyawadhwa
+* Ramkumar Chinchani
+
 # v2.0.1
 
 ## Enhancements
