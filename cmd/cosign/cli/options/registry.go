@@ -111,6 +111,19 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 	if o.AllowInsecure {
 		opts = append(opts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
 	}
+
+	// Reuse a remote.Pusher and a remote.Puller for all operations that use these opts.
+	// This allows us to avoid re-authenticating for everying remote.Function we call,
+	// which speeds things up a whole lot.
+	pusher, err := remote.NewPusher(opts...)
+	if err == nil {
+		opts = append(opts, remote.Reuse(pusher))
+	}
+	puller, err := remote.NewPuller(opts...)
+	if err == nil {
+		opts = append(opts, remote.Reuse(puller))
+	}
+
 	return opts
 }
 
