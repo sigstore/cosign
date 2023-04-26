@@ -117,9 +117,6 @@ jobs:
           kind create cluster
 
       - name: Run end-to-end tests
-        env:
-          # See #2091 for the issue describing this temp workaround.
-          GODEBUG: x509sha1=1
         run: ./test/e2e_test.sh
 
       - name: Collect diagnostics
