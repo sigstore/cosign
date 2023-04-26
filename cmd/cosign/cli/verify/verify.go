@@ -271,7 +271,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 
 	// NB: There are only 2 kinds of verification right now:
 	// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
-	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
+	// 2. We’re going to find an x509 certificate on the signature and verify against
+	//    Fulcio root trust (or user supplied root trust)
 	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
 	// was performed so we don't need to use this fragile logic here.
 	fulcioVerified := (co.SigVerifier == nil)
