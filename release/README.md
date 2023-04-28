@@ -4,7 +4,7 @@ This directory contain the files and scripts to run a cosign release.
 
 # Cutting a Cosign Release
 
-1. Release notes: Create a PR to update and review release notes in CHANGELOG.md. 
+1. Release notes: Create a PR to update and review release notes in CHANGELOG.md.
 
 Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
 
