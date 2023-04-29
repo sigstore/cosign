@@ -21,8 +21,6 @@ Cosign supports:
 * Container Signing, Verification and Storage in an OCI registry.
 * Bring-your-own PKI
 
-![intro](images/intro.gif)
-
 ## Info
 
 `Cosign` is developed as part of the [`sigstore`](https://sigstore.dev) project.
