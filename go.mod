@@ -27,7 +27,7 @@ require (
 	github.com/open-policy-agent/opa v0.52.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.5.0
-	github.com/sigstore/fulcio v1.2.0
+	github.com/sigstore/fulcio v1.3.0
 	github.com/sigstore/rekor v1.1.0
 	github.com/sigstore/sigstore v1.6.3
 	github.com/sigstore/timestamp-authority v1.0.0
