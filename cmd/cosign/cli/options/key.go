@@ -33,6 +33,10 @@ type KeyOpts struct {
 	OIDCProvider         string // Specify which OIDC credential provider to use for keyless signer
 	BundlePath           string
 	SkipConfirmation     bool
+	TSAClientCACert      string
+	TSAClientCert        string
+	TSAClientKey         string
+	TSAServerName        string // expected SAN field in the TSA server's certificate - https://pkg.go.dev/crypto/tls#Config.ServerName
 	TSAServerURL         string
 	RFC3161TimestampPath string
 	TSACertChainPath     string

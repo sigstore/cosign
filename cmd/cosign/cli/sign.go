@@ -113,6 +113,10 @@ race conditions or (worse) malicious tampering.
 				OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
 				OIDCProvider:                   o.OIDC.Provider,
 				SkipConfirmation:               o.SkipConfirmation,
+				TSAClientCACert:                o.TSAClientCACert,
+				TSAClientCert:                  o.TSAClientCert,
+				TSAClientKey:                   o.TSAClientKey,
+				TSAServerName:                  o.TSAServerName,
 				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
 			}
