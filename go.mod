@@ -43,7 +43,7 @@ require (
 	go.step.sm/crypto v0.29.3
 	golang.org/x/crypto v0.8.0
 	golang.org/x/oauth2 v0.7.0
-	golang.org/x/sync v0.1.0
+	golang.org/x/sync v0.2.0
 	golang.org/x/term v0.8.0
 	google.golang.org/api v0.120.0
 	k8s.io/api v0.26.3
