@@ -163,8 +163,21 @@ func TestSignEntity(t *testing.T) {
 	}
 	sii := signed.ImageIndex(ii)
 
+	// Create an explicitly unknown implementation of oci.SignedEntity, which we
+	// feed through the table tests below.
+	want := make([]byte, 300)
+	rand.Read(want)
+	orig, err := static.NewFile(want)
+	if err != nil {
+		t.Fatalf("static.NewFile() = %v", err)
+	}
+	sunk, err := AttachFileToUnknown(sii, "sbom", orig)
+	if err != nil {
+		t.Fatalf("AttachFileToUnknown() = %v", err)
+	}
+
 	t.Run("attach SBOMs", func(t *testing.T) {
-		for _, se := range []oci.SignedEntity{si, sii} {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
 			want := make([]byte, 300)
 			rand.Read(want)
 
@@ -197,7 +210,7 @@ func TestSignEntity(t *testing.T) {
 	})
 
 	t.Run("without duplicate detector (signature)", func(t *testing.T) {
-		for _, se := range []oci.SignedEntity{si, sii} {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
 			orig, err := static.NewSignature(nil, "")
 			if err != nil {
 				t.Fatalf("static.NewSignature() = %v", err)
@@ -232,7 +245,7 @@ func TestSignEntity(t *testing.T) {
 	})
 
 	t.Run("without duplicate detector (attestation)", func(t *testing.T) {
-		for _, se := range []oci.SignedEntity{si, sii} {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
 			orig, err := static.NewAttestation([]byte("payload"))
 			if err != nil {
 				t.Fatalf("static.NewAttestation() = %v", err)
@@ -267,7 +280,7 @@ func TestSignEntity(t *testing.T) {
 	})
 
 	t.Run("with duplicate detector (signature)", func(t *testing.T) {
-		for _, se := range []oci.SignedEntity{si, sii} {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
 			orig, err := static.NewSignature(nil, "")
 			if err != nil {
 				t.Fatalf("static.NewSignature() = %v", err)
@@ -306,7 +319,7 @@ func TestSignEntity(t *testing.T) {
 	})
 
 	t.Run("with duplicate detector (attestation)", func(t *testing.T) {
-		for _, se := range []oci.SignedEntity{si, sii} {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
 			orig, err := static.NewAttestation([]byte("blah"))
 			if err != nil {
 				t.Fatalf("static.NewAttestation() = %v", err)
@@ -345,7 +358,7 @@ func TestSignEntity(t *testing.T) {
 	})
 
 	t.Run("with erroring duplicate detector (signature)", func(t *testing.T) {
-		for _, se := range []oci.SignedEntity{si, sii} {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
 			orig, err := static.NewSignature(nil, "")
 			if err != nil {
 				t.Fatalf("static.NewSignature() = %v", err)
@@ -379,7 +392,7 @@ func TestSignEntity(t *testing.T) {
 	})
 
 	t.Run("with erroring duplicate detector (attestation)", func(t *testing.T) {
-		for _, se := range []oci.SignedEntity{si, sii} {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
 			orig, err := static.NewAttestation([]byte("blah"))
 			if err != nil {
 				t.Fatalf("static.NewAttestation() = %v", err)

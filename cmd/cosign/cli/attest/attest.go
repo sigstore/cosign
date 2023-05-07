@@ -214,10 +214,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return err
 	}
 
-	se, err := ociremote.SignedEntity(digest, ociremoteOpts...)
-	if err != nil {
-		return err
-	}
+	// We don't actually need to access the remote entity to attach things to it
+	// so we use a placeholder here.
+	se := ociremote.SignedUnknown(digest)
 
 	signOpts := []mutate.SignOption{
 		mutate.WithDupeDetector(dd),
