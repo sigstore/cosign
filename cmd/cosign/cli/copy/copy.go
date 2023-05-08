@@ -66,7 +66,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 
 	if err := walk.SignedEntity(gctx, root, func(ctx context.Context, se oci.SignedEntity) error {
 		// Both of the SignedEntity types implement Digest()
-		h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
+		h, err := se.Digest()
 		if err != nil {
 			return err
 		}
@@ -119,7 +119,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}
 
 	// Now that everything has been copied over, update the tag.
-	h, err := root.(interface{ Digest() (v1.Hash, error) }).Digest()
+	h, err := root.Digest()
 	if err != nil {
 		return err
 	}
