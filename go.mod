@@ -30,7 +30,7 @@ require (
 	github.com/sigstore/fulcio v1.3.1
 	github.com/sigstore/rekor v1.1.1
 	github.com/sigstore/sigstore v1.6.4
-	github.com/sigstore/timestamp-authority v1.1.0
+	github.com/sigstore/timestamp-authority v1.1.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
@@ -194,7 +194,7 @@ require (
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.15.0 // indirect
+	github.com/prometheus/client_golang v1.15.1 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
