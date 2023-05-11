@@ -34,7 +34,8 @@ func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
 	img, err := remoteImage(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) {
-		if te.StatusCode != http.StatusNotFound {
+		// some Docker registries may return 403 for non-existing tags that start with "sha256"
+		if te.StatusCode != http.StatusNotFound && te.StatusCode != http.StatusForbidden {
 			return nil, te
 		}
 		return empty.Signatures(), nil

@@ -32,6 +32,24 @@ func TestSignaturesErrors(t *testing.T) {
 		remoteImage = ri
 	})
 
+	t.Run("403 returns empty", func(t *testing.T) {
+		remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+			return nil, &transport.Error{
+				StatusCode: http.StatusForbidden,
+			}
+		}
+
+		sigs, err := Signatures(name.MustParseReference("gcr.io/distroless/static:sha256-deadbeef.sig"))
+		if err != nil {
+			t.Fatalf("Signatures() = %v", err)
+		}
+		if sl, err := sigs.Get(); err != nil {
+			t.Fatalf("Get() = %v", err)
+		} else if len(sl) != 0 {
+			t.Fatalf("len(Get()) = %d, wanted 0", len(sl))
+		}
+	})
+
 	t.Run("404 returns empty", func(t *testing.T) {
 		remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
 			return nil, &transport.Error{
