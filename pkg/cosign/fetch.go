@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"golang.org/x/sync/errgroup"
 )
@@ -121,12 +123,15 @@ func FetchSignaturesForReference(_ context.Context, ref name.Reference, opts ...
 }
 
 func FetchAttestationsForReference(_ context.Context, ref name.Reference, predicateType string, opts ...ociremote.Option) ([]AttestationPayload, error) {
-	simg, err := ociremote.SignedEntity(ref, opts...)
+	se, err := ociremote.SignedEntity(ref, opts...)
 	if err != nil {
 		return nil, err
 	}
+	return FetchAttestations(se, predicateType)
+}
 
-	atts, err := simg.Attestations()
+func FetchAttestations(se oci.SignedEntity, predicateType string) ([]AttestationPayload, error) {
+	atts, err := se.Attestations()
 	if err != nil {
 		return nil, fmt.Errorf("remote image: %w", err)
 	}
@@ -135,7 +140,7 @@ func FetchAttestationsForReference(_ context.Context, ref name.Reference, predic
 		return nil, fmt.Errorf("fetching attestations: %w", err)
 	}
 	if len(l) == 0 {
-		return nil, fmt.Errorf("no attestations associated with %s", ref)
+		return nil, errors.New("found no attestations")
 	}
 
 	attestations := make([]AttestationPayload, 0, len(l))
