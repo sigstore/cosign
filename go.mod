@@ -50,7 +50,7 @@ require (
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.25.4
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
-	sigs.k8s.io/release-utils v0.7.3
+	sigs.k8s.io/release-utils v0.7.4
 )
 
 require (
