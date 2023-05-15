@@ -70,7 +70,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 
 		platforms = matchPlatform(targetPlatform, platforms)
 		if len(platforms) == 0 {
-			return fmt.Errorf("unable to find an SBOM for %s", targetPlatform.String())
+			return fmt.Errorf("unable to find an attestation for %s", targetPlatform.String())
 		}
 		if len(platforms) > 1 {
 			return fmt.Errorf(
