@@ -61,6 +61,9 @@ cosign sign [flags]
 
   # sign a container image and skip uploading to the transparency log
   cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
+
+  # sign a container image by manually setting the container image identity
+  cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>
 ```
 
 ### Options
@@ -93,6 +96,7 @@ cosign sign [flags]
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --registry-referrers-mode registryReferrersMode                                            mode for fetching references from the registry. allowed: legacy, oci-1-1
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
+      --sign-container-identity string                                                           manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr

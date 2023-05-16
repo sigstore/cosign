@@ -221,8 +221,9 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	// The payload can be passed to skip generation.
 	if len(payload) == 0 {
 		payload, err = (&sigPayload.Cosign{
-			Image:       digest,
-			Annotations: annotations,
+			Image:           digest,
+			ClaimedIdentity: signOpts.SignContainerIdentity,
+			Annotations:     annotations,
 		}).MarshalJSON()
 		if err != nil {
 			return fmt.Errorf("payload: %w", err)

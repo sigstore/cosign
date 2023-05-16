@@ -31,7 +31,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0
 	github.com/sigstore/fulcio v1.3.1
 	github.com/sigstore/rekor v1.2.1
-	github.com/sigstore/sigstore v1.6.5
+	github.com/sigstore/sigstore v1.6.6-0.20230602075123-c74dd4383337
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.6.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.6.5
