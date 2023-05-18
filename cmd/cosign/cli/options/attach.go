@@ -129,3 +129,38 @@ func (o *AttachAttestationOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVarP(&o.Attestations, "attestation", "", nil,
 		"path to the attestation envelope")
 }
+
+// AttachRekorOptions is the top level wrapper for the attach rekor command.
+type AttachRekorOptions struct {
+	RekorURL  string
+	Signature string
+	Payload   string
+	Cert      string
+	CertChain string
+	Registry  RegistryOptions
+}
+
+var _ Interface = (*AttachRekorOptions)(nil)
+
+// AddFlags implements Interface
+func (o *AttachRekorOptions) AddFlags(cmd *cobra.Command) {
+	o.Registry.AddFlags(cmd)
+
+	cmd.Flags().StringVar(&o.RekorURL, "rekor-url", "",
+		"path to the rekor-url, or {-} for stdin")
+
+	cmd.Flags().StringVar(&o.Signature, "signature", "",
+		"path to the signature, or {-} for stdin")
+
+	cmd.Flags().StringVar(&o.Payload, "payload", "",
+		"path to the payload covered by the signature")
+
+	cmd.Flags().StringVar(&o.Cert, "certificate", "",
+		"path to the X.509 certificate in PEM format to include in the OCI Signature")
+
+	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
+		"path to a list of CA X.509 certificates in PEM format which will be needed "+
+			"when building the certificate chain for the signing certificate. "+
+			"Must start with the parent intermediate CA certificate of the "+
+			"signing certificate and end with the root certificate. Included in the OCI Signature")
+}

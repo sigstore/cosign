@@ -34,6 +34,7 @@ func Attach() *cobra.Command {
 		attachSignature(),
 		attachSBOM(),
 		attachAttestation(),
+		attachRekorBundle(),
 	)
 
 	return cmd
@@ -102,6 +103,25 @@ func attachAttestation() *cobra.Command {
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attach.AttestationCmd(cmd.Context(), o.Registry, o.Attestations, args[0])
+		},
+	}
+
+	o.AddFlags(cmd)
+
+	return cmd
+}
+
+func attachRekorBundle() *cobra.Command {
+	o := &options.AttachRekorOptions{}
+
+	cmd := &cobra.Command{
+		Use:              "rekor",
+		Short:            "Attach rekor bundles to the supplied container image",
+		Example:          "  cosign attach rekor <image uri>",
+		PersistentPreRun: options.BindViper,
+		Args:             cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return attach.RekorCmd(cmd.Context(), o.Registry, o.RekorURL, o.Signature, o.Payload, o.Cert, o.CertChain, args[0])
 		},
 	}
 
