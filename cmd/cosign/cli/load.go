@@ -17,12 +17,16 @@ package cli
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/oci/layout"
-	"github.com/sigstore/cosign/v2/pkg/oci/remote"
+
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/spf13/cobra"
 )
 
@@ -45,16 +49,25 @@ func Load() *cobra.Command {
 	return cmd
 }
 
-func LoadCmd(_ context.Context, opts options.LoadOptions, imageRef string) error {
+func LoadCmd(ctx context.Context, opts options.LoadOptions, imageRef string) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return fmt.Errorf("parsing image name %s: %w", imageRef, err)
 	}
 
+	remoteOpts := []remote.Option{
+		remote.WithContext(ctx),
+		remote.WithUserAgent(options.UserAgent()),
+	}
 	// get the signed image from disk
 	sii, err := layout.SignedImageIndex(opts.Directory)
 	if err != nil {
 		return fmt.Errorf("signed image index: %w", err)
 	}
-	return remote.WriteSignedImageIndexImages(ref, sii)
+
+	if opts.AllowInsecure {
+		remoteOpts = append(remoteOpts, remote.WithTransport(&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}})) // #nosec G402
+	}
+
+	return ociremote.WriteSignedImageIndexImages(ref, sii, ociremote.WithRemoteOptions(remoteOpts...))
 }

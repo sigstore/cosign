@@ -19,8 +19,9 @@ cosign load [flags]
 ### Options
 
 ```
-      --dir string   path to directory where the signed image is stored on disk
-  -h, --help         help for load
+      --allow-insecure-registry   whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
+      --dir string                path to directory where the signed image is stored on disk
+  -h, --help                      help for load
 ```
 
 ### Options inherited from parent commands
