@@ -47,7 +47,7 @@ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
 
 ## Sign with Leafcert Private Key
 openssl dgst -sha256 -sign ./private_key -out payload.sig payload.json
-## Generate TSR for the signature 
+## Generate TSR for the signature
 openssl ts -query -data payload.sig -sha256 -cert -out payload.tsq
 curl -H "Content-Type: application/timestamp-query" --data-binary '@payload.tsq' https://freetsa.org/tsr > payload.tsr
 
