@@ -19,8 +19,12 @@ cosign load [flags]
 ### Options
 
 ```
-      --dir string   path to directory where the signed image is stored on disk
-  -h, --help         help for load
+      --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
+      --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
+      --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --dir string                                                                               path to directory where the signed image is stored on disk
+  -h, --help                                                                                     help for load
+      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
 ```
 
 ### Options inherited from parent commands
