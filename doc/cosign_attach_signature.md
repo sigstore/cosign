@@ -24,6 +24,7 @@ cosign attach signature [flags]
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --payload string                                                                           path to the payload covered by the signature
       --signature string                                                                         path to the signature, or {-} for stdin
+      --timeStampedSignatureResponse string                                                      path to the Time Stamped Signature Response from RFC3161 compliant TSA
 ```
 
 ### Options inherited from parent commands

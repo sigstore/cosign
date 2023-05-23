@@ -25,6 +25,7 @@ cp ./test/testdata/test_attach_private_key $tmp/private_key
 cp ./test/testdata/test_attach_leafcert.pem $tmp/leafcert.pem
 cp ./test/testdata/test_attach_certchain.pem $tmp/certchain.pem
 cp ./test/testdata/test_attach_rootcert.pem $tmp/rootcert.pem
+cp ./test/testdata/test_attach_freetsacacert.pem $tmp/freetsacacert.pem
 
 pushd $tmp
 
@@ -46,6 +47,10 @@ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
 
 ## Sign with Leafcert Private Key
 openssl dgst -sha256 -sign ./private_key -out payload.sig payload.json
+## Generate TSR for the signature 
+openssl ts -query -data payload.sig -sha256 -cert -out payload.tsq
+curl -H "Content-Type: application/timestamp-query" --data-binary '@payload.tsq' https://freetsa.org/tsr > payload.tsr
+
 cat payload.sig | base64 > payloadbase64.sig
 
 
@@ -58,18 +63,19 @@ echo "Payload: $PAYLOAD"
 
 
 ## Attach Signature, payload, cert and cert-chain
-./cosign attach signature --signature ./payloadbase64.sig --payload ./payload.json --cert ./leafcert.pem --cert-chain ./certchain.pem $IMAGE_URI_DIGEST
+./cosign attach signature --signature ./payloadbase64.sig --payload ./payload.json --cert ./leafcert.pem --cert-chain ./certchain.pem --timeStampedSignatureResponse ./payload.tsr $IMAGE_URI_DIGEST
 
 
 ## confirm manifest conatins annotation for cert and cert chain
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "application/vnd.oci.image.config.v1+json"
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/certificate"
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/chain"
+crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/rfc3161timestamp"
 
 ## Verify Signature, payload, cert and cert-chain using SIGSTORE_ROOT_FILE
 
 export SIGSTORE_ROOT_FILE=./rootcert.pem
-./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-skip-tlog-verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*'
+./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' --timestamp-certificate-chain ./freetsacacert.pem
 
 
 # clean up a bit
