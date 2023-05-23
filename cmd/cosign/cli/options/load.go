@@ -21,19 +21,17 @@ import (
 
 // LoadOptions is the top level wrapper for the load command.
 type LoadOptions struct {
-	Directory     string
-	AllowInsecure bool
+	Directory string
+	Registry  RegistryOptions
 }
 
 var _ Interface = (*LoadOptions)(nil)
 
 // AddFlags implements Interface
 func (o *LoadOptions) AddFlags(cmd *cobra.Command) {
+	o.Registry.AddFlags(cmd)
 	cmd.Flags().StringVar(&o.Directory, "dir", "",
 		"path to directory where the signed image is stored on disk")
 	_ = cmd.Flags().SetAnnotation("dir", cobra.BashCompSubdirsInDir, []string{})
 	_ = cmd.MarkFlagRequired("dir")
-
-	cmd.Flags().BoolVar(&o.AllowInsecure, "allow-insecure-registry", false,
-		"whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing")
 }
