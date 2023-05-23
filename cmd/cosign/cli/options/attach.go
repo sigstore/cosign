@@ -27,12 +27,12 @@ import (
 
 // AttachSignatureOptions is the top level wrapper for the attach signature command.
 type AttachSignatureOptions struct {
-	Signature string
-	Payload   string
-	Cert      string
-	CertChain string
+	Signature      string
+	Payload        string
+	Cert           string
+	CertChain      string
 	TimeStampedSig string
-	Registry  RegistryOptions
+	Registry       RegistryOptions
 }
 
 var _ Interface = (*AttachSignatureOptions)(nil)
