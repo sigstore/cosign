@@ -26,6 +26,7 @@ import (
 
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/templates"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 )
 
@@ -87,6 +88,8 @@ func New() *cobra.Command {
 		},
 	}
 	ro.AddFlags(cmd)
+
+	templates.SetCustomUsage(cmd)
 
 	// Add sub-commands.
 	cmd.AddCommand(Attach())
