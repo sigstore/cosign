@@ -17,7 +17,7 @@ type templater struct {
 	RootCmd       *cobra.Command
 }
 
-func SetCustomUsage(cmd *cobra.Command) {
+func SetCustomUsageFunc(cmd *cobra.Command) {
 	if cmd == nil {
 		panic("nil root command")
 	}

@@ -89,7 +89,7 @@ func New() *cobra.Command {
 	}
 	ro.AddFlags(cmd)
 
-	templates.SetCustomUsage(cmd)
+	templates.SetCustomUsageFunc(cmd)
 
 	// Add sub-commands.
 	cmd.AddCommand(Attach())
