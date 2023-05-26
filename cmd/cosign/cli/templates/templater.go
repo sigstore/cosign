@@ -3,8 +3,8 @@ package templates
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/templates/term"
@@ -21,14 +21,15 @@ func SetCustomUsage(cmd *cobra.Command) {
 	if cmd == nil {
 		panic("nil root command")
 	}
-	templater := &templater{
+	t := &templater{
 		RootCmd:       cmd,
 		UsageTemplate: MainUsageTemplate(),
 	}
-	cmd.SetUsageFunc(templater.UsageFunc())
+
+	cmd.SetUsageFunc(t.UsageFunc())
 }
 
-func (templater *templater) UsageFunc(exposedFlags ...string) func(*cobra.Command) error {
+func (templater *templater) UsageFunc() func(*cobra.Command) error {
 	return func(c *cobra.Command) error {
 		t := template.New("usage")
 		t.Funcs(templater.templateFuncs())
