@@ -49,6 +49,11 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}
 	dstRepoRef := dstRef.Context()
 
+	ociRemoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return err
+	}
+
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
 
 	pusher, err := remote.NewPusher(remoteOpts...)
@@ -56,10 +61,12 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		return err
 	}
 
+	ociRemoteOpts = append(ociRemoteOpts, ociremote.WithRemoteOptions(remoteOpts...))
+
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(runtime.GOMAXPROCS(0))
 
-	root, err := ociremote.SignedEntity(srcRef, ociremote.WithRemoteOptions(remoteOpts...))
+	root, err := ociremote.SignedEntity(srcRef, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -73,7 +80,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		srcDigest := srcRepoRef.Digest(h.String())
 
 		copyTag := func(tm tagMap) error {
-			src, err := tm(srcDigest, ociremote.WithRemoteOptions(remoteOpts...))
+			src, err := tm(srcDigest, ociRemoteOpts...)
 			if err != nil {
 				return err
 			}
