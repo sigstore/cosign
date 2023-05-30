@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
+	"github.com/go-openapi/runtime"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/sigstore/pkg/tuf"
 
@@ -53,6 +54,12 @@ import (
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	rekor_types "github.com/sigstore/rekor/pkg/types"
+	dsse_v001 "github.com/sigstore/rekor/pkg/types/dsse/v0.0.1"
+	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
+	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	intoto_v002 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
+	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -1130,155 +1137,80 @@ func comparePublicKey(bundleBody string, sig oci.Signature, co *CheckOpts) error
 	return nil
 }
 
-func bundleHash(bundleBody, signature string) (string, string, error) {
-	var toto models.Intoto
-	var rekord models.Rekord
-	var hrekord models.Hashedrekord
-	var intotoObj models.IntotoV001Schema
-	var rekordObj models.RekordV001Schema
-	var hrekordObj models.HashedrekordV001Schema
+func extractEntryImpl(bundleBody string) (rekor_types.EntryImpl, error) {
+	pe, err := models.UnmarshalProposedEntry(base64.NewDecoder(base64.StdEncoding, strings.NewReader(bundleBody)), runtime.JSONConsumer())
+	if err != nil {
+		return nil, err
+	}
 
-	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
+	return rekor_types.UnmarshalEntry(pe)
+}
+
+func bundleHash(bundleBody, _ string) (string, string, error) {
+	ei, err := extractEntryImpl(bundleBody)
 	if err != nil {
 		return "", "", err
 	}
 
-	// The fact that there's no signature (or empty rather), implies
-	// that this is an Attestation that we're verifying.
-	if len(signature) == 0 {
-		err = json.Unmarshal(bodyDecoded, &toto)
-		if err != nil {
-			return "", "", err
-		}
-
-		specMarshal, err := json.Marshal(toto.Spec)
-		if err != nil {
-			return "", "", err
-		}
-		err = json.Unmarshal(specMarshal, &intotoObj)
-		if err != nil {
-			return "", "", err
-		}
-
-		return *intotoObj.Content.Hash.Algorithm, *intotoObj.Content.Hash.Value, nil
+	switch entry := ei.(type) {
+	case *dsse_v001.V001Entry:
+		return *entry.DSSEObj.EnvelopeHash.Algorithm, *entry.DSSEObj.EnvelopeHash.Value, nil
+	case *hashedrekord_v001.V001Entry:
+		return *entry.HashedRekordObj.Data.Hash.Algorithm, *entry.HashedRekordObj.Data.Hash.Value, nil
+	case *intoto_v001.V001Entry:
+		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+	case *intoto_v002.V002Entry:
+		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+	case *rekord_v001.V001Entry:
+		return *entry.RekordObj.Data.Hash.Algorithm, *entry.RekordObj.Data.Hash.Value, nil
+	default:
+		return "", "", errors.New("unsupported type")
 	}
-
-	if err := json.Unmarshal(bodyDecoded, &rekord); err == nil {
-		specMarshal, err := json.Marshal(rekord.Spec)
-		if err != nil {
-			return "", "", err
-		}
-		err = json.Unmarshal(specMarshal, &rekordObj)
-		if err != nil {
-			return "", "", err
-		}
-		return *rekordObj.Data.Hash.Algorithm, *rekordObj.Data.Hash.Value, nil
-	}
-
-	// Try hashedRekordObj
-	err = json.Unmarshal(bodyDecoded, &hrekord)
-	if err != nil {
-		return "", "", err
-	}
-	specMarshal, err := json.Marshal(hrekord.Spec)
-	if err != nil {
-		return "", "", err
-	}
-	err = json.Unmarshal(specMarshal, &hrekordObj)
-	if err != nil {
-		return "", "", err
-	}
-	return *hrekordObj.Data.Hash.Algorithm, *hrekordObj.Data.Hash.Value, nil
 }
 
 // bundleSig extracts the signature from the rekor bundle body
 func bundleSig(bundleBody string) (string, error) {
-	var rekord models.Rekord
-	var hrekord models.Hashedrekord
-	var rekordObj models.RekordV001Schema
-	var hrekordObj models.HashedrekordV001Schema
-
-	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
-	if err != nil {
-		return "", fmt.Errorf("decoding bundleBody: %w", err)
-	}
-
-	// Try Rekord
-	if err := json.Unmarshal(bodyDecoded, &rekord); err == nil {
-		specMarshal, err := json.Marshal(rekord.Spec)
-		if err != nil {
-			return "", err
-		}
-		if err := json.Unmarshal(specMarshal, &rekordObj); err != nil {
-			return "", err
-		}
-		return rekordObj.Signature.Content.String(), nil
-	}
-
-	// Try hashedRekordObj
-	if err := json.Unmarshal(bodyDecoded, &hrekord); err != nil {
-		return "", err
-	}
-	specMarshal, err := json.Marshal(hrekord.Spec)
+	ei, err := extractEntryImpl(bundleBody)
 	if err != nil {
 		return "", err
 	}
-	if err := json.Unmarshal(specMarshal, &hrekordObj); err != nil {
-		return "", err
+
+	switch entry := ei.(type) {
+	case *dsse_v001.V001Entry:
+		// TODO: this could have multiple signatures but we're only returning the first here
+		return *entry.DSSEObj.Signatures[0].Signature, nil
+	case *hashedrekord_v001.V001Entry:
+		return entry.HashedRekordObj.Signature.Content.String(), nil
+	case *rekord_v001.V001Entry:
+		return entry.RekordObj.Signature.Content.String(), nil
+	default:
+		return "", errors.New("unsupported type")
 	}
-	return hrekordObj.Signature.Content.String(), nil
 }
 
 // bundleKey extracts the key from the rekor bundle body
 func bundleKey(bundleBody string) (string, error) {
-	var rekord models.Rekord
-	var hrekord models.Hashedrekord
-	var intotod models.Intoto
-	var rekordObj models.RekordV001Schema
-	var hrekordObj models.HashedrekordV001Schema
-	var intotodObj models.IntotoV001Schema
-
-	bodyDecoded, err := base64.StdEncoding.DecodeString(bundleBody)
-	if err != nil {
-		return "", fmt.Errorf("decoding bundleBody: %w", err)
-	}
-
-	// Try Rekord
-	if err := json.Unmarshal(bodyDecoded, &rekord); err == nil {
-		specMarshal, err := json.Marshal(rekord.Spec)
-		if err != nil {
-			return "", err
-		}
-		if err := json.Unmarshal(specMarshal, &rekordObj); err != nil {
-			return "", err
-		}
-		return rekordObj.Signature.PublicKey.Content.String(), nil
-	}
-
-	// Try hashedRekordObj
-	if err := json.Unmarshal(bodyDecoded, &hrekord); err == nil {
-		specMarshal, err := json.Marshal(hrekord.Spec)
-		if err != nil {
-			return "", err
-		}
-		if err := json.Unmarshal(specMarshal, &hrekordObj); err != nil {
-			return "", err
-		}
-		return hrekordObj.Signature.PublicKey.Content.String(), nil
-	}
-
-	// Try Intoto
-	if err := json.Unmarshal(bodyDecoded, &intotod); err != nil {
-		return "", err
-	}
-	specMarshal, err := json.Marshal(intotod.Spec)
+	ei, err := extractEntryImpl(bundleBody)
 	if err != nil {
 		return "", err
 	}
-	if err := json.Unmarshal(specMarshal, &intotodObj); err != nil {
-		return "", err
+
+	switch entry := ei.(type) {
+	case *dsse_v001.V001Entry:
+		// TODO: this could have multiple verifiers but we're only returning the first here
+		return entry.DSSEObj.Signatures[0].Verifier.String(), nil
+	case *hashedrekord_v001.V001Entry:
+		return entry.HashedRekordObj.Signature.PublicKey.Content.String(), nil
+	case *intoto_v001.V001Entry:
+		return entry.IntotoObj.PublicKey.String(), nil
+	case *intoto_v002.V002Entry:
+		// TODO: this could have multiple verifiers but we're only returning the first here
+		return entry.IntotoObj.Content.Envelope.Signatures[0].PublicKey.String(), nil
+	case *rekord_v001.V001Entry:
+		return entry.RekordObj.Signature.PublicKey.Content.String(), nil
+	default:
+		return "", errors.New("unsupported type")
 	}
-	return intotodObj.PublicKey.String(), nil
 }
 
 func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {
