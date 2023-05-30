@@ -109,6 +109,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		// Copy the entity itself.
 		g.Go(func() error {
 			dst := dstRepoRef.Tag(srcDigest.Identifier())
+			dst = dst.Tag(normalize(h, regOpts.RefOpts.TagPrefix, ""))
 			return remoteCopy(ctx, pusher, srcDigest, dst, force, remoteOpts...)
 		})
 
@@ -167,4 +168,11 @@ func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Refer
 
 	fmt.Fprintf(os.Stderr, "Copying %s to %s...\n", src, dest)
 	return pusher.Push(ctx, dest, got)
+}
+
+func normalize(h v1.Hash, prefix string, suffix string) string {
+	if suffix == "" {
+		return fmt.Sprint(prefix, h.Algorithm, "-", h.Hex)
+	}
+	return fmt.Sprint(prefix, h.Algorithm, "-", h.Hex, ".", suffix)
 }
