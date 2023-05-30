@@ -29,11 +29,11 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0
 	github.com/sigstore/fulcio v1.3.1
 	github.com/sigstore/rekor v1.2.1
-	github.com/sigstore/sigstore v1.6.5-0.20230530075057-10f8e74b2bf5
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v0.0.0-20230530075057-10f8e74b2bf5
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v0.0.0-20230530075057-10f8e74b2bf5
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v0.0.0-20230530075057-10f8e74b2bf5
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v0.0.0-20230530075057-10f8e74b2bf5
+	github.com/sigstore/sigstore v1.6.5
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.6.5
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.6.5
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.6.5
 	github.com/sigstore/timestamp-authority v1.1.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
