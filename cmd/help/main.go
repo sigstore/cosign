@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/templates"
 	errors "github.com/sigstore/cosign/v2/cmd/cosign/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -41,6 +42,9 @@ func main() {
 		},
 	}
 	root.Flags().StringVarP(&dir, "dir", "d", "doc", "Path to directory in which to generate docs")
+
+	templates.SetCustomUsageFunc(root)
+
 	if err := root.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
