@@ -162,8 +162,8 @@ github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj
 github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
-github.com/aws/aws-sdk-go v1.44.267 h1:Asrp6EMqqRxZvjK0NjzkWcrOk15RnWtupuUrUuZMabk=
-github.com/aws/aws-sdk-go v1.44.267/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
+github.com/aws/aws-sdk-go v1.44.271 h1:aa+Nu2JcnFmW1TLIz/67SS7KPq1I1Adl4RmExSMjGVo=
+github.com/aws/aws-sdk-go v1.44.271/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
 github.com/aws/aws-sdk-go-v2 v1.7.1/go.mod h1:L5LuPC1ZgDr2xQS7AmIec/Jlc7O/Y1u2KxJyNVab250=
 github.com/aws/aws-sdk-go-v2 v1.14.0/go.mod h1:ZA3Y8V0LrlWj63MQAnRHgKf/5QB//LSZCPNWlWrNGLU=
 github.com/aws/aws-sdk-go-v2 v1.18.0 h1:882kkTpSFhdgYRKVZ/VCgf7sd0ru57p2JCxz4/oN5RY=
@@ -954,8 +954,8 @@ go.opentelemetry.io/otel/sdk v1.16.0 h1:Z1Ok1YsijYL0CSJpHt4cS3wDDh7p572grzNrBMiM
 go.opentelemetry.io/otel/trace v1.16.0 h1:8JRpaObFoW0pxuVPapkgH8UhHQj+bJW8jJsCZEu5MQs=
 go.opentelemetry.io/otel/trace v1.16.0/go.mod h1:Yt9vYq1SdNz3xdjZZK7wcXv1qv2pwLkqr2QVwea0ef0=
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
-go.step.sm/crypto v0.31.0 h1:8ZG/BxC+0+LzPpk/764h5yubpG3GfxcRVR4E+Aye72g=
-go.step.sm/crypto v0.31.0/go.mod h1:Dv4lpkijKiZVkoc6zp+Xaw1xmy+voia1mykvbpQIvuc=
+go.step.sm/crypto v0.31.1 h1:Ua2asApVvWP3DP26L1q1fHGV1Ud/w8VQUA6JQyj2TUI=
+go.step.sm/crypto v0.31.1/go.mod h1:gFQ/XlQIIiFRfZrXglqKbrX9bgC1HmsASErev9sZN4A=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.10.0 h1:9qC72Qh0+3MqyJbAn8YU5xVq1frD8bn3JtD2oXtafVQ=
 go.uber.org/atomic v1.10.0/go.mod h1:LUxbIzbOniOlMKjJjyPfpl4v+PKK2cNJn91OQbhoJI0=
