@@ -45,7 +45,7 @@ require (
 	github.com/theupdateframework/go-tuf v0.5.2
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
-	github.com/xanzy/go-gitlab v0.83.0
+	github.com/xanzy/go-gitlab v0.84.0
 	go.step.sm/crypto v0.31.2
 	golang.org/x/crypto v0.9.0
 	golang.org/x/oauth2 v0.8.0
