@@ -1177,10 +1177,17 @@ func bundleSig(bundleBody string) (string, error) {
 
 	switch entry := ei.(type) {
 	case *dsse_v001.V001Entry:
-		// TODO: this could have multiple signatures but we're only returning the first here
+		if len(entry.DSSEObj.Signatures) > 1 {
+			return "", errors.New("multiple signatures on DSSE envelopes are not currently supported")
+		}
 		return *entry.DSSEObj.Signatures[0].Signature, nil
 	case *hashedrekord_v001.V001Entry:
 		return entry.HashedRekordObj.Signature.Content.String(), nil
+	case *intoto_v002.V002Entry:
+		if len(entry.IntotoObj.Content.Envelope.Signatures) > 1 {
+			return "", errors.New("multiple signatures on DSSE envelopes are not currently supported")
+		}
+		return entry.IntotoObj.Content.Envelope.Signatures[0].Sig.String(), nil
 	case *rekord_v001.V001Entry:
 		return entry.RekordObj.Signature.Content.String(), nil
 	default:
@@ -1197,14 +1204,18 @@ func bundleKey(bundleBody string) (string, error) {
 
 	switch entry := ei.(type) {
 	case *dsse_v001.V001Entry:
-		// TODO: this could have multiple verifiers but we're only returning the first here
+		if len(entry.DSSEObj.Signatures) > 1 {
+			return "", errors.New("multiple signatures on DSSE envelopes are not currently supported")
+		}
 		return entry.DSSEObj.Signatures[0].Verifier.String(), nil
 	case *hashedrekord_v001.V001Entry:
 		return entry.HashedRekordObj.Signature.PublicKey.Content.String(), nil
 	case *intoto_v001.V001Entry:
 		return entry.IntotoObj.PublicKey.String(), nil
 	case *intoto_v002.V002Entry:
-		// TODO: this could have multiple verifiers but we're only returning the first here
+		if len(entry.IntotoObj.Content.Envelope.Signatures) > 1 {
+			return "", errors.New("multiple signatures on DSSE envelopes are not currently supported")
+		}
 		return entry.IntotoObj.Content.Envelope.Signatures[0].PublicKey.String(), nil
 	case *rekord_v001.V001Entry:
 		return entry.RekordObj.Signature.PublicKey.Content.String(), nil

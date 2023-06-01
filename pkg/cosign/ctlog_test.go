@@ -33,7 +33,7 @@ Nmo7M3bN7+dQddw9Ibc2R3SV8tzBZw0rST8FKcn4apJepcKM4qUpYUeNfw==
 func TestGetCTLogPubKeys(t *testing.T) {
 	keys, err := GetCTLogPubs(context.Background())
 	if err != nil {
-		t.Errorf("Unexpected error calling GetCTLogPubs, expected nil: %v", err)
+		t.Fatalf("Unexpected error calling GetCTLogPubs, expected nil: %v", err)
 	}
 	if len(keys.Keys) == 0 {
 		t.Errorf("expected 1 or more keys, got 0")

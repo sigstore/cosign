@@ -179,7 +179,7 @@ func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature []byte
 	return doUpload(ctx, rekorClient, &returnVal)
 }
 
-// TLogUploadInTotoAttestation will upload and in-toto entry for the signature and public key to the transparency log.
+// TLogUploadDSSEEnvelope will upload a DSSE entry for the signature and public key to the Rekor transparency log.
 func TLogUploadDSSEEnvelope(ctx context.Context, rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
 	e, err := dsseEntry(ctx, signature, pemBytes)
 	if err != nil {
@@ -189,7 +189,7 @@ func TLogUploadDSSEEnvelope(ctx context.Context, rekorClient *client.Rekor, sign
 	return doUpload(ctx, rekorClient, e)
 }
 
-// TLogUploadInTotoAttestation will upload and in-toto entry for the signature and public key to the transparency log.
+// TLogUploadInTotoAttestation will upload an in-toto entry for the signature and public key to the transparency log.
 func TLogUploadInTotoAttestation(ctx context.Context, rekorClient *client.Rekor, signature, pemBytes []byte) (*models.LogEntryAnon, error) {
 	e, err := intotoEntry(ctx, signature, pemBytes)
 	if err != nil {
