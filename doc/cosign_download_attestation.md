@@ -21,7 +21,7 @@ cosign download attestation [flags]
   -h, --help                                                                                     help for attestation
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --platform string                                                                          download attestation for a specific platform image
-      --predicate-type string                                                                    download attestation with matching predicateType annotation
+      --predicate-type string                                                                    download attestation with matching predicateType
 ```
 
 ### Options inherited from parent commands

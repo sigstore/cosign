@@ -18,6 +18,7 @@ package cosign
 import (
 	"context"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
@@ -150,28 +152,35 @@ func FetchAttestations(se oci.SignedEntity, predicateType string) ([]Attestation
 	g.SetLimit(runtime.NumCPU())
 
 	for _, att := range l {
-		if predicateType != "" {
-			anns, err := att.Annotations()
-			if err != nil {
-				return nil, err
-			}
-			pt, ok := anns["predicateType"]
-			// Skip attestation if predicateType annotation is not present or predicateType annotation does not match supplied predicate type
-			if !ok || pt != predicateType {
-				continue
-			}
-		}
 		att := att
-		var a AttestationPayload
 		g.Go(func() error {
-			attestPayload, _ := att.Payload()
-			err := json.Unmarshal(attestPayload, &a)
+			rawPayload, err := att.Payload()
 			if err != nil {
-				return err
+				return fmt.Errorf("fetching payload: %w", err)
 			}
+			var payload AttestationPayload
+			if err := json.Unmarshal(rawPayload, &payload); err != nil {
+				return fmt.Errorf("unmarshaling payload: %w", err)
+			}
+
+			if predicateType != "" {
+				var decodedPayload []byte
+				decodedPayload, err = base64.StdEncoding.DecodeString(payload.PayLoad)
+				if err != nil {
+					return fmt.Errorf("decoding payload: %w", err)
+				}
+				var statement in_toto.Statement
+				if err := json.Unmarshal(decodedPayload, &statement); err != nil {
+					return fmt.Errorf("unmarshaling statement: %w", err)
+				}
+				if statement.PredicateType != predicateType {
+					return nil
+				}
+			}
+
 			attMu.Lock()
 			defer attMu.Unlock()
-			attestations = append(attestations, a)
+			attestations = append(attestations, payload)
 			return nil
 		})
 	}
