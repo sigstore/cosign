@@ -21,7 +21,6 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -90,6 +89,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return &options.KeyParseError{}
 	}
 
+	if c.PredicatePath == "" {
+		return fmt.Errorf("predicate cannot be empty")
+	}
+
 	predicateURI, err := options.ParsePredicateType(c.PredicateType)
 	if err != nil {
 		return err
@@ -131,18 +134,11 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 	dd := cremote.NewDupeDetector(sv)
 
-	var predicate io.ReadCloser
-	if c.PredicatePath == "-" {
-		fmt.Fprintln(os.Stderr, "Using payload from: standard input")
-		predicate = os.Stdin
-	} else {
-		fmt.Fprintln(os.Stderr, "Using payload from:", c.PredicatePath)
-		predicate, err = os.Open(c.PredicatePath)
-		if err != nil {
-			return err
-		}
-		defer predicate.Close()
+	predicate, err := predicateReader(c.PredicatePath)
+	if err != nil {
+		return fmt.Errorf("getting predicate reader: %w", err)
 	}
+	defer predicate.Close()
 
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
 		Predicate: predicate,

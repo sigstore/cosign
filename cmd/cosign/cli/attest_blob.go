@@ -42,7 +42,10 @@ func AttestBlob() *cobra.Command {
   cosign attest-blob --predicate <FILE> --type <TYPE> --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Hashicorp Vault
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>`,
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>
+
+  # supply attestation via stdin
+  echo <PAYLOAD> | cosign attest-blob --predicate - --yes`,
 
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,

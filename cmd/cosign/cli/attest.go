@@ -55,7 +55,10 @@ func Attest() *cobra.Command {
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
   # attach an attestation to a container image which does not fully support OCI media types
-  COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image`,
+  COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image
+
+  # supply attestation via stdin
+  echo <PAYLOAD> | cosign attest --predicate - <IMAGE>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,

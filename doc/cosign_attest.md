@@ -11,6 +11,7 @@ cosign attest [flags]
 ```
   cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--f] [--r] <image uri>
 
+
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
 
@@ -34,6 +35,9 @@ cosign attest [flags]
 
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image
+
+  # supply attestation via stdin
+  echo <PAYLOAD> | cosign attest --predicate - <IMAGE>
 ```
 
 ### Options
