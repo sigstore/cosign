@@ -16,13 +16,26 @@
 package errors
 
 import (
+	"fmt"
 	"testing"
+
+	pkgError "github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
-func TestDefaultExitCodeReturnIfErrorTypeDoesNotExist(t *testing.T) {
-	exitCode := LookupExitCodeForErrorType("I do not exist as an error type")
+func TestDefaultExitCodeReturnIfErrorTypeToExitCodeMappingDoesNotExist(t *testing.T) {
+	exitCode := LookupExitCodeForError(fmt.Errorf("I do not exist as an error type"))
 	if exitCode != 1 {
 		t.Fatalf("default exit code not returned when an error type doesn't exist. default should be 1")
+	}
+	t.Logf("Correct default exit code returned")
+}
+
+func TestDefaultExitCodeReturnIfErrorTypeToExitCodeMappingExists(t *testing.T) {
+	// We test with any error that is not a generic CosignError.
+	// In this case, ErrNoMatchingSignatures
+	exitCode := LookupExitCodeForError(&pkgError.ErrNoMatchingSignatures{})
+	if exitCode != NoMatchingSignature {
+		t.Fatalf("NoMatchingSignature exit code not returned when error is thrown")
 	}
 	t.Logf("Correct default exit code returned")
 }
