@@ -808,8 +808,8 @@ github.com/sigstore/protobuf-specs v0.1.0 h1:X0l/E2C2c79t/rI/lmSu8WAoKWsQtMqDzAM
 github.com/sigstore/protobuf-specs v0.1.0/go.mod h1:5shUCxf82hGnjUEFVWiktcxwzdtn6EfeeJssxZ5Q5HE=
 github.com/sigstore/rekor v1.2.1 h1:cEI4qn9IBvM7EkPQYl3YzCwCw97Mx8O2nHrv02XiI8U=
 github.com/sigstore/rekor v1.2.1/go.mod h1:zcFO54qIg2G1/i0sE/nvmELUOng/n0MPjTszRYByVPo=
-github.com/sigstore/sigstore v1.6.5 h1:/liHIo7YPJp6sN31DzBYDOuRPmN1xbzROMBE5DLllYM=
-github.com/sigstore/sigstore v1.6.5/go.mod h1:h+EoQsf9+6UKgNYxKhBcPgo4PZeEVfzAJxKRRIYhyN4=
+github.com/sigstore/sigstore v1.6.6-0.20230602075123-c74dd4383337 h1:DjwvoCAcj10hgyWFQn+DH/24/zjk/UdN4aPjb2NSyJw=
+github.com/sigstore/sigstore v1.6.6-0.20230602075123-c74dd4383337/go.mod h1:HvxCZNdh85qy1xOrRLCweTJyhUI1foWq9cZw1aEQotk=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5 h1:SXzp0/S2fBT3O45BKBxInJ5zLqPTqN/nJRG9ZU6ZS1o=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5/go.mod h1:iJ1fhlOHajTppwDbFpSrrxvteZcbDt96yOkAQZ3AWdY=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.6.5 h1:Eq7FRpCmtWgqO0W8PTV4uEtoLfVOJfDuLYGEwCN1Cy8=
