@@ -18,23 +18,7 @@ package errors
 import (
 	"errors"
 	"testing"
-
-	verificationError "github.com/sigstore/cosign/v2/pkg/cosign"
 )
-
-func TestWrapWithVerificationError(t *testing.T) {
-	ve := &verificationError.VerificationError{}
-	ve.SetErrorType(verificationError.ErrNoMatchingSignaturesType)
-	err := WrapError(ve)
-
-	var cosignError *CosignError
-	if errors.As(err, &cosignError) {
-		if cosignError.ExitCode() != NoMatchingSignature {
-			t.Fatalf("verification error unsuccessfully wrapped")
-		}
-		t.Logf("verification error successfully wrapped and exit code returned")
-	}
-}
 
 func TestWrapWithGenericCosignError(t *testing.T) {
 	errorText := "i am a generic cosign error"

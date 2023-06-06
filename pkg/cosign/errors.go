@@ -14,55 +14,56 @@
 
 package cosign
 
-import "fmt"
-
-var (
-	// NoMatchingAttestations
-	ErrNoMatchingAttestationsMessage = "no matching attestations"
-	ErrNoMatchingAttestationsType    = "NoMatchingAttestations"
-
-	// NoMatchingSignatures
-	ErrNoMatchingSignaturesType    = "NoMatchingSignatures"
-	ErrNoMatchingSignaturesMessage = "no matching signatures"
-
-	// NonExistingTagType
-	ErrImageTagNotFoundType    = "ImageTagNotFound"
-	ErrImageTagNotFoundMessage = "image tag not found"
-
-	// NoSignaturesFound
-	ErrNoSignaturesFoundType    = "NoSignaturesFound"
-	ErrNoSignaturesFoundMessage = "no signatures found for image"
-)
-
-// VerificationError is the type of Go error that is used by cosign to surface
+// VerificationFailure is the type of Go error that is used by cosign to surface
 // errors actually related to verification (vs. transient, misconfiguration,
 // transport, or authentication related issues).
-type VerificationError struct {
-	errorType string
-	message   string
+// It is now marked as deprecated and will be removed in favour of defined
+// error types with use of the ThrowError function.
+type VerificationFailure struct {
+	err error
 }
 
-// NewVerificationError constructs a new VerificationError in a manner similar
-// to fmt.Errorf
-func NewVerificationError(msg string, args ...interface{}) error {
-	return &VerificationError{
-		message: fmt.Sprintf(msg, args...),
-	}
+// ThrowError returns the error type that is passed. It acts as a
+// single consistent way of throwing errors from the pkg level.
+// As long as the error type is defined before hand, this can be
+// used to throw errors up to the calling code without discrimination
+// around the error type.
+func ThrowError(err interface{ error }) error {
+	return err
 }
 
-// Assert that we implement error at build time.
-var _ error = (*VerificationError)(nil)
-
-// Error implements error
-func (ve *VerificationError) Error() string {
-	return ve.message
+func (e *VerificationFailure) Error() string {
+	return e.err.Error()
 }
 
-// Error implements error
-func (ve *VerificationError) ErrorType() string {
-	return ve.errorType
+type ErrNoMatchingSignatures struct {
+	err error
 }
 
-func (ve *VerificationError) SetErrorType(errorType string) {
-	ve.errorType = errorType
+func (e *ErrNoMatchingSignatures) Error() string {
+	return e.err.Error()
+}
+
+type ErrImageTagNotFound struct {
+	err error
+}
+
+func (e *ErrImageTagNotFound) Error() string {
+	return e.err.Error()
+}
+
+type ErrNoSignaturesFound struct {
+	err error
+}
+
+func (e *ErrNoSignaturesFound) Error() string {
+	return e.err.Error()
+}
+
+type ErrNoMatchingAttestations struct {
+	err error
+}
+
+func (e *ErrNoMatchingAttestations) Error() string {
+	return e.err.Error()
 }

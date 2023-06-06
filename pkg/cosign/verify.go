@@ -26,12 +26,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/digitorus/timestamp"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -168,7 +169,9 @@ func verifyOCIAttestation(ctx context.Context, verifier signature.Verifier, att 
 	}
 
 	if env.PayloadType != types.IntotoPayloadType {
-		return NewVerificationError("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
+		return ThrowError(&VerificationFailure{
+			fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType),
+		})
 	}
 	dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
 	if err != nil {
@@ -237,7 +240,9 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	}
 	if !contains && len(co.SCT) == 0 {
 		// TODO: add error type instead of blank string
-		return nil, &VerificationError{"", "certificate does not include required embedded SCT and no detached SCT was set"}
+		return nil, ThrowError(&VerificationFailure{
+			fmt.Errorf("certificate does not include required embedded SCT and no detached SCT was set"),
+		})
 	}
 	// handle if chains has more than one chain - grab first and print message
 	if len(chains) > 1 {
@@ -330,9 +335,9 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				return nil
 			}
 		}
-		return &VerificationError{"",
-			fmt.Sprintf("none of the expected identities matched what was in the certificate, got subjects [%s] with issuer %s",
-				strings.Join(sans, ", "), oidcIssuer)}
+		return ThrowError(&VerificationFailure{
+			fmt.Errorf("none of the expected identities matched what was in the certificate, got subjects [%s] with issuer %s", strings.Join(sans, ", "), oidcIssuer),
+		})
 	}
 	return nil
 }
@@ -341,35 +346,45 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 	if co.CertGithubWorkflowTrigger != "" {
 		if ce.GetCertExtensionGithubWorkflowTrigger() != co.CertGithubWorkflowTrigger {
 			// TODO: add error type instead of blank string
-			return &VerificationError{"", "expected GitHub Workflow Trigger not found in certificate"}
+			return ThrowError(&VerificationFailure{
+				fmt.Errorf("expected GitHub Workflow Trigger not found in certificate"),
+			})
 		}
 	}
 
 	if co.CertGithubWorkflowSha != "" {
 		if ce.GetExtensionGithubWorkflowSha() != co.CertGithubWorkflowSha {
 			// TODO: add error type instead of blank string
-			return &VerificationError{"", "expected GitHub Workflow SHA not found in certificate"}
+			return ThrowError(&VerificationFailure{
+				fmt.Errorf("expected GitHub Workflow SHA not found in certificate"),
+			})
 		}
 	}
 
 	if co.CertGithubWorkflowName != "" {
 		if ce.GetCertExtensionGithubWorkflowName() != co.CertGithubWorkflowName {
 			// TODO: add error type instead of blank string
-			return &VerificationError{"", "expected GitHub Workflow Name not found in certificate"}
+			return ThrowError(&VerificationFailure{
+				fmt.Errorf("expected GitHub Workflow Name not found in certificate"),
+			})
 		}
 	}
 
 	if co.CertGithubWorkflowRepository != "" {
 		if ce.GetCertExtensionGithubWorkflowRepository() != co.CertGithubWorkflowRepository {
 			// TODO: add error type instead of blank string
-			return &VerificationError{"", "expected GitHub Workflow Repository not found in certificate"}
+			return ThrowError(&VerificationFailure{
+				fmt.Errorf("expected GitHub Workflow Repository not found in certificate"),
+			})
 		}
 	}
 
 	if co.CertGithubWorkflowRef != "" {
 		if ce.GetCertExtensionGithubWorkflowRef() != co.CertGithubWorkflowRef {
 			// TODO: add error type instead of blank string
-			return &VerificationError{"", "expected GitHub Workflow Ref not found in certificate"}
+			return ThrowError(&VerificationFailure{
+				fmt.Errorf("expected GitHub Workflow Ref not found in certificate"),
+			})
 		}
 	}
 	return nil
@@ -486,10 +501,9 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
 	if err != nil {
 		if strings.Contains(err.Error(), "MANIFEST_UNKNOWN") {
-			return nil, false, &VerificationError{
-				errorType: ErrImageTagNotFoundType,
-				message:   fmt.Sprintf("%s: %v", ErrImageTagNotFoundMessage, err),
-			}
+			return nil, false, ThrowError(&ErrImageTagNotFound{
+				fmt.Errorf("image tag not found: %w", err),
+			})
 		}
 		return nil, false, err
 	}
@@ -575,10 +589,9 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	}
 
 	if len(sl) == 0 {
-		return nil, false, &VerificationError{
-			errorType: ErrNoSignaturesFoundType,
-			message:   ErrNoSignaturesFoundMessage,
-		}
+		return nil, false, ThrowError(&ErrNoMatchingSignatures{
+			errors.New("no matching signatures"),
+		})
 	}
 
 	validationErrs := []string{}
@@ -600,10 +613,9 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 		checkedSignatures = append(checkedSignatures, sig)
 	}
 	if len(checkedSignatures) == 0 {
-		return nil, false, &VerificationError{
-			errorType: ErrNoMatchingSignaturesType,
-			message:   fmt.Sprintf("%s:\n%s", ErrNoMatchingSignaturesMessage, strings.Join(validationErrs, "\n ")),
-		}
+		return nil, false, ThrowError(&ErrNoMatchingSignatures{
+			fmt.Errorf("no matching signatures: %s", strings.Join(validationErrs, "\n ")),
+		})
 	}
 	return checkedSignatures, bundleVerified, nil
 }
@@ -678,7 +690,9 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 		if cert == nil {
 			// TODO: add error type instead of blank string
-			return false, &VerificationError{"", "no certificate found on signature"}
+			return false, ThrowError(&VerificationFailure{
+				fmt.Errorf("no certificate found on signature"),
+			})
 		}
 		// Create a certificate pool for intermediate CA certificates, excluding the root
 		chain, err := sig.Chain()
@@ -746,7 +760,9 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				// If certificate is expired and not signed timestamp was provided then error the following message. Otherwise throw an expiration error.
 				if co.IgnoreTlog && acceptableRFC3161Time == nil {
 					// TODO: add error type instead of blank string
-					return false, &VerificationError{"", "expected a signed timestamp to verify an expired certificate"}
+					return false, ThrowError(&VerificationFailure{
+						fmt.Errorf("expected a signed timestamp to verify an expired certificate"),
+					})
 				}
 				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
 			}
@@ -935,10 +951,9 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 		checkedAttestations = append(checkedAttestations, att)
 	}
 	if len(checkedAttestations) == 0 {
-		return nil, false, &VerificationError{
-			errorType: ErrNoMatchingAttestationsType,
-			message:   fmt.Sprintf("%s:\n%s", ErrNoMatchingAttestationsMessage, strings.Join(validationErrs, "\n ")),
-		}
+		return nil, false, ThrowError(&ErrNoMatchingAttestations{
+			fmt.Errorf("no matching attestations: %s", strings.Join(validationErrs, "\n ")),
+		})
 	}
 	return checkedAttestations, bundleVerified, nil
 }
@@ -949,12 +964,16 @@ func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 		return t.Format(time.RFC3339)
 	}
 	if cert.NotAfter.Before(it) {
-		return NewVerificationError("certificate expired before signatures were entered in log: %s is before %s",
-			ft(cert.NotAfter), ft(it))
+		return ThrowError(&VerificationFailure{
+			fmt.Errorf("certificate expired before signatures were entered in log: %s is before %s",
+				ft(cert.NotAfter), ft(it)),
+		})
 	}
 	if cert.NotBefore.After(it) {
-		return NewVerificationError("certificate was issued after signatures were entered in log: %s is after %s",
-			ft(cert.NotAfter), ft(it))
+		return ThrowError(&VerificationFailure{
+			fmt.Errorf("certificate was issued after signatures were entered in log: %s is after %s",
+				ft(cert.NotAfter), ft(it)),
+		})
 	}
 	return nil
 }
@@ -1000,7 +1019,9 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	pubKey, ok := co.RekorPubKeys.Keys[bundle.Payload.LogID]
 	if !ok {
 		// TODO: add error type instead of blank string
-		return false, &VerificationError{"", "verifying bundle: rekor log public key not found for payload"}
+		return false, ThrowError(&VerificationFailure{
+			fmt.Errorf("verifying bundle: rekor log public key not found for payload"),
+		})
 	}
 	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey.(*ecdsa.PublicKey))
 	if err != nil {
@@ -1091,7 +1112,9 @@ func compareSigs(bundleBody string, sig oci.Signature) error {
 	}
 	if bundleSignature != actualSig {
 		// TODO: add error type instead of blank string
-		return &VerificationError{"", "signature in bundle does not match signature being verified"}
+		return ThrowError(&VerificationFailure{
+			fmt.Errorf("signature in bundle does not match signature being verified"),
+		})
 	}
 	return nil
 }
@@ -1295,7 +1318,9 @@ func VerifySET(bundlePayload cbundle.RekorPayload, signature []byte, pub *ecdsa.
 	hash := sha256.Sum256(canonicalized)
 	if !ecdsa.VerifyASN1(pub, hash[:], signature) {
 		// TODO: add error type instead of blank string
-		return &VerificationError{"", "unable to verify SET"}
+		return ThrowError(&VerificationFailure{
+			fmt.Errorf("unable to verify SET"),
+		})
 	}
 	return nil
 }
