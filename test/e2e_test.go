@@ -154,14 +154,6 @@ var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[st
 
 var ro = &options.RootOptions{Timeout: options.DefaultTimeout}
 
-func appendSlices(slices [][]byte) []byte {
-	var tmp []byte
-	for _, s := range slices {
-		tmp = append(tmp, s...)
-	}
-	return tmp
-}
-
 func TestSignVerify(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
@@ -879,7 +871,7 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	pemleafRef := mkfile(string(pemLeaf), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 
-	certchainRef := mkfile(string(appendSlices([][]byte{pemSub, pemRoot})), td, t)
+	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
 
 	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
 
