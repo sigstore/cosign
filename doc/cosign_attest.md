@@ -11,7 +11,6 @@ cosign attest [flags]
 ```
   cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--f] [--r] <image uri>
 
-
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
 
