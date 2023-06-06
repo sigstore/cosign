@@ -27,11 +27,12 @@ import (
 
 // AttachSignatureOptions is the top level wrapper for the attach signature command.
 type AttachSignatureOptions struct {
-	Signature string
-	Payload   string
-	Cert      string
-	CertChain string
-	Registry  RegistryOptions
+	Signature      string
+	Payload        string
+	Cert           string
+	CertChain      string
+	TimeStampedSig string
+	Registry       RegistryOptions
 }
 
 var _ Interface = (*AttachSignatureOptions)(nil)
@@ -54,6 +55,8 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Included in the OCI Signature")
+	cmd.Flags().StringVar(&o.TimeStampedSig, "tsr", "",
+		"path to the Time Stamped Signature Response from RFC3161 compliant TSA")
 }
 
 // AttachSBOMOptions is the top level wrapper for the attach sbom command.
