@@ -57,6 +57,10 @@ func TestPredicateReader(t *testing.T) {
 			}
 
 			got, err := predicateReader(pf)
+			if err == nil {
+				defer got.Close()
+			}
+
 			if tc.wantErr {
 				require.Error(t, err)
 				return
