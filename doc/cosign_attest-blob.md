@@ -25,6 +25,9 @@ cosign attest-blob [flags]
 
   # attach an attestation to a blob with a key pair stored in Hashicorp Vault
   cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>
+
+  # supply attestation via stdin
+  echo <PAYLOAD> | cosign attest-blob --predicate - --yes
 ```
 
 ### Options

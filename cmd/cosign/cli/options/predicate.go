@@ -87,6 +87,7 @@ func (o *PredicateLocalOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Path, "predicate", "",
 		"path to the predicate file.")
+	_ = cmd.MarkFlagRequired("predicate")
 }
 
 // PredicateRemoteOptions is the wrapper for remote predicate related options.

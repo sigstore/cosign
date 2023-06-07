@@ -71,6 +71,10 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return &options.KeyParseError{}
 	}
 
+	if c.PredicatePath == "" {
+		return fmt.Errorf("predicate cannot be empty")
+	}
+
 	if c.Timeout != 0 {
 		var cancelFn context.CancelFunc
 		ctx, cancelFn = context.WithTimeout(ctx, c.Timeout)
@@ -107,10 +111,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		hexDigest = c.ArtifactHash
 	}
 
-	fmt.Fprintln(os.Stderr, "Using predicate from:", c.PredicatePath)
-	predicate, err := os.Open(c.PredicatePath)
+	predicate, err := predicateReader(c.PredicatePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting predicate reader: %w", err)
 	}
 	defer predicate.Close()
 
