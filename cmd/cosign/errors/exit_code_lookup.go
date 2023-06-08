@@ -34,6 +34,10 @@ func LookupExitCodeForError(err interface{ error }) int {
 		return ImageWithoutSignature
 	}
 
+	if noCertificateFoundOnSignature(err) {
+		return NoCertificateFoundOnSignature
+	}
+
 	// we want to return exit code = `1` at this point because there is
 	// no valid exit code found for the error type passed, so we default to 1.
 	return 1
@@ -52,4 +56,9 @@ func imageTagNotFoundError(err interface{ error }) bool {
 func noSignaturesFoundError(err interface{ error }) bool {
 	var errNoSignaturesFound *cosignError.ErrNoSignaturesFound
 	return errors.As(err, &errNoSignaturesFound)
+}
+
+func noCertificateFoundOnSignature(err interface{ error }) bool {
+	var errNoCertificateFoundOnSignature *cosignError.ErrNoCertificateFoundOnSignature
+	return errors.As(err, &errNoCertificateFoundOnSignature)
 }
