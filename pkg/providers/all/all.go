@@ -19,10 +19,15 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/providers"
 
 	// Link in all of the providers.
+	// Link the GitHub one first, since we might be running in a GitHub self-hosted
+	// runner running in one of the other environments, and we should prefer GitHub
+	// credentials if we can find them.
+	_ "github.com/sigstore/cosign/v2/pkg/providers/github"
+
+	// Link in the rest of the providers.
 	_ "github.com/sigstore/cosign/v2/pkg/providers/buildkite"
 	_ "github.com/sigstore/cosign/v2/pkg/providers/envvar"
 	_ "github.com/sigstore/cosign/v2/pkg/providers/filesystem"
-	_ "github.com/sigstore/cosign/v2/pkg/providers/github"
 	_ "github.com/sigstore/cosign/v2/pkg/providers/google"
 	_ "github.com/sigstore/cosign/v2/pkg/providers/spiffe"
 )
