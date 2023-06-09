@@ -58,7 +58,7 @@ cosign attest [flags]
       --oidc-client-secret-file string                                                           Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers                                                           Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-issuer string                                                                       OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
-      --oidc-provider string                                                                     Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem, buildkite-agent]
+      --oidc-provider string                                                                     Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string                                                                 OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --predicate string                                                                         path to the predicate file.
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
