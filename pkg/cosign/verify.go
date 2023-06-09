@@ -689,8 +689,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, err
 		}
 		if cert == nil {
-			// TODO: add error type instead of blank string
-			return false, ThrowError(&VerificationFailure{
+			return false, ThrowError(&ErrNoCertificateFoundOnSignature{
 				fmt.Errorf("no certificate found on signature"),
 			})
 		}

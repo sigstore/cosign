@@ -33,3 +33,6 @@ const NonExistentTag = 11
 
 // Error verifying image due to no matching signature
 const NoMatchingSignature = 12
+
+// Error verifying image due to no certificate found on signature
+const NoCertificateFoundOnSignature = 13

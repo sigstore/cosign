@@ -67,3 +67,11 @@ type ErrNoMatchingAttestations struct {
 func (e *ErrNoMatchingAttestations) Error() string {
 	return e.err.Error()
 }
+
+type ErrNoCertificateFoundOnSignature struct {
+	err error
+}
+
+func (e *ErrNoCertificateFoundOnSignature) Error() string {
+	return e.err.Error()
+}
