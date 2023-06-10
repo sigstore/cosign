@@ -53,7 +53,7 @@ jobs:
       COSIGN_YES: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: cpanato/vault-installer@4246c92b8f047fdb824eb7387d86b3c7806e2bf3 # v0.0.2
         with:
           vault-release: '1.12.2'
