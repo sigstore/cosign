@@ -23,8 +23,8 @@ import (
 
 func TestErrors(t *testing.T) {
 	for _, want := range []error{
-		ThrowError(&VerificationFailure{errors.Errorf("not a constant %d", 3)}),
-		ThrowError(&VerificationFailure{errors.Errorf("not a string %s", "i am a string")}),
+		&VerificationFailure{errors.Errorf("not a constant %d", 3)},
+		&VerificationFailure{errors.Errorf("not a string %s", "i am a string")},
 	} {
 		t.Run(want.Error(), func(t *testing.T) {
 			verr := &VerificationFailure{}
