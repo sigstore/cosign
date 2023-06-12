@@ -70,7 +70,7 @@ func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 		"OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.")
 
 	cmd.Flags().StringVar(&o.Provider, "oidc-provider", "",
-		"Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem, buildkite-agent]")
+		"Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]")
 
 	cmd.Flags().BoolVar(&o.DisableAmbientProviders, "oidc-disable-ambient-providers", false,
 		"Disable ambient OIDC providers. When true, ambient credentials will not be read")
