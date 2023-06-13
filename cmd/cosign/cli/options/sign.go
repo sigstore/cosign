@@ -21,21 +21,22 @@ import (
 
 // SignOptions is the top level wrapper for the sign command.
 type SignOptions struct {
-	Key               string
-	Cert              string
-	CertChain         string
-	Upload            bool
-	Output            string // deprecated: TODO remove when the output flag is fully deprecated
-	OutputSignature   string // TODO: this should be the root output file arg.
-	OutputPayload     string
-	OutputCertificate string
-	PayloadPath       string
-	Recursive         bool
-	Attachment        string
-	SkipConfirmation  bool
-	TlogUpload        bool
-	TSAServerURL      string
-	IssueCertificate  bool
+	Key                   string
+	Cert                  string
+	CertChain             string
+	Upload                bool
+	Output                string // deprecated: TODO remove when the output flag is fully deprecated
+	OutputSignature       string // TODO: this should be the root output file arg.
+	OutputPayload         string
+	OutputCertificate     string
+	PayloadPath           string
+	Recursive             bool
+	Attachment            string
+	SkipConfirmation      bool
+	TlogUpload            bool
+	TSAServerURL          string
+	IssueCertificate      bool
+	SignContainerIdentity string
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -108,4 +109,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
+
+	cmd.Flags().StringVar(&o.SignContainerIdentity, "sign-container-identity", "",
+		"manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature")
 }

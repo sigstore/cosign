@@ -25,6 +25,9 @@ cosign attest-blob [flags]
 
   # attach an attestation to a blob with a key pair stored in Hashicorp Vault
   cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>
+
+  # supply attestation via stdin
+  echo <PAYLOAD> | cosign attest-blob --predicate - --yes
 ```
 
 ### Options
@@ -43,7 +46,7 @@ cosign attest-blob [flags]
       --oidc-client-secret-file string    Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers    Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-issuer string                OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
-      --oidc-provider string              Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github, filesystem, buildkite-agent]
+      --oidc-provider string              Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string          OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --output-attestation string         write the attestation to FILE
       --output-certificate string         write the certificate to FILE

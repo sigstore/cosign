@@ -36,6 +36,7 @@ signing_key=cosign.key
 verification_key=cosign.pub
 img="${TEST_INSTANCE_REPO}/test"
 img2="${TEST_INSTANCE_REPO}/test-2"
+img3="${TEST_INSTANCE_REPO}/test-3"
 legacy_img="${TEST_INSTANCE_REPO}/legacy-test"
 for image in $img $img2 $legacy_img
 do
@@ -72,6 +73,21 @@ do
     # verify sigs on discrete images
     ./cosign verify --key ${verification_key} "${multiarch_img}@$(crane digest --platform=$arch ${multiarch_img})"
 done
+
+# sign/attest an image that doesn't exist (yet) in the registry
+# This digest was generated with the following command and
+# does not exist anywhere AFAIK:
+#   head -10 /dev/urandom | sha256sum | cut -d' ' -f 1
+# We don't just run this here because the macos leg doesn't
+# have sha256sum
+./cosign sign --key ${signing_key} "$img3@sha256:17b14220441083f55dfa21e1deb3720457d3c2d571219801d629b43c53b99627"
+PREDICATE_FILE=$(mktemp)
+cat > "${PREDICATE_FILE}" <<EOF
+{
+  "foo": "bar"
+}
+EOF
+./cosign attest --key ${signing_key} --type custom --predicate "${PREDICATE_FILE}" "$img3@sha256:17b14220441083f55dfa21e1deb3720457d3c2d571219801d629b43c53b99627"
 
 ## confirm use of OCI media type in signature image
 crane manifest $(./cosign triangulate $img) | grep -q "application/vnd.oci.image.config.v1+json"

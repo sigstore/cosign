@@ -1,4 +1,3 @@
-//
 // Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errors
+package policy
 
-// WrapError takes an error type and depending on the type of error
-// passed, will access it's error message and errorType (and return
-// the associated exitCode) and wrap them in a generic `CosignError`.
-// If no custom error has been found, then it will still return a
-// `CosignError` with an error message, but the `exitCode` will be `1`.
-func WrapError(err error) error {
-	// return default cosign error with error message and default exit code
-	return &CosignError{
-		Message: err.Error(),
-		Code:    LookupExitCodeForError(err),
-	}
+type EvaluationFailure struct {
+	err error
+}
+
+func (e *EvaluationFailure) Error() string {
+	return e.err.Error()
+}
+
+// ThrowError returns the error type that is passed. It acts as a
+// single consistent way of throwing errors from the pkg level.
+// As long as the error type is defined before hand, this can be
+// used to throw errors up to the calling code without discrimination
+// around the error type.
+func ThrowError(err interface{ error }) error {
+	return err
 }

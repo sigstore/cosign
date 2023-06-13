@@ -69,7 +69,7 @@ crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore
 ## Verify Signature, payload, cert and cert-chain using SIGSTORE_ROOT_FILE
 
 export SIGSTORE_ROOT_FILE=./rootcert.pem
-./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-skip-tlog-verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*'
+./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*'
 
 
 # clean up a bit

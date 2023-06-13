@@ -79,7 +79,10 @@ race conditions or (worse) malicious tampering.
   cosign sign --key cosign.key <IMAGE DIGEST>
 
   # sign a container image and skip uploading to the transparency log
-  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>`,
+  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
+
+  # sign a container image by manually setting the container image identity
+  cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,

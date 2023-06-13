@@ -16,25 +16,49 @@
 package errors
 
 import (
-	verificationError "github.com/sigstore/cosign/v2/pkg/cosign"
+	"errors"
+
+	cosignError "github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
-// exitCodeLookup contains a map of errorTypes and their associated exitCodes.
-var exitCodeLookup = map[string]int{
-	verificationError.ErrNoMatchingSignaturesType: NoMatchingSignature,
-	verificationError.ErrImageTagNotFoundType:     NonExistentTag,
-	verificationError.ErrNoSignaturesFoundType:    ImageWithoutSignature,
+func LookupExitCodeForError(err interface{ error }) int {
+	if noMatchingSignatureError(err) {
+		return NoMatchingSignature
+	}
+
+	if imageTagNotFoundError(err) {
+		return NonExistentTag
+	}
+
+	if noSignaturesFoundError(err) {
+		return ImageWithoutSignature
+	}
+
+	if noCertificateFoundOnSignature(err) {
+		return NoCertificateFoundOnSignature
+	}
+
+	// we want to return exit code = `1` at this point because there is
+	// no valid exit code found for the error type passed, so we default to 1.
+	return 1
 }
 
-func LookupExitCodeForErrorType(errorType string) int {
-	exitCode := exitCodeLookup[errorType]
+func noMatchingSignatureError(err interface{ error }) bool {
+	var errNoMatchingSignatures *cosignError.ErrNoMatchingSignatures
+	return errors.As(err, &errNoMatchingSignatures)
+}
 
-	// if there is no entry in the lookup map for the passed errorType,
-	// then by default, it will return `0`. however, as `0` as an exitCode
-	// for success, we want to return `1` instead until there is a valid
-	// exit code entry in the map for the passed errorType.
-	if exitCode == 0 {
-		return 1
-	}
-	return exitCode
+func imageTagNotFoundError(err interface{ error }) bool {
+	var errImageTagNotFound *cosignError.ErrImageTagNotFound
+	return errors.As(err, &errImageTagNotFound)
+}
+
+func noSignaturesFoundError(err interface{ error }) bool {
+	var errNoSignaturesFound *cosignError.ErrNoSignaturesFound
+	return errors.As(err, &errNoSignaturesFound)
+}
+
+func noCertificateFoundOnSignature(err interface{ error }) bool {
+	var errNoCertificateFoundOnSignature *cosignError.ErrNoCertificateFoundOnSignature
+	return errors.As(err, &errNoCertificateFoundOnSignature)
 }

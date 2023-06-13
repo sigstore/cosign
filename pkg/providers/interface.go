@@ -24,8 +24,13 @@ import (
 
 var (
 	m         sync.Mutex
-	providers = make(map[string]Interface)
+	providers []providerEntry
 )
+
+type providerEntry struct {
+	name string
+	p    Interface
+}
 
 // Interface is what providers need to implement to participate in furnishing OIDC tokens.
 type Interface interface {
@@ -41,10 +46,12 @@ func Register(name string, p Interface) {
 	m.Lock()
 	defer m.Unlock()
 
-	if prev, ok := providers[name]; ok {
-		panic(fmt.Sprintf("duplicate provider for name %q, %T and %T", name, prev, p))
+	for _, pe := range providers {
+		if pe.name == name {
+			panic(fmt.Sprintf("duplicate provider for name %q, %T and %T", name, pe.p, p))
+		}
 	}
-	providers[name] = p
+	providers = append(providers, providerEntry{name: name, p: p})
 }
 
 // Enabled checks whether any of the registered providers are enabled in this execution context.
@@ -53,7 +60,7 @@ func Enabled(ctx context.Context) bool {
 	defer m.Unlock()
 
 	for _, provider := range providers {
-		if provider.Enabled(ctx) {
+		if provider.p.Enabled(ctx) {
 			return true
 		}
 	}
@@ -68,10 +75,10 @@ func Provide(ctx context.Context, audience string) (string, error) {
 	var id string
 	var err error
 	for _, provider := range providers {
-		if !provider.Enabled(ctx) {
+		if !provider.p.Enabled(ctx) {
 			continue
 		}
-		id, err = provider.Provide(ctx, audience)
+		id, err = provider.p.Provide(ctx, audience)
 		if err == nil {
 			return id, err
 		}
@@ -89,9 +96,10 @@ func ProvideFrom(_ context.Context, provider string) (Interface, error) {
 	m.Lock()
 	defer m.Unlock()
 
-	p, ok := providers[provider]
-	if !ok {
-		return nil, fmt.Errorf("%s is not a valid provider", provider)
+	for _, p := range providers {
+		if p.name == provider {
+			return p.p, nil
+		}
 	}
-	return p, nil
+	return nil, fmt.Errorf("%s is not a valid provider", provider)
 }

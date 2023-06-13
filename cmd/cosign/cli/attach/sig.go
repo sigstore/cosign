@@ -23,15 +23,15 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -73,6 +73,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 
 	var cert []byte
 	var certChain []byte
+	var timeStampedSig []byte
 
 	if certRef != "" {
 		cert, err = os.ReadFile(filepath.Clean(certRef))
@@ -88,7 +89,15 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		}
 	}
 
-	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain))
+	if timeStampedSigRef != "" {
+		timeStampedSig, err = os.ReadFile(filepath.Clean(timeStampedSigRef))
+		if err != nil {
+			return err
+		}
+	}
+	bundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
+
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(bundle))
 	if err != nil {
 		return err
 	}

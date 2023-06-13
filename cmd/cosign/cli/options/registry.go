@@ -44,6 +44,9 @@ type RegistryOptions struct {
 	KubernetesKeychain bool
 	RefOpts            ReferenceOptions
 	Keychain           Keychain
+
+	// RegistryClientOpts allows overriding the result of GetRegistryClientOpts.
+	RegistryClientOpts []remote.Option
 }
 
 var _ Interface = (*RegistryOptions)(nil)
@@ -86,6 +89,12 @@ func (o *RegistryOptions) NameOptions() []name.Option {
 }
 
 func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Option {
+	if o.RegistryClientOpts != nil {
+		ropts := o.RegistryClientOpts
+		ropts = append(ropts, remote.WithContext(ctx))
+		return ropts
+	}
+
 	opts := []remote.Option{
 		remote.WithContext(ctx),
 		remote.WithUserAgent(UserAgent()),

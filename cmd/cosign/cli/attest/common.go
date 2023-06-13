@@ -1,5 +1,4 @@
-//
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2023 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,23 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errors
+package attest
 
 import (
-	"errors"
-	"testing"
+	"fmt"
+	"io"
+	"os"
 )
 
-func TestWrapWithGenericCosignError(t *testing.T) {
-	errorText := "i am a generic cosign error"
-	err := WrapError(errors.New(errorText))
-
-	var cosignError *CosignError
-	if errors.As(err, &cosignError) {
-		if cosignError.ExitCode() == 1 && cosignError.Message == errorText {
-			t.Logf("generic cosign error successfully returned")
-			return
-		}
-		t.Fatalf("generic cosign error unsuccessfully returned")
+func predicateReader(predicatePath string) (io.ReadCloser, error) {
+	if predicatePath == "-" {
+		fmt.Fprintln(os.Stderr, "Using payload from: standard input")
+		return os.Stdin, nil
 	}
+
+	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
+	f, err := os.Open(predicatePath)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }

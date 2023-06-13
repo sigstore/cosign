@@ -179,7 +179,9 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 
 		if digest, ok := ref.(name.Digest); ok && !signOpts.Recursive {
 			se, err := ociremote.SignedEntity(ref, opts...)
-			if err != nil {
+			if err == ociremote.ErrEntityNotFound {
+				se = ociremote.SignedUnknown(digest)
+			} else if err != nil {
 				return fmt.Errorf("accessing image: %w", err)
 			}
 			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
@@ -221,8 +223,9 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	// The payload can be passed to skip generation.
 	if len(payload) == 0 {
 		payload, err = (&sigPayload.Cosign{
-			Image:       digest,
-			Annotations: annotations,
+			Image:           digest,
+			ClaimedIdentity: signOpts.SignContainerIdentity,
+			Annotations:     annotations,
 		}).MarshalJSON()
 		if err != nil {
 			return fmt.Errorf("payload: %w", err)
