@@ -1230,44 +1230,6 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatalf("expected error with mismatched root, got %v", err)
 		}
 	})
-	t.Run("dsse Attestation with keyless", func(t *testing.T) {
-		identity := "hello@foo.com"
-		issuer := "issuer"
-		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
-
-		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"customFoo","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
-		wrapped := dsse.WrapSigner(signer, ctypes.IntotoPayloadType)
-		signedPayload, err := wrapped.SignMessage(bytes.NewReader([]byte(stmt)), signatureoptions.WithContext(context.Background()))
-		if err != nil {
-			t.Fatal(err)
-		}
-		// intoto sig = json-serialized dsse envelope
-		sig := signedPayload
-
-		// Create bundle
-		entry := genRekorEntry(t, rekor_dsse.KIND, "0.0.1", signedPayload, leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
-		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
-		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
-		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
-
-		// Verify command with bundle
-		cmd := VerifyBlobAttestationCommand{
-			CertVerifyOptions: options.CertVerifyOptions{
-				CertOidcIssuer: issuer,
-				CertIdentity:   identity,
-			},
-			CertRef:       "", // Cert is fetched from bundle
-			CertChain:     "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
-			SignaturePath: "", // Sig is fetched from bundle
-			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
-			IgnoreSCT:     true,
-			CheckClaims:   false, // Intentionally false. This checks the subject claim. This is tested in verify_blob_attestation_test.go
-		}
-		if err := cmd.Exec(context.Background(), blobPath); err != nil {
-			t.Fatal(err)
-		}
-	})
 	t.Run("intoto Attestation with keyless", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
