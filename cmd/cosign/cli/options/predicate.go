@@ -19,34 +19,31 @@ import (
 	"fmt"
 	"net/url"
 
-	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
-
-	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/spf13/cobra"
 
-	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
+	"github.com/sigstore/cosign/v2/pkg/policy"
 )
 
 const (
-	PredicateCustom    = "custom"
-	PredicateSLSA      = "slsaprovenance"
-	PredicateSPDX      = "spdx"
-	PredicateSPDXJSON  = "spdxjson"
-	PredicateCycloneDX = "cyclonedx"
-	PredicateLink      = "link"
-	PredicateVuln      = "vuln"
+	// Deprecated: Use pkg/cosign/policy.PredicateCustom instead.
+	PredicateCustom = policy.PredicateCustom
+	// Deprecated: Use pkg/cosign/policy.PredicateSLSA instead.
+	PredicateSLSA = policy.PredicateSLSA
+	// Deprecated: Use pkg/cosign/policy.PredicateSPDX instead.
+	PredicateSPDX = policy.PredicateSPDX
+	// Deprecated: Use pkg/cosign/policy.PredicateSPDXJSON instead.
+	PredicateSPDXJSON = policy.PredicateSPDXJSON
+	// Deprecated: Use pkg/cosign/policy.PredicateCycloneDX instead.
+	PredicateCycloneDX = policy.PredicateCycloneDX
+	// Deprecated: Use pkg/cosign/policy.PredicateLink instead.
+	PredicateLink = policy.PredicateLink
+	// Deprecated: Use pkg/cosign/policy.PredicateVuln instead.
+	PredicateVuln = policy.PredicateVuln
 )
 
 // PredicateTypeMap is the mapping between the predicate `type` option to predicate URI.
-var PredicateTypeMap = map[string]string{
-	PredicateCustom:    attestation.CosignCustomProvenanceV01,
-	PredicateSLSA:      slsa.PredicateSLSAProvenance,
-	PredicateSPDX:      in_toto.PredicateSPDX,
-	PredicateSPDXJSON:  in_toto.PredicateSPDX,
-	PredicateCycloneDX: in_toto.PredicateCycloneDX,
-	PredicateLink:      in_toto.PredicateLinkV1,
-	PredicateVuln:      attestation.CosignVulnProvenanceV01,
-}
+// Deprecated: Use pkg/cosign/policy.PredicateTypeMap instead.
+var PredicateTypeMap = policy.PredicateTypeMap
 
 // PredicateOptions is the wrapper for predicate related options.
 type PredicateOptions struct {

@@ -57,8 +57,16 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 
-	// Loads OIDC providers
-	_ "github.com/sigstore/cosign/v2/pkg/providers/all"
+	//
+	_ "github.com/sigstore/cosign/v2/pkg/providers/github"
+
+	//
+	_ "github.com/sigstore/cosign/v2/pkg/providers"
+	_ "github.com/sigstore/cosign/v2/pkg/providers/buildkite"
+	_ "github.com/sigstore/cosign/v2/pkg/providers/envvar"
+	_ "github.com/sigstore/cosign/v2/pkg/providers/filesystem"
+	_ "github.com/sigstore/cosign/v2/pkg/providers/google"
+	_ "github.com/sigstore/cosign/v2/pkg/providers/spiffe"
 )
 
 func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {

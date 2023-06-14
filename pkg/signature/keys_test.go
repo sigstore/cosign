@@ -26,7 +26,7 @@ import (
 
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/test"
+	"github.com/sigstore/cosign/v2/pkg/cosign/test"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"

@@ -23,11 +23,32 @@ import (
 	"fmt"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
+	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 )
+
+const (
+	PredicateCustom    = "custom"
+	PredicateSLSA      = "slsaprovenance"
+	PredicateSPDX      = "spdx"
+	PredicateSPDXJSON  = "spdxjson"
+	PredicateCycloneDX = "cyclonedx"
+	PredicateLink      = "link"
+	PredicateVuln      = "vuln"
+)
+
+// PredicateTypeMap is the mapping between the predicate `type` option to predicate URI.
+var PredicateTypeMap = map[string]string{
+	PredicateCustom:    attestation.CosignCustomProvenanceV01,
+	PredicateSLSA:      slsa.PredicateSLSAProvenance,
+	PredicateSPDX:      in_toto.PredicateSPDX,
+	PredicateSPDXJSON:  in_toto.PredicateSPDX,
+	PredicateCycloneDX: in_toto.PredicateCycloneDX,
+	PredicateLink:      in_toto.PredicateLinkV1,
+	PredicateVuln:      attestation.CosignVulnProvenanceV01,
+}
 
 // AttestationToPayloadJSON takes in a verified Attestation (oci.Signature) and
 // marshals it into a JSON depending on the payload that's then consumable
@@ -49,7 +70,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	if predicateType == "" {
 		return nil, "", errors.New("missing predicate type")
 	}
-	predicateURI, ok := options.PredicateTypeMap[predicateType]
+	predicateURI, ok := PredicateTypeMap[predicateType]
 	if !ok {
 		// Not a custom one, use it as is.
 		predicateURI = predicateType
@@ -91,12 +112,12 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	// with more meaningful error message.
 	var payload []byte
 	switch predicateType {
-	case options.PredicateCustom:
+	case PredicateCustom:
 		payload, err = json.Marshal(statement)
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("generating CosignStatement: %w", err)
 		}
-	case options.PredicateLink:
+	case PredicateLink:
 		var linkStatement in_toto.LinkStatement
 		if err := json.Unmarshal(decodedPayload, &linkStatement); err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("unmarshaling LinkStatement: %w", err)
@@ -105,7 +126,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("marshaling LinkStatement: %w", err)
 		}
-	case options.PredicateSLSA:
+	case PredicateSLSA:
 		var slsaProvenanceStatement in_toto.ProvenanceStatement
 		if err := json.Unmarshal(decodedPayload, &slsaProvenanceStatement); err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("unmarshaling ProvenanceStatement): %w", err)
@@ -114,7 +135,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("marshaling ProvenanceStatement: %w", err)
 		}
-	case options.PredicateSPDX, options.PredicateSPDXJSON:
+	case PredicateSPDX, PredicateSPDXJSON:
 		var spdxStatement in_toto.SPDXStatement
 		if err := json.Unmarshal(decodedPayload, &spdxStatement); err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("unmarshaling SPDXStatement: %w", err)
@@ -123,7 +144,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("marshaling SPDXStatement: %w", err)
 		}
-	case options.PredicateCycloneDX:
+	case PredicateCycloneDX:
 		var cyclonedxStatement in_toto.CycloneDXStatement
 		if err := json.Unmarshal(decodedPayload, &cyclonedxStatement); err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("unmarshaling CycloneDXStatement: %w", err)
@@ -132,7 +153,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("marshaling CycloneDXStatement: %w", err)
 		}
-	case options.PredicateVuln:
+	case PredicateVuln:
 		var vulnStatement attestation.CosignVulnStatement
 		if err := json.Unmarshal(decodedPayload, &vulnStatement); err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("unmarshaling CosignVulnStatement: %w", err)

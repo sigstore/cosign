@@ -34,7 +34,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/test"
+	"github.com/sigstore/cosign/v2/pkg/cosign/test"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/theupdateframework/go-tuf/encrypted"
