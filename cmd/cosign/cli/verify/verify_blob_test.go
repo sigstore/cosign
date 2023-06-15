@@ -48,6 +48,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
+	rekor_dsse "github.com/sigstore/rekor/pkg/types/dsse"
 	"github.com/sigstore/rekor/pkg/types/hashedrekord"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -861,7 +862,44 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatal("expected error due to expired cert, received nil")
 		}
 	})
-	t.Run("Attestation", func(t *testing.T) {
+	t.Run("dsse Attestation", func(t *testing.T) {
+		identity := "hello@foo.com"
+		issuer := "issuer"
+		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
+
+		stmt := `{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"customFoo","subject":[{"name":"subject","digest":{"sha256":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}}],"predicate":{}}`
+		wrapped := dsse.WrapSigner(signer, ctypes.IntotoPayloadType)
+		signedPayload, err := wrapped.SignMessage(bytes.NewReader([]byte(stmt)), signatureoptions.WithContext(context.Background()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		// intoto sig = json-serialized dsse envelope
+		sig := signedPayload
+
+		// Create bundle
+		entry := genRekorEntry(t, rekor_dsse.KIND, "0.0.1", signedPayload, leafPemCert, sig)
+		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
+		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
+		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
+
+		// Verify command
+		cmd := VerifyBlobAttestationCommand{
+			CertVerifyOptions: options.CertVerifyOptions{
+				CertIdentity:   identity,
+				CertOidcIssuer: issuer,
+			},
+			CertRef:       "", // Cert is fetched from bundle
+			CertChain:     "", // Chain is fetched from TUF/SIGSTORE_ROOT_FILE
+			SignaturePath: "", // Sig is fetched from bundle
+			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
+			IgnoreSCT:     true,
+		}
+		if err := cmd.Exec(context.Background(), blobPath); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("intoto Attestation", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
@@ -1192,7 +1230,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			t.Fatalf("expected error with mismatched root, got %v", err)
 		}
 	})
-	t.Run("Attestation with keyless", func(t *testing.T) {
+	t.Run("intoto Attestation with keyless", func(t *testing.T) {
 		identity := "hello@foo.com"
 		issuer := "issuer"
 		leafCert, _, leafPemCert, signer := keyless.genLeafCert(t, identity, issuer)
@@ -1476,6 +1514,8 @@ func createEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBy
 		props.ArtifactHash = strings.ToLower(hex.EncodeToString(blobHash[:]))
 		props.SignatureBytes = sigBytes
 	case intoto.KIND:
+		props.ArtifactBytes = blobBytes
+	case rekor_dsse.KIND:
 		props.ArtifactBytes = blobBytes
 	default:
 		return nil, fmt.Errorf("unexpected entry kind: %s", kind)

@@ -38,7 +38,7 @@ var (
 func TestGetRekorPubKeys(t *testing.T) {
 	keys, err := GetRekorPubs(context.Background())
 	if err != nil {
-		t.Errorf("Unexpected error calling GetRekorPubs, expected nil: %v", err)
+		t.Fatalf("Unexpected error calling GetRekorPubs, expected nil: %v", err)
 	}
 	if len(keys.Keys) == 0 {
 		t.Errorf("expected 1 or more keys, got 0")
