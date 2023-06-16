@@ -35,16 +35,16 @@ func EvaluatePolicyAgainstJSON(ctx context.Context, name, policyType string, pol
 	case "cue":
 		cueValidationErr := evaluateCue(ctx, jsonBytes, policyBody)
 		if cueValidationErr != nil {
-			return nil, ThrowError(&EvaluationFailure{
+			return nil, &EvaluationFailure{
 				fmt.Errorf("failed evaluating cue policy for %s: %w", name, cueValidationErr),
-			})
+			}
 		}
 	case "rego":
 		regoValidationWarn, regoValidationErr := evaluateRego(ctx, jsonBytes, policyBody)
 		if regoValidationErr != nil {
-			return regoValidationWarn, ThrowError(&EvaluationFailure{
+			return regoValidationWarn, &EvaluationFailure{
 				fmt.Errorf("failed evaluating rego policy for type %s: %w", name, regoValidationErr),
-			})
+			}
 		}
 		// It is possible to return warning messages when the policy is compliant
 		return regoValidationWarn, regoValidationErr
