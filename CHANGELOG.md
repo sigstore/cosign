@@ -1,4 +1,4 @@
-# v2.0.3
+# v2.1.0
 
 **Breaking Change: The predicate is now a required flag in the attest commands, set via the --type flag.**
 
@@ -26,7 +26,6 @@
 ## Documentation
 * Fix links to sigstore/docs in markdown files (#3064)
 * Update release readme (#2942)
-
 
 # v2.0.2
 
