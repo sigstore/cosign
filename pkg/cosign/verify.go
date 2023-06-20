@@ -31,6 +31,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -597,24 +598,42 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 		}
 	}
 
-	validationErrs := []string{}
+	validationErrs := make([]string, len(sl))
+	signatures := make([]oci.Signature, len(sl))
+	bundlesVerified := make([]bool, len(sl))
 
-	for _, sig := range sl {
-		sig, err := static.Copy(sig)
-		if err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
-		verified, err := VerifyImageSignature(ctx, sig, h, co)
-		bundleVerified = bundleVerified || verified
-		if err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
+	var wg sync.WaitGroup
 
-		// Phew, we made it.
-		checkedSignatures = append(checkedSignatures, sig)
+	for i, sig := range sl {
+		wg.Add(1)
+		go func(sig oci.Signature, index int) {
+			defer wg.Done()
+			sig, err := static.Copy(sig)
+			if err != nil {
+				validationErrs[index] = err.Error()
+				return
+			}
+			verified, err := VerifyImageSignature(ctx, sig, h, co)
+			bundlesVerified[index] = verified
+			if err != nil {
+				validationErrs[index] = err.Error()
+				return
+			}
+			signatures[index] = sig
+		}(sig, i)
 	}
+	wg.Wait()
+
+	for _, s := range signatures {
+		if s != nil {
+			checkedSignatures = append(checkedSignatures, s)
+		}
+	}
+
+	for _, verified := range bundlesVerified {
+		bundleVerified = bundleVerified || verified
+	}
+
 	if len(checkedSignatures) == 0 {
 		// TODO: ErrNoMatchingSignatures.Unwrap should return []error,
 		// or we should replace "...%s" strings.Join with "...%w", errors.Join.
@@ -934,25 +953,44 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 		return nil, false, err
 	}
 
-	validationErrs := []string{}
-	for _, att := range sl {
-		att, err := static.Copy(att)
-		if err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
-		if err := func(att oci.Signature) error {
-			verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co)
-			bundleVerified = bundleVerified || verified
-			return err
-		}(att); err != nil {
-			validationErrs = append(validationErrs, err.Error())
-			continue
-		}
+	validationErrs := make([]string, len(sl))
+	attestations := make([]oci.Signature, len(sl))
+	bundlesVerified := make([]bool, len(sl))
 
-		// Phew, we made it.
-		checkedAttestations = append(checkedAttestations, att)
+	var wg sync.WaitGroup
+
+	for i, att := range sl {
+		wg.Add(1)
+		go func(att oci.Signature, index int) {
+			defer wg.Done()
+			att, err := static.Copy(att)
+			if err != nil {
+				validationErrs[index] = err.Error()
+				return
+			}
+			if err := func(att oci.Signature) error {
+				verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co)
+				bundlesVerified[index] = verified
+				return err
+			}(att); err != nil {
+				validationErrs[index] = err.Error()
+				return
+			}
+			attestations[index] = att
+		}(att, i)
 	}
+	wg.Wait()
+
+	for _, a := range attestations {
+		if a != nil {
+			checkedAttestations = append(checkedAttestations, a)
+		}
+	}
+
+	for _, verified := range bundlesVerified {
+		bundleVerified = bundleVerified || verified
+	}
+
 	if len(checkedAttestations) == 0 {
 		return nil, false, &ErrNoMatchingAttestations{
 			fmt.Errorf("no matching attestations: %s", strings.Join(validationErrs, "\n ")),
