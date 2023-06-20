@@ -600,6 +600,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 
 	validationErrs := make([]string, len(sl))
 	signatures := make([]oci.Signature, len(sl))
+	bundlesVerified := make([]bool, len(sl))
 
 	var wg sync.WaitGroup
 
@@ -613,7 +614,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 				return
 			}
 			verified, err := VerifyImageSignature(ctx, sig, h, co)
-			bundleVerified = bundleVerified || verified
+			bundlesVerified[index] = verified
 			if err != nil {
 				validationErrs[index] = err.Error()
 				return
@@ -627,6 +628,10 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 		if s != nil {
 			checkedSignatures = append(checkedSignatures, s)
 		}
+	}
+
+	for _, verified := range bundlesVerified {
+		bundleVerified = bundleVerified || verified
 	}
 
 	if len(checkedSignatures) == 0 {
@@ -950,6 +955,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 
 	validationErrs := make([]string, len(sl))
 	attestations := make([]oci.Signature, len(sl))
+	bundlesVerified := make([]bool, len(sl))
 
 	var wg sync.WaitGroup
 
@@ -964,7 +970,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 			}
 			if err := func(att oci.Signature) error {
 				verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co)
-				bundleVerified = bundleVerified || verified
+				bundlesVerified[index] = verified
 				return err
 			}(att); err != nil {
 				validationErrs[index] = err.Error()
@@ -979,6 +985,10 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 		if a != nil {
 			checkedAttestations = append(checkedAttestations, a)
 		}
+	}
+
+	for _, verified := range bundlesVerified {
+		bundleVerified = bundleVerified || verified
 	}
 
 	if len(checkedAttestations) == 0 {
