@@ -96,6 +96,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		if err := copyTag(ociremote.SignatureTag); err != nil {
 			return err
 		}
+
 		if sigOnly {
 			return nil
 		}
@@ -117,13 +118,15 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}); err != nil {
 		return err
 	}
-	if sigOnly {
-		return nil
-	}
 
 	// Wait for everything to be copied over.
 	if err := g.Wait(); err != nil {
 		return err
+	}
+
+	// If we're only copying sigs, we have nothing left to do.
+	if sigOnly {
+		return nil
 	}
 
 	// Now that everything has been copied over, update the tag.
