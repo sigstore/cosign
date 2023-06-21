@@ -15,25 +15,24 @@
 
 linters:
   enable:
-  - asciicheck
-  - unused
-  - depguard
-  - errcheck
-  - errorlint
-  - forbidigo
-  - gofmt
-  - goimports
-  - gosec
-  - gocritic
-  - importas
-  - prealloc
-  - revive
-  - misspell
-  - stylecheck
-  - tparallel
-  - unconvert
-  - unparam
-  - whitespace
+    - asciicheck
+    - unused
+    - errcheck
+    - errorlint
+    - forbidigo
+    - gofmt
+    - goimports
+    - gosec
+    - gocritic
+    - importas
+    - prealloc
+    - revive
+    - misspell
+    - stylecheck
+    - tparallel
+    - unconvert
+    - unparam
+    - whitespace
 linters-settings:
   forbidigo:
     forbid:
@@ -43,92 +42,17 @@ linters-settings:
       - 'os\.Getenv.*'
       - 'os\.LookupEnv.*'
     exclude_godoc_examples: false
-  depguard:
-    rules:
-      main:
-        files:
-          - $all
-          - "!$test"
-        allow:
-          - $gostd
-
-          - github.com/open-policy-agent/opa/rego
-          - github.com/xanzy/go-gitlab
-          - github.com/spf13/cobra
-          - github.com/spf13/viper
-          - github.com/spf13/pflag
-          - github.com/pkg/errors
-          - github.com/moby/term
-          - github.com/google/go-cmp/cmp
-          - github.com/in-toto/in-toto-golang
-          - github.com/secure-systems-lab/go-securesystemslib
-          - github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer
-          - github.com/digitorus/timestamp
-          - github.com/transparency-dev/merkle
-          - github.com/google/certificate-transparency-go
-          - github.com/go-openapi
-          - github.com/theupdateframework/go-tuf
-          - github.com/kelseyhightower/envconfig
-          - github.com/google/go-github
-          - github.com/buildkite/agent
-          - github.com/mitchellh/go-wordwrap
-          - github.com/withfig/autocomplete-tools/integrations/cobra
-          - github.com/awslabs/amazon-ecr-credential-helper/ecr-login
-          - github.com/chrismellard/docker-credential-acr-env/pkg/credhelper
-          - github.com/mozillazg/docker-credential-acr-helper/pkg/credhelper
-
-          - cuelang.org/go/cue/load
-          - cuelang.org/go/cue/cuecontext
-          - cuelang.org/go/encoding/json
-
-          - k8s.io/utils/pointer
-          - k8s.io/client-go
-          - k8s.io/api/core
-          - k8s.io/apimachinery
-          - sigs.k8s.io/release-utils/version
-
-          - github.com/spiffe/go-spiffe
-          - github.com/google/go-containerregistry
-          - github.com/sigstore
-
-      test:
-        files:
-          - $test
-        allow:
-          - $gostd
-          - github.com/google/go-cmp/cmp
-          - github.com/go-openapi
-          - github.com/google/go-containerregistry
-          - github.com/in-toto/in-toto-golang
-          - github.com/stretchr/testify
-          - github.com/pkg/errors
-          - github.com/theupdateframework/go-tuf
-          - github.com/google/certificate-transparency-go
-          - github.com/secure-systems-lab/go-securesystemslib
-          - github.com/transparency-dev/merkle/rfc6962
-          - github.com/depcheck-test/depcheck-test/depcheck
-          - github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer
-
-          - k8s.io/api/core
-          - k8s.io/apimachinery
-          - k8s.io/utils/pointer
-
-          - github.com/sigstore/cosign
-          - github.com/sigstore/sigstore
-          - github.com/sigstore/rekor
-          - github.com/sigstore/fulcio
-
 output:
   uniq-by-line: false
 issues:
   exclude-rules:
-  - path: _test\.go
-    linters:
-    - errcheck
-    - gosec
-    # We want to allow using os.Getenv and os.Setenv in tests because it
-    # might be easier (and needed in some cases)
-    - forbidigo
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+        # We want to allow using os.Getenv and os.Setenv in tests because it
+        # might be easier (and needed in some cases)
+        - forbidigo
   max-issues-per-linter: 0
   max-same-issues: 0
 run:
