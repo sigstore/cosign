@@ -73,6 +73,7 @@ cosign dockerfile verify [flags]
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
+      --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
       --offline                                                                                  only allow offline verification
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --payload string                                                                           payload path or remote URL

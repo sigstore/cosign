@@ -21,6 +21,10 @@ import (
 	"os"
 )
 
+const (
+	DefaultMaxWorkers int = 10
+)
+
 func FileExists(filename string) (bool, error) {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {

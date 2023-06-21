@@ -67,6 +67,7 @@ type VerifyAttestationCommand struct {
 	Offline                      bool
 	TSACertChainPath             string
 	IgnoreTlog                   bool
+	MaxWorkers                   int
 }
 
 // Exec runs the verification command
@@ -104,6 +105,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		MaxWorkers:                   c.MaxWorkers,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
