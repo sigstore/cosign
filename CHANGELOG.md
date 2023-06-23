@@ -1,3 +1,4 @@
+
 # v2.1.0
 
 **Breaking Change: The predicate is now a required flag in the attest commands, set via the --type flag.**
@@ -17,15 +18,38 @@
 * download attestation: support --platform flag (#2980)
 * Cleanup: Add `Digest` to the `SignedEntity` interface. (#2960)
 * verify command: support keyless verification using only a provided certificate chain with non-fulcio roots (#2845)
+* verify: use workers to limit the paralellism when verifying images with --max-workers flag (#3069)
 
 ## Bug Fixes
 * Fix pkg/cosign/errors (#3050)
 * fix: update doc to refer to github-actions oidc provider (#3040)
 * fix: prefer GitHub OIDC provider if enabled (#3044)
+* Fix --sig-only in cosign copy (#3074)
 
 ## Documentation
 * Fix links to sigstore/docs in markdown files (#3064)
 * Update release readme (#2942)
+
+**Thank you to our contributors!**
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Chok Yip Lau
+* Chris Burns
+* Dmitry Savintsev
+* Enyinna Ochulor
+* Hayden B
+* Hector Fernandez
+* Jakub Hrozek
+* Jason Hall
+* Jon Johnson
+* Luiz Carvalho
+* Matt Moore
+* Mritunjay Kumar Sharma
+* Mukuls77
+* Ramkumar Chinchani
+* Sascha Grunert
+* Yolanda Robla Mota
+* priyawadhwa
 
 # v2.0.2
 
