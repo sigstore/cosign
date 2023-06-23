@@ -126,6 +126,11 @@ against the transparency log.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+			}
+
+			if o.CommonVerifyOptions.MaxWorkers == 0 {
+				return fmt.Errorf("please set the --max-worker flag to a value that is greater than 0")
 			}
 
 			if o.Registry.AllowInsecure {
@@ -220,6 +225,11 @@ against the transparency log.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+			}
+
+			if o.CommonVerifyOptions.MaxWorkers == 0 {
+				return fmt.Errorf("please set the --max-worker flag to a value that is greater than 0")
 			}
 
 			ctx := cmd.Context()

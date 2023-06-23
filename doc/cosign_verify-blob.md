@@ -74,6 +74,7 @@ cosign verify-blob [flags]
       --insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
+      --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
       --offline                                         only allow offline verification
       --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp string                        path to RFC3161 timestamp FILE

@@ -16,6 +16,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
@@ -106,9 +108,15 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					Offline:                      o.CommonVerifyOptions.Offline,
 					TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				},
 				BaseOnly: o.BaseImageOnly,
 			}
+
+			if o.CommonVerifyOptions.MaxWorkers == 0 {
+				return fmt.Errorf("please set the --max-worker flag to a value that is greater than 0")
+			}
+
 			return v.Exec(cmd.Context(), args)
 		},
 	}

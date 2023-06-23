@@ -16,6 +16,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
@@ -101,8 +103,14 @@ against the transparency log.`,
 					Offline:                      o.CommonVerifyOptions.Offline,
 					TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				},
 			}
+
+			if o.CommonVerifyOptions.MaxWorkers == 0 {
+				return fmt.Errorf("please set the --max-worker flag to a value that is greater than 0")
+			}
+
 			return v.Exec(cmd.Context(), args)
 		},
 	}

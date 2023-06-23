@@ -95,6 +95,7 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 		Attachment:    attachment,
 		HashAlgorithm: crypto.SHA256,
 		IgnoreTlog:    true,
+		MaxWorkers:    10,
 	}
 
 	args := []string{imageRef}
@@ -111,6 +112,7 @@ var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[
 		HashAlgorithm:    crypto.SHA256,
 		TSACertChainPath: tsaCertChain,
 		IgnoreTlog:       skipTlogVerify,
+		MaxWorkers:       10,
 	}
 
 	args := []string{imageRef}
@@ -128,6 +130,7 @@ var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, 
 		TSACertChainPath: tsaCertChain,
 		IgnoreSCT:        skipSCT,
 		IgnoreTlog:       skipTlogVerify,
+		MaxWorkers:       10,
 	}
 
 	args := []string{imageRef}
@@ -145,6 +148,7 @@ var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[st
 		HashAlgorithm: crypto.SHA256,
 		LocalImage:    true,
 		IgnoreTlog:    true,
+		MaxWorkers:    10,
 	}
 
 	args := []string{path}
@@ -336,6 +340,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	verifyAttestation := cliverify.VerifyAttestationCommand{
 		KeyRef:     pubKeyPath,
 		IgnoreTlog: true,
+		MaxWorkers: 10,
 	}
 
 	// Fail case when using without type and policy flag
@@ -827,6 +832,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 		TSACertChainPath: file.Name(),
 		IgnoreTlog:       true,
 		PredicateType:    "slsaprovenance",
+		MaxWorkers:       10,
 	}
 
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
@@ -1738,6 +1744,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	verifyAttestation := cliverify.VerifyAttestationCommand{
 		KeyRef:     pubKeyPath,
 		IgnoreTlog: true,
+		MaxWorkers: 10,
 	}
 	verifyAttestation.PredicateType = "slsaprovenance"
 	verifyAttestation.Policies = []string{policyPath}
@@ -2242,6 +2249,7 @@ func TestInvalidBundle(t *testing.T) {
 		RekorURL:      rekorURL,
 		CheckClaims:   true,
 		HashAlgorithm: crypto.SHA256,
+		MaxWorkers:    10,
 	}
 	args := []string{img2}
 	mustErr(cmd.Exec(context.Background(), args), t)
@@ -2343,6 +2351,7 @@ func TestOffline(t *testing.T) {
 		KeyRef:      pubKeyPath,
 		Offline:     true,
 		CheckClaims: true,
+		MaxWorkers:  10,
 	}
 	must(verifyCmd.Exec(ctx, []string{img1}), t)
 

@@ -31,17 +31,17 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime"
-	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/sigstore/pkg/tuf"
+	"github.com/nozzle/throttler"
 
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/blob"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
 
@@ -68,6 +68,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	tsaverification "github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
@@ -153,6 +154,10 @@ type CheckOpts struct {
 
 	// IgnoreTlog skip tlog verification
 	IgnoreTlog bool
+
+	// The amount of maximum workers for parallel executions.
+	// Defaults to 10.
+	MaxWorkers int
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -598,31 +603,36 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 		}
 	}
 
-	validationErrs := make([]string, len(sl))
 	signatures := make([]oci.Signature, len(sl))
 	bundlesVerified := make([]bool, len(sl))
 
-	var wg sync.WaitGroup
-
+	workers := co.MaxWorkers
+	if co.MaxWorkers == 0 {
+		workers = cosign.DefaultMaxWorkers
+	}
+	t := throttler.New(workers, len(sl))
 	for i, sig := range sl {
-		wg.Add(1)
 		go func(sig oci.Signature, index int) {
-			defer wg.Done()
 			sig, err := static.Copy(sig)
 			if err != nil {
-				validationErrs[index] = err.Error()
+				t.Done(err)
 				return
 			}
 			verified, err := VerifyImageSignature(ctx, sig, h, co)
 			bundlesVerified[index] = verified
 			if err != nil {
-				validationErrs[index] = err.Error()
+				t.Done(err)
 				return
 			}
 			signatures[index] = sig
+
+			t.Done(nil)
 		}(sig, i)
+
+		if t.Throttle() > 0 {
+			break
+		}
 	}
-	wg.Wait()
 
 	for _, s := range signatures {
 		if s != nil {
@@ -635,12 +645,17 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	}
 
 	if len(checkedSignatures) == 0 {
+		var combinedErrors []string
+		for _, err := range t.Errs() {
+			combinedErrors = append(combinedErrors, err.Error())
+		}
 		// TODO: ErrNoMatchingSignatures.Unwrap should return []error,
 		// or we should replace "...%s" strings.Join with "...%w", errors.Join.
 		return nil, false, &ErrNoMatchingSignatures{
-			fmt.Errorf("no matching signatures: %s", strings.Join(validationErrs, "\n ")),
+			fmt.Errorf("no matching signatures: %s", strings.Join(combinedErrors, "\n ")),
 		}
 	}
+
 	return checkedSignatures, bundleVerified, nil
 }
 
@@ -953,19 +968,19 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 		return nil, false, err
 	}
 
-	validationErrs := make([]string, len(sl))
 	attestations := make([]oci.Signature, len(sl))
 	bundlesVerified := make([]bool, len(sl))
 
-	var wg sync.WaitGroup
-
+	workers := co.MaxWorkers
+	if co.MaxWorkers == 0 {
+		workers = cosign.DefaultMaxWorkers
+	}
+	t := throttler.New(workers, len(sl))
 	for i, att := range sl {
-		wg.Add(1)
 		go func(att oci.Signature, index int) {
-			defer wg.Done()
 			att, err := static.Copy(att)
 			if err != nil {
-				validationErrs[index] = err.Error()
+				t.Done(err)
 				return
 			}
 			if err := func(att oci.Signature) error {
@@ -973,13 +988,18 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 				bundlesVerified[index] = verified
 				return err
 			}(att); err != nil {
-				validationErrs[index] = err.Error()
+				t.Done(err)
 				return
 			}
+
 			attestations[index] = att
+			t.Done(nil)
 		}(att, i)
+
+		if t.Throttle() > 0 {
+			break
+		}
 	}
-	wg.Wait()
 
 	for _, a := range attestations {
 		if a != nil {
@@ -992,10 +1012,16 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 	}
 
 	if len(checkedAttestations) == 0 {
+		var combinedErrors []string
+		for _, err := range t.Errs() {
+			combinedErrors = append(combinedErrors, err.Error())
+		}
+
 		return nil, false, &ErrNoMatchingAttestations{
-			fmt.Errorf("no matching attestations: %s", strings.Join(validationErrs, "\n ")),
+			fmt.Errorf("no matching attestations: %s", strings.Join(combinedErrors, "\n ")),
 		}
 	}
+
 	return checkedAttestations, bundleVerified, nil
 }
 
