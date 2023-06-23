@@ -1,3 +1,32 @@
+# v2.1.0
+
+**Breaking Change: The predicate is now a required flag in the attest commands, set via the --type flag.**
+
+## Enhancements
+* Verify sigs and attestations in parallel (#3066)
+* Deep inspect attestations when filtering download (#3031)
+* refactor bundle validation code, add support for DSSE rekor type (#3016)
+* Allow overriding remote options (#3049)
+* feat: adds no cert found on sig exit code (#3038)
+* Make predicate a required flag in attest commands (#3033)
+* Added support for attaching Time stamp authority Response in attach command (#3001)
+* Add `sign --sign-container-identity` CLI (#2984)
+* Feature: Allow cosign to sign digests before they are uploaded. (#2959)
+* accepts `attachment-tag-prefix` for `cosign copy` (#3014)
+* Feature: adds '--allow-insecure-registry' for cosign load (#3000)
+* download attestation: support --platform flag (#2980)
+* Cleanup: Add `Digest` to the `SignedEntity` interface. (#2960)
+* verify command: support keyless verification using only a provided certificate chain with non-fulcio roots (#2845)
+
+## Bug Fixes
+* Fix pkg/cosign/errors (#3050)
+* fix: update doc to refer to github-actions oidc provider (#3040)
+* fix: prefer GitHub OIDC provider if enabled (#3044)
+
+## Documentation
+* Fix links to sigstore/docs in markdown files (#3064)
+* Update release readme (#2942)
+
 # v2.0.2
 
 ## Enhancements
