@@ -33,8 +33,8 @@ cloud.google.com/go/datastore v1.1.0/go.mod h1:umbIZjpQpHh4hmRpGhH4tLFup+FVzqBi1
 cloud.google.com/go/firestore v1.1.0/go.mod h1:ulACoGHTpvq5r8rxGJ4ddJZBZqakUQqClKRT5SZwBmk=
 cloud.google.com/go/iam v1.1.0 h1:67gSqaPukx7O8WLLHMa0PNs3EBGd2eE4d+psbO/CO94=
 cloud.google.com/go/iam v1.1.0/go.mod h1:nxdHjaKfCr7fNYx/HJMM8LgiMugmveWlkatear5gVyk=
-cloud.google.com/go/kms v1.12.0 h1:IEYV44WsGc6yVO1PlvnRlYzsHM2ImpB598Cglh/3uGw=
-cloud.google.com/go/kms v1.12.0/go.mod h1:syfpIBSOqQ/ZqK48RLPkwUhFhvbsA1SyGAq/vPohd20=
+cloud.google.com/go/kms v1.12.1 h1:xZmZuwy2cwzsocmKDOPu4BL7umg8QXagQx6fKVmf45U=
+cloud.google.com/go/kms v1.12.1/go.mod h1:c9J991h5DTl+kg7gi3MYomh12YEENGrf48ee/N/2CDM=
 cloud.google.com/go/pubsub v1.0.1/go.mod h1:R0Gpsv3s54REJCy4fxDixWD93lHJMoZTyQ2kNxGRt3I=
 cloud.google.com/go/pubsub v1.1.0/go.mod h1:EwwdRX2sKPjnvnqCa270oGRyludottCI76h+R3AArQw=
 cloud.google.com/go/pubsub v1.2.0/go.mod h1:jhfEVHT8odbXTkndysNHCcx0awwzvfOlguIAii9o8iA=
@@ -818,8 +818,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.0 h1:fRv9grFx22NsmXTkfhF
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.0/go.mod h1:IgMwzsYgwhi0eB37GTylJxHPUVRtYXDBtL6/wOTvMKU=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1 h1:X3ezwolP+b1jP3R6XPOWhUU0TZKONiv6EIRuySlZGrY=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1/go.mod h1:SG2NPEdX2Vi7CBp/o93kJqXrovkis/T9ou9oxZONyEA=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0 h1:rYJ7+nRDGxSneFcawUzYyVcRKvGrqqdMUbjZMLI6iCc=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0/go.mod h1:pJD5JoV/1i61LwGFMgQ/xfpEX8QlSk90sfYFGMnxQX0=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.1 h1:mj1KhdzzP1me994bt1UXhq5KZGSR1SoqxTqcT+hfPMk=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.1/go.mod h1:Z7LFrKKfj5ZPhy0YS9HcI4H6kbUQzBsE3e3hR+R3YY8=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.1 h1:fhOToGY5fC5TY101an8i/oDYpoLzUJ1nUFwhnHA1+XY=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.1/go.mod h1:SN4QZHHDs2VqXh5bRXrIi8vqLbOijIp2XoSlmV/WJ/c=
 github.com/sigstore/timestamp-authority v1.1.1 h1:EldrdeBED0edNzDMvYZDf5CyWgtSchtR9DKYyksNR8M=
