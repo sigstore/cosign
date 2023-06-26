@@ -629,9 +629,8 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 			t.Done(nil)
 		}(sig, i)
 
-		if t.Throttle() > 0 {
-			break
-		}
+		// wait till workers are available
+		t.Throttle()
 	}
 
 	for _, s := range signatures {
@@ -996,9 +995,8 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 			t.Done(nil)
 		}(att, i)
 
-		if t.Throttle() > 0 {
-			break
-		}
+		// wait till workers are available
+		t.Throttle()
 	}
 
 	for _, a := range attestations {
