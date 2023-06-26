@@ -98,7 +98,7 @@ func GetWordWrapperLimit() (uint, error) {
 	stdout := os.Stdout
 	fd := stdout.Fd()
 	if !term.IsTerminal(fd) {
-		return 0, errors.New("file descriptor is not a terminal")
+		return 0, nil
 	}
 	terminalSize := GetSize(fd)
 	if terminalSize == nil {
