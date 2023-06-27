@@ -1,3 +1,15 @@
+# v2.1.1
+
+## Bug Fixes
+* wait for the workers become available again to continue the execution (#3084)
+* fix help text when in a container (#3082)
+
+## Documentation
+* update changelog (#3080)
+* DNM: Add CHANGELOG for v2.1.0 (#3068)
+
+* Carlos Tadeu Panato Junior
+* priyawadhwa
 
 # v2.1.0
 
