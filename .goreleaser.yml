@@ -27,7 +27,8 @@ builds:
   - id: linux
     binary: cosign-linux-{{ .Arch }}
     no_unique_dist_dir: true
-    main: ./cmd/cosign
+    main: .
+    dir: ./cmd/cosign
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
@@ -50,7 +51,8 @@ builds:
   - id: linux-pivkey-pkcs11key-amd64
     binary: cosign-linux-pivkey-pkcs11key-amd64
     no_unique_dist_dir: true
-    main: ./cmd/cosign
+    main: .
+    dir: ./cmd/cosign
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
@@ -73,7 +75,8 @@ builds:
   - id: linux-pivkey-pkcs11key-arm64
     binary: cosign-linux-pivkey-pkcs11key-arm64
     no_unique_dist_dir: true
-    main: ./cmd/cosign
+    main: .
+    dir: ./cmd/cosign
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
@@ -101,7 +104,8 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-    main: ./cmd/cosign
+    main: .
+    dir: ./cmd/cosign
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
@@ -121,7 +125,8 @@ builds:
     env:
       - CC=aarch64-apple-darwin21.4-clang
       - CXX=aarch64-apple-darwin21.4-clang++
-    main: ./cmd/cosign
+    main: .
+    dir: ./cmd/cosign
     flags:
       - -trimpath
     goos:
@@ -140,7 +145,8 @@ builds:
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
-    main: ./cmd/cosign
+    main: .
+    dir: ./cmd/cosign
     mod_timestamp: '{{ .CommitTimestamp }}'
     flags:
       - -trimpath
