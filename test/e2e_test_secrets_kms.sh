@@ -16,8 +16,7 @@
 
 set -ex
 
-cd ./cmd/cosign
-go build
+go build -C ./cmd/cosign
 tmp=$(mktemp -d -t cosign-e2e-secrets.XXXXXX)
 cp cosign $tmp/
 

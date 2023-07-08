@@ -59,7 +59,7 @@ jobs:
 
     - name: Install Cosign
       run: |
-        cd ./cmd/cosign && go install && cd -
+        go install -C ./cmd/cosign
 
     - name: Setup mirror
       uses: chainguard-dev/actions/setup-mirror@main
