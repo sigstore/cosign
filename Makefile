@@ -79,10 +79,10 @@ log-%:
 			}'
 
 cosign: $(SRCS)
-	CGO_ENABLED=0 $(GOEXE) build -C ./cmd/cosign -trimpath -ldflags "$(LDFLAGS)" -o $@
+	CGO_ENABLED=0 $(GOEXE) build -C ./cmd/cosign -trimpath -ldflags "$(LDFLAGS)" -o ./../../$@
 
 cosign-pivkey-pkcs11key: $(SRCS)
-	CGO_ENABLED=1 $(GOEXE) build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
+	CGO_ENABLED=1 $(GOEXE) build -C ./cmd/cosign -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o ../../cosign
 
 .PHONY: cross
 cross:

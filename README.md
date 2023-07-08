@@ -39,8 +39,8 @@ If you have Go 1.19+, you can setup a development environment:
 
 ```shell
 $ git clone https://github.com/sigstore/cosign
-$ cd cosign/cmd/cosign
-$ go install
+$ cd cosign
+$ go install -C ./cmd/cosign
 $ $(go env GOPATH)/bin/cosign
 ```
 
