@@ -16,7 +16,7 @@
 
 set -ex
 
-go build -o cosign ./cmd/cosign
+go build -C ./cmd/cosign -o ../../cosign
 tmp=$(mktemp -d)
 cp cosign $tmp/
 
