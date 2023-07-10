@@ -110,23 +110,7 @@ func getHTTPTransport(cacertFilename, certFilename, keyFilename, serverName stri
 	}
 
 	if serverName != "" {
-		// copied from https://pkg.go.dev/crypto/tls#example-Config-VerifyConnection,
-		// changed the DNSName setting from cs.Servername to serverName
-		tr.TLSClientConfig.InsecureSkipVerify = true
-		tr.TLSClientConfig.VerifyConnection = func(cs tls.ConnectionState) error {
-			opts := x509.VerifyOptions{
-				DNSName:       serverName,
-				Intermediates: x509.NewCertPool(),
-				Roots:         pool,
-				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-			}
-			for _, cert := range cs.PeerCertificates[1:] {
-				opts.Intermediates.AddCert(cert)
-			}
-
-			_, err := cs.PeerCertificates[0].Verify(opts)
-			return err
-		}
+		tr.TLSClientConfig.ServerName = serverName
 	}
 	return tr, nil
 }
