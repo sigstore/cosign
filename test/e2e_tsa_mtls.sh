@@ -1,14 +1,27 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+#
+# Copyright 2023 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -exuo pipefail
 
 ## Requirements
 # - cosign
 # - crane
 # - go
 
-which cosign
-
-CERT_BASE="testdata"
+CERT_BASE="test/testdata"
 
 TIMESTAMP_CACERT=$CERT_BASE/tsa-mtls-cacert.pem
 TIMESTAMP_CLIENT_CERT=$CERT_BASE/tsa-mtls-client.pem
@@ -67,4 +80,4 @@ cosign verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=true \
 
 # cleanup
 rm -fr ca-key.pem cacert.pem cert.pem /tmp/timestamp-authority
-pkill timestamp-server
+pkill -f 'timestamp-server'
