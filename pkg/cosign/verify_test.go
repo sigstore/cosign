@@ -256,7 +256,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	// Create a fake bundle
-	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
+	pe, _ := proposedEntries(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
 	entry, _ := rtypes.UnmarshalEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
@@ -299,7 +299,7 @@ func TestVerifyImageSignatureWithInvalidPublicKeyType(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	// Create a fake bundle
-	pe, _ := proposedEntry(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
+	pe, _ := proposedEntries(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
 	entry, _ := rtypes.UnmarshalEntry(pe[0])
 	leaf, _ := entry.Canonicalize(ctx)
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)

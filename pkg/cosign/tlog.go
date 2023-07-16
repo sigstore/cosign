@@ -370,7 +370,7 @@ func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, entryUUID stri
 	return nil, errors.New("empty response")
 }
 
-func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntry, error) {
+func proposedEntries(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntry, error) {
 	var proposedEntry []models.ProposedEntry
 	signature, err := base64.StdEncoding.DecodeString(b64Sig)
 	if err != nil {
@@ -380,11 +380,15 @@ func proposedEntry(b64Sig string, payload, pubKey []byte) ([]models.ProposedEntr
 	// The fact that there's no signature (or empty rather), implies
 	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
-		e, err := intotoEntry(context.Background(), payload, pubKey)
+		intotoEntry, err := intotoEntry(context.Background(), payload, pubKey)
 		if err != nil {
 			return nil, err
 		}
-		proposedEntry = []models.ProposedEntry{e}
+		dsseEntry, err := dsseEntry(context.Background(), payload, pubKey)
+		if err != nil {
+			return nil, err
+		}
+		proposedEntry = []models.ProposedEntry{dsseEntry, intotoEntry}
 	} else {
 		sha256CheckSum := sha256.New()
 		if _, err := sha256CheckSum.Write(payload); err != nil {
@@ -404,12 +408,12 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 	b64Sig string, payload, pubKey []byte) ([]models.LogEntryAnon, error) {
 	searchParams := entries.NewSearchLogQueryParamsWithContext(ctx)
 	searchLogQuery := models.SearchLogQuery{}
-	proposedEntry, err := proposedEntry(b64Sig, payload, pubKey)
+	proposedEntries, err := proposedEntries(b64Sig, payload, pubKey)
 	if err != nil {
 		return nil, err
 	}
 
-	searchLogQuery.SetEntries(proposedEntry)
+	searchLogQuery.SetEntries(proposedEntries)
 
 	searchParams.SetEntry(&searchLogQuery)
 	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)

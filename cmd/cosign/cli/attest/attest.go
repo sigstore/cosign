@@ -197,7 +197,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 	if shouldUpload {
 		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
+			return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
 		})
 		if err != nil {
 			return err

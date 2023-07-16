@@ -36,6 +36,7 @@ var (
 )
 
 func TestGetRekorPubKeys(t *testing.T) {
+	t.Setenv("TUF_ROOT", t.TempDir())
 	keys, err := GetRekorPubs(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error calling GetRekorPubs, expected nil: %v", err)
