@@ -50,3 +50,7 @@ jobs:
       - name: Run e2e_test_secrets.sh
         shell: bash
         run: ./test/e2e_test_secrets.sh
+      
+      - name: Run e2e_test_attach.sh 
+        shell: bash
+        run: ./test/e2e_test_attach.sh
