@@ -23,11 +23,12 @@ set -exuo pipefail
 
 CERT_BASE="test/testdata"
 
-TIMESTAMP_CACERT=$CERT_BASE/tsa-mtls-cacert.pem
-TIMESTAMP_CLIENT_CERT=$CERT_BASE/tsa-mtls-client.pem
-TIMESTAMP_CLIENT_KEY=$CERT_BASE/tsa-mtls-client-key.pem
-TIMESTAMP_SERVER_CERT=$CERT_BASE/tsa-mtls-server.pem
-TIMESTAMP_SERVER_KEY=$CERT_BASE/tsa-mtls-server-key.pem
+# the certificates listed below are generated with the `gen-tsa-mtls-certs.sh` script.
+TIMESTAMP_CACERT=$CERT_BASE/tsa-mtls-ca.crt
+TIMESTAMP_CLIENT_CERT=$CERT_BASE/tsa-mtls-client.crt
+TIMESTAMP_CLIENT_KEY=$CERT_BASE/tsa-mtls-client.key
+TIMESTAMP_SERVER_CERT=$CERT_BASE/tsa-mtls-server.crt
+TIMESTAMP_SERVER_KEY=$CERT_BASE/tsa-mtls-server.key
 TIMESTAMP_SERVER_NAME="server.example.com"
 TIMESTAMP_SERVER_URL=https://localhost:3000/api/v1/timestamp
 
