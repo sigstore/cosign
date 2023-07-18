@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script generates certificates for testing
 # mTLS connection from 'cosign' command to the TSA server.

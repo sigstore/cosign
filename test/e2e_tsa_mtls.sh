@@ -32,14 +32,23 @@ TIMESTAMP_SERVER_KEY=$CERT_BASE/tsa-mtls-server.key
 TIMESTAMP_SERVER_NAME="server.example.com"
 TIMESTAMP_SERVER_URL=https://localhost:3000/api/v1/timestamp
 
-rm -fr /tmp/timestamp-authority
-git clone https://github.com/sigstore/timestamp-authority /tmp/timestamp-authority
-pushd /tmp/timestamp-authority
-make
-popd
-/tmp/timestamp-authority/bin/timestamp-server serve --disable-ntp-monitoring --tls-host 0.0.0.0 --tls-port 3000 \
-	--scheme https --tls-ca $TIMESTAMP_CACERT --tls-key $TIMESTAMP_SERVER_KEY --tls-certificate $TIMESTAMP_SERVER_CERT &
-export PATH="/tmp/timestampserver:$PATH"
+set +e
+command -v timestamp-server >& /dev/null
+exit_code=$?
+set -e
+if [[ $exit_code != 0 ]]; then
+	rm -fr /tmp/timestamp-authority
+	git clone https://github.com/sigstore/timestamp-authority /tmp/timestamp-authority
+	pushd /tmp/timestamp-authority
+	make
+	export PATH="/tmp/timestamp-authority/bin:$PATH"
+	popd
+fi
+
+timestamp-server serve --disable-ntp-monitoring --tls-host 0.0.0.0 --tls-port 3000 \
+		--scheme https --tls-ca $TIMESTAMP_CACERT --tls-key $TIMESTAMP_SERVER_KEY \
+		--tls-certificate $TIMESTAMP_SERVER_CERT &
+
 
 IMG=${IMAGE_URI_DIGEST:-}
 if [[ "$#" -ge 1 ]]; then
