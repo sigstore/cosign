@@ -16,8 +16,11 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -37,9 +40,79 @@ type TimestampAuthorityClientImpl struct {
 
 	// URL is the path to the API to request timestamp responses
 	URL string
+	// CACert is the filepath to the PEM-encoded CA certificate for the connection to the TSA server
+	CACert string
+	// Cert is the filepath to the PEM-encoded certificate for the connection to the TSA server
+	Cert string
+	// Cert is the filepath to the PEM-encoded key corresponding to the certificate for the connection to the TSA server
+	Key string
+	// ServerName is the expected SAN value in the server's certificate - used for https://pkg.go.dev/crypto/tls#Config.ServerName
+	ServerName string
 
 	// Timeout is the request timeout
 	Timeout time.Duration
+}
+
+const defaultTimeout = 10 * time.Second
+
+func getHTTPTransport(cacertFilename, certFilename, keyFilename, serverName string, timeout time.Duration) (http.RoundTripper, error) {
+	if timeout == 0 {
+		timeout = defaultTimeout
+	}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			CipherSuites: []uint16{
+				// TLS 1.3 cipher suites.
+				tls.TLS_AES_128_GCM_SHA256,
+				tls.TLS_AES_256_GCM_SHA384,
+				tls.TLS_CHACHA20_POLY1305_SHA256,
+			},
+			MinVersion:             tls.VersionTLS13,
+			SessionTicketsDisabled: true,
+		},
+		// the rest of default settings are copied verbatim from https://golang.org/pkg/net/http/#DefaultTransport
+		// to minimize surprises for the users.
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	var pool *x509.CertPool
+	if cacertFilename != "" {
+		f, err := os.Open(cacertFilename)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		caCertBytes, err := io.ReadAll(f)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read CA certs from %s: %w", cacertFilename, err)
+		}
+		pool = x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(caCertBytes) {
+			return nil, fmt.Errorf("no valid CA certs found in %s", cacertFilename)
+		}
+		tr.TLSClientConfig.RootCAs = pool
+	}
+	if certFilename != "" && keyFilename != "" {
+		cert, err := tls.LoadX509KeyPair(certFilename, keyFilename)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read CA certs from cert %s, key %s: %w",
+				certFilename, keyFilename, err)
+		}
+		tr.TLSClientConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	if serverName != "" {
+		tr.TLSClientConfig.ServerName = serverName
+	}
+	return tr, nil
 }
 
 // GetTimestampResponse sends a timestamp query to a timestamp authority, returning a timestamp response.
@@ -48,6 +121,16 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 	client := http.Client{
 		Timeout: t.Timeout,
 	}
+
+	// if mTLS-related fields are set, create a custom Transport for the Client
+	if t.CACert != "" || t.Cert != "" {
+		tr, err := getHTTPTransport(t.CACert, t.Cert, t.Key, t.ServerName, t.Timeout)
+		if err != nil {
+			return nil, err
+		}
+		client.Transport = tr
+	}
+
 	req, err := http.NewRequest("POST", t.URL, bytes.NewReader(tsq))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating HTTP request")
@@ -79,5 +162,16 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 }
 
 func NewTSAClient(url string) *TimestampAuthorityClientImpl {
-	return &TimestampAuthorityClientImpl{URL: url, Timeout: 10 * time.Second}
+	return &TimestampAuthorityClientImpl{URL: url, Timeout: defaultTimeout}
+}
+
+func NewTSAClientMTLS(url, cacert, cert, key, serverName string) *TimestampAuthorityClientImpl {
+	return &TimestampAuthorityClientImpl{
+		URL:        url,
+		CACert:     cacert,
+		Cert:       cert,
+		Key:        key,
+		ServerName: serverName,
+		Timeout:    defaultTimeout,
+	}
 }

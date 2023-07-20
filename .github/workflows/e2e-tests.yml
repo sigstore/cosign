@@ -46,11 +46,26 @@ jobs:
           check-latest: true
 
       - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
-
-      - name: Run e2e_test_secrets.sh
-        shell: bash
-        run: ./test/e2e_test_secrets.sh
       
       - name: Run e2e_test_attach.sh 
         shell: bash
         run: ./test/e2e_test_attach.sh
+
+  e2e-tsa-mtls:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version: '1.20.x'
+          check-latest: true
+
+      - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
+
+      - name: Run e2e_tsa_mtls.sh
+        shell: bash
+        run: make && PATH="$PWD:$PATH" ./test/e2e_tsa_mtls.sh
