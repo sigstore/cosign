@@ -817,8 +817,8 @@ github.com/segmentio/ksuid v1.0.4/go.mod h1:/XUiZBD3kVx5SmUOl55voK5yeAbBNNIed+2O
 github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh5dkI=
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
-github.com/sigstore/fulcio v1.3.4 h1:ZpR0eK8CdxYvIiXYR/mbcpB4GCPjVuE44vQsf65dfH8=
-github.com/sigstore/fulcio v1.3.4/go.mod h1:7QQMi1lDVhxIYR8IE7buT4FE+WR0lRPTEl19CcmjvXk=
+github.com/sigstore/fulcio v1.4.0 h1:05+k8BFvwTQzfCkVxESWzCN4b70KIRliGYz0Upmdrs8=
+github.com/sigstore/fulcio v1.4.0/go.mod h1:wcjlktbhoy6+ZTxO3yXpvqUxsLV+JEH4FF3a5Jz4VPI=
 github.com/sigstore/rekor v1.2.2 h1:5JK/zKZvcQpL/jBmHvmFj3YbpDMBQnJQ6ygp8xdF3bY=
 github.com/sigstore/rekor v1.2.2/go.mod h1:FGnWBGWzeNceJnp0x9eDFd41mI8aQqCjj+Zp0IEs0Qg=
 github.com/sigstore/sigstore v1.7.1 h1:fCATemikcBK0cG4+NcM940MfoIgmioY1vC6E66hXxks=
