@@ -97,13 +97,6 @@ availableSecrets:
     - versionName: projects/${PROJECT_NUMBER}/secrets/GITHUB_TOKEN/versions/latest
       env: GITHUB_TOKEN
 
-artifacts:
-  objects:
-    location: 'gs://${_STORAGE_LOCATION}/${_GIT_TAG}'
-    paths:
-      - "go/src/sigstore/cosign/dist/*"
-      - "go/src/sigstore/cosign/release/release-cosign.pub"
-
 options:
   machineType: E2_HIGHCPU_32
 
@@ -117,7 +110,6 @@ substitutions:
   _GIT_TAG: 'v1.23.45'
   _TOOL_ORG: 'honk'
   _TOOL_REPO: 'honk-repo'
-  _STORAGE_LOCATION: 'honk'
   _KEY_RING: 'honk-ring'
   _KEY_NAME: 'honk-crypto'
   _KEY_VERSION: '1'
