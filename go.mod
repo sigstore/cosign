@@ -47,7 +47,7 @@ require (
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	github.com/xanzy/go-gitlab v0.88.0
-	go.step.sm/crypto v0.32.4
+	go.step.sm/crypto v0.32.5
 	golang.org/x/crypto v0.11.0
 	golang.org/x/oauth2 v0.10.0
 	golang.org/x/sync v0.3.0
@@ -64,11 +64,11 @@ require (
 	cloud.google.com/go/compute v1.20.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.0 // indirect
-	cloud.google.com/go/kms v1.13.0 // indirect
+	cloud.google.com/go/kms v1.15.0 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/alibabacloudsdkgo/helper v0.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.1 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys v0.12.0 // indirect
@@ -106,7 +106,7 @@ require (
 	github.com/alibabacloud-go/tea-xml v1.1.2 // indirect
 	github.com/aliyun/credentials-go v1.2.3 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go v1.44.301 // indirect
+	github.com/aws/aws-sdk-go v1.44.307 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.18.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.18.27 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.26 // indirect
