@@ -28,13 +28,19 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	pbbundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	pbcommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	pbrekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	internal "github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/protobundle"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // nolint
@@ -71,6 +77,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	}
 
 	signedPayload := cosign.LocalSignedPayload{}
+	var rekorEntry *models.LogEntryAnon
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	if ko.TSAServerURL != "" {
@@ -117,26 +124,83 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		}
 		ui.Infof(ctx, "tlog entry created with index: %d", *entry.LogIndex)
 		signedPayload.Bundle = cbundle.EntryToBundle(entry)
+		rekorEntry = entry
 	}
 
 	// if bundle is specified, just do that and ignore the rest
 	if ko.BundlePath != "" {
-		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
+		if ko.UsePBBundleFormat {
+			vm := pbbundle.VerificationMaterial{}
 
-		certBytes, err := extractCertificate(ctx, sv)
-		if err != nil {
-			return nil, err
-		}
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(certBytes)
+			certBytes, err := sv.Bytes(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("error getting signer: %w", err)
+			}
+			certChain, err := protobundle.GenerateX509CertificateChain(certBytes)
+			if err != nil {
+				return nil, err
+			}
+			vm.Content = &pbbundle.VerificationMaterial_X509CertificateChain{
+				X509CertificateChain: certChain,
+			}
 
-		contents, err := json.Marshal(signedPayload)
-		if err != nil {
-			return nil, err
+			// getting inclusion proof if available
+			if rekorEntry != nil {
+				tlEntry, err := protobundle.GenerateTransparencyLogEntry(*rekorEntry)
+				if err != nil {
+					return nil, fmt.Errorf("error generating tle for bundle: %w", err)
+				}
+				vm.TlogEntries = []*pbrekor.TransparencyLogEntry{tlEntry}
+			}
+
+			if rfc3161Timestamp != nil {
+				vm.TimestampVerificationData = &pbbundle.TimestampVerificationData{
+					Rfc3161Timestamps: []*pbcommon.RFC3161SignedTimestamp{
+						{SignedTimestamp: rfc3161Timestamp.SignedRFC3161Timestamp},
+					},
+				}
+			}
+
+			bundle := pbbundle.Bundle{
+				MediaType: "application/vnd.dev.sigstore.bundle+json;version=0.1",
+				VerificationMaterial: &vm,
+				Content: &pbbundle.Bundle_MessageSignature{
+					MessageSignature: &pbcommon.MessageSignature{
+						MessageDigest: &pbcommon.HashOutput{
+							Algorithm: pbcommon.HashAlgorithm_SHA2_256,
+							Digest: payload.Sum(nil),
+						},
+						Signature: sig,
+					},
+				},
+			}
+
+			contents, err := protojson.Marshal(&bundle)
+			if err != nil {
+				return nil, err
+			}
+			if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+				return nil, fmt.Errorf("create bundle file: %w", err)
+			}
+			ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
+		} else {
+			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
+
+			certBytes, err := extractCertificate(ctx, sv)
+			if err != nil {
+				return nil, err
+			}
+			signedPayload.Cert = base64.StdEncoding.EncodeToString(certBytes)
+
+			contents, err := json.Marshal(signedPayload)
+			if err != nil {
+				return nil, err
+			}
+			if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+				return nil, fmt.Errorf("create bundle file: %w", err)
+			}
+			ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
 		}
-		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
-			return nil, fmt.Errorf("create bundle file: %w", err)
-		}
-		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
 	}
 
 	if outputSignature != "" {

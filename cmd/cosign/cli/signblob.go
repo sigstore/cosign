@@ -80,6 +80,7 @@ func SignBlob() *cobra.Command {
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
 				OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
 				BundlePath:                     o.BundlePath,
+				UsePBBundleFormat:              o.UsePBBundleFormat,
 				SkipConfirmation:               o.SkipConfirmation,
 				TSAServerURL:                   o.TSAServerURL,
 				RFC3161TimestampPath:           o.RFC3161TimestampPath,

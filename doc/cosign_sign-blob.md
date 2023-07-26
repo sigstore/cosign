@@ -35,6 +35,7 @@ cosign sign-blob [flags]
 ```
       --b64                              whether to base64 encode the output (default true)
       --bundle string                    write everything required to verify the blob to a FILE
+      --use-new-bundle-format            whether to use the new bundle format defined in sigstore/protobuf-specs when writing to the --bundle file
       --fulcio-url string                address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                             help for sign-blob
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
