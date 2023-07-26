@@ -35,7 +35,6 @@ cosign sign-blob [flags]
 ```
       --b64                              whether to base64 encode the output (default true)
       --bundle string                    write everything required to verify the blob to a FILE
-      --use-new-bundle-format            whether to use the new bundle format defined in sigstore/protobuf-specs when writing to the --bundle file
       --fulcio-url string                address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                             help for sign-blob
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
@@ -57,6 +56,7 @@ cosign sign-blob [flags]
       --slot string                      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-server-url string      url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                      whether or not to upload to the tlog (default true)
+      --use-new-bundle-format            use the new bundle format defined in sigstore/protobuf-specs
   -y, --yes                              skip confirmation prompts for non-destructive operations
 ```
 
