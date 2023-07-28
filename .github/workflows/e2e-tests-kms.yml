@@ -56,7 +56,7 @@ jobs:
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: cpanato/vault-installer@4246c92b8f047fdb824eb7387d86b3c7806e2bf3 # v0.0.2
         with:
-          vault-release: '1.12.2'
+          vault-release: '1.14.1'
 
       - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
 
