@@ -1105,11 +1105,16 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	}
 
 	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature)
+	if err != nil {
+		return false, fmt.Errorf("computing bundle hash: %w", err)
+	}
 	h := sha256.Sum256(payload)
 	payloadHash := hex.EncodeToString(h[:])
 
-	if alg != "sha256" || bundlehash != payloadHash {
-		return false, fmt.Errorf("matching bundle to payload: %w", err)
+	if alg != "sha256" {
+		return false, fmt.Errorf("unexpected algorithm: %q", alg)
+	} else if bundlehash != payloadHash {
+		return false, fmt.Errorf("matching bundle to payload: bundle=%q, payload=%q", bundlehash, payloadHash)
 	}
 	return true, nil
 }
