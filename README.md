@@ -33,6 +33,8 @@ For Homebrew, Arch, Nix, GitHub Action, and Kubernetes installs see the [install
 
 For Linux and macOS binaries see the [GitHub release assets](https://github.com/sigstore/cosign/releases/latest).
 
+:rotating_light: If you are downloading releases of cosign from our GCS bucket - please see more information on the July 31, 2023 [deprecation notice](https://blog.sigstore.dev/cosign-releases-bucket-deprecation/) :rotating_light:
+
 ## Developer Installation
 
 If you have Go 1.19+, you can setup a development environment:
