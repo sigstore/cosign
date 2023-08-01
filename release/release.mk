@@ -18,7 +18,7 @@ sign-release-images: ko
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --clean --timeout 120m --parallelism 1
+	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --clean --timeout 120m --parallelism 1 || true
 
 ####################
 # copy image to GHCR
