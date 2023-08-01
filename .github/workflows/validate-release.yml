@@ -62,13 +62,16 @@ jobs:
       - run: git config --system --add safe.directory /__w/cosign/cosign
       - name: check disk space
         run: df -h
-      - name: goreleaser snapshot
+      - name: goreleaser snapshot-linux
         run: make snapshot
         env:
           PROJECT_ID: honk-fake-project
           RUNTIME_IMAGE: gcr.io/distroless/static:debug-nonroot
       - name: check disk space
-        run: df -h && rm -rf /opt/hostedtoolcache* && df -h
+        run: df -h
       - name: check binaries
         run: |
           ./dist/cosign-linux-amd64 version
+      - name: removes the dist folder
+        run: |
+          rm -rf ./dist
