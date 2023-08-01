@@ -17,6 +17,9 @@ cosign sign-blob [flags]
   # sign a blob with a local key pair file
   cosign sign-blob --key cosign.key <FILE>
 
+  # sign a blob with a key stored in an environment variable
+  cosign sign-blob --key env://[ENV_VAR] <FILE>
+
   # sign a blob with a key pair stored in Azure Key Vault
   cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
 
