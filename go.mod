@@ -27,7 +27,7 @@ require (
 	github.com/moby/term v0.5.0
 	github.com/mozillazg/docker-credential-acr-helper v0.3.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
-	github.com/open-policy-agent/opa v0.54.0
+	github.com/open-policy-agent/opa v0.55.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0
 	github.com/sigstore/fulcio v1.4.0
@@ -144,7 +144,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/emicklei/proto v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
@@ -213,7 +213,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/oleiade/reflections v1.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/outcaste-io/ristretto v0.2.1 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
