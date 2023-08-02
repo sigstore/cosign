@@ -618,6 +618,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 				t.Done(err)
 				return
 			}
+
 			verified, err := VerifyImageSignature(ctx, sig, h, co)
 			bundlesVerified[index] = verified
 			if err != nil {
@@ -907,7 +908,7 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 		return nil, false, err
 	}
 
-	return verifyImageAttestations(ctx, atts, h, co)
+	return VerifyImageAttestation(ctx, atts, h, co)
 }
 
 // VerifyLocalImageAttestations verifies attestations from a saved, local image, without any network calls,
@@ -953,7 +954,7 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	if err != nil {
 		return nil, false, err
 	}
-	return verifyImageAttestations(ctx, atts, h, co)
+	return VerifyImageAttestation(ctx, atts, h, co)
 }
 
 func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
@@ -961,7 +962,7 @@ func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co
 	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
 }
 
-func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err
