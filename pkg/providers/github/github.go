@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
@@ -54,22 +55,38 @@ func (ga *githubActions) Enabled(_ context.Context) bool {
 }
 
 // Provide implements providers.Interface
-func (ga *githubActions) Provide(_ context.Context, audience string) (string, error) {
+func (ga *githubActions) Provide(ctx context.Context, audience string) (string, error) {
 	url := env.Getenv(env.VariableGitHubRequestURL) + "&audience=" + audience
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return "", err
 	}
 
+	// May be replaced by a different client if we hit HTTP_1_1_REQUIRED.
+	client := http.DefaultClient
+
 	// Retry up to 3 times.
 	for i := 0; ; i++ {
 		req.Header.Add("Authorization", "bearer "+env.Getenv(env.VariableGitHubRequestToken))
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			if i == 2 {
 				return "", err
 			}
+
+			// This error isn't exposed by net/http, and retrying this with the
+			// DefaultClient will fail because it will just use HTTP2 again.
+			// I don't know why go doesn't do this for us.
+			if strings.Contains(err.Error(), "HTTP_1_1_REQUIRED") {
+				http1transport := http.DefaultTransport.(*http.Transport).Clone()
+				http1transport.ForceAttemptHTTP2 = false
+
+				client = &http.Client{
+					Transport: http1transport,
+				}
+			}
+
 			fmt.Fprintf(os.Stderr, "error fetching GitHub OIDC token (will retry): %v\n", err)
 			time.Sleep(time.Second)
 			continue
