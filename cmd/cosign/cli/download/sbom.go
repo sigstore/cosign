@@ -45,7 +45,7 @@ func (pl *platformList) String() string {
 
 func SBOMCmd(
 	ctx context.Context, regOpts options.RegistryOptions,
-	dnOpts options.SBOMDownloadOptions, imageRef string, out io.Writer,
+	imageRef string, out io.Writer,
 ) ([]string, error) {
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
@@ -65,12 +65,12 @@ func SBOMCmd(
 	idx, isIndex := se.(oci.SignedImageIndex)
 
 	// We only allow --platform on multiarch indexes
-	if dnOpts.Platform != "" && !isIndex {
+	if regOpts.Platform != "" && !isIndex {
 		return nil, fmt.Errorf("specified reference is not a multiarch image")
 	}
 
-	if dnOpts.Platform != "" && isIndex {
-		targetPlatform, err := v1.ParsePlatform(dnOpts.Platform)
+	if regOpts.Platform != "" && isIndex {
+		targetPlatform, err := v1.ParsePlatform(regOpts.Platform)
 		if err != nil {
 			return nil, fmt.Errorf("parsing platform: %w", err)
 		}

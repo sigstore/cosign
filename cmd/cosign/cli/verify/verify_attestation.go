@@ -68,6 +68,7 @@ type VerifyAttestationCommand struct {
 	TSACertChainPath             string
 	IgnoreTlog                   bool
 	MaxWorkers                   int
+	Platform                     string
 }
 
 // Exec runs the verification command

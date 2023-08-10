@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	alibabaacr "github.com/mozillazg/docker-credential-acr-helper/pkg/credhelper"
@@ -44,6 +45,7 @@ type RegistryOptions struct {
 	KubernetesKeychain bool
 	RefOpts            ReferenceOptions
 	Keychain           Keychain
+	Platform           string
 
 	// RegistryClientOpts allows overriding the result of GetRegistryClientOpts.
 	RegistryClientOpts []remote.Option
@@ -62,6 +64,9 @@ func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.KubernetesKeychain, "k8s-keychain", false,
 		"whether to use the kubernetes keychain instead of the default keychain (supports workload identity).")
 
+	cmd.Flags().StringVar(&o.Platform, "platform", "",
+		"fetch a specific platform image")
+
 	o.RefOpts.AddFlags(cmd)
 }
 
@@ -76,6 +81,13 @@ func (o *RegistryOptions) ClientOpts(ctx context.Context) ([]ociremote.Option, e
 	}
 	if (targetRepoOverride != name.Repository{}) {
 		opts = append(opts, ociremote.WithTargetRepository(targetRepoOverride))
+	}
+	if o.Platform != "" {
+		plat, err := v1.ParsePlatform(o.Platform)
+		if err != nil {
+			return nil, fmt.Errorf("parsing platform: %w", err)
+		}
+		opts = append(opts, ociremote.WithRemoteOptions(remote.WithPlatform(*plat)))
 	}
 	return opts, nil
 }
