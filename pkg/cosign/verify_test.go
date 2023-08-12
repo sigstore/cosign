@@ -1318,46 +1318,6 @@ func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
 	}
 }
 
-func Test_getSubjectAltnernativeNames(t *testing.T) {
-	rootCert, rootKey, _ := test.GenerateRootCa()
-	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-
-	// generate with OtherName, which will override other SANs
-	ext, err := cryptoutils.MarshalOtherNameSAN("subject-othername", true)
-	if err != nil {
-		t.Fatalf("error marshalling SANs: %v", err)
-	}
-	exts := []pkix.Extension{*ext}
-	leafCert, _, _ := test.GenerateLeafCert("unused@mail.com", "oidc-issuer", subCert, subKey, exts...)
-
-	sans := getSubjectAlternateNames(leafCert)
-	if len(sans) != 1 {
-		t.Fatalf("expected 1 SAN field, got %d", len(sans))
-	}
-	if sans[0] != "subject-othername" {
-		t.Fatalf("unexpected OtherName SAN value")
-	}
-
-	// generate with all other SANs
-	leafCert, _, _ = test.GenerateLeafCertWithSubjectAlternateNames([]string{"subject-dns"}, []string{"subject-email"}, []net.IP{{1, 2, 3, 4}}, []*url.URL{{Path: "testURL"}}, "oidc-issuer", subCert, subKey)
-	sans = getSubjectAlternateNames(leafCert)
-	if len(sans) != 4 {
-		t.Fatalf("expected 1 SAN field, got %d", len(sans))
-	}
-	if sans[0] != "subject-dns" {
-		t.Fatalf("unexpected DNS SAN value")
-	}
-	if sans[1] != "subject-email" {
-		t.Fatalf("unexpected email SAN value")
-	}
-	if sans[2] != "1.2.3.4" {
-		t.Fatalf("unexpected IP SAN value")
-	}
-	if sans[3] != "testURL" {
-		t.Fatalf("unexpected URL SAN value")
-	}
-}
-
 func TestVerifyRFC3161Timestamp(t *testing.T) {
 	// generate signed artifact
 	rootCert, rootKey, _ := test.GenerateRootCa()

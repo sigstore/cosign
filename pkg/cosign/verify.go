@@ -296,7 +296,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 		return err
 	}
 	oidcIssuer := ce.GetIssuer()
-	sans := getSubjectAlternateNames(cert)
+	sans := cryptoutils.GetSubjectAlternateNames(cert)
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
 	if len(co.Identities) > 0 {
@@ -397,29 +397,6 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 		}
 	}
 	return nil
-}
-
-// getSubjectAlternateNames returns all of the following for a Certificate.
-// DNSNames
-// EmailAddresses
-// IPAddresses
-// URIs
-func getSubjectAlternateNames(cert *x509.Certificate) []string {
-	sans := []string{}
-	sans = append(sans, cert.DNSNames...)
-	sans = append(sans, cert.EmailAddresses...)
-	for _, ip := range cert.IPAddresses {
-		sans = append(sans, ip.String())
-	}
-	for _, uri := range cert.URIs {
-		sans = append(sans, uri.String())
-	}
-	// ignore error if there's no OtherName SAN
-	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
-	if len(otherName) > 0 {
-		sans = append(sans, otherName)
-	}
-	return sans
 }
 
 // ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
