@@ -28,13 +28,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
 func pass(s string) cosign.PassFunc {

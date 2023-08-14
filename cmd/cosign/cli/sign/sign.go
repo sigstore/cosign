@@ -239,7 +239,16 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	if ko.TSAServerURL != "" {
-		s = tsa.NewSigner(s, client.NewTSAClient(ko.TSAServerURL))
+		if ko.TSAClientCACert == "" && ko.TSAClientCert == "" { // no mTLS params or custom CA
+			s = tsa.NewSigner(s, client.NewTSAClient(ko.TSAServerURL))
+		} else {
+			s = tsa.NewSigner(s, client.NewTSAClientMTLS(ko.TSAServerURL,
+				ko.TSAClientCACert,
+				ko.TSAClientCert,
+				ko.TSAClientKey,
+				ko.TSAServerName,
+			))
+		}
 	}
 	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
 	if err != nil {

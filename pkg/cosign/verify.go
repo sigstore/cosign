@@ -296,7 +296,7 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 		return err
 	}
 	oidcIssuer := ce.GetIssuer()
-	sans := getSubjectAlternateNames(cert)
+	sans := cryptoutils.GetSubjectAlternateNames(cert)
 	// If there are identities given, go through them and if one of them
 	// matches, call that good, otherwise, return an error.
 	if len(co.Identities) > 0 {
@@ -397,29 +397,6 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 		}
 	}
 	return nil
-}
-
-// getSubjectAlternateNames returns all of the following for a Certificate.
-// DNSNames
-// EmailAddresses
-// IPAddresses
-// URIs
-func getSubjectAlternateNames(cert *x509.Certificate) []string {
-	sans := []string{}
-	sans = append(sans, cert.DNSNames...)
-	sans = append(sans, cert.EmailAddresses...)
-	for _, ip := range cert.IPAddresses {
-		sans = append(sans, ip.String())
-	}
-	for _, uri := range cert.URIs {
-		sans = append(sans, uri.String())
-	}
-	// ignore error if there's no OtherName SAN
-	otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
-	if len(otherName) > 0 {
-		sans = append(sans, otherName)
-	}
-	return sans
 }
 
 // ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
@@ -618,6 +595,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 				t.Done(err)
 				return
 			}
+
 			verified, err := VerifyImageSignature(ctx, sig, h, co)
 			bundlesVerified[index] = verified
 			if err != nil {
@@ -907,7 +885,7 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 		return nil, false, err
 	}
 
-	return verifyImageAttestations(ctx, atts, h, co)
+	return VerifyImageAttestation(ctx, atts, h, co)
 }
 
 // VerifyLocalImageAttestations verifies attestations from a saved, local image, without any network calls,
@@ -953,7 +931,7 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	if err != nil {
 		return nil, false, err
 	}
-	return verifyImageAttestations(ctx, atts, h, co)
+	return VerifyImageAttestation(ctx, atts, h, co)
 }
 
 func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
@@ -961,7 +939,7 @@ func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co
 	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
 }
 
-func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err
@@ -1105,11 +1083,16 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	}
 
 	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature)
+	if err != nil {
+		return false, fmt.Errorf("computing bundle hash: %w", err)
+	}
 	h := sha256.Sum256(payload)
 	payloadHash := hex.EncodeToString(h[:])
 
-	if alg != "sha256" || bundlehash != payloadHash {
-		return false, fmt.Errorf("matching bundle to payload: %w", err)
+	if alg != "sha256" {
+		return false, fmt.Errorf("unexpected algorithm: %q", alg)
+	} else if bundlehash != payloadHash {
+		return false, fmt.Errorf("matching bundle to payload: bundle=%q, payload=%q", bundlehash, payloadHash)
 	}
 	return true, nil
 }
