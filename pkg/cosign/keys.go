@@ -30,8 +30,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/theupdateframework/go-tuf/encrypted"
-
+	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
