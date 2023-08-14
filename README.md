@@ -29,7 +29,7 @@ Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcf
 
 ## Installation
 
-For Homebrew, Arch, Nix, GitHub Action, and Kubernetes installs see the [installation docs](https://docs.sigstore.dev/cosign/installation).
+For Homebrew, Arch, Nix, GitHub Action, and Kubernetes installs see the [installation docs](https://docs.sigstore.dev/system_config/installation/).
 
 For Linux and macOS binaries see the [GitHub release assets](https://github.com/sigstore/cosign/releases/latest).
 
