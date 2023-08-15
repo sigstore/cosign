@@ -182,7 +182,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return err
 		}
-		entry, err := cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+		entry, err := cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
 		if err != nil {
 			return err
 		}
