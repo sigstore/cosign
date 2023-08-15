@@ -46,8 +46,8 @@ jobs:
           check-latest: true
 
       - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
-      
-      - name: Run e2e_test_attach.sh 
+
+      - name: Run e2e_test_attach.sh
         shell: bash
         run: ./test/e2e_test_attach.sh
 
