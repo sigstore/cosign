@@ -24,15 +24,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	internal "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
