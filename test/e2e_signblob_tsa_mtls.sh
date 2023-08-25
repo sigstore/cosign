@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -exuo pipefail
+# This test checks that verify-blob will iterate over all entries and check for at least one valid entry before erroring out
+# This is to prevent verify-blob from only checking the most recent entry, which could result
+# in a "denial of service" type attack if someone signs a piece of software
+# with their own certificate which doesn't chain up to Sigstore
 
-## Requirements
-# - cosign
-# - crane
-# - go
+set -ex
 
+COSIGN_CLI=./cosign
 CERT_BASE="test/testdata"
 
 # the certificates listed below are generated with the `gen-tsa-mtls-certs.sh` script.
@@ -31,6 +32,7 @@ TIMESTAMP_SERVER_CERT=$CERT_BASE/tsa-mtls-server.crt
 TIMESTAMP_SERVER_KEY=$CERT_BASE/tsa-mtls-server.key
 TIMESTAMP_SERVER_NAME="server.example.com"
 TIMESTAMP_SERVER_URL=https://localhost:3000/api/v1/timestamp
+TIMESTAMP_CHAIN_FILE="timestamp-chain.pem"
 
 set +e
 COSIGN_CLI=./cosign
@@ -50,43 +52,42 @@ timestamp-server serve --disable-ntp-monitoring --tls-host 0.0.0.0 --tls-port 30
 		--scheme https --tls-ca $TIMESTAMP_CACERT --tls-key $TIMESTAMP_SERVER_KEY \
 		--tls-certificate $TIMESTAMP_SERVER_CERT &
 
+sleep 1
+curl -k -s --key test/testdata/tsa-mtls-client.key \
+    --cert test/testdata/tsa-mtls-client.crt \
+    --cacert test/testdata/tsa-mtls-ca.crt https://localhost:3000/api/v1/timestamp/certchain \
+    > $TIMESTAMP_CHAIN_FILE
+echo "DONE: $(ls -l $TIMESTAMP_CHAIN_FILE)"
+echo "Creating a unique blob"
+BLOB=verify-experimental-blob
+date > $BLOB
+cat $BLOB
 
-IMG=${IMAGE_URI_DIGEST:-}
-if [[ "$#" -ge 1 ]]; then
-	IMG=$1
-elif [[ -z "${IMG}" ]]; then
-	# Upload an image to ttl.sh - commands from https://docs.sigstore.dev/cosign/keyless/
-	SRC_IMAGE=busybox
-	SRC_DIGEST=$(crane digest busybox)
-	IMAGE_URI=ttl.sh/$(uuidgen | head -c 8 | tr 'A-Z' 'a-z')
-	crane cp $SRC_IMAGE@$SRC_DIGEST $IMAGE_URI:3h
-	IMG=$IMAGE_URI@$SRC_DIGEST
-fi
-
-echo "IMG (IMAGE_URI_DIGEST): $IMG, TIMESTAMP_SERVER_URL: $TIMESTAMP_SERVER_URL"
-
-rm -f *.pem import-cosign.* key.pem
-
-
+rm -f ca-key.pem cacert.pem cert.pem key.pem import-cosign.*
 # use gencert to generate CA, keys and certificates
 echo "generate keys and certificates with gencert"
 
 passwd=$(uuidgen | head -c 32 | tr 'A-Z' 'a-z')
-rm -f *.pem import-cosign.* && go run test/gencert/main.go && COSIGN_PASSWORD="$passwd" $COSIGN_CLI import-key-pair --key key.pem
+go run test/gencert/main.go \
+    && COSIGN_PASSWORD="$passwd" $COSIGN_CLI import-key-pair --key key.pem
 
-COSIGN_PASSWORD="$passwd" $COSIGN_CLI sign --timestamp-server-url "${TIMESTAMP_SERVER_URL}" \
+echo "Sign the blob with cosign first and upload to rekor"
+COSIGN_PASSWORD="$passwd" $COSIGN_CLI sign-blob --yes \
+    --key import-cosign.key \
+	--timestamp-server-url "${TIMESTAMP_SERVER_URL}" \
 	--timestamp-client-cacert ${TIMESTAMP_CACERT} --timestamp-client-cert ${TIMESTAMP_CLIENT_CERT} \
-	--timestamp-client-key ${TIMESTAMP_CLIENT_KEY} --timestamp-server-name ${TIMESTAMP_SERVER_NAME}\
-	--upload=true --tlog-upload=false --key import-cosign.key --certificate-chain cacert.pem --cert cert.pem $IMG
+	--timestamp-client-key ${TIMESTAMP_CLIENT_KEY} --timestamp-server-name ${TIMESTAMP_SERVER_NAME} \
+    --rfc3161-timestamp=timestamp.txt --tlog-upload=false \
+    --bundle cosign.bundle $BLOB
 
-# key is now longer needed
-rm -f key.pem import-cosign.*
-
-echo "cosign verify:"
-$COSIGN_CLI verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=true \
-	--certificate-identity-regexp 'xyz@nosuchprovider.com' --certificate-oidc-issuer-regexp '.*' \
-	--certificate-chain cacert.pem $IMG
+echo "Verifying ..."
+$COSIGN_CLI verify-blob --bundle cosign.bundle \
+    --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' \
+    --rfc3161-timestamp=timestamp.txt --timestamp-certificate-chain=$TIMESTAMP_CHAIN_FILE \
+    --insecure-ignore-tlog=true --key import-cosign.pub $BLOB
 
 # cleanup
-rm -fr ca-key.pem cacert.pem cert.pem /tmp/timestamp-authority
+rm -fr blob.sig ca-key.pem cacert.pem cert.pem cosign.bundle import-cosign.key \
+    import-cosign.pub key.pem timestamp.txt timestamp-chain.pem \
+    /tmp/timestamp-authority verify-experimental-blob
 pkill -f 'timestamp-server'
