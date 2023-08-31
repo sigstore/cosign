@@ -1,3 +1,48 @@
+# v2.2.0
+
+## Enhancements
+
+* switch to uploading DSSE types to rekor instead of intoto (#3113)
+* add 'cosign sign' command-line parameters for mTLS (#3052)
+* improve error messages around bundle != payload hash (#3146)
+* make VerifyImageAttestation function public (#3156)
+* Switch to cryptoutils function for SANS (#3185)
+* Handle HTTP_1_1_REQUIRED errors in github provider (#3172)
+
+## Bug Fixes
+
+* Fix nondeterminsitic timestamps (#3121)
+
+## Documentation
+
+* doc: Add example of sign-blob with key in env var (#3152)
+* add deprecation notice for cosign-releases GCS bucket (#3148)
+* update doc links (#3186)
+
+## Others
+
+* Upgrade to go1.21 (#3188)
+* Updates ci tests (#3142)
+* test using latest release of scaffolding (#3187)
+* ci: free up disk space for the gh runner (#3169)
+* update go-github to v53 (#3116)
+* call e2e test for cosign attach  (#3112)
+* bump build cross to use go1.20.6 and cosign image to 2.1.1 (#3108)
+
+## Contributors
+
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Dmitry Savintsev
+* Hayden B
+* Hector Fernandez
+* Jason Hall
+* Jon Johnson
+* Jubril Oyetunji
+* Paulo Gomes
+* Priya Wadhwa
+* 张志强
+
 # v2.1.1
 
 ## Bug Fixes
@@ -7,6 +52,8 @@
 ## Documentation
 * update changelog (#3080)
 * DNM: Add CHANGELOG for v2.1.0 (#3068)
+
+## Contributors
 
 * Carlos Tadeu Panato Junior
 * priyawadhwa
@@ -41,6 +88,8 @@
 ## Documentation
 * Fix links to sigstore/docs in markdown files (#3064)
 * Update release readme (#2942)
+
+## Contributors
 
 **Thank you to our contributors!**
 * Bob Callaway
