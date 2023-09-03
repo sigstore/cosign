@@ -655,8 +655,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b h1:ZGiXF8sz7PDk6RgkP+A/SFfUD0ZR/AgG6SpRNEDKZy8=
 github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b/go.mod h1:hQmNrgofl+IY/8L+n20H6E6PWBBTokdsv+q49j0QhsU=
-github.com/jellydator/ttlcache/v3 v3.0.1 h1:cHgCSMS7TdQcoprXnWUptJZzyFsqs18Lt8VVhRuZYVU=
-github.com/jellydator/ttlcache/v3 v3.0.1/go.mod h1:WwTaEmcXQ3MTjOm4bsZoDFiCu/hMvNWLO1w67RXz6h4=
+github.com/jellydator/ttlcache/v3 v3.1.0 h1:0gPFG0IHHP6xyUyXq+JaD8fwkDCqgqwohXNJBcYE71g=
+github.com/jellydator/ttlcache/v3 v3.1.0/go.mod h1:hi7MGFdMAwZna5n2tuvh63DvFLzVKySzCVW6+0gA2n4=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=
@@ -891,8 +891,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.2 h1:JtdEI/81xugNfHqHyK1
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.2/go.mod h1:GBGQtFm6XmC00DeGc1GI/PdETg7vrhzaHBgj5YCS9lY=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.2 h1:WtTn0OYxbSPY/xEy13iSPjJnSHXhILmzbfleg9x8CuQ=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.2/go.mod h1:E4IGHXN9peBqP/PGVEF8VNAzPQIP17qSqcYAsXgnSRQ=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.2 h1:/c9AZS8mfOlpjCuBA1aBesuDxPMEN2QtmZS/CQ6Cz8I=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.2/go.mod h1:aN9UpIdLFf185H1+vmdxT+nty/ka8NPxUUvBigydaLk=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.3 h1:zO5OlN1DZ/f6N2Gtl72NleHv2kLudSxa9evaz1VgIKQ=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.3/go.mod h1:JVLf01VmZPBqkISIc7EDCFeTk4aFC0+uL/SXC57QhHQ=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.2 h1:GquAXZRIVJ8e10NpTzW4wNkpRGaDdJdPWz2Xlsdc2OM=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.2/go.mod h1:M7+ABfjRwfpKCTMCrhMweUrqKGoa4S6u53dB321MKdM=
 github.com/sigstore/timestamp-authority v1.1.2 h1:xgBs9Ct27sEgFb35GL1trKD2XOgYbtk0q2G0HLZHDDY=
