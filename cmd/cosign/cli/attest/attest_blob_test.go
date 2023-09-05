@@ -116,7 +116,6 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 
 	for predicateType, predicatePath := range predicates {
 		t.Run(predicateType, func(t *testing.T) {
-
 			ctx := context.Background()
 			for _, tc := range []struct {
 				name         string
@@ -208,7 +207,6 @@ func TestAttestBlob(t *testing.T) {
 
 	for predicateType, predicatePath := range predicates {
 		t.Run(predicateType, func(t *testing.T) {
-
 			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
 			at := AttestBlobCommand{
 				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
