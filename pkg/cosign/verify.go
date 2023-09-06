@@ -1101,11 +1101,12 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 // no root is provided with a timestamp.
 func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
 	ts, err := sig.RFC3161Timestamp()
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, err
-	} else if ts == nil {
+	case ts == nil:
 		return nil, nil
-	} else if co.TSARootCertificates == nil {
+	case co.TSARootCertificates == nil:
 		return nil, errors.New("no TSA root certificate(s) provided to verify timestamp")
 	}
 
