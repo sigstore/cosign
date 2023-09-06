@@ -100,7 +100,7 @@ type GenerateOpts struct {
 }
 
 // GenerateStatement returns an in-toto statement based on the provided
-// predicate type (custom|slsaprovenance|slsaprovenance1.0|spdx|spdxjson|cyclonedx|link).
+// predicate type (custom|slsaprovenance|slsaprovenance1|spdx|spdxjson|cyclonedx|link).
 func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	predicate, err := io.ReadAll(opts.Predicate)
 	if err != nil {
