@@ -1420,4 +1420,13 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "hashed messages don't match") {
 		t.Fatalf("expected error verifying mismatched signatures, got: %v", err)
 	}
+
+	// failure without root certificate
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+	})
+	if err == nil || !strings.Contains(err.Error(), "no TSA root certificate(s) provided to verify timestamp") {
+		t.Fatalf("expected error verifying without a root certificate, got: %v", err)
+	}
 }
