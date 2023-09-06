@@ -31,7 +31,7 @@ TIMESTAMP_SERVER_CERT=$CERT_BASE/tsa-mtls-server.crt
 TIMESTAMP_SERVER_KEY=$CERT_BASE/tsa-mtls-server.key
 TIMESTAMP_SERVER_NAME="server.example.com"
 TIMESTAMP_SERVER_URL=https://localhost:3000/api/v1/timestamp
-TIMESTAMP_CHAIN_FILE="timestamp-chain.pem"
+TIMESTAMP_CHAIN_FILE="timestamp-chain"
 
 set +e
 COSIGN_CLI=./cosign
@@ -95,5 +95,5 @@ $COSIGN_CLI verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=t
 	--certificate-chain cacert.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE $IMG
 
 # cleanup
-rm -fr ca-key.pem cacert.pem cert.pem timestamp-chain.pem /tmp/timestamp-authority
+rm -fr ca-key.pem cacert.pem cert.pem timestamp-chain /tmp/timestamp-authority
 pkill -f 'timestamp-server'
