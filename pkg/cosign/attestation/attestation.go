@@ -100,7 +100,7 @@ type GenerateOpts struct {
 }
 
 // GenerateStatement returns an in-toto statement based on the provided
-// predicate type (custom|slsaprovenance|slsaprovenance1|spdx|spdxjson|cyclonedx|link).
+// predicate type (custom|slsaprovenance|slsaprovenance02|slsaprovenance1|spdx|spdxjson|cyclonedx|link).
 func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	predicate, err := io.ReadAll(opts.Predicate)
 	if err != nil {
@@ -109,7 +109,9 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 
 	switch opts.Type {
 	case "slsaprovenance":
-		return generateSLSAProvenanceStatement(predicate, opts.Digest, opts.Repo)
+		return generateSLSAProvenanceStatementSLSA02(predicate, opts.Digest, opts.Repo)
+	case "slsaprovenance02":
+		return generateSLSAProvenanceStatementSLSA02(predicate, opts.Digest, opts.Repo)
 	case "slsaprovenance1":
 		return generateSLSAProvenanceStatementSLSA1(predicate, opts.Digest, opts.Repo)
 	case "spdx":
@@ -201,7 +203,7 @@ func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (i
 	return result, nil
 }
 
-func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
+func generateSLSAProvenanceStatementSLSA02(rawPayload []byte, digest string, repo string) (interface{}, error) {
 	var predicate slsa02.ProvenancePredicate
 	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
 	if err != nil {
