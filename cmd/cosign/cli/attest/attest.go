@@ -212,7 +212,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 
 	// We don't actually need to access the remote entity to attach things to it
 	// so we use a placeholder here.
-	se := ociremote.SignedUnknown(digest)
+	se := ociremote.SignedUnknown(digest, ociremoteOpts...)
 
 	signOpts := []mutate.SignOption{
 		mutate.WithDupeDetector(dd),
