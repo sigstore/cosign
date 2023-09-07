@@ -119,8 +119,8 @@ builds:
     binary: cosign-darwin-arm64
     no_unique_dist_dir: true
     env:
-      - CC=aarch64-apple-darwin21.4-clang
-      - CXX=aarch64-apple-darwin21.4-clang++
+      - CC=aarch64-apple-darwin22-clang
+      - CXX=aarch64-apple-darwin22-clang++
     main: ./cmd/cosign
     flags:
       - -trimpath
