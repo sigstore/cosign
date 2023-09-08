@@ -31,6 +31,7 @@ TIMESTAMP_SERVER_CERT=$CERT_BASE/tsa-mtls-server.crt
 TIMESTAMP_SERVER_KEY=$CERT_BASE/tsa-mtls-server.key
 TIMESTAMP_SERVER_NAME="server.example.com"
 TIMESTAMP_SERVER_URL=https://localhost:3000/api/v1/timestamp
+TIMESTAMP_CHAIN_FILE="timestamp-chain"
 
 set +e
 COSIGN_CLI=./cosign
@@ -50,6 +51,12 @@ timestamp-server serve --disable-ntp-monitoring --tls-host 0.0.0.0 --tls-port 30
 		--scheme https --tls-ca $TIMESTAMP_CACERT --tls-key $TIMESTAMP_SERVER_KEY \
 		--tls-certificate $TIMESTAMP_SERVER_CERT &
 
+sleep 1
+curl -k -s --key test/testdata/tsa-mtls-client.key \
+    --cert test/testdata/tsa-mtls-client.crt \
+    --cacert test/testdata/tsa-mtls-ca.crt https://localhost:3000/api/v1/timestamp/certchain \
+    > $TIMESTAMP_CHAIN_FILE
+echo "DONE: $(ls -l $TIMESTAMP_CHAIN_FILE)"
 
 IMG=${IMAGE_URI_DIGEST:-}
 if [[ "$#" -ge 1 ]]; then
@@ -66,7 +73,6 @@ fi
 echo "IMG (IMAGE_URI_DIGEST): $IMG, TIMESTAMP_SERVER_URL: $TIMESTAMP_SERVER_URL"
 
 rm -f *.pem import-cosign.* key.pem
-
 
 # use gencert to generate CA, keys and certificates
 echo "generate keys and certificates with gencert"
@@ -85,8 +91,8 @@ rm -f key.pem import-cosign.*
 echo "cosign verify:"
 $COSIGN_CLI verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=true \
 	--certificate-identity-regexp 'xyz@nosuchprovider.com' --certificate-oidc-issuer-regexp '.*' \
-	--certificate-chain cacert.pem $IMG
+	--certificate-chain cacert.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE $IMG
 
 # cleanup
-rm -fr ca-key.pem cacert.pem cert.pem /tmp/timestamp-authority
+rm -fr ca-key.pem cacert.pem cert.pem timestamp-chain /tmp/timestamp-authority
 pkill -f 'timestamp-server'

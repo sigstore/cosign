@@ -648,14 +648,12 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
-	if co.TSARootCertificates != nil {
-		acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co)
-		if err != nil {
-			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
-		}
-		if acceptableRFC3161Timestamp != nil {
-			acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
-		}
+	acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co)
+	if err != nil {
+		return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
+	}
+	if acceptableRFC3161Timestamp != nil {
+		acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
 	}
 
 	if !co.IgnoreTlog {
@@ -1099,13 +1097,17 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 
 // VerifyRFC3161Timestamp verifies that the timestamp in sig is correctly signed, and if so,
 // returns the timestamp value.
-// It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp.
+// It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp or if
+// no root is provided with a timestamp.
 func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
 	ts, err := sig.RFC3161Timestamp()
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, err
-	} else if ts == nil {
+	case ts == nil:
 		return nil, nil
+	case co.TSARootCertificates == nil:
+		return nil, errors.New("no TSA root certificate(s) provided to verify timestamp")
 	}
 
 	b64Sig, err := sig.Base64Signature()
