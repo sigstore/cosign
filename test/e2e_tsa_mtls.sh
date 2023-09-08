@@ -74,7 +74,6 @@ echo "IMG (IMAGE_URI_DIGEST): $IMG, TIMESTAMP_SERVER_URL: $TIMESTAMP_SERVER_URL"
 
 rm -f *.pem import-cosign.* key.pem
 
-
 # use gencert to generate CA, keys and certificates
 echo "generate keys and certificates with gencert"
 
