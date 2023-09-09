@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -39,8 +40,16 @@ var (
 
 	// ErrEntityNotFound is the error that SignedEntity returns when the
 	// provided ref does not exist.
-	ErrEntityNotFound = errors.New("entity not found in registry")
+	ErrEntityNotFound = "entity not found in registry"
 )
+
+func NewEntityNotFoundError(err error) error {
+	return fmt.Errorf("%s error: %v", ErrEntityNotFound, err)
+}
+
+func IsEntityNotFoundError(err error) bool {
+	return strings.Contains(err.Error(), ErrEntityNotFound)
+}
 
 // SignedEntity provides access to a remote reference, and its signatures.
 // The SignedEntity will be one of SignedImage or SignedImageIndex.
@@ -50,7 +59,7 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	got, err := remoteGet(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
-		return nil, ErrEntityNotFound
+		return nil, NewEntityNotFoundError(err)
 	} else if err != nil {
 		return nil, err
 	}
