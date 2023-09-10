@@ -44,7 +44,7 @@ var (
 )
 
 func NewEntityNotFoundError(err error) error {
-	return fmt.Errorf("%s error: %v", ErrEntityNotFound, err)
+	return fmt.Errorf("%s error: %w", ErrEntityNotFound, err)
 }
 
 func IsEntityNotFoundError(err error) bool {
