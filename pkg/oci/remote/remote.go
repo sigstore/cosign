@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -37,18 +36,22 @@ var (
 	remoteIndex = remote.Index
 	remoteGet   = remote.Get
 	remoteWrite = remote.Write
-
-	// ErrEntityNotFound is the error that SignedEntity returns when the
-	// provided ref does not exist.
-	ErrEntityNotFound = "cosign remoteGet: entity not found in registry"
 )
 
-func NewEntityNotFoundError(err error) error {
-	return fmt.Errorf("%s error: %w", ErrEntityNotFound, err)
+// EntityNotFoundError is the error that SignedEntity returns when the
+// provided ref does not exist.
+type EntityNotFoundError struct {
+	baseErr error
 }
 
-func IsEntityNotFoundError(err error) bool {
-	return strings.Contains(err.Error(), ErrEntityNotFound)
+func (e *EntityNotFoundError) Error() string {
+	return fmt.Sprintf("entity not found in registry, error: %v", e.baseErr)
+}
+
+func NewEntityNotFoundError(err error) error {
+	return &EntityNotFoundError{
+		baseErr: err,
+	}
 }
 
 // SignedEntity provides access to a remote reference, and its signatures.
