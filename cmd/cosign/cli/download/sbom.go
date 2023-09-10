@@ -21,27 +21,14 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/common"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
-
-type platformList []struct {
-	hash     v1.Hash
-	platform *v1.Platform
-}
-
-func (pl *platformList) String() string {
-	r := []string{}
-	for _, p := range *pl {
-		r = append(r, p.platform.String())
-	}
-	return strings.Join(r, ", ")
-}
 
 func SBOMCmd(
 	ctx context.Context, regOpts options.RegistryOptions,
@@ -74,12 +61,12 @@ func SBOMCmd(
 		if err != nil {
 			return nil, fmt.Errorf("parsing platform: %w", err)
 		}
-		platforms, err := getIndexPlatforms(idx)
+		platforms, err := common.GetIndexPlatforms(idx)
 		if err != nil {
 			return nil, fmt.Errorf("getting available platforms: %w", err)
 		}
 
-		platforms = matchPlatform(targetPlatform, platforms)
+		platforms = common.MatchPlatform(targetPlatform, platforms)
 		if len(platforms) == 0 {
 			return nil, fmt.Errorf("unable to find an SBOM for %s", targetPlatform.String())
 		}
@@ -90,12 +77,12 @@ func SBOMCmd(
 			)
 		}
 
-		nse, err := idx.SignedImage(platforms[0].hash)
+		nse, err := idx.SignedImage(platforms[0].Hash)
 		if err != nil {
-			return nil, fmt.Errorf("searching for %s image: %w", platforms[0].hash.String(), err)
+			return nil, fmt.Errorf("searching for %s image: %w", platforms[0].Hash.String(), err)
 		}
 		if nse == nil {
-			return nil, fmt.Errorf("unable to find image %s", platforms[0].hash.String())
+			return nil, fmt.Errorf("unable to find image %s", platforms[0].Hash.String())
 		}
 		se = nse
 	}
@@ -106,7 +93,7 @@ func SBOMCmd(
 			return nil, errors.New("no sbom attached to reference")
 		}
 		// Help the user with the available architectures
-		pl, err := getIndexPlatforms(idx)
+		pl, err := common.GetIndexPlatforms(idx)
 		if len(pl) > 0 && err == nil {
 			fmt.Fprintf(
 				os.Stderr,
@@ -138,58 +125,4 @@ func SBOMCmd(
 	fmt.Fprint(out, string(sbom))
 
 	return sboms, nil
-}
-
-func getIndexPlatforms(idx oci.SignedImageIndex) (platformList, error) {
-	im, err := idx.IndexManifest()
-	if err != nil {
-		return nil, fmt.Errorf("fetching index manifest: %w", err)
-	}
-
-	platforms := platformList{}
-	for _, m := range im.Manifests {
-		if m.Platform == nil {
-			continue
-		}
-		platforms = append(platforms, struct {
-			hash     v1.Hash
-			platform *v1.Platform
-		}{m.Digest, m.Platform})
-	}
-	return platforms, nil
-}
-
-// matchPlatform filters a list of platforms returning only those matching
-// a base. "Based" on ko's internal equivalent while it moves to GGCR.
-// https://github.com/google/ko/blob/e6a7a37e26d82a8b2bb6df991c5a6cf6b2728794/pkg/build/gobuild.go#L1020
-func matchPlatform(base *v1.Platform, list platformList) platformList {
-	ret := platformList{}
-	for _, p := range list {
-		if base.OS != "" && base.OS != p.platform.OS {
-			continue
-		}
-		if base.Architecture != "" && base.Architecture != p.platform.Architecture {
-			continue
-		}
-		if base.Variant != "" && base.Variant != p.platform.Variant {
-			continue
-		}
-
-		if base.OSVersion != "" && p.platform.OSVersion != base.OSVersion {
-			if base.OS != "windows" {
-				continue
-			} else { //nolint: revive
-				if pcount, bcount := strings.Count(base.OSVersion, "."), strings.Count(p.platform.OSVersion, "."); pcount == 2 && bcount == 3 {
-					if base.OSVersion != p.platform.OSVersion[:strings.LastIndex(p.platform.OSVersion, ".")] {
-						continue
-					}
-				} else {
-					continue
-				}
-			}
-		}
-		ret = append(ret, p)
-	}
-
-	return ret
 }

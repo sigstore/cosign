@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/common"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/oci"
@@ -63,12 +64,12 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 		if err != nil {
 			return fmt.Errorf("parsing platform: %w", err)
 		}
-		platforms, err := getIndexPlatforms(idx)
+		platforms, err := common.GetIndexPlatforms(idx)
 		if err != nil {
 			return fmt.Errorf("getting available platforms: %w", err)
 		}
 
-		platforms = matchPlatform(targetPlatform, platforms)
+		platforms = common.MatchPlatform(targetPlatform, platforms)
 		if len(platforms) == 0 {
 			return fmt.Errorf("unable to find an attestation for %s", targetPlatform.String())
 		}
@@ -79,12 +80,12 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 			)
 		}
 
-		nse, err := idx.SignedImage(platforms[0].hash)
+		nse, err := idx.SignedImage(platforms[0].Hash)
 		if err != nil {
-			return fmt.Errorf("searching for %s image: %w", platforms[0].hash.String(), err)
+			return fmt.Errorf("searching for %s image: %w", platforms[0].Hash.String(), err)
 		}
 		if nse == nil {
-			return fmt.Errorf("unable to find image %s", platforms[0].hash.String())
+			return fmt.Errorf("unable to find image %s", platforms[0].Hash.String())
 		}
 		se = nse
 	}
