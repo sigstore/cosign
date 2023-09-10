@@ -179,7 +179,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 
 		if digest, ok := ref.(name.Digest); ok && !signOpts.Recursive {
 			se, err := ociremote.SignedEntity(ref, opts...)
-			if err == ociremote.ErrEntityNotFound {
+			if _, isEntityNotFoundErr := err.(*ociremote.EntityNotFoundError); isEntityNotFoundErr {
 				se = ociremote.SignedUnknown(digest)
 			} else if err != nil {
 				return fmt.Errorf("accessing image: %w", err)
