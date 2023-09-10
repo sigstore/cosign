@@ -40,7 +40,7 @@ var (
 
 	// ErrEntityNotFound is the error that SignedEntity returns when the
 	// provided ref does not exist.
-	ErrEntityNotFound = "entity not found in registry"
+	ErrEntityNotFound = "cosign remoteGet: entity not found in registry"
 )
 
 func NewEntityNotFoundError(err error) error {
