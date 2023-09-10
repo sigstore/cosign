@@ -45,7 +45,7 @@ func Copy() *cobra.Command {
 		Args:             cobra.ExactArgs(2),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return copy.CopyCmd(cmd.Context(), o.Registry, args[0], args[1], o.SignatureOnly, o.Force)
+			return copy.CopyCmd(cmd.Context(), o.Registry, args[0], args[1], o.SignatureOnly, o.Force, o.Platform)
 		},
 	}
 
