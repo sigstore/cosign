@@ -202,7 +202,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	keyRef := c.KeyRef
 	certRef := c.CertRef
 
-	if !c.IgnoreSCT {
+	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
+	if !c.IgnoreSCT || keyRef != "" {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)

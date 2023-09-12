@@ -285,7 +285,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		opts = append(opts, static.WithCertChain(certPEM, chainPEM))
 	}
 
-	if !c.IgnoreSCT {
+	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
+	if !c.IgnoreSCT || c.KeyRef != "" {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
