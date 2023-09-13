@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	"github.com/sigstore/cosign/v2/pkg/oci/signed"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	"github.com/google/go-containerregistry/pkg/name"
 )
 
 func TestReadWrite(t *testing.T) {
@@ -36,7 +37,8 @@ func TestReadWrite(t *testing.T) {
 	// write random signed image to disk
 	si := randomSignedImage(t)
 	tmp := t.TempDir()
-	if err := WriteSignedImage(tmp, si); err != nil {
+	ref, err := name.ParseReference("test.com/test")
+	if err := WriteSignedImage(tmp, si, ref); err != nil {
 		t.Fatal(err)
 	}
 

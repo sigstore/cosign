@@ -25,11 +25,12 @@ import (
 )
 
 const (
-	kindAnnotation       = "kind"
-	imageAnnotation      = "dev.cosignproject.cosign/image"
-	imageIndexAnnotation = "dev.cosignproject.cosign/imageIndex"
-	sigsAnnotation       = "dev.cosignproject.cosign/sigs"
-	attsAnnotation       = "dev.cosignproject.cosign/atts"
+	KindAnnotation       = "kind"
+	ImageAnnotation      = "dev.cosignproject.cosign/image"
+	ImageTitleAnnotation = "org.opencontainers.image.title"
+	ImageIndexAnnotation = "dev.cosignproject.cosign/imageIndex"
+	SigsAnnotation       = "dev.cosignproject.cosign/sigs"
+	AttsAnnotation       = "dev.cosignproject.cosign/atts"
 )
 
 // SignedImageIndex provides access to a local index reference, and its signatures.
@@ -59,7 +60,7 @@ var _ oci.SignedImageIndex = (*index)(nil)
 
 // Signatures implements oci.SignedImageIndex
 func (i *index) Signatures() (oci.Signatures, error) {
-	img, err := i.imageByAnnotation(sigsAnnotation)
+	img, err := i.imageByAnnotation(SigsAnnotation)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +72,7 @@ func (i *index) Signatures() (oci.Signatures, error) {
 
 // Attestations implements oci.SignedImageIndex
 func (i *index) Attestations() (oci.Signatures, error) {
-	img, err := i.imageByAnnotation(attsAnnotation)
+	img, err := i.imageByAnnotation(AttsAnnotation)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	var img v1.Image
 	var err error
 	if h.String() == ":" {
-		img, err = i.imageByAnnotation(imageAnnotation)
+		img, err = i.imageByAnnotation(ImageAnnotation)
 	} else {
 		img, err = i.Image(h)
 	}
@@ -113,7 +114,7 @@ func (i *index) imageByAnnotation(annotation string) (v1.Image, error) {
 		return nil, err
 	}
 	for _, m := range manifest.Manifests {
-		if val, ok := m.Annotations[kindAnnotation]; ok && val == annotation {
+		if val, ok := m.Annotations[KindAnnotation]; ok && val == annotation {
 			return i.Image(m.Digest)
 		}
 	}
@@ -126,7 +127,7 @@ func (i *index) imageIndexByAnnotation(annotation string) (v1.ImageIndex, error)
 		return nil, err
 	}
 	for _, m := range manifest.Manifests {
-		if val, ok := m.Annotations[kindAnnotation]; ok && val == annotation {
+		if val, ok := m.Annotations[KindAnnotation]; ok && val == annotation {
 			return i.ImageIndex(m.Digest)
 		}
 	}
@@ -138,7 +139,7 @@ func (i *index) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error) {
 	var ii v1.ImageIndex
 	var err error
 	if h.String() == ":" {
-		ii, err = i.imageIndexByAnnotation(imageIndexAnnotation)
+		ii, err = i.imageIndexByAnnotation(ImageIndexAnnotation)
 	} else {
 		ii, err = i.ImageIndex(h)
 	}
