@@ -49,16 +49,12 @@ func WriteSignedImage(path string, si oci.SignedImage, ref name.Reference) error
 // WriteSignedImageIndex writes the image index and all related signatures, attestations and attachments
 func WriteSignedImageIndex(path string, si oci.SignedImageIndex, ref name.Reference) error {
 	layoutPath, err := layout.FromPath(path)
+    if os.IsNotExist(err) {
+        // If the layout doesn't exist, create a new one
+        layoutPath, err = layout.Write(path, empty.Index)
+    }
     if err != nil {
-        if os.IsNotExist(err) {
-            // If the layout doesn't exist, create a new one
-            layoutPath, err = layout.Write(path, empty.Index)
-            if err != nil {
-                return err
-            }
-        } else {
-            return err
-        }
+        return err
     }
 
     // Append the image index
