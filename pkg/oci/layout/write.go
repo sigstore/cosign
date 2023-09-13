@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"errors"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -36,7 +37,6 @@ func WriteSignedImage(path string, si oci.SignedImage, ref name.Reference) error
     }
     if err != nil {
         return err
-    }
     }
 	
 	// write the image
@@ -58,8 +58,12 @@ func WriteSignedImageIndex(path string, si oci.SignedImageIndex, ref name.Refere
     }
 
     // Append the image index
+    imageRef, err := getImageRef(ref)
+    if err != nil {
+        return err // Return the error from getImageRef immediately.
+    }
     if err := layoutPath.AppendIndex(si, layout.WithAnnotations(
-        map[string]string{KindAnnotation: ImageIndexAnnotation, ImageTitleAnnotation: getImageRef(ref)},
+        map[string]string{KindAnnotation: ImageIndexAnnotation, ImageTitleAnnotation: imageRef},
     )); err != nil {
         return fmt.Errorf("appending signed image index: %w", err)
     }
@@ -100,16 +104,23 @@ func isEmpty(s oci.Signatures) bool {
 }
 
 func appendImage(path layout.Path, img v1.Image, ref name.Reference, annotation string) error {
+	imageRef, err := getImageRef(ref)
+    if err != nil {
+        return err // Return the error from getImageRef immediately.
+    }
 	return path.AppendImage(img, layout.WithAnnotations(
-        map[string]string{KindAnnotation: annotation, ImageTitleAnnotation: getImageRef(ref)},
+        map[string]string{KindAnnotation: annotation, ImageTitleAnnotation: imageRef},
     ))
 }
 
-func getImageRef(ref name.Reference) string {
+func getImageRef(ref name.Reference) (string, error) {
+	if ref == nil {
+		return "", errors.New("reference is nil")
+	}
 	registry := ref.Context().RegistryStr() + "/"
 	imageRef := ref.Name()
 	if strings.HasPrefix(imageRef, registry) {
 		imageRef = imageRef[len(registry):]
 	}
-	return imageRef
+	return imageRef, nil
 }
