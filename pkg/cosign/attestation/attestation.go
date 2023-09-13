@@ -23,7 +23,8 @@ import (
 	"strings"
 	"time"
 
-	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+	slsa02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+	slsa1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 )
@@ -99,7 +100,7 @@ type GenerateOpts struct {
 }
 
 // GenerateStatement returns an in-toto statement based on the provided
-// predicate type (custom|slsaprovenance|spdx|spdxjson|cyclonedx|link).
+// predicate type (custom|slsaprovenance|slsaprovenance02|slsaprovenance1|spdx|spdxjson|cyclonedx|link).
 func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	predicate, err := io.ReadAll(opts.Predicate)
 	if err != nil {
@@ -108,7 +109,11 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 
 	switch opts.Type {
 	case "slsaprovenance":
-		return generateSLSAProvenanceStatement(predicate, opts.Digest, opts.Repo)
+		return generateSLSAProvenanceStatementSLSA02(predicate, opts.Digest, opts.Repo)
+	case "slsaprovenance02":
+		return generateSLSAProvenanceStatementSLSA02(predicate, opts.Digest, opts.Repo)
+	case "slsaprovenance1":
+		return generateSLSAProvenanceStatementSLSA1(predicate, opts.Digest, opts.Repo)
 	case "spdx":
 		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, false)
 	case "spdxjson":
@@ -198,8 +203,8 @@ func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (i
 	return result, nil
 }
 
-func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var predicate slsa.ProvenancePredicate
+func generateSLSAProvenanceStatementSLSA02(rawPayload []byte, digest string, repo string) (interface{}, error) {
+	var predicate slsa02.ProvenancePredicate
 	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
 	if err != nil {
 		return nil, fmt.Errorf("provenance predicate: %w", err)
@@ -209,7 +214,23 @@ func generateSLSAProvenanceStatement(rawPayload []byte, digest string, repo stri
 		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
 	}
 	return in_toto.ProvenanceStatement{
-		StatementHeader: generateStatementHeader(digest, repo, slsa.PredicateSLSAProvenance),
+		StatementHeader: generateStatementHeader(digest, repo, slsa02.PredicateSLSAProvenance),
+		Predicate:       predicate,
+	}, nil
+}
+
+func generateSLSAProvenanceStatementSLSA1(rawPayload []byte, digest string, repo string) (interface{}, error) {
+	var predicate slsa1.ProvenancePredicate
+	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
+	if err != nil {
+		return nil, fmt.Errorf("provenance predicate: %w", err)
+	}
+	err = json.Unmarshal(rawPayload, &predicate)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
+	}
+	return in_toto.ProvenanceStatementSLSA1{
+		StatementHeader: generateStatementHeader(digest, repo, slsa1.PredicateSLSAProvenance),
 		Predicate:       predicate,
 	}, nil
 }

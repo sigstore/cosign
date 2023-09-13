@@ -71,6 +71,16 @@ func writeFile(t *testing.T, td string, blob string, name string) string {
 	return blobPath
 }
 
+func makeSLSA02PredicateFile(t *testing.T, td string) string {
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	return writeFile(t, td, predicate, "predicate02.json")
+}
+
+func makeSLSA1PredicateFile(t *testing.T, td string) string {
+	predicate := `{ "buildDefinition": {}, "runDetails": {} }`
+	return writeFile(t, td, predicate, "predicate1.json")
+}
+
 // TestAttestBlobCmdWithCert verifies the AttestBlobCmd checks
 // that the cmd correctly matches the signing key with the cert
 // provided.
@@ -99,73 +109,78 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 	chainRef := writeFile(t, td, string(pemChain), "chain.pem")
 
 	blob := writeFile(t, td, "foo", "foo.txt")
-	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
-	predicateType := "slsaprovenance"
-	predicatePath := writeFile(t, td, predicate, "predicate.json")
 
-	ctx := context.Background()
-	for _, tc := range []struct {
-		name         string
-		keyref       string
-		certref      string
-		certchainref string
-		errString    string
-	}{
-		{
-			name:   "no cert",
-			keyref: keyRef,
-		},
-		{
-			name:    "cert matches key",
-			keyref:  keyRef,
-			certref: certRef,
-		},
-		{
-			name:      "fail: cert no match key",
-			keyref:    keyRef,
-			certref:   subCertPem,
-			errString: "public key in certificate does not match the provided public key",
-		},
-		{
-			name:         "cert chain matches key",
-			keyref:       keyRef,
-			certref:      certRef,
-			certchainref: chainRef,
-		},
-		{
-			name:         "cert chain partial",
-			keyref:       keyRef,
-			certref:      certRef,
-			certchainref: subCertPem,
-		},
-		{
-			name:         "fail: cert chain bad",
-			keyref:       keyRef,
-			certref:      certRef,
-			certchainref: otherRootPem,
-			errString:    "unable to validate certificate chain",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			at := AttestBlobCommand{
-				KeyOpts:       options.KeyOpts{KeyRef: tc.keyref},
-				CertPath:      tc.certref,
-				CertChainPath: tc.certchainref,
-				PredicatePath: predicatePath,
-				PredicateType: predicateType,
-			}
-			err := at.Exec(ctx, blob)
-			if err != nil {
-				if tc.errString == "" {
-					t.Fatalf("unexpected error %v", err)
-				}
-				if !strings.Contains(err.Error(), tc.errString) {
-					t.Fatalf("expected error %v got %v", tc.errString, err)
-				}
-				return
-			}
-			if tc.errString != "" {
-				t.Fatalf("expected error %v", tc.errString)
+	predicates := map[string]string{}
+	predicates["slsaprovenance"] = makeSLSA02PredicateFile(t, td)
+	predicates["slsaprovenance1"] = makeSLSA1PredicateFile(t, td)
+
+	for predicateType, predicatePath := range predicates {
+		t.Run(predicateType, func(t *testing.T) {
+			ctx := context.Background()
+			for _, tc := range []struct {
+				name         string
+				keyref       string
+				certref      string
+				certchainref string
+				errString    string
+			}{
+				{
+					name:   "no cert",
+					keyref: keyRef,
+				},
+				{
+					name:    "cert matches key",
+					keyref:  keyRef,
+					certref: certRef,
+				},
+				{
+					name:      "fail: cert no match key",
+					keyref:    keyRef,
+					certref:   subCertPem,
+					errString: "public key in certificate does not match the provided public key",
+				},
+				{
+					name:         "cert chain matches key",
+					keyref:       keyRef,
+					certref:      certRef,
+					certchainref: chainRef,
+				},
+				{
+					name:         "cert chain partial",
+					keyref:       keyRef,
+					certref:      certRef,
+					certchainref: subCertPem,
+				},
+				{
+					name:         "fail: cert chain bad",
+					keyref:       keyRef,
+					certref:      certRef,
+					certchainref: otherRootPem,
+					errString:    "unable to validate certificate chain",
+				},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					at := AttestBlobCommand{
+						KeyOpts:       options.KeyOpts{KeyRef: tc.keyref},
+						CertPath:      tc.certref,
+						CertChainPath: tc.certchainref,
+						PredicatePath: predicatePath,
+						PredicateType: predicateType,
+					}
+					err := at.Exec(ctx, blob)
+					if err != nil {
+						if tc.errString == "" {
+							t.Fatalf("unexpected error %v", err)
+						}
+						if !strings.Contains(err.Error(), tc.errString) {
+							t.Fatalf("expected error %v got %v", tc.errString, err)
+						}
+						return
+					}
+					if tc.errString != "" {
+						t.Fatalf("expected error %v", tc.errString)
+					}
+				})
 			}
 		})
 	}
@@ -185,59 +200,64 @@ func TestAttestBlob(t *testing.T) {
 	blobPath := writeFile(t, td, string(blob), "foo.txt")
 	digest, _, _ := signature.ComputeDigestForSigning(bytes.NewReader(blob), crypto.SHA256, []crypto.Hash{crypto.SHA256, crypto.SHA384})
 	blobDigest := strings.ToLower(hex.EncodeToString(digest))
-	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
-	predicateType := "slsaprovenance"
-	predicatePath := writeFile(t, td, predicate, "predicate.json")
 
-	dssePath := filepath.Join(td, "dsse.intoto.jsonl")
-	at := AttestBlobCommand{
-		KeyOpts:         options.KeyOpts{KeyRef: keyRef},
-		PredicatePath:   predicatePath,
-		PredicateType:   predicateType,
-		OutputSignature: dssePath,
-	}
-	err := at.Exec(ctx, blobPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	predicates := map[string]string{}
+	predicates["slsaprovenance"] = makeSLSA02PredicateFile(t, td)
+	predicates["slsaprovenance1"] = makeSLSA1PredicateFile(t, td)
 
-	// Load the attestation.
-	dsseBytes, _ := os.ReadFile(dssePath)
-	env := &ssldsse.Envelope{}
-	if err := json.Unmarshal(dsseBytes, env); err != nil {
-		t.Fatal(err)
-	}
+	for predicateType, predicatePath := range predicates {
+		t.Run(predicateType, func(t *testing.T) {
+			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
+			at := AttestBlobCommand{
+				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
+				PredicatePath:   predicatePath,
+				PredicateType:   predicateType,
+				OutputSignature: dssePath,
+			}
+			err := at.Exec(ctx, blobPath)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	if len(env.Signatures) != 1 {
-		t.Fatalf("expected 1 signature, got %d", len(env.Signatures))
-	}
+			// Load the attestation.
+			dsseBytes, _ := os.ReadFile(dssePath)
+			env := &ssldsse.Envelope{}
+			if err := json.Unmarshal(dsseBytes, env); err != nil {
+				t.Fatal(err)
+			}
 
-	// Verify the subject digest
-	decodedPredicate, err := base64.StdEncoding.DecodeString(env.Payload)
-	if err != nil {
-		t.Fatalf("decoding dsse payload: %v", err)
-	}
-	var statement in_toto.Statement
-	if err := json.Unmarshal(decodedPredicate, &statement); err != nil {
-		t.Fatalf("decoding predicate: %v", err)
-	}
-	if statement.Subject == nil || len(statement.Subject) != 1 {
-		t.Fatalf("expected one subject in intoto statement")
-	}
-	if statement.Subject[0].Digest["sha256"] != blobDigest {
-		t.Fatalf("expected matching digest")
-	}
-	if statement.PredicateType != options.PredicateTypeMap[predicateType] {
-		t.Fatalf("expected matching predicate type")
-	}
+			if len(env.Signatures) != 1 {
+				t.Fatalf("expected 1 signature, got %d", len(env.Signatures))
+			}
 
-	// Load a verifier and DSSE verify
-	verifier, _ := signature.LoadVerifierFromPEMFile(pubKeyRef, crypto.SHA256)
-	dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
-	if err != nil {
-		t.Fatalf("new envelope verifier: %v", err)
-	}
-	if _, err := dssev.Verify(ctx, env); err != nil {
-		t.Fatalf("dsse verify: %v", err)
+			// Verify the subject digest
+			decodedPredicate, err := base64.StdEncoding.DecodeString(env.Payload)
+			if err != nil {
+				t.Fatalf("decoding dsse payload: %v", err)
+			}
+			var statement in_toto.Statement
+			if err := json.Unmarshal(decodedPredicate, &statement); err != nil {
+				t.Fatalf("decoding predicate: %v", err)
+			}
+			if statement.Subject == nil || len(statement.Subject) != 1 {
+				t.Fatalf("expected one subject in intoto statement")
+			}
+			if statement.Subject[0].Digest["sha256"] != blobDigest {
+				t.Fatalf("expected matching digest")
+			}
+			if statement.PredicateType != options.PredicateTypeMap[predicateType] {
+				t.Fatalf("expected matching predicate type")
+			}
+
+			// Load a verifier and DSSE verify
+			verifier, _ := signature.LoadVerifierFromPEMFile(pubKeyRef, crypto.SHA256)
+			dssev, err := ssldsse.NewEnvelopeVerifier(&dsse.VerifierAdapter{SignatureVerifier: verifier})
+			if err != nil {
+				t.Fatalf("new envelope verifier: %v", err)
+			}
+			if _, err := dssev.Verify(ctx, env); err != nil {
+				t.Fatalf("dsse verify: %v", err)
+			}
+		})
 	}
 }
