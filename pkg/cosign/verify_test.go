@@ -105,7 +105,7 @@ func appendSlices(slices [][]byte) []byte {
 }
 
 func Test_verifyOCIAttestation(t *testing.T) {
-	stmt, err := json.Marshal(in_toto.ProvenanceStatement{})
+	stmt, err := json.Marshal(in_toto.ProvenanceStatementSLSA02{})
 	if err != nil {
 		t.Fatal(err)
 	}
