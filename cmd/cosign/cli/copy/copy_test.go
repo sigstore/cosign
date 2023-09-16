@@ -38,3 +38,15 @@ func TestCopyAttachmentTagPrefix(t *testing.T) {
 		t.Fatal("failed to copy with attachment-tag-prefix")
 	}
 }
+
+func TestCopyPlatformOpt(t *testing.T) {
+	ctx := context.Background()
+
+	srcImg := "alpine"
+	destImg := "test-alpine"
+
+	err := CopyCmd(ctx, options.RegistryOptions{}, srcImg, destImg, false, true, "linux/amd64")
+	if err == nil {
+		t.Fatal("failed to copy with platform")
+	}
+}
