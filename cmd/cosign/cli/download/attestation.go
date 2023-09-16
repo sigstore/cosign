@@ -18,6 +18,7 @@ package download
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -46,14 +47,17 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 	}
 
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
-	if _, isEntityNotFoundErr := err.(*ociremote.EntityNotFoundError); isEntityNotFoundErr {
-		if digest, ok := ref.(name.Digest); ok {
-			se = ociremote.SignedUnknown(digest)
+	var entityNotFoundError *ociremote.EntityNotFoundError
+	if err != nil {
+		if errors.As(err, &entityNotFoundError) {
+			if digest, ok := ref.(name.Digest); ok {
+				se = ociremote.SignedUnknown(digest)
+			} else {
+				return err
+			}
 		} else {
 			return err
 		}
-	} else if err != nil {
-		return err
 	}
 
 	se, err = platform.SignedEntityForPlatform(se, attOptions.Platform)
