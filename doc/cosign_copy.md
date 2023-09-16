@@ -19,6 +19,9 @@ cosign copy [flags]
 
   # overwrite destination image and signatures
   cosign copy -f example.com/src example.com/dest
+
+	# copy a container image and its signatures for a specific platform
+  cosign copy --platform=linux/amd64 example.com/src:latest example.com/dest:latest
 ```
 
 ### Options
@@ -30,6 +33,7 @@ cosign copy [flags]
   -f, --force                                                                                    overwrite destination image(s), if necessary
   -h, --help                                                                                     help for copy
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --platform string                                                                          only copy container image and its signatures for a specific platform image
       --sig-only                                                                                 only copy the image signature
 ```
 

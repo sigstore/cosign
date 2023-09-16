@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/oci"
+	ociplatform "github.com/sigstore/cosign/v2/pkg/oci/platform"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 	"golang.org/x/sync/errgroup"
@@ -35,7 +36,7 @@ import (
 
 // CopyCmd implements the logic to copy the supplied container image and signatures.
 // nolint
-func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool) error {
+func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool, platform string) error {
 	no := regOpts.NameOptions()
 	srcRef, err := name.ParseReference(srcImg, no...)
 	if err != nil {
@@ -67,6 +68,11 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	g.SetLimit(runtime.GOMAXPROCS(0))
 
 	root, err := ociremote.SignedEntity(srcRef, ociRemoteOpts...)
+	if err != nil {
+		return err
+	}
+
+	root, err = ociplatform.SignedEntityForPlatform(root, platform)
 	if err != nil {
 		return err
 	}

@@ -37,12 +37,15 @@ func Copy() *cobra.Command {
   cosign copy --sig-only example.com/src example.com/dest
 
   # overwrite destination image and signatures
-  cosign copy -f example.com/src example.com/dest`,
+  cosign copy -f example.com/src example.com/dest
+
+	# copy a container image and its signatures for a specific platform
+  cosign copy --platform=linux/amd64 example.com/src:latest example.com/dest:latest`,
 
 		Args:             cobra.ExactArgs(2),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return copy.CopyCmd(cmd.Context(), o.Registry, args[0], args[1], o.SignatureOnly, o.Force)
+			return copy.CopyCmd(cmd.Context(), o.Registry, args[0], args[1], o.SignatureOnly, o.Force, o.Platform)
 		},
 	}
 
