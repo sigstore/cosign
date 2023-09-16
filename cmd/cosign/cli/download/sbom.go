@@ -44,16 +44,14 @@ func SBOMCmd(
 	}
 
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
-	if err != nil {
-		if _, isEntityNotFoundErr := err.(*ociremote.EntityNotFoundError); isEntityNotFoundErr {
-			if digest, ok := ref.(name.Digest); ok {
-				se = ociremote.SignedUnknown(digest)
-			} else {
-				return nil, err
-			}
+	if _, isEntityNotFoundErr := err.(*ociremote.EntityNotFoundError); isEntityNotFoundErr {
+		if digest, ok := ref.(name.Digest); ok {
+			se = ociremote.SignedUnknown(digest)
 		} else {
 			return nil, err
 		}
+	} else if err != nil {
+		return nil, err
 	}
 
 	se, err = platform.SignedEntityForPlatform(se, dnOpts.Platform)
