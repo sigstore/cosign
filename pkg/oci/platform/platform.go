@@ -1,4 +1,4 @@
-package common
+package platform
 
 import (
 	"fmt"
@@ -43,7 +43,7 @@ func GetIndexPlatforms(idx oci.SignedImageIndex) (platformList, error) {
 // matchPlatform filters a list of platforms returning only those matching
 // a base. "Based" on ko's internal equivalent while it moves to GGCR.
 // https://github.com/google/ko/blob/e6a7a37e26d82a8b2bb6df991c5a6cf6b2728794/pkg/build/gobuild.go#L1020
-func MatchPlatform(base *v1.Platform, list platformList) platformList {
+func matchPlatform(base *v1.Platform, list platformList) platformList {
 	ret := platformList{}
 	for _, p := range list {
 		if base.OS != "" && base.OS != p.Platform.OS {
@@ -73,4 +73,48 @@ func MatchPlatform(base *v1.Platform, list platformList) platformList {
 	}
 
 	return ret
+}
+
+func SignedEntityForPlatform(se oci.SignedEntity, platform string) (oci.SignedEntity, error) {
+	if platform == "" {
+		// Copy all platforms
+		return se, nil
+	}
+	idx, isIndex := se.(oci.SignedImageIndex)
+
+	// We only allow --platform on multiarch indexes
+	if !isIndex {
+		return nil, fmt.Errorf("specified reference is not a multiarch image")
+	}
+
+	targetPlatform, err := v1.ParsePlatform(platform)
+	if err != nil {
+		return nil, fmt.Errorf("parsing platform: %w", err)
+	}
+	platforms, err := GetIndexPlatforms(idx)
+	if err != nil {
+		return nil, fmt.Errorf("getting available platforms: %w", err)
+	}
+
+	platforms = matchPlatform(targetPlatform, platforms)
+	if len(platforms) == 0 {
+		return nil, fmt.Errorf("unable to find an entity for %s", targetPlatform.String())
+	}
+	if len(platforms) > 1 {
+		return nil, fmt.Errorf(
+			"platform spec matches more than one image architecture: %s",
+			platforms.String(),
+		)
+	}
+
+	nse, err := idx.SignedImage(platforms[0].Hash)
+	if err != nil {
+		return nil, fmt.Errorf("searching for %s image: %w", platforms[0].Hash.String(), err)
+	}
+	if nse == nil {
+		return nil, fmt.Errorf("unable to find image %s", platforms[0].Hash.String())
+	}
+
+	return nse, nil
+
 }

@@ -21,11 +21,9 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/common"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci/platform"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
@@ -52,42 +50,9 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 		return err
 	}
 
-	idx, isIndex := se.(oci.SignedImageIndex)
-
-	// We only allow --platform on multiarch indexes
-	if attOptions.Platform != "" && !isIndex {
-		return fmt.Errorf("specified reference is not a multiarch image")
-	}
-
-	if attOptions.Platform != "" && isIndex {
-		targetPlatform, err := v1.ParsePlatform(attOptions.Platform)
-		if err != nil {
-			return fmt.Errorf("parsing platform: %w", err)
-		}
-		platforms, err := common.GetIndexPlatforms(idx)
-		if err != nil {
-			return fmt.Errorf("getting available platforms: %w", err)
-		}
-
-		platforms = common.MatchPlatform(targetPlatform, platforms)
-		if len(platforms) == 0 {
-			return fmt.Errorf("unable to find an attestation for %s", targetPlatform.String())
-		}
-		if len(platforms) > 1 {
-			return fmt.Errorf(
-				"platform spec matches more than one image architecture: %s",
-				platforms.String(),
-			)
-		}
-
-		nse, err := idx.SignedImage(platforms[0].Hash)
-		if err != nil {
-			return fmt.Errorf("searching for %s image: %w", platforms[0].Hash.String(), err)
-		}
-		if nse == nil {
-			return fmt.Errorf("unable to find image %s", platforms[0].Hash.String())
-		}
-		se = nse
+	se, err = platform.SignedEntityForPlatform(se, attOptions.Platform)
+	if err != nil {
+		return err
 	}
 
 	attestations, err := cosign.FetchAttestations(se, predicateType)
