@@ -20,7 +20,7 @@ cosign copy [flags]
   # overwrite destination image and signatures
   cosign copy -f example.com/src example.com/dest
 
-	# copy a container image and its signatures for a specific platform
+  # copy a container image and its signatures for a specific platform
   cosign copy --platform=linux/amd64 example.com/src:latest example.com/dest:latest
 ```
 
