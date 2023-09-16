@@ -22,12 +22,12 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
 
-type platformList []struct {
+type PlatformList []struct {
 	Hash     v1.Hash
 	Platform *v1.Platform
 }
 
-func (pl *platformList) String() string {
+func (pl *PlatformList) String() string {
 	r := []string{}
 	for _, p := range *pl {
 		r = append(r, p.Platform.String())
@@ -35,13 +35,13 @@ func (pl *platformList) String() string {
 	return strings.Join(r, ", ")
 }
 
-func GetIndexPlatforms(idx oci.SignedImageIndex) (platformList, error) {
+func GetIndexPlatforms(idx oci.SignedImageIndex) (PlatformList, error) {
 	im, err := idx.IndexManifest()
 	if err != nil {
 		return nil, fmt.Errorf("fetching index manifest: %w", err)
 	}
 
-	platforms := platformList{}
+	platforms := PlatformList{}
 	for _, m := range im.Manifests {
 		if m.Platform == nil {
 			continue
@@ -57,8 +57,8 @@ func GetIndexPlatforms(idx oci.SignedImageIndex) (platformList, error) {
 // matchPlatform filters a list of platforms returning only those matching
 // a base. "Based" on ko's internal equivalent while it moves to GGCR.
 // https://github.com/google/ko/blob/e6a7a37e26d82a8b2bb6df991c5a6cf6b2728794/pkg/build/gobuild.go#L1020
-func matchPlatform(base *v1.Platform, list platformList) platformList {
-	ret := platformList{}
+func matchPlatform(base *v1.Platform, list PlatformList) PlatformList {
+	ret := PlatformList{}
 	for _, p := range list {
 		if base.OS != "" && base.OS != p.Platform.OS {
 			continue
