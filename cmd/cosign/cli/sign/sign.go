@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -306,6 +307,31 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		ui.Infof(ctx, "Certificate wrote in the file %s", signOpts.OutputCertificate)
 	}
 
+	if ko.BundlePath != "" {
+		rekorBytes, err := sv.Bytes(ctx)
+		if err != nil {
+			return fmt.Errorf("error getting signer: %w", err)
+		}
+		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(rekorBytes)
+
+		// signer is a certificate
+		if err == nil && len(cert) == 1 {
+			signedPayload, err := fetchSignedPayload(ociSig)
+			if err != nil {
+				return fmt.Errorf("failed to fetch signed payload: %w", err)
+			}
+
+			contents, err := json.Marshal(signedPayload)
+			if err != nil {
+				return fmt.Errorf("failed to marshal signed payload: %w", err)
+			}
+			if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+				return fmt.Errorf("create bundle file: %w", err)
+			}
+			ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
+		}
+	}
+
 	if !signOpts.Upload {
 		return nil
 	}
@@ -590,4 +616,34 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return pemBytes, nil
+}
+
+func fetchSignedPayload(sig oci.Signature) (*cosign.SignedPayload, error) {
+	var signedPayload *cosign.SignedPayload
+	var err error
+	signedPayload.Payload, err = sig.Payload()
+	if err != nil {
+		return nil, err
+	}
+	signedPayload.Base64Signature, err = sig.Base64Signature()
+	if err != nil {
+		return nil, err
+	}
+	signedPayload.Cert, err = sig.Cert()
+	if err != nil {
+		return nil, err
+	}
+	signedPayload.Chain, err = sig.Chain()
+	if err != nil {
+		return nil, err
+	}
+	signedPayload.RFC3161Timestamp, err = sig.RFC3161Timestamp()
+	if err != nil {
+		return nil, err
+	}
+	signedPayload.Bundle, err = sig.Bundle()
+	if err != nil {
+		return nil, err
+	}
+	return signedPayload, nil
 }
