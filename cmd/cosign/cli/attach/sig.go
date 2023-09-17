@@ -74,7 +74,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	var cert []byte
 	var certChain []byte
 	var timeStampedSig []byte
-	var rekorBundleByte []byte
+	var rekorBundle *bundle.RekorBundle
 
 	if certRef != "" {
 		cert, err = os.ReadFile(filepath.Clean(certRef))
@@ -99,14 +99,15 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	TSBundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
 
 	if rekorBundleRef != "" {
-		rekorBundleByte, err = os.ReadFile(filepath.Clean(rekorBundleRef))
+		rekorBundleByte, err := os.ReadFile(filepath.Clean(rekorBundleRef))
 		if err != nil {
 			return err
 		}
-	}
-	rekorBundle, err := bundle.BytesToRekorBundle(rekorBundleByte)
-	if err != nil {
-		return err
+
+		rekorBundle, err = bundle.BytesToRekorBundle(rekorBundleByte)
+		if err != nil {
+			return err
+		}
 	}
 
 	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(TSBundle), mutate.WithBundle(rekorBundle))

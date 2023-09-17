@@ -908,7 +908,7 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	rfc3161TSRef := mkfile(string(tsBytes), td, t)
 
 	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, imgName)
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1598,7 +1598,7 @@ func TestUploadDownload(t *testing.T) {
 				sigRef = signature
 			}
 			// Upload it!
-			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, "", "", "", imgName)
+			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, "", "", "", "", imgName)
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {

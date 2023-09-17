@@ -54,7 +54,7 @@ func BytesToRekorBundle(data []byte) (*RekorBundle, error) {
 	var rekorBundle RekorBundle
 	err := json.Unmarshal(data, &rekorBundle)
 	if err != nil {
-		return nil, fmt.Errorf("invalid rekor bundle provided: %v", err)
+		return nil, fmt.Errorf("invalid rekor bundle provided: %w", err)
 	}
 
 	return &rekorBundle, nil
