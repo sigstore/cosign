@@ -31,7 +31,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, rekorBundleRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -74,6 +74,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	var cert []byte
 	var certChain []byte
 	var timeStampedSig []byte
+	var rekorBundleByte []byte
 
 	if certRef != "" {
 		cert, err = os.ReadFile(filepath.Clean(certRef))
@@ -95,9 +96,20 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 			return err
 		}
 	}
-	bundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
+	TSBundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
 
-	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(bundle))
+	if rekorBundleRef != "" {
+		rekorBundleByte, err = os.ReadFile(filepath.Clean(rekorBundleRef))
+		if err != nil {
+			return err
+		}
+	}
+	rekorBundle, err := bundle.BytesToRekorBundle(rekorBundleByte)
+	if err != nil {
+		return err
+	}
+
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(TSBundle), mutate.WithBundle(rekorBundle))
 	if err != nil {
 		return err
 	}

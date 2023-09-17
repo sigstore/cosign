@@ -14,7 +14,12 @@
 
 package bundle
 
-import "github.com/sigstore/rekor/pkg/generated/models"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/sigstore/rekor/pkg/generated/models"
+)
 
 // RekorBundle holds metadata about recording a Signature's ephemeral key to
 // a Rekor transparency log.
@@ -43,4 +48,14 @@ func EntryToBundle(entry *models.LogEntryAnon) *RekorBundle {
 			LogID:          *entry.LogID,
 		},
 	}
+}
+
+func BytesToRekorBundle(data []byte) (*RekorBundle, error) {
+	var rekorBundle RekorBundle
+	err := json.Unmarshal(data, &rekorBundle)
+	if err != nil {
+		return nil, fmt.Errorf("invalid rekor bundle provided: %v", err)
+	}
+
+	return &rekorBundle, nil
 }
