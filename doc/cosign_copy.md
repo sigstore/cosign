@@ -15,7 +15,10 @@ cosign copy [flags]
   cosign copy example.com/src:latest example.com/dest:latest
 
   # copy the signatures only
-  cosign copy --sig-only example.com/src example.com/dest
+  cosign copy --only=sign example.com/src example.com/dest
+
+  # copy the signatures, attestations, sbom only
+  cosign copy --only=sign,att,sbom example.com/src example.com/dest
 
   # overwrite destination image and signatures
   cosign copy -f example.com/src example.com/dest
@@ -33,8 +36,9 @@ cosign copy [flags]
   -f, --force                                                                                    overwrite destination image(s), if necessary
   -h, --help                                                                                     help for copy
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --only string                                                                              custom string array to only copy specific items. ex: --only=sbom,sign,att
       --platform string                                                                          only copy container image and its signatures for a specific platform image
-      --sig-only                                                                                 only copy the image signature
+      --sig-only                                                                                 [DEPRECATED] only copy the image signature
 ```
 
 ### Options inherited from parent commands

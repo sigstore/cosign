@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -32,11 +33,12 @@ import (
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // CopyCmd implements the logic to copy the supplied container image and signatures.
 // nolint
-func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool, platform string) error {
+func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool, copyOnly, platform string) error {
 	no := regOpts.NameOptions()
 	srcRef, err := name.ParseReference(srcImg, no...)
 	if err != nil {
@@ -99,15 +101,9 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 			return nil
 		}
 
-		if err := copyTag(ociremote.SignatureTag); err != nil {
-			return err
-		}
+		tags := parseOnlyFlag(copyOnly)
 
-		if sigOnly {
-			return nil
-		}
-
-		for _, tm := range []tagMap{ociremote.AttestationTag, ociremote.SBOMTag} {
+		for _, tm := range tags {
 			if err := copyTag(tm); err != nil {
 				return err
 			}
@@ -130,8 +126,8 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		return err
 	}
 
-	// If we're only copying sigs, we have nothing left to do.
-	if sigOnly {
+	// If we're only copying sig/att/sbom, we have nothing left to do.
+	if len(parseOnlyFlag(copyOnly)) > 0 {
 		return nil
 	}
 
@@ -177,4 +173,20 @@ func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Refer
 
 	fmt.Fprintf(os.Stderr, "Copying %s to %s...\n", src, dest)
 	return pusher.Push(ctx, dest, got)
+}
+
+func parseOnlyFlag(str string) []tagMap {
+	var tags []tagMap
+	items := strings.Split(str, ",")
+	tagSet := sets.New(items...)
+	if tagSet.Has("sign") {
+		tags = append(tags, ociremote.SignatureTag)
+	}
+	if tagSet.Has("sbom") {
+		tags = append(tags, ociremote.SBOMTag)
+	}
+	if tagSet.Has("att") {
+		tags = append(tags, ociremote.AttestationTag)
+	}
+	return tags
 }

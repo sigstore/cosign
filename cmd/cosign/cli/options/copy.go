@@ -21,6 +21,7 @@ import (
 
 // CopyOptions is the top level wrapper for the copy command.
 type CopyOptions struct {
+	CopyOnly      string
 	SignatureOnly bool
 	Force         bool
 	Platform      string
@@ -33,8 +34,11 @@ var _ Interface = (*CopyOptions)(nil)
 func (o *CopyOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
+	cmd.Flags().StringVar(&o.CopyOnly, "only", "",
+		"custom string array to only copy specific items. ex: --only=sbom,sign,att")
+
 	cmd.Flags().BoolVar(&o.SignatureOnly, "sig-only", false,
-		"only copy the image signature")
+		"[DEPRECATED] only copy the image signature")
 
 	cmd.Flags().BoolVarP(&o.Force, "force", "f", false,
 		"overwrite destination image(s), if necessary")
