@@ -101,7 +101,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 			return nil
 		}
 
-		tags := parseOnlyFlag(copyOnly)
+		tags := parseOnlyFlag(copyOnly, sigOnly)
 
 		for _, tm := range tags {
 			if err := copyTag(tm); err != nil {
@@ -127,7 +127,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}
 
 	// If we're only copying sig/att/sbom, we have nothing left to do.
-	if len(parseOnlyFlag(copyOnly)) > 0 {
+	if len(parseOnlyFlag(copyOnly, sigOnly)) > 0 {
 		return nil
 	}
 
@@ -175,10 +175,15 @@ func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Refer
 	return pusher.Push(ctx, dest, got)
 }
 
-func parseOnlyFlag(str string) []tagMap {
+func parseOnlyFlag(str string, sigOnly bool) []tagMap {
 	var tags []tagMap
 	items := strings.Split(str, ",")
 	tagSet := sets.New(items...)
+
+	if sigOnly {
+		tagSet.Insert("sign")
+	}
+
 	if tagSet.Has("sign") {
 		tags = append(tags, ociremote.SignatureTag)
 	}
