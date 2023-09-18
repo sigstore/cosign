@@ -27,7 +27,7 @@ import (
 const (
 	KindAnnotation       = "kind"
 	ImageAnnotation      = "dev.cosignproject.cosign/image"
-	ImageTitleAnnotation = "org.opencontainers.image.title"
+	ImageRefAnnotation = "org.opencontainers.image.ref.name"
 	ImageIndexAnnotation = "dev.cosignproject.cosign/imageIndex"
 	SigsAnnotation       = "dev.cosignproject.cosign/sigs"
 	AttsAnnotation       = "dev.cosignproject.cosign/atts"

@@ -28,8 +28,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci"
-	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/cosign/v2/pkg/oci/layout"
+	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 )
 
 // WriteSignedImageIndexImages writes the images within the image index
@@ -103,10 +103,10 @@ func WriteSignedImageIndexImagesBulk(targetRegistry string, sii oci.SignedImageI
 		return err
 	}
 	for _, m := range manifest.Manifests {
-		
+
 		// write image index if exists
 		if val, ok := m.Annotations[layout.KindAnnotation]; ok && val == layout.ImageIndexAnnotation {
-			imgTitle := m.Annotations[layout.ImageTitleAnnotation]
+			imgTitle := m.Annotations[layout.ImageRefAnnotation]
 			fmt.Println(imgTitle)
 			si, err := sii.SignedImageIndex(m.Digest)
 			if err != nil {
@@ -127,7 +127,7 @@ func WriteSignedImageIndexImagesBulk(targetRegistry string, sii oci.SignedImageI
 
 		// write any images
 		if val, ok := m.Annotations[layout.KindAnnotation]; ok && val == layout.ImageAnnotation {
-			imgTitle := m.Annotations[layout.ImageTitleAnnotation]
+			imgTitle := m.Annotations[layout.ImageRefAnnotation]
 			fmt.Println(imgTitle)
 			si, err := sii.SignedImage(m.Digest)
 			if err != nil {
@@ -148,7 +148,7 @@ func WriteSignedImageIndexImagesBulk(targetRegistry string, sii oci.SignedImageI
 
 		// write the signatures
 		if val, ok := m.Annotations[layout.KindAnnotation]; ok && val == layout.SigsAnnotation {
-			imgTitle := m.Annotations[layout.ImageTitleAnnotation]
+			imgTitle := m.Annotations[layout.ImageRefAnnotation]
 			sigs, err := sii.SignedImage(m.Digest)
 			if err != nil {
 				return err
@@ -169,7 +169,7 @@ func WriteSignedImageIndexImagesBulk(targetRegistry string, sii oci.SignedImageI
 
 		// write the attestations
 		if val, ok := m.Annotations[layout.KindAnnotation]; ok && val == layout.AttsAnnotation {
-			imgTitle := m.Annotations[layout.ImageTitleAnnotation]
+			imgTitle := m.Annotations[layout.ImageRefAnnotation]
 			atts, err := sii.SignedImage(m.Digest)
 			if err != nil {
 				return err
