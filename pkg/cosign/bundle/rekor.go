@@ -15,9 +15,6 @@
 package bundle
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -48,14 +45,4 @@ func EntryToBundle(entry *models.LogEntryAnon) *RekorBundle {
 			LogID:          *entry.LogID,
 		},
 	}
-}
-
-func BytesToRekorBundle(data []byte) (*RekorBundle, error) {
-	var rekorBundle RekorBundle
-	err := json.Unmarshal(data, &rekorBundle)
-	if err != nil {
-		return nil, fmt.Errorf("invalid rekor bundle provided: %w", err)
-	}
-
-	return &rekorBundle, nil
 }

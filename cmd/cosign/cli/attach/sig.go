@@ -17,6 +17,7 @@ package attach
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -104,10 +105,13 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 			return err
 		}
 
-		rekorBundle, err = bundle.BytesToRekorBundle(rekorBundleByte)
+		var localCosignPayload cosign.LocalSignedPayload
+		err = json.Unmarshal(rekorBundleByte, &localCosignPayload)
 		if err != nil {
 			return err
 		}
+
+		rekorBundle = localCosignPayload.Bundle
 	}
 
 	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(TSBundle), mutate.WithBundle(rekorBundle))
