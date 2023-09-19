@@ -620,7 +620,7 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 }
 
 func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, error) {
-	var signedPayload *cosign.LocalSignedPayload
+	signedPayload := &cosign.LocalSignedPayload{}
 	var err error
 	signedPayload.Base64Signature, err = sig.Base64Signature()
 	if err != nil {
@@ -630,9 +630,11 @@ func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, err
 	if err != nil {
 		return nil, err
 	}
-	signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
-	if err != nil {
-		return nil, err
+	if sigCert != nil {
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
+		if err != nil {
+			return nil, err
+		}
 	}
 	signedPayload.Bundle, err = sig.Bundle()
 	if err != nil {
