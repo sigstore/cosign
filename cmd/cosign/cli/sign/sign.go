@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -316,7 +317,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 
 		// signer is a certificate
 		if err == nil && len(cert) == 1 {
-			signedPayload, err := fetchSignedPayload(ociSig)
+			signedPayload, err := fetchLocalSignedPayload(ociSig)
 			if err != nil {
 				return fmt.Errorf("failed to fetch signed payload: %w", err)
 			}
@@ -618,26 +619,18 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	return pemBytes, nil
 }
 
-func fetchSignedPayload(sig oci.Signature) (*cosign.SignedPayload, error) {
-	var signedPayload *cosign.SignedPayload
+func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, error) {
+	var signedPayload *cosign.LocalSignedPayload
 	var err error
-	signedPayload.Payload, err = sig.Payload()
-	if err != nil {
-		return nil, err
-	}
 	signedPayload.Base64Signature, err = sig.Base64Signature()
 	if err != nil {
 		return nil, err
 	}
-	signedPayload.Cert, err = sig.Cert()
+	sigCert, err := sig.Cert()
 	if err != nil {
 		return nil, err
 	}
-	signedPayload.Chain, err = sig.Chain()
-	if err != nil {
-		return nil, err
-	}
-	signedPayload.RFC3161Timestamp, err = sig.RFC3161Timestamp()
+	signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
 	if err != nil {
 		return nil, err
 	}
