@@ -213,7 +213,7 @@ func generateSLSAProvenanceStatementSLSA02(rawPayload []byte, digest string, rep
 	if err != nil {
 		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
 	}
-	return in_toto.ProvenanceStatement{
+	return in_toto.ProvenanceStatementSLSA02{
 		StatementHeader: generateStatementHeader(digest, repo, slsa02.PredicateSLSAProvenance),
 		Predicate:       predicate,
 	}, nil
