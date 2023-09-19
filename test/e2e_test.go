@@ -22,10 +22,13 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -37,6 +40,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -68,6 +72,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/rekor/pkg/types/hashedrekord"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -914,6 +920,112 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	}
 
 	must(verifyKeylessTSA(imgName, file.Name(), true, true), t)
+}
+
+func TestAttachWithRekorBundle(t *testing.T) {
+	ctx := context.Background()
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	b := bytes.Buffer{}
+	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
+
+	rootCert, rootKey, _ := GenerateRootCa()
+	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payloadref := mkfile(b.String(), td, t)
+
+	h := sha256.Sum256(b.Bytes())
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	sigRef := mkfile(b64signature, td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	pemrootRef := mkfile(string(pemRoot), td, t)
+
+	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+
+	rekorPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rekorSigner, err := signature.LoadECDSASignerVerifier(rekorPriv, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rekorPub := rekorSigner.Public()
+	pemRekor, err := cryptoutils.MarshalPublicKeyToPEM(rekorPub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpRekorPubFile, err := os.CreateTemp(td, "cosign_rekor_pub_*.key")
+	if err != nil {
+		t.Fatalf("failed to create temp rekor pub file: %v", err)
+	}
+	defer tmpRekorPubFile.Close()
+	if _, err := tmpRekorPubFile.Write(pemRekor); err != nil {
+		t.Fatalf("failed to write rekor pub file: %v", err)
+	}
+
+	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(pubBytes)
+
+	rekorPubBytes, err := x509.MarshalPKIXPublicKey(rekorPub)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	digest := sha256.Sum256(pubBytes)
+	rekorLogID := hex.EncodeToString(digest[:])
+	t.Setenv("SIGSTORE_REKOR_PUBLIC_KEY", tmpRekorPubFile.Name())
+
+	entry := cliverify.GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte("blob"), pemLeaf, []byte(signature))
+	b := cliverify.CreateBundle(t, []byte(signature), pemLeaf, rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+
+	jsonPayload, err := json.Marshal(b.Bundle.Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(jsonPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.Bundle.SignedEntryTimestamp, err := rekorSigner.SignMessage(bytes.NewReader(canonicalized))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jsonBundle, err := json.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(td, "bundle.json")
+	if err := os.WriteFile(bundlePath, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Upload it!
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", bundlePath, imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func TestRekorBundle(t *testing.T) {

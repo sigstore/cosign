@@ -776,8 +776,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -816,8 +816,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert2, sig2)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert2, sig2)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -846,8 +846,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()-1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()-1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -877,8 +877,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		sig := signedPayload
 
 		// Create bundle
-		entry := genRekorEntry(t, rekor_dsse.KIND, "0.0.1", signedPayload, leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, rekor_dsse.KIND, "0.0.1", signedPayload, leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
@@ -914,8 +914,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		sig := signedPayload
 
 		// Create bundle
-		entry := genRekorEntry(t, intoto.KIND, "0.0.1", signedPayload, leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, intoto.KIND, "0.0.1", signedPayload, leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
@@ -951,8 +951,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = []byte{'i', 'n', 'v', 'a', 'l', 'i', 'd'}
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -989,8 +989,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1027,8 +1027,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1065,8 +1065,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1123,8 +1123,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		rfc3161Timestamp := &bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsr}
 		tsPath := writeTimestampFile(t, keyless.td, rfc3161Timestamp, "rfc3161TS.json")
 
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1160,8 +1160,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1197,8 +1197,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1245,8 +1245,8 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 		sig := signedPayload
 
 		// Create bundle
-		entry := genRekorEntry(t, intoto.KIND, "0.0.1", signedPayload, leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, intoto.KIND, "0.0.1", signedPayload, leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, keyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = keyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, string(signedPayload), "attestation.txt")
@@ -1292,8 +1292,8 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, newKeyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, newKeyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = newKeyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1331,8 +1331,8 @@ func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
 		}
 
 		// Create bundle
-		entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
-		b := createBundle(t, sig, leafPemCert, newKeyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+		entry := GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte(blob), leafPemCert, sig)
+		b := CreateBundle(t, sig, leafPemCert, newKeyless.rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 		b.Bundle.SignedEntryTimestamp = newKeyless.rekorSignPayload(t, b.Bundle.Payload)
 		bundlePath := writeBundleFile(t, keyless.td, b, "bundle.json")
 		blobPath := writeBlobFile(t, keyless.td, blob, "blob.txt")
@@ -1465,7 +1465,7 @@ func getLogID(pub crypto.PublicKey) (string, error) {
 	return hex.EncodeToString(digest[:]), nil
 }
 
-func genRekorEntry(t *testing.T, kind, version string, artifact []byte, cert []byte, sig []byte) string {
+func GenRekorEntry(t *testing.T, kind, version string, artifact []byte, cert []byte, sig []byte) string {
 	// Generate the Rekor Entry
 	entryImpl, err := createEntry(context.Background(), kind, version, artifact, cert, sig)
 	if err != nil {
@@ -1478,7 +1478,7 @@ func genRekorEntry(t *testing.T, kind, version string, artifact []byte, cert []b
 	return base64.StdEncoding.EncodeToString(entryBytes)
 }
 
-func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string) *cosign.LocalSignedPayload {
+func CreateBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string) *cosign.LocalSignedPayload {
 	// Create bundle with:
 	// * Blob signature
 	// * Signing certificate
