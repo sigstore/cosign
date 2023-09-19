@@ -960,7 +960,7 @@ func TestRekorOutput(t *testing.T) {
 	td := t.TempDir()
 
 	imgName := path.Join(repo, "cosign-e2e")
-	bundlePath := filepath.Join(td1, "bundle.sig")
+	bundlePath := filepath.Join(td, "bundle.sig")
 
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
@@ -986,7 +986,7 @@ func TestRekorOutput(t *testing.T) {
 		t.Fatal(err)
 	} else {
 		var localCosignPayload cosign.LocalSignedPayload
-		if err := json.Unmarshal(rekorBundleByte, &localCosignPayload); err != nil {
+		if err := json.Unmarshal(file, &localCosignPayload); err != nil {
 			t.Fatal(err)
 		}
 	}
