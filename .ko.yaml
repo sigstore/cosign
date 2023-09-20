@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# We need a shell for a lot of redirection/piping to work
 defaultBaseImage: gcr.io/distroless/static-debian12:nonroot
 
 builds:
