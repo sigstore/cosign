@@ -1001,7 +1001,12 @@ func TestAttachWithRekorBundle(t *testing.T) {
 
 	t.Setenv("SIGSTORE_REKOR_PUBLIC_KEY", tmpRekorPubFile.Name())
 
-	entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte("blob"), pemLeaf, []byte(signature))
+	sigBlob, err := rekorSigner.SignMessage(bytes.NewReader([]byte("blob")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte("blob"), pemLeaf, sigBlob)
 	bundle := createBundle(t, []byte(signature), pemLeaf, rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 
 	jsonPayload, err := json.Marshal(bundle.Bundle.Payload)
