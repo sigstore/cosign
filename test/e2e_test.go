@@ -37,10 +37,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/go-openapi/runtime"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -72,8 +74,14 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	rekormodels "github.com/sigstore/rekor/pkg/generated/models"
+	rekorpki "github.com/sigstore/rekor/pkg/pki"
+	rekortypes "github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/hashedrekord"
+	"github.com/sigstore/rekor/pkg/types/intoto"
+	"github.com/sigstore/rekor/pkg/types/rekord"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	sigstoreSigs "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -962,7 +970,7 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rekorSigner, err := signature.LoadECDSASignerVerifier(rekorPriv, crypto.SHA256)
+	rekorSigner, err := sigstoreSigs.LoadECDSASignerVerifier(rekorPriv, crypto.SHA256)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -980,9 +988,9 @@ func TestAttachWithRekorBundle(t *testing.T) {
 		t.Fatalf("failed to write rekor pub file: %v", err)
 	}
 
-	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
+	pubBytes, err := x509.MarshalPKIXPublicKey(rekorPub)
 	if err != nil {
-		return "", err
+		t.Fatal(err)
 	}
 	digest := sha256.Sum256(pubBytes)
 
@@ -991,14 +999,13 @@ func TestAttachWithRekorBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	digest := sha256.Sum256(pubBytes)
-	rekorLogID := hex.EncodeToString(digest[:])
+	rekorLogID := hex.EncodeToString(sha256.Sum256(pubBytes)[:])
 	t.Setenv("SIGSTORE_REKOR_PUBLIC_KEY", tmpRekorPubFile.Name())
 
-	entry := cliverify.GenRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte("blob"), pemLeaf, []byte(signature))
-	b := cliverify.CreateBundle(t, []byte(signature), pemLeaf, rekorLogID, leafCert.NotBefore.Unix()+1, entry)
+	entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte("blob"), pemLeaf, []byte(signature))
+	bundle := createBundle(t, []byte(signature), pemLeaf, rekorLogID, leafCert.NotBefore.Unix()+1, entry)
 
-	jsonPayload, err := json.Marshal(b.Bundle.Payload)
+	jsonPayload, err := json.Marshal(bundle.Bundle.Payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1006,12 +1013,12 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.Bundle.SignedEntryTimestamp, err := rekorSigner.SignMessage(bytes.NewReader(canonicalized))
+	bundle.Bundle.SignedEntryTimestamp, err = rekorSigner.SignMessage(bytes.NewReader(canonicalized))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	jsonBundle, err := json.Marshal(b)
+	jsonBundle, err := json.Marshal(bundle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2501,4 +2508,80 @@ func TestOffline(t *testing.T) {
 
 	// Confirm offline verification fails
 	mustErr(verifyCmd.Exec(ctx, []string{img1}), t)
+}
+
+func createBundle(_ *testing.T, sig []byte, certPem []byte, logID string, integratedTime int64, rekorEntry string) *cosign.LocalSignedPayload {
+	// Create bundle with:
+	// * Blob signature
+	// * Signing certificate
+	// * Bundle with a payload and signature over the payload
+	b := &cosign.LocalSignedPayload{
+		Base64Signature: base64.StdEncoding.EncodeToString(sig),
+		Cert:            string(certPem),
+		Bundle: &bundle.RekorBundle{
+			SignedEntryTimestamp: []byte{},
+			Payload: bundle.RekorPayload{
+				LogID:          logID,
+				IntegratedTime: integratedTime,
+				LogIndex:       1,
+				Body:           rekorEntry,
+			},
+		},
+	}
+
+	return b
+}
+
+func genRekorEntry(t *testing.T, kind, version string, artifact []byte, cert []byte, sig []byte) string {
+	// Generate the Rekor Entry
+	entryImpl, err := createEntry(context.Background(), kind, version, artifact, cert, sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entryBytes, err := entryImpl.Canonicalize(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return base64.StdEncoding.EncodeToString(entryBytes)
+}
+
+func createEntry(ctx context.Context, kind, apiVersion string, blobBytes, certBytes, sigBytes []byte) (rekortypes.EntryImpl, error) {
+	props := rekortypes.ArtifactProperties{
+		PublicKeyBytes: [][]byte{certBytes},
+		PKIFormat:      string(rekorpki.X509),
+	}
+	switch kind {
+	case rekord.KIND:
+		props.ArtifactBytes = blobBytes
+		props.SignatureBytes = sigBytes
+	case hashedrekord.KIND:
+		blobHash := sha256.Sum256(blobBytes)
+		props.ArtifactHash = strings.ToLower(hex.EncodeToString(blobHash[:]))
+		props.SignatureBytes = sigBytes
+	case intoto.KIND:
+		props.ArtifactBytes = blobBytes
+	case rekor_dsse.KIND:
+		props.ArtifactBytes = blobBytes
+	default:
+		return nil, fmt.Errorf("unexpected entry kind: %s", kind)
+	}
+	proposedEntry, err := rekortypes.NewProposedEntry(ctx, kind, apiVersion, props)
+	if err != nil {
+		return nil, err
+	}
+	eimpl, err := rekortypes.CreateVersionedEntry(proposedEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	can, err := rekortypes.CanonicalizeEntry(ctx, eimpl)
+	if err != nil {
+		return nil, err
+	}
+	proposedEntryCan, err := rekormodels.UnmarshalProposedEntry(bytes.NewReader(can), runtime.JSONConsumer())
+	if err != nil {
+		return nil, err
+	}
+
+	return rekortypes.UnmarshalEntry(proposedEntryCan)
 }
