@@ -22,13 +22,10 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -40,8 +37,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
-	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -73,9 +68,6 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	rekormodels "github.com/sigstore/rekor/pkg/generated/models"
-	sigstoreSigs "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -954,74 +946,23 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	h := sha256.Sum256(b.Bytes())
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
-	sigRef := mkfile(b64signature, td, t)
-	pemleafRef := mkfile(string(pemLeaf), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 
 	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
 
 	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
 
-	rekorPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rekorSigner, err := sigstoreSigs.LoadECDSASignerVerifier(rekorPriv, crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	e := rekormodels.LogEntryAnon{
-		Body:           base64.StdEncoding.EncodeToString(leaf),
-		IntegratedTime: swag.Int64(integratedTime.Unix()),
-		LogIndex:       swag.Int64(0),
-		LogID:          swag.String(logID),
-	}
-
-	sigBlob, err := rekorSigner.SignMessage(bytes.NewReader([]byte("blob")))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	jsonPayload, err := json.Marshal(e)
-	if err != nil {
-		t.Fatal(err)
-	}
-	canonicalized, err := jsoncanonicalizer.Transform(jsonPayload)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bundleSig, err := rekorSigner.SignMessage(bytes.NewReader(canonicalized))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	uuid, _ := cosign.ComputeLeafHash(&e)
-
-	e.Verification = &models.LogEntryAnonVerification{
-		SignedEntryTimestamp: bundleSig,
-		InclusionProof: &models.InclusionProof{
-			LogIndex: swag.Int64(0),
-			TreeSize: swag.Int64(1),
-			RootHash: swag.String(hex.EncodeToString(uuid)),
-			Hashes:   []string{},
-		},
-	}
-
-	rekorBundle := bundle.EntryToBundle(&e)
-
 	localPayload := cosign.LocalSignedPayload{
-		Base64Signature: base64.StdEncoding.EncodeToString(sig),
+		Base64Signature: b64signature
 		Cert:            string(pemLeaf),
 		Bundle: &bundle.RekorBundle{
+			SignedEntryTimestamp: base64.StdEncoding.DecodeString("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
 			Payload: bundle.RekorPayload{
-				Body:           e.Body,
-				IntegratedTime: *e.IntegratedTime,
-				LogIndex:       *e.LogIndex,
-				LogID:          *e.LogID,
+				Body:           "REMOVED",
+				IntegratedTime: 1631646761,
+				LogIndex:       693591,
+				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
 			},
-			SignedEntryTimestamp: e.Verification.SignedEntryTimestamp,
 		},
 	}
 
