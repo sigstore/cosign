@@ -37,6 +37,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -946,6 +947,8 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	h := sha256.Sum256(b.Bytes())
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	sigRef := mkfile(b64signature, td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 
 	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
@@ -956,7 +959,7 @@ func TestAttachWithRekorBundle(t *testing.T) {
 		Base64Signature: b64signature,
 		Cert:            string(pemLeaf),
 		Bundle: &bundle.RekorBundle{
-			SignedEntryTimestamp: base64.StdEncoding.DecodeString("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
+			SignedEntryTimestamp: strfmt.Base64("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
 			Payload: bundle.RekorPayload{
 				Body:           "REMOVED",
 				IntegratedTime: 1631646761,
