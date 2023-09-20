@@ -953,7 +953,7 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
 
 	localPayload := cosign.LocalSignedPayload{
-		Base64Signature: b64signature
+		Base64Signature: b64signature,
 		Cert:            string(pemLeaf),
 		Bundle: &bundle.RekorBundle{
 			SignedEntryTimestamp: base64.StdEncoding.DecodeString("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
