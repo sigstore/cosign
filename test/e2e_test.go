@@ -991,7 +991,7 @@ func TestAttachWithRekorBundle(t *testing.T) {
 		t.Fatalf("failed to write rekor pub file: %v", err)
 	}
 
-	rekorPubBytes, err := x509.MarshalPKIXPublicKey(pubBytes)
+	rekorPubBytes, err := x509.MarshalPKIXPublicKey(rekorPub)
 	if err != nil {
 		t.Fatal(err)
 	}
