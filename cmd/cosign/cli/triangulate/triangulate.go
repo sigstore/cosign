@@ -38,14 +38,22 @@ func MungeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef str
 	}
 
 	var dstRef name.Tag
+	var dstRefName string
+
 	switch attachmentType {
 	case cosign.Signature:
 		dstRef, err = ociremote.SignatureTag(ref, ociremoteOpts...)
+		dstRefName = dstRef.Name()
 	case cosign.SBOM:
 		fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
 		dstRef, err = ociremote.SBOMTag(ref, ociremoteOpts...)
+		dstRefName = dstRef.Name()
 	case cosign.Attestation:
 		dstRef, err = ociremote.AttestationTag(ref, ociremoteOpts...)
+		dstRefName = dstRef.Name()
+	case cosign.Digest:
+		dstRef, err = ociremote.DigestTag(ref, ociremoteOpts...)
+		dstRefName = fmt.Sprint(dstRef.Repository.Name(), "@", dstRef.TagStr())
 	default:
 		err = fmt.Errorf("unknown attachment type %s", attachmentType)
 	}
@@ -53,6 +61,6 @@ func MungeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef str
 		return err
 	}
 
-	fmt.Println(dstRef.Name())
+	fmt.Println(dstRefName)
 	return nil
 }
