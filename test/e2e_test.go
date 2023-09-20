@@ -77,6 +77,7 @@ import (
 	rekormodels "github.com/sigstore/rekor/pkg/generated/models"
 	rekorpki "github.com/sigstore/rekor/pkg/pki"
 	rekortypes "github.com/sigstore/rekor/pkg/types"
+	rekor_dsse "github.com/sigstore/rekor/pkg/types/dsse"
 	"github.com/sigstore/rekor/pkg/types/hashedrekord"
 	"github.com/sigstore/rekor/pkg/types/intoto"
 	"github.com/sigstore/rekor/pkg/types/rekord"
@@ -964,6 +965,8 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	pemleafRef := mkfile(string(pemLeaf), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 
+	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
+
 	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
 
 	rekorPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -988,18 +991,14 @@ func TestAttachWithRekorBundle(t *testing.T) {
 		t.Fatalf("failed to write rekor pub file: %v", err)
 	}
 
-	pubBytes, err := x509.MarshalPKIXPublicKey(rekorPub)
-	if err != nil {
-		t.Fatal(err)
-	}
-	digest := sha256.Sum256(pubBytes)
-
-	rekorPubBytes, err := x509.MarshalPKIXPublicKey(rekorPub)
+	rekorPubBytes, err := x509.MarshalPKIXPublicKey(pubBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rekorLogID := hex.EncodeToString(sha256.Sum256(pubBytes)[:])
+	digest := sha256.Sum256(rekorPubBytes)
+	rekorLogID := hex.EncodeToString(digest[:])
+
 	t.Setenv("SIGSTORE_REKOR_PUBLIC_KEY", tmpRekorPubFile.Name())
 
 	entry := genRekorEntry(t, hashedrekord.KIND, hashedrekord.New().DefaultVersion(), []byte("blob"), pemLeaf, []byte(signature))
