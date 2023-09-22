@@ -88,7 +88,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	switch c.Attachment {
-	case "sbom", "":
+	case "sbom":
+		fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
+	case "":
 		break
 	default:
 		return flag.ErrHelp

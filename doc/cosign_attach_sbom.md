@@ -1,6 +1,12 @@
 ## cosign attach sbom
 
+DEPRECATED: Attach sbom to the supplied container image
+
+### Synopsis
+
 Attach sbom to the supplied container image
+
+WARNING: SBOM attachments are deprecated and support will be removed in a Cosign release soon after 2024-02-22 (see https://github.com/sigstore/cosign/issues/2755). Instead, please use SBOM attestations.
 
 ```
 cosign attach sbom [flags]

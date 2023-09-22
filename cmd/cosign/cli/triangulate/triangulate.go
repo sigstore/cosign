@@ -18,6 +18,7 @@ package triangulate
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -41,6 +42,7 @@ func MungeCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef str
 	case cosign.Signature:
 		dstRef, err = ociremote.SignatureTag(ref, ociremoteOpts...)
 	case cosign.SBOM:
+		fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
 		dstRef, err = ociremote.SBOMTag(ref, ociremoteOpts...)
 	case cosign.Attestation:
 		dstRef, err = ociremote.AttestationTag(ref, ociremoteOpts...)

@@ -100,7 +100,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 		"if a multi-arch image is specified, additionally sign each discrete image")
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
-		"related image attachment to sign (sbom), default none")
+		"DEPRECATED, related image attachment to sign (sbom), default none")
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
