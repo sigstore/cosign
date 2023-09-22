@@ -18,7 +18,7 @@ require (
 	github.com/google/certificate-transparency-go v1.1.6
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-containerregistry v0.16.1
-	github.com/google/go-github/v53 v53.2.0
+	github.com/google/go-github/v55 v55.0.0
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/manifoldco/promptui v0.9.0

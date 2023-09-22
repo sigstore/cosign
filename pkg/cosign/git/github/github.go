@@ -25,7 +25,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v53/github"
+	"github.com/google/go-github/v55/github"
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/oauth2"
 
@@ -57,7 +57,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	var client *github.Client
 	if host, ok := env.LookupEnv(env.VariableGitHubHost); ok {
 		var err error
-		client, err = github.NewEnterpriseClient(host, host, httpClient)
+		client, err = github.NewClient(httpClient).WithEnterpriseURLs(host, host)
 		if err != nil {
 			return fmt.Errorf("could not create github enterprise client: %w", err)
 		}
