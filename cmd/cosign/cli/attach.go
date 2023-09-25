@@ -63,16 +63,18 @@ func attachSBOM() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "sbom",
-		Short:            "Attach sbom to the supplied container image",
+		Short:            "DEPRECATED: Attach sbom to the supplied container image",
+		Long:             "Attach sbom to the supplied container image\n\n" + options.SBOMAttachmentDeprecation,
 		Example:          "  cosign attach sbom <image uri>",
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
 			mediaType, err := o.MediaType()
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "WARNING: Attaching SBOMs this way does not sign them. If you want to sign them, use 'cosign attest --predicate %s --key <key path>' or 'cosign sign --key <key path> --attachment sbom <image uri>'.\n", o.SBOM)
+			fmt.Fprintf(os.Stderr, "WARNING: Attaching SBOMs this way does not sign them. To sign them, use 'cosign attest --predicate %s --key <key path>'.\n", o.SBOM)
 			return attach.SBOMCmd(cmd.Context(), o.Registry, o.RegistryExperimental, o.SBOM, mediaType, args[0])
 		},
 	}

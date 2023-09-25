@@ -17,6 +17,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -88,7 +89,9 @@ race conditions or (worse) malicious tampering.
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch o.Attachment {
-			case "sbom", "":
+			case "sbom":
+				fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
+			case "":
 				break
 			default:
 				return fmt.Errorf("specified image attachment %s not specified. Can be 'sbom'", o.Attachment)

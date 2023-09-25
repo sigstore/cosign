@@ -65,7 +65,7 @@ var _ Interface = (*CleanOptions)(nil)
 func (c *CleanOptions) AddFlags(cmd *cobra.Command) {
 	c.Registry.AddFlags(cmd)
 	c.CleanType = defaultCleanType()
-	cmd.Flags().Var(&c.CleanType, "type", "a type of clean: <signature|attestation|sbom|all>")
+	cmd.Flags().Var(&c.CleanType, "type", "a type of clean: <signature|attestation|sbom|all> (sbom is deprecated)")
 	// TODO(#2044): Rename to --skip-confirmation for consistency?
 	cmd.Flags().BoolVarP(&c.Force, "force", "f", false, "do not prompt for confirmation")
 }

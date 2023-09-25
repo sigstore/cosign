@@ -1,5 +1,9 @@
 # Cosign SBOM Specifications
 
+**WARNING**: SBOM attachments are deprecated and support will be removed in a Cosign release soon
+after 2024-02-22 (see [sigstore/cosign#2755](https://github.com/sigstore/cosign/issues/2755)).
+Instead, please use SBOM [attestations](./specs/ATTESTATION_SPEC.md).
+
 This document aims to describe how `cosign` attaches SBOM (Software Bill of Materials) documents to containers.
 
 The goal is to specify the behavior well enough to promote other implementations and enable interoperability.

@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2023 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,22 +15,7 @@
 
 package options
 
-import (
-	"github.com/spf13/cobra"
-)
-
-// TriangulateOptions is the top level wrapper for the triangulate command.
-type TriangulateOptions struct {
-	Type     string
-	Registry RegistryOptions
-}
-
-var _ Interface = (*TriangulateOptions)(nil)
-
-// AddFlags implements Interface
-func (o *TriangulateOptions) AddFlags(cmd *cobra.Command) {
-	o.Registry.AddFlags(cmd)
-
-	cmd.Flags().StringVar(&o.Type, "type", "signature",
-		"related attachment to triangulate (attestation|sbom|signature), default signature (sbom is deprecated)")
-}
+const SBOMAttachmentDeprecation = "WARNING: SBOM attachments are deprecated " +
+	"and support will be removed in a Cosign release soon after 2024-02-22 " +
+	"(see https://github.com/sigstore/cosign/issues/2755). " +
+	"Instead, please use SBOM attestations."

@@ -20,7 +20,7 @@ cosign triangulate [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
   -h, --help                                                                                     help for triangulate
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
-      --type string                                                                              related attachment to triangulate (attestation|sbom|signature), default signature (default "signature")
+      --type string                                                                              related attachment to triangulate (attestation|sbom|signature), default signature (sbom is deprecated) (default "signature")
 ```
 
 ### Options inherited from parent commands
