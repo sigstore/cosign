@@ -45,7 +45,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
-	github.com/xanzy/go-gitlab v0.91.1
+	github.com/xanzy/go-gitlab v0.92.1
 	go.step.sm/crypto v0.35.1
 	golang.org/x/crypto v0.13.0
 	golang.org/x/oauth2 v0.12.0
