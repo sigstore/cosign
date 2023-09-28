@@ -752,3 +752,7 @@ process](https://github.com/sigstore/.github/blob/main/SECURITY.md)
 The GitHub release assets for cosign contain a PEM file produced by [GoReleaser](https://github.com/sigstore/cosign/blob/ac999344eb381ae91455b0a9c5c267e747608d76/.goreleaser.yml#L166) while signing the cosign blob that is used to verify the integrity of the release binaries. This file is not used by cosign itself, but is provided for users who wish to verify the integrity of the release binaries. 
 
 By default, cosign output these PEM files in [base64 encoded format](https://github.com/sigstore/cosign/blob/main/doc/cosign_sign-blob.md#options), this approach might be good for air-gapped environments where the PEM file is stored in a file system. So, you should decode these PEM files before using them to verify the blobs.
+
+## Additional Documentation
+
+In addition to this README file, documentation for Cosign exists in the repository's doc folder and consists of one markdown file for each command.   If you add, delete or modify a Cosign command you must also add, delete, or edit the appropriate file in the doc folder.
