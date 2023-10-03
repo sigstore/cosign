@@ -13,7 +13,7 @@ cosign load [flags]
 ### Examples
 
 ```
-  cosign load --dir <path to directory> <IMAGE>
+  cosign load --dir <path to directory> <IMAGE> OR cosign load --dir <path to directory> --registry <REGISTRY>
 ```
 
 ### Options
@@ -25,6 +25,7 @@ cosign load [flags]
       --dir string                                                                               path to directory where the signed image is stored on disk
   -h, --help                                                                                     help for load
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --registry string                                                                          registry to use for bulk load
 ```
 
 ### Options inherited from parent commands
