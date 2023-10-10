@@ -1693,6 +1693,63 @@ func TestSaveLoad(t *testing.T) {
 	}
 }
 
+func TestSaveLoadBulk(t *testing.T) {
+	tests := []struct {
+        description     string
+        getSignedEntity func(t *testing.T, n string) (name.Reference, *remote.Descriptor, func())
+    }{
+        {
+            description:     "save and load multiple images with a registry",
+            getSignedEntity: mkimage,
+        },
+        {
+            description:     "save and load multiple image indexes with a registry",
+            getSignedEntity: mkimageindex,
+        },
+    }
+    for i, test := range tests {
+        t.Run(test.description, func(t *testing.T) {
+            regName, stop := reg(t)
+            defer stop()
+            keysDir := t.TempDir()
+
+            // Generate multiple image names
+            imageNames := []string{fmt.Sprintf("save-load-%d-1", i), fmt.Sprintf("save-load-%d-2", i)}
+
+            for _, imgName := range imageNames {
+                imgName := path.Join(regName, imgName)
+
+                _, _, cleanup := test.getSignedEntity(t, imgName)
+                defer cleanup()
+
+                _, privKeyPath, pubKeyPath := keypair(t, keysDir)
+
+                ctx := context.Background()
+                // Now sign the image and verify it
+                ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+                so := options.SignOptions{
+                    Upload: true,
+                }
+                must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+                must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+                // Save the image to a temp dir
+                imageDir := t.TempDir()
+                must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+
+                // Verify the local image using a local key
+                must(verifyLocal(pubKeyPath, imageDir, true, nil, ""), t)                
+            }
+			// Load the images from the temp dir into a registry 
+			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir, Registry: regName), t)
+
+			// verify the new images
+			must(verify(pubKeyPath, path.Join(regName, imageName[0]), true, nil, ""), t)
+			must(verify(pubKeyPath, path.Join(regName, imageName[1]), true, nil, ""), t)
+        })
+    }
+}
+
 func TestSaveLoadAttestation(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
