@@ -26,6 +26,9 @@ type CommonVerifyOptions struct {
 	TSACertChainPath string
 	IgnoreTlog       bool
 	MaxWorkers       int
+	// This is added to CommonVerifyOptions to provide a path to support
+	// it for other verify options.
+	ExperimentalOCI11 bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -39,6 +42,9 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.IgnoreTlog, "insecure-ignore-tlog", false,
 		"ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
 			"cannot be publicly verified when not included in a log")
+
+	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
+		"set to true to enable experimental OCI 1.1 behaviour")
 
 	cmd.Flags().IntVar(&o.MaxWorkers, "max-workers", cosign.DefaultMaxWorkers,
 		"the amount of maximum workers for parallel executions")

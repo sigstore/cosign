@@ -158,6 +158,10 @@ type CheckOpts struct {
 	// The amount of maximum workers for parallel executions.
 	// Defaults to 10.
 	MaxWorkers int
+
+	// Should the experimental OCI 1.1 behaviour be enabled or not.
+	// Defaults to false.
+	ExperimentalOCI11 bool
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -470,11 +474,15 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 
 // VerifyImageSignatures does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error.
+// Note that if co.ExperimentlOCI11 is set, we will attempt to verify
+// signatures using the experimental OCI 1.1 behavior.
 func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
-	// Try first using OCI 1.1 behavior
-	verified, bundleVerified, err := verifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co)
-	if err == nil {
-		return verified, bundleVerified, nil
+	// Try first using OCI 1.1 behavior if experimental flag is set.
+	if co.ExperimentalOCI11 {
+		verified, bundleVerified, err := verifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co)
+		if err == nil {
+			return verified, bundleVerified, nil
+		}
 	}
 
 	// Enforce this up front.
