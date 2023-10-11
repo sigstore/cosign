@@ -74,7 +74,7 @@ func ReplaceSignatures(base oci.Signatures) (oci.Signatures, error) {
 	return &sigAppender{
 		Image: img,
 		base:  base,
-		sigs:  sigs,
+		sigs:  []oci.Signature{},
 	}, nil
 }
 
