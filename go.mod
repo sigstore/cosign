@@ -30,7 +30,7 @@ require (
 	github.com/open-policy-agent/opa v0.57.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0
-	github.com/sigstore/fulcio v1.4.2
+	github.com/sigstore/fulcio v1.4.3
 	github.com/sigstore/rekor v1.2.2
 	github.com/sigstore/sigstore v1.7.3
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.3
