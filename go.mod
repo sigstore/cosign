@@ -36,7 +36,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.3
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.3
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.3
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.3
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.4
 	github.com/sigstore/timestamp-authority v1.1.2
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -190,7 +190,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
-	github.com/hashicorp/vault/api v1.9.2 // indirect
+	github.com/hashicorp/vault/api v1.10.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b // indirect
