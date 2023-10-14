@@ -35,7 +35,7 @@ require (
 	github.com/sigstore/sigstore v1.7.4
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.3
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.4
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.3
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.4
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.4
 	github.com/sigstore/timestamp-authority v1.1.2
 	github.com/spf13/cobra v1.7.0
