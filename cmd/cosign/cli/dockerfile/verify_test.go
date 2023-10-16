@@ -72,20 +72,67 @@ func TestGetImagesFromDockerfile(t *testing.T) {
 			expected: []string{"gcr.io/env/var/test/repo"},
 		},
 		{
+			name: "with-value-from-arg",
+			fileContents: `ARG IMAGE=gcr.io/someorg/someimage
+FROM ${IMAGE}`,
+			expected: []string{"gcr.io/someorg/someimage"},
+		},
+		{
+			name: "with-value-from-env",
+			fileContents: `ENV IMAGE=gcr.io/someorg/someimage
+FROM ${IMAGE}`,
+			expected: []string{"gcr.io/someorg/someimage"},
+		},
+		{
+			name: "with-multiple-values-from-env",
+			fileContents: `ENV IMAGE_ONE=gcr.io/someorg/someimage IMAGE_TWO=gcr.io/someorg/coolimage
+FROM ${IMAGE_ONE}
+FROM ${IMAGE_TWO}`,
+			expected: []string{"gcr.io/someorg/someimage", "gcr.io/someorg/coolimage"},
+		},
+		{
+			name: "with-value-from-arg-from-env",
+			fileContents: `ARG IMAGE=${THING}
+FROM ${IMAGE}`,
+			expected: []string{"gcr.io/someorg/coolimage"},
+			env: map[string]string{
+				"THING": "gcr.io/someorg/coolimage",
+			},
+		},
+		{
+			name:         "image-in-copy",
+			fileContents: `COPY --from=gcr.io/someorg/someimage /var/www/html /app`,
+			expected:     []string{"gcr.io/someorg/someimage"},
+		},
+		{
+			name: "image-in-copy-with-env",
+			fileContents: `ENV IMAGE_HERE=gcr.io/someorg/someimage
+COPY --from=${IMAGE_HERE} /var/www/html /app`,
+			expected: []string{"gcr.io/someorg/someimage"},
+		},
+		{
+			name: "copy-dont-include-prepare-stage-as-images",
+			fileContents: `FROM gcr.io/someorg/coolimage AS prepare
+FROM gcr.io/someorg/someimage AS final
+COPY --from=prepare /app /app`,
+			expected: []string{"gcr.io/someorg/coolimage", "gcr.io/someorg/someimage"},
+		},
+		{
 			name: "gauntlet",
 			fileContents: `FROM gcr.io/${TEST_IMAGE_REPO_PATH}/one AS one
-			RUN script1
-			FROM gcr.io/$TEST_IMAGE_REPO_PATH/${TEST_SUBREPO}:latest
-			RUN script2
-			FROM --platform=linux/amd64 gcr.io/${TEST_IMAGE_REPO_PATH}/$TEST_RUNTIME_SUBREPO
-			CMD bin`,
+RUN script1
+FROM gcr.io/$TEST_IMAGE_REPO_PATH/${TEST_SUBREPO}:latest
+RUN script2
+FROM --platform=linux/amd64 gcr.io/${TEST_IMAGE_REPO_PATH}/$TEST_RUNTIME_SUBREPO
+COPY --from=gcr.io/someorg/someimage /etc/config /app/etc/config
+CMD bin`,
 			env: map[string]string{
 				"TEST_IMAGE_REPO_PATH": "gauntlet/test",
 				"TEST_SUBREPO":         "two",
 				"TEST_RUNTIME_SUBREPO": "runtime",
 				"SOMETHING_ELSE":       "something/else",
 			},
-			expected: []string{"gcr.io/gauntlet/test/one", "gcr.io/gauntlet/test/two:latest", "gcr.io/gauntlet/test/runtime"},
+			expected: []string{"gcr.io/gauntlet/test/one", "gcr.io/gauntlet/test/two:latest", "gcr.io/gauntlet/test/runtime", "gcr.io/someorg/someimage"},
 		},
 	}
 	for _, tc := range testCases {
@@ -94,8 +141,9 @@ func TestGetImagesFromDockerfile(t *testing.T) {
 				os.Setenv(k, v)
 				defer os.Unsetenv(k)
 			}
+			fc := newFinderCache()
 			ctx := context.Background()
-			got, err := getImagesFromDockerfile(ctx, strings.NewReader(tc.fileContents))
+			got, err := fc.getImagesFromDockerfile(ctx, strings.NewReader(tc.fileContents))
 			if err != nil {
 				t.Fatalf("getImagesFromDockerfile returned error: %v", err)
 			}
