@@ -17,6 +17,7 @@ package attach
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -31,7 +32,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, rekorBundleRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -74,6 +75,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	var cert []byte
 	var certChain []byte
 	var timeStampedSig []byte
+	var rekorBundle *bundle.RekorBundle
 
 	if certRef != "" {
 		cert, err = os.ReadFile(filepath.Clean(certRef))
@@ -95,9 +97,24 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 			return err
 		}
 	}
-	bundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
+	tsBundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
 
-	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(bundle))
+	if rekorBundleRef != "" {
+		rekorBundleByte, err := os.ReadFile(filepath.Clean(rekorBundleRef))
+		if err != nil {
+			return err
+		}
+
+		var localCosignPayload cosign.LocalSignedPayload
+		err = json.Unmarshal(rekorBundleByte, &localCosignPayload)
+		if err != nil {
+			return err
+		}
+
+		rekorBundle = localCosignPayload.Bundle
+	}
+
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(tsBundle), mutate.WithBundle(rekorBundle))
 	if err != nil {
 		return err
 	}

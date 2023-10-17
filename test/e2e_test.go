@@ -37,6 +37,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -908,12 +909,80 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	rfc3161TSRef := mkfile(string(tsBytes), td, t)
 
 	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, imgName)
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	must(verifyKeylessTSA(imgName, file.Name(), true, true), t)
+}
+
+func TestAttachWithRekorBundle(t *testing.T) {
+	ctx := context.Background()
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	b := bytes.Buffer{}
+	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
+
+	rootCert, rootKey, _ := GenerateRootCa()
+	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payloadref := mkfile(b.String(), td, t)
+
+	h := sha256.Sum256(b.Bytes())
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	sigRef := mkfile(b64signature, td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	pemrootRef := mkfile(string(pemRoot), td, t)
+
+	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
+
+	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+
+	localPayload := cosign.LocalSignedPayload{
+		Base64Signature: b64signature,
+		Cert:            string(pemLeaf),
+		Bundle: &bundle.RekorBundle{
+			SignedEntryTimestamp: strfmt.Base64("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
+			Payload: bundle.RekorPayload{
+				Body:           "REMOVED",
+				IntegratedTime: 1631646761,
+				LogIndex:       693591,
+				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
+			},
+		},
+	}
+
+	jsonBundle, err := json.Marshal(localPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(td, "bundle.json")
+	if err := os.WriteFile(bundlePath, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Upload it!
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", bundlePath, imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRekorBundle(t *testing.T) {
@@ -1640,7 +1709,7 @@ func TestUploadDownload(t *testing.T) {
 				sigRef = signature
 			}
 			// Upload it!
-			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, "", "", "", imgName)
+			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, "", "", "", "", imgName)
 			if testCase.expectedErr {
 				mustErr(err, t)
 			} else {
