@@ -42,7 +42,7 @@ type RegistryOptions struct {
 	AllowInsecure      bool
 	AllowHTTPRegistry  bool
 	KubernetesKeychain bool
-	Name		       string
+	Name               string
 	RefOpts            ReferenceOptions
 	Keychain           Keychain
 

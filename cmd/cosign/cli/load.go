@@ -54,7 +54,6 @@ func Load() *cobra.Command {
 }
 
 func LoadCmd(ctx context.Context, opts options.LoadOptions, imageRef string) error {
-
 	if opts.Registry.Name != "" && imageRef != "" {
 		return fmt.Errorf("both --registry and image argument provided, only one should be used")
 	}
@@ -82,7 +81,6 @@ func LoadCmd(ctx context.Context, opts options.LoadOptions, imageRef string) err
 
 	if opts.Registry.Name == "" {
 		return remote.WriteSignedImageIndexImages(ref, sii, ociremoteOpts...)
-	} else {
-		return remote.WriteSignedImageIndexImagesBulk(opts.Registry.Name, sii, ociremoteOpts...)
 	}
+	return remote.WriteSignedImageIndexImagesBulk(opts.Registry.Name, sii, ociremoteOpts...)
 }
