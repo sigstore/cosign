@@ -1716,15 +1716,16 @@ func TestSaveLoadBulk(t *testing.T) {
             // Generate multiple image names
             imageNames := []string{fmt.Sprintf("save-load-%d-1", i), fmt.Sprintf("save-load-%d-2", i)}
 
+			ctx := context.Background()
+			_, privKeyPath, pubKeyPath := keypair(t, keysDir)
+			imageDir := t.TempDir()
+
             for _, imgName := range imageNames {
                 imgName := path.Join(regName, imgName)
 
                 _, _, cleanup := test.getSignedEntity(t, imgName)
                 defer cleanup()
 
-                _, privKeyPath, pubKeyPath := keypair(t, keysDir)
-
-                ctx := context.Background()
                 // Now sign the image and verify it
                 ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
                 so := options.SignOptions{
@@ -1734,18 +1735,20 @@ func TestSaveLoadBulk(t *testing.T) {
                 must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
                 // Save the image to a temp dir
-                imageDir := t.TempDir()
                 must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
 
                 // Verify the local image using a local key
                 must(verifyLocal(pubKeyPath, imageDir, true, nil, ""), t)
             }
 			// Load the images from the temp dir into a registry
-			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir, Registry: regName}), t)
+			ro := options.RegistryOptions{
+				Name: regName,
+			}
+			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir, Registry: ro}, ""), t)
 
 			// verify the new images
-			must(verify(pubKeyPath, path.Join(regName, imageName[0]), true, nil, ""), t)
-			must(verify(pubKeyPath, path.Join(regName, imageName[1]), true, nil, ""), t)
+			must(verify(pubKeyPath, path.Join(regName, imageNames[0]), true, nil, ""), t)
+			must(verify(pubKeyPath, path.Join(regName, imageNames[1]), true, nil, ""), t)
         })
     }
 }
