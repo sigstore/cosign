@@ -51,6 +51,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 	if err != nil {
 		if errors.As(err, &entityNotFoundError) {
 			if digest, ok := ref.(name.Digest); ok {
+				// We don't need to access the original image to download the attached attestation
 				se = ociremote.SignedUnknown(digest)
 			} else {
 				return err
