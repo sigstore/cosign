@@ -951,6 +951,48 @@ func TestRekorBundle(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 }
 
+func TestRekorOutput(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+	bundlePath := filepath.Join(td, "bundle.sig")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := options.KeyOpts{
+		KeyRef:     privKeyPath,
+		PassFunc:   passFunc,
+		RekorURL:   rekorURL,
+		BundlePath: bundlePath,
+	}
+	so := options.SignOptions{
+		Upload: true,
+	}
+
+	// Sign the image
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Make sure verify works
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+
+	if file, err := os.ReadFile(bundlePath); err != nil {
+		t.Fatal(err)
+	} else {
+		var localCosignPayload cosign.LocalSignedPayload
+		if err := json.Unmarshal(file, &localCosignPayload); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Make sure offline verification works with bundling
+	// use rekor prod since we have hardcoded the public key
+	os.Setenv(serverEnv, "notreal")
+	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+}
+
 func TestFulcioBundle(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()

@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -306,6 +308,22 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		ui.Infof(ctx, "Certificate wrote in the file %s", signOpts.OutputCertificate)
 	}
 
+	if ko.BundlePath != "" {
+		signedPayload, err := fetchLocalSignedPayload(ociSig)
+		if err != nil {
+			return fmt.Errorf("failed to fetch signed payload: %w", err)
+		}
+
+		contents, err := json.Marshal(signedPayload)
+		if err != nil {
+			return fmt.Errorf("failed to marshal signed payload: %w", err)
+		}
+		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+			return fmt.Errorf("create bundle file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
+	}
+
 	if !signOpts.Upload {
 		return nil
 	}
@@ -590,4 +608,33 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return pemBytes, nil
+}
+
+func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, error) {
+	signedPayload := &cosign.LocalSignedPayload{}
+	var err error
+
+	signedPayload.Base64Signature, err = sig.Base64Signature()
+	if err != nil {
+		return nil, err
+	}
+
+	sigCert, err := sig.Cert()
+	if err != nil {
+		return nil, err
+	}
+	if sigCert != nil {
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		signedPayload.Cert = ""
+	}
+
+	signedPayload.Bundle, err = sig.Bundle()
+	if err != nil {
+		return nil, err
+	}
+	return signedPayload, nil
 }
