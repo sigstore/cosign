@@ -952,9 +952,6 @@ func TestRekorBundle(t *testing.T) {
 }
 
 func TestRekorOutput(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
