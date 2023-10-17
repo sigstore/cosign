@@ -97,7 +97,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 			return err
 		}
 	}
-	TSBundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
+	tsBundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
 
 	if rekorBundleRef != "" {
 		rekorBundleByte, err := os.ReadFile(filepath.Clean(rekorBundleRef))
@@ -114,7 +114,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		rekorBundle = localCosignPayload.Bundle
 	}
 
-	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(TSBundle), mutate.WithBundle(rekorBundle))
+	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(tsBundle), mutate.WithBundle(rekorBundle))
 	if err != nil {
 		return err
 	}
