@@ -79,7 +79,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		return err
 	}
 
-	tags := parseeOnlyOpt(copyOnly, sigOnly)
+	tags := parseOnlyOpt(copyOnly, sigOnly)
 	if err := walk.SignedEntity(gctx, root, func(ctx context.Context, se oci.SignedEntity) error {
 		// Both of the SignedEntity types implement Digest()
 		h, err := se.Digest()
@@ -174,7 +174,7 @@ func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Refer
 	return pusher.Push(ctx, dest, got)
 }
 
-func parseeOnlyOpt(str string, sigOnly bool) []tagMap {
+func parseOnlyOpt(str string, sigOnly bool) []tagMap {
 	var tags []tagMap
 	items := strings.Split(str, ",")
 	tagSet := sets.New(items...)

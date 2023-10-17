@@ -36,7 +36,7 @@ cosign copy [flags]
   -f, --force                                                                                    overwrite destination image(s), if necessary
   -h, --help                                                                                     help for copy
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
-      --only string                                                                              custom string array to only copy specific items. ex: --only=sbom,sign,att
+      --only string                                                                              custom string array to only copy specific items, this flag is comma delimited. ex: --only=sbom,sign,att
       --platform string                                                                          only copy container image and its signatures for a specific platform image
       --sig-only                                                                                 [DEPRECATED] only copy the image signature
 ```
