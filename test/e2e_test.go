@@ -1738,10 +1738,10 @@ func TestSaveLoadBulk(t *testing.T) {
                 must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
 
                 // Verify the local image using a local key
-                must(verifyLocal(pubKeyPath, imageDir, true, nil, ""), t)                
+                must(verifyLocal(pubKeyPath, imageDir, true, nil, ""), t)
             }
-			// Load the images from the temp dir into a registry 
-			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir, Registry: regName), t)
+			// Load the images from the temp dir into a registry
+			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir, Registry: regName}), t)
 
 			// verify the new images
 			must(verify(pubKeyPath, path.Join(regName, imageName[0]), true, nil, ""), t)
