@@ -21,6 +21,9 @@ cosign clean [flags]
   -f, --force                                                                                    do not prompt for confirmation
   -h, --help                                                                                     help for clean
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
       --type CLEAN_TYPE                                                                          a type of clean: <signature|attestation|sbom|all> (sbom is deprecated) (default all)
 ```
 

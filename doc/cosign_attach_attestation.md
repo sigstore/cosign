@@ -29,6 +29,9 @@ cosign attach attestation [flags]
       --attestation stringArray                                                                  path to the attestation envelope
   -h, --help                                                                                     help for attestation
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
 ```
 
 ### Options inherited from parent commands

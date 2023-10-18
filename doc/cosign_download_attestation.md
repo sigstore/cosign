@@ -22,6 +22,9 @@ cosign download attestation [flags]
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --platform string                                                                          download attestation for a specific platform image
       --predicate-type string                                                                    download attestation with matching predicateType
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
 ```
 
 ### Options inherited from parent commands
