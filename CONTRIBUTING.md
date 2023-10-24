@@ -63,3 +63,7 @@ Ensure that the documentation is up-to-date and reflects your changes accurately
 ### Sign DCO
 
 Make sure to sign the [Developer Certificate of Origin](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---signoff).
+
+## Additional Documentation
+
+In addition to the README file, documentation for Cosign exists in the repository's doc folder and consists of one markdown file for each command.   If you add, delete or modify a Cosign command you must also add, delete, or edit the appropriate file in the doc folder.
