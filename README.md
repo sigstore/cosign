@@ -128,6 +128,33 @@ The following checks were performed on these signatures:
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
 
+### Verify a container in an air-gapped environment
+
+Cosign can do completely offline verification by verifying a [bundle](./specs/SIGNATURE_SPEC.md#properties) which is typically distributed as an annotation on the image manifest.
+As long as this annotation is present, then offline verification can be done.
+This bundle annotation is always included by default for keyless signing, so the default `cosign sign` functionality will include all materials needed for offline verification.
+
+To verify an image in an air-gapped environment, the image and signatures must be available locally on the filesystem.
+
+An image can be saved locally using `cosign save` (note, this step must be done with a network connection):
+
+```
+cosign initialize # This will pull in the latest TUF root
+cosign save $IMAGE_NAME --dir ./path/to/dir
+```
+
+Now, in an air-gapped environment, this local image can be verified:
+
+```
+cosign verify --certificate-identity $CERT_IDENTITY --certificate-oidc-issuer $CERT_OIDC_ISSUER --offline --local-image ./path/to/dir
+```
+
+You'll need to pass in expected values for `$CERT_IDENTITY` and `$CERT_OIDC_ISSUER` to correctly verify this image.
+If you signed with a keypair, the same command will work, assuming the public key material is present locally:
+
+```
+cosign verify --key cosign.pub --offline --local-image ./path/to/dir
+```
 
 ### What ** is not ** production ready?
 
