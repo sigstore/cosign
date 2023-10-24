@@ -18,6 +18,7 @@ package download
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -46,8 +47,18 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 	}
 
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
+	var entityNotFoundError *ociremote.EntityNotFoundError
 	if err != nil {
-		return err
+		if errors.As(err, &entityNotFoundError) {
+			if digest, ok := ref.(name.Digest); ok {
+				// We don't need to access the original image to download the attached attestation
+				se = ociremote.SignedUnknown(digest)
+			} else {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	se, err = platform.SignedEntityForPlatform(se, attOptions.Platform)

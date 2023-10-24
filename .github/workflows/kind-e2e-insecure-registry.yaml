@@ -41,10 +41,12 @@ jobs:
       REGISTRY_PORT: 5000
       INSECURE_REGISTRY_NAME: insecure-registry.notlocal
       INSECURE_REGISTRY_PORT: 5001
+      INSECURE_OCI_REGISTRY_NAME: insecure-oci-registry.notlocal
+      INSECURE_OCI_REGISTRY_PORT: 5002
       KO_DOCKER_REPO: registry.local:5000/policy-controller
 
     steps:
-    - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
     - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
       with:
         go-version: '1.21'
@@ -99,6 +101,54 @@ jobs:
       run: |
         go install github.com/google/go-containerregistry/cmd/crane
         ./test/e2e_test_insecure_registry.sh
+
+    - name: Setup local insecure OCI registry
+      run: |
+        # Create a self-signed SSL cert
+        mkdir -p insecure-certs
+        openssl req \
+          -subj "/C=US/ST=WA/L=Flavorton/O=Tests-R-Us/OU=Dept. of Insecurity/CN=example.com/emailAddress=testing@example.com" \
+          -newkey rsa:4096 -nodes -sha256 -keyout insecure-certs/domain.key \
+          -x509 -days 365 -out insecure-certs/domain.crt
+        cat > config.json << EOF
+        {
+          "distSpecVersion": "1.1.0-dev",
+          "storage": {
+            "rootDirectory": "/tmp/zot"
+          },
+          "http": {
+            "address": "0.0.0.0",
+            "port": "5000",
+            "realm": "zot",
+            "tls": {
+              "cert": "/insecure-certs/domain.crt",
+              "key": "/insecure-certs/domain.key"
+            }
+          },
+          "log": {
+            "level": "debug"
+          }
+        }
+        EOF
+        # Run a registry.
+        docker run -d  --restart=always \
+          --name $INSECURE_OCI_REGISTRY_NAME \
+          -v "$(pwd)"/insecure-certs:/insecure-certs \
+          -v "$(pwd)"/config.json:/etc/zot/config.json \
+          -p $INSECURE_OCI_REGISTRY_PORT:$REGISTRY_PORT \
+          ghcr.io/project-zot/zot-minimal-linux-amd64:$ZOT_VERSION
+        # Connect the registry to the KinD network.
+        docker network connect "kind" $INSECURE_OCI_REGISTRY_NAME
+        # Make the $INSECURE_REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
+        # local registry, even when pushing $INSECURE_REGISTRY_NAME:$INSECURE_REGISTRY_NAME/some/image
+        sudo echo "127.0.0.1 $INSECURE_OCI_REGISTRY_NAME" | sudo tee -a /etc/hosts
+      env:
+        ZOT_VERSION: v2.0.0-rc6
+
+    - name: Run Insecure OCI Registry Tests
+      run: |
+        go install github.com/google/go-containerregistry/cmd/crane
+        ./test/e2e_test_insecure_oci_registry.sh
 
     - name: Collect diagnostics
       if: ${{ failure() }}

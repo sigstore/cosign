@@ -351,7 +351,7 @@ func TestSignEntity(t *testing.T) {
 				if al, err := atts.Get(); err != nil {
 					t.Fatalf("Get() = %v", err)
 				} else if len(al) != 1 {
-					t.Errorf("len(Get()) = %d, wanted %d", len(al), i)
+					t.Errorf("len(Get()) = %d, wanted %d", len(al), 1)
 				}
 			}
 		}
@@ -424,6 +424,43 @@ func TestSignEntity(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("with replace op (attestation)", func(t *testing.T) {
+		for _, se := range []oci.SignedEntity{si, sii, sunk} {
+			orig, err := static.NewAttestation([]byte("blah"))
+			if err != nil {
+				t.Fatalf("static.NewAttestation() = %v", err)
+			}
+			se, err = AttachAttestationToEntity(se, orig)
+			if err != nil {
+				t.Fatalf("AttachAttestationToEntity() = %v", err)
+			}
+
+			ro := &replaceAll{}
+
+			for i := 2; i < 10; i++ {
+				sig, err := static.NewAttestation([]byte(fmt.Sprintf("%d", i)))
+				if err != nil {
+					t.Fatalf("static.NewAttestation() = %v", err)
+				}
+
+				se, err = AttachAttestationToEntity(se, sig, WithReplaceOp(ro))
+				if err != nil {
+					t.Fatalf("AttachAttestationToEntity() = %v", err)
+				}
+
+				atts, err := se.Attestations()
+				if err != nil {
+					t.Fatalf("Attestations() = %v", err)
+				}
+				if al, err := atts.Get(); err != nil {
+					t.Fatalf("Get() = %v", err)
+				} else if len(al) != 1 {
+					t.Errorf("len(Get()) = %d, wanted %d", len(al), 1)
+				}
+			}
+		}
+	})
 }
 
 type dupe struct {
@@ -436,4 +473,23 @@ var _ DupeDetector = (*dupe)(nil)
 // Find implements DupeDetector
 func (d *dupe) Find(oci.Signatures, oci.Signature) (oci.Signature, error) {
 	return d.sig, d.err
+}
+
+type replaceAll struct {
+}
+
+func (r *replaceAll) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures, error) {
+	return &replaceOCISignatures{
+		Signatures:   signatures,
+		attestations: []oci.Signature{o},
+	}, nil
+}
+
+type replaceOCISignatures struct {
+	oci.Signatures
+	attestations []oci.Signature
+}
+
+func (r *replaceOCISignatures) Get() ([]oci.Signature, error) {
+	return r.attestations, nil
 }

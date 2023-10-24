@@ -127,6 +127,7 @@ against the transparency log.`,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {

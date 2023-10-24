@@ -32,5 +32,5 @@ func (o *TriangulateOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Type, "type", "signature",
-		"related attachment to triangulate (attestation|sbom|signature), default signature (sbom is deprecated)")
+		"related attachment to triangulate (attestation|sbom|signature|digest), default signature (sbom is deprecated)")
 }
