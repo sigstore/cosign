@@ -10,7 +10,7 @@ require (
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936
-	github.com/digitorus/timestamp v0.0.0-20230821155606-d1ad5ca9624c
+	github.com/digitorus/timestamp v0.0.0-20230902153158-687734543647
 	github.com/go-openapi/runtime v0.26.0
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/go-openapi/swag v0.22.4
@@ -37,7 +37,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.5
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.5
-	github.com/sigstore/timestamp-authority v1.1.2
+	github.com/sigstore/timestamp-authority v1.2.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.17.0
@@ -163,7 +163,7 @@ require (
 	github.com/go-openapi/validate v0.22.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.15.1 // indirect
+	github.com/go-playground/validator/v10 v10.15.5 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

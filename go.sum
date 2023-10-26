@@ -321,8 +321,8 @@ github.com/dgryski/trifles v0.0.0-20200323201526-dd97f9abfb48/go.mod h1:if7Fbed8
 github.com/digitorus/pkcs7 v0.0.0-20230713084857-e76b763bdc49/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
 github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 h1:ge14PCmCvPjpMQMIAH7uKg0lrtNSOdpYsRXlwk3QbaE=
 github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
-github.com/digitorus/timestamp v0.0.0-20230821155606-d1ad5ca9624c h1:kgG83Hfj3YXkUbrihwBxDc0COzP1ZejiDSr4/fItT0E=
-github.com/digitorus/timestamp v0.0.0-20230821155606-d1ad5ca9624c/go.mod h1:GvWntX9qiTlOud0WkQ6ewFm0LPy5JUR1Xo0Ngbd1w6Y=
+github.com/digitorus/timestamp v0.0.0-20230902153158-687734543647 h1:WOk5Aclr/+sZ2/SX2YyxulNFwZOUhSrDJLw5KbHKmdE=
+github.com/digitorus/timestamp v0.0.0-20230902153158-687734543647/go.mod h1:GvWntX9qiTlOud0WkQ6ewFm0LPy5JUR1Xo0Ngbd1w6Y=
 github.com/dimchansky/utfbom v1.1.0/go.mod h1:rO41eb7gLfo8SF1jd9F8HplJm1Fewwi4mQvIirEdv+8=
 github.com/dimchansky/utfbom v1.1.1 h1:vV6w1AhK4VMnhBno/TPVCoK9U/LP0PkLCS9tbxHdi/U=
 github.com/dimchansky/utfbom v1.1.1/go.mod h1:SxdoEBH5qIqFocHMyGOXVAybYJdr71b1Q/j0mACtrfE=
@@ -435,8 +435,8 @@ github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/o
 github.com/go-playground/locales v0.14.1/go.mod h1:hxrqLVvrK65+Rwrd5Fc6F2O76J/NuW9t0sjnWqG1slY=
 github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJnYK9S473LQFuzCbDbfSFY=
 github.com/go-playground/universal-translator v0.18.1/go.mod h1:xekY+UJKNuX9WP91TpwSH2VMlDf28Uj24BCp08ZFTUY=
-github.com/go-playground/validator/v10 v10.15.1 h1:BSe8uhN+xQ4r5guV/ywQI4gO59C2raYcGffYWZEjZzM=
-github.com/go-playground/validator/v10 v10.15.1/go.mod h1:9iXMNT7sEkjXb0I+enO7QXmzG6QCsPWY4zveKFVRSyU=
+github.com/go-playground/validator/v10 v10.15.5 h1:LEBecTWb/1j5TNY1YYG2RcOUN3R7NLylN+x8TTueE24=
+github.com/go-playground/validator/v10 v10.15.5/go.mod h1:9iXMNT7sEkjXb0I+enO7QXmzG6QCsPWY4zveKFVRSyU=
 github.com/go-quicktest/qt v1.100.0 h1:I7iSLgIwNp0E0UnSvKJzs7ig0jg/Iq83zsZjtQNW7jY=
 github.com/go-rod/rod v0.114.4 h1:FpkNFukjCuZLwnoLs+S9aCL95o/EMec6M+41UmvQay8=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
@@ -899,8 +899,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.5 h1:Ku3MD55VXR7+uezCS4L
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.5/go.mod h1:FsNzxmFGATZS5ynkJLLXm9g2zHD0Xw23iJs7lM/asPo=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.5 h1:yWNBuL52Je3ukUGry1qwg00ujJF2UFWShzXFIAtmxZU=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.5/go.mod h1:EI9vDWVGG8fQU9aFMY7Bd204xJiqmXcDMSkFifCf16Q=
-github.com/sigstore/timestamp-authority v1.1.2 h1:xgBs9Ct27sEgFb35GL1trKD2XOgYbtk0q2G0HLZHDDY=
-github.com/sigstore/timestamp-authority v1.1.2/go.mod h1:7rGe/e6ZJNMqPiwFiv7w+qNXT8GID9gL7nMcRwZ007I=
+github.com/sigstore/timestamp-authority v1.2.0 h1:Ffk10QsHxu6aLwySQ7WuaoWkD63QkmcKtozlEFot/VI=
+github.com/sigstore/timestamp-authority v1.2.0/go.mod h1:ojKaftH78Ovfow9DzuNl5WgTCEYSa4m5622UkKDHRXc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.1/go.mod h1:ni0Sbl8bgC9z8RoU9G6nDWqqs/fq4eDPysMBDgk/93Q=
