@@ -35,7 +35,7 @@ require (
 	github.com/sigstore/sigstore v1.7.4
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.4
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.4
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.4
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.5
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.5
 	github.com/sigstore/timestamp-authority v1.1.2
 	github.com/spf13/cobra v1.7.0
@@ -283,7 +283,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a // indirect

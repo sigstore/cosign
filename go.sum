@@ -895,8 +895,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.4 h1:zIqB/IB8qVJBjazd+fj
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.4/go.mod h1:eorFqzSo/RDsBfl97Ui/mKXw0YQ9qLDT1RhMYiuvPf8=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.4 h1:2xI6GX+tQMF0L+DlQq09U4fH8PlFhuz0wSYkiHY8fgo=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.4/go.mod h1:+O0uMOHhBmaVtiuR6QjO+Firh3lNWDAdFC80EYZxvZs=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.4 h1:1xpfNzVhTKOlyfcR618l7Ew1GmnUcMHMQ/fxW1IG/Yw=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.4/go.mod h1:7oUJ9Uv9KdYsXHDNBWnIfT5vP7ClztoRAi3zMTLC6X8=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.5 h1:Ku3MD55VXR7+uezCS4LOY0+y2EZFlGCGFyzl+ZSoPyo=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.5/go.mod h1:FsNzxmFGATZS5ynkJLLXm9g2zHD0Xw23iJs7lM/asPo=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.5 h1:yWNBuL52Je3ukUGry1qwg00ujJF2UFWShzXFIAtmxZU=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.5/go.mod h1:EI9vDWVGG8fQU9aFMY7Bd204xJiqmXcDMSkFifCf16Q=
 github.com/sigstore/timestamp-authority v1.1.2 h1:xgBs9Ct27sEgFb35GL1trKD2XOgYbtk0q2G0HLZHDDY=
@@ -1426,8 +1426,9 @@ google.golang.org/appengine v1.5.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7
 google.golang.org/appengine v1.6.1/go.mod h1:i06prIuMbXzDqacNJfV5OdTW448YApPu5ww/cMBSeb0=
 google.golang.org/appengine v1.6.5/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
 google.golang.org/appengine v1.6.6/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
-google.golang.org/appengine v1.6.7 h1:FZR1q0exgwxzPzp/aF+VccGrSfxfPpkBqjIIEq3ru6c=
 google.golang.org/appengine v1.6.7/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
+google.golang.org/appengine v1.6.8 h1:IhEN5q69dyKagZPYMSdIjS2HqprW324FRQZJcGqPAsM=
+google.golang.org/appengine v1.6.8/go.mod h1:1jJ3jBArFh5pcgW8gCtRJnepW8FzD1V44FJffLiz/Ds=
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
 google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19/go.mod h1:VzzqZJRnGkLBvHegQrXjBqPurQTc5/KpmUdxsrq26oE=
 google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7/go.mod h1:VzzqZJRnGkLBvHegQrXjBqPurQTc5/KpmUdxsrq26oE=
