@@ -18,10 +18,9 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/utils/pointer"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
@@ -43,7 +42,7 @@ func TestSecret(t *testing.T) {
 			"cosign.pub":      []byte("public"),
 			"cosign.password": nil,
 		},
-		Immutable: pointer.Bool(true),
+		Immutable: ptr.To[bool](true),
 	}
 	actual := secret(keys, namespace, name, nil, true)
 	if !reflect.DeepEqual(actual, expect) {

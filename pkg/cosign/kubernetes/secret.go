@@ -21,11 +21,10 @@ import (
 	"os"
 	"strings"
 
-	"k8s.io/utils/pointer"
-
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
@@ -120,7 +119,7 @@ func secret(keys *cosign.KeysBytes, namespace, name string, data map[string][]by
 		return &v1.Secret{
 			ObjectMeta: obj,
 			Data:       data,
-			Immutable:  pointer.Bool(true),
+			Immutable:  ptr.To[bool](true),
 		}
 	}
 
