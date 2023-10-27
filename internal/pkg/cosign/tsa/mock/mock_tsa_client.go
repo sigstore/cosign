@@ -117,5 +117,5 @@ func (c *TSAClient) GetTimestampResponse(tsq []byte) ([]byte, error) {
 		tsStruct.Time = c.Time
 	}
 
-	return tsStruct.CreateResponseWithOpts(c.CertChain[0], c.Signer, hashAlg)
+	return tsStruct.CreateResponseWithOpts(c.CertChain[0], c.Signer, crypto.SHA256)
 }
