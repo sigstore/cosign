@@ -38,6 +38,9 @@ func TestReadWrite(t *testing.T) {
 	si := randomSignedImage(t)
 	tmp := t.TempDir()
 	ref, err := name.ParseReference("test.com/test")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := WriteSignedImage(tmp, si, ref); err != nil {
 		t.Fatal(err)
 	}

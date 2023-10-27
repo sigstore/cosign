@@ -118,9 +118,6 @@ func getImageRef(ref name.Reference) (string, error) {
 		return "", errors.New("reference is nil")
 	}
 	registry := ref.Context().RegistryStr() + "/"
-	imageRef := ref.Name()
-	if strings.HasPrefix(imageRef, registry) {
-		imageRef = imageRef[len(registry):]
-	}
+	imageRef := strings.TrimPrefix(ref.Name(), registry)
 	return imageRef, nil
 }
