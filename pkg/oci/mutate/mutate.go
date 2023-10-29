@@ -96,13 +96,16 @@ func (i *indexWrapper) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 			return si, nil
 		}
 	}
+
 	if sb, ok := i.ogbase.(oci.SignedImageIndex); ok {
 		return sb.SignedImage(h)
-	} else if unsigned, err := i.Image(h); err != nil {
-		return nil, err
-	} else {
-		return signed.Image(unsigned), nil
 	}
+
+	unsigned, err := i.Image(h)
+	if err != nil {
+		return nil, err
+	}
+	return signed.Image(unsigned), nil
 }
 
 // SignedImageIndex implements oci.SignedImageIndex
@@ -118,13 +121,16 @@ func (i *indexWrapper) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error)
 			return sii, nil
 		}
 	}
+
 	if sb, ok := i.ogbase.(oci.SignedImageIndex); ok {
 		return sb.SignedImageIndex(h)
-	} else if unsigned, err := i.ImageIndex(h); err != nil {
-		return nil, err
-	} else {
-		return signed.ImageIndex(unsigned), nil
 	}
+
+	unsigned, err := i.ImageIndex(h)
+	if err != nil {
+		return nil, err
+	}
+	return signed.ImageIndex(unsigned), nil
 }
 
 // AttachSignatureToEntity attaches the provided signature to the provided entity.

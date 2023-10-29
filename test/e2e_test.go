@@ -753,7 +753,8 @@ func TestAttestationReplace(t *testing.T) {
 func TestAttestationRFC3161Timestamp(t *testing.T) {
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
 	t.Cleanup(server.Close)
 
@@ -843,7 +844,8 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	ctx := context.Background()
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
 	t.Cleanup(server.Close)
 
@@ -1099,7 +1101,8 @@ func TestFulcioBundle(t *testing.T) {
 func TestRFC3161Timestamp(t *testing.T) {
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
 	t.Cleanup(server.Close)
 
@@ -1153,7 +1156,8 @@ func TestRFC3161Timestamp(t *testing.T) {
 func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
 	t.Cleanup(server.Close)
 
@@ -1460,7 +1464,8 @@ func TestSignBlobBundle(t *testing.T) {
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
 	t.Cleanup(server.Close)
 
