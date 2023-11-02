@@ -6,7 +6,7 @@ require (
 	cuelang.org/go v0.6.0
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20231024185945-8841054dbdb8
-	github.com/buildkite/agent/v3 v3.57.0
+	github.com/buildkite/agent/v3 v3.58.0
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46
 	github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936
@@ -105,7 +105,7 @@ require (
 	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
 	github.com/aliyun/credentials-go v1.3.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go v1.46.5 // indirect
+	github.com/aws/aws-sdk-go v1.47.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.21.2 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.19.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.43 // indirect
@@ -207,7 +207,7 @@ require (
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc v1.0.4 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
-	github.com/lestrrat-go/jwx/v2 v2.0.15 // indirect
+	github.com/lestrrat-go/jwx/v2 v2.0.16 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20231026200631-000cd05d5491 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
