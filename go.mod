@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/go-openapi/swag v0.22.4
 	github.com/go-piv/piv-go v1.11.0
-	github.com/google/certificate-transparency-go v1.1.6
+	github.com/google/certificate-transparency-go v1.1.7
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.16.1
 	github.com/google/go-github/v55 v55.0.0
