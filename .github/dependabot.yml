@@ -20,8 +20,18 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    gomod:
+      actions:
+        update-types:
+          - "patch"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    groups:
+      actions:
+        update-types:
+          - "minor"
+          - "patch"
