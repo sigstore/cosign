@@ -177,10 +177,15 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 	// Key's corresponding cert might not exist,
 	// therefore, we do not fail if it is the case.
 	var cert *x509.Certificate
-	if len(config.KeyID) != 0 {
-		cert, _ = ctx.FindCertificate(config.KeyID, nil, nil)
-	} else if len(config.KeyLabel) != 0 {
-		cert, _ = ctx.FindCertificate(nil, config.KeyLabel, nil)
+
+	ignoreCert := env.Getenv(env.VariablePKCS11IgnoreCertificate) == "1"
+
+	if !ignoreCert {
+		if len(config.KeyID) != 0 {
+			cert, _ = ctx.FindCertificate(config.KeyID, nil, nil)
+		} else if len(config.KeyLabel) != 0 {
+			cert, _ = ctx.FindCertificate(nil, config.KeyLabel, nil)
+		}
 	}
 
 	return &Key{ctx: ctx, signer: signer, cert: cert}, nil

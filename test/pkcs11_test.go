@@ -45,6 +45,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
 	"strings"
@@ -214,6 +215,64 @@ func TestListKeysUrisCmd(t *testing.T) {
 	}
 }
 
+func TestCertificateIgnored(t *testing.T) {
+	ctx := context.Background()
+
+	tokens, err := GetTokens(ctx, modulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bTokenFound := false
+	var slotID uint
+	for _, token := range tokens {
+		if token.TokenInfo.Label == tokenLabel {
+			bTokenFound = true
+			slotID = token.Slot
+			break
+		}
+	}
+	if !bTokenFound {
+		t.Fatalf("token with label '%s' not found", tokenLabel)
+	}
+
+	err = importKey(slotID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deleteKey(slotID)
+
+	pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
+	err = pkcs11UriConfig.Parse(uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const envvar = "COSIGN_PKCS11_IGNORE_CERTIFICATE"
+
+	if err := os.Setenv(envvar, "1"); err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Setenv(envvar, "")
+
+	sk, err := pkcs11key.GetKeyWithURIConfig(pkcs11UriConfig, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer sk.Close()
+
+	cert, err := sk.Certificate()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cert != nil {
+		t.Fatalf("expected certificate to be ignored while loading")
+	}
+}
+
 func TestSignAndVerify(t *testing.T) {
 	ctx := context.Background()
 
@@ -350,7 +409,7 @@ func importKey(slotID uint) error {
 	keyLabelBytes := []byte(keyLabel)
 
 	r := strings.NewReader(rsaPrivKey)
-	pemBytes, err = os.ReadAll(r)
+	pemBytes, err = io.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("unable to read pem")
 	}
