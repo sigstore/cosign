@@ -63,7 +63,7 @@ func SaveCmd(_ context.Context, opts options.SaveOptions, imageRef string) error
 		if err != nil {
 			return fmt.Errorf("getting signed image: %w", err)
 		}
-		return layout.WriteSignedImage(opts.Directory, si)
+		return layout.WriteSignedImage(opts.Directory, si, ref)
 	}
 
 	if _, ok := se.(oci.SignedImageIndex); ok {
@@ -71,7 +71,7 @@ func SaveCmd(_ context.Context, opts options.SaveOptions, imageRef string) error
 		if err != nil {
 			return fmt.Errorf("getting signed image index: %w", err)
 		}
-		return layout.WriteSignedImageIndex(opts.Directory, sii)
+		return layout.WriteSignedImageIndex(opts.Directory, sii, ref)
 	}
 	return errors.New("unknown signed entity")
 }

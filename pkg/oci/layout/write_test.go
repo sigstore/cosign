@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/sigstore/cosign/v2/pkg/oci"
@@ -36,7 +37,11 @@ func TestReadWrite(t *testing.T) {
 	// write random signed image to disk
 	si := randomSignedImage(t)
 	tmp := t.TempDir()
-	if err := WriteSignedImage(tmp, si); err != nil {
+	ref, err := name.ParseReference("test.com/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteSignedImage(tmp, si, ref); err != nil {
 		t.Fatal(err)
 	}
 
