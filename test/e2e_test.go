@@ -373,6 +373,88 @@ func TestAttestationReplaceCreate(t *testing.T) {
 	}
 }
 
+func TestExcessiveAttestations(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-download-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+
+	ctx := context.Background()
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	vulnAttestation := `
+	{
+    "invocation": {
+      "parameters": null,
+      "uri": "invocation.example.com/cosign-testing",
+      "event_id": "",
+      "builder.id": ""
+    },
+    "scanner": {
+      "uri": "fakescanner.example.com/cosign-testing",
+      "version": "",
+      "db": {
+        "uri": "",
+        "version": ""
+      },
+      "result": null
+    },
+    "metadata": {
+      "scanStartedOn": "2022-04-12T00:00:00Z",
+      "scanFinishedOn": "2022-04-12T00:10:00Z"
+    }
+}
+`
+	ref, err := name.ParseReference(imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	regOpts := options.RegistryOptions{}
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 102; i++ {
+		vulnAttestationPath := filepath.Join(td, fmt.Sprintf("attestation-%d.vuln.json", i))
+		if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0600); err != nil {
+			t.Fatal(err)
+		}
+
+		// Attest to create a vuln attestation
+		attestCommand := attest.AttestCommand{
+			KeyOpts:       ko,
+			PredicatePath: vulnAttestationPath,
+			PredicateType: "vuln",
+			Timeout:       30 * time.Second,
+			Replace:       false,
+		}
+		must(attestCommand.Exec(ctx, imgName), t)
+	}
+
+	attOpts := options.AttestationDownloadOptions{}
+	_, err = cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
+	if err == nil {
+		t.Fatalf("Expected an error, but 'err' was 'nil'")
+	}
+	expectedError := "maximum number of attestations on an image is 100, found 102"
+	if err.Error() != expectedError {
+		t.Errorf("Exted the error to be: '%s' but it was '%s'", expectedError, err.Error())
+	}
+}
+
 func TestAttestationReplace(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
@@ -520,6 +602,38 @@ func TestDuplicateSign(t *testing.T) {
 
 	if len(signatures) > 1 {
 		t.Errorf("expected there to only be one signature, got %v", signatures)
+	}
+}
+
+func TestExcessiveSignatures(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	for i := 0; i < 102; i++ {
+		_, privKeyPath, _ := keypair(t, td)
+
+		// Sign the image
+		ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+		so := options.SignOptions{
+			Upload: true,
+		}
+		must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	}
+	err := download.SignatureCmd(ctx, options.RegistryOptions{}, imgName)
+	if err == nil {
+		t.Fatal("Expected an error, but 'err' was 'nil'")
+	}
+	expectedErr := "maximum number of signatures on an image is 100, found 102"
+	if err.Error() != expectedErr {
+		t.Fatalf("Expected the error '%s', but got the error '%s'", expectedErr, err.Error())
 	}
 }
 
