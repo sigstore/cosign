@@ -39,6 +39,9 @@ func Load() *cobra.Command {
 		//Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.Registry.Name != "" && len(args) != 0 {
+				return fmt.Errorf("both --registry and image argument provided, only one should be used")
+			}
 			if o.Registry.Name != "" && len(args) == 0 {
 				return LoadCmd(cmd.Context(), *o, "")
 			}
@@ -54,10 +57,6 @@ func Load() *cobra.Command {
 }
 
 func LoadCmd(ctx context.Context, opts options.LoadOptions, imageRef string) error {
-	if opts.Registry.Name != "" && imageRef != "" {
-		return fmt.Errorf("both --registry and image argument provided, only one should be used")
-	}
-
 	var ref name.Reference
 	var err error
 	if opts.Registry.Name == "" {
