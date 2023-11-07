@@ -1,3 +1,68 @@
+# v2.2.1
+**Note: This release comes with a fix for CVE-2023-46737 described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-vfp6-jrw2-99g9). Please upgrade to this release ASAP**
+
+## Enhancements
+* feat: Support basic auth and bearer auth login to registry (#3310)
+* add support for ignoring certificates with pkcs11 (#3334)
+* Support ReplaceOp in Signatures (#3315)
+* feat: added ability to get image digest back via triangulate (#3255)
+* feat: add `--only` flag in `cosign copy` to copy sign, att & sbom (#3247)
+* feat: add support attaching a Rekor bundle to a container (#3246)
+* feat: add support outputting rekor response on signing (#3248)
+* feat: improve dockerfile verify subcommand (#3264)
+* Add guard flag for experimental OCI 1.1 verify. (#3272)
+* Deprecate SBOM attachments (#3256)
+* feat: dedent line in cosign copy doc (#3244)
+* feat: add platform flag to cosign copy command (#3234)
+* Add SLSA 1.0 attestation support to cosign. Closes #2860 (#3219)
+* attest: pass OCI remote opts to att resolver. (#3225)
+
+## Bug Fixes
+* Merge pull request from GHSA-vfp6-jrw2-99g9
+* fix: allow cosign download sbom when image is absent (#3245)
+* ci: add a OCI registry test for referrers support (#3253)
+* Fix ReplaceSignatures (#3292)
+* Stop using deprecated in_toto.ProvenanceStatement (#3243)
+* Fixes #3236, disable SCT checking for a cosign verification when usin… (#3237)
+* fix: update error in `SignedEntity` to be more descriptive (#3233)
+* Fail timestamp verification if no root is provided (#3224)
+
+
+## Documentation
+* Add some docs about verifying in an air-gapped environment (#3321)
+* Update CONTRIBUTING.md (#3268)
+* docs: improves the Contribution guidelines (#3257)
+* Remove security policy (#3230)
+
+
+## Others
+* Set go to min 1.21 and update dependencies  (#3327)
+* Update contact for code of conduct (#3266)
+* Update .ko.yaml (#3240)
+
+
+## Contributors
+* AdamKorcz
+* Andres Galante
+* Appu
+* Billy Lynch
+* Bob Callaway
+* Caleb Woodbine
+* Carlos Tadeu Panato Junior
+* Dylan Richardson
+* Gareth Healy
+* Hayden B
+* John Kjell
+* Jon Johnson
+* jonvnadelberg
+* Luiz Carvalho
+* Priya Wadhwa
+* Ramkumar Chinchani
+* Tosone
+* Ville Aikas
+* Vishal Choudhary
+* ziel
+
 # v2.2.0
 
 ## Enhancements
