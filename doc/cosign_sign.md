@@ -94,7 +94,10 @@ cosign sign [flags]
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
+      --registry-password string                                                                 registry basic auth password
       --registry-referrers-mode registryReferrersMode                                            mode for fetching references from the registry. allowed: legacy, oci-1-1
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --sign-container-identity string                                                           manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature
       --sk                                                                                       whether to use a hardware security key

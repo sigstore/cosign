@@ -25,6 +25,9 @@ cosign load [flags]
       --dir string                                                                               path to directory where the signed image is stored on disk
   -h, --help                                                                                     help for load
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
 ```
 
 ### Options inherited from parent commands

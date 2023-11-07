@@ -36,6 +36,9 @@ cosign generate [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
   -h, --help                                                                                     help for generate
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
 ```
 
 ### Options inherited from parent commands

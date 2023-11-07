@@ -23,6 +23,9 @@ cosign attach signature [flags]
   -h, --help                                                                                     help for signature
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --payload string                                                                           path to the payload covered by the signature
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
       --rekor-response string                                                                    path to the rekor bundle
       --signature string                                                                         path to the signature, or {-} for stdin
       --tsr string                                                                               path to the Time Stamped Signature Response from RFC3161 compliant TSA

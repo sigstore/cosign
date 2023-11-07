@@ -21,6 +21,9 @@ cosign upload wasm [flags]
   -f, --file string                                                                              path to the wasm file to upload
   -h, --help                                                                                     help for wasm
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
 ```
 
 ### Options inherited from parent commands

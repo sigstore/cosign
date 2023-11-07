@@ -38,6 +38,9 @@ cosign copy [flags]
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --only string                                                                              custom string array to only copy specific items, this flag is comma delimited. ex: --only=sbom,sign,att
       --platform string                                                                          only copy container image and its signatures for a specific platform image
+      --registry-password string                                                                 registry basic auth password
+      --registry-token string                                                                    registry bearer auth token
+      --registry-username string                                                                 registry basic auth username
       --sig-only                                                                                 [DEPRECATED] only copy the image signature
 ```
 
