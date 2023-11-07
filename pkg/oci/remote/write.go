@@ -105,7 +105,6 @@ func WriteSignedImageIndexImagesBulk(targetRegistry string, sii oci.SignedImageI
 		// write image index if exists
 		if val, ok := m.Annotations[layout.KindAnnotation]; ok && val == layout.ImageIndexAnnotation {
 			imgTitle := m.Annotations[layout.ImageRefAnnotation]
-			fmt.Println(imgTitle)
 			si, err := sii.SignedImageIndex(m.Digest)
 			if err != nil {
 				return fmt.Errorf("signed image index: %w", err)
@@ -126,7 +125,6 @@ func WriteSignedImageIndexImagesBulk(targetRegistry string, sii oci.SignedImageI
 		// write any images
 		if val, ok := m.Annotations[layout.KindAnnotation]; ok && val == layout.ImageAnnotation {
 			imgTitle := m.Annotations[layout.ImageRefAnnotation]
-			fmt.Println(imgTitle)
 			si, err := sii.SignedImage(m.Digest)
 			if err != nil {
 				return fmt.Errorf("signed image: %w", err)
