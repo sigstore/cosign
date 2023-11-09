@@ -50,7 +50,7 @@ echo "running tests"
 
 popd
 go build -o cosign ./cmd/cosign
-go test -tags=e2e -race $(go list ./... | grep -v third_party/)
+go test -timeout 15m -tags=e2e -race $(go list ./... | grep -v third_party/)
 
 # Test `cosign dockerfile verify`
 ./cosign dockerfile verify ./test/testdata/single_stage.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
