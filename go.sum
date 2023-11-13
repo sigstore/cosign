@@ -846,8 +846,8 @@ github.com/vbatts/tar-split v0.11.5 h1:3bHCTIheBm1qFTcgh9oPu+nNBtX+XJIupG/vacinC
 github.com/vbatts/tar-split v0.11.5/go.mod h1:yZbwRsSeGjusneWgA781EKej9HF8vme8okylkAeNKLk=
 github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1 h1:+dBg5k7nuTE38VVdoroRsT0Z88fmvdYrI2EjzJst35I=
 github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1/go.mod h1:nmuySobZb4kFgFy6BptpXp/BBw+xFSyvVPP6auoJB4k=
-github.com/xanzy/go-gitlab v0.93.2 h1:kNNf3BYNYn/Zkig0B89fma12l36VLcYSGu7OnaRlRDg=
-github.com/xanzy/go-gitlab v0.93.2/go.mod h1:5ryv+MnpZStBH8I/77HuQBsMbBGANtVpLWC15qOjWAw=
+github.com/xanzy/go-gitlab v0.94.0 h1:GmBl2T5zqUHqyjkxFSvsT7CbelGdAH/dmBqUBqS+4BE=
+github.com/xanzy/go-gitlab v0.94.0/go.mod h1:ETg8tcj4OhrB84UEgeE8dSuV/0h4BBL1uOV/qK0vlyI=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
 github.com/xdg-go/scram v1.0.2/go.mod h1:1WAq6h33pAW+iRreB34OORO2Nf7qel3VV3fjBj+hCSs=
 github.com/xdg-go/scram v1.1.1/go.mod h1:RaEWvsqvNKKvBPvcKeFjrG2cJqOkHTiyTpzz23ni57g=
