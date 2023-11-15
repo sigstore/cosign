@@ -64,7 +64,7 @@ jobs:
         make cosign
 
     - name: Install cluster + sigstore
-      uses: sigstore/scaffolding/actions/setup@main
+      uses: sigstore/scaffolding/actions/setup@v0.4.13
       with:
         legacy-variables: "false"
         k8s-version: ${{ matrix.k8s-version }}
