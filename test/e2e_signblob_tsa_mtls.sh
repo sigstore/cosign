@@ -86,6 +86,11 @@ $COSIGN_CLI verify-blob --bundle cosign.bundle \
     --rfc3161-timestamp=timestamp.txt --timestamp-certificate-chain=$TIMESTAMP_CHAIN_FILE \
     --insecure-ignore-tlog=true --key import-cosign.pub $BLOB
 
+$COSIGN_CLI verify-blob --bundle cosign.bundle \
+    --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' \
+    --rfc3161-timestamp=timestamp.txt --timestamp-certificate-chain=$TIMESTAMP_CHAIN_FILE \
+    --private-infrastructure --key import-cosign.pub $BLOB
+
 # cleanup
 rm -fr blob.sig ca-key.pem cacert.pem cert.pem cosign.bundle import-cosign.key \
     import-cosign.pub key.pem timestamp.txt timestamp-chain.pem \

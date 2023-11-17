@@ -28,7 +28,8 @@ type CommonVerifyOptions struct {
 	MaxWorkers       int
 	// This is added to CommonVerifyOptions to provide a path to support
 	// it for other verify options.
-	ExperimentalOCI11 bool
+	ExperimentalOCI11     bool
+	PrivateInfrastructure bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -42,6 +43,9 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.IgnoreTlog, "insecure-ignore-tlog", false,
 		"ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
 			"cannot be publicly verified when not included in a log")
+
+	cmd.Flags().BoolVar(&o.PrivateInfrastructure, "private-infrastructure", false,
+		"skip transparency log verification when verifying artifacts in a privately deployed infrastructure")
 
 	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
 		"set to true to enable experimental OCI 1.1 behaviour")
