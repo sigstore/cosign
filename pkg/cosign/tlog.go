@@ -208,7 +208,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 		// Here, we display the proof and succeed.
 		var existsErr *entries.CreateLogEntryConflict
 		if errors.As(err, &existsErr) {
-			ui.Infof(ctx, "Signature already exists. Displaying proof")
+			ui.Infof(ctx, "Signature already exists. Fetching and verifying inclusion proof.")
 			uriSplit := strings.Split(existsErr.Location.String(), "/")
 			uuid := uriSplit[len(uriSplit)-1]
 			e, err := GetTlogEntry(ctx, rekorClient, uuid)
@@ -299,8 +299,8 @@ func getTreeUUID(entryUUID string) (string, error) {
 	}
 }
 
-// Validates UUID and also TreeID if present.
-func isExpectedResponseUUID(requestEntryUUID string, responseEntryUUID string, treeid string) error {
+// Validates UUID and also shard if present.
+func isExpectedResponseUUID(requestEntryUUID string, responseEntryUUID string) error {
 	// Comparare UUIDs
 	requestUUID, err := getUUID(requestEntryUUID)
 	if err != nil {
@@ -313,19 +313,21 @@ func isExpectedResponseUUID(requestEntryUUID string, responseEntryUUID string, t
 	if requestUUID != responseUUID {
 		return fmt.Errorf("expected EntryUUID %s got UUID %s", requestEntryUUID, responseEntryUUID)
 	}
-	// Compare tree ID if it is in the request.
-	requestTreeID, err := getTreeUUID(requestEntryUUID)
+	// Compare shards if it is in the request.
+	requestShardID, err := getTreeUUID(requestEntryUUID)
 	if err != nil {
 		return err
 	}
-	if requestTreeID != "" {
-		tid, err := getTreeUUID(treeid)
-		if err != nil {
-			return err
-		}
-		if requestTreeID != tid {
-			return fmt.Errorf("expected EntryUUID %s got UUID %s from Tree %s", requestEntryUUID, responseEntryUUID, treeid)
-		}
+	responseShardID, err := getTreeUUID(responseEntryUUID)
+	if err != nil {
+		return err
+	}
+	// no shard ID prepends the entry UUID
+	if requestShardID == "" || responseShardID == "" {
+		return nil
+	}
+	if requestShardID != responseShardID {
+		return fmt.Errorf("expected UUID %s from shard %s: got UUID %s from shard %s", requestEntryUUID, responseEntryUUID, requestShardID, responseShardID)
 	}
 	return nil
 }
@@ -357,8 +359,8 @@ func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, entryUUID stri
 		return nil, err
 	}
 	for k, e := range resp.Payload {
-		// Validate that request EntryUUID matches the response UUID and response Tree ID
-		if err := isExpectedResponseUUID(entryUUID, k, *e.LogID); err != nil {
+		// Validate that request EntryUUID matches the response UUID and response shard ID
+		if err := isExpectedResponseUUID(entryUUID, k); err != nil {
 			return nil, fmt.Errorf("unexpected entry returned from rekor server: %w", err)
 		}
 		// Check that body hash matches UUID

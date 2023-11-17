@@ -67,14 +67,12 @@ func TestExpectedRekorResponse(t *testing.T) {
 		name         string
 		requestUUID  string
 		responseUUID string
-		treeID       string
 		wantErr      bool
 	}{
 		{
 			name:         "valid match with request & response entry UUID",
 			requestUUID:  validTreeID + validUUID,
 			responseUUID: validTreeID + validUUID,
-			treeID:       validTreeID,
 			wantErr:      false,
 		},
 		// The following is the current typical Rekor behavior.
@@ -82,63 +80,54 @@ func TestExpectedRekorResponse(t *testing.T) {
 			name:         "valid match with request entry UUID",
 			requestUUID:  validTreeID + validUUID,
 			responseUUID: validUUID,
-			treeID:       validTreeID,
 			wantErr:      false,
 		},
 		{
 			name:         "valid match with request UUID",
 			requestUUID:  validUUID,
 			responseUUID: validUUID,
-			treeID:       validTreeID,
 			wantErr:      false,
 		},
 		{
 			name:         "valid match with response entry UUID",
 			requestUUID:  validUUID,
 			responseUUID: validTreeID + validUUID,
-			treeID:       validTreeID,
 			wantErr:      false,
 		},
 		{
 			name:         "mismatch uuid with response tree id",
 			requestUUID:  validUUID,
 			responseUUID: validTreeID + validUUID1,
-			treeID:       validTreeID,
 			wantErr:      true,
 		},
 		{
 			name:         "mismatch uuid with request tree id",
 			requestUUID:  validTreeID + validUUID1,
 			responseUUID: validUUID,
-			treeID:       validTreeID,
 			wantErr:      true,
 		},
 		{
 			name:         "mismatch tree id",
 			requestUUID:  validTreeID + validUUID,
-			responseUUID: validUUID,
-			treeID:       validTreeID1,
+			responseUUID: validTreeID1 + validUUID,
 			wantErr:      true,
 		},
 		{
 			name:         "invalid response tree id",
 			requestUUID:  validTreeID + validUUID,
 			responseUUID: invalidTreeID + validUUID,
-			treeID:       invalidTreeID,
 			wantErr:      true,
 		},
 		{
 			name:         "invalid request tree id",
 			requestUUID:  invalidTreeID + validUUID,
 			responseUUID: validUUID,
-			treeID:       invalidTreeID,
 			wantErr:      true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isExpectedResponseUUID(tt.requestUUID,
-				tt.responseUUID, tt.treeID); (got != nil) != tt.wantErr {
+			if got := isExpectedResponseUUID(tt.requestUUID, tt.responseUUID); (got != nil) != tt.wantErr {
 				t.Errorf("isExpectedResponseUUID() = %v, want %v", got, tt.wantErr)
 			}
 		})
