@@ -72,6 +72,7 @@ cosign manifest verify [flags]
       --offline                                                                                  only allow offline verification
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --payload string                                                                           payload path or remote URL
+      --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --registry-password string                                                                 registry basic auth password
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username

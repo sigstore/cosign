@@ -89,6 +89,10 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.CommonVerifyOptions.PrivateInfrastructure {
+				o.CommonVerifyOptions.IgnoreTlog = true
+			}
+
 			annotations, err := o.AnnotationsMap()
 			if err != nil {
 				return err
@@ -140,7 +144,7 @@ against the transparency log.`,
 
 			ctx := cmd.Context()
 
-			if o.CommonVerifyOptions.IgnoreTlog {
+			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "signature"))
 			}
 
@@ -201,6 +205,10 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.CommonVerifyOptions.PrivateInfrastructure {
+				o.CommonVerifyOptions.IgnoreTlog = true
+			}
+
 			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
 				CheckClaims:                  o.CheckClaims,
@@ -235,7 +243,7 @@ against the transparency log.`,
 
 			ctx := cmd.Context()
 
-			if o.CommonVerifyOptions.IgnoreTlog {
+			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "attestation"))
 			}
 
@@ -298,6 +306,10 @@ The blob may be specified as a path to a file or - for stdin.`,
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.CommonVerifyOptions.PrivateInfrastructure {
+				o.CommonVerifyOptions.IgnoreTlog = true
+			}
+
 			ko := options.KeyOpts{
 				KeyRef:               o.Key,
 				Sk:                   o.SecurityKey.Use,
@@ -326,7 +338,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 
 			ctx := cmd.Context()
 
-			if o.CommonVerifyOptions.IgnoreTlog {
+			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob"))
 			}
 
@@ -359,6 +371,10 @@ The blob may be specified as a path to a file.`,
 		Args:             cobra.MaximumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.CommonVerifyOptions.PrivateInfrastructure {
+				o.CommonVerifyOptions.IgnoreTlog = true
+			}
+
 			ko := options.KeyOpts{
 				KeyRef:               o.Key,
 				Sk:                   o.SecurityKey.Use,
@@ -397,7 +413,7 @@ The blob may be specified as a path to a file.`,
 
 			ctx := cmd.Context()
 
-			if o.CommonVerifyOptions.IgnoreTlog {
+			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob attestation"))
 			}
 

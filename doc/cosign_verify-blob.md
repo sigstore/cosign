@@ -77,6 +77,7 @@ cosign verify-blob [flags]
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
       --offline                                         only allow offline verification
+      --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp string                        path to RFC3161 timestamp FILE
       --sct string                                      path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
