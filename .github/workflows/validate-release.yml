@@ -31,9 +31,9 @@ jobs:
     steps:
       - name: Check Signature
         run: |
-          cosign verify ghcr.io/gythialy/golang-cross:v1.21.3-0@sha256:6e2c885532ad276195d3e3f269055fb2742c8963b231d097c467758dd425a632 \
+          cosign verify ghcr.io/gythialy/golang-cross:v1.21.4-0@sha256:d18679c199db258cac9876a80abf9aff69485cf8a324bf547521f3de4cf3a366 \
           --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.21.3-0"
+          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.21.4-0"
         env:
           TUF_ROOT: /tmp
 
@@ -43,7 +43,7 @@ jobs:
       - check-signature
 
     container:
-      image: ghcr.io/gythialy/golang-cross:v1.21.3-0@sha256:6e2c885532ad276195d3e3f269055fb2742c8963b231d097c467758dd425a632
+      image: ghcr.io/gythialy/golang-cross:v1.21.4-0@sha256:d18679c199db258cac9876a80abf9aff69485cf8a324bf547521f3de4cf3a366
 
     permissions: {}
 
@@ -117,7 +117,7 @@ jobs:
         run: make snapshot
         env:
           PROJECT_ID: honk-fake-project
-          RUNTIME_IMAGE: gcr.io/distroless/static:debug-nonroot
+          RUNTIME_IMAGE: gcr.io/distroless/static-debian12:nonroot
 
       - name: check binaries
         run: |

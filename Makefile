@@ -98,7 +98,7 @@ cross:
 golangci-lint:
 	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.2	 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2	 ;\
 
 lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
@@ -128,7 +128,7 @@ endef
 # ko build
 ##########
 .PHONY: ko
-ko: ko-cosign
+ko: ko-cosign ko-cosign-dev
 
 .PHONY: ko-cosign
 ko-cosign:
@@ -139,11 +139,29 @@ ko-cosign:
 		$(ARTIFACT_HUB_LABELS) --image-refs cosignImagerefs \
 		github.com/sigstore/cosign/v2/cmd/cosign
 
+.PHONY: ko-cosign-dev
+ko-cosign-dev:
+	$(create_kocache_path)
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KOCACHE=$(KOCACHE_PATH) KO_DEFAULTBASEIMAGE=gcr.io/distroless/static-debian12:debug-nonroot ko build --base-import-paths \
+		--platform=all --tags $(GIT_VERSION)-dev --tags $(GIT_HASH)-dev \
+		$(ARTIFACT_HUB_LABELS) --image-refs cosignDevImagerefs \
+		github.com/sigstore/cosign/v2/cmd/cosign
+
 .PHONY: ko-local
 ko-local:
 	$(create_kocache_path)
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		$(ARTIFACT_HUB_LABELS) \
+		github.com/sigstore/cosign/v2/cmd/cosign
+
+.PHONY: ko-local-dev
+ko-local-dev:
+	$(create_kocache_path)
+	KO_DOCKER_REPO=ko.local/cosign-dev LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KOCACHE=$(KOCACHE_PATH) KO_DEFAULTBASEIMAGE=gcr.io/distroless/static-debian12:debug-nonroot ko build --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		$(ARTIFACT_HUB_LABELS) \
 		github.com/sigstore/cosign/v2/cmd/cosign
