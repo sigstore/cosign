@@ -18,7 +18,7 @@ sign-release-images: ko
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --clean --timeout 120m --parallelism 1
+	LDFLAGS="$(LDFLAGS)" goreleaser release --skip=sign,publish --snapshot --clean --timeout 120m --parallelism 1
 
 ####################
 # copy image to GHCR
@@ -27,3 +27,4 @@ snapshot:
 .PHONY: copy-signed-release-to-ghcr
 copy-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:$(GIT_VERSION)
+	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION)-dev $(GHCR_PREFIX)/cosign:$(GIT_VERSION)-dev

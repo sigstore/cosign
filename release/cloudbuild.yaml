@@ -90,7 +90,7 @@ steps:
       - '-c'
       - |
         echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
-        && make copy-signed-release-to-ghcr || true
+        && make sign-release-images && make copy-signed-release-to-ghcr || true
 
 availableSecrets:
   secretManager:
