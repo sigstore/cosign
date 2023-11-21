@@ -21,8 +21,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -47,6 +50,26 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	if payloadPath == "-" {
 		payload = internal.NewHashReader(os.Stdin, sha256.New())
 	} else {
+		if strings.HasPrefix(payloadPath, "http://") || strings.HasPrefix(payloadPath, "https://") {
+			base := "downloadedArtifact"
+			resp, err := http.Get(payloadPath)
+			if err != nil {
+				panic(err)
+			}
+			defer resp.Body.Close()
+
+			fileHandle, err := os.OpenFile(base, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+			if err != nil {
+				panic(err)
+			}
+			defer fileHandle.Close()
+
+			_, err = io.Copy(fileHandle, resp.Body)
+			if err != nil {
+				panic(err)
+			}
+			payloadPath = base
+		}
 		ui.Infof(ctx, "Using payload from: %s", payloadPath)
 		f, err := os.Open(filepath.Clean(payloadPath))
 		if err != nil {

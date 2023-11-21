@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -93,8 +94,29 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if artifactPath == "-" {
 			artifact, err = io.ReadAll(os.Stdin)
 		} else {
+			if strings.HasPrefix(artifactPath, "http://") || strings.HasPrefix(artifactPath, "https://") {
+				base := "downloadedArtifact"
+				resp, err := http.Get(artifactPath)
+				if err != nil {
+					panic(err)
+				}
+				defer resp.Body.Close()
+
+				fileHandle, err := os.OpenFile(base, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+				if err != nil {
+					panic(err)
+				}
+				defer fileHandle.Close()
+
+				_, err = io.Copy(fileHandle, resp.Body)
+				if err != nil {
+					panic(err)
+				}
+				artifactPath = base
+			}
 			fmt.Fprintln(os.Stderr, "Using payload from:", artifactPath)
 			artifact, err = os.ReadFile(filepath.Clean(artifactPath))
+
 		}
 		if err != nil {
 			return err
