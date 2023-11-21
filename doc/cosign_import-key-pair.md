@@ -32,6 +32,7 @@ CAVEATS:
   -h, --help                       help for import-key-pair
   -k, --key string                 import key pair to use for signing
   -o, --output-key-prefix string   name used for outputted key pairs (default "import-cosign")
+  -y, --yes                        skip confirmation prompts for non-destructive operations
 ```
 
 ### Options inherited from parent commands
