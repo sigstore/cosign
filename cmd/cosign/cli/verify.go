@@ -143,7 +143,8 @@ against the transparency log.`,
 				v.NameOptions = append(v.NameOptions, name.Insecure)
 			}
 
-			ctx, _ := context.WithTimeout(cmd.Context(), ro.Timeout)
+			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
+			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "signature"))
@@ -242,7 +243,8 @@ against the transparency log.`,
 				return fmt.Errorf("please set the --max-worker flag to a value that is greater than 0")
 			}
 
-			ctx, _ := context.WithTimeout(cmd.Context(), ro.Timeout)
+			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
+			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "attestation"))
@@ -337,7 +339,8 @@ The blob may be specified as a path to a file or - for stdin.`,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 			}
 
-			ctx, _ := context.WithTimeout(cmd.Context(), ro.Timeout)
+			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
+			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob"))
@@ -412,7 +415,8 @@ The blob may be specified as a path to a file.`,
 				path = args[0]
 			}
 
-			ctx, _ := context.WithTimeout(cmd.Context(), ro.Timeout)
+			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
+			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
 				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob attestation"))
