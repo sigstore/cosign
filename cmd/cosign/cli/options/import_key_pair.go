@@ -43,5 +43,5 @@ func (o *ImportKeyPairOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().SetAnnotation("output-key-prefix", cobra.BashCompFilenameExt, []string{})
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
-		"skip confirmation prompts for non-destructive operations")
+		"skip confirmation prompts for overwriting existing key")
 }
