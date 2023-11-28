@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -33,14 +34,14 @@ var (
 )
 
 // nolint
-func ImportKeyPairCmd(ctx context.Context, keyVal string, outputKeyPrefixVal string, args []string) error {
-	keys, err := cosign.ImportKeyPair(keyVal, GetPass)
+func ImportKeyPairCmd(ctx context.Context, o options.ImportKeyPairOptions, args []string) error {
+	keys, err := cosign.ImportKeyPair(o.Key, GetPass)
 	if err != nil {
 		return err
 	}
 
-	privateKeyFileName := outputKeyPrefixVal + ".key"
-	publicKeyFileName := outputKeyPrefixVal + ".pub"
+	privateKeyFileName := o.OutputKeyPrefix + ".key"
+	publicKeyFileName := o.OutputKeyPrefix + ".pub"
 
 	fileExists, err := icos.FileExists(privateKeyFileName)
 	if err != nil {
@@ -49,8 +50,10 @@ func ImportKeyPairCmd(ctx context.Context, keyVal string, outputKeyPrefixVal str
 
 	if fileExists {
 		ui.Warnf(ctx, "File %s already exists. Overwrite?", privateKeyFileName)
-		if err := ui.ConfirmContinue(ctx); err != nil {
-			return err
+		if !o.SkipConfirmation {
+			if err := ui.ConfirmContinue(ctx); err != nil {
+				return err
+			}
 		}
 	}
 	// TODO: make sure the perms are locked down first.

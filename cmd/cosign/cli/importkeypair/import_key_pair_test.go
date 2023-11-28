@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
 )
 
@@ -62,7 +63,11 @@ func TestImportOfKeys(t *testing.T) {
 	// framework if there is no value set by the user when running the
 	// command.
 	outputtedKeyPairFileName := "my-test"
-	ImportKeyPairCmd(context.Background(), privateKeyFileName, outputtedKeyPairFileName, nil)
+	ImportKeyPairCmd(context.Background(), options.ImportKeyPairOptions{
+		Key:              privateKeyFileName,
+		OutputKeyPrefix:  outputtedKeyPairFileName,
+		SkipConfirmation: false,
+	}, nil)
 
 	// removes temporary RSA private key used for test
 	checkIfFileExistsThenDelete(privateKeyFileName, t)
