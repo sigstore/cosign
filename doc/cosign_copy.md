@@ -15,10 +15,10 @@ cosign copy [flags]
   cosign copy example.com/src:latest example.com/dest:latest
 
   # copy the signatures only
-  cosign copy --only=sign example.com/src example.com/dest
+  cosign copy --only=sig example.com/src example.com/dest
 
   # copy the signatures, attestations, sbom only
-  cosign copy --only=sign,att,sbom example.com/src example.com/dest
+  cosign copy --only=sig,att,sbom example.com/src example.com/dest
 
   # overwrite destination image and signatures
   cosign copy -f example.com/src example.com/dest

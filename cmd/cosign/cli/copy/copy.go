@@ -79,7 +79,13 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 		return err
 	}
 
+	onlyFlagSet := false
 	tags := parseOnlyOpt(copyOnly, sigOnly)
+	if len(tags) > 0 {
+		onlyFlagSet = true
+	} else {
+		tags = []tagMap{ociremote.SignatureTag, ociremote.AttestationTag, ociremote.SBOMTag}
+	}
 	if err := walk.SignedEntity(gctx, root, func(ctx context.Context, se oci.SignedEntity) error {
 		// Both of the SignedEntity types implement Digest()
 		h, err := se.Digest()
@@ -126,7 +132,7 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}
 
 	// If we're only copying sig/att/sbom, we have nothing left to do.
-	if len(tags) > 0 {
+	if onlyFlagSet {
 		return nil
 	}
 
@@ -174,17 +180,16 @@ func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Refer
 	return pusher.Push(ctx, dest, got)
 }
 
-func parseOnlyOpt(str string, sigOnly bool) []tagMap {
+func parseOnlyOpt(onlyFlag string, sigOnly bool) []tagMap {
 	var tags []tagMap
-	items := strings.Split(str, ",")
-	tagSet := sets.New(items...)
+	tagSet := sets.New(strings.Split(onlyFlag, ",")...)
 
 	if sigOnly {
-		fmt.Fprintf(os.Stderr, "--sig-only is deprecated, use --only=sign instead")
+		fmt.Fprintf(os.Stderr, "--sig-only is deprecated, use --only=sig instead")
 		tagSet.Insert("sign")
 	}
 
-	if tagSet.Has("sign") {
+	if tagSet.Has("sig") {
 		tags = append(tags, ociremote.SignatureTag)
 	}
 	if tagSet.Has("sbom") {
