@@ -1,3 +1,41 @@
+# v2.2.2
+
+v2.2.2 adds a new container with a shell, `gcr.io/projectsigstore/cosign:vx.y.z-dev`, in addition to the existing
+container `gcr.io/projectsigstore/cosign:vx.y.z` without a shell.
+
+For private deployments, we have also added an alias for `--insecure-skip-log`, `--private-infrastructure`.
+
+## Bug Fixes
+
+* chore(deps): bump github.com/sigstore/sigstore from 1.7.5 to 1.7.6 (#3411) which fixes a bug with using Azure KMS
+* Don't require CT log keys if using a key/sk (#3415)
+* Fix copy without any flag set (#3409)
+* Update cosign generate cmd to not include newline (#3393)
+* Fix idempotency error with signing (#3371)
+
+## Features
+
+* Add `--yes` flag `cosign import-key-pair` to skip the overwrite confirmation. (#3383)
+* Use the timeout flag value in verify* commands. (#3391)
+* add --private-infrastructure flag (#3369)
+
+## Container Updates
+
+* Bump builder image to use go1.21.4 and add new cosign image tags with shell  (#3373)
+
+## Documentation
+
+* Update SBOM_SPEC.md (#3358)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior
+* Dylan Richardson
+* Hayden B
+* Lily Sturmann
+* Nikos Fotiou
+* Yonghe Zhao
+
 # v2.2.1
 **Note: This release comes with a fix for CVE-2023-46737 described in this [Github Security Advisory](https://github.com/sigstore/cosign/security/advisories/GHSA-vfp6-jrw2-99g9). Please upgrade to this release ASAP**
 
