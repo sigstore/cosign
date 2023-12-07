@@ -35,6 +35,12 @@ const (
 
 	// CosignVulnProvenanceV01 specifies the type of VulnerabilityScan Predicate
 	CosignVulnProvenanceV01 = "https://cosign.sigstore.dev/attestation/vuln/v1"
+
+	// OpenVexNamespace holds the URI of the OpenVEX context to identify its
+	// predicate type. More info about the specification can be found at
+	// https://github.com/openvex/spec and the attestation spec is found here:
+	// https://github.com/openvex/spec/blob/main/ATTESTING.md
+	OpenVexNamespace = "https://openvex.dev/ns"
 )
 
 // CosignPredicate specifies the format of the Custom Predicate.
@@ -124,6 +130,8 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
 	case "vuln":
 		return generateVulnStatement(predicate, opts.Digest, opts.Repo)
+	case "openvex":
+		return generateOpenVexStatement(predicate, opts.Digest, opts.Repo)
 	default:
 		stamp := timestamp(opts)
 		predicateType := customType(opts)
@@ -248,6 +256,17 @@ func generateLinkStatement(rawPayload []byte, digest string, repo string) (inter
 	return in_toto.LinkStatement{
 		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateLinkV1),
 		Predicate:       link,
+	}, nil
+}
+
+func generateOpenVexStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
+	var data interface{}
+	if err := json.Unmarshal(rawPayload, &data); err != nil {
+		return nil, err
+	}
+	return in_toto.Statement{
+		StatementHeader: generateStatementHeader(digest, repo, OpenVexNamespace),
+		Predicate:       data,
 	}, nil
 }
 
