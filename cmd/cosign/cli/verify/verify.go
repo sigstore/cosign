@@ -502,7 +502,7 @@ func keylessVerification(keyRef string, sk bool) bool {
 	return true
 }
 
-func keylessVerificationWithSCTEnabled(IgnoreSCT bool, keyRef string, sk bool, CertChain string) bool {
+func keylessVerificationWithSCTEnabled(ignoreSCT bool, keyRef string, sk bool, certChain string) bool {
 	rootEnv := env.Getenv(env.VariableSigstoreRootFile)
 	if keyRef != "" {
 		return false
@@ -510,10 +510,10 @@ func keylessVerificationWithSCTEnabled(IgnoreSCT bool, keyRef string, sk bool, C
 	if sk {
 		return false
 	}
-	if IgnoreSCT && (CertChain != "" || rootEnv != "") {
+	if ignoreSCT && (certChain != "" || rootEnv != "") {
 		return false
 	}
-	if IgnoreSCT {
+	if ignoreSCT {
 		return false
 	}
 	return true
