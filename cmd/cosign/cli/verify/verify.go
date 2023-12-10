@@ -38,6 +38,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci"
@@ -207,7 +208,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	certRef := c.CertRef
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if !c.IgnoreSCT || keylessVerification(c.KeyRef, c.Sk) {
+	if keylessVerificationWithSCTEnabled(c.IgnoreSCT, c.KeyRef, c.Sk, c.CertChain) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
@@ -496,6 +497,23 @@ func keylessVerification(keyRef string, sk bool) bool {
 		return false
 	}
 	if sk {
+		return false
+	}
+	return true
+}
+
+func keylessVerificationWithSCTEnabled(IgnoreSCT bool, keyRef string, sk bool, CertChain string) bool {
+	rootEnv := env.Getenv(env.VariableSigstoreRootFile)
+	if keyRef != "" {
+		return false
+	}
+	if sk {
+		return false
+	}
+	if IgnoreSCT && (CertChain != "" || rootEnv != "") {
+		return false
+	}
+	if IgnoreSCT {
 		return false
 	}
 	return true
