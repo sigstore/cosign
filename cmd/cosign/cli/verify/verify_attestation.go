@@ -111,7 +111,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if !c.IgnoreSCT || keylessVerification(c.KeyRef, c.Sk) {
+	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)

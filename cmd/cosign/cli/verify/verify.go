@@ -207,7 +207,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	certRef := c.CertRef
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if !c.IgnoreSCT || keylessVerification(c.KeyRef, c.Sk) {
+	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
@@ -496,6 +496,19 @@ func keylessVerification(keyRef string, sk bool) bool {
 		return false
 	}
 	if sk {
+		return false
+	}
+	return true
+}
+
+func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
+	if keyRef != "" {
+		return false
+	}
+	if sk {
+		return false
+	}
+	if ignoreSCT {
 		return false
 	}
 	return true
