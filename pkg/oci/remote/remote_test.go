@@ -147,3 +147,59 @@ func TestTagMethodErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestDockercontentDigest(t *testing.T) {
+	rg := remoteGet
+	defer func() {
+		remoteGet = rg
+	}()
+	remoteGet = func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error) {
+		return &remote.Descriptor{
+			Descriptor: v1.Descriptor{
+				Digest: v1.Hash{
+					Algorithm: "sha256",
+					// As of 2021-09-20:
+					// crane digest gcr.io/distroless/static:nonroot
+					Hex: "be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4",
+				},
+			},
+		}, nil
+	}
+
+	repo, err := name.NewRepository("gcr.io/distroless/static")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	tests := []struct {
+		name    string
+		tag     name.Tag
+		wantTag name.Tag
+	}{
+		{
+			name:    "docker content digest for tag",
+			tag:     name.MustParseReference("gcr.io/distroless/static:sha256-be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4.sig").(name.Tag),
+			wantTag: repo.Tag("sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4"),
+		},
+		{
+			name:    "docker content digest for attestation",
+			tag:     name.MustParseReference("gcr.io/distroless/static:sha256-be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4.att").(name.Tag),
+			wantTag: repo.Tag("sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4"),
+		},
+		{
+			name:    "docker content digest for SBOM",
+			tag:     name.MustParseReference("gcr.io/distroless/static:sha256-be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4.sbom").(name.Tag),
+			wantTag: repo.Tag("sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotTag, err := DockerContentDigest(test.tag)
+			if err != nil {
+				t.Fatalf("fn() = %v", err)
+			}
+			if gotTag != test.wantTag {
+				t.Errorf("fn() = %s, wanted %s", gotTag.String(), test.wantTag.String())
+			}
+		})
+	}
+}
