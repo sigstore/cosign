@@ -27,8 +27,6 @@ import (
 	"sigs.k8s.io/release-utils/version"
 )
 
-// const cosignDescription = "cosign: A tool for Container Signing, Verification and Storage in an OCI registry."
-
 var (
 	expectedVersionInfo = version.GetVersionInfo()
 	reGitVersion        = regexp.MustCompile(fmt.Sprintf("\nGitVersion:\\s+%s\n", expectedVersionInfo.GitVersion))
