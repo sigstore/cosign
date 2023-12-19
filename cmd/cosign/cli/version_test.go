@@ -15,41 +15,85 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/release-utils/version"
 )
 
-const cosignDescription = "cosign: A tool for Container Signing, Verification and Storage in an OCI registry."
+// const cosignDescription = "cosign: A tool for Container Signing, Verification and Storage in an OCI registry."
 
-func TestVersionOutputStream(t *testing.T) {
+var (
+	expectedVersionInfo = version.GetVersionInfo()
+	reGitVersion        = regexp.MustCompile(fmt.Sprintf("\nGitVersion:\\s+%s\n", expectedVersionInfo.GitVersion))
+	reGitCommmit        = regexp.MustCompile(fmt.Sprintf("GitCommit:\\s+%s\n", expectedVersionInfo.GitCommit))
+	reBuildDate         = regexp.MustCompile(fmt.Sprintf("BuildDate:\\s+%s\n", expectedVersionInfo.BuildDate))
+	reGoVersion         = regexp.MustCompile(fmt.Sprintf("GoVersion:\\s+%s\n", expectedVersionInfo.GoVersion))
+	reCompiler          = regexp.MustCompile(fmt.Sprintf("Compiler:\\s+%s\n", expectedVersionInfo.Compiler))
+	rePlatform          = regexp.MustCompile(fmt.Sprintf("Platform:\\s+%s\n", expectedVersionInfo.Platform))
+)
+
+func getVersionSTDOUT(json bool) (bytes.Buffer, error) {
 	command := New()
-	command.SetArgs([]string{"version"})
+	if json {
+		command.SetArgs([]string{"version", "--json"})
+	} else {
+		command.SetArgs([]string{"version"})
+
+	}
 	// testing approach inspired by https://github.com/zenizh/go-capturer/blob/master/main.go
 	reader, writer, err := os.Pipe()
 	if err != nil {
-		t.Fatal("failed to create a pipe for testing os.Stdout")
+		return bytes.Buffer{}, errors.New("failed to create a pipe for testing os.Stdout")
 	}
 	stdout := os.Stdout
 	os.Stdout = writer
 	err = command.Execute()
 	os.Stdout = stdout
 	if err != nil {
-		t.Fatal("version is expected to run with a")
+		return bytes.Buffer{}, errors.New("version is expected to run with a")
 	}
 	writer.Close()
 
 	var buffer bytes.Buffer
 	_, err = io.Copy(&buffer, reader)
-	if err != nil {
-		t.Fatal("failed to copy the contents of os.Stdout")
-	}
-	output := buffer.String()
-	if !strings.Contains(output, cosignDescription) {
-		fmt.Print(output)
-		t.Fatal("version output doesn't contain the expected format")
-	}
+	return buffer, err
+}
 
+func testVersionASCII(t *testing.T) {
+	buffer, err := getVersionSTDOUT(false)
+	output := buffer.String()
+	assert.NoError(t, err)
+	assert.Regexp(t, reGitVersion, output, "output doesn't contain the Git version tag")
+	assert.Regexp(t, reGitCommmit, output, "output doesn't contain the Git commit hash")
+	assert.Regexp(t, reBuildDate, output, "output doesn't contain the build date")
+	assert.Regexp(t, reGoVersion, output, "output doesn't contain the Go version")
+	assert.Regexp(t, reCompiler, output, "output doesn't contain the compiler name")
+	assert.Regexp(t, rePlatform, output, "output doesn't contain the platform name")
+}
+
+func testVersionJSON(t *testing.T) {
+	buffer, err := getVersionSTDOUT(true)
+	assert.NoError(t, err)
+	output := buffer.Bytes()
+	var actualVersionInfo version.Info
+	err = json.Unmarshal(output, &actualVersionInfo)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedVersionInfo.GitVersion, actualVersionInfo.GitVersion)
+	assert.Equal(t, expectedVersionInfo.GitCommit, actualVersionInfo.GitCommit)
+	assert.Equal(t, expectedVersionInfo.BuildDate, actualVersionInfo.BuildDate)
+	assert.Equal(t, expectedVersionInfo.GoVersion, actualVersionInfo.GoVersion)
+	assert.Equal(t, expectedVersionInfo.Compiler, actualVersionInfo.Compiler)
+	assert.Equal(t, expectedVersionInfo.Platform, actualVersionInfo.Platform)
+}
+
+func TestVersionOutput(t *testing.T) {
+	t.Run("ASCII", testVersionASCII)
+	t.Run("JSON", testVersionJSON)
 }
