@@ -43,7 +43,6 @@ func getVersionSTDOUT(json bool) (bytes.Buffer, error) {
 		command.SetArgs([]string{"version", "--json"})
 	} else {
 		command.SetArgs([]string{"version"})
-
 	}
 	// testing approach inspired by https://github.com/zenizh/go-capturer/blob/master/main.go
 	reader, writer, err := os.Pipe()
