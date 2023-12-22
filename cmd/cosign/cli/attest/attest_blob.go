@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -182,7 +183,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return err
 		}
-		entry, err := cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
+		var entry *models.LogEntryAnon
+		if c.PredicateType == "intoto" {
+			entry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+		} else {
+			entry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
+		}
+
 		if err != nil {
 			return err
 		}
