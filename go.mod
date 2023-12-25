@@ -29,10 +29,10 @@ require (
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 	github.com/open-policy-agent/opa v0.60.0
 	github.com/pkg/errors v0.9.1
-	github.com/secure-systems-lab/go-securesystemslib v0.7.0
+	github.com/secure-systems-lab/go-securesystemslib v0.8.0
 	github.com/sigstore/fulcio v1.4.3
 	github.com/sigstore/rekor v1.3.4
-	github.com/sigstore/sigstore v1.7.6
+	github.com/sigstore/sigstore v1.8.0
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.6
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.6
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.6
@@ -128,7 +128,7 @@ require (
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
-	github.com/coreos/go-oidc/v3 v3.7.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.9.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect

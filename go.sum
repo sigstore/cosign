@@ -211,8 +211,8 @@ github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be h1:J5BL
 github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be/go.mod h1:mk5IQ+Y0ZeO87b858TlA645sVcEcbiX6YqP98kt+7+w=
 github.com/containerd/stargz-snapshotter/estargz v0.14.3 h1:OqlDCK3ZVUO6C3B/5FSkDwbkEETK84kQgEeFwDC+62k=
 github.com/containerd/stargz-snapshotter/estargz v0.14.3/go.mod h1:KY//uOCIkSuNAHhJogcZtrNHdKrA99/FCCRjE3HD36o=
-github.com/coreos/go-oidc/v3 v3.7.0 h1:FTdj0uexT4diYIPlF4yoFVI5MRO1r5+SEcIpEw9vC0o=
-github.com/coreos/go-oidc/v3 v3.7.0/go.mod h1:yQzSCqBnK3e6Fs5l+f5i0F8Kwf0zpH9bPEsbY00KanM=
+github.com/coreos/go-oidc/v3 v3.9.0 h1:0J/ogVOd4y8P0f0xUh8l9t07xRP/d8tccvjHl2dcsSo=
+github.com/coreos/go-oidc/v3 v3.9.0/go.mod h1:rTKz2PYwftcrtoCzV5g5kvfJoWcm0Mk8AF8y1iAQro4=
 github.com/cpuguy83/go-md2man/v2 v2.0.3 h1:qMCsGGgs+MAzDFyp9LpAe1Lqy/fY/qCovCm0qnXZOBM=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
@@ -621,8 +621,8 @@ github.com/sassoftware/relic v7.2.1+incompatible h1:Pwyh1F3I0r4clFJXkSI8bOyJINGq
 github.com/sassoftware/relic v7.2.1+incompatible/go.mod h1:CWfAxv73/iLZ17rbyhIEq3K9hs5w6FpNMdUT//qR+zk=
 github.com/sassoftware/relic/v7 v7.6.1 h1:O5s8ewCgq5QYNpv45dK4u6IpBmDM9RIcsbf/G1uXepQ=
 github.com/sassoftware/relic/v7 v7.6.1/go.mod h1:NxwtWxWxlUa9as2qZi635Ye6bBT/tGnMALLq7dSfOOU=
-github.com/secure-systems-lab/go-securesystemslib v0.7.0 h1:OwvJ5jQf9LnIAS83waAjPbcMsODrTQUpJ02eNLUoxBg=
-github.com/secure-systems-lab/go-securesystemslib v0.7.0/go.mod h1:/2gYnlnHVQ6xeGtfIqFy7Do03K4cdCY0A/GlJLDKLHI=
+github.com/secure-systems-lab/go-securesystemslib v0.8.0 h1:mr5An6X45Kb2nddcFlbmfHkLguCE9laoZCUzEEpIZXA=
+github.com/secure-systems-lab/go-securesystemslib v0.8.0/go.mod h1:UH2VZVuJfCYR8WgMlCU1uFsOUU+KeyrTWcSS73NBOzU=
 github.com/segmentio/ksuid v1.0.4 h1:sBo2BdShXjmcugAMwjugoGUdUV0pcxY5mW4xKRn3v4c=
 github.com/segmentio/ksuid v1.0.4/go.mod h1:/XUiZBD3kVx5SmUOl55voK5yeAbBNNIed+2O73XgrPE=
 github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh5dkI=
@@ -631,8 +631,8 @@ github.com/sigstore/fulcio v1.4.3 h1:9JcUCZjjVhRF9fmhVuz6i1RyhCc/EGCD7MOl+iqCJLQ
 github.com/sigstore/fulcio v1.4.3/go.mod h1:BQPWo7cfxmJwgaHlphUHUpFkp5+YxeJes82oo39m5og=
 github.com/sigstore/rekor v1.3.4 h1:RGIia1iOZU7fOiiP2UY/WFYhhp50S5aUm7YrM8aiA6E=
 github.com/sigstore/rekor v1.3.4/go.mod h1:1GubPVO2yO+K0m0wt/3SHFqnilr/hWbsjSOe7Vzxrlg=
-github.com/sigstore/sigstore v1.7.6 h1:zB0woXx+3Bp7dk7AjklHF1VhXBdCs84VXkZbp0IHLv8=
-github.com/sigstore/sigstore v1.7.6/go.mod h1:FJE+NpEZIs4QKqZl4B2RtaVLVDcDtocAwTiNlexeBkY=
+github.com/sigstore/sigstore v1.8.0 h1:sSRWXv1JiDsK4T2wNWVYcvKCgxcSrhQ/QUJxsfCO4OM=
+github.com/sigstore/sigstore v1.8.0/go.mod h1:l12B1gFlLIpBIVeqk/q1Lb+6YSOGNuN3xLExIjYH+qc=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.6 h1:WzZExOcFanrFfCi7SUgkBtJicWnSNziBD9nSSQIrqhc=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.6/go.mod h1:3zOHOLHnCE6EXyVH+6Z/lC9O1RDsbmR045NQ1DogiHw=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.6 h1:wsPt9kNXF1ZZyae2wO35NLsK+cjWqPGpuPaDdXzRe0g=
