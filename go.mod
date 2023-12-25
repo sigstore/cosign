@@ -35,7 +35,7 @@ require (
 	github.com/sigstore/sigstore v1.8.0
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.6
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.6
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.6
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.0
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.6
 	github.com/sigstore/timestamp-authority v1.2.0
 	github.com/spf13/cobra v1.8.0
@@ -184,7 +184,7 @@ require (
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20230811132847-661be99b8267 // indirect
-	github.com/jellydator/ttlcache/v3 v3.1.0 // indirect
+	github.com/jellydator/ttlcache/v3 v3.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
