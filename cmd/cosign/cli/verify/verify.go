@@ -60,6 +60,7 @@ type VerifyCommand struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
+	CertBundle                   string
 	CertChain                    string
 	CertOidcProvider             string
 	IgnoreSCT                    bool

@@ -33,6 +33,7 @@ type CertVerifyOptions struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
+	CertBundle                   string
 	CertChain                    string
 	SCT                          string
 	IgnoreSCT                    bool
@@ -75,12 +76,18 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.CertGithubWorkflowRef, "certificate-github-workflow-ref", "",
 		"contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.")
 	// -- Cert extensions end --
+	cmd.Flags().StringVar(&o.CertBundle, "certificate-bundle", "",
+		"path to a bundle file of CA certificates in PEM format which will be needed "+
+			"when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.")
+	_ = cmd.Flags().SetAnnotation("certificate-bundle", cobra.BashCompFilenameExt, []string{"cert"})
+
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
-			"signing certificate and end with the root certificate")
+			"signing certificate and end with the root certificate. Conflicts with --certificate-bundle.")
 	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
+	cmd.MarkFlagsMutuallyExclusive("certificate-bundle", "certificate-chain")
 
 	cmd.Flags().StringVar(&o.SCT, "sct", "",
 		"path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. "+
