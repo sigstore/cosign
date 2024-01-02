@@ -71,15 +71,16 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 type AttestCommand struct {
 	options.KeyOpts
 	options.RegistryOptions
-	CertPath      string
-	CertChainPath string
-	NoUpload      bool
-	PredicatePath string
-	PredicateType string
-	Replace       bool
-	Timeout       time.Duration
-	TlogUpload    bool
-	TSAServerURL  string
+	CertPath         string
+	CertChainPath    string
+	NoUpload         bool
+	PredicatePath    string
+	PredicateType    string
+	Replace          bool
+	Timeout          time.Duration
+	TlogUpload       bool
+	TSAServerURL     string
+	StoreAttestation bool
 }
 
 // nolint
@@ -197,7 +198,12 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 	if shouldUpload {
 		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
+			if c.StoreAttestation && c.RekorURL != options.DefaultRekorURL {
+				return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
+			} else {
+				return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
+			}
+
 		})
 		if err != nil {
 			return err

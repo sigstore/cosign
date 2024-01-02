@@ -63,6 +63,8 @@ type AttestBlobCommand struct {
 	OutputSignature   string
 	OutputAttestation string
 	OutputCertificate string
+
+	StoreAttestation bool
 }
 
 // nolint
@@ -184,7 +186,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return err
 		}
 		var entry *models.LogEntryAnon
-		if c.PredicateType == "intoto" {
+		if c.StoreAttestation && c.RekorURL != options.DefaultRekorURL {
 			entry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
 		} else {
 			entry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
