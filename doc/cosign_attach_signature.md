@@ -43,7 +43,7 @@ cosign attach signature [flags]
       --registry-password string                                                                 registry basic auth password
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --rekor-response string                                                                    path to the rekor bundle
+      --rekor-response bundle.json                                                               NOTE: the path can be either bundle, i.e. bundle.json which can be retrieve as o/p of command `cosign sign --bundle < bundle.json >` or rekor bundle formatted from rekor-response.
       --signature string                                                                         path to the signature, or {-} for stdin
       --tsr string                                                                               path to the Time Stamped Signature Response from RFC3161 compliant TSA
 ```

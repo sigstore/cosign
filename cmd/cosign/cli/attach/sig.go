@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, rekorBundleRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, rekorResponseRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -98,20 +99,31 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		}
 	}
 	tsBundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
-
-	if rekorBundleRef != "" {
-		rekorBundleByte, err := os.ReadFile(filepath.Clean(rekorBundleRef))
+	if rekorResponseRef != "" {
+		rekorResponseByte, err := os.ReadFile(filepath.Clean(rekorResponseRef))
 		if err != nil {
 			return err
 		}
 
 		var localCosignPayload cosign.LocalSignedPayload
-		err = json.Unmarshal(rekorBundleByte, &localCosignPayload)
-		if err != nil {
+		if err := json.Unmarshal(rekorResponseByte, &localCosignPayload); err == nil {
+			rekorBundle = localCosignPayload.Bundle
+			if rekorBundle == nil && localCosignPayload.Cert == "" && localCosignPayload.Base64Signature == "" {
+				fmt.Printf("rekor-bundle is passed")
+				err = json.Unmarshal(rekorResponseByte, &rekorBundle)
+				if err != nil {
+					return err
+				}
+			} else {
+				fmt.Printf("Bundle is passed")
+			}
+		} else {
 			return err
 		}
 
-		rekorBundle = localCosignPayload.Bundle
+		if rekorBundle == nil {
+			return fmt.Errorf("unable to parse Rekor response to attach to image")
+		}
 	}
 
 	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(tsBundle), mutate.WithBundle(rekorBundle))

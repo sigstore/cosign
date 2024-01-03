@@ -236,7 +236,6 @@ func TestSignVerifyClean(t *testing.T) {
 }
 
 func TestImportSignVerifyClean(t *testing.T) {
-
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -968,31 +967,47 @@ func TestAttachWithRekorBundle(t *testing.T) {
 
 	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
 
+	localRekorBundle := &bundle.RekorBundle{
+		SignedEntryTimestamp: strfmt.Base64("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
+		Payload: bundle.RekorPayload{
+			Body:           "REMOVED",
+			IntegratedTime: 1631646761,
+			LogIndex:       693591,
+			LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
+		},
+	}
+
 	localPayload := cosign.LocalSignedPayload{
 		Base64Signature: b64signature,
 		Cert:            string(pemLeaf),
-		Bundle: &bundle.RekorBundle{
-			SignedEntryTimestamp: strfmt.Base64("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
-			Payload: bundle.RekorPayload{
-				Body:           "REMOVED",
-				IntegratedTime: 1631646761,
-				LogIndex:       693591,
-				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
-			},
-		},
+		Bundle:          localRekorBundle,
 	}
 
 	jsonBundle, err := json.Marshal(localPayload)
 	if err != nil {
 		t.Fatal(err)
 	}
+	jsonRekorBundle, err := json.Marshal(localRekorBundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	bundlePath := filepath.Join(td, "bundle.json")
 	if err := os.WriteFile(bundlePath, jsonBundle, 0644); err != nil {
 		t.Fatal(err)
 	}
 
+	rekorBundlePath := filepath.Join(td, "bundle2.json")
+	if err := os.WriteFile(rekorBundlePath, jsonRekorBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	// Upload it!
 	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", bundlePath, imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", rekorBundlePath, imgName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1615,7 +1630,6 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 }
 
 func importKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
-
 	const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAx5piWVlE62NnZ0UzJ8Z6oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+
 25yq6P+0JU/Qvr9veOGEb3R/J9u8JBo+hv2i5X8OtgvP2V2pi6f1s6vK7L0+6uRb
@@ -1675,7 +1689,6 @@ qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
 		t.Fatal(err)
 	}
 	return keys, privKeyPath, pubKeyPath
-
 }
 
 func TestUploadDownload(t *testing.T) {
