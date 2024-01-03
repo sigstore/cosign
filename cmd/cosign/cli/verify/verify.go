@@ -345,7 +345,11 @@ func PrintVerification(ctx context.Context, verified []oci.Signature, output str
 		for _, sig := range verified {
 			if cert, err := sig.Cert(); err == nil && cert != nil {
 				ce := cosign.CertExtensions{Cert: cert}
-				ui.Infof(ctx, "Certificate subject: %s", sigs.CertSubject(cert))
+				sub := ""
+				if sans := cryptoutils.GetSubjectAlternateNames(cert); len(sans) > 0 {
+					sub = sans[0]
+				}
+				ui.Infof(ctx, "Certificate subject: %s", sub)
 				if issuerURL := ce.GetIssuer(); issuerURL != "" {
 					ui.Infof(ctx, "Certificate issuer URL: %s", issuerURL)
 				}
@@ -398,7 +402,11 @@ func PrintVerification(ctx context.Context, verified []oci.Signature, output str
 				if ss.Optional == nil {
 					ss.Optional = make(map[string]interface{})
 				}
-				ss.Optional["Subject"] = sigs.CertSubject(cert)
+				sub := ""
+				if sans := cryptoutils.GetSubjectAlternateNames(cert); len(sans) > 0 {
+					sub = sans[0]
+				}
+				ss.Optional["Subject"] = sub
 				if issuerURL := ce.GetIssuer(); issuerURL != "" {
 					ss.Optional["Issuer"] = issuerURL
 					ss.Optional[cosign.CertExtensionOIDCIssuer] = issuerURL
