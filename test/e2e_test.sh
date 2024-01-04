@@ -52,6 +52,16 @@ popd
 go build -o cosign ./cmd/cosign
 go test -tags=e2e -race $(go list ./... | grep -v third_party/)
 
+# Test on a private registry
+echo "testing sign/verify/clean on private registry"
+cleanup() {
+    docker rm -f registry
+}
+trap cleanup EXIT
+docker run -d -p 5000:5000 --restart always -e REGISTRY_STORAGE_DELETE_ENABLED=true --name registry registry:latest
+export COSIGN_TEST_REPO=localhost:5000
+go test -tags=e2e -v ./test/... -run TestSignVerifyClean
+
 # Test `cosign dockerfile verify`
 ./cosign dockerfile verify ./test/testdata/single_stage.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
 if (./cosign dockerfile verify ./test/testdata/unsigned_build_stage.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
