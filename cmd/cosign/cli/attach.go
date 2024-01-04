@@ -50,7 +50,7 @@ func attachSignature() *cobra.Command {
 		cosign attach signature command attaches payload, signature, rekor-bundle, etc in a new layer of provided image.
 		
 		# Attach signature can attach payload to a supplied image
-		cosign attach signature --payload <payload.json>  $IMAGE 
+		cosign attach signature --payload <payload.json>  $IMAGE
 
 		# Attach signature can attach payload, signature to a supplied image
 		cosign attach signature --payload <payload.json> --signature <base64 signature file> $IMAGE
