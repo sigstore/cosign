@@ -43,9 +43,26 @@ func attachSignature() *cobra.Command {
 	o := &options.AttachSignatureOptions{}
 
 	cmd := &cobra.Command{
-		Use:              "signature",
-		Short:            "Attach signatures to the supplied container image",
-		Example:          "  cosign attach signature <image uri>",
+		Use:   "signature",
+		Short: "Attach signatures to the supplied container image",
+		Example: `  cosign attach signature [--payload <path>] [--signature < path>] [--rekor-response < path>] <image uri>
+
+		cosign attach signature command attaches payload, signature, rekor-bundle, etc in a new layer of provided image.
+		
+		# Attach signature can attach payload to a supplied image
+		cosign attach signature --payload <payload.json>  $IMAGE
+
+		# Attach signature can attach payload, signature to a supplied image
+		cosign attach signature --payload <payload.json> --signature <base64 signature file> $IMAGE
+
+		# Attach signature can attach payload, signature, time stamped response to a supplied image
+		cosign attach signature --payload <payload.json> --signature <base64 signature file> --tsr=<file> $IMAGE
+
+		# Attach signature attaches payload, signature and rekor-bundle via rekor-response to a supplied image
+		cosign attach signature --payload <payload.json> --signature <base64 signature file>  --rekor-response <proper rekor-response format file> $IMAGE
+
+		# Attach signature attaches payload, signature and rekor-bundle directly to a supplied image
+		cosign attach signature --payload <payload.json> --signature <base64 signature file>  --rekor-response <rekor-bundle file> $IMAGE`,
 		PersistentPreRun: options.BindViper,
 		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
