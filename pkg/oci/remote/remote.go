@@ -60,6 +60,10 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	o := makeOptions(ref.Context(), options...)
 
 	got, err := remoteGet(ref, o.ROpt...)
+	if err != nil {
+		fmt.Println("Error in remoteGet:", err)
+		return nil, err
+	}
 	var te *transport.Error
 	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
 		return nil, NewEntityNotFoundError(err)
