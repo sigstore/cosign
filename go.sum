@@ -163,10 +163,10 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdnnjpJbkM4JQ=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
-github.com/buildkite/agent/v3 v3.59.0 h1:4+4gnl5DAgmDXs2JomzlVcYAiWJWkb6U9631Nh3wr0A=
-github.com/buildkite/agent/v3 v3.59.0/go.mod h1:htNkEYNyaN7sNK63I1AIMJ30kR3l7IwxF5OCDh25jHY=
-github.com/buildkite/go-pipeline v0.2.0 h1:+abnWSScMhJscxYgom2z0dzuXbjnYOz4RPeHmrfy31k=
-github.com/buildkite/go-pipeline v0.2.0/go.mod h1:Wkiq1SFvic/GcDem1mg4o8BrtA8JJubTlsBMLPHYoSQ=
+github.com/buildkite/agent/v3 v3.61.0 h1:fyVH6CQAb7Cc6rWg3ks/CgB+JqLArtD2yxdb54/xDsc=
+github.com/buildkite/agent/v3 v3.61.0/go.mod h1:gSues23/7zuPIyPHTA6GxgTfmeXkEzwMlX3L4O0Szcs=
+github.com/buildkite/go-pipeline v0.3.2 h1:SW4EaXNwfjow7xDRPGgX0Rcx+dPj5C1kV9LKCLjWGtM=
+github.com/buildkite/go-pipeline v0.3.2/go.mod h1:iY5jzs3Afc8yHg6KDUcu3EJVkfaUkd9x/v/OH98qyUA=
 github.com/buildkite/interpolate v0.0.0-20200526001904-07f35b4ae251 h1:k6UDF1uPYOs0iy1HPeotNa155qXRWrzKnqAaGXHLZCE=
 github.com/buildkite/interpolate v0.0.0-20200526001904-07f35b4ae251/go.mod h1:gbPR1gPu9dB96mucYIR7T3B7p/78hRVSOuzIWLHK2Y4=
 github.com/bwesterb/go-ristretto v1.2.3/go.mod h1:fUIoIZaG73pV5biE2Blr2xEzDoMj7NFEuV9ekS419A0=
@@ -214,8 +214,8 @@ github.com/coreos/go-oidc/v3 v3.9.0 h1:0J/ogVOd4y8P0f0xUh8l9t07xRP/d8tccvjHl2dcs
 github.com/coreos/go-oidc/v3 v3.9.0/go.mod h1:rTKz2PYwftcrtoCzV5g5kvfJoWcm0Mk8AF8y1iAQro4=
 github.com/cpuguy83/go-md2man/v2 v2.0.3 h1:qMCsGGgs+MAzDFyp9LpAe1Lqy/fY/qCovCm0qnXZOBM=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
-github.com/creack/pty v1.1.20 h1:VIPb/a2s17qNeQgDnkfZC35RScx+blkKF8GV68n80J4=
-github.com/creack/pty v1.1.20/go.mod h1:MOBLtS5ELjhRRrroQr9kyvTxUAFNvYEK993ew/Vr4O4=
+github.com/creack/pty v1.1.21 h1:1/QdRyBaHHJP61QkWMXlOIBfsgdDeeKfK8SYVUWJKf0=
+github.com/creack/pty v1.1.21/go.mod h1:MOBLtS5ELjhRRrroQr9kyvTxUAFNvYEK993ew/Vr4O4=
 github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46 h1:2Dx4IHfC1yHWI12AxQDJM1QbRCDfk6M+blLzlZCXdrc=
 github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46/go.mod h1:uzvlm1mxhHkdfqitSA92i7Se+S9ksOn3a3qmv/kyOCw=
 github.com/danieljoos/wincred v1.2.0 h1:ozqKHaLK0W/ii4KVbbvluM91W2H3Sh0BncbUNPS7jLE=
