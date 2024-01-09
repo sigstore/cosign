@@ -59,7 +59,7 @@ type VerifyCommand struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
-	CertBundle                   string
+	CARoots                      string
 	CertChain                    string
 	CertOidcProvider             string
 	IgnoreSCT                    bool
@@ -174,29 +174,47 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
-		if c.CertChain != "" {
-			chain, err := loadCertChainFromFileOrURL(c.CertChain)
-			if err != nil {
-				return err
-			}
-			co.RootCerts = x509.NewCertPool()
-			co.RootCerts.AddCert(chain[len(chain)-1])
-			if len(chain) > 1 {
-				co.IntermediateCerts = x509.NewCertPool()
-				for _, cert := range chain[:len(chain)-1] {
-					co.IntermediateCerts.AddCert(cert)
+		switch {
+		case c.CertChain != "":
+			{
+				chain, err := loadCertChainFromFileOrURL(c.CertChain)
+				if err != nil {
+					return err
+				}
+				co.RootCerts = x509.NewCertPool()
+				co.RootCerts.AddCert(chain[len(chain)-1])
+				if len(chain) > 1 {
+					co.IntermediateCerts = x509.NewCertPool()
+					for _, cert := range chain[:len(chain)-1] {
+						co.IntermediateCerts.AddCert(cert)
+					}
 				}
 			}
-		} else {
-			// This performs an online fetch of the Fulcio roots. This is needed
-			// for verifying keyless certificates (both online and offline).
-			co.RootCerts, err = fulcio.GetRoots()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio roots: %w", err)
+		case c.CARoots != "":
+			{
+				caRoots, err := loadCertChainFromFileOrURL(c.CARoots)
+				if err != nil {
+					return err
+				}
+				co.RootCerts = x509.NewCertPool()
+				if len(caRoots) > 0 {
+					for _, cert := range caRoots {
+						co.RootCerts.AddCert(cert)
+					}
+				}
 			}
-			co.IntermediateCerts, err = fulcio.GetIntermediates()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		default:
+			{
+				// This performs an online fetch of the Fulcio roots. This is needed
+				// for verifying keyless certificates (both online and offline).
+				co.RootCerts, err = fulcio.GetRoots()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio roots: %w", err)
+				}
+				co.IntermediateCerts, err = fulcio.GetIntermediates()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio intermediates: %w", err)
+				}
 			}
 		}
 	}
@@ -238,8 +256,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return err
 		}
-		if c.CertChain == "" {
-			// If no certChain is passed, the Fulcio root certificate will be used
+		if c.CertChain == "" && c.CARoots == "" {
+			// If no certChain and no CARoots are passed, the Fulcio root certificate will be used
 			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
 				return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -253,14 +271,21 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return err
 			}
 		} else {
-			// Verify certificate with chain
-			chain, err := loadCertChainFromFileOrURL(c.CertChain)
-			if err != nil {
-				return err
-			}
-			pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
-			if err != nil {
-				return err
+			if c.CARoots == "" {
+				// Verify certificate with chain
+				chain, err := loadCertChainFromFileOrURL(c.CertChain)
+				if err != nil {
+					return err
+				}
+				pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+				if err != nil {
+					return err
+				}
+			} else {
+				pubKey, err = cosign.ValidateAndUnpackCertWithCertPools(cert, co)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if c.SCTRef != "" {
