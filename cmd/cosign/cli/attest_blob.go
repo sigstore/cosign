@@ -85,7 +85,7 @@ func AttestBlob() *cobra.Command {
 				OutputAttestation: o.OutputAttestation,
 				OutputCertificate: o.OutputCertificate,
 				Timeout:           ro.Timeout,
-				StoreAttestation:  o.StoreAttestation,
+				RekorEntryType:    o.RekorEntryType,
 			}
 			return v.Exec(cmd.Context(), args[0])
 		},

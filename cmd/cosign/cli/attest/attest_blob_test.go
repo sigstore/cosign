@@ -261,3 +261,35 @@ func TestAttestBlob(t *testing.T) {
 		})
 	}
 }
+
+func TestBadRekorEntryType(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	keys, _ := cosign.GenerateKeyPair(nil)
+	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
+
+	blob := []byte("foo")
+	blobPath := writeFile(t, td, string(blob), "foo.txt")
+
+	predicates := map[string]string{}
+	predicates["slsaprovenance"] = makeSLSA02PredicateFile(t, td)
+	predicates["slsaprovenance1"] = makeSLSA1PredicateFile(t, td)
+
+	for predicateType, predicatePath := range predicates {
+		t.Run(predicateType, func(t *testing.T) {
+			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
+			at := AttestBlobCommand{
+				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
+				PredicatePath:   predicatePath,
+				PredicateType:   predicateType,
+				OutputSignature: dssePath,
+				RekorEntryType:  "badvalue",
+			}
+			err := at.Exec(ctx, blobPath)
+			if err == nil || err.Error() != "unknown value for rekor-entry-type" {
+				t.Fatal("expected an error due to unknown rekor entry type")
+			}
+		})
+	}
+}

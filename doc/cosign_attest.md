@@ -65,11 +65,11 @@ cosign attest [flags]
       --registry-password string                                                                 registry basic auth password
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
+      --rekor-entry-type string                                                                  specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default).  (default "dsse")
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --store-attestation                                                                        whether or not to upload the attestation to an attestation store
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                                                                              whether or not to upload to the tlog (default true)
       --type string                                                                              specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")

@@ -64,7 +64,7 @@ type AttestBlobCommand struct {
 	OutputAttestation string
 	OutputCertificate string
 
-	StoreAttestation bool
+	RekorEntryType string
 }
 
 // nolint
@@ -76,6 +76,10 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	if c.PredicatePath == "" {
 		return fmt.Errorf("predicate cannot be empty")
+	}
+
+	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
+		return fmt.Errorf("unknown value for rekor-entry-type")
 	}
 
 	if c.Timeout != 0 {
@@ -186,7 +190,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return err
 		}
 		var entry *models.LogEntryAnon
-		if c.StoreAttestation && c.RekorURL != options.DefaultRekorURL {
+		if c.RekorEntryType == "intoto" {
 			entry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
 		} else {
 			entry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
