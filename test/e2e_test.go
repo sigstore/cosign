@@ -1324,6 +1324,11 @@ func TestGenerateKeyPairK8s(t *testing.T) {
 	if v, ok := s.Data["cosign.password"]; !ok || string(v) != password {
 		t.Fatalf("password is incorrect, got %v expected %v", v, "foo")
 	}
+	// Clean up the secret (so tests can be re-run locally)
+	err = client.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMultipleSignatures(t *testing.T) {
