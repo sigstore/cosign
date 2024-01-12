@@ -161,11 +161,12 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					at := AttestBlobCommand{
-						KeyOpts:       options.KeyOpts{KeyRef: tc.keyref},
-						CertPath:      tc.certref,
-						CertChainPath: tc.certchainref,
-						PredicatePath: predicatePath,
-						PredicateType: predicateType,
+						KeyOpts:        options.KeyOpts{KeyRef: tc.keyref},
+						CertPath:       tc.certref,
+						CertChainPath:  tc.certchainref,
+						PredicatePath:  predicatePath,
+						PredicateType:  predicateType,
+						RekorEntryType: "dsse",
 					}
 					err := at.Exec(ctx, blob)
 					if err != nil {
@@ -213,6 +214,7 @@ func TestAttestBlob(t *testing.T) {
 				PredicatePath:   predicatePath,
 				PredicateType:   predicateType,
 				OutputSignature: dssePath,
+				RekorEntryType:  "dsse",
 			}
 			err := at.Exec(ctx, blobPath)
 			if err != nil {
