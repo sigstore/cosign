@@ -354,10 +354,11 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	// Now attest the image
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	attestCmd := attest.AttestCommand{
-		KeyOpts:       ko,
-		PredicatePath: attestationPath,
-		PredicateType: predicateType,
-		Timeout:       30 * time.Second,
+		KeyOpts:        ko,
+		PredicatePath:  attestationPath,
+		PredicateType:  predicateType,
+		Timeout:        30 * time.Second,
+		RekorEntryType: "dsse",
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
 
@@ -2405,11 +2406,12 @@ func TestAttestBlobSignVerify(t *testing.T) {
 		KeyRef: pubKeyPath1,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:       ko,
-		SignaturePath: outputSignature,
-		PredicateType: predicateType,
-		IgnoreTlog:    true,
-		CheckClaims:   true,
+		KeyOpts:        ko,
+		SignaturePath:  outputSignature,
+		PredicateType:  predicateType,
+		IgnoreTlog:     true,
+		CheckClaims:    true,
+		RekorEntryType: "dsse",
 	}
 	// Verify should fail on a bad input
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
