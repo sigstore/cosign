@@ -29,6 +29,13 @@ cd rekor
 
 echo "starting services"
 docker-compose up -d
+cleanup_services() {
+    echo "cleaning up"
+    pushd $HOME/rekor
+    docker-compose down
+    popd
+}
+trap cleanup_services EXIT
 
 count=0
 
@@ -50,7 +57,7 @@ echo "running tests"
 
 popd
 go build -o cosign ./cmd/cosign
-go test -tags=e2e -race $(go list ./... | grep -v third_party/)
+go test -tags=e2e -v -race ./test/...
 
 # Test on a private registry
 echo "testing sign/verify/clean on private registry"
@@ -80,7 +87,3 @@ if (./cosign manifest verify ./test/testdata/unsigned_manifest.yaml --certificat
 make ko-local
 img="ko.local/cosign:$(git rev-parse HEAD)"
 docker run $img version
-
-echo "cleanup"
-cd $HOME/rekor
-docker-compose down
