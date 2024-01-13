@@ -77,8 +77,8 @@ import (
 
 const (
 	serverEnv = "REKOR_SERVER"
-	rekorURL  = "https://rekor.sigstore.dev"
-	fulcioURL = "https://fulcio.sigstore.dev"
+	rekorURL  = "http://127.0.0.1:3000"
+	fulcioURL = "http://127.0.0.1:5555"
 )
 
 var keyPass = []byte("hello")
