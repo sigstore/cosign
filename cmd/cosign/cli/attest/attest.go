@@ -71,15 +71,16 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 type AttestCommand struct {
 	options.KeyOpts
 	options.RegistryOptions
-	CertPath      string
-	CertChainPath string
-	NoUpload      bool
-	PredicatePath string
-	PredicateType string
-	Replace       bool
-	Timeout       time.Duration
-	TlogUpload    bool
-	TSAServerURL  string
+	CertPath       string
+	CertChainPath  string
+	NoUpload       bool
+	PredicatePath  string
+	PredicateType  string
+	Replace        bool
+	Timeout        time.Duration
+	TlogUpload     bool
+	TSAServerURL   string
+	RekorEntryType string
 }
 
 // nolint
@@ -91,6 +92,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 
 	if c.PredicatePath == "" {
 		return fmt.Errorf("predicate cannot be empty")
+	}
+
+	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
+		return fmt.Errorf("unknown value for rekor-entry-type")
 	}
 
 	predicateURI, err := options.ParsePredicateType(c.PredicateType)
@@ -197,7 +202,12 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 	if shouldUpload {
 		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
+			if c.RekorEntryType == "intoto" {
+				return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
+			} else {
+				return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
+			}
+
 		})
 		if err != nil {
 			return err

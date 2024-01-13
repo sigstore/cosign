@@ -161,11 +161,12 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					at := AttestBlobCommand{
-						KeyOpts:       options.KeyOpts{KeyRef: tc.keyref},
-						CertPath:      tc.certref,
-						CertChainPath: tc.certchainref,
-						PredicatePath: predicatePath,
-						PredicateType: predicateType,
+						KeyOpts:        options.KeyOpts{KeyRef: tc.keyref},
+						CertPath:       tc.certref,
+						CertChainPath:  tc.certchainref,
+						PredicatePath:  predicatePath,
+						PredicateType:  predicateType,
+						RekorEntryType: "dsse",
 					}
 					err := at.Exec(ctx, blob)
 					if err != nil {
@@ -213,6 +214,7 @@ func TestAttestBlob(t *testing.T) {
 				PredicatePath:   predicatePath,
 				PredicateType:   predicateType,
 				OutputSignature: dssePath,
+				RekorEntryType:  "dsse",
 			}
 			err := at.Exec(ctx, blobPath)
 			if err != nil {
@@ -257,6 +259,38 @@ func TestAttestBlob(t *testing.T) {
 			}
 			if _, err := dssev.Verify(ctx, env); err != nil {
 				t.Fatalf("dsse verify: %v", err)
+			}
+		})
+	}
+}
+
+func TestBadRekorEntryType(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	keys, _ := cosign.GenerateKeyPair(nil)
+	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
+
+	blob := []byte("foo")
+	blobPath := writeFile(t, td, string(blob), "foo.txt")
+
+	predicates := map[string]string{}
+	predicates["slsaprovenance"] = makeSLSA02PredicateFile(t, td)
+	predicates["slsaprovenance1"] = makeSLSA1PredicateFile(t, td)
+
+	for predicateType, predicatePath := range predicates {
+		t.Run(predicateType, func(t *testing.T) {
+			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
+			at := AttestBlobCommand{
+				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
+				PredicatePath:   predicatePath,
+				PredicateType:   predicateType,
+				OutputSignature: dssePath,
+				RekorEntryType:  "badvalue",
+			}
+			err := at.Exec(ctx, blobPath)
+			if err == nil || err.Error() != "unknown value for rekor-entry-type" {
+				t.Fatal("expected an error due to unknown rekor entry type")
 			}
 		})
 	}

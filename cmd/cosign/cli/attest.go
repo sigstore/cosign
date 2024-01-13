@@ -95,6 +95,7 @@ func Attest() *cobra.Command {
 				Replace:         o.Replace,
 				Timeout:         ro.Timeout,
 				TlogUpload:      o.TlogUpload,
+				RekorEntryType:  o.RekorEntryType,
 			}
 
 			for _, img := range args {

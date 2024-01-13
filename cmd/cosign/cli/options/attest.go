@@ -30,6 +30,7 @@ type AttestOptions struct {
 	SkipConfirmation bool
 	TlogUpload       bool
 	TSAServerURL     string
+	RekorEntryType   string
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -79,6 +80,9 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
 		"whether or not to upload to the tlog")
+
+	cmd.Flags().StringVar(&o.RekorEntryType, "rekor-entry-type", "dsse",
+		"specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default). ")
 
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")

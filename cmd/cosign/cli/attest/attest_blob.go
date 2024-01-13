@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -62,6 +63,8 @@ type AttestBlobCommand struct {
 	OutputSignature   string
 	OutputAttestation string
 	OutputCertificate string
+
+	RekorEntryType string
 }
 
 // nolint
@@ -73,6 +76,10 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	if c.PredicatePath == "" {
 		return fmt.Errorf("predicate cannot be empty")
+	}
+
+	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
+		return fmt.Errorf("unknown value for rekor-entry-type")
 	}
 
 	if c.Timeout != 0 {
@@ -182,7 +189,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return err
 		}
-		entry, err := cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
+		var entry *models.LogEntryAnon
+		if c.RekorEntryType == "intoto" {
+			entry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+		} else {
+			entry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
+		}
+
 		if err != nil {
 			return err
 		}

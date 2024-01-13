@@ -65,6 +65,7 @@ cosign attest [flags]
       --registry-password string                                                                 registry basic auth password
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
+      --rekor-entry-type string                                                                  specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default).  (default "dsse")
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
