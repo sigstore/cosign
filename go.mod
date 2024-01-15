@@ -47,7 +47,7 @@ require (
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	github.com/xanzy/go-gitlab v0.95.2
 	go.step.sm/crypto v0.40.0
-	golang.org/x/crypto v0.17.0
+	golang.org/x/crypto v0.18.0
 	golang.org/x/oauth2 v0.15.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.16.0
