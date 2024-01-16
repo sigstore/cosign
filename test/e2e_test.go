@@ -77,8 +77,8 @@ import (
 
 const (
 	serverEnv = "REKOR_SERVER"
-	rekorURL  = "https://rekor.sigstore.dev"
-	fulcioURL = "https://fulcio.sigstore.dev"
+	rekorURL  = "http://127.0.0.1:3000"
+	fulcioURL = "http://127.0.0.1:5555"
 )
 
 var keyPass = []byte("hello")
@@ -1323,6 +1323,11 @@ func TestGenerateKeyPairK8s(t *testing.T) {
 	}
 	if v, ok := s.Data["cosign.password"]; !ok || string(v) != password {
 		t.Fatalf("password is incorrect, got %v expected %v", v, "foo")
+	}
+	// Clean up the secret (so tests can be re-run locally)
+	err = client.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
