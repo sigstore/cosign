@@ -18,7 +18,6 @@ package verify
 import (
 	"context"
 	"crypto"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -118,7 +117,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		}
 		defer f.Close()
 
-		payload = internal.NewHashReader(f, sha256.New())
+		payload = internal.NewHashReader(f, crypto.SHA256)
 		if _, err := io.ReadAll(&payload); err != nil {
 			return err
 		}

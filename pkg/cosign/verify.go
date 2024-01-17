@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
@@ -165,6 +166,60 @@ type CheckOpts struct {
 	ExperimentalOCI11 bool
 }
 
+type validateCertOpts struct {
+	chain  []*x509.Certificate
+	svOpts []signature.LoadOption
+	pool   *x509.CertPool
+}
+
+type ValidateAndUnpackCertOption func(*validateCertOpts)
+
+func WithChain(chain []*x509.Certificate) ValidateAndUnpackCertOption {
+	return func(o *validateCertOpts) {
+		o.chain = chain
+	}
+}
+
+func WithPool(pool *x509.CertPool) ValidateAndUnpackCertOption {
+	return func(o *validateCertOpts) {
+		o.pool = pool
+	}
+}
+
+func WithSignerVerifierOptions(svOpts ...signature.LoadOption) ValidateAndUnpackCertOption {
+	return func(o *validateCertOpts) {
+		o.svOpts = svOpts
+	}
+}
+
+func makeValidateAndUnpackCertOpts(co *CheckOpts, opts ...ValidateAndUnpackCertOption) (*validateCertOpts, error) {
+	o := &validateCertOpts{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	// Pool Option has precedence over chain option
+	if o.pool == nil && o.chain != nil {
+		if len(o.chain) == 0 {
+			return nil, errors.New("no chain provided to validate certificate")
+		}
+		rootPool := x509.NewCertPool()
+		rootPool.AddCert(o.chain[len(o.chain)-1])
+		co.RootCerts = rootPool
+
+		subPool := x509.NewCertPool()
+		for _, c := range o.chain[:len(o.chain)-1] {
+			subPool.AddCert(c)
+		}
+		o.pool = subPool
+	}
+	// If no pool or chain is provided, use the one from the CheckOpts
+	if o.pool == nil {
+		o.pool = co.IntermediateCerts
+	}
+	return o, nil
+}
+
 // This is a substitutable signature verification function that can be used for verifying
 // attestations of blobs.
 type signatureVerificationFn func(
@@ -221,14 +276,33 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 // certificate chains up to a trusted root using intermediate certificate chain coming from CheckOpts.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	return ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
+	return ValidateAndUnpackCertWithOpts(cert, co)
 }
 
 // ValidateAndUnpackCertWithIntermediates creates a Verifier from a certificate. Verifies that the
 // certificate chains up to a trusted root using intermediate cert passed as separate argument.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
-	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+	return ValidateAndUnpackCertWithOpts(cert, co, WithPool(intermediateCerts))
+}
+
+// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
+// chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
+// Optionally verifies the subject and issuer of the certificate.
+func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+	return ValidateAndUnpackCertWithOpts(cert, co, WithChain(chain))
+}
+
+// ValidateAndUnpackCertWithOpts creates a Verifier from a certificate. Verifies that the certificate
+// chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
+// Accept chain and signerVerifierOptions as optional parameters.
+func ValidateAndUnpackCertWithOpts(cert *x509.Certificate, co *CheckOpts, opts ...ValidateAndUnpackCertOption) (signature.Verifier, error) {
+	o, err := makeValidateAndUnpackCertOpts(co, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	verifier, err := signature.LoadVerifierWithOpts(cert.PublicKey, o.svOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
@@ -248,7 +322,7 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	}
 
 	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(cert, co.RootCerts, intermediateCerts)
+	chains, err := TrustedCert(cert, co.RootCerts, o.pool)
 
 	if err != nil {
 		return nil, err
@@ -413,26 +487,6 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 	return nil
 }
 
-// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
-// chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
-// Optionally verifies the subject and issuer of the certificate.
-func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	if len(chain) == 0 {
-		return nil, errors.New("no chain provided to validate certificate")
-	}
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(chain[len(chain)-1])
-	co.RootCerts = rootPool
-
-	subPool := x509.NewCertPool()
-	for _, c := range chain[:len(chain)-1] {
-		subPool.AddCert(c)
-	}
-	co.IntermediateCerts = subPool
-
-	return ValidateAndUnpackCert(cert, co)
-}
-
 func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedTransparencyLogPubKeys,
 	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
@@ -487,9 +541,13 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 // Note that if co.ExperimentlOCI11 is set, we will attempt to verify
 // signatures using the experimental OCI 1.1 behavior.
 func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	return VerifyImageSignaturesWithOpts(ctx, signedImgRef, co)
+}
+
+func VerifyImageSignaturesWithOpts(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Try first using OCI 1.1 behavior if experimental flag is set.
 	if co.ExperimentalOCI11 {
-		verified, bundleVerified, err := verifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co)
+		verified, bundleVerified, err := verifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co, svOpts...)
 		if err == nil {
 			return verified, bundleVerified, nil
 		}
@@ -534,12 +592,18 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		}
 	}
 
-	return verifySignatures(ctx, sigs, h, co)
+	return verifySignatures(ctx, sigs, h, co, svOpts...)
 }
 
 // VerifyLocalImageSignatures verifies signatures from a saved, local image, without any network calls, returning the verified signatures.
 // If there were no valid signatures, we return an error.
 func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	return VerifyLocalImageSignaturesWithOpts(ctx, path, co)
+}
+
+// VerifyLocalImageSignaturesWithOpts verifies signatures from a saved, local image, without any network calls, returning the verified signatures.
+// If there were no valid signatures, we return an error.
+func VerifyLocalImageSignaturesWithOpts(ctx context.Context, path string, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -583,10 +647,10 @@ func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts)
 		return nil, false, fmt.Errorf("no signatures associated with the image saved in %s", path)
 	}
 
-	return verifySignatures(ctx, sigs, h, co)
+	return verifySignatures(ctx, sigs, h, co, svOpts...)
 }
 
-func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	sl, err := sigs.Get()
 	if err != nil {
 		return nil, false, err
@@ -614,7 +678,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 				return
 			}
 
-			verified, err := VerifyImageSignature(ctx, sig, h, co)
+			verified, err := VerifyImageSignatureWithOpts(ctx, sig, h, co, svOpts...)
 			bundlesVerified[index] = verified
 			if err != nil {
 				t.Done(err)
@@ -662,7 +726,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 //     we are in experimental mode).
 //  3. If a certificate is provided, check it's expiration using the transparency log timestamp.
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
-	verifyFn signatureVerificationFn, co *CheckOpts) (
+	verifyFn signatureVerificationFn, co *CheckOpts, svOpts ...signature.LoadOption) (
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
@@ -745,7 +809,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if pool == nil {
 			pool = co.IntermediateCerts
 		}
-		verifier, err = ValidateAndUnpackCertWithIntermediates(cert, co, pool)
+		verifier, err = ValidateAndUnpackCertWithOpts(cert, co, WithPool(pool), WithSignerVerifierOptions(svOpts...))
 		if err != nil {
 			return false, err
 		}
@@ -822,13 +886,23 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 
 // VerifyBlobSignature verifies a blob signature.
 func VerifyBlobSignature(ctx context.Context, sig oci.Signature, co *CheckOpts) (bundleVerified bool, err error) {
+	return VerifyBlobSignatureWithOpts(ctx, sig, co)
+}
+
+// VerifyBlobSignature verifies a blob signature.
+func VerifyBlobSignatureWithOpts(ctx context.Context, sig oci.Signature, co *CheckOpts, svOpts ...signature.LoadOption) (bundleVerified bool, err error) {
 	// The hash of the artifact is unused.
-	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co)
+	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co, svOpts...)
 }
 
 // VerifyImageSignature verifies a signature
 func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
-	return verifyInternal(ctx, sig, h, verifyOCISignature, co)
+	return VerifyImageSignatureWithOpts(ctx, sig, h, co)
+}
+
+// VerifyImageSignature verifies a signature
+func VerifyImageSignatureWithOpts(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts, svOpts ...signature.LoadOption) (bundleVerified bool, err error) {
+	return verifyInternal(ctx, sig, h, verifyOCISignature, co, svOpts...)
 }
 
 func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
@@ -1104,12 +1178,23 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("computing bundle hash: %w", err)
 	}
-	h := sha256.Sum256(payload)
-	payloadHash := hex.EncodeToString(h[:])
 
-	if alg != "sha256" {
+	var payloadHash string
+	switch alg.HashFunc() {
+	case crypto.SHA256:
+		h := sha256.Sum256(payload)
+		payloadHash = hex.EncodeToString(h[:])
+	case crypto.SHA384:
+		h := sha512.Sum384(payload)
+		payloadHash = hex.EncodeToString(h[:])
+	case crypto.SHA512:
+		h := sha512.Sum512(payload)
+		payloadHash = hex.EncodeToString(h[:])
+	default:
 		return false, fmt.Errorf("unexpected algorithm: %q", alg)
-	} else if bundlehash != payloadHash {
+	}
+
+	if bundlehash != payloadHash {
 		return false, fmt.Errorf("matching bundle to payload: bundle=%q, payload=%q", bundlehash, payloadHash)
 	}
 	return true, nil
@@ -1230,25 +1315,36 @@ func extractEntryImpl(bundleBody string) (rekor_types.EntryImpl, error) {
 	return rekor_types.UnmarshalEntry(pe)
 }
 
-func bundleHash(bundleBody, _ string) (string, string, error) {
+func HashAlgorithmToCryptoHash(hashAlgorithm string) crypto.Hash {
+	switch hashAlgorithm {
+	case "sha384":
+		return crypto.SHA384
+	case "sha512":
+		return crypto.SHA512
+	default:
+		return crypto.SHA256
+	}
+}
+
+func bundleHash(bundleBody, _ string) (crypto.Hash, string, error) {
 	ei, err := extractEntryImpl(bundleBody)
 	if err != nil {
-		return "", "", err
+		return crypto.Hash(0), "", err
 	}
 
 	switch entry := ei.(type) {
 	case *dsse_v001.V001Entry:
-		return *entry.DSSEObj.EnvelopeHash.Algorithm, *entry.DSSEObj.EnvelopeHash.Value, nil
+		return HashAlgorithmToCryptoHash(*entry.DSSEObj.EnvelopeHash.Algorithm), *entry.DSSEObj.EnvelopeHash.Value, nil
 	case *hashedrekord_v001.V001Entry:
-		return *entry.HashedRekordObj.Data.Hash.Algorithm, *entry.HashedRekordObj.Data.Hash.Value, nil
+		return HashAlgorithmToCryptoHash(*entry.HashedRekordObj.Data.Hash.Algorithm), *entry.HashedRekordObj.Data.Hash.Value, nil
 	case *intoto_v001.V001Entry:
-		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+		return HashAlgorithmToCryptoHash(*entry.IntotoObj.Content.Hash.Algorithm), *entry.IntotoObj.Content.Hash.Value, nil
 	case *intoto_v002.V002Entry:
-		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+		return HashAlgorithmToCryptoHash(*entry.IntotoObj.Content.Hash.Algorithm), *entry.IntotoObj.Content.Hash.Value, nil
 	case *rekord_v001.V001Entry:
-		return *entry.RekordObj.Data.Hash.Algorithm, *entry.RekordObj.Data.Hash.Value, nil
+		return HashAlgorithmToCryptoHash(*entry.RekordObj.Data.Hash.Algorithm), *entry.RekordObj.Data.Hash.Value, nil
 	default:
-		return "", "", errors.New("unsupported type")
+		return crypto.Hash(0), "", errors.New("unsupported type")
 	}
 }
 
@@ -1357,7 +1453,7 @@ func correctAnnotations(wanted, have map[string]interface{}) bool {
 
 // verifyImageSignaturesExperimentalOCI does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error, using OCI 1.1+ behavior.
-func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -1410,5 +1506,5 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 		}
 	}
 
-	return verifySignatures(ctx, sigs, h, co)
+	return verifySignatures(ctx, sigs, h, co, svOpts...)
 }

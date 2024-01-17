@@ -17,7 +17,10 @@ package sign
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -33,8 +36,27 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
+
+func getHashAlgorithmFromSignerVerifier(sv *SignerVerifier) (crypto.Hash, error) {
+	publicKey, err := sv.SignerVerifier.PublicKey()
+	if err != nil {
+		return crypto.Hash(0), err
+	}
+
+	switch publicKey.(type) {
+	case *ecdsa.PublicKey:
+		return crypto.SHA256, nil
+	case *rsa.PublicKey:
+		return crypto.SHA256, nil
+	case ed25519.PublicKey:
+		return crypto.SHA512, nil
+	default:
+		return crypto.Hash(0), fmt.Errorf("unsupported public key type")
+	}
+}
 
 // nolint
 func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
@@ -44,25 +66,35 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
+	svOptions := []signature.LoadOption{
+		signatureoptions.WithHash(crypto.SHA256),
+		signatureoptions.WithED25519ph(),
+	}
+
+	sv, err := signerFromKeyOptsWithSVOpts(ctx, "", "", ko, svOptions...)
+	if err != nil {
+		return nil, err
+	}
+	defer sv.Close()
+
+	hashAlgorithm, err := getHashAlgorithmFromSignerVerifier(sv)
+	if err != nil {
+		return nil, err
+	}
+
 	if payloadPath == "-" {
-		payload = internal.NewHashReader(os.Stdin, sha256.New())
+		payload = internal.NewHashReader(os.Stdin, hashAlgorithm)
 	} else {
 		ui.Infof(ctx, "Using payload from: %s", payloadPath)
 		f, err := os.Open(filepath.Clean(payloadPath))
 		if err != nil {
 			return nil, err
 		}
-		payload = internal.NewHashReader(f, sha256.New())
+		payload = internal.NewHashReader(f, hashAlgorithm)
 	}
 	if err != nil {
 		return nil, err
 	}
-
-	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
-	if err != nil {
-		return nil, err
-	}
-	defer sv.Close()
 
 	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
 	if err != nil {
@@ -123,7 +155,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err != nil {
 			return nil, err
 		}
-		entry, err := cosign.TLogUpload(ctx, rekorClient, sig, &payload, rekorBytes)
+		entry, err := cosign.TLogUploadWithCustomHash(ctx, rekorClient, sig, &payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}
