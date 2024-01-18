@@ -75,7 +75,7 @@ crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "application/
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/certificate"
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/chain"
 
-## Verify Signature, payload, cert and cert-chain using Root certificate only 
+## Verify Signature, payload, cert and cert-chain using Root certificate only
 
 ./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' --cert-chain=./rootcert.pem
 
