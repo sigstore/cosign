@@ -25,6 +25,10 @@ cp ./test/testdata/test_attach_private_key $tmp/private_key
 cp ./test/testdata/test_attach_leafcert.pem $tmp/leafcert.pem
 cp ./test/testdata/test_attach_certchain.pem $tmp/certchain.pem
 cp ./test/testdata/test_attach_rootcert.pem $tmp/rootcert.pem
+cp ./test/testdata/test_attach_second_private_key $tmp/secondprivate_key
+cp ./test/testdata/test_attach_second_leafcert.pem $tmp/secondleafcert.pem
+cp ./test/testdata/test_attach_second_certchain.pem $tmp/secondcertchain.pem
+cp ./test/testdata/test_attach_second_rootcert.pem $tmp/secondrootcert.pem
 
 pushd $tmp
 
@@ -47,10 +51,14 @@ IMAGE_URI_DIGEST=$IMAGE_URI@$SRC_DIGEST
 ## Sign with Leafcert Private Key
 openssl dgst -sha256 -sign ./private_key -out payload.sig payload.json
 cat payload.sig | base64 > payloadbase64.sig
+openssl dgst -sha256 -sign ./secondprivate_key -out secondpayload.sig payload.json
+cat secondpayload.sig | base64 > secondpayloadbase64.sig
 
 
 SIGNATURE=$(cat payloadbase64.sig | base64)
 echo "Signature: $SIGNATURE"
+SIGNATURE2=$(cat secondpayloadbase64.sig | base64)
+echo "Second Signature: $SIGNATURE2"
 
 PAYLOAD=$(cat payload.json)
 echo "Payload: $PAYLOAD"
@@ -59,6 +67,7 @@ echo "Payload: $PAYLOAD"
 
 ## Attach Signature, payload, cert and cert-chain
 ./cosign attach signature --signature ./payloadbase64.sig --payload ./payload.json --cert ./leafcert.pem --cert-chain ./certchain.pem $IMAGE_URI_DIGEST
+./cosign attach signature --signature ./secondpayloadbase64.sig --payload ./payload.json --cert ./secondleafcert.pem --cert-chain ./secondcertchain.pem $IMAGE_URI_DIGEST
 
 
 ## confirm manifest conatins annotation for cert and cert chain
@@ -66,17 +75,14 @@ crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "application/
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/certificate"
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/chain"
 
-## Verify Signature, payload, cert and cert-chain using SIGSTORE_ROOT_FILE
+## Verify Signature, payload, cert and cert-chain using Root certificate only 
 
-export SIGSTORE_ROOT_FILE=./rootcert.pem
-./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*'
+./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' --cert-chain=./rootcert.pem
 
+./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' --cert-chain=./secondrootcert.pem
 
 # clean up a bit
-for image in $IMAGE_URI_DIGEST
-do
-    (crane delete $(./cosign triangulate $IMAGE_URI_DIGEST)) || true
-done
+./cosign clean $IMAGE_URI_DIGEST --force=true
 crane delete $IMAGE_URI_DIGEST || true
 
 

@@ -296,7 +296,6 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 // as it uses a common reference of CheckOpts so in multi thread invocation co.intermediateCert object
 // can get overwritten my multiple threads. So to solve this ValidateAndUnpackCertWithIntermediates
 // is created which has a separate argument for Intermediate certs.
-
 func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
