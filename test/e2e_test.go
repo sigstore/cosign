@@ -54,12 +54,15 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attest"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -2526,4 +2529,144 @@ func TestOffline(t *testing.T) {
 
 	// Confirm offline verification fails
 	mustErr(verifyCmd.Exec(ctx, []string{img1}), t)
+}
+
+func TestDockerfileVerify(t *testing.T) {
+	// unset the roots that were generated for timestamp signing, they won't work here
+	err := fulcioroots.ReInit()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Unset the local rekor trust so that we can use the public instance.
+	os.Unsetenv("SIGSTORE_REKOR_PUBLIC_KEY")
+	ctx := context.Background()
+	tests := []struct {
+		name       string
+		certID     string
+		certIssuer string
+		dockerfile string
+		baseOnly   bool
+		env        map[string]string
+		wantErr    bool
+	}{
+		{
+			name:       "verify single stage",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			dockerfile: "single_stage.Dockerfile",
+		},
+		{
+			name:       "verify unsigned build stage",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			dockerfile: "unsigned_build_stage.Dockerfile",
+			wantErr:    true,
+		},
+		{
+			name:       "verify base image only",
+			certID:     "https://github.com/distroless/static/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			dockerfile: "unsigned_build_stage.Dockerfile",
+			baseOnly:   true,
+		},
+		{
+			name:       "verify from as",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			dockerfile: "fancy_from.Dockerfile",
+		},
+		{
+			name:       "verify with arg",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			dockerfile: "with_arg.Dockerfile",
+			env:        map[string]string{"test_image": "ghcr.io/distroless/alpine-base"},
+		},
+		{
+			name:       "verify image exists but is unsigned",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			dockerfile: "with_arg.Dockerfile",
+			env:        map[string]string{"test_image": "ubuntu"},
+			wantErr:    true,
+		},
+		{
+			name:       "verify with lowercase",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			dockerfile: "with_lowercase.Dockerfile",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := dockerfile.VerifyDockerfileCommand{
+				VerifyCommand: cliverify.VerifyCommand{
+					CertVerifyOptions: options.CertVerifyOptions{
+						CertOidcIssuer: test.certIssuer,
+						CertIdentity:   test.certID,
+					},
+				},
+				BaseOnly: test.baseOnly,
+			}
+			args := []string{"testdata/" + test.dockerfile}
+			for k, v := range test.env {
+				t.Setenv(k, v)
+			}
+			if test.wantErr {
+				mustErr(cmd.Exec(ctx, args), t)
+			} else {
+				must(cmd.Exec(ctx, args), t)
+			}
+		})
+	}
+}
+
+func TestManifestVerify(t *testing.T) {
+	// unset the roots that were generated for timestamp signing, they won't work here
+	err := fulcioroots.ReInit()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Unset the local rekor trust so that we can use the public instance.
+	os.Unsetenv("SIGSTORE_REKOR_PUBLIC_KEY")
+	ctx := context.Background()
+	tests := []struct {
+		name       string
+		certID     string
+		certIssuer string
+		manifest   string
+		wantErr    bool
+	}{
+		{
+			name:       "signed manifest",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			manifest:   "signed_manifest.yaml",
+		},
+		{
+			name:       "unsigned manifest",
+			certID:     "https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main",
+			certIssuer: "https://token.actions.githubusercontent.com",
+			manifest:   "unsigned_manifest.yaml",
+			wantErr:    true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := manifest.VerifyManifestCommand{
+				VerifyCommand: cliverify.VerifyCommand{
+					CertVerifyOptions: options.CertVerifyOptions{
+						CertOidcIssuer: test.certIssuer,
+						CertIdentity:   test.certID,
+					},
+				},
+			}
+			args := []string{"testdata/" + test.manifest}
+			if test.wantErr {
+				mustErr(cmd.Exec(ctx, args), t)
+			} else {
+				must(cmd.Exec(ctx, args), t)
+			}
+		})
+	}
 }

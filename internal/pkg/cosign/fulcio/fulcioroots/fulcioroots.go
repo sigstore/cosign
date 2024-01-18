@@ -56,6 +56,13 @@ func GetIntermediates() (*x509.CertPool, error) {
 	return intermediates, singletonRootErr
 }
 
+// ReInit reinitializes the global roots and intermediates, overriding the sync.Once lock.
+// This is only to be used for tests, where the trust root environment variables may change after the roots are initialized in the module.
+func ReInit() error {
+	roots, intermediates, singletonRootErr = initRoots()
+	return singletonRootErr
+}
+
 func initRoots() (*x509.CertPool, *x509.CertPool, error) {
 	rootPool := x509.NewCertPool()
 	// intermediatePool should be nil if no intermediates are found
