@@ -64,7 +64,6 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
@@ -76,7 +75,6 @@ import (
 )
 
 const (
-	serverEnv = "REKOR_SERVER"
 	rekorURL  = "http://127.0.0.1:3000"
 	fulcioURL = "http://127.0.0.1:5555"
 )
@@ -107,6 +105,7 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaCertChain string, skipTlogVerify bool) error {
 	cmd := cliverify.VerifyCommand{
 		KeyRef:           keyRef,
+		RekorURL:         rekorURL,
 		CheckClaims:      checkClaims,
 		Annotations:      sigs.AnnotationsMap{Annotations: annotations},
 		Attachment:       attachment,
@@ -127,6 +126,7 @@ var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, 
 			CertOidcIssuerRegexp: ".*",
 			CertIdentityRegexp:   ".*",
 		},
+		RekorURL:         rekorURL,
 		HashAlgorithm:    crypto.SHA256,
 		TSACertChainPath: tsaCertChain,
 		IgnoreSCT:        skipSCT,
@@ -143,6 +143,7 @@ var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, 
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
 		KeyRef:        keyRef,
+		RekorURL:      rekorURL,
 		CheckClaims:   checkClaims,
 		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
 		Attachment:    attachment,
@@ -153,6 +154,24 @@ var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[st
 	}
 
 	args := []string{path}
+
+	return cmd.Exec(context.Background(), args)
+}
+
+var verifyOffline = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        keyRef,
+		RekorURL:      "notreal",
+		Offline:       true,
+		CheckClaims:   checkClaims,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
+		IgnoreTlog:    true,
+		MaxWorkers:    10,
+	}
+
+	args := []string{imageRef}
 
 	return cmd.Exec(context.Background(), args)
 }
@@ -999,9 +1018,6 @@ func TestAttachWithRekorBundle(t *testing.T) {
 }
 
 func TestRekorBundle(t *testing.T) {
-	// turn on the tlog
-	defer setenv(t, env.VariableExperimental.String(), "1")()
-
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -1028,9 +1044,7 @@ func TestRekorBundle(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil, ""), t)
 
 	// Make sure offline verification works with bundling
-	// use rekor prod since we have hardcoded the public key
-	os.Setenv(serverEnv, "notreal")
-	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+	must(verifyOffline(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestRekorOutput(t *testing.T) {
@@ -1070,9 +1084,7 @@ func TestRekorOutput(t *testing.T) {
 		}
 	}
 	// Make sure offline verification works with bundling
-	// use rekor prod since we have hardcoded the public key
-	os.Setenv(serverEnv, "notreal")
-	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+	must(verifyOffline(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestFulcioBundle(t *testing.T) {
@@ -1105,8 +1117,7 @@ func TestFulcioBundle(t *testing.T) {
 
 	// Make sure offline verification works with bundling
 	// use rekor prod since we have hardcoded the public key
-	os.Setenv(serverEnv, "notreal")
-	must(verify(pubKeyPath, imgName, true, nil, ""), t)
+	must(verifyOffline(pubKeyPath, imgName, true, nil, ""), t)
 }
 
 func TestRFC3161Timestamp(t *testing.T) {
@@ -1276,7 +1287,7 @@ func TestKeyURLVerify(t *testing.T) {
 }
 
 func TestGenerateKeyPairEnvVar(t *testing.T) {
-	defer setenv(t, "COSIGN_PASSWORD", "foo")()
+	t.Setenv("COSIGN_PASSWORD", "foo")
 	keys, err := cosign.GenerateKeyPair(generate.GetPass)
 	if err != nil {
 		t.Fatal(err)
@@ -1299,7 +1310,7 @@ func TestGenerateKeyPairK8s(t *testing.T) {
 		os.Chdir(wd)
 	}()
 	password := "foo"
-	defer setenv(t, "COSIGN_PASSWORD", password)()
+	t.Setenv("COSIGN_PASSWORD", password)
 	ctx := context.Background()
 	name := "cosign-secret"
 	namespace := "default"
@@ -1472,7 +1483,7 @@ func TestSignBlobBundle(t *testing.T) {
 	}
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
-	os.Setenv(serverEnv, "notreal")
+	verifyBlobCmd.RekorURL = "notreal"
 	verifyBlobCmd.IgnoreTlog = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
@@ -1556,6 +1567,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
+	verifyBlobCmd.RekorURL = "notreal"
 	verifyBlobCmd.IgnoreTlog = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
@@ -2047,15 +2059,6 @@ func TestAttachSBOM_bom_flag(t *testing.T) {
 	}
 }
 
-func setenv(t *testing.T, k, v string) func() {
-	if err := os.Setenv(k, v); err != nil {
-		t.Fatalf("error setting env: %v", err)
-	}
-	return func() {
-		os.Unsetenv(k)
-	}
-}
-
 func TestTlog(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
@@ -2333,7 +2336,6 @@ func TestInvalidBundle(t *testing.T) {
 
 	// Now, we move on to image2
 	// Sign image2 and DO NOT store the entry in rekor
-	defer setenv(t, env.VariableExperimental.String(), "0")()
 	img2 := path.Join(regName, "unrelated")
 	imgRef2, _, cleanup := mkimage(t, img2)
 	defer cleanup()
@@ -2483,6 +2485,7 @@ func TestOffline(t *testing.T) {
 	must(verify(pubKeyPath, img1, true, nil, ""), t)
 	verifyCmd := &cliverify.VerifyCommand{
 		KeyRef:      pubKeyPath,
+		RekorURL:    "notreal",
 		Offline:     true,
 		CheckClaims: true,
 		MaxWorkers:  10,
