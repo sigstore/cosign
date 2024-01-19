@@ -217,13 +217,13 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 }
 
 // ValidateAndUnpackCert calls ValidateAndUnpackCertWithIntermediates() by passing intermediate
-// certs from checkOpts as seperate argument
+// certs from checkOpts as separate argument
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	return ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
 }
 
 // ValidateAndUnpackCertWithIntermediates creates a Verifier from a certificate. Verifies that the
-// certificate chains up to a trusted root using intermediate cert passed as seperate argument.
+// certificate chains up to a trusted root using intermediate cert passed as separate argument.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
@@ -246,6 +246,9 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	}
 
 	// Now verify the cert, then the signature.
+	if intermediateCerts == nil {
+		intermediateCerts = co.IntermediateCerts
+	}
 	chains, err := TrustedCert(cert, co.RootCerts, intermediateCerts)
 
 	if err != nil {
