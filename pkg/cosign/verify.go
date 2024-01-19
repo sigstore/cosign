@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/x509"
@@ -261,7 +262,7 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	if err != nil {
 		return err
 	}
-	signature, err := base64.StdEncoding.DecodeString(b64sig)
+	decodedSignature, err := base64.StdEncoding.DecodeString(b64sig)
 	if err != nil {
 		return err
 	}
@@ -269,7 +270,33 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	if err != nil {
 		return err
 	}
-	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
+	// For compatibility reasons, if ED25519ph is used, we try both ED25519 and ED25519ph.
+	// Refusing to verify ED25519 signatures (used e.g. by rekord entries) would break compatibility.
+	// The signature algorithm to use should be uniquely determined before this point.
+	verificationErr := verifier.VerifySignature(bytes.NewReader(decodedSignature), bytes.NewReader(payload), options.WithContext(ctx))
+	if verificationErr == nil {
+		return nil
+	}
+
+	switch verifier.(type) {
+	case *signature.ED25519phVerifier:
+		publicKey, err := verifier.PublicKey()
+		if err != nil {
+			return err
+		}
+
+		if edPublicKey, ok := publicKey.(ed25519.PublicKey); ok {
+			altVerifier, err := signature.LoadED25519Verifier(edPublicKey)
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprintf(os.Stderr, "Failed to verify signature with ED25519ph, falling back to ED25519 for backward compatibility.\n")
+			verificationErr = altVerifier.VerifySignature(bytes.NewReader(decodedSignature), bytes.NewReader(payload), options.WithContext(ctx))
+		}
+	}
+
+	return verificationErr
 }
 
 // ValidateAndUnpackCert creates a Verifier from a certificate. Verifies that the
