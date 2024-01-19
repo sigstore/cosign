@@ -216,86 +216,15 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
-// ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
-// chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
+// ValidateAndUnpackCert calls ValidateAndUnpackCertWithIntermediates() by passing intermediate
+// certs from checkOpts as seperate argument
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
-	if err != nil {
-		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
-	}
-
-	// Handle certificates where the Subject Alternative Name is not set to a supported
-	// GeneralName (RFC 5280 4.2.1.6). Go only supports DNS, IP addresses, email addresses,
-	// or URIs as SANs. Fulcio can issue a certificate with an OtherName GeneralName, so
-	// remove the unhandled critical SAN extension before verifying.
-	if len(cert.UnhandledCriticalExtensions) > 0 {
-		var unhandledExts []asn1.ObjectIdentifier
-		for _, oid := range cert.UnhandledCriticalExtensions {
-			if !oid.Equal(cryptoutils.SANOID) {
-				unhandledExts = append(unhandledExts, oid)
-			}
-		}
-		cert.UnhandledCriticalExtensions = unhandledExts
-	}
-
-	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts)
-	if err != nil {
-		return nil, err
-	}
-
-	err = CheckCertificatePolicy(cert, co)
-	if err != nil {
-		return nil, err
-	}
-
-	// If IgnoreSCT is set, skip the SCT check
-	if co.IgnoreSCT {
-		return verifier, nil
-	}
-	contains, err := ContainsSCT(cert.Raw)
-	if err != nil {
-		return nil, err
-	}
-	if !contains && len(co.SCT) == 0 {
-		return nil, &VerificationFailure{
-			fmt.Errorf("certificate does not include required embedded SCT and no detached SCT was set"),
-		}
-	}
-	// handle if chains has more than one chain - grab first and print message
-	if len(chains) > 1 {
-		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
-	}
-	if contains {
-		if err := VerifyEmbeddedSCT(context.Background(), chains[0], co.CTLogPubKeys); err != nil {
-			return nil, err
-		}
-	} else {
-		chain := chains[0]
-		if len(chain) < 2 {
-			return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
-		}
-		certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
-		if err != nil {
-			return nil, err
-		}
-		chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
-		if err != nil {
-			return nil, err
-		}
-		if err := VerifySCT(context.Background(), certPEM, chainPEM, co.SCT, co.CTLogPubKeys); err != nil {
-			return nil, err
-		}
-	}
-
-	return verifier, nil
+	return ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
 }
 
-// ValidateAndUnpackCertWithIntermediates function has same logic as ValidateAndUnpackCert.
-// Main diffrence is that we can not use ValidateAndUnpackCert in multi thread invocation
-// as it uses a common reference of CheckOpts so in multi thread invocation co.intermediateCert object
-// can get overwritten my multiple threads. So to solve this ValidateAndUnpackCertWithIntermediates
-// is created which has a separate argument for Intermediate certs.
+// ValidateAndUnpackCertWithIntermediates creates a Verifier from a certificate. Verifies that the
+// certificate chains up to a trusted root using intermediate cert passed as seperate argument.
+// Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
@@ -317,9 +246,6 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	}
 
 	// Now verify the cert, then the signature.
-	if intermediateCerts == nil {
-		intermediateCerts = co.IntermediateCerts
-	}
 	chains, err := TrustedCert(cert, co.RootCerts, intermediateCerts)
 
 	if err != nil {
@@ -803,11 +729,9 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, err
 		}
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
-		var pool = (*x509.CertPool)(nil)
-		if len(chain) > 0 {
-			if len(chain) == 1 {
-				co.IntermediateCerts = nil
-			} else if co.IntermediateCerts == nil {
+		var pool *x509.CertPool
+		if len(chain) > 1 {
+			if co.IntermediateCerts == nil {
 				// If the intermediate certs have not been loaded in by TUF
 				pool = x509.NewCertPool()
 				for _, cert := range chain[:len(chain)-1] {

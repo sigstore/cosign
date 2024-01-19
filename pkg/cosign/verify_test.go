@@ -1228,6 +1228,37 @@ func TestValidateAndUnpackCertWithIdentities(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateAndUnpackCertWithIntermediatesSuccess(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, subCert, subKey)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+	subPool := x509.NewCertPool()
+	rootPool.AddCert(subCert)
+	subPool.AddCert(subCert)
+
+	co := &CheckOpts{
+		RootCerts:  rootPool,
+		IgnoreSCT:  true,
+		Identities: []Identity{{Subject: subject, Issuer: oidcIssuer}},
+	}
+
+	_, err := ValidateAndUnpackCertWithIntermediates(leafCert, co, subPool)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCertWithIntermediates expected no error, got err = %v", err)
+	}
+	err = CheckCertificatePolicy(leafCert, co)
+	if err != nil {
+		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
+}
+
 func TestCompareSigs(t *testing.T) {
 	// TODO(nsmith5): Add test cases for invalid signature, missing signature etc
 	tests := []struct {
