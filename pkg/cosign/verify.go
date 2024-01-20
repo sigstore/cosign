@@ -216,8 +216,9 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
-// ValidateAndUnpackCert calls ValidateAndUnpackCertWithIntermediates() by passing intermediate
-// certs from checkOpts as separate argument
+// ValidateAndUnpackCert creates a Verifier from a certificate. Verifies that the
+// certificate chains up to a trusted root using intermediate certificate chain coming from CheckOpts.
+// Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	return ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
 }
@@ -246,9 +247,6 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	}
 
 	// Now verify the cert, then the signature.
-	if intermediateCerts == nil {
-		intermediateCerts = co.IntermediateCerts
-	}
 	chains, err := TrustedCert(cert, co.RootCerts, intermediateCerts)
 
 	if err != nil {
@@ -741,6 +739,10 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 					pool.AddCert(cert)
 				}
 			}
+		}
+		// In case pool is not set than set it from co.IntermediateCerts
+		if pool == nil {
+			pool = co.IntermediateCerts
 		}
 		verifier, err = ValidateAndUnpackCertWithIntermediates(cert, co, pool)
 		if err != nil {
