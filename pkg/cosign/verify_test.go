@@ -1241,7 +1241,6 @@ func TestValidateAndUnpackCertWithIntermediatesSuccess(t *testing.T) {
 	rootPool.AddCert(rootCert)
 	subPool := x509.NewCertPool()
 	rootPool.AddCert(subCert)
-	subPool.AddCert(subCert)
 
 	co := &CheckOpts{
 		RootCerts:  rootPool,
