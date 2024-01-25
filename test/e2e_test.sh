@@ -16,6 +16,31 @@
 
 set -ex
 
+echo "setting up OIDC provider"
+pushd ./test/fakeoidc
+oidcimg=$(ko build main.go --local)
+docker network ls | grep fulcio_default || docker network create fulcio_default
+docker run -d --rm -p 8080:8080 --network fulcio_default --name fakeoidc $oidcimg
+cleanup_oidc() {
+    echo "cleaning up oidc"
+    docker stop fakeoidc
+}
+trap cleanup_oidc EXIT
+oidc_ip=$(docker inspect fakeoidc | jq -r '.[0].NetworkSettings.Networks.fulcio_default.IPAddress')
+export OIDC_URL="http://${oidc_ip}:8080"
+cat <<EOF > /tmp/fulcio-config.json
+{
+  "OIDCIssuers": {
+    "$OIDC_URL": {
+      "IssuerURL": "$OIDC_URL",
+      "ClientID": "sigstore",
+      "Type": "email"
+    }
+  }
+}
+EOF
+popd
+
 pushd $HOME
 
 echo "downloading service repos"
@@ -31,6 +56,7 @@ done
 
 echo "starting services"
 export FULCIO_METRICS_PORT=2113
+export FULCIO_CONFIG=/tmp/fulcio-config.json
 for repo in rekor fulcio; do
     pushd $repo
     docker-compose up -d
@@ -51,6 +77,7 @@ for repo in rekor fulcio; do
 done
 cleanup_services() {
     echo "cleaning up"
+    cleanup_oidc
     for repo in rekor fulcio; do
         pushd $HOME/$repo
         docker-compose down
