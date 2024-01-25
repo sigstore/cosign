@@ -18,7 +18,7 @@
 # scenario 1: Attach a single signature with certificate and certificate chain to an artifact
 # and verify it using root certificate
 # scenario 2: Attaches second signature with diffrent certificate and certificate chain to same
-# artifact and verify it using both root certificates separately 
+# artifact and verify it using both root certificates separately
 
 set -ex
 
@@ -74,7 +74,7 @@ crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "application/
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/certificate"
 crane manifest $(./cosign triangulate $IMAGE_URI_DIGEST) | grep -q "dev.sigstore.cosign/chain"
 
-## Verify Signature, payload, cert and cert-chain using Root certificate only 
+## Verify Signature, payload, cert and cert-chain using Root certificate only
 ./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' --cert-chain=./rootcert.pem
 
 ## Scenario 2 Starts
@@ -89,7 +89,7 @@ echo "Second Signature: $SIGNATURE2"
 ## Attach Second Signature, payload, cert and cert-chain
 ./cosign attach signature --signature ./secondpayloadbase64.sig --payload ./payload.json --cert ./secondleafcert.pem --cert-chain ./secondcertchain.pem $IMAGE_URI_DIGEST
 
-## Verify Signature, payload, cert and cert-chain using Root certificate only 
+## Verify Signature, payload, cert and cert-chain using Root certificate only
 ./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' --cert-chain=./rootcert.pem
 
 ./cosign verify $IMAGE_URI_DIGEST --insecure-ignore-sct --insecure-ignore-tlog --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' --cert-chain=./secondrootcert.pem
