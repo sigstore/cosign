@@ -106,3 +106,98 @@ $ cp certChain.crt test/testdata/test_attach_certchain.pem
 ```shell
 $ cp leafCA.crt test/testdata/test_attach_leafcert.pem
 ```
+
+16. Generate a private key for Second Root certificate
+
+```shell
+$ openssl genrsa -des3 -out secondrootCA.key 2048
+```
+17. Generate Second Root certificate
+
+```shell
+$ openssl req -x509 -new -nodes -key secondrootCA.key -sha256 -days 1825 -out secondrootCA.crt
+```
+   in Certificate generation set following values
+   C = IN, ST = DEL, L = DEL, O = exampleclient.com, OU = sigstore, CN = sigstore, emailAddress = foo@exampleclient.com
+
+18. Generate Private key for second Intermediate certificate
+
+```shell
+$ openssl genrsa -out secondintermediateCA.key 2048
+```
+19. Generate CSR for second Intermediate certificate
+
+```shell
+$ openssl req -new -key secondintermediateCA.key -out secondintermediateCA.csr
+```
+   in Certificate generation set following values
+   C = IN, ST = DEL, L = DEL, O = exampleclient.com, OU = sigstore-sub, CN = sigstore-sub, emailAddress = foo@exampleclient.com
+
+20. Create intermediate certificate config file by name "intermediateConfigFile" having content
+   	subjectKeyIdentifier = hash
+   	authorityKeyIdentifier = keyid:always,issuer
+   	basicConstraints = critical, CA:true, pathlen:0
+   	keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+21. Create intermediate certificate
+
+```shell
+$ openssl x509 -req -in secondintermediateCA.csr -CA secondrootCA.crt -CAkey secondrootCA.key  -CAcreateserial -CAserial secondintermediateca.srl -out secondintermediateCA.crt -days 1825 -sha256 -extfile intermediateConfigFile
+```
+
+22. Create Private key for second leaf certificate
+
+```shell
+$ openssl genrsa -out secondleafCA.key 2048
+```
+
+23. Create CSR for second Leaf certificate
+
+```shell
+$ openssl req -new -key secondleafCA.key -out secondleafCA.csr
+```
+   in certificate generation set following values
+   C = IN, ST = DEL, L = DEL, O = exampleclient.com, OU = sigstore-leaf, CN = sigstore-leaf, emailAddress = foo@exampleclient.com
+
+24. Create Leaf certificate config file by name "leafConfigFile" having content
+        authorityKeyIdentifier=keyid,issuer
+        basicConstraints=CA:FALSE
+        keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+        extendedKeyUsage=codeSigning
+        subjectAltName=email:copy
+
+25. Create Leaf certificate
+
+```shell
+$ openssl x509 -req -in secondleafCA.csr -CA secondintermediateCA.crt -CAkey secondintermediateCA.key  -CAcreateserial -CAserial secondleafca.srl -out secondleafCA.crt -days 1825 -sha256 -extfile leafConfigFile
+```
+
+26. Generate Certificate chain by concatinating second Intermediate certificate and second Root certificate
+
+```shell
+$ cat secondintermediateCA.crt secondrootCA.crt > secondcertChain.crt
+```
+
+27. copy private key of second Leaf certificate to test/testdata/test_attach_second_private_key
+
+```shell
+$ cp secondleafCA.key test/testdata/test_attach_second_private_key
+```
+
+28. copy root certificate to test/testdata/test_attach_second_rootcert.pem
+
+```shell
+$ cp secondrootCA.crt test/testdata/test_attach_second_rootcert.pem
+```
+
+29. copy second cert chain to test/testdata/test_attach_second_certchain.pem
+
+```shell
+$ cp secondcertChain.crt test/testdata/test_attach_second_certchain.pem
+```
+
+30. copy second Leaf certificate to test/testdata/test_attach_second_leafcert.pem
+
+```shell
+$ cp secondleafCA.crt test/testdata/test_attach_second_leafcert.pem
+```

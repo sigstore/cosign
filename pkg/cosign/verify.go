@@ -216,9 +216,17 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
-// ValidateAndUnpackCert creates a Verifier from a certificate. Veries that the certificate
-// chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
+// ValidateAndUnpackCert creates a Verifier from a certificate. Verifies that the
+// certificate chains up to a trusted root using intermediate certificate chain coming from CheckOpts.
+// Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+	return ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
+}
+
+// ValidateAndUnpackCertWithIntermediates creates a Verifier from a certificate. Verifies that the
+// certificate chains up to a trusted root using intermediate cert passed as separate argument.
+// Optionally verifies the subject and issuer of the certificate.
+func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
@@ -239,7 +247,8 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 	}
 
 	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(cert, co.RootCerts, co.IntermediateCerts)
+	chains, err := TrustedCert(cert, co.RootCerts, intermediateCerts)
+
 	if err != nil {
 		return nil, err
 	}
@@ -721,19 +730,21 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			return false, err
 		}
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
-		if len(chain) > 0 {
-			if len(chain) == 1 {
-				co.IntermediateCerts = nil
-			} else if co.IntermediateCerts == nil {
+		var pool *x509.CertPool
+		if len(chain) > 1 {
+			if co.IntermediateCerts == nil {
 				// If the intermediate certs have not been loaded in by TUF
-				pool := x509.NewCertPool()
+				pool = x509.NewCertPool()
 				for _, cert := range chain[:len(chain)-1] {
 					pool.AddCert(cert)
 				}
-				co.IntermediateCerts = pool
 			}
 		}
-		verifier, err = ValidateAndUnpackCert(cert, co)
+		// In case pool is not set than set it from co.IntermediateCerts
+		if pool == nil {
+			pool = co.IntermediateCerts
+		}
+		verifier, err = ValidateAndUnpackCertWithIntermediates(cert, co, pool)
 		if err != nil {
 			return false, err
 		}
