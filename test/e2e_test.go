@@ -1183,6 +1183,12 @@ func TestRFC3161Timestamp(t *testing.T) {
 }
 
 func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
@@ -1212,7 +1218,6 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 
 	repo, stop := reg(t)
 	defer stop()
-	td := t.TempDir()
 
 	imgName := path.Join(repo, "cosign-e2e")
 
@@ -1388,13 +1393,14 @@ func TestMultipleSignatures(t *testing.T) {
 }
 
 func TestSignBlob(t *testing.T) {
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
 	blob := "someblob"
 	td1 := t.TempDir()
 	td2 := t.TempDir()
-	t.Cleanup(func() {
-		os.RemoveAll(td1)
-		os.RemoveAll(td2)
-	})
 	bp := filepath.Join(td1, blob)
 
 	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
@@ -1445,13 +1451,15 @@ func TestSignBlob(t *testing.T) {
 func TestSignBlobBundle(t *testing.T) {
 	blob := "someblob"
 	td1 := t.TempDir()
-	t.Cleanup(func() {
-		os.RemoveAll(td1)
-	})
 	bp := filepath.Join(td1, blob)
 	bundlePath := filepath.Join(td1, "bundle.sig")
 
 	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td1)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -1496,6 +1504,11 @@ func TestSignBlobBundle(t *testing.T) {
 }
 
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
@@ -1504,13 +1517,9 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	blob := "someblob"
-	td1 := t.TempDir()
-	t.Cleanup(func() {
-		os.RemoveAll(td1)
-	})
-	bp := filepath.Join(td1, blob)
-	bundlePath := filepath.Join(td1, "bundle.sig")
-	tsPath := filepath.Join(td1, "rfc3161Timestamp.json")
+	bp := filepath.Join(td, blob)
+	bundlePath := filepath.Join(td, "bundle.sig")
+	tsPath := filepath.Join(td, "rfc3161Timestamp.json")
 
 	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
 		t.Fatal(err)
@@ -1536,7 +1545,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
 
-	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
+	_, privKeyPath1, pubKeyPath1 := keypair(t, td)
 
 	ctx := context.Background()
 
@@ -2477,9 +2486,14 @@ func TestAttestBlobSignVerify(t *testing.T) {
 }
 
 func TestOffline(t *testing.T) {
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	regName, stop := reg(t)
 	defer stop()
-	td := t.TempDir()
 
 	img1 := path.Join(regName, "cosign-e2e")
 

@@ -86,9 +86,6 @@ cleanup_services() {
 }
 trap cleanup_services EXIT
 
-curl http://127.0.0.1:3000/api/v1/log/publicKey > rekor.pub
-export SIGSTORE_REKOR_PUBLIC_KEY=$(pwd)/rekor.pub
-
 echo
 echo "running tests"
 
