@@ -63,7 +63,7 @@ jobs:
         shell: bash
         if: github.event_name != 'pull_request'
         run: |
-          name=$(echo ${{ matrix.os }} | cut -d '-' f1)
+          name=$(echo ${{ matrix.os }} | cut -f1 -d"-")
           echo "artifactsfilename=$name" >> $GITHUB_ENV
       - name: Upload artifacts
         if: github.event_name != 'pull_request'
