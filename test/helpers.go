@@ -114,6 +114,33 @@ var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, 
 	return cmd.Exec(context.Background(), args)
 }
 
+var verifyKeylessTSAWithCARoots = func(imageRef string,
+	caroots string, // filename of a PEM file with CA Roots certificates
+	intermediates string, // empty or filename of a PEM file with Intermediate certificates
+	certFile string, // filename of a PEM file with the codesigning certificate
+	tsaCertChain string,
+	skipSCT bool,
+	skipTlogVerify bool) error {
+	cmd := cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuerRegexp: ".*",
+			CertIdentityRegexp:   ".*",
+		},
+		CertRef:          certFile,
+		CARoots:          caroots,
+		CAIntermediates:  intermediates,
+		RekorURL:         rekorURL,
+		HashAlgorithm:    crypto.SHA256,
+		TSACertChainPath: tsaCertChain,
+		IgnoreSCT:        skipSCT,
+		IgnoreTlog:       skipTlogVerify,
+		MaxWorkers:       10,
+	}
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
 // Used to verify local images stored on disk
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{

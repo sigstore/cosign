@@ -21,7 +21,12 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,6 +38,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -55,6 +61,8 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
@@ -791,6 +799,348 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 }
 
+func TestVerifyWithCARoots(t *testing.T) {
+	ctx := context.Background()
+	// TSA server needed to create timestamp
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-verify-caroots-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	b := bytes.Buffer{}
+	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
+
+	rootCert, rootKey, _ := GenerateRootCa()
+	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootCert02, rootKey02, _ := GenerateRootCa()
+	subCert02, subKey02, _ := GenerateSubordinateCa(rootCert02, rootKey02)
+	leafCert02, _, _ := GenerateLeafCert("subject02@mail.com", "oidc-issuer02", subCert02, subKey02)
+	pemRoot02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert02.Raw})
+	pemSub02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert02.Raw})
+	pemLeaf02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert02.Raw})
+	pemsubRef02 := mkfile(string(pemSub02), td, t)
+	pemrootRef02 := mkfile(string(pemRoot02), td, t)
+	pemleafRef02 := mkfile(string(pemLeaf02), td, t)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payloadref := mkfile(b.String(), td, t)
+
+	h := sha256.Sum256(b.Bytes())
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	sigRef := mkfile(b64signature, td, t)
+	pemsubRef := mkfile(string(pemSub), td, t)
+	pemrootRef := mkfile(string(pemRoot), td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+
+	pemrootBundleRef := mkfile(string(append(pemRoot[:], pemRoot02[:]...)), td, t)
+	pemsubBundleRef := mkfile(string(append(pemSub[:], pemSub02[:]...)), td, t)
+
+	tsclient, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := tsclient.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	tsaChainRef, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(tsaChainRef.Name())
+	_, err = tsaChainRef.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(server.URL+"/api/v1/timestamp"))
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TSRef := mkfile(string(tsBytes), td, t)
+
+	// Upload it!
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// the following fields with non-changing values are logically "factored out" for brevity
+	// and passed to verifyKeylessTSAWithCARoots in the testing loop:
+	// imageName string
+	// tsaCertChainRef string
+	// skipSCT   bool
+	// skipTlogVerify bool
+	tests := []struct {
+		name      string
+		rootRef   string
+		subRef    string
+		leafRef   string
+		wantError bool
+	}{
+		{
+			"verify with root, intermediate and leaf certificates",
+			pemrootRef,
+			pemsubRef,
+			pemleafRef,
+			false,
+		},
+		// NB - "confusely" switching the root and intermediate PEM files does _NOT_ (currently) produce an error
+		// - the Go crypto/x509 package doesn't strictly verify that the certificate chain is anchored
+		// in a self-signed root certificate.  In this case, only the chain up to the intermediate
+		// certificate is verified, and the root certificate is ignored.
+		// See also https://gist.github.com/dmitris/15160f703b3038b1b00d03d3c7b66ce0 and in particular
+		// https://gist.github.com/dmitris/15160f703b3038b1b00d03d3c7b66ce0#file-main-go-L133-L135 as an example.
+		{
+			"switch root and intermediate no error",
+			pemsubRef,
+			pemrootRef,
+			pemleafRef,
+			false,
+		},
+		{
+			"leave out the root certificate",
+			"",
+			pemsubRef,
+			pemleafRef,
+			true,
+		},
+		{
+			"leave out the intermediate certificate",
+			pemrootRef,
+			"",
+			pemleafRef,
+			true,
+		},
+		{
+			"leave out the codesigning leaf certificate which is extracted from the image",
+			pemrootRef,
+			pemsubRef,
+			"",
+			false,
+		},
+		{
+			"wrong leaf certificate",
+			pemrootRef,
+			pemsubRef,
+			pemleafRef02,
+			true,
+		},
+		{
+			"root and intermediates bundles",
+			pemrootBundleRef,
+			pemsubBundleRef,
+			pemleafRef,
+			false,
+		},
+		{
+			"wrong root and intermediates bundles",
+			pemrootRef02,
+			pemsubRef02,
+			pemleafRef,
+			true,
+		},
+		{
+			"wrong root undle",
+			pemrootRef02,
+			pemsubBundleRef,
+			pemleafRef,
+			true,
+		},
+		{
+			"wrong intermediates bundle",
+			pemrootRef,
+			pemsubRef02,
+			pemleafRef,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		err := verifyKeylessTSAWithCARoots(imgName,
+			tt.rootRef,
+			tt.subRef,
+			tt.leafRef,
+			tsaChainRef.Name(),
+			true,
+			true)
+		hasErr := (err != nil)
+		if hasErr != tt.wantError {
+			if tt.wantError {
+				t.Errorf("%s - no expected error", tt.name)
+			} else {
+				t.Errorf("%s - unexpected error: %v", tt.name, err)
+			}
+		}
+	}
+}
+
+func TestAttachWithRFC3161Timestamp(t *testing.T) {
+	ctx := context.Background()
+	// TSA server needed to create timestamp
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	b := bytes.Buffer{}
+	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
+
+	rootCert, rootKey, _ := GenerateRootCa()
+	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	payloadref := mkfile(b.String(), td, t)
+
+	h := sha256.Sum256(b.Bytes())
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	sigRef := mkfile(b64signature, td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	pemrootRef := mkfile(string(pemRoot), td, t)
+
+	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+
+	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
+	// reset the roots to use the root pointed by the environment variable SIGSTORE_ROOT_FILE
+	if err := fulcioroots.ReInit(); err != nil {
+		t.Fatal(err)
+	}
+
+	tsclient, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := tsclient.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(server.URL+"/api/v1/timestamp"))
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TSRef := mkfile(string(tsBytes), td, t)
+
+	// Upload it!
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	must(verifyKeylessTSA(imgName, file.Name(), true, true), t)
+}
+
+func TestAttachWithRekorBundle(t *testing.T) {
+	ctx := context.Background()
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	b := bytes.Buffer{}
+	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
+
+	rootCert, rootKey, _ := GenerateRootCa()
+	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	payloadref := mkfile(b.String(), td, t)
+
+	h := sha256.Sum256(b.Bytes())
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	sigRef := mkfile(b64signature, td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	pemrootRef := mkfile(string(pemRoot), td, t)
+
+	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
+
+	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+
+	localPayload := cosign.LocalSignedPayload{
+		Base64Signature: b64signature,
+		Cert:            string(pemLeaf),
+		Bundle: &bundle.RekorBundle{
+			SignedEntryTimestamp: strfmt.Base64("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
+			Payload: bundle.RekorPayload{
+				Body:           "REMOVED",
+				IntegratedTime: 1631646761,
+				LogIndex:       693591,
+				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
+			},
+		},
+	}
+
+	jsonBundle, err := json.Marshal(localPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(td, "bundle.json")
+	if err := os.WriteFile(bundlePath, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Upload it!
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", bundlePath, imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRekorBundle(t *testing.T) {
 	td := t.TempDir()
 	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
@@ -1420,6 +1770,102 @@ func TestGenerate(t *testing.T) {
 
 	equals(desc.Digest.String(), ss.Critical.Image.DockerManifestDigest, t)
 	equals(ss.Optional["foo"], "bar", t)
+}
+
+func TestUploadDownload(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+	ctx := context.Background()
+
+	testCases := map[string]struct {
+		signature     string
+		signatureType attach.SignatureArgType
+		expectedErr   bool
+	}{
+		"stdin containing signature": {
+			signature:     "testsignatureraw",
+			signatureType: attach.StdinSignature,
+			expectedErr:   false,
+		},
+		"file containing signature": {
+			signature:     "testsignaturefile",
+			signatureType: attach.FileSignature,
+			expectedErr:   false,
+		},
+		"raw signature as argument": {
+			signature:     "testsignatureraw",
+			signatureType: attach.RawSignature,
+			expectedErr:   true,
+		},
+		"empty signature as argument": {
+			signature:     "",
+			signatureType: attach.RawSignature,
+			expectedErr:   true,
+		},
+	}
+
+	imgName := path.Join(repo, "cosign-e2e")
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			ref, _, cleanup := mkimage(t, imgName)
+			payload := "testpayload"
+			payloadPath := mkfile(payload, td, t)
+			signature := base64.StdEncoding.EncodeToString([]byte(testCase.signature))
+			restoreStdin := func() {}
+
+			var sigRef string
+			if testCase.signatureType == attach.FileSignature {
+				sigRef = mkfile(signature, td, t)
+			} else if testCase.signatureType == attach.StdinSignature {
+				sigRef = "-"
+				restoreStdin = mockStdin(signature, td, t)
+			} else {
+				sigRef = signature
+			}
+			// Upload it!
+			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, "", "", "", "", imgName)
+			if testCase.expectedErr {
+				mustErr(err, t)
+			} else {
+				must(err, t)
+			}
+			restoreStdin()
+
+			// Now download it!
+			se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
+			must(err, t)
+			sigs, err := se.Signatures()
+			must(err, t)
+			signatures, err := sigs.Get()
+			must(err, t)
+
+			if testCase.expectedErr {
+				if len(signatures) != 0 {
+					t.Fatalf("unexpected signatures %d, wanted 0", len(signatures))
+				}
+			} else {
+				if len(signatures) != 1 {
+					t.Fatalf("unexpected signatures %d, wanted 1", len(signatures))
+				}
+
+				if b64sig, err := signatures[0].Base64Signature(); err != nil {
+					t.Fatalf("Base64Signature() = %v", err)
+				} else if diff := cmp.Diff(b64sig, signature); diff != "" {
+					t.Error(diff)
+				}
+
+				if p, err := signatures[0].Payload(); err != nil {
+					t.Fatalf("Payload() = %v", err)
+				} else if diff := cmp.Diff(p, []byte(payload)); diff != "" {
+					t.Error(diff)
+				}
+			}
+
+			// Now delete it!
+			cleanup()
+		})
+	}
 }
 
 func TestSaveLoad(t *testing.T) {
