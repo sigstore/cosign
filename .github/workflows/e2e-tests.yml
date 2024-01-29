@@ -87,3 +87,7 @@ jobs:
       - name: Run pkcs11 end-to-end tests
         shell: bash
         run: ./test/e2e_test_pkcs11.sh
+
+      - name: Run e2e_tsa_certbundle.sh
+        shell: bash
+        run: make && PATH="$PWD:$PATH" ./test/e2e_tsa_certbundle.sh
