@@ -27,7 +27,7 @@ require (
 	github.com/moby/term v0.5.0
 	github.com/mozillazg/docker-credential-acr-helper v0.3.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
-	github.com/open-policy-agent/opa v0.60.0
+	github.com/open-policy-agent/opa v0.61.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0
 	github.com/sigstore/fulcio v1.4.3
@@ -145,7 +145,7 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.1 // indirect
-	github.com/go-logr/logr v1.3.0 // indirect
+	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.22.0 // indirect
 	github.com/go-openapi/errors v0.21.0 // indirect
@@ -167,7 +167,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/tink/go v1.7.0 // indirect
-	github.com/google/uuid v1.5.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
@@ -263,7 +263,7 @@ require (
 	google.golang.org/genproto v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240116215550-a9fa1716bcac // indirect
-	google.golang.org/grpc v1.60.1 // indirect
+	google.golang.org/grpc v1.61.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
