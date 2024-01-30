@@ -26,8 +26,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*fulcio.Signer, error) {
-	fs, err := fulcio.NewSigner(ctx, ko, signer)
+func NewSignerWithAdapter(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier, fulcioSigner signature.SignerVerifier) (*fulcio.Signer, error) {
+	fs, err := fulcio.NewSignerWithAdapter(ctx, ko, signer, fulcioSigner)
 	if err != nil {
 		return nil, err
 	}
@@ -45,4 +45,8 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 	ui.Infof(ctx, "Successfully verified SCT...")
 
 	return fs, nil
+}
+
+func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*fulcio.Signer, error) {
+	return NewSignerWithAdapter(ctx, ko, signer, signer)
 }

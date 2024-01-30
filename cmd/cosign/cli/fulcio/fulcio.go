@@ -109,7 +109,7 @@ type Signer struct {
 	signature.SignerVerifier
 }
 
-func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*Signer, error) {
+func NewSignerWithAdapter(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier, fulcioSigner signature.SignerVerifier) (*Signer, error) {
 	fClient, err := NewClient(ko.FulcioURL)
 	if err != nil {
 		return nil, fmt.Errorf("creating Fulcio client: %w", err)
@@ -164,7 +164,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 		}
 		flow = flowNormal
 	}
-	Resp, err := GetCert(ctx, signer, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
+	Resp, err := GetCert(ctx, fulcioSigner, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
 	if err != nil {
 		return nil, fmt.Errorf("retrieving cert: %w", err)
 	}
@@ -177,6 +177,10 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 	}
 
 	return f, nil
+}
+
+func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*Signer, error) {
+	return NewSignerWithAdapter(ctx, ko, signer, signer)
 }
 
 func (f *Signer) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) { //nolint: revive
