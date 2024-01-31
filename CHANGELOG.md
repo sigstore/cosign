@@ -1,3 +1,38 @@
+# v2.2.3
+
+## Bug Fixes
+
+* Fix race condition on verification with multiple signatures attached to image (#3486)
+* fix(clean): Fix clean cmd for private registries (#3446)
+* Fixed BYO PKI verification (#3427)
+
+## Features
+
+* Allow for option in cosign attest and attest-blob to upload attestation as supported in Rekor (#3466)
+* Add support for OpenVEX predicate type (#3405)
+
+## Documentation
+
+* Resolves #3088: `version` sub-command expected behaviour documentation and testing (#3447)
+* add examples for cosign attach signature cmd (#3468)
+
+## Misc
+
+* Remove CertSubject function (#3467)
+* Use local rekor and fulcio instances in e2e tests (#3478)
+
+## Contributors
+
+* aalsabag
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Colleen Murphy
+* Hayden B
+* Mukuls77
+* Omri Bornstein
+* Puerco
+* vivek kumar sahu
+
 # v2.2.2
 
 v2.2.2 adds a new container with a shell, `gcr.io/projectsigstore/cosign:vx.y.z-dev`, in addition to the existing
@@ -25,7 +60,7 @@ For private deployments, we have also added an alias for `--insecure-skip-log`, 
 
 ## Documentation
 
-* Update SBOM_SPEC.md (#3358)
+* Update SBOM\_SPEC.md (#3358)
 
 ## Contributors
 
