@@ -62,6 +62,10 @@ against the transparency log.`,
   # verify image with local certificate and certificate chain
   cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
+  # verify image with local certificate and certificate bundles of CA roots
+  # and (optionally) CA intermediates
+  cosign verify --cert cosign.crt --ca-roots ca-roots.pem --ca-intermediates ca-intermediates.pem <IMAGE>
+
   # verify image using keyless verification with the given certificate
   # chain and identity parameters, without Fulcio roots (for BYO PKI):
   cosign verify --cert-chain chain.crt --certificate-oidc-issuer https://issuer.example.com --certificate-identity foo@example.com <IMAGE>
@@ -115,6 +119,7 @@ against the transparency log.`,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
 				CARoots:                      o.CertVerify.CARoots,
 				CertChain:                    o.CertVerify.CertChain,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,

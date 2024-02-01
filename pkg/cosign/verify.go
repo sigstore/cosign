@@ -434,7 +434,7 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 }
 
 // ValidateAndUnpackCertWithCertPools creates a Verifier from a certificate. Verifies that the certificate
-// chains up to the provided root. CheckOpts should contain a pool of CA Roots and optionally the Intermediates
+// chains up to the provided root. CheckOpts should contain a pool of CA Roots and optionally the Intermediates.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCertWithCertPools(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
 	if co.RootCerts == nil {

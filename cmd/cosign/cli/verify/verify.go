@@ -60,6 +60,7 @@ type VerifyCommand struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
+	CAIntermediates              string
 	CARoots                      string
 	CertChain                    string
 	CertOidcProvider             string
@@ -204,6 +205,18 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				if len(caRoots) > 0 {
 					for _, cert := range caRoots {
 						co.RootCerts.AddCert(cert)
+					}
+				}
+				if c.CAIntermediates != "" {
+					caIntermediates, err := loadCertChainFromFileOrURL(c.CAIntermediates)
+					if err != nil {
+						return err
+					}
+					if len(caIntermediates) > 0 {
+						co.IntermediateCerts = x509.NewCertPool()
+						for _, cert := range caIntermediates {
+							co.IntermediateCerts.AddCert(cert)
+						}
 					}
 				}
 			}
