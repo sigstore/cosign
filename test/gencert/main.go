@@ -15,6 +15,9 @@
 // code is based on the snippet https://gist.github.com/shaneutt/5e1995295cff6721c89a71d13a71c251
 // with a permissive (Public Domain) License.
 
+// TODO(dmitris) - refactor to move the code generating certificates and writing to files
+// to a separate function.
+
 package main
 
 import (
@@ -23,6 +26,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"flag"
 	"log"
 	"math/big"
 	"net"
@@ -31,16 +35,21 @@ import (
 )
 
 func main() {
+	var genIntermediate = flag.Bool("intermediate", false, "generate intermediate CA")
+	var outputSuffix = flag.String("output-suffix", "", "suffix to append to generated files before the extension")
+	flag.Parse()
+
 	// set up our CA certificate
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
-			Organization:  []string{"CA Company, INC."},
-			Country:       []string{"US"},
-			Province:      []string{""},
-			Locality:      []string{"San Francisco"},
-			StreetAddress: []string{"Golden Gate Bridge"},
-			PostalCode:    []string{"94016"},
+			Organization:       []string{"CA Company, INC."},
+			OrganizationalUnit: []string{"CA Root Team"},
+			Country:            []string{"US"},
+			Province:           []string{""},
+			Locality:           []string{"San Francisco"},
+			StreetAddress:      []string{"Golden Gate Bridge"},
+			PostalCode:         []string{"94016"},
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
@@ -64,19 +73,20 @@ func main() {
 	}
 
 	// pem encode
-	caCertFile, err := os.OpenFile("cacert.pem", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	fname := "ca-root" + *outputSuffix + ".pem"
+	caCertFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		log.Fatalf("unable to write to cacert.pem: %v", err)
+		log.Fatalf("unable to write to %s: %v", fname, err)
 	}
 	err = pem.Encode(caCertFile, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
 	if err != nil {
-		log.Fatalf("unable to write to cacert.pem: %v", err)
+		log.Fatalf("unable to write to %s: %v", fname, err)
 	}
-
-	caPrivKeyFile, err := os.OpenFile("ca-key.pem", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0400)
+	fname = "ca-key" + *outputSuffix + ".pem"
+	caPrivKeyFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0400)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -86,19 +96,82 @@ func main() {
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
 	})
 	if err != nil {
-		log.Fatalf("unable to create to ca-key.pem: %v", err) //nolint:gocritic
+		log.Fatalf("unable to create to %s: %v", fname, err) //nolint:gocritic
 	}
 
+	// generate intermediate CA if requested
+	var caIntermediate *x509.Certificate
+	var caIntermediatePrivKey *rsa.PrivateKey
+	if *genIntermediate {
+		caIntermediate = &x509.Certificate{
+			SerialNumber: big.NewInt(2019),
+			Subject: pkix.Name{
+				Organization:       []string{"CA Company, INC."},
+				OrganizationalUnit: []string{"CA Intermediate Team"},
+				Country:            []string{"US"},
+				Province:           []string{""},
+				Locality:           []string{"San Francisco"},
+				StreetAddress:      []string{"Golden Gate Bridge"},
+				PostalCode:         []string{"94016"},
+			},
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().AddDate(10, 0, 0),
+			IsCA:                  true,
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning /*, x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth */},
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			BasicConstraintsValid: true,
+			EmailAddresses:        []string{"ca@example.com"},
+		}
+		// create our private and public key
+		caIntermediatePrivKey, err = rsa.GenerateKey(rand.Reader, 4096)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// create the Intermediate CA
+		caIntermediateBytes, err := x509.CreateCertificate(rand.Reader, caIntermediate, ca, &caIntermediatePrivKey.PublicKey, caPrivKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// pem encode
+		fname = "ca-intermediate" + *outputSuffix + ".pem"
+		caIntermediateCertFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			log.Fatalf("unable to write to %s: %v", fname, err)
+		}
+		err = pem.Encode(caIntermediateCertFile, &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: caIntermediateBytes,
+		})
+		if err != nil {
+			log.Fatalf("unable to write to %s: %v", fname, err)
+		}
+		fname = "ca-intermediate-key" + *outputSuffix + ".pem"
+		caIntermediatePrivKeyFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0400)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer caIntermediatePrivKeyFile.Close()
+		err = pem.Encode(caIntermediatePrivKeyFile, &pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(caIntermediatePrivKey),
+		})
+		if err != nil {
+			log.Fatalf("unable to create to %s: %v", fname, err) //nolint:gocritic
+		}
+	}
 	// set up our server certificate
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
-			Organization:  []string{"Company, INC."},
-			Country:       []string{"US"},
-			Province:      []string{""},
-			Locality:      []string{"San Francisco"},
-			StreetAddress: []string{"Golden Gate Bridge"},
-			PostalCode:    []string{"94016"},
+			Organization:       []string{"End User"},
+			OrganizationalUnit: []string{"End Node Team"},
+			Country:            []string{"US"},
+			Province:           []string{""},
+			Locality:           []string{"San Francisco"},
+			StreetAddress:      []string{"Golden Gate Bridge"},
+			PostalCode:         []string{"94016"},
 		},
 		IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 		NotBefore:      time.Now(),
@@ -115,12 +188,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &certPrivKey.PublicKey, caPrivKey)
+	var certBytes []byte
+	if !*genIntermediate {
+		certBytes, err = x509.CreateCertificate(rand.Reader, cert, ca, &certPrivKey.PublicKey, caPrivKey)
+	} else {
+		certBytes, err = x509.CreateCertificate(rand.Reader, cert, caIntermediate, &caIntermediatePrivKey.PublicKey, caIntermediatePrivKey)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	certFile, err := os.OpenFile("cert.pem", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	fname = "cert" + *outputSuffix + ".pem"
+	certFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,7 +212,8 @@ func main() {
 		log.Fatalf("failed to encode cert: %v", err)
 	}
 
-	keyFile, err := os.OpenFile("key.pem", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0400)
+	fname = "key" + *outputSuffix + ".pem"
+	keyFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0400)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -143,6 +223,6 @@ func main() {
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	})
 	if err != nil {
-		log.Fatalf("failed to encode private key: %v", err)
+		log.Fatalf("failed to encode private key to %s: %v", fname, err)
 	}
 }
