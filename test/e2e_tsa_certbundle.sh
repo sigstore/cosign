@@ -27,40 +27,11 @@ set -exuo pipefail
 
 CERT_BASE="test/testdata"
 
-# the certificates listed below are generated with the `gen-tsa-mtls-certs.sh` script.
-TIMESTAMP_CACERT=$CERT_BASE/tsa-mtls-ca.crt
-TIMESTAMP_CLIENT_CERT=$CERT_BASE/tsa-mtls-client.crt
-TIMESTAMP_CLIENT_KEY=$CERT_BASE/tsa-mtls-client.key
-TIMESTAMP_SERVER_CERT=$CERT_BASE/tsa-mtls-server.crt
-TIMESTAMP_SERVER_KEY=$CERT_BASE/tsa-mtls-server.key
-TIMESTAMP_SERVER_NAME="server.example.com"
-TIMESTAMP_SERVER_URL=https://localhost:3000/api/v1/timestamp
+export TIMESTAMP_SERVER_URL=https://freetsa.org/tsr
 TIMESTAMP_CHAIN_FILE="timestamp-chain"
-
-set +e
+curl -s https://www.freetsa.org/files/cacert.pem > $TIMESTAMP_CHAIN_FILE
+echo "TIMESTAMP_CHAIN_FILE: $(ls -l $TIMESTAMP_CHAIN_FILE)"
 COSIGN_CLI=./cosign
-command -v timestamp-server >& /dev/null
-exit_code=$?
-set -e
-if [[ $exit_code != 0 ]]; then
-	rm -fr /tmp/timestamp-authority
-	git clone https://github.com/sigstore/timestamp-authority /tmp/timestamp-authority
-	pushd /tmp/timestamp-authority
-	make
-	export PATH="/tmp/timestamp-authority/bin:$PATH"
-	popd
-fi
-
-timestamp-server serve --disable-ntp-monitoring --tls-host 0.0.0.0 --tls-port 3000 \
-		--scheme https --tls-ca $TIMESTAMP_CACERT --tls-key $TIMESTAMP_SERVER_KEY \
-		--tls-certificate $TIMESTAMP_SERVER_CERT &
-
-sleep 1
-curl -k -s --key test/testdata/tsa-mtls-client.key \
-    --cert test/testdata/tsa-mtls-client.crt \
-    --cacert test/testdata/tsa-mtls-ca.crt https://localhost:3000/api/v1/timestamp/certchain \
-    > $TIMESTAMP_CHAIN_FILE
-echo "DONE: $(ls -l $TIMESTAMP_CHAIN_FILE)"
 
 # unlike e2e_tsa_mtls.sh, there is no option to pass an image as a command-line parameter.
 
@@ -76,36 +47,40 @@ done
 
 echo "IMG01: $IMG01, IMG02: $IMG02, TIMESTAMP_SERVER_URL: $TIMESTAMP_SERVER_URL"
 
-rm -f *.pem import-cosign.* key.pem
-
 # use gencert to generate two CAs (for testing certificate bundle feature),
 # keys and certificates
 echo "generate CAs, keys and certificates with gencert"
-
 passwd=$(uuidgen | head -c 32 | tr 'A-Z' 'a-z')
 rm -f *.pem import-cosign.*
 for i in 01 02; do
-	go run test/gencert/main.go && mv cacert.pem cacert${i}.pem && mv ca-key.pem ca-key${i}.pem && mv cert.pem cert${i}.pem && mv key.pem key${i}.pem
-	COSIGN_PASSWORD="$passwd" $COSIGN_CLI import-key-pair --key key${i}.pem --output-key-prefix import-cosign${i}
+	go run test/gencert/main.go -output-suffix "$i" -intermediate
+	COSIGN_PASSWORD="$passwd" $COSIGN_CLI import-key-pair --key ca-intermediate-key${i}.pem --output-key-prefix import-cosign${i}
 	IMG="IMG${i}"
+	cat ca-intermediate${i}.pem ca-root${i}.pem > certchain${i}.pem
 	COSIGN_PASSWORD="$passwd" $COSIGN_CLI sign --timestamp-server-url "${TIMESTAMP_SERVER_URL}" \
-		--timestamp-client-cacert ${TIMESTAMP_CACERT} --timestamp-client-cert ${TIMESTAMP_CLIENT_CERT} \
-		--timestamp-client-key ${TIMESTAMP_CLIENT_KEY} --timestamp-server-name ${TIMESTAMP_SERVER_NAME}\
-		--upload=true --tlog-upload=false --key import-cosign${i}.key --certificate-chain cacert${i}.pem --cert cert${i}.pem "${!IMG}"
+		--upload=true --tlog-upload=false --key import-cosign${i}.key --certificate-chain certchain${i}.pem --cert cert${i}.pem "${!IMG}"
 	# key is now longer needed
 	rm -f key${i}.pem import-cosign${i}.*
 done
+
 # create a certificate bundle - concatenate both generated CA certificates
-cat cacert01.pem cacert02.pem > ca-roots.pem
+ls -l *.pem
+cat ca-root01.pem ca-root02.pem > ca-roots.pem
+cat ca-intermediate01.pem ca-intermediate02.pem > ca-intermediates.pem
 
 echo "cosign verify:"
 for i in 01 02; do
 	IMG="IMG${i}"
+	# first try with --certificate-chain parameter
 	$COSIGN_CLI verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=true \
 		--certificate-identity-regexp 'xyz@nosuchprovider.com' --certificate-oidc-issuer-regexp '.*' \
-		--ca-roots ca-roots.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE "${!IMG}"
+		--certificate-chain certchain${i}.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE "${!IMG}"
+
+	# then do the same but now with --ca-roots and --ca-intermediates parameters
+	$COSIGN_CLI verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=true \
+		--certificate-identity-regexp 'xyz@nosuchprovider.com' --certificate-oidc-issuer-regexp '.*' \
+		--ca-roots ca-roots.pem --ca-intermediates ca-intermediates.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE "${!IMG}"
 done
 
 # cleanup
-rm -fr ca-key*.pem ca-roots.pem cacert*.pem cert*.pem timestamp-chain /tmp/timestamp-authority
-pkill -f 'timestamp-server'
+rm -fr *.pem timestamp-chain
