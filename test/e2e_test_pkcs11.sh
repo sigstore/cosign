@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -ex
+set -o errexit
+set -o nounset
+set -o pipefail
 
 # Test pkcs11 token signing
 CONTAINER_ID=$(docker run -dit --name softhsm -v $(pwd):/root/cosign -p 2345:2345 vegardit/softhsm2-pkcs11-proxy@sha256:557a65d2a14e3986f2389d36ddce75609cbd8fb7ee6cf08a78adcc8236c2a80e)
