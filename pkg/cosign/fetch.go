@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -50,6 +51,8 @@ type LocalSignedPayload struct {
 	Cert            string              `json:"cert,omitempty"`
 	Bundle          *bundle.RekorBundle `json:"rekorBundle,omitempty"`
 }
+
+type RekorResponse map[string]models.LogEntryAnon
 
 type Signatures struct {
 	KeyID string `json:"keyid"`

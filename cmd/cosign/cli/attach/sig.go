@@ -105,20 +105,21 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 			return err
 		}
 
-		var localCosignPayload cosign.LocalSignedPayload
-		if err := json.Unmarshal(rekorResponseByte, &localCosignPayload); err == nil {
-			rekorBundle = localCosignPayload.Bundle
-			if rekorBundle == nil && localCosignPayload.Cert == "" && localCosignPayload.Base64Signature == "" {
-				fmt.Printf("rekor-bundle is passed")
-				err = json.Unmarshal(rekorResponseByte, &rekorBundle)
-				if err != nil {
-					return err
-				}
-			} else {
-				fmt.Printf("Bundle is passed")
-			}
-		} else {
-			return err
+		var rekorResponse cosign.RekorResponse
+		err = json.Unmarshal(rekorResponseByte, &rekorResponse)
+		if err != nil {
+			return fmt.Errorf("Unmarshal rekorResponse error: ", err)
+		}
+
+		if rekorResponse == nil {
+			return fmt.Errorf("unable to parse rekor-response to attach to image")
+		}
+		for _, v := range rekorResponse {
+			rekorBundle.SignedEntryTimestamp = v.Verification.SignedEntryTimestamp
+			rekorBundle.Payload.Body = v.Body
+			rekorBundle.Payload.IntegratedTime = *v.IntegratedTime
+			rekorBundle.Payload.LogIndex = *v.LogIndex
+			rekorBundle.Payload.LogID = *v.LogID
 		}
 
 		if rekorBundle == nil {
