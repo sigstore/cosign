@@ -78,7 +78,6 @@ jobs:
         run: make && PATH="$PWD:$PATH" ./test/e2e_signblob_tsa_mtls.sh
 
   e2e-test-pkcs11:
-    name: Run pkcs11 e2e tests
     runs-on: ubuntu-latest
 
     steps:
@@ -89,4 +88,5 @@ jobs:
           check-latest: true
 
       - name: Run pkcs11 end-to-end tests
+        shell: bash
         run: ./test/e2e_test_pkcs11.sh
