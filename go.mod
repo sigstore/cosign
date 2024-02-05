@@ -46,12 +46,12 @@ require (
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	github.com/xanzy/go-gitlab v0.96.0
-	go.step.sm/crypto v0.42.1
+	go.step.sm/crypto v0.43.0
 	golang.org/x/crypto v0.18.0
 	golang.org/x/oauth2 v0.16.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.16.0
-	google.golang.org/api v0.159.0
+	google.golang.org/api v0.160.0
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
