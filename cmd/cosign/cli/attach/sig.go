@@ -76,8 +76,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	var cert []byte
 	var certChain []byte
 	var timeStampedSig []byte
-	var rekorBundle *bundle.RekorBundle
-
+	rekorBundle := &bundle.RekorBundle{}
 	if certRef != "" {
 		cert, err = os.ReadFile(filepath.Clean(certRef))
 		if err != nil {
@@ -108,22 +107,19 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		var rekorResponse cosign.RekorResponse
 		err = json.Unmarshal(rekorResponseByte, &rekorResponse)
 		if err != nil {
-			return fmt.Errorf("Unmarshal rekorResponse error: ", err)
+			return fmt.Errorf("unmarshal rekorResponse error: %v", err)
 		}
 
 		if rekorResponse == nil {
 			return fmt.Errorf("unable to parse rekor-response to attach to image")
 		}
+
 		for _, v := range rekorResponse {
 			rekorBundle.SignedEntryTimestamp = v.Verification.SignedEntryTimestamp
 			rekorBundle.Payload.Body = v.Body
 			rekorBundle.Payload.IntegratedTime = *v.IntegratedTime
 			rekorBundle.Payload.LogIndex = *v.LogIndex
 			rekorBundle.Payload.LogID = *v.LogID
-		}
-
-		if rekorBundle == nil {
-			return fmt.Errorf("unable to parse Rekor response to attach to image")
 		}
 	}
 
