@@ -593,7 +593,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 
 	if len(sl) == 0 {
 		return nil, false, &ErrNoSignaturesFound{
-			errors.New("no matching signatures"),
+			errors.New("no signatures found"),
 		}
 	}
 
