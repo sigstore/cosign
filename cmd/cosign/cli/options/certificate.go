@@ -79,7 +79,9 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	// -- Cert extensions end --
 	cmd.Flags().StringVar(&o.CAIntermediates, "ca-intermediates", "",
 		"path to a file of intermediate CA certificates in PEM format which will be needed "+
-			"when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.")
+			"when building the certificate chains for the signing certificate. "+
+			"The flag is optional and must be used together with --ca-roots, conflicts with "+
+			"--certificate-chain.")
 	_ = cmd.Flags().SetAnnotation("ca-intermediates", cobra.BashCompFilenameExt, []string{"cert"})
 	cmd.Flags().StringVar(&o.CARoots, "ca-roots", "",
 		"path to a bundle file of CA certificates in PEM format which will be needed "+
