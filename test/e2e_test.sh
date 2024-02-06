@@ -72,6 +72,7 @@ go test -tags=e2e -v -race ./test/...
 # Test on a private registry
 echo "testing sign/verify/clean on private registry"
 cleanup() {
+    cleanup_services
     docker rm -f registry
 }
 trap cleanup EXIT
