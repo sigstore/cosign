@@ -44,6 +44,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -983,11 +984,42 @@ func TestAttachWithRekorBundle(t *testing.T) {
 		Bundle:          localRekorBundle,
 	}
 
+	rekorResponse := make(cosign.RekorResponse)
+	logIndexValue := int64(63771522)
+	rootHash := "5bbff4e9f8034a33b102996271c0e01b87caa83c44c46e893b47b81467fd808c"
+	treeSize := int64(64319120)
+	checkPoint := "rekor.sigstore.dev - 2605736670972794746\n64319120\nW7/06fgDSjOxApliccDgG4fKqDxExG6JO0e4FGf9gIw=\nTimestamp: 1706845443714164712\n\n— rekor.sigstore.dev wNI9ajBFAiEAnduIhP1Jjz8E0ZAP8e1x0aKqzJCtmWZyV1mRJB/PlOoCIBoeHdjeONYmxlD2Za7sU0NeK/60skNnwoelsa3m2M8z\n"
+	integratedTime := int64(1706680021)
+	logID := "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"
+	logIndex := int64(67934953)
+
+	logEntry := models.LogEntryAnon{
+		Body:           "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiI3YTIxODlmNzNlYTVkYmVlMmQ1NjgxMGU4NjBjZDgxNjdlYTFiMGYzMTdkZGRjMmU0YzE2NmU3ZDY4NzUzOGYwIn19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FUUNJQlZtMVc1YlNSOXBTYVFyRWRVL2dOeEZuaVQzMCs4RGp5SG9naERwWHM3b0FpQXMyby82c3l2bzRaTDd3YVUrMXBNeVIvR1dNWlZTaUdzRm5hSm04ZDZZZ0E9PSIsInB1YmxpY0tleSI6eyJjb250ZW50IjoiTFMwdExTMUNSVWRKVGlCUVZVSk1TVU1nUzBWWkxTMHRMUzBLVFVacmQwVjNXVWhMYjFwSmVtb3dRMEZSV1VsTGIxcEplbW93UkVGUlkwUlJaMEZGUldGSWNHUmhZVE13ZEVOaVMxbG5lalpyUlhsQmNqTXJORmh5TWdwb1pWUjNaM2hQVVVrM2QwcDRiVWhIWW5OU1dYcEJWbFJyUVN0RGIzVjZUblZrTUc5eGRuUTRXVXB0Tm5CQlFUZG5SbUZFUkZGU05EUlJQVDBLTFMwdExTMUZUa1FnVUZWQ1RFbERJRXRGV1MwdExTMHRDZz09In19fX0=",
+		IntegratedTime: &integratedTime,
+		LogID:          &logID,
+		LogIndex:       &logIndex,
+		Verification: &models.LogEntryAnonVerification{
+			InclusionProof: &models.InclusionProof{
+				Checkpoint: &checkPoint,
+				LogIndex:   &logIndexValue,
+				RootHash:   &rootHash,
+				TreeSize:   &treeSize,
+			},
+			SignedEntryTimestamp: strfmt.Base64("MEUCIQCLiNiSLxFk8vgkCopYcuFQXGEcvr6YM0TXgFUe5HcAHAIgSJuWj3uH8QrQeaEfc5ddMpIwU4JdXmQD3bgfkntEVTk="),
+		},
+	}
+
+	rekorResponse["24296fb24b8ad77a8ada322cbba201d23b88acd2f68b29e358668e3aef36306ddb2c253ca0dc9ede"] = logEntry
+
 	jsonBundle, err := json.Marshal(localPayload)
 	if err != nil {
 		t.Fatal(err)
 	}
 	jsonRekorBundle, err := json.Marshal(localRekorBundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jsonRekorResponsePath, err := json.Marshal(rekorResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1002,12 +1034,21 @@ func TestAttachWithRekorBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	rekorResponsePath := filepath.Join(td, "rekor-response.json")
+	if err := os.WriteFile(rekorResponsePath, jsonRekorResponsePath, 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	// Upload it!
 	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", bundlePath, imgName)
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", rekorBundlePath, imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", rekorResponsePath, imgName)
 	if err != nil {
 		t.Fatal(err)
 	}
