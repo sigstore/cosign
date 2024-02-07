@@ -107,7 +107,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		var rekorResponse cosign.RekorResponse
 		err = json.Unmarshal(rekorResponseByte, &rekorResponse)
 		if err != nil {
-			return fmt.Errorf("unmarshal rekorResponse error: %v", err)
+			return fmt.Errorf("unmarshal rekorResponse error: %w", err)
 		}
 
 		if rekorResponse == nil {
