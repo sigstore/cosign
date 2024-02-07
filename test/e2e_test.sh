@@ -16,6 +16,31 @@
 
 set -ex
 
+echo "setting up OIDC provider"
+pushd ./test/fakeoidc
+oidcimg=$(ko build main.go --local)
+docker network ls | grep fulcio_default || docker network create fulcio_default
+docker run -d --rm -p 8080:8080 --network fulcio_default --name fakeoidc $oidcimg
+cleanup_oidc() {
+    echo "cleaning up oidc"
+    docker stop fakeoidc
+}
+trap cleanup_oidc EXIT
+oidc_ip=$(docker inspect fakeoidc | jq -r '.[0].NetworkSettings.Networks.fulcio_default.IPAddress')
+export OIDC_URL="http://${oidc_ip}:8080"
+cat <<EOF > /tmp/fulcio-config.json
+{
+  "OIDCIssuers": {
+    "$OIDC_URL": {
+      "IssuerURL": "$OIDC_URL",
+      "ClientID": "sigstore",
+      "Type": "email"
+    }
+  }
+}
+EOF
+popd
+
 pushd $HOME
 
 echo "downloading service repos"
@@ -31,6 +56,7 @@ done
 
 echo "starting services"
 export FULCIO_METRICS_PORT=2113
+export FULCIO_CONFIG=/tmp/fulcio-config.json
 for repo in rekor fulcio; do
     pushd $repo
     docker-compose up -d
@@ -51,6 +77,7 @@ for repo in rekor fulcio; do
 done
 cleanup_services() {
     echo "cleaning up"
+    cleanup_oidc
     for repo in rekor fulcio; do
         pushd $HOME/$repo
         docker-compose down
@@ -59,41 +86,22 @@ cleanup_services() {
 }
 trap cleanup_services EXIT
 
-curl http://127.0.0.1:3000/api/v1/log/publicKey > rekor.pub
-export SIGSTORE_REKOR_PUBLIC_KEY=$(pwd)/rekor.pub
-
 echo
 echo "running tests"
 
 popd
-go build -o cosign ./cmd/cosign
 go test -tags=e2e -v -race ./test/...
 
 # Test on a private registry
 echo "testing sign/verify/clean on private registry"
 cleanup() {
+    cleanup_services
     docker rm -f registry
 }
 trap cleanup EXIT
 docker run -d -p 5000:5000 --restart always -e REGISTRY_STORAGE_DELETE_ENABLED=true --name registry registry:latest
 export COSIGN_TEST_REPO=localhost:5000
 go test -tags=e2e -v ./test/... -run TestSignVerifyClean
-
-# Use the public instance to verify existing images and manifests
-unset SIGSTORE_REKOR_PUBLIC_KEY
-# Test `cosign dockerfile verify`
-./cosign dockerfile verify ./test/testdata/single_stage.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
-if (./cosign dockerfile verify ./test/testdata/unsigned_build_stage.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
-./cosign dockerfile verify --base-image-only ./test/testdata/unsigned_build_stage.Dockerfile --certificate-identity https://github.com/distroless/static/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
-./cosign dockerfile verify ./test/testdata/fancy_from.Dockerfile --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
-test_image="ghcr.io/distroless/alpine-base" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
-# Image exists, but is unsigned
-if (test_image="ubuntu" ./cosign dockerfile verify ./test/testdata/with_arg.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
-./cosign dockerfile verify ./test/testdata/with_lowercase.Dockerfile  --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
-
-# Test `cosign manifest verify`
-./cosign manifest verify ./test/testdata/signed_manifest.yaml --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com
-if (./cosign manifest verify ./test/testdata/unsigned_manifest.yaml --certificate-identity https://github.com/distroless/alpine-base/.github/workflows/release.yaml@refs/heads/main --certificate-oidc-issuer https://token.actions.githubusercontent.com); then false; fi
 
 # Run the built container to make sure it doesn't crash
 make ko-local
