@@ -46,6 +46,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	tsaMock "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/cosign/v2/test"
@@ -235,6 +236,44 @@ func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer,
 		Payload:              pyld,
 	}
 	return b
+}
+
+func Test_verifySignaturesErrNoSignaturesFound(t *testing.T) {
+	_, _, err := verifySignatures(context.Background(), &fakeOCISignatures{}, v1.Hash{}, nil)
+	var e *ErrNoSignaturesFound
+	if !errors.As(err, &e) {
+		t.Fatalf("%T{%q} is not a %T", err, err, &ErrNoSignaturesFound{})
+	}
+}
+
+func Test_verifySignaturesErrNoMatchingSignatures(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+	_, _, err := verifySignatures(context.Background(), &fakeOCISignatures{signatures: []oci.Signature{ociSig}}, v1.Hash{}, &CheckOpts{
+		RootCerts:  rootPool,
+		IgnoreSCT:  true,
+		IgnoreTlog: true,
+		Identities: []Identity{{Subject: "another-subject@mail.com", Issuer: "oidc-issuer"}}})
+
+	var e *ErrNoMatchingSignatures
+	if !errors.As(err, &e) {
+		t.Fatalf("%T{%q} is not a %T", err, err, &ErrNoMatchingSignatures{})
+	}
 }
 
 func TestVerifyImageSignatureWithNoChain(t *testing.T) {
