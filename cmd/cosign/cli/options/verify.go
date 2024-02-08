@@ -143,7 +143,7 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 		"whether to check the claims found")
 
 	cmd.Flags().StringSliceVar(&o.Policies, "policy", nil,
-		"specify CUE or Rego files will be using for validation")
+		"specify CUE or Rego files with policies to be used for validation")
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")

@@ -81,7 +81,7 @@ cosign verify-attestation [flags]
       --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
       --offline                                                                                  only allow offline verification
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
-      --policy strings                                                                           specify CUE or Rego files will be using for validation
+      --policy strings                                                                           specify CUE or Rego files with policies to be used for validation
       --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --registry-password string                                                                 registry basic auth password
       --registry-token string                                                                    registry bearer auth token
