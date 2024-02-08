@@ -32,7 +32,7 @@ type AttachSignatureOptions struct {
 	Cert           string
 	CertChain      string
 	TimeStampedSig string
-	RekorBundle    string
+	RekorResponse  string
 	Registry       RegistryOptions
 }
 
@@ -58,8 +58,10 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 			"signing certificate and end with the root certificate. Included in the OCI Signature")
 	cmd.Flags().StringVar(&o.TimeStampedSig, "tsr", "",
 		"path to the Time Stamped Signature Response from RFC3161 compliant TSA")
-	cmd.Flags().StringVar(&o.RekorBundle, "rekor-response", "",
-		"path to the rekor bundle")
+	cmd.Flags().StringVar(&o.RekorResponse, "rekor-response", "",
+		"NOTE: the path can be either bundle, i.e. `bundle.json` which can be retrieve as o/p of command "+
+			"`cosign sign --bundle < bundle.json >` or "+
+			"rekor bundle formatted from rekor-response.")
 }
 
 // AttachSBOMOptions is the top level wrapper for the attach sbom command.

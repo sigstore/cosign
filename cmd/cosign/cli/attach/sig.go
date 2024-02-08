@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, rekorBundleRef, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, rekorResponseRef, imageRef string) error {
 	b64SigBytes, err := signatureBytes(sigRef)
 	if err != nil {
 		return err
@@ -75,8 +76,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	var cert []byte
 	var certChain []byte
 	var timeStampedSig []byte
-	var rekorBundle *bundle.RekorBundle
-
+	rekorBundle := &bundle.RekorBundle{}
 	if certRef != "" {
 		cert, err = os.ReadFile(filepath.Clean(certRef))
 		if err != nil {
@@ -98,20 +98,29 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 		}
 	}
 	tsBundle := bundle.TimestampToRFC3161Timestamp(timeStampedSig)
-
-	if rekorBundleRef != "" {
-		rekorBundleByte, err := os.ReadFile(filepath.Clean(rekorBundleRef))
+	if rekorResponseRef != "" {
+		rekorResponseByte, err := os.ReadFile(filepath.Clean(rekorResponseRef))
 		if err != nil {
 			return err
 		}
 
-		var localCosignPayload cosign.LocalSignedPayload
-		err = json.Unmarshal(rekorBundleByte, &localCosignPayload)
+		var rekorResponse cosign.RekorResponse
+		err = json.Unmarshal(rekorResponseByte, &rekorResponse)
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshal rekorResponse error: %w", err)
 		}
 
-		rekorBundle = localCosignPayload.Bundle
+		if rekorResponse == nil {
+			return fmt.Errorf("unable to parse rekor-response to attach to image")
+		}
+
+		for _, v := range rekorResponse {
+			rekorBundle.SignedEntryTimestamp = v.Verification.SignedEntryTimestamp
+			rekorBundle.Payload.Body = v.Body
+			rekorBundle.Payload.IntegratedTime = *v.IntegratedTime
+			rekorBundle.Payload.LogIndex = *v.LogIndex
+			rekorBundle.Payload.LogID = *v.LogID
+		}
 	}
 
 	newSig, err := mutate.Signature(sig, mutate.WithCertChain(cert, certChain), mutate.WithRFC3161Timestamp(tsBundle), mutate.WithBundle(rekorBundle))
