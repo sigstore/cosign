@@ -31,9 +31,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  GO_VERSION: '1.21'
-
 jobs:
   e2e-secrets:
     strategy:
