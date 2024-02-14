@@ -293,7 +293,10 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 					return err
 				}
 			} else {
-				pubKey, err = cosign.ValidateAndUnpackCertWithCertPools(cert, co)
+				if co.RootCerts == nil {
+					return errors.New("no CA roots provided to validate certificate")
+				}
+				pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
 				if err != nil {
 					return err
 				}
