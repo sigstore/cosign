@@ -17,7 +17,6 @@ package generate
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -49,6 +48,6 @@ func GenerateCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef 
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(w, string(json))
+	w.Write(json)
 	return nil
 }

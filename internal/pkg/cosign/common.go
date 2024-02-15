@@ -18,6 +18,7 @@ import (
 	"errors"
 	"hash"
 	"io"
+	"io/fs"
 	"os"
 )
 
@@ -27,7 +28,7 @@ const (
 
 func FileExists(filename string) (bool, error) {
 	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
 	if err != nil {

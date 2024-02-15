@@ -100,7 +100,9 @@ func SBOMCmd(
 	}
 
 	sboms = append(sboms, string(sbom))
-	fmt.Fprint(out, string(sbom))
+	if _, err := out.Write(sbom); err != nil {
+		return nil, err
+	}
 
 	return sboms, nil
 }
