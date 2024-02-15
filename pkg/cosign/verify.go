@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"regexp"
@@ -834,7 +835,7 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 	var b64sig string
 	targetSig, err := blob.LoadFileOrURL(sigRef)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
 		targetSig = []byte(sigRef)

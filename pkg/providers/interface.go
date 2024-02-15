@@ -80,7 +80,7 @@ func Provide(ctx context.Context, audience string) (string, error) {
 		}
 		id, err = provider.p.Provide(ctx, audience)
 		if err == nil {
-			return id, err
+			return id, nil
 		}
 	}
 	// return the last id/err combo, unless there wasn't an error in
