@@ -267,7 +267,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return err
 		}
-		if c.CertChain == "" && c.CARoots == "" {
+		switch {
+		case c.CertChain == "" && co.RootCerts == nil:
 			// If no certChain and no CARoots are passed, the Fulcio root certificate will be used
 			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
@@ -281,27 +282,25 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
-		} else {
-			if c.CARoots == "" {
-				// Verify certificate with chain
-				chain, err := loadCertChainFromFileOrURL(c.CertChain)
-				if err != nil {
-					return err
-				}
-				pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
-				if err != nil {
-					return err
-				}
-			} else {
-				if co.RootCerts == nil {
-					return errors.New("no CA roots provided to validate certificate")
-				}
-				pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
-				if err != nil {
-					return err
-				}
+		case c.CertChain != "":
+			// Verify certificate with chain
+			chain, err := loadCertChainFromFileOrURL(c.CertChain)
+			if err != nil {
+				return err
 			}
+			pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			if err != nil {
+				return err
+			}
+		case co.RootCerts != nil:
+			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
+			if err != nil {
+				return err
+			}
+		default:
+			return errors.New("internal error in handling CertChain and RootCerts - default case should never happen")
 		}
+
 		if c.SCTRef != "" {
 			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
 			if err != nil {
