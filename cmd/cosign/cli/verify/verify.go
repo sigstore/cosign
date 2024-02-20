@@ -293,6 +293,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return err
 			}
 		case co.RootCerts != nil:
+			// Verify certificate with root (and if given, intermediate) certificate
 			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
 				return err
