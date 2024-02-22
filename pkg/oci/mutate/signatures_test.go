@@ -73,7 +73,7 @@ func TestAppendSignatures(t *testing.T) {
 
 	if testCfg, err := threeSig.ConfigFile(); err != nil {
 		t.Fatalf("ConfigFile() = %v", err)
-	} else if !testCfg.Created.Time.IsZero() {
-		t.Errorf("Date of Signature was not Zero")
+	} else if testCfg.Created.Time.IsZero() {
+		t.Errorf("Date of Signature was Zero")
 	}
 }

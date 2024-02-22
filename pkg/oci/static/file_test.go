@@ -126,8 +126,8 @@ func TestNewFile(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ConfigFile() = %v", err)
 		}
-		if !fileCfg.Created.Time.IsZero() {
-			t.Errorf("Date of Signature was not Zero")
+		if fileCfg.Created.Time.IsZero() {
+			t.Errorf("Date of Signature was Zero")
 		}
 	})
 
