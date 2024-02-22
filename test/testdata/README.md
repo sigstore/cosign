@@ -77,7 +77,7 @@ $ openssl req -new -key leafCA.key -out leafCA.csr
 $ openssl x509 -req -in leafCA.csr -CA intermediateCA.crt -CAkey intermediateCA.key  -CAcreateserial -CAserial leafca.srl -out leafCA.crt -days 1825 -sha256 -extfile leafConfigFile
 ```
 
-11. Generate Certificate chain by concatinating Intermediate certificate and Root certificate
+11. Generate Certificate chain by concatenating Intermediate certificate and Root certificate
 
 ```shell
 $ cat intermediateCA.crt rootCA.crt > certChain.crt
@@ -172,7 +172,7 @@ $ openssl req -new -key secondleafCA.key -out secondleafCA.csr
 $ openssl x509 -req -in secondleafCA.csr -CA secondintermediateCA.crt -CAkey secondintermediateCA.key  -CAcreateserial -CAserial secondleafca.srl -out secondleafCA.crt -days 1825 -sha256 -extfile leafConfigFile
 ```
 
-26. Generate Certificate chain by concatinating second Intermediate certificate and second Root certificate
+26. Generate Certificate chain by concatenating second Intermediate certificate and second Root certificate
 
 ```shell
 $ cat secondintermediateCA.crt secondrootCA.crt > secondcertChain.crt

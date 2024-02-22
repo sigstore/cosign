@@ -2883,7 +2883,7 @@ func setLocalEnv(t *testing.T, dir string) error {
 	// fulcio repo is downloaded to the user's home directory by e2e_test.sh
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Errorf("error getting home directory: %w", err)
+		return fmt.Errorf("error getting home directory: %w", err)
 	}
 	t.Setenv(env.VariableSigstoreCTLogPublicKeyFile.String(), path.Join(home, "fulcio/config/ctfe/pubkey.pem"))
 	err = downloadAndSetEnv(t, fulcioURL+"/api/v1/rootCert", env.VariableSigstoreRootFile.String(), dir)
