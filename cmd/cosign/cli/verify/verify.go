@@ -309,6 +309,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 			co.SCT = sct
 		}
+	default:
+		// Do nothing. Neither keyRef, c.Sk, nor certRef were set - can happen for example when using Fulcio and TSA.
+		// For an example see the TestAttachWithRFC3161Timestamp test in test/e2e_test.go.
 	}
 	co.SigVerifier = pubKey
 
