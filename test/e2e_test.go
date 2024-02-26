@@ -24,7 +24,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -935,9 +934,6 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
 
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(rootCert)
-
 	payloadref := mkfile(b.String(), td, t)
 
 	h := sha256.Sum256(b.Bytes())
@@ -1007,9 +1003,6 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(rootCert)
 
 	payloadref := mkfile(b.String(), td, t)
 
