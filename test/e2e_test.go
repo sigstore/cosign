@@ -146,6 +146,33 @@ var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, 
 	return cmd.Exec(context.Background(), args)
 }
 
+var verifyKeylessTSAWithCARoots = func(imageRef string,
+	caroots string, // filename of a PEM file with CA Roots certificates
+	intermediates string, // empty or filename of a PEM file with Intermediate certificates
+	certFile string, // filename of a PEM file with the codesigning certificate
+	tsaCertChain string,
+	skipSCT bool,
+	skipTlogVerify bool) error {
+	cmd := cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuerRegexp: ".*",
+			CertIdentityRegexp:   ".*",
+		},
+		CertRef:          certFile,
+		CARoots:          caroots,
+		CAIntermediates:  intermediates,
+		RekorURL:         rekorURL,
+		HashAlgorithm:    crypto.SHA256,
+		TSACertChainPath: tsaCertChain,
+		IgnoreSCT:        skipSCT,
+		IgnoreTlog:       skipTlogVerify,
+		MaxWorkers:       10,
+	}
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
 // Used to verify local images stored on disk
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
@@ -905,6 +932,203 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 	}
 
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+}
+
+func TestVerifyWithCARoots(t *testing.T) {
+	ctx := context.Background()
+	// TSA server needed to create timestamp
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-verify-caroots-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	b := bytes.Buffer{}
+	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
+
+	rootCert, rootKey, _ := GenerateRootCa()
+	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootCert02, rootKey02, _ := GenerateRootCa()
+	subCert02, subKey02, _ := GenerateSubordinateCa(rootCert02, rootKey02)
+	leafCert02, _, _ := GenerateLeafCert("subject02@mail.com", "oidc-issuer02", subCert02, subKey02)
+	pemRoot02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert02.Raw})
+	pemSub02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert02.Raw})
+	pemLeaf02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert02.Raw})
+	pemsubRef02 := mkfile(string(pemSub02), td, t)
+	pemrootRef02 := mkfile(string(pemRoot02), td, t)
+	pemleafRef02 := mkfile(string(pemLeaf02), td, t)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payloadref := mkfile(b.String(), td, t)
+
+	h := sha256.Sum256(b.Bytes())
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	sigRef := mkfile(b64signature, td, t)
+	pemsubRef := mkfile(string(pemSub), td, t)
+	pemrootRef := mkfile(string(pemRoot), td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+
+	pemrootBundleRef := mkfile(string(append(pemRoot[:], pemRoot02[:]...)), td, t)
+	pemsubBundleRef := mkfile(string(append(pemSub[:], pemSub02[:]...)), td, t)
+
+	tsclient, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := tsclient.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(server.URL+"/api/v1/timestamp"))
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TSRef := mkfile(string(tsBytes), td, t)
+
+	// Upload it!
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// the following fields with non-changing values are logically "factored out" for brevity
+	// and passed to verifyKeylessTSAWithCARoots in the testing loop:
+	// imageName string
+	// tsaCertChainRef string
+	// skipSCT   bool
+	// skipTlogVerify bool
+	tests := []struct {
+		name      string
+		rootRef   string
+		subRef    string
+		leafRef   string
+		wantError bool
+	}{
+		{
+			"verify with root, intermediate and leaf certificates",
+			pemrootRef,
+			pemsubRef,
+			pemleafRef,
+			false,
+		},
+		// NB - "confusely" switching the root and intermediate PEM files does _NOT_ (currently) produce an error
+		// - the Go crypto/x509 package doesn't strictly verify that the certificate chain is anchored
+		// in a self-signed root certificate.  In this case, only the chain up to the intermediate
+		// certificate is verified, and the root certificate is ignored.
+		// See also https://gist.github.com/dmitris/15160f703b3038b1b00d03d3c7b66ce0 and in particular
+		// https://gist.github.com/dmitris/15160f703b3038b1b00d03d3c7b66ce0#file-main-go-L133-L135 as an example.
+		{
+			"switch root and intermediate no error",
+			pemsubRef,
+			pemrootRef,
+			pemleafRef,
+			false,
+		},
+		{
+			"leave out the root certificate",
+			"",
+			pemsubRef,
+			pemleafRef,
+			true,
+		},
+		{
+			"leave out the intermediate certificate",
+			pemrootRef,
+			"",
+			pemleafRef,
+			true,
+		},
+		{
+			"leave out the codesigning leaf certificate",
+			pemrootRef,
+			pemsubRef,
+			"",
+			true,
+		},
+		{
+			"wrong leaf certificate",
+			pemrootRef,
+			pemsubRef,
+			pemleafRef02,
+			true,
+		},
+		{
+			"root and intermediates bundles",
+			pemrootBundleRef,
+			pemsubBundleRef,
+			pemleafRef,
+			false,
+		},
+		{
+			"wrong root and intermediates bundles",
+			pemrootRef02,
+			pemsubRef02,
+			pemleafRef,
+			true,
+		},
+		{
+			"wrong root undle",
+			pemrootRef02,
+			pemsubBundleRef,
+			pemleafRef,
+			true,
+		},
+		{
+			"wrong intermediates bundle",
+			pemrootRef,
+			pemsubRef02,
+			pemleafRef,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		err := verifyKeylessTSAWithCARoots(imgName,
+			tt.rootRef,
+			tt.subRef,
+			tt.leafRef,
+			file.Name(),
+			true,
+			true)
+		hasErr := (err != nil)
+		if hasErr != tt.wantError {
+			if tt.wantError {
+				t.Errorf("%s - no expected error", tt.name)
+			} else {
+				t.Errorf("%s - unexpected error: %v", tt.name, err)
+			}
+		}
+	}
 }
 
 func TestAttachWithRFC3161Timestamp(t *testing.T) {
@@ -2461,7 +2685,7 @@ func TestInvalidBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// veriyfing image2 now should fail
+	// verifying image2 now should fail
 	cmd := cliverify.VerifyCommand{
 		KeyRef:        pubKeyPath,
 		RekorURL:      rekorURL,

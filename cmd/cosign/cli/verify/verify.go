@@ -178,7 +178,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return fmt.Errorf("getting Rekor public keys: %w", err)
 		}
 	}
-	if keylessVerification(c.KeyRef, c.Sk) {
+	isKeylessVerification := keylessVerification(c.KeyRef, c.Sk)
+	if isKeylessVerification {
 		switch {
 		case c.CertChain != "":
 			chain, err := loadCertChainFromFileOrURL(c.CertChain)
@@ -309,6 +310,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 			co.SCT = sct
 		}
+	default:
+		return errors.New("internal error - neither keyRef, c.Sk, nor certRef were set, should never happen")
 	}
 	co.SigVerifier = pubKey
 
