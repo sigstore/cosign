@@ -127,12 +127,13 @@ var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[
 	return cmd.Exec(context.Background(), args)
 }
 
-var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, skipTlogVerify bool) error {
+var verifyKeylessTSA = func(imageRef string, rootCertRef string, tsaCertChain string, skipSCT bool, skipTlogVerify bool) error {
 	cmd := cliverify.VerifyCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuerRegexp: ".*",
 			CertIdentityRegexp:   ".*",
 		},
+		CARoots:          rootCertRef,
 		RekorURL:         rekorURL,
 		HashAlgorithm:    crypto.SHA256,
 		TSACertChainPath: tsaCertChain,
@@ -1173,7 +1174,7 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 
 	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
 
-	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
+	// t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
 
 	tsclient, err := tsaclient.GetTimestampClient(server.URL)
 	if err != nil {
@@ -1207,7 +1208,7 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	must(verifyKeylessTSA(imgName, file.Name(), true, true), t)
+	must(verifyKeylessTSA(imgName, pemrootRef, file.Name(), true, true), t)
 }
 
 func TestAttachWithRekorBundle(t *testing.T) {
