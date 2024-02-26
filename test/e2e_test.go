@@ -1000,12 +1000,12 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	tsaChainRef, err := os.CreateTemp(os.TempDir(), "tempfile")
 	if err != nil {
 		t.Fatalf("error creating temp file: %v", err)
 	}
-	defer os.Remove(file.Name())
-	_, err = file.WriteString(chain.Payload)
+	defer os.Remove(tsaChainRef.Name())
+	_, err = tsaChainRef.WriteString(chain.Payload)
 	if err != nil {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
@@ -1070,11 +1070,11 @@ func TestVerifyWithCARoots(t *testing.T) {
 			true,
 		},
 		{
-			"leave out the codesigning leaf certificate",
+			"leave out the codesigning leaf certificate which is extracted from the image",
 			pemrootRef,
 			pemsubRef,
 			"",
-			true,
+			false,
 		},
 		{
 			"wrong leaf certificate",
@@ -1117,7 +1117,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			tt.rootRef,
 			tt.subRef,
 			tt.leafRef,
-			file.Name(),
+			tsaChainRef.Name(),
 			true,
 			true)
 		hasErr := (err != nil)
