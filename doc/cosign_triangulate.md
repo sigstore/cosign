@@ -1,6 +1,6 @@
 ## cosign triangulate
 
-Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.
+Outputs the located cosign image reference. This is the location where cosign stores the specified artifact type.
 
 ```
 cosign triangulate [flags]
