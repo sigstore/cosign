@@ -68,7 +68,13 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 
 	svOptions := []signature.LoadOption{
 		signatureoptions.WithHash(crypto.SHA256),
-		signatureoptions.WithED25519ph(),
+	}
+	// Use ED25519 pre-hashed version only when uploading to tlog to maintain
+	// backwards compatibility. When self-managed keys are used this keeps the
+	// behavior consistent with older cosign clients, which will still be able
+	// to verify the newer signatures.
+	if tlogUpload {
+		svOptions = append(svOptions, signatureoptions.WithED25519ph())
 	}
 
 	sv, err := signerFromKeyOptsWithSVOpts(ctx, "", "", ko, svOptions...)
