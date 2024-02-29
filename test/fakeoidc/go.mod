@@ -1,6 +1,6 @@
 module github.com/sigstore/cosign/test/fakeoidc
 
-go 1.21.5
+go 1.21.7
 
 require gopkg.in/square/go-jose.v2 v2.6.0
 
