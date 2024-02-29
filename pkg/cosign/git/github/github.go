@@ -153,15 +153,17 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 func (g *Gh) getPublicKey(client *github.Client, ctx context.Context, owner string, repo string) (*github.PublicKey, *github.Response, error) {
 	if len(repo) > 0 {
 		return client.Actions.GetRepoPublicKey(ctx, owner, repo)
+	} else {
+		return client.Actions.GetOrgPublicKey(ctx, owner)
 	}
-	return client.Actions.GetOrgPublicKey(ctx, owner)
 }
 
 func (g *Gh) createOrUpdateOrgSecret(client *github.Client, ctx context.Context, owner string, repo string, encryptedCosignPasswd *github.EncryptedSecret) (*github.Response, error) {
 	if len(repo) > 0 {
 		return client.Actions.CreateOrUpdateRepoSecret(ctx, owner, repo, encryptedCosignPasswd)
+	} else {
+		return client.Actions.CreateOrUpdateOrgSecret(ctx, owner, encryptedCosignPasswd)
 	}
-	return client.Actions.CreateOrUpdateOrgSecret(ctx, owner, encryptedCosignPasswd)
 }
 
 // NOTE: GetSecret is not implemented for GitHub
