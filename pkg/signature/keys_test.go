@@ -141,7 +141,7 @@ func TestSignerVerifierFromEnvVar(t *testing.T) {
 }
 
 func TestVerifierForKeyRefError(t *testing.T) {
-	kms.AddProvider("errorkms://", func(ctx context.Context, _ string, hf crypto.Hash, _ ...sigsignature.RPCOption) (kms.SignerVerifier, error) {
+	kms.AddProvider("errorkms://", func(_ context.Context, _ string, _ crypto.Hash, _ ...sigsignature.RPCOption) (kms.SignerVerifier, error) {
 		return nil, errors.New("bad")
 	})
 	var uerr *blob.UnrecognizedSchemeError

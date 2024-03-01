@@ -36,7 +36,7 @@ func TestMapImage(t *testing.T) {
 
 	t.Run("one call to identity mutator", func(t *testing.T) {
 		calls := 0
-		rsi, err := Map(context.Background(), si, func(c context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		rsi, err := Map(context.Background(), si, func(_ context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
 			calls++
 			return se, nil
 		})
@@ -53,7 +53,7 @@ func TestMapImage(t *testing.T) {
 
 	t.Run("error propagates", func(t *testing.T) {
 		want := errors.New("this is the error I expect")
-		_, got := Map(context.Background(), si, func(c context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		_, got := Map(context.Background(), si, func(_ context.Context, _ oci.SignedEntity) (oci.SignedEntity, error) {
 			return nil, want
 		})
 		if !errors.Is(got, want) {
@@ -68,7 +68,7 @@ func TestMapImage(t *testing.T) {
 		}
 		want := signed.Image(i)
 
-		got, err := Map(context.Background(), si, func(c context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		got, err := Map(context.Background(), si, func(_ context.Context, _ oci.SignedEntity) (oci.SignedEntity, error) {
 			return want, nil
 		})
 		if err != nil {
@@ -80,7 +80,7 @@ func TestMapImage(t *testing.T) {
 	})
 
 	t.Run("filtered image", func(t *testing.T) {
-		got, err := Map(context.Background(), si, func(c context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		got, err := Map(context.Background(), si, func(_ context.Context, _ oci.SignedEntity) (oci.SignedEntity, error) {
 			return nil, nil
 		})
 		if err != nil {
@@ -131,7 +131,7 @@ func TestMapImageIndex(t *testing.T) {
 
 	t.Run("just one call to root index w/ ErrSkipChildren", func(t *testing.T) {
 		calls := 0
-		_, err := Map(context.Background(), sii, func(ctx context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		_, err := Map(context.Background(), sii, func(_ context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
 			calls++
 			if se != sii {
 				t.Errorf("Wanted mutator called on %#v, got call on %#v", sii, se)
@@ -180,7 +180,7 @@ func TestMapImageIndex(t *testing.T) {
 	})
 
 	t.Run("test filtering images", func(t *testing.T) {
-		rsi, err := Map(context.Background(), sii, func(ctx context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		rsi, err := Map(context.Background(), sii, func(_ context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
 			if _, ok := se.(oci.SignedImage); ok {
 				return nil, nil
 			}
@@ -231,7 +231,7 @@ func TestMapImageIndex(t *testing.T) {
 
 	t.Run("error propagates from child image", func(t *testing.T) {
 		want := errors.New("this is the error I expect")
-		_, got := Map(context.Background(), sii, func(c context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
+		_, got := Map(context.Background(), sii, func(_ context.Context, se oci.SignedEntity) (oci.SignedEntity, error) {
 			if _, ok := se.(oci.SignedImage); !ok {
 				return se, nil
 			}

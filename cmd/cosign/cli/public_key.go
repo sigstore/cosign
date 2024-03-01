@@ -56,14 +56,14 @@ func PublicKey() *cobra.Command {
 
   # extract public key from GitLab with project id
   cosign public-key --key gitlab://[PROJECT_ID] <IMAGE>`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if !options.OneOf(o.Key, o.SecurityKey.Use) {
 				return &options.KeyParseError{}
 			}
 			return nil
 		},
 		PersistentPreRun: options.BindViper,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			writer := publickey.NamedWriter{Name: "", Writer: nil}
 			var f *os.File
 			// Open output file for public key if specified.

@@ -87,7 +87,7 @@ race conditions or (worse) malicious tampering.
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			switch o.Attachment {
 			case "sbom":
 				fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)

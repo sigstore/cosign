@@ -145,7 +145,7 @@ func TestPrintVerification(t *testing.T) {
 	_ = captureOutput
 
 	out := captureOutput(func() {
-		ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
+		ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
 			PrintVerification(ctx, []oci.Signature{ociSig}, "json")
 		})
 	})

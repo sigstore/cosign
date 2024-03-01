@@ -33,7 +33,7 @@ func TestSignaturesErrors(t *testing.T) {
 	})
 
 	t.Run("404 returns empty", func(t *testing.T) {
-		remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
 			return nil, &transport.Error{
 				StatusCode: http.StatusNotFound,
 			}
@@ -54,7 +54,7 @@ func TestSignaturesErrors(t *testing.T) {
 		want := &transport.Error{
 			StatusCode: http.StatusInternalServerError,
 		}
-		remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
 			return nil, want
 		}
 
@@ -66,7 +66,7 @@ func TestSignaturesErrors(t *testing.T) {
 
 	t.Run("other errors propagate", func(t *testing.T) {
 		want := errors.New("it's my error, I can cry if I want to")
-		remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+		remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
 			return nil, want
 		}
 

@@ -52,7 +52,7 @@ cosign initialize -root <url>
 # initialize with an out-of-band root key file and custom repository mirror.
 cosign initialize -mirror <url> -root <url>`,
 		PersistentPreRun: options.BindViper,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return initialize.DoInitialize(cmd.Context(), o.Root, o.Mirror)
 		},
 	}

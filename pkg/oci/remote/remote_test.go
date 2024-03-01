@@ -29,7 +29,7 @@ func TestTagMethods(t *testing.T) {
 	defer func() {
 		remoteGet = rg
 	}()
-	remoteGet = func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error) {
+	remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 		return &remote.Descriptor{
 			Descriptor: v1.Descriptor{
 				Digest: v1.Hash{
@@ -117,7 +117,7 @@ func TestTagMethodErrors(t *testing.T) {
 		remoteGet = rg
 	}()
 	errRemoteGet := errors.New("remote.Get failure")
-	remoteGet = func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error) {
+	remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 		return nil, errRemoteGet
 	}
 
@@ -153,7 +153,7 @@ func TestDockercontentDigest(t *testing.T) {
 	defer func() {
 		remoteGet = rg
 	}()
-	remoteGet = func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error) {
+	remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 		return &remote.Descriptor{
 			Descriptor: v1.Descriptor{
 				Digest: v1.Hash{

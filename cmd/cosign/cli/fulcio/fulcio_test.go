@@ -191,7 +191,7 @@ func TestNewSigner(t *testing.T) {
 	pemChain, _ := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
 
 	testServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write(pemChain)
 		}))

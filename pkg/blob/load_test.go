@@ -58,7 +58,7 @@ func TestLoadFile(t *testing.T) {
 func TestLoadURL(t *testing.T) {
 	data := []byte("test")
 
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.Write(data)
 	}))
 	defer server.Close()

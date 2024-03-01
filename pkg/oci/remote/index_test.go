@@ -56,11 +56,11 @@ func TestSignedImageIndex(t *testing.T) {
 		},
 	)
 
-	remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+	remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
 		// Only called for signature images
 		return random.Image(300 /* byteSize */, wantLayers)
 	}
-	remoteIndex = func(ref name.Reference, options ...remote.Option) (ii v1.ImageIndex, err error) {
+	remoteIndex = func(_ name.Reference, _ ...remote.Option) (ii v1.ImageIndex, err error) {
 		return l3, nil
 	}
 
