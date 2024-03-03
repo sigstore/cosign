@@ -53,7 +53,7 @@ func TestWriteSignatures(t *testing.T) {
 
 	ref := name.MustParseReference("gcr.io/bistroless/static:nonroot")
 
-	remoteWrite = func(ref name.Reference, img v1.Image, options ...remote.Option) error {
+	remoteWrite = func(_ name.Reference, img v1.Image, _ ...remote.Option) error {
 		l, err := img.Layers()
 		if err != nil {
 			return err
@@ -95,7 +95,7 @@ func TestWriteAttestations(t *testing.T) {
 
 	ref := name.MustParseReference("gcr.io/bistroless/static:nonroot")
 
-	remoteWrite = func(ref name.Reference, img v1.Image, options ...remote.Option) error {
+	remoteWrite = func(_ name.Reference, img v1.Image, _ ...remote.Option) error {
 		l, err := img.Layers()
 		if err != nil {
 			return err

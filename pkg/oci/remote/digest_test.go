@@ -35,7 +35,7 @@ func TestResolveDigest(t *testing.T) {
 	digest := name.MustParseReference("gcr.io/distroless/static@sha256:be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4")
 
 	t.Run("digest doesn't call remote.Get", func(t *testing.T) {
-		remoteGet = func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error) {
+		remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 			t.Fatal("ResolveDigest should not call remote.Get.")
 			return nil, nil
 		}
@@ -50,7 +50,7 @@ func TestResolveDigest(t *testing.T) {
 	})
 
 	t.Run("tag calls remote.Get", func(t *testing.T) {
-		remoteGet = func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error) {
+		remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 			return &remote.Descriptor{
 				Descriptor: v1.Descriptor{
 					Digest: v1.Hash{
@@ -74,7 +74,7 @@ func TestResolveDigest(t *testing.T) {
 
 	t.Run("remote.Get errors propagate", func(t *testing.T) {
 		want := errors.New("we should propagate this error")
-		remoteGet = func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error) {
+		remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 			return nil, want
 		}
 

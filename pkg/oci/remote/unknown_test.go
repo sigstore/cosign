@@ -31,7 +31,7 @@ func TestSignedUnknown(t *testing.T) {
 	})
 	wantLayers := int64(7)
 
-	remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+	remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
 		// Only called for signature images
 		return random.Image(300 /* byteSize */, wantLayers)
 	}
@@ -73,7 +73,7 @@ func TestSignedUnknownWithAttachment(t *testing.T) {
 	})
 	wantLayers := int64(1) // File must have a single layer
 
-	remoteImage = func(ref name.Reference, options ...remote.Option) (v1.Image, error) {
+	remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
 		// Only called for signature images
 		return random.Image(300 /* byteSize */, wantLayers)
 	}

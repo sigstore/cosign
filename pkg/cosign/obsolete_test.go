@@ -31,7 +31,7 @@ func TestObsoletePayload(t *testing.T) {
 	digestedImg, err := name.NewDigest("docker.io/namespace/image@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec")
 	require.NoError(t, err)
 	var res []byte
-	stderr := ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
+	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
 		r, err := ObsoletePayload(ctx, digestedImg)
 		require.NoError(t, err)
 		res = r

@@ -35,7 +35,7 @@ func TestInfof(t *testing.T) {
 		{"fmt", "foo: %v", []any{"bar"}, "foo: bar\n"},
 	}
 	for _, tc := range cases {
-		stderr := ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
+		stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
 			ui.Infof(ctx, tc.input, tc.args...)
 		})
 		assert.Equal(t, tc.expected, stderr, "Bad output to STDERR")
@@ -49,7 +49,7 @@ func TestWarnf(t *testing.T) {
 		{"fmt", "bar: %v", []any{"baz"}, "WARNING: bar: baz\n"},
 	}
 	for _, tc := range cases {
-		stderr := ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
+		stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
 			ui.Warnf(ctx, tc.input, tc.args...)
 		})
 		assert.Equal(t, tc.expected, stderr, "Bad output to STDERR")

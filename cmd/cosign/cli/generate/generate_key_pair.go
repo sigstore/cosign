@@ -114,7 +114,7 @@ func writeKeyFiles(privateKeyFileName string, publicKeyFileName string, keys *co
 	}
 	fmt.Fprintln(os.Stderr, "Private key written to", privateKeyFileName)
 
-	if err := os.WriteFile(publicKeyFileName, keys.PublicBytes, 0644); err != nil {
+	if err := os.WriteFile(publicKeyFileName, keys.PublicBytes, 0644); err != nil { //nolint: gosec
 		return err
 	} // #nosec G306
 	fmt.Fprintln(os.Stderr, "Public key written to", publicKeyFileName)
