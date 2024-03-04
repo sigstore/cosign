@@ -73,11 +73,12 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	var owner, repo string
 	split := strings.Split(ref, "/")
 
-	if len(split) == 2 {
+	switch len(split) {
+	case 2:
 		owner, repo = split[0], split[1]
-	} else if len(split) == 1 {
+	case 1:
 		owner = split[0]
-	} else {
+	default:
 		return errors.New("could not parse scheme, use github://<owner> or github://<owner>/<repo> format")
 	}
 
