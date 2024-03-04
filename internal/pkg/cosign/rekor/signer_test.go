@@ -56,7 +56,7 @@ func TestSigner(t *testing.T) {
 		}}},
 	}
 
-	testSigner := NewSigner(payloadSigner, &mClient)
+	testSigner := NewSigner(payloadSigner, &mClient, crypto.SHA256)
 
 	testPayload := "test payload"
 
