@@ -38,17 +38,17 @@ func TestAppendSignatures(t *testing.T) {
 		t.Fatalf("NewSignature() = %v", err)
 	}
 
-	oneSig, err := AppendSignatures(base, s1)
+	oneSig, err := AppendSignatures(base, false, s1)
 	if err != nil {
 		t.Fatalf("AppendSignatures() = %v", err)
 	}
 
-	twoSig, err := AppendSignatures(oneSig, s2)
+	twoSig, err := AppendSignatures(oneSig, false, s2)
 	if err != nil {
 		t.Fatalf("AppendSignatures() = %v", err)
 	}
 
-	threeSig, err := AppendSignatures(oneSig, s2, s3)
+	threeSig, err := AppendSignatures(oneSig, true, s2, s3)
 	if err != nil {
 		t.Fatalf("AppendSignatures() = %v", err)
 	}
@@ -74,6 +74,12 @@ func TestAppendSignatures(t *testing.T) {
 	if testCfg, err := threeSig.ConfigFile(); err != nil {
 		t.Fatalf("ConfigFile() = %v", err)
 	} else if testCfg.Created.Time.IsZero() {
+		t.Errorf("Date of Signature was Zero")
+	}
+
+	if testDefaultCfg, err := twoSig.ConfigFile(); err != nil {
+		t.Fatalf("ConfigFile() = %v", err)
+	} else if !testDefaultCfg.Created.Time.IsZero() {
 		t.Errorf("Date of Signature was Zero")
 	}
 }

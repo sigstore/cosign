@@ -49,16 +49,19 @@ func NewFile(payload []byte, opts ...Option) (oci.File, error) {
 	// Add annotations from options
 	img = mutate.Annotations(img, o.Annotations).(v1.Image)
 
-	t, err := now.Now()
-	if err != nil {
-		return nil, err
+	if o.HonorCreateTimestamp {
+		t, err := now.Now()
+		if err != nil {
+			return nil, err
+		}
+
+		// Set the Created date to time of execution
+		img, err = mutate.CreatedAt(img, v1.Time{Time: t})
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Set the Created date to time of execution
-	img, err = mutate.CreatedAt(img, v1.Time{Time: t})
-	if err != nil {
-		return nil, err
-	}
 	return &file{
 		SignedImage: signed.Image(img),
 		layer:       layer,

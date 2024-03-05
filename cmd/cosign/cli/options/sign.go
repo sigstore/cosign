@@ -41,6 +41,7 @@ type SignOptions struct {
 	TSAServerURL          string
 	IssueCertificate      bool
 	SignContainerIdentity string
+	HonorCreateTimestamp  bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -130,4 +131,6 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SignContainerIdentity, "sign-container-identity", "",
 		"manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature")
+
+	cmd.Flags().BoolVar(&o.HonorCreateTimestamp, "honor-create-timestamp", false, "honor the create timestamp in the signature artefact to be pushed to the OCI registry")
 }

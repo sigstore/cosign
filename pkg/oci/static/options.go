@@ -27,13 +27,14 @@ import (
 type Option func(*options)
 
 type options struct {
-	LayerMediaType   types.MediaType
-	ConfigMediaType  types.MediaType
-	Bundle           *bundle.RekorBundle
-	RFC3161Timestamp *bundle.RFC3161Timestamp
-	Cert             []byte
-	Chain            []byte
-	Annotations      map[string]string
+	LayerMediaType       types.MediaType
+	ConfigMediaType      types.MediaType
+	Bundle               *bundle.RekorBundle
+	RFC3161Timestamp     *bundle.RFC3161Timestamp
+	Cert                 []byte
+	Chain                []byte
+	Annotations          map[string]string
+	HonorCreateTimestamp bool
 }
 
 func makeOptions(opts ...Option) (*options, error) {
@@ -110,5 +111,12 @@ func WithCertChain(cert, chain []byte) Option {
 	return func(o *options) {
 		o.Cert = cert
 		o.Chain = chain
+	}
+}
+
+// WithHonorCreationTimestamp sets the feature flag to honor the creation timestamp to time of running
+func WithHonorCreationTimestamp(hct bool) Option {
+	return func(o *options) {
+		o.HonorCreateTimestamp = hct
 	}
 }
