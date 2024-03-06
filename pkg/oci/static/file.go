@@ -49,7 +49,7 @@ func NewFile(payload []byte, opts ...Option) (oci.File, error) {
 	// Add annotations from options
 	img = mutate.Annotations(img, o.Annotations).(v1.Image)
 
-	if o.HonorCreateTimestamp {
+	if o.RecordCreationTimestamp {
 		t, err := now.Now()
 		if err != nil {
 			return nil, err

@@ -32,7 +32,7 @@ func TestNewFile(t *testing.T) {
 		t.Fatalf("NewFile() = %v", err)
 	}
 
-	timestampedFile, err := NewFile([]byte(payload), WithLayerMediaType("foo"), WithAnnotations(map[string]string{"foo": "bar"}), WithHonorCreationTimestamp(true))
+	timestampedFile, err := NewFile([]byte(payload), WithLayerMediaType("foo"), WithAnnotations(map[string]string{"foo": "bar"}), WithRecordCreationTimestamp(true))
 
 	if err != nil {
 		t.Fatalf("NewFile() = %v", err)

@@ -81,7 +81,6 @@ cosign sign [flags]
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
       --fulcio-url string                                                                        address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign
-      --honor-create-timestamp                                                                   honor the create timestamp in the signature artefact to be pushed to the OCI registry
       --identity-token string                                                                    identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify                                                                     skip verifying fulcio published to the SCT (this should only be used for testing).
       --issue-certificate                                                                        issue a code signing certificate from Fulcio, even if a key is provided
@@ -97,6 +96,7 @@ cosign sign [flags]
       --output-payload string                                                                    write the signed payload to FILE
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
+      --record-creation-timestamp                                                                set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --registry-password string                                                                 registry basic auth password
       --registry-referrers-mode registryReferrersMode                                            mode for fetching references from the registry. allowed: legacy, oci-1-1

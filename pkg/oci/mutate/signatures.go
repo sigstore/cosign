@@ -25,7 +25,7 @@ import (
 
 // AppendSignatures produces a new oci.Signatures with the provided signatures
 // appended to the provided base signatures.
-func AppendSignatures(base oci.Signatures, honorTimestamp bool, sigs ...oci.Signature) (oci.Signatures, error) {
+func AppendSignatures(base oci.Signatures, recordCreationTimestamp bool, sigs ...oci.Signature) (oci.Signatures, error) {
 	adds := make([]mutate.Addendum, 0, len(sigs))
 	for _, sig := range sigs {
 		ann, err := sig.Annotations()
@@ -43,7 +43,7 @@ func AppendSignatures(base oci.Signatures, honorTimestamp bool, sigs ...oci.Sign
 		return nil, err
 	}
 
-	if honorTimestamp {
+	if recordCreationTimestamp {
 		t, err := now.Now()
 		if err != nil {
 			return nil, err

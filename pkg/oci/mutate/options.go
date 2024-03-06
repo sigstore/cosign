@@ -35,7 +35,7 @@ type SignOption func(*signOpts)
 type signOpts struct {
 	dd  DupeDetector
 	ro  ReplaceOp
-	hct bool
+	rct bool
 }
 
 func makeSignOpts(opts ...SignOption) *signOpts {
@@ -60,9 +60,9 @@ func WithReplaceOp(ro ReplaceOp) SignOption {
 	}
 }
 
-func WithHonorCreationTimestamp(hct bool) SignOption {
+func WithHonorCreationTimestamp(rct bool) SignOption {
 	return func(so *signOpts) {
-		so.hct = hct
+		so.rct = rct
 	}
 }
 
