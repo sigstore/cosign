@@ -37,6 +37,7 @@ cosign attest-blob [flags]
       --certificate string                path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string          path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
       --fulcio-url string                 address of sigstore PKI server (default "https://fulcio.sigstore.dev")
+      --fulcio-auth-flow string           fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment.
       --hash string                       hash of blob in hexadecimal (base16). Used if you want to sign an artifact stored elsewhere and have the hash
   -h, --help                              help for attest-blob
       --identity-token string             identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.

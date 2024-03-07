@@ -38,9 +38,10 @@ import (
 )
 
 const (
-	flowNormal = "normal"
-	flowDevice = "device"
-	flowToken  = "token"
+	flowNormal            = "normal"
+	flowDevice            = "device"
+	flowToken             = "token"
+	flowClientCredentials = "client_credentials"
 )
 
 type oidcConnector interface {
@@ -89,6 +90,8 @@ func getCertForOauthID(sv signature.SignerVerifier, fc api.LegacyClient, connect
 func GetCert(_ context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
+	case flowClientCredentials:
+		c.flow = oauthflow.NewClientCredentialsFlow(oidcIssuer)
 	case flowDevice:
 		c.flow = oauthflow.NewDeviceFlowTokenGetterForIssuer(oidcIssuer)
 	case flowNormal:
