@@ -66,7 +66,7 @@ cosign sign [flags]
   cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>
 
   # sign a container image and honor the creation timestamp of the signature
-  cosign sign --key cosign.key --honor-create-timestamp <IMAGE DIGEST>
+  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>
 ```
 
 ### Options

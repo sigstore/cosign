@@ -60,7 +60,7 @@ func WithReplaceOp(ro ReplaceOp) SignOption {
 	}
 }
 
-func WithHonorCreationTimestamp(rct bool) SignOption {
+func WithRecordCreationTimestamp(rct bool) SignOption {
 	return func(so *signOpts) {
 		so.rct = rct
 	}
