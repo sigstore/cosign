@@ -64,6 +64,9 @@ cosign sign [flags]
 
   # sign a container image by manually setting the container image identity
   cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>
+
+  # sign a container image and honor the creation timestamp of the signature
+  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>
 ```
 
 ### Options
@@ -93,6 +96,7 @@ cosign sign [flags]
       --output-payload string                                                                    write the signed payload to FILE
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
+      --record-creation-timestamp                                                                set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --registry-password string                                                                 registry basic auth password
       --registry-referrers-mode registryReferrersMode                                            mode for fetching references from the registry. allowed: legacy, oci-1-1

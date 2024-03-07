@@ -32,6 +32,12 @@ func TestNewFile(t *testing.T) {
 		t.Fatalf("NewFile() = %v", err)
 	}
 
+	timestampedFile, err := NewFile([]byte(payload), WithLayerMediaType("foo"), WithAnnotations(map[string]string{"foo": "bar"}), WithRecordCreationTimestamp(true))
+
+	if err != nil {
+		t.Fatalf("NewFile() = %v", err)
+	}
+
 	layers, err := file.Layers()
 	if err != nil {
 		t.Fatalf("Layers() = %v", err)
@@ -128,6 +134,13 @@ func TestNewFile(t *testing.T) {
 		}
 		if !fileCfg.Created.Time.IsZero() {
 			t.Errorf("Date of Signature was not Zero")
+		}
+		tsCfg, err := timestampedFile.ConfigFile()
+		if err != nil {
+			t.Fatalf("ConfigFile() = %v", err)
+		}
+		if tsCfg.Created.Time.IsZero() {
+			t.Errorf("Date of Signature was Zero")
 		}
 	})
 

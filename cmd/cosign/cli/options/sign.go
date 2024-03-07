@@ -21,26 +21,27 @@ import (
 
 // SignOptions is the top level wrapper for the sign command.
 type SignOptions struct {
-	Key                   string
-	Cert                  string
-	CertChain             string
-	Upload                bool
-	Output                string // deprecated: TODO remove when the output flag is fully deprecated
-	OutputSignature       string // TODO: this should be the root output file arg.
-	OutputPayload         string
-	OutputCertificate     string
-	PayloadPath           string
-	Recursive             bool
-	Attachment            string
-	SkipConfirmation      bool
-	TlogUpload            bool
-	TSAClientCACert       string
-	TSAClientCert         string
-	TSAClientKey          string
-	TSAServerName         string
-	TSAServerURL          string
-	IssueCertificate      bool
-	SignContainerIdentity string
+	Key                     string
+	Cert                    string
+	CertChain               string
+	Upload                  bool
+	Output                  string // deprecated: TODO remove when the output flag is fully deprecated
+	OutputSignature         string // TODO: this should be the root output file arg.
+	OutputPayload           string
+	OutputCertificate       string
+	PayloadPath             string
+	Recursive               bool
+	Attachment              string
+	SkipConfirmation        bool
+	TlogUpload              bool
+	TSAClientCACert         string
+	TSAClientCert           string
+	TSAClientKey            string
+	TSAServerName           string
+	TSAServerURL            string
+	IssueCertificate        bool
+	SignContainerIdentity   string
+	RecordCreationTimestamp bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -130,4 +131,6 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SignContainerIdentity, "sign-container-identity", "",
 		"manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature")
+
+	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false, "set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value")
 }
