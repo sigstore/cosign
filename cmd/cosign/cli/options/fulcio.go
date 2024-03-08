@@ -41,7 +41,7 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 		"identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.")
 
 	cmd.Flags().StringVar(&o.AuthFlow, "fulcio-auth-flow", "",
-		"fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment.")
+		"fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials")
 
 	cmd.Flags().BoolVar(&o.InsecureSkipFulcioVerify, "insecure-skip-verify", false,
 		"skip verifying fulcio published to the SCT (this should only be used for testing).")
