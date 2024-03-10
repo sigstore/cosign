@@ -102,7 +102,7 @@ Cosign will then store the signature and certificate in the Rekor transparency l
 
 ### Verify a container
 
-To verify the image, you'll need to pass in the expected certificate issuer and certificate subject via the `--certificate-identity` and `--certificate-oidc-issuer` flags:
+To verify the image, you'll need to pass in the expected certificate subject and certificate issuer via the `--certificate-identity` and `--certificate-oidc-issuer` flags:
 
 ```
 cosign verify $IMAGE --certificate-identity=$IDENTITY --certificate-oidc-issuer=$OIDC_ISSUER
