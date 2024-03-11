@@ -13,7 +13,7 @@ require (
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/go-openapi/runtime v0.27.2
 	github.com/go-openapi/strfmt v0.22.2
-	github.com/go-openapi/swag v0.22.10
+	github.com/go-openapi/swag v0.23.0
 	github.com/go-piv/piv-go v1.11.0
 	github.com/google/certificate-transparency-go v1.1.8
 	github.com/google/go-cmp v0.6.0
