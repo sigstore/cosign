@@ -50,6 +50,17 @@ $ $(go env GOPATH)/bin/cosign
 
 If you are interested in contributing to `cosign`, please read the [contributing documentation](./CONTRIBUTING.md).
 
+Future Cosign development will be focused the next major release which will be based on
+[sigstore-go](https://github.com/sigstore/sigstore-go). Maintainers will be focused on feature development within
+sigstore-go. Contributions to sigstore-go, particularly around bring-your-own keys and signing, are appreciated.
+Please see the [issue tracker](https://github.com/sigstore/sigstore-go/issues) for good first issues.
+
+Cosign 2.x is a stable release and will continue to receive periodic feature updates and bug fixes. PRs
+that are small in scope and size are most likely to be quickly reviewed.
+
+PRs which significantly modify or break the API will not be accepted. PRs which are significant in size but do not
+introduce breaking changes may be accepted, but will be considered lower priority than PRs in sigstore-go.
+
 ## Dockerfile
 
 Here is how to install and use cosign inside a Dockerfile through the gcr.io/projectsigstore/cosign image:
