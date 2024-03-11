@@ -48,7 +48,7 @@ require (
 	github.com/xanzy/go-gitlab v0.100.0
 	go.step.sm/crypto v0.43.1
 	golang.org/x/crypto v0.21.0
-	golang.org/x/oauth2 v0.17.0
+	golang.org/x/oauth2 v0.18.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.18.0
 	google.golang.org/api v0.167.0
