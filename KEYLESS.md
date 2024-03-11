@@ -1,1 +1,0 @@
-> Note of deprecation: This document has been migrated into [`sigstore/docs`](https://github.com/sigstore/docs/blob/main/content/en/signing/overview.md) as part of [documentation migration](https://github.com/sigstore/cosign/issues/822) and PR: https://github.com/sigstore/docs/pull/56. To view the live docs page, go to: https://docs.sigstore.dev/signing/overview/
