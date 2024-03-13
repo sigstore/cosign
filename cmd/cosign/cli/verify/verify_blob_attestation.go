@@ -102,7 +102,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	if err != nil {
 		return fmt.Errorf("new envelope verifier: %w", err)
 	}
-	if _, err := dssev.Verify(&env); err != nil {
+	if _, err := dssev.Verify(ctx, &env); err != nil {
 		return fmt.Errorf("dsse verify: %w", err)
 	}
 
