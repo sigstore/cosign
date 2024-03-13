@@ -33,7 +33,7 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/test"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/theupdateframework/go-tuf/encrypted"
+	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 )
 
 func pass(s string) cosign.PassFunc {
