@@ -17,6 +17,7 @@ package verify
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,7 +29,6 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/cue"
@@ -38,6 +38,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -119,28 +120,41 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	if c.TSACertChainPath != "" {
-		_, err := os.Stat(c.TSACertChainPath)
+		leaves, intermediates, roots, err := cosign.GetTSACerts(ctx)
 		if err != nil {
-			return fmt.Errorf("unable to open timestamp certificate chain file '%s: %w", c.TSACertChainPath, err)
-		}
-		// TODO: Add support for TUF certificates.
-		pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
-		if err != nil {
-			return fmt.Errorf("error reading certification chain path file: %w", err)
-		}
-
-		leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(pemBytes)
-		if err != nil {
-			return fmt.Errorf("error splitting certificates: %w", err)
+			return fmt.Errorf("unable to get TSA certificates: %w", err)
 		}
 		if len(leaves) > 1 {
 			return fmt.Errorf("certificate chain must contain at most one TSA certificate")
 		}
 		if len(leaves) == 1 {
-			co.TSACertificate = leaves[0]
+			certs, err := cryptoutils.UnmarshalCertificatesFromPEM(leaves[0])
+			if err != nil {
+				return fmt.Errorf("error parsing TSA certificate: %w", err)
+			}
+			if len(certs) != 1 {
+				return fmt.Errorf("expected a single TSA certificate, got %d", len(certs))
+			}
+			co.TSACertificate = certs[0]
 		}
-		co.TSAIntermediateCertificates = intermediates
-		co.TSARootCertificates = roots
+		var allIntermediateCerts []*x509.Certificate
+		for _, intermediate := range intermediates {
+			certs, err := cryptoutils.UnmarshalCertificatesFromPEM(intermediate)
+			if err != nil {
+				return fmt.Errorf("error parsing TSA intermediate certificates: %w", err)
+			}
+			allIntermediateCerts = append(allIntermediateCerts, certs...)
+		}
+		co.TSAIntermediateCertificates = allIntermediateCerts
+		var allRootCerts []*x509.Certificate
+		for _, root := range roots {
+			certs, err := cryptoutils.UnmarshalCertificatesFromPEM(root)
+			if err != nil {
+				return fmt.Errorf("error parsing TSA root certificates: %w", err)
+			}
+			allRootCerts = append(allRootCerts, certs...)
+		}
+		co.TSARootCertificates = allRootCerts
 	}
 	if !c.IgnoreTlog {
 		if c.RekorURL != "" {
