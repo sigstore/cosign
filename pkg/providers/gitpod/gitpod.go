@@ -16,7 +16,9 @@
 package gitpod
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os/exec"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
@@ -33,12 +35,36 @@ var _ providers.Interface = (*gitpod)(nil)
 
 // Enabled implements providers.Interface
 func (ga *gitpod) Enabled(_ context.Context) bool {
-	return env.Getenv(env.VariableGitpodWorkspaceId) != ""
+	// Check we are in a Gitpod Workspace
+	if env.Getenv(env.VariableGitpodWorkspaceId) != "" {
+
+		//Check we are able to generate tokens with a verified email address
+		output, err := exec.Command("gp", "idp", "token", "--audience", "example.org", "--decode").Output()
+		if err != nil {
+			return false
+		}
+
+		var token struct {
+			Payload *struct {
+				Email         *string `json:"email"`
+				EmailVerified bool    `json:"email_verified"`
+			} `json:"Payload"`
+		}
+		dec := json.NewDecoder(bytes.NewBuffer(output))
+		if err := dec.Decode(&token); err != nil {
+			return false
+		}
+
+		if token.Payload != nil {
+			return token.Payload.Email != nil && token.Payload.EmailVerified
+		}
+	}
+	return false
 }
 
 // Provide implements providers.Interface
 func (ga *gitpod) Provide(ctx context.Context, audience string) (string, error) {
-	token, err := exec.Command("gp idp token --audience " + audience).Output()
+	token, err := exec.Command("gp", "idp", "token", "--audience", audience).Output()
 	if err != nil {
 		return "", err
 	}
