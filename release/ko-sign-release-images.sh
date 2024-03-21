@@ -39,9 +39,10 @@ fi
 
 echo "Signing cosign images with GCP KMS Key..."
 
-cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat cosignImagerefs)
-cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat sgetImagerefs)
+cosign sign --yes --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat cosignImagerefs)
+cosign sign --yes --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat sgetImagerefs)
 
 echo "Signing images with Keyless..."
-cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat cosignImagerefs)
-cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat sgetImagerefs)
+
+cosign sign --yes -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat cosignImagerefs)
+cosign sign --yes -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat sgetImagerefs)	
