@@ -9,12 +9,10 @@ release:
 ######################
 # sign section
 ######################
-
 .PHONY: sign-release-images
 sign-release-images: ko
 	GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	./release/ko-sign-release-images.sh
-
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
@@ -24,7 +22,13 @@ snapshot:
 # copy image to GHCR
 ####################
 
-.PHONY: copy-signed-release-to-ghcr
-copy-signed-release-to-ghcr:
+.PHONY: copy-cosign-signed-release-to-ghcr
+copy-cosign-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:$(GIT_VERSION)
-	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION)-dev $(GHCR_PREFIX)/cosign:$(GIT_VERSION)-dev
+
+.PHONY: copy-sget-signed-release-to-ghcr
+copy-sget-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/sget:$(GIT_VERSION) $(GHCR_PREFIX)/sget:$(GIT_VERSION)
+
+.PHONY: copy-signed-release-to-ghcr
+copy-signed-release-to-ghcr: copy-cosign-signed-release-to-ghcr copy-sget-signed-release-to-ghcr
