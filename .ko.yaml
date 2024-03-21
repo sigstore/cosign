@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-defaultBaseImage: gcr.io/distroless/static-debian12:nonroot
+# We need a shell for a lot of redirection/piping to work
+defaultBaseImage: gcr.io/distroless/base:debug-nonroot
 
 builds:
-- id: cosign
+- id: cosign  
   dir: .
   main: ./cmd/cosign
   env:
@@ -26,6 +27,21 @@ builds:
   - -tags
   - "{{ .Env.GIT_HASH }}"
   - -tags
+  - "{{ .Env.GIT_VERSION }}"
+  ldflags:
+  - -extldflags "-static"
+  - "{{ .Env.LDFLAGS }}"
+
+- id: sget
+  dir: .
+  main: ./cmd/sget
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  - --tags
+  - "{{ .Env.GIT_HASH }}"
+  - --tags
   - "{{ .Env.GIT_VERSION }}"
   ldflags:
   - -extldflags "-static"
