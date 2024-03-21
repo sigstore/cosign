@@ -17,7 +17,7 @@
 defaultBaseImage: gcr.io/distroless/base:debug-nonroot
 
 builds:
-- id: cosign  
+- id: cosign
   dir: .
   main: ./cmd/cosign
   env:
