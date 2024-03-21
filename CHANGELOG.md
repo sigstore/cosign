@@ -549,6 +549,24 @@ Critical breaking changes include:
 * asraa
 * priyawadhwa
 
+# v1.13.5
+
+_Note: v1.13.3 and v1.13.4 were skipped due to issues in the release pipeline_
+
+This release backports support for the latest TUF specification. We encourage users to upgrade to Cosign v2.
+
+## Updates
+* V1 go tuf update (#3598)
+* Update cloud build script to latest for v1.13.x (#3615)
+
+# v1.13.2
+
+This release backports a security fix. We encourage users to upgrade to Cosign v2.
+
+## Updates
+* [release-1.13] update builder image that uses go 1.19.4 (#2521)
+* Backport GHSA-vfp6-jrw2-99g9 in (#3364)
+
 # v1.13.1
 
 ## Enhancements
