@@ -28,12 +28,12 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 
+	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/test"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/theupdateframework/go-tuf/encrypted"
 )
 
 func pass(s string) cosign.PassFunc {

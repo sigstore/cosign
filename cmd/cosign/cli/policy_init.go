@@ -43,7 +43,6 @@ import (
 	"github.com/sigstore/cosign/pkg/sget" //nolint:staticcheck
 	sigs "github.com/sigstore/cosign/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
-	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
 )
 
@@ -86,7 +85,7 @@ func initPolicy() *cobra.Command {
   cosign policy init -ns <project_namespace> --maintainers {email_addresses} --threshold <int> --expires <int>(days)`,
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var publicKeys []*tuf.Key
+			var publicKeys []*Key
 
 			// Process the list of maintainers by
 			// 1. Ensure each entry is a correctly formatted email address
@@ -96,13 +95,13 @@ func initPolicy() *cobra.Command {
 					panic(fmt.Sprintf("Invalid email format: %s", email))
 				} else {
 					// Currently only a single issuer can be set for all the maintainers.
-					key := tuf.FulcioVerificationKey(strings.TrimSpace(email), o.Issuer)
+					key := FulcioVerificationKey(strings.TrimSpace(email), o.Issuer)
 					publicKeys = append(publicKeys, key)
 				}
 			}
 
 			// Create a new root.
-			root := tuf.NewRoot()
+			root := NewRoot()
 
 			// Add the maintainer identities to the root's trusted keys.
 			for _, key := range publicKeys {
@@ -112,7 +111,7 @@ func initPolicy() *cobra.Command {
 			// Set root keys, threshold, and namespace.
 			role, ok := root.Roles["root"]
 			if !ok {
-				role = &tuf.Role{KeyIDs: []string{}, Threshold: 1}
+				role = &Role{KeyIDs: []string{}, Threshold: 1}
 			}
 			role.AddKeysWithThreshold(publicKeys, o.Threshold)
 			root.Roles["root"] = role
@@ -240,18 +239,18 @@ func signPolicy() *cobra.Command {
 			}
 
 			// Unmarshal policy and verify that Fulcio signer email is in the trusted
-			signed := &tuf.Signed{}
+			signed := &Signed{}
 			if err := json.Unmarshal(b, signed); err != nil {
 				return fmt.Errorf("unmarshalling signed root policy: %w", err)
 			}
 
 			// Create and add signature
-			key := tuf.FulcioVerificationKey(signerEmail, signerIssuer)
+			key := FulcioVerificationKey(signerEmail, signerIssuer)
 			sig, err := sv.SignMessage(bytes.NewReader(signed.Signed), signatureoptions.WithContext(ctx))
 			if err != nil {
 				return fmt.Errorf("error occurred while during artifact signing): %w", err)
 			}
-			signature := tuf.Signature{
+			signature := Signature{
 				Signature: base64.StdEncoding.EncodeToString(sig),
 				Cert:      base64.StdEncoding.EncodeToString(sv.Cert),
 			}

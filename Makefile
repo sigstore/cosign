@@ -100,7 +100,7 @@ lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
 
 test:
-	go test $(shell go list ./... | grep -v third_party/)
+	GODEBUG=x509sha1=1 go test $(shell go list ./... | grep -v third_party/)
 
 clean:
 	rm -rf cosign
