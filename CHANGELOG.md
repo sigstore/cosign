@@ -549,9 +549,9 @@ Critical breaking changes include:
 * asraa
 * priyawadhwa
 
-# v1.13.5
+# v1.13.6
 
-_Note: v1.13.3 and v1.13.4 were skipped due to issues in the release pipeline_
+_Note: v1.13.3, .4, and .5 were skipped due to issues in the release pipeline_
 
 This release backports support for the latest TUF specification. We encourage users to upgrade to Cosign v2.
 
