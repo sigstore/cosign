@@ -16,21 +16,21 @@
 timeout: 3600s
 
 steps:
-- name: gcr.io/cloud-builders/git
-  dir: "go/src/sigstore"
-  args:
-  - "clone"
-  - "https://github.com/${_TOOL_ORG}/${_TOOL_REPO}"
+  - name: gcr.io/cloud-builders/git
+    dir: "go/src/sigstore"
+    args:
+      - "clone"
+      - "https://github.com/${_TOOL_ORG}/${_TOOL_REPO}"
 
-- name: gcr.io/cloud-builders/git
-  entrypoint: "bash"
-  dir: "go/src/sigstore/cosign"
-  args:
-  - '-c'
-  - |
-    git fetch
-    echo "Checking out ${_GIT_TAG}"
-    git checkout ${_GIT_TAG}
+  - name: gcr.io/cloud-builders/git
+    entrypoint: "bash"
+    dir: "go/src/sigstore/cosign"
+    args:
+      - '-c'
+      - |
+        git fetch
+        echo "Checking out ${_GIT_TAG}"
+        git checkout ${_GIT_TAG}
 
   - name: 'gcr.io/projectsigstore/cosign:v2.2.3-dev@sha256:0d795fa145b03026b7bc2a35e33068cdb75e1c1f974e604c17408bf7bd174967'
     dir: "go/src/sigstore/cosign"
