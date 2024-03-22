@@ -63,6 +63,7 @@ const (
 	VariableGitHubToken               Variable = "GITHUB_TOKEN" //nolint:gosec
 	VariableGitHubRequestToken        Variable = "ACTIONS_ID_TOKEN_REQUEST_TOKEN"
 	VariableGitHubRequestURL          Variable = "ACTIONS_ID_TOKEN_REQUEST_URL"
+	VariableGitpodWorkspaceId         Variable = "GITPOD_WORKSPACE_ID"
 	VariableSPIFFEEndpointSocket      Variable = "SPIFFE_ENDPOINT_SOCKET"
 	VariableGoogleServiceAccountName  Variable = "GOOGLE_SERVICE_ACCOUNT_NAME"
 	VariableGitLabHost                Variable = "GITLAB_HOST"
@@ -154,6 +155,12 @@ var (
 		VariableGitHubRequestURL: {
 			Description: "is the URL for GitHub's OIDC provider",
 			Expects:     "string with the URL for the OIDC provider",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableGitpodWorkspaceId: {
+			Description: "is the ID of the workspace in Gitpod",
+			Expects:     "string with the ID of the Gitpod workspace",
 			Sensitive:   false,
 			External:    true,
 		},
