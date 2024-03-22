@@ -83,7 +83,7 @@ rm -f *.pem import-cosign.* && go run test/gencert/main.go && COSIGN_PASSWORD="$
 COSIGN_PASSWORD="$passwd" $COSIGN_CLI sign --timestamp-server-url "${TIMESTAMP_SERVER_URL}" \
 	--timestamp-client-cacert ${TIMESTAMP_CACERT} --timestamp-client-cert ${TIMESTAMP_CLIENT_CERT} \
 	--timestamp-client-key ${TIMESTAMP_CLIENT_KEY} --timestamp-server-name ${TIMESTAMP_SERVER_NAME}\
-	--upload=true --tlog-upload=false --key import-cosign.key --certificate-chain cacert.pem --cert cert.pem $IMG
+	--upload=true --tlog-upload=false --key import-cosign.key --certificate-chain ca-root.pem --cert cert.pem $IMG
 
 # key is now longer needed
 rm -f key.pem import-cosign.*
@@ -91,8 +91,12 @@ rm -f key.pem import-cosign.*
 echo "cosign verify:"
 $COSIGN_CLI verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=true \
 	--certificate-identity-regexp 'xyz@nosuchprovider.com' --certificate-oidc-issuer-regexp '.*' \
-	--certificate-chain cacert.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE $IMG
+	--certificate-chain ca-root.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE $IMG
+# alternative invocation of 'cosign verify' using '--ca-roots' instead of '--certificate-chain'
+$COSIGN_CLI verify --insecure-ignore-tlog --insecure-ignore-sct --check-claims=true \
+	--certificate-identity-regexp 'xyz@nosuchprovider.com' --certificate-oidc-issuer-regexp '.*' \
+	--ca-roots ca-root.pem --timestamp-certificate-chain $TIMESTAMP_CHAIN_FILE $IMG
 
 # cleanup
-rm -fr ca-key.pem cacert.pem cert.pem timestamp-chain /tmp/timestamp-authority
+rm -fr ca-key.pem ca-root.pem cert.pem timestamp-chain /tmp/timestamp-authority
 pkill -f 'timestamp-server'
