@@ -234,7 +234,7 @@ difficult to identify which artifact is which in the image index:
 }
 ```
 
-To help help disambiguate attestations, clients may add annotations to the items
+To help disambiguate attestations, clients may add annotations to the items
 in the `manifests` list which indicate what is contained within each bundle:
 
 - `dev.sigstore.cosign.bundle.content` - Must be one "message-signature" or
