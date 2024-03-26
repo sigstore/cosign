@@ -243,6 +243,8 @@ when it was created:
   bundle.
 - `dev.sigstore.bundle.predicateType` - When the bundle contains a DSSE-wrapped
   in-toto statement, the statement's predicate can be reflected here.
+- `dev.sigstore.bundle.signer` - Identity of the application which generated the
+  attestation bundle.
 - `org.opencontainers.image.created` - Date and time when the attestation bundle
   was created, conforming to
   [RFC 3339](https://tools.ietf.org/html/rfc3339#section-5.6) (this is one of
@@ -259,6 +261,7 @@ These annotations should be included as part of the bundle manifest:
   "annotations": {
     "dev.sigstore.bundle.content": "dsse-envelope",
     "dev.sigstore.bundle.predicateType": "https://slsa.dev/provenance/v1",
+    "dev.sigstore.bundle.signer": "cosign/v2.2.3 (darwin; arm64)",
     "org.opencontainers.image.created": "2024-03-08T18:18:20.406Z"
   },
   "config": {
@@ -297,6 +300,7 @@ the following:
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "annotations": {
         "dev.sigstore.bundle.content": "message-signature",
+        "dev.sigstore.bundle.signer": "cosign/v2.2.3 (darwin; arm64)",
         "org.opencontainers.image.created": "2024-03-07T18:17:38.000Z"
       }
     },
@@ -307,6 +311,7 @@ the following:
       "annotations": {
         "dev.sigstore.bundle.content": "dsse-envelope",
         "dev.sigstore.bundle.predicateType": "https://slsa.dev/provenance/v1",
+        "dev.sigstore.bundle.signer": "cosign/v2.2.3 (darwin; arm64)",
         "org.opencontainers.image.created": "2024-03-08T18:18:20.406Z"
       }
     }
