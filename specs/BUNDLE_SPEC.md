@@ -234,15 +234,57 @@ difficult to identify which artifact is which in the image index:
 }
 ```
 
-To help disambiguate attestations, clients may add annotations to the items
-in the `manifests` list which indicate what is contained within each bundle:
+To help disambiguate attestations, clients may add annotations to the items in
+the `manifests` list which indicate what is contained within each bundle and
+when it was created:
 
-- `dev.sigstore.cosign.bundle.content` - Must be one "message-signature" or
+- `dev.sigstore.bundle.content` - Must be one "message-signature" or
   "dsse-envelope" and should match the type of content embedded in the Sigstore
   bundle.
-- `dev.sigstore.cosign.bundle.predicateType` - When the bundle contains a
-  DSSE-wrapped in-toto statement, the statement's predicate can be reflected
-  here.
+- `dev.sigstore.bundle.predicateType` - When the bundle contains a DSSE-wrapped
+  in-toto statement, the statement's predicate can be reflected here.
+- `org.opencontainers.image.created` - Date and time when the attestation bundle
+  was created, conforming to
+  [RFC 3339](https://tools.ietf.org/html/rfc3339#section-5.6) (this is one of
+  the pre-defined annotation keys identified in the
+  [OCI spec](https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys)).
+
+These annotations should be included as part of the bundle manifest:
+
+```json
+{
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  "schemaVersion": 2,
+  "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+  "annotations": {
+    "dev.sigstore.bundle.content": "dsse-envelope",
+    "dev.sigstore.bundle.predicateType": "https://slsa.dev/provenance/v1",
+    "org.opencontainers.image.created": "2024-03-08T18:18:20.406Z"
+  },
+  "config": {
+    "mediaType": "application/vnd.oci.empty.v1+json",
+    "digest": "sha256:44136fa3...",
+    "size": 2
+  },
+  "layers": [
+    {
+      "digest": "sha256:cafed00d...",
+      "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "size": 4971
+    }
+  ],
+  "subject": {
+    "digest": "sha256:c00010ff...",
+    "mediaType": "application/vnd.oci.image.index.v1+json"
+  }
+}
+```
+
+Registries which support the referrers API will automatically propagate any
+annotations on the referring manifest to the index. For registries which do NOT
+support the referrers API, the annotations should be added to the index when it
+is updated manually. In either case, the end result should look something like
+the following:
 
 ```json
 {
@@ -254,7 +296,8 @@ in the `manifests` list which indicate what is contained within each bundle:
       "digest": "sha256:facefeed",
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "annotations": {
-        "dev.sigstore.cosign.bundle.content": "message-signature"
+        "dev.sigstore.bundle.content": "message-signature",
+        "org.opencontainers.image.created": "2024-03-07T18:17:38.000Z"
       }
     },
     {
@@ -262,8 +305,9 @@ in the `manifests` list which indicate what is contained within each bundle:
       "digest": "sha256:d0d0caca",
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "annotations": {
-        "dev.sigstore.cosign.bundle.content": "dsse-envelope",
-        "dev.sigstore.cosign.bundle.predicateType": "https://slsa.dev/provenance/v1"
+        "dev.sigstore.bundle.content": "dsse-envelope",
+        "dev.sigstore.bundle.predicateType": "https://slsa.dev/provenance/v1",
+        "org.opencontainers.image.created": "2024-03-08T18:18:20.406Z"
       }
     }
   ]
