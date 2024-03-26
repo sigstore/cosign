@@ -32,7 +32,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  e2e-secrets:
+  e2e-cross:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
@@ -45,11 +45,8 @@ jobs:
           go-version: '1.21'
           check-latest: true
 
-      - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
-
-      - name: Run e2e_test_attach.sh
-        shell: bash
-        run: ./test/e2e_test_attach.sh
+      - name: Run cross platform e2e tests
+        run: go test -tags=e2e,cross -v ./test/...
 
   e2e-tsa-mtls:
     strategy:
