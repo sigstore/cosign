@@ -32,7 +32,7 @@ in the OCI
 ### Publishing
 
 First, the bundle itself is stored in it's JSON-serialized form as a blob in the
-registry
+registry:
 
 ```
 POST /v2/foo/blobs/uploads/?digest=cafed00d...
