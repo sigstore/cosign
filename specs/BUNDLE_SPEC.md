@@ -31,7 +31,7 @@ in the OCI
 
 ### Publishing
 
-First, the bundle itself is stored in it's JSON-serialized form as a blob in the
+First, the bundle itself is stored in its JSON-serialized form as a blob in the
 registry:
 
 ```
