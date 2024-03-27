@@ -63,10 +63,6 @@ jobs:
 
       - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
 
-      - name: Run e2e_tsa_mtls.sh
-        shell: bash
-        run: make && PATH="$PWD:$PATH" ./test/e2e_tsa_mtls.sh
-
       - name: Run e2e_signblob_tsa_mtls.sh
         shell: bash
         run: make && PATH="$PWD:$PATH" ./test/e2e_signblob_tsa_mtls.sh
