@@ -38,7 +38,7 @@ registry:
 POST /v2/foo/blobs/uploads/?digest=cafed00d...
 Content-Type: application/octet-stream
 
-{"mediaType":"application/vnd.dev.sigstore.bundle+json;version=0.2", ...}
+{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json", ...}
 ```
 
 In this example “foo” is the name of the repository within the registry to which
@@ -55,7 +55,7 @@ Content-Type: application/vnd.oci.image.manifest.v1+json
 {
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
   "schemaVersion": 2,
-  "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+  "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json",
   "config": {
     "mediaType": "application/vnd.oci.empty.v1+json",
     "digest": "sha256:44136fa3...",
@@ -64,7 +64,7 @@ Content-Type: application/vnd.oci.image.manifest.v1+json
   "layers": [
     {
       "digest": "sha256:cafed00d...",
-      "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
       "size": 4971
     }
   ],
@@ -110,7 +110,7 @@ Content-Type: application/vnd.oci.image.index.v1+json
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "digest": "sha256:badf00d..",
       "size": 779,
-      "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2"
+      "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json"
     }
   ]
 }
@@ -154,7 +154,7 @@ image:
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "digest": "sha256:badf00d..",
       "size": 779,
-      "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2"
+      "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json"
     }
   ]
 }
@@ -174,7 +174,7 @@ GET /v2/foo/manifests/sha256:badf00d..
 {
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
   "schemaVersion": 2,
-  "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+  "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json",
   "config": {
     "mediaType": "application/vnd.oci.empty.v1+json",
     "digest": "sha256:44136fa3...",
@@ -183,7 +183,7 @@ GET /v2/foo/manifests/sha256:badf00d..
   "layers": [
     {
       "digest": "sha256:cafed00d...",
-      "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
       "size": 4971
     }
   ],
@@ -203,7 +203,7 @@ GET /v2/foo/blobs/uploads/?digest=cafed00d...
 
 ```
 {
-  "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+  "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
   "verificationMaterial": {...},
   "messageSignature": {...}
 }
@@ -221,12 +221,12 @@ difficult to identify which artifact is which in the image index:
   "schemaVersion": 2,
   "manifests": [
     {
-      "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json",
       "digest": "sha256:facefeed",
       "mediaType": "application/vnd.oci.image.manifest.v1+json"
     },
     {
-      "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json",
       "digest": "sha256:d0d0caca",
       "mediaType": "application/vnd.oci.image.manifest.v1+json"
     }
@@ -257,7 +257,7 @@ These annotations should be included as part of the bundle manifest:
 {
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
   "schemaVersion": 2,
-  "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+  "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json",
   "annotations": {
     "dev.sigstore.bundle.content": "dsse-envelope",
     "dev.sigstore.bundle.predicateType": "https://slsa.dev/provenance/v1",
@@ -272,7 +272,7 @@ These annotations should be included as part of the bundle manifest:
   "layers": [
     {
       "digest": "sha256:cafed00d...",
-      "mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
       "size": 4971
     }
   ],
@@ -295,7 +295,7 @@ the following:
   "schemaVersion": 2,
   "manifests": [
     {
-      "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json",
       "digest": "sha256:facefeed",
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "annotations": {
@@ -305,7 +305,7 @@ the following:
       }
     },
     {
-      "artifactType": "application/vnd.dev.sigstore.bundle+json;version=0.2",
+      "artifactType": "application/vnd.dev.sigstore.bundle.v0.3+json",
       "digest": "sha256:d0d0caca",
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "annotations": {
