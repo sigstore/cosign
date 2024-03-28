@@ -19,6 +19,7 @@
 // This test requires a yubikey to be present. It WILL reset the yubikey to exercise functionality.
 // DO NOT RUN THIS TEST IF YOU DO NOT WANT TO RESET YOUR YUBIKEY
 // This requires the "resetyubikey" tag to be passed to go test.
+// See https://docs.sigstore.dev/key_management/hardware-based-tokens/#tested-devices
 
 package test
 
