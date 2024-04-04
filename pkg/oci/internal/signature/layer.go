@@ -67,6 +67,7 @@ func (s *sigLayer) Payload() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer r.Close()
 	return payload, nil
 }
 
