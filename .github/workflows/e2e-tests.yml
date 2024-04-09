@@ -32,7 +32,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  e2e-secrets:
+  e2e-cross:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
@@ -45,34 +45,8 @@ jobs:
           go-version: '1.21'
           check-latest: true
 
-      - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
-
-      - name: Run e2e_test_attach.sh
-        shell: bash
-        run: ./test/e2e_test_attach.sh
-
-  e2e-tsa-mtls:
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
-      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
-        with:
-          go-version: '1.21'
-          check-latest: true
-
-      - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
-
-      - name: Run e2e_tsa_mtls.sh
-        shell: bash
-        run: make && PATH="$PWD:$PATH" ./test/e2e_tsa_mtls.sh
-
-      - name: Run e2e_signblob_tsa_mtls.sh
-        shell: bash
-        run: make && PATH="$PWD:$PATH" ./test/e2e_signblob_tsa_mtls.sh
+      - name: Run cross platform e2e tests
+        run: go test -tags=e2e,cross -v ./test/...
 
   e2e-test-pkcs11:
     runs-on: ubuntu-latest
@@ -81,7 +55,7 @@ jobs:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version: '1.21' 
+          go-version: '1.21'
           check-latest: true
 
       - name: Run pkcs11 end-to-end tests
