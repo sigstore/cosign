@@ -1,3 +1,31 @@
+# v2.2.4
+
+## Bug Fixes
+
+* Fixes for GHSA-88jx-383q-w4qc and GHSA-95pr-fxf5-86gv (#3661)
+* ErrNoSignaturesFound should be used when there is no signature attached to an image. (#3526)
+* fix semgrep issues for dgryski.semgrep-go ruleset (#3541)
+* Honor creation timestamp for signatures again (#3549)
+
+## Features
+
+* Adds Support for Fulcio Client Credentials Flow, and Argument to Set Flow Explicitly (#3578)
+
+## Documentation
+
+* add oci bundle spec (#3622)
+* Correct help text of triangulate cmd (#3551)
+* Correct help text of verify-attestation policy argument (#3527)
+* feat: add OVHcloud MPR registry tested with cosign (#3639)
+
+## Testing
+
+* Refactor e2e-tests.yml workflow (#3627)
+* Clean up and clarify e2e scripts (#3628)
+* Don't ignore transparency log in tests if possible (#3528)
+* Make E2E tests hermetic (#3499)
+* add e2e test for pkcs11 token signing (#3495)
+
 # v2.2.3
 
 ## Bug Fixes
