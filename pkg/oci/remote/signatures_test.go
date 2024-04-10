@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
@@ -73,6 +74,27 @@ func TestSignaturesErrors(t *testing.T) {
 		_, err := Signatures(name.MustParseReference("gcr.io/distroless/static:sha256-deadbeef.sig"))
 		if !errors.Is(err, want) {
 			t.Fatalf("Signatures() = %v, wanted %v", err, want)
+		}
+	})
+
+	t.Run("too many layers", func(t *testing.T) {
+		remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
+			return &fake.FakeImage{
+				ManifestStub: func() (*v1.Manifest, error) {
+					return &v1.Manifest{
+						Layers: make([]v1.Descriptor, 10000),
+					}, nil
+				},
+			}, nil
+		}
+		sigs, err := Signatures(name.MustParseReference("gcr.io/distroless/static:sha256-deadbeef.sig"))
+		if err != nil {
+			t.Fatalf("Signatures() = %v", err)
+		}
+		want := errors.New("number of layers (10000) exceeded the limit (1000)")
+		_, err = sigs.Get()
+		if err == nil || want.Error() != err.Error() {
+			t.Fatalf("Get() = %v", err)
 		}
 	})
 }
