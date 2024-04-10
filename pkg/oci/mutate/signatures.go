@@ -23,6 +23,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
 
+const maxLayers = 1000
+
 // AppendSignatures produces a new oci.Signatures with the provided signatures
 // appended to the provided base signatures.
 func AppendSignatures(base oci.Signatures, recordCreationTimestamp bool, sigs ...oci.Signature) (oci.Signatures, error) {
@@ -105,6 +107,10 @@ func (sa *sigAppender) Get() ([]oci.Signature, error) {
 	sl, err := sa.base.Get()
 	if err != nil {
 		return nil, err
+	}
+	sumLayers := int64(len(sl) + len(sa.sigs))
+	if sumLayers > maxLayers {
+		return nil, oci.NewMaxLayersExceeded(sumLayers, maxLayers)
 	}
 	return append(sl, sa.sigs...), nil
 }

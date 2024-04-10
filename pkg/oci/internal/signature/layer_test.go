@@ -20,6 +20,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -50,6 +52,7 @@ func TestSignature(t *testing.T) {
 	tests := []struct {
 		name           string
 		l              *sigLayer
+		env            map[string]string
 		wantPayloadErr error
 		wantSig        string
 		wantSigErr     error
@@ -222,10 +225,39 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 		},
 		wantSig:   "blah",
 		wantChain: 1,
+	}, {
+		name: "payload size exceeds default limit",
+		l: &sigLayer{
+			Layer: &mockLayer{size: 134217728 + 42}, // 128MB + 42 bytes
+		},
+		wantPayloadErr: errors.New("size of layer (134217770) exceeded the limit (134217728)"),
+	}, {
+		name: "payload size exceeds overridden limit",
+		l: &sigLayer{
+			Layer: &mockLayer{size: 1000000000 + 42}, // 1GB + 42 bytes
+		},
+		env:            map[string]string{"COSIGN_MAX_ATTACHMENT_SIZE": "1GB"},
+		wantPayloadErr: errors.New("size of layer (1000000042) exceeded the limit (1000000000)"),
+	}, {
+		name: "payload size is within overridden limit",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey: "blah",
+				},
+			},
+		},
+		env:     map[string]string{"COSIGN_MAX_ATTACHMENT_SIZE": "5KB"},
+		wantSig: "blah",
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			for k, v := range test.env {
+				t.Setenv(k, v)
+			}
 			b, err := test.l.Payload()
 			switch {
 			case (err != nil) != (test.wantPayloadErr != nil):
@@ -238,6 +270,9 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 				} else if want := digest; want != got {
 					t.Errorf("v1.SHA256() = %v, wanted %v", got, want)
 				}
+			}
+			if err != nil {
+				return
 			}
 
 			switch got, err := test.l.Base64Signature(); {
@@ -453,3 +488,20 @@ func TestSignatureWithTSAAnnotation(t *testing.T) {
 		})
 	}
 }
+
+type mockLayer struct {
+	size int64
+}
+
+func (m *mockLayer) Size() (int64, error) {
+	return m.size, nil
+}
+
+func (m *mockLayer) Compressed() (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader("data")), nil
+}
+
+func (m *mockLayer) Digest() (v1.Hash, error)             { panic("not implemented") }
+func (m *mockLayer) DiffID() (v1.Hash, error)             { panic("not implemented") }
+func (m *mockLayer) Uncompressed() (io.ReadCloser, error) { panic("not implemented") }
+func (m *mockLayer) MediaType() (types.MediaType, error)  { panic("not implemented") }
