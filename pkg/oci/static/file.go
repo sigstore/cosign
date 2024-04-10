@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	payloadsize "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload/size"
 	"github.com/sigstore/cosign/v2/internal/pkg/now"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/signed"
@@ -82,6 +83,14 @@ func (f *file) FileMediaType() (types.MediaType, error) {
 
 // Payload implements oci.File
 func (f *file) Payload() ([]byte, error) {
+	size, err := f.layer.Size()
+	if err != nil {
+		return nil, err
+	}
+	err = payloadsize.CheckSize(uint64(size))
+	if err != nil {
+		return nil, err
+	}
 	rc, err := f.layer.Uncompressed()
 	if err != nil {
 		return nil, err

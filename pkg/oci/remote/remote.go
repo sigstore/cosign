@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	payloadsize "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload/size"
 	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
@@ -226,6 +227,15 @@ func (f *attached) FileMediaType() (types.MediaType, error) {
 
 // Payload implements oci.File
 func (f *attached) Payload() ([]byte, error) {
+	size, err := f.layer.Size()
+	if err != nil {
+		return nil, err
+	}
+	err = payloadsize.CheckSize(uint64(size))
+	if err != nil {
+		return nil, err
+	}
+
 	// remote layers are believed to be stored
 	// compressed, but we don't compress attachments
 	// so use "Compressed" to access the raw byte
