@@ -84,6 +84,7 @@ steps:
       - COSIGN_YES=true
       - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
       - GITHUB_USER=${_GITHUB_USER}
+      - LATEST_TAG=",latest"
     secretEnv:
       - GITHUB_TOKEN
     args:

@@ -144,7 +144,7 @@ ko-cosign-dev:
 	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) KO_DEFAULTBASEIMAGE=gcr.io/distroless/static-debian12:debug-nonroot ko build --base-import-paths \
-		--platform=all --tags $(GIT_VERSION)-dev --tags $(GIT_HASH)-dev \
+		--platform=all --tags $(GIT_VERSION)-dev --tags $(GIT_HASH)-dev$(LATEST_TAG)-dev \
 		$(ARTIFACT_HUB_LABELS) --image-refs cosignDevImagerefs \
 		github.com/sigstore/cosign/v2/cmd/cosign
 
