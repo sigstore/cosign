@@ -21,7 +21,7 @@ concurrency: cut-release
 jobs:
   cut-release:
     name: Cut release
-    uses: sigstore/sigstore/.github/workflows/reusable-release.yml@main
+    uses: sigstore/community/.github/workflows/reusable-release.yml@main
     permissions:
       id-token: write
       contents: read
