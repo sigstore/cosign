@@ -54,7 +54,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
-      - uses: cpanato/vault-installer@df0775e6f6ee38dee09eaf57ede66ac6a414b70e # v1.0.2
+      - uses: cpanato/vault-installer@ac6d910a90d64f78ef773afe83887a35c95245c6 # v1.0.3
         with:
           vault-release: '1.14.1'
 
