@@ -47,19 +47,25 @@ func Save() *cobra.Command {
 	return cmd
 }
 
-func SaveCmd(_ context.Context, opts options.SaveOptions, imageRef string) error {
-	ref, err := name.ParseReference(imageRef)
+func SaveCmd(ctx context.Context, opts options.SaveOptions, imageRef string) error {
+	regOpts := opts.Registry
+	regClientOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("constructing client options: %w", err)
+	}
+
+	ref, err := name.ParseReference(imageRef, opts.Registry.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("parsing image name %s: %w", imageRef, err)
 	}
 
-	se, err := ociremote.SignedEntity(ref)
+	se, err := ociremote.SignedEntity(ref, regClientOpts...)
 	if err != nil {
 		return fmt.Errorf("signed entity: %w", err)
 	}
 
 	if _, ok := se.(oci.SignedImage); ok {
-		si, err := ociremote.SignedImage(ref)
+		si, err := ociremote.SignedImage(ref, regClientOpts...)
 		if err != nil {
 			return fmt.Errorf("getting signed image: %w", err)
 		}
@@ -67,7 +73,7 @@ func SaveCmd(_ context.Context, opts options.SaveOptions, imageRef string) error
 	}
 
 	if _, ok := se.(oci.SignedImageIndex); ok {
-		sii, err := ociremote.SignedImageIndex(ref)
+		sii, err := ociremote.SignedImageIndex(ref, regClientOpts...)
 		if err != nil {
 			return fmt.Errorf("getting signed image index: %w", err)
 		}
