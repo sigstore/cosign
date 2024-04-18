@@ -608,7 +608,6 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	t := throttler.New(workers, len(sl))
 	for i, sig := range sl {
 		go func(sig oci.Signature, index int) {
-
 			gotMT, err := sig.MediaType()
 			if err != nil {
 				t.Done(err)
