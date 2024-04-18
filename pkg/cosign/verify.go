@@ -608,19 +608,28 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 	t := throttler.New(workers, len(sl))
 	for i, sig := range sl {
 		go func(sig oci.Signature, index int) {
-			sig, err := static.Copy(sig)
+
+			gotMT, err := sig.MediaType()
+			if err != nil {
+				t.Done(err)
+			}
+			if gotMT != types.SimpleSigningMediaType {
+				t.Done(errors.New("Incorrect MediaType of Signature"))
+				return
+			}
+			sigNew, err := static.Copy(sig)
 			if err != nil {
 				t.Done(err)
 				return
 			}
 
-			verified, err := VerifyImageSignature(ctx, sig, h, co)
+			verified, err := VerifyImageSignature(ctx, sigNew, h, co)
 			bundlesVerified[index] = verified
 			if err != nil {
 				t.Done(err)
 				return
 			}
-			signatures[index] = sig
+			signatures[index] = sigNew
 
 			t.Done(nil)
 		}(sig, i)
@@ -665,7 +674,6 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
-
 	acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co)
 	if err != nil {
 		return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
