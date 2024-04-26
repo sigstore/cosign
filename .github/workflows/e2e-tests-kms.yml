@@ -68,5 +68,4 @@ jobs:
       - name: enable vault transit
         run: vault secrets enable transit
       - name: Acceptance Tests
-        run: |
-          ./test/e2e_test_secrets_kms.sh
+        run: go test -tags=e2e,kms -v ./test/...
