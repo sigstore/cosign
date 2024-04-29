@@ -51,6 +51,7 @@ func attachAttestation(ctx context.Context, remoteOpts []ociremote.Option, signe
 	if err != nil {
 		return err
 	}
+	defer attestationFile.Close()
 
 	env := ssldsse.Envelope{}
 	decoder := json.NewDecoder(attestationFile)
