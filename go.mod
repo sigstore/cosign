@@ -3,7 +3,7 @@ module github.com/sigstore/cosign/v2
 go 1.21
 
 require (
-	cuelang.org/go v0.8.1
+	cuelang.org/go v0.8.2
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20231024185945-8841054dbdb8
 	github.com/buildkite/agent/v3 v3.62.0
@@ -47,12 +47,12 @@ require (
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	github.com/xanzy/go-gitlab v0.103.0
-	go.step.sm/crypto v0.44.6
+	go.step.sm/crypto v0.44.8
 	golang.org/x/crypto v0.22.0
 	golang.org/x/oauth2 v0.19.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/term v0.19.0
-	google.golang.org/api v0.176.0
+	google.golang.org/api v0.176.1
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
@@ -61,8 +61,8 @@ require (
 )
 
 require (
-	cloud.google.com/go/auth v0.2.2 // indirect
-	cloud.google.com/go/auth/oauth2adapt v0.2.1 // indirect
+	cloud.google.com/go/auth v0.3.0 // indirect
+	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	cloud.google.com/go/kms v1.15.8 // indirect
