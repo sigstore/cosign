@@ -25,12 +25,14 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 const (
-	testKMSVar = "TEST_KMS"
-	defaultKMS = "hashivault://transit"
+	rekorURLVar = "REKOR_URL"
+	testKMSVar  = "TEST_KMS"
+	defaultKMS  = "hashivault://transit"
 )
 
 func TestSecretsKMS(t *testing.T) {
@@ -59,10 +61,14 @@ func TestSecretsKMS(t *testing.T) {
 	// Verify should fail at first
 	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
 
+	rekorURL := os.Getenv(rekorURLVar)
+
+	must(downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td), t)
+
 	// Now sign and verify with the KMS key
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
-		RekorURL:         "https://rekor.sigstore.dev",
+		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{

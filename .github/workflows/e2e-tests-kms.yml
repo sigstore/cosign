@@ -44,6 +44,7 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
+          --restart always
         ports:
           - 8200:8200
 
@@ -51,6 +52,7 @@ jobs:
       VAULT_TOKEN: "root"
       VAULT_ADDR: "http://localhost:8200"
       COSIGN_YES: "true"
+      SCAFFOLDING_RELEASE_VERSION: "v0.6.17"
     steps:
       - name: Checkout
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
@@ -65,7 +67,13 @@ jobs:
 
       - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
 
+      - name: Install cluster + sigstore
+        uses: sigstore/scaffolding/actions/setup@main
+        with:
+          version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
+
       - name: enable vault transit
         run: vault secrets enable transit
+
       - name: Acceptance Tests
         run: go test -tags=e2e,kms -v ./test/...
