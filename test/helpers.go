@@ -20,9 +20,13 @@ package test
 import (
 	"context"
 	"crypto"
+	"fmt"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -39,6 +43,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
@@ -371,4 +376,43 @@ func registryClientOpts(ctx context.Context) []remote.Option {
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 		remote.WithContext(ctx),
 	}
+}
+
+// setLocalEnv sets SIGSTORE_CT_LOG_PUBLIC_KEY_FILE, SIGSTORE_ROOT_FILE, and SIGSTORE_REKOR_PUBLIC_KEY for the locally running sigstore deployment.
+func setLocalEnv(t *testing.T, dir string) error {
+	// fulcio repo is downloaded to the user's home directory by e2e_test.sh
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("error getting home directory: %w", err)
+	}
+	t.Setenv(env.VariableSigstoreCTLogPublicKeyFile.String(), path.Join(home, "fulcio/config/ctfe/pubkey.pem"))
+	err = downloadAndSetEnv(t, fulcioURL+"/api/v1/rootCert", env.VariableSigstoreRootFile.String(), dir)
+	if err != nil {
+		return fmt.Errorf("error setting %s env var: %w", env.VariableSigstoreRootFile.String(), err)
+	}
+	err = downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), dir)
+	if err != nil {
+		return fmt.Errorf("error setting %s env var: %w", env.VariableSigstoreRekorPublicKey.String(), err)
+	}
+	return nil
+}
+
+// downloadAndSetEnv fetches a URL and sets the given environment variable to point to the downloaded file path.
+func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("error downloading file: %w", err)
+	}
+	defer resp.Body.Close()
+	f, err := os.CreateTemp(dir, "")
+	if err != nil {
+		return fmt.Errorf("error creating temp file: %w", err)
+	}
+	defer f.Close()
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		return fmt.Errorf("error writing to file: %w", err)
+	}
+	t.Setenv(envVar, f.Name())
+	return nil
 }

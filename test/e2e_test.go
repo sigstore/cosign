@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e && !cross
+//go:build e2e && !cross && !kms
 
 package test
 
@@ -2200,41 +2200,4 @@ func getOIDCToken() (string, error) {
 		return "", err
 	}
 	return string(body), nil
-}
-
-func setLocalEnv(t *testing.T, dir string) error {
-	// fulcio repo is downloaded to the user's home directory by e2e_test.sh
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("error getting home directory: %w", err)
-	}
-	t.Setenv(env.VariableSigstoreCTLogPublicKeyFile.String(), path.Join(home, "fulcio/config/ctfe/pubkey.pem"))
-	err = downloadAndSetEnv(t, fulcioURL+"/api/v1/rootCert", env.VariableSigstoreRootFile.String(), dir)
-	if err != nil {
-		return fmt.Errorf("error setting %s env var: %w", env.VariableSigstoreRootFile.String(), err)
-	}
-	err = downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), dir)
-	if err != nil {
-		return fmt.Errorf("error setting %s env var: %w", env.VariableSigstoreRekorPublicKey.String(), err)
-	}
-	return nil
-}
-
-func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("error downloading file: %w", err)
-	}
-	defer resp.Body.Close()
-	f, err := os.CreateTemp(dir, "")
-	if err != nil {
-		return fmt.Errorf("error creating temp file: %w", err)
-	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.Body)
-	if err != nil {
-		return fmt.Errorf("error writing to file: %w", err)
-	}
-	t.Setenv(envVar, f.Name())
-	return nil
 }

@@ -61,3 +61,49 @@ jobs:
       - name: Run pkcs11 end-to-end tests
         shell: bash
         run: ./test/e2e_test_pkcs11.sh
+
+  e2e-kms:
+    runs-on: ubuntu-latest
+    services:
+      vault:
+        image: hashicorp/vault:latest
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: root
+        options: >-
+          --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 5
+          --restart always
+        ports:
+          - 8200:8200
+
+    env:
+      VAULT_TOKEN: "root"
+      VAULT_ADDR: "http://localhost:8200"
+      COSIGN_YES: "true"
+      SCAFFOLDING_RELEASE_VERSION: "v0.6.17"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: cpanato/vault-installer@ac6d910a90d64f78ef773afe83887a35c95245c6 # v1.0.3
+        with:
+          vault-release: '1.14.1'
+
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version: '1.21'
+          check-latest: true
+
+      - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
+
+      - name: Install cluster + sigstore
+        uses: sigstore/scaffolding/actions/setup@main
+        with:
+          version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
+
+      - name: enable vault transit
+        run: vault secrets enable transit
+
+      - name: Acceptance Tests
+        run: go test -tags=e2e,kms -v ./test/...
