@@ -16,6 +16,7 @@
 package policy
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"encoding/json"
@@ -163,6 +164,50 @@ func TestAttestationToPayloadJson(t *testing.T) {
 		case "default":
 			t.Fatal("non supported predicate file")
 		}
+	}
+}
+
+type myPayloadProvider struct {
+	payload []byte
+}
+
+func (m *myPayloadProvider) Payload() ([]byte, error) {
+	return m.payload, nil
+}
+
+// assert that myPayloadProvider implements PayloadProvider
+var _ PayloadProvider = &myPayloadProvider{}
+
+// TestPayloadProvider tests that the PayloadProvider interface is working as expected.
+func TestPayloadProvider(t *testing.T) {
+	// Control: oci.Signature
+	attestationBytes := readAttestationFromTestFile(t, "valid", "vuln")
+	ociSig, err := static.NewSignature(attestationBytes, "")
+	if err != nil {
+		t.Fatal("Failed to create static.NewSignature: ", err)
+	}
+	jsonBytes, gotPredicateType, err := AttestationToPayloadJSON(context.TODO(), "vuln", ociSig)
+	if err != nil {
+		t.Fatalf("Failed to convert : %s", err)
+	}
+	if len(jsonBytes) == 0 {
+		t.Fatalf("Failed to get jsonBytes")
+	}
+	if gotPredicateType != attestation.CosignVulnProvenanceV01 {
+		t.Fatalf("Did not get expected predicateType, want: %s got: %s", attestation.CosignVulnProvenanceV01, gotPredicateType)
+	}
+
+	// Test: myPayloadProvider
+	provider := &myPayloadProvider{payload: attestationBytes}
+	jsonBytes2, gotPredicateType2, err := AttestationToPayloadJSON(context.TODO(), "vuln", provider)
+	if err != nil {
+		t.Fatalf("Failed to convert : %s", err)
+	}
+	if !bytes.Equal(jsonBytes, jsonBytes2) {
+		t.Fatalf("Expected same jsonBytes, got different")
+	}
+	if gotPredicateType != gotPredicateType2 {
+		t.Fatalf("Expected same predicateType, got different")
 	}
 }
 
