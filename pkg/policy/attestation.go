@@ -29,6 +29,17 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 )
 
+// PayloadProvider is a subset of oci.Signature that only provides the
+// Payload() method.
+type PayloadProvider interface {
+	// Payload fetches the opaque data that is being signed.
+	// This will always return data when there is no error.
+	Payload() ([]byte, error)
+}
+
+// Assert that oci.Signature implements PayloadProvider
+var _ PayloadProvider = (oci.Signature)(nil)
+
 // AttestationToPayloadJSON takes in a verified Attestation (oci.Signature) and
 // marshals it into a JSON depending on the payload that's then consumable
 // by policy engine like cue, rego, etc.
@@ -45,7 +56,7 @@ import (
 // or the predicateType is not the one they are looking for. Without returning
 // this, it's hard for users to know which attestations/predicateTypes were
 // inspected.
-func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedAttestation oci.Signature) ([]byte, string, error) {
+func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedAttestation PayloadProvider) ([]byte, string, error) {
 	if predicateType == "" {
 		return nil, "", errors.New("missing predicate type")
 	}
