@@ -107,3 +107,109 @@ jobs:
 
       - name: Acceptance Tests
         run: go test -tags=e2e,kms -v ./test/...
+
+  e2e-registry:
+    runs-on: ubuntu-latest
+
+    env:
+      SCAFFOLDING_RELEASE_VERSION: "v0.6.17"
+
+    steps:
+    - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
+    - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+      with:
+        go-version: '1.21'
+        check-latest: true
+
+    - name: Setup mirror
+      uses: chainguard-dev/actions/setup-mirror@main
+      with:
+        mirror: mirror.gcr.io
+
+    - name: Install cluster + sigstore
+      uses: sigstore/scaffolding/actions/setup@main
+      with:
+        version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
+
+    - name: Setup local insecure registry
+      run: |
+        # Create a self-signed SSL cert
+        mkdir -p insecure-certs
+        openssl req \
+          -subj "/C=US/ST=WA/L=Flavorton/O=Tests-R-Us/OU=Dept. of Insecurity/CN=example.com/emailAddress=testing@example.com" \
+          -newkey rsa:4096 -nodes -sha256 -keyout insecure-certs/domain.key \
+          -x509 -days 365 -out insecure-certs/domain.crt
+        # Run a registry.
+        docker run -d  --restart=always \
+          --name $INSECURE_REGISTRY_NAME \
+          -v "$(pwd)"/insecure-certs:/insecure-certs \
+          -e REGISTRY_HTTP_ADDR=0.0.0.0:$INSECURE_REGISTRY_PORT \
+          -e REGISTRY_HTTP_TLS_CERTIFICATE=/insecure-certs/domain.crt \
+          -e REGISTRY_HTTP_TLS_KEY=/insecure-certs/domain.key \
+          -p $INSECURE_REGISTRY_PORT:$INSECURE_REGISTRY_PORT \
+          registry:2
+        sudo echo "127.0.0.1 $INSECURE_REGISTRY_NAME" | sudo tee -a /etc/hosts
+      env:
+        # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
+        # '*.local' hostnames.
+        INSECURE_REGISTRY_NAME: insecure-registry.notlocal
+        INSECURE_REGISTRY_PORT: 5001
+
+    - name: Run Insecure Registry Tests
+      run: go test -tags=e2e,registry -v ./test/...
+      env:
+        COSIGN_TEST_REPO: insecure-registry.notlocal:5001
+
+    - name: Setup local insecure OCI 1.1 registry
+      run: |
+        # Create a self-signed SSL cert
+        mkdir -p insecure-certs
+        openssl req \
+          -subj "/C=US/ST=WA/L=Flavorton/O=Tests-R-Us/OU=Dept. of Insecurity/CN=example.com/emailAddress=testing@example.com" \
+          -newkey rsa:4096 -nodes -sha256 -keyout insecure-certs/domain.key \
+          -x509 -days 365 -out insecure-certs/domain.crt
+        cat > config.json << EOF
+        {
+          "distSpecVersion": "1.1.0-dev",
+          "storage": {
+            "rootDirectory": "/tmp/zot"
+          },
+          "http": {
+            "address": "0.0.0.0",
+            "port": "5002",
+            "realm": "zot",
+            "tls": {
+              "cert": "/insecure-certs/domain.crt",
+              "key": "/insecure-certs/domain.key"
+            }
+          },
+          "log": {
+            "level": "debug"
+          }
+        }
+        EOF
+        # Run a registry.
+        docker run -d  --restart=always \
+          --name $INSECURE_OCI_REGISTRY_NAME \
+          -v "$(pwd)"/insecure-certs:/insecure-certs \
+          -v "$(pwd)"/config.json:/etc/zot/config.json \
+          -p $INSECURE_OCI_REGISTRY_PORT:$INSECURE_OCI_REGISTRY_PORT \
+          ghcr.io/project-zot/zot-minimal-linux-amd64:$ZOT_VERSION
+        sudo echo "127.0.0.1 $INSECURE_OCI_REGISTRY_NAME" | sudo tee -a /etc/hosts
+      env:
+        ZOT_VERSION: v2.0.0-rc6
+        # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
+        # '*.local' hostnames.
+        INSECURE_OCI_REGISTRY_NAME: insecure-oci-registry.notlocal
+        INSECURE_OCI_REGISTRY_PORT: 5002
+
+
+    - name: Run Insecure OCI 1.1 Registry Tests
+      run: go test -tags=e2e,registry -v ./test/...
+      env:
+        OCI11: yes
+        COSIGN_TEST_REPO: insecure-oci-registry.notlocal:5002
+
+    - name: Collect diagnostics
+      if: ${{ failure() }}
+      uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main
