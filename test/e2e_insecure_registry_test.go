@@ -30,11 +30,13 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
 const (
-	oci11Var = "OCI11"
+	oci11Var    = "OCI11"
+	rekorURLVar = "REKOR_URL"
 )
 
 func TestInsecureRegistry(t *testing.T) {
@@ -53,10 +55,13 @@ func TestInsecureRegistry(t *testing.T) {
 
 	useOCI11 := os.Getenv("oci11Var") != ""
 
+	rekorURL := os.Getenv(rekorURLVar)
+	must(downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td), t)
+
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         "https://rekor.sigstore.dev", // FIXME
+		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
