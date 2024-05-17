@@ -109,10 +109,12 @@ jobs:
         INSECURE_OCI_REGISTRY_NAME: insecure-oci-registry.notlocal
         INSECURE_OCI_REGISTRY_PORT: 5002
 
-    - name: Run Insecure OCI Registry Tests
-      run: |
-        go install github.com/google/go-containerregistry/cmd/crane
-        ./test/e2e_test_insecure_oci_registry.sh
+
+    - name: Run Insecure OCI 1.1 Registry Tests
+      run: go test -tags=e2e,registry -v ./test/...
+      env:
+        OCI11: yes
+        COSIGN_TEST_REPO: insecure-oci-registry.notlocal:5002
 
     - name: Collect diagnostics
       if: ${{ failure() }}

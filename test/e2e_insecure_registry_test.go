@@ -33,6 +33,10 @@ import (
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
+const (
+	oci11Var = "OCI11"
+)
+
 func TestInsecureRegistry(t *testing.T) {
 	if os.Getenv("COSIGN_TEST_REPO") == "" {
 		t.Fatal("COSIGN_TEST_REPO must be set to an insecure registry for this test")
@@ -46,6 +50,8 @@ func TestInsecureRegistry(t *testing.T) {
 	defer cleanup()
 
 	_, privKey, pubKey := keypair(t, td)
+
+	useOCI11 := os.Getenv("oci11Var") != ""
 
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
@@ -61,6 +67,11 @@ func TestInsecureRegistry(t *testing.T) {
 	so.Registry = options.RegistryOptions{
 		AllowInsecure: true,
 	}
+	if useOCI11 {
+		so.RegistryExperimental = options.RegistryExperimentalOptions{
+			RegistryReferrersMode: options.RegistryReferrersModeOCI11,
+		}
+	}
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
 	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
 	cmd := cliverify.VerifyCommand{
@@ -69,6 +80,9 @@ func TestInsecureRegistry(t *testing.T) {
 		RegistryOptions: options.RegistryOptions{
 			AllowInsecure: true,
 		},
+	}
+	if useOCI11 {
+		cmd.ExperimentalOCI11 = true
 	}
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 }
