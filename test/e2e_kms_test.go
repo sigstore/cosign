@@ -42,7 +42,7 @@ func TestSecretsKMS(t *testing.T) {
 	defer stop()
 	td := t.TempDir()
 
-	imgName := path.Join(repo, "cosign-attach-e2e")
+	imgName := path.Join(repo, "cosign-kms-e2e")
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
 
