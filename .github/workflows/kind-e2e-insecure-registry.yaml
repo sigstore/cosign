@@ -25,26 +25,6 @@ jobs:
     name: e2e tests
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false # Keep running if one leg fails.
-      matrix:
-        k8s-version:
-        - v1.24.x
-        - v1.25.x
-        - v1.26.x
-        - v1.27.x
-
-    env:
-      # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
-      # '*.local' hostnames.
-      REGISTRY_NAME: registry.local
-      REGISTRY_PORT: 5000
-      INSECURE_REGISTRY_NAME: insecure-registry.notlocal
-      INSECURE_REGISTRY_PORT: 5001
-      INSECURE_OCI_REGISTRY_NAME: insecure-oci-registry.notlocal
-      INSECURE_OCI_REGISTRY_PORT: 5002
-      KO_DOCKER_REPO: registry.local:5000/policy-controller
-
     steps:
     - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
     - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
@@ -52,27 +32,10 @@ jobs:
         go-version: '1.21'
         check-latest: true
 
-    - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
-
-    - uses: imranismail/setup-kustomize@2ba527d4d055ab63514ba50a99456fc35684947f # v2.1.0
-
-    - name: Install yq
-      uses: mikefarah/yq@557dcb87b8efe786f89a12c09e9046b4753ab72e # v4.44.1
-
-    - name: Install Cosign
-      run: |
-        go install ./cmd/cosign
-
     - name: Setup mirror
       uses: chainguard-dev/actions/setup-mirror@main
       with:
         mirror: mirror.gcr.io
-
-    - name: Setup kind cluster
-      uses: chainguard-dev/actions/setup-kind@main
-      with:
-        k8s-version: ${{ matrix.k8s-version }}
-        cluster-suffix: c${{ github.run_id }}.local
 
     - name: Setup local insecure registry
       run: |
@@ -91,11 +54,12 @@ jobs:
           -e REGISTRY_HTTP_TLS_KEY=/insecure-certs/domain.key \
           -p $INSECURE_REGISTRY_PORT:$INSECURE_REGISTRY_PORT \
           registry:2
-        # Connect the registry to the KinD network.
-        docker network connect "kind" $INSECURE_REGISTRY_NAME
-        # Make the $INSECURE_REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
-        # local registry, even when pushing $INSECURE_REGISTRY_NAME:$INSECURE_REGISTRY_NAME/some/image
         sudo echo "127.0.0.1 $INSECURE_REGISTRY_NAME" | sudo tee -a /etc/hosts
+      env:
+        # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
+        # '*.local' hostnames.
+        INSECURE_REGISTRY_NAME: insecure-registry.notlocal
+        INSECURE_REGISTRY_PORT: 5001
 
     - name: Run Insecure Registry Tests
       run: |
@@ -118,7 +82,7 @@ jobs:
           },
           "http": {
             "address": "0.0.0.0",
-            "port": "5000",
+            "port": "5002",
             "realm": "zot",
             "tls": {
               "cert": "/insecure-certs/domain.crt",
@@ -135,15 +99,15 @@ jobs:
           --name $INSECURE_OCI_REGISTRY_NAME \
           -v "$(pwd)"/insecure-certs:/insecure-certs \
           -v "$(pwd)"/config.json:/etc/zot/config.json \
-          -p $INSECURE_OCI_REGISTRY_PORT:$REGISTRY_PORT \
+          -p $INSECURE_OCI_REGISTRY_PORT:$INSECURE_OCI_REGISTRY_PORT \
           ghcr.io/project-zot/zot-minimal-linux-amd64:$ZOT_VERSION
-        # Connect the registry to the KinD network.
-        docker network connect "kind" $INSECURE_OCI_REGISTRY_NAME
-        # Make the $INSECURE_REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
-        # local registry, even when pushing $INSECURE_REGISTRY_NAME:$INSECURE_REGISTRY_NAME/some/image
         sudo echo "127.0.0.1 $INSECURE_OCI_REGISTRY_NAME" | sudo tee -a /etc/hosts
       env:
         ZOT_VERSION: v2.0.0-rc6
+        # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
+        # '*.local' hostnames.
+        INSECURE_OCI_REGISTRY_NAME: insecure-oci-registry.notlocal
+        INSECURE_OCI_REGISTRY_PORT: 5002
 
     - name: Run Insecure OCI Registry Tests
       run: |
