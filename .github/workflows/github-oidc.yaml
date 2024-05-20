@@ -62,8 +62,3 @@ jobs:
           set -e
           # Build and publish an image.
           make sign-ci-keyless-containers
-
-      - name: Build and sign a blob
-        run: |
-          set -e
-          make sign-blob-experimental
