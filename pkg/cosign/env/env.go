@@ -58,6 +58,7 @@ const (
 	VariableSigstoreRootFile           Variable = "SIGSTORE_ROOT_FILE"
 	VariableSigstoreRekorPublicKey     Variable = "SIGSTORE_REKOR_PUBLIC_KEY"
 	VariableSigstoreIDToken            Variable = "SIGSTORE_ID_TOKEN" //nolint:gosec
+	VariableSigstoreTSACertificateFile Variable = "SIGSTORE_TSA_CERTIFICATE_FILE"
 
 	// Other external environment variables
 	VariableGitHubHost                Variable = "GITHUB_HOST"
@@ -135,6 +136,13 @@ var (
 		VariableSigstoreRekorPublicKey: {
 			Description: "if specified, you can specify an oob Public Key that Rekor uses",
 			Expects:     "path to the public key",
+			Sensitive:   false,
+			External:    true,
+		},
+
+		VariableSigstoreTSACertificateFile: {
+			Description: "if specified, you can specify TSA certificates",
+			Expects:     "path to the certificate",
 			Sensitive:   false,
 			External:    true,
 		},
