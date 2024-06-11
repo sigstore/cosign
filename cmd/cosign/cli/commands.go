@@ -96,6 +96,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Attest())
 	cmd.AddCommand(AttestBlob())
 	cmd.AddCommand(Clean())
+	cmd.AddCommand(Debug())
 	cmd.AddCommand(Tree())
 	cmd.AddCommand(Completion())
 	cmd.AddCommand(Copy())
