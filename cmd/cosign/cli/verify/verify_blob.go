@@ -63,7 +63,19 @@ type VerifyBlobCmd struct {
 	IgnoreSCT                    bool
 	SCTRef                       string
 	Offline                      bool
+	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
+}
+
+func (c *VerifyBlobCmd) loadTSACertificates(ctx context.Context) (*cosign.TSACertificates, error) {
+	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
+		return nil, fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set")
+	}
+	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
+	}
+	return tsaCertificates, nil
 }
 
 // nolint
@@ -111,18 +123,17 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 	}
-	if c.RFC3161TimestampPath != "" && c.KeyOpts.TSACertChainPath == "" {
-		return fmt.Errorf("timestamp-certificate-chain is required to validate a RFC3161 timestamp")
+	if c.RFC3161TimestampPath != "" && !(c.TSACertChainPath != "" || c.UseSignedTimestamps) {
+		return fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set when using RFC3161 timestamp path")
 	}
-	if c.KeyOpts.TSACertChainPath != "" {
-		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+		tsaCertificates, err := c.loadTSACertificates(ctx)
 		if err != nil {
-			ui.Warnf(ctx, fmt.Sprintf("unable to load or get TSA certificates: %s", err.Error()))
-		} else {
-			co.TSACertificate = tsaCertificates.LeafCert
-			co.TSARootCertificates = tsaCertificates.RootCert
-			co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
+			return err
 		}
+		co.TSACertificate = tsaCertificates.LeafCert
+		co.TSARootCertificates = tsaCertificates.RootCert
+		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
 	if !c.IgnoreTlog {

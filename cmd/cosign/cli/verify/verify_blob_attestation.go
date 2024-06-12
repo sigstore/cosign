@@ -35,7 +35,6 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	internal "github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	payloadsize "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload/size"
-	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -71,7 +70,8 @@ type VerifyBlobAttestationCommand struct {
 	PredicateType string
 	// TODO: Add policies
 
-	SignaturePath string // Path to the signature
+	SignaturePath       string // Path to the signature
+	UseSignedTimestamps bool
 }
 
 // Exec runs the verification command
@@ -140,14 +140,15 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 
 	// Set up TSA, Fulcio roots and tlog public keys and clients.
-	if c.RFC3161TimestampPath != "" && c.KeyOpts.TSACertChainPath == "" {
-		return fmt.Errorf("timestamp-cert-chain is required to validate a rfc3161 timestamp bundle")
+	if c.RFC3161TimestampPath != "" && !(c.TSACertChainPath != "" || c.UseSignedTimestamps) {
+		return fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set when using RFC3161 timestamp path")
 	}
 
-	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
-	if err != nil {
-		ui.Warnf(ctx, fmt.Sprintf("unable to load or get TSA certificates: %s", err.Error()))
-	} else {
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+		if err != nil {
+			return fmt.Errorf("unable to load or get TSA certificates: %w", err)
+		}
 		co.TSACertificate = tsaCertificates.LeafCert
 		co.TSARootCertificates = tsaCertificates.RootCert
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts

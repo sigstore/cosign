@@ -67,6 +67,18 @@ type VerifyAttestationCommand struct {
 	TSACertChainPath             string
 	IgnoreTlog                   bool
 	MaxWorkers                   int
+	UseSignedTimestamps          bool
+}
+
+func (c *VerifyAttestationCommand) loadTSACertificates(ctx context.Context) (*cosign.TSACertificates, error) {
+	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
+		return nil, fmt.Errorf("TSA certificate chain path not provided and use-signed-timestamps not set")
+	}
+	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
+	}
+	return tsaCertificates, nil
 }
 
 // Exec runs the verification command
@@ -117,10 +129,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 	}
 
-	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
-	if err != nil {
-		ui.Warnf(ctx, fmt.Sprintf("unable to load or get TSA certificates: %s", err.Error()))
-	} else {
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+		tsaCertificates, err := c.loadTSACertificates(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to load TSA certificates: %w", err)
+		}
 		co.TSACertificate = tsaCertificates.LeafCert
 		co.TSARootCertificates = tsaCertificates.RootCert
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts

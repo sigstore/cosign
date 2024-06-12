@@ -76,9 +76,21 @@ type VerifyCommand struct {
 	NameOptions                  []name.Option
 	Offline                      bool
 	TSACertChainPath             string
+	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	ExperimentalOCI11            bool
+}
+
+func (c *VerifyCommand) loadTSACertificates(ctx context.Context) (*cosign.TSACertificates, error) {
+	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
+		return nil, fmt.Errorf("TSA certificate chain path not provided and use-signed-timestamps not set")
+	}
+	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
+	}
+	return tsaCertificates, nil
 }
 
 // Exec runs the verification command
@@ -135,13 +147,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
-	if err != nil {
-		if c.TSACertChainPath != "" {
-			return fmt.Errorf("unable to load TSA certificates from specified path '%s': %w", c.TSACertChainPath, err)
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+		tsaCertificates, err := c.loadTSACertificates(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to load TSA certificates: %w", err)
 		}
-		ui.Warnf(ctx, "no TSA certificate chain path provided, or unable to load TSA certificates: %s", err.Error())
-	} else {
 		co.TSACertificate = tsaCertificates.LeafCert
 		co.TSARootCertificates = tsaCertificates.RootCert
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
