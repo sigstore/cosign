@@ -82,7 +82,7 @@ jobs:
       VAULT_TOKEN: "root"
       VAULT_ADDR: "http://localhost:8200"
       COSIGN_YES: "true"
-      SCAFFOLDING_RELEASE_VERSION: "v0.6.17"
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.2"
     steps:
       - name: Checkout
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SCAFFOLDING_RELEASE_VERSION: "v0.6.17"
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.2"
 
     steps:
     - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
