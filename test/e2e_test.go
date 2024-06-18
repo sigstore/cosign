@@ -26,6 +26,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,6 +38,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -59,6 +61,8 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
@@ -1766,98 +1770,6 @@ func TestGenerate(t *testing.T) {
 
 	equals(desc.Digest.String(), ss.Critical.Image.DockerManifestDigest, t)
 	equals(ss.Optional["foo"], "bar", t)
-}
-
-func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(td); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		os.Chdir(wd)
-	}()
-	keys, err := cosign.GenerateKeyPair(passFunc)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	privKeyPath := filepath.Join(td, "cosign.key")
-	if err := os.WriteFile(privKeyPath, keys.PrivateBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	pubKeyPath := filepath.Join(td, "cosign.pub")
-	if err := os.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-	return keys, privKeyPath, pubKeyPath
-}
-
-func importKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
-
-	const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
-MIIEogIBAAKCAQEAx5piWVlE62NnZ0UzJ8Z6oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+
-25yq6P+0JU/Qvr9veOGEb3R/J9u8JBo+hv2i5X8OtgvP2V2pi6f1s6vK7L0+6uRb
-4YTT/UdMshaVf97MgEqbq41Jf/cuvh+3AV0tZ1BpixZg4aXMKpY6HUP69lbsu27o
-SUN1myMv7TSgZiV4CYs3l/gkEfpysBptWlcHRuw5RsB+C0RbjRtbJ/5VxmE/vd3M
-lafd5t1WSpMb8yf0a84u5NFaXwZ7CweMfXeOddS0yb19ShSuW3PPRadruBM1mq15
-js9GfagPxDS75Imcs+fA62lWvHxEujTGjYHxawIDAQABAoIBAH+sgLwmHa9zJfEo
-klAe5NFe/QpydN/ziXbkAnzqzH9URC3wD+TpkWj4JoK3Sw635NWtasjf+3XDV9S/
-9L7j/g5N91r6sziWcJykEsWaXXKQmm4lI6BdFjwsHyLKz1W7bZOiJXDWLu1rbrqu
-DqEQuLoc9WXCKrYrFy0maoXNtfla/1p05kKN0bMigcnnyAQ+xBTwoyco4tkIz5se
-IYxorz7qzXrkHQI+knz5BawmNe3ekoSaXUPoLoOR7TRTGsLteL5yukvWAi8S/0rE
-gftC+PZCQpoQhSUYq7wXe7RowJ1f+kXb7HsSedOTfTSW1D/pUb/uW+CcRKig42ZI
-I9H9TAECgYEA5XGBML6fJyWVqx64sHbUAjQsmQ0RwU6Zo7sqHIEPf6tYVYp7KtzK
-KOfi8seOOL5FSy4pjCo11Dzyrh9bn45RNmtjSYTgOnVPSoCfuRNfOcpG+/wCHjYf
-EjDvdrCpbg59kVUeaMeBDiyWAlM48HJAn8O7ez2U/iKQCyJmOIwFhSkCgYEA3rSz
-Fi1NzqYWxWos4NBmg8iKcQ9SMkmPdgRLAs/WNnZJ8fdgJZwihevkXGytRGJEmav2
-GMKRx1g6ey8fjXTQH9WM8X/kJC5fv8wLHnUCH/K3Mcp9CYwn7PFvSnBr4kQoc/el
-bURhcF1+/opEC8vNX/Wk3zAG7Xs1PREXlH2SIHMCgYBV/3kgwBH/JkM25EjtO1yz
-hsLAivmAruk/SUO7c1RP0fVF+qW3pxHOyztxLALOmeJ3D1JbSubqKf377Zz17O3b
-q9yHDdrNjnKtxhAX2n7ytjJs+EQC9t4mf1kB761RpvTBqFnBhCWHHocLUA4jcW9v
-cnmu86IIrwO2aKpPv4vCIQKBgHU9gY3qOazRSOmSlJ+hdmZn+2G7pBTvHsQNTIPl
-cCrpqNHl3crO4GnKHkT9vVVjuiOAIKU2QNJFwzu4Og8Y8LvhizpTjoHxm9x3iV72
-UDELcJ+YrqyJCTe2flUcy96o7Pbn50GXnwgtYD6WAW6IUszyn2ITgYIhu4wzZEt6
-s6O7AoGAPTKbRA87L34LMlXyUBJma+etMARIP1zu8bXJ7hSJeMcog8zaLczN7ruT
-pGAaLxggvtvuncMuTrG+cdmsR9SafSFKRS92NCxhOUonQ+NP6mLskIGzJZoQ5JvQ
-qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
------END RSA PRIVATE KEY-----`
-
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(td); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		os.Chdir(wd)
-	}()
-
-	err = os.WriteFile("validrsa1.key", []byte(validrsa1), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	keys, err := cosign.ImportKeyPair("validrsa1.key", passFunc)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	privKeyPath := filepath.Join(td, "import-cosign.key")
-	if err := os.WriteFile(privKeyPath, keys.PrivateBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	pubKeyPath := filepath.Join(td, "import-cosign.pub")
-	if err := os.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-	return keys, privKeyPath, pubKeyPath
-
 }
 
 func TestUploadDownload(t *testing.T) {
