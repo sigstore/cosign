@@ -33,14 +33,14 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.25.x
+        - v1.27.x
         tuf-root:
         - remote
         - air-gap
 
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.6.17"
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.2"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
