@@ -1,4 +1,5 @@
 project_name: cosign
+version: 2
 
 env:
   - GO111MODULE=on

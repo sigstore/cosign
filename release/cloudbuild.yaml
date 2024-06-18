@@ -38,14 +38,14 @@ steps:
       - TUF_ROOT=/tmp
     args:
       - 'verify'
-      - 'ghcr.io/gythialy/golang-cross:v1.21.9-0@sha256:3ea5f8dc2ea7508df43516966c9d498e830b1f0739a58de81ca7e28211822de6'
+      - 'ghcr.io/gythialy/golang-cross:v1.21.11-0@sha256:77d65066f94e9f650ecf355c4cb7e8432c950fe6517bf48eab52c6f58c02ef77'
       - '--certificate-oidc-issuer'
       - "https://token.actions.githubusercontent.com"
       - '--certificate-identity'
-      - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.21.9-0"
+      - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.21.11-0"
 
   # maybe we can build our own image and use that to be more in a safe side
-  - name: ghcr.io/gythialy/golang-cross:v1.21.9-0@sha256:3ea5f8dc2ea7508df43516966c9d498e830b1f0739a58de81ca7e28211822de6
+  - name: ghcr.io/gythialy/golang-cross:v1.21.11-0@sha256:77d65066f94e9f650ecf355c4cb7e8432c950fe6517bf48eab52c6f58c02ef77
     entrypoint: /bin/sh
     dir: "go/src/sigstore/cosign"
     env:
@@ -68,7 +68,7 @@ steps:
         gcloud auth configure-docker \
         && make release
 
-  - name: ghcr.io/gythialy/golang-cross:v1.21.9-0@sha256:3ea5f8dc2ea7508df43516966c9d498e830b1f0739a58de81ca7e28211822de6
+  - name: ghcr.io/gythialy/golang-cross:v1.21.11-0@sha256:77d65066f94e9f650ecf355c4cb7e8432c950fe6517bf48eab52c6f58c02ef77
     entrypoint: 'bash'
     dir: "go/src/sigstore/cosign"
     env:
