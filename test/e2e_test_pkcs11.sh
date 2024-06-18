@@ -19,7 +19,8 @@ set -o nounset
 set -o pipefail
 
 # Test pkcs11 token signing
-CONTAINER_ID=$(docker run -dit --name softhsm -v $(pwd):/root/cosign -p 2345:2345 vegardit/softhsm2-pkcs11-proxy@sha256:557a65d2a14e3986f2389d36ddce75609cbd8fb7ee6cf08a78adcc8236c2a80e)
+# using a fork of https://github.com/vegardit/docker-softhsm2-pkcs11-proxy that stopped to build 5 months ago
+CONTAINER_ID=$(docker run -dit --name softhsm -v $(pwd):/root/cosign -p 2345:2345 ghcr.io/cpanato/softhsm2-pkcs11-proxy:latest@sha256:716dd1c8c5d976ca13dc1bb76999e531cd6460b3cdce5957854696857a62daff)
 
 docker exec -i $CONTAINER_ID /bin/bash << 'EOF'
 
