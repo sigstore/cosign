@@ -28,7 +28,6 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/cue"
@@ -68,6 +67,18 @@ type VerifyAttestationCommand struct {
 	TSACertChainPath             string
 	IgnoreTlog                   bool
 	MaxWorkers                   int
+	UseSignedTimestamps          bool
+}
+
+func (c *VerifyAttestationCommand) loadTSACertificates(ctx context.Context) (*cosign.TSACertificates, error) {
+	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
+		return nil, fmt.Errorf("TSA certificate chain path not provided and use-signed-timestamps not set")
+	}
+	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
+	}
+	return tsaCertificates, nil
 }
 
 // Exec runs the verification command
@@ -118,30 +129,16 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 	}
 
-	if c.TSACertChainPath != "" {
-		_, err := os.Stat(c.TSACertChainPath)
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+		tsaCertificates, err := c.loadTSACertificates(ctx)
 		if err != nil {
-			return fmt.Errorf("unable to open timestamp certificate chain file '%s: %w", c.TSACertChainPath, err)
+			return fmt.Errorf("unable to load TSA certificates: %w", err)
 		}
-		// TODO: Add support for TUF certificates.
-		pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
-		if err != nil {
-			return fmt.Errorf("error reading certification chain path file: %w", err)
-		}
-
-		leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(pemBytes)
-		if err != nil {
-			return fmt.Errorf("error splitting certificates: %w", err)
-		}
-		if len(leaves) > 1 {
-			return fmt.Errorf("certificate chain must contain at most one TSA certificate")
-		}
-		if len(leaves) == 1 {
-			co.TSACertificate = leaves[0]
-		}
-		co.TSAIntermediateCertificates = intermediates
-		co.TSARootCertificates = roots
+		co.TSACertificate = tsaCertificates.LeafCert
+		co.TSARootCertificates = tsaCertificates.RootCert
+		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
+
 	if !c.IgnoreTlog {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
@@ -157,6 +154,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("getting Rekor public keys: %w", err)
 		}
 	}
+
 	if keylessVerification(c.KeyRef, c.Sk) {
 		// This performs an online fetch of the Fulcio roots. This is needed
 		// for verifying keyless certificates (both online and offline).
@@ -169,6 +167,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("getting Fulcio intermediates: %w", err)
 		}
 	}
+
 	keyRef := c.KeyRef
 
 	// Keys are optional!

@@ -85,6 +85,7 @@ cosign verify-blob [flags]
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string              path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
+      --use-signed-timestamps                           use signed timestamps if available
 ```
 
 ### Options inherited from parent commands

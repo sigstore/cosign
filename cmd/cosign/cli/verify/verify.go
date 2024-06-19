@@ -34,7 +34,6 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -77,9 +76,21 @@ type VerifyCommand struct {
 	NameOptions                  []name.Option
 	Offline                      bool
 	TSACertChainPath             string
+	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	ExperimentalOCI11            bool
+}
+
+func (c *VerifyCommand) loadTSACertificates(ctx context.Context) (*cosign.TSACertificates, error) {
+	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
+		return nil, fmt.Errorf("TSA certificate chain path not provided and use-signed-timestamps not set")
+	}
+	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
+	}
+	return tsaCertificates, nil
 }
 
 // Exec runs the verification command
@@ -136,29 +147,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	if c.TSACertChainPath != "" {
-		_, err := os.Stat(c.TSACertChainPath)
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+		tsaCertificates, err := c.loadTSACertificates(ctx)
 		if err != nil {
-			return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
+			return fmt.Errorf("unable to load TSA certificates: %w", err)
 		}
-		// TODO: Add support for TUF certificates.
-		pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
-		if err != nil {
-			return fmt.Errorf("error reading certification chain path file: %w", err)
-		}
-
-		leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(pemBytes)
-		if err != nil {
-			return fmt.Errorf("error splitting certificates: %w", err)
-		}
-		if len(leaves) > 1 {
-			return fmt.Errorf("certificate chain must contain at most one TSA certificate")
-		}
-		if len(leaves) == 1 {
-			co.TSACertificate = leaves[0]
-		}
-		co.TSAIntermediateCertificates = intermediates
-		co.TSARootCertificates = roots
+		co.TSACertificate = tsaCertificates.LeafCert
+		co.TSARootCertificates = tsaCertificates.RootCert
+		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
 	if !c.IgnoreTlog {
