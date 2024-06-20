@@ -512,31 +512,36 @@ func generateCertificateBundleFiles(td string, genIntermediate bool, outputSuffi
 		err = fmt.Errorf("error generating certificate bundle: %w", err)
 		return
 	}
-	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caCert%s.pem", outputSuffix)), caCertBuf.Bytes(), 0600)
+	caCertFile = filepath.Join(td, fmt.Sprintf("caCert%s.pem", outputSuffix))
+	err = os.WriteFile(caCertFile, caCertBuf.Bytes(), 0600)
 	if err != nil {
-		err = fmt.Errorf("error writing caCert to file: %w", err)
+		err = fmt.Errorf("error writing caCert to file %s: %w", caCertFile, err)
 		return
 	}
-	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caPrivKey%s.pem", outputSuffix)), caPrivKeyBuf.Bytes(), 0600)
+	caPrivKeyFile = filepath.Join(td, fmt.Sprintf("caPrivKey%s.pem", outputSuffix))
+	err = os.WriteFile(caPrivKeyFile, caPrivKeyBuf.Bytes(), 0600)
 	if err != nil {
-		err = fmt.Errorf("error writing caPrivKey to file: %w", err)
+		err = fmt.Errorf("error writing caPrivKey to file %s: %w", caPrivKeyFile, err)
 		return
 	}
 	if genIntermediate {
-		err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caIntermediateCert%s.pem", outputSuffix)), caIntermediateCertBuf.Bytes(), 0600)
+		caIntermediateCertFile = filepath.Join(td, fmt.Sprintf("caIntermediateCert%s.pem", outputSuffix))
+		err = os.WriteFile(caIntermediateCertFile, caIntermediateCertBuf.Bytes(), 0600)
 		if err != nil {
-			err = fmt.Errorf("error writing caIntermediateCert to file: %w", err)
+			err = fmt.Errorf("error writing caIntermediateCert to file %s: %w", caIntermediateCertFile, err)
 			return
 		}
-		err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caIntermediatePrivKey%s.pem", outputSuffix)), caIntermediatePrivKeyBuf.Bytes(), 0600)
+		caIntermediatePrivKeyFile = filepath.Join(td, fmt.Sprintf("caIntermediatePrivKey%s.pem", outputSuffix))
+		err = os.WriteFile(caIntermediatePrivKeyFile, caIntermediatePrivKeyBuf.Bytes(), 0600)
 		if err != nil {
-			err = fmt.Errorf("error writing caIntermediatePrivKey to file: %w", err)
+			err = fmt.Errorf("error writing caIntermediatePrivKey to file %s: %w", caIntermediatePrivKeyFile, err)
 			return
 		}
 	}
-	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("cert%s.pem", outputSuffix)), certBuf.Bytes(), 0600)
+	certFile = filepath.Join(td, fmt.Sprintf("cert%s.pem", outputSuffix))
+	err = os.WriteFile(certFile, certBuf.Bytes(), 0600)
 	if err != nil {
-		err = fmt.Errorf("error writing cert to file: %w", err)
+		err = fmt.Errorf("error writing cert to file %s: %w", certFile, err)
 		return
 	}
 
@@ -544,7 +549,7 @@ func generateCertificateBundleFiles(td string, genIntermediate bool, outputSuffi
 	certChainFile = filepath.Join(td, fmt.Sprintf("certchain%s.pem", outputSuffix))
 	err = os.WriteFile(certChainFile, certChainBuf.Bytes(), 0600)
 	if err != nil {
-		err = fmt.Errorf("error writing certificate chain to file: %w", err)
+		err = fmt.Errorf("error writing certificate chain to file %s: %w", certFile, err)
 		return
 	}
 	return
