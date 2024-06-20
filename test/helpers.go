@@ -18,10 +18,19 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
+	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,6 +38,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -70,6 +80,49 @@ var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[str
 		HashAlgorithm: crypto.SHA256,
 		MaxWorkers:    10,
 		IgnoreTlog:    skipTlogVerify,
+	}
+
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
+var verifyCertChain = func(keyRef, certChain, certFile, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        keyRef,
+		RekorURL:      rekorURL,
+		CheckClaims:   checkClaims,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
+		MaxWorkers:    10,
+		IgnoreTlog:    skipTlogVerify,
+		CertVerifyOptions: options.CertVerifyOptions{
+			Cert:      certFile,
+			CertChain: certChain,
+		},
+	}
+
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
+var verifyCertBundle = func(keyRef, caCertFile, caIntermediates, certFile, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        keyRef,
+		RekorURL:      rekorURL,
+		CheckClaims:   checkClaims,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:    attachment,
+		HashAlgorithm: crypto.SHA256,
+		MaxWorkers:    10,
+		IgnoreTlog:    skipTlogVerify,
+		CertVerifyOptions: options.CertVerifyOptions{
+			Cert:            certFile,
+			CAIntermediates: caIntermediates,
+			CARoots:         caCertFile,
+		},
 	}
 
 	args := []string{imageRef}
@@ -442,4 +495,263 @@ func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
 	}
 	t.Setenv(envVar, f.Name())
 	return nil
+}
+
+func generateCertificateBundleFiles(td string, genIntermediate bool, outputSuffix string) (
+	caCertFile string,
+	caPrivKeyFile string,
+	caIntermediateCertFile string,
+	caIntermediatePrivKeyFile string,
+	certFile string,
+	keyFile string,
+	pubKeyFile string,
+	certChainFile string,
+	err error,
+) {
+	caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, keyBuf, pubkey, certChainBuf, err := generateCertificateBundle(genIntermediate)
+	if err != nil {
+		err = fmt.Errorf("error generating certificate bundle: %w", err)
+		return
+	}
+	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caCert%s.pem", outputSuffix)), caCertBuf.Bytes(), 0600)
+	if err != nil {
+		err = fmt.Errorf("error writing caCert to file: %w", err)
+		return
+	}
+	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caPrivKey%s.pem", outputSuffix)), caPrivKeyBuf.Bytes(), 0600)
+	if err != nil {
+		err = fmt.Errorf("error writing caPrivKey to file: %w", err)
+		return
+	}
+	if genIntermediate {
+		err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caIntermediateCert%s.pem", outputSuffix)), caIntermediateCertBuf.Bytes(), 0600)
+		if err != nil {
+			err = fmt.Errorf("error writing caIntermediateCert to file: %w", err)
+			return
+		}
+		err = os.WriteFile(filepath.Join(td, fmt.Sprintf("caIntermediatePrivKey%s.pem", outputSuffix)), caIntermediatePrivKeyBuf.Bytes(), 0600)
+		if err != nil {
+			err = fmt.Errorf("error writing caIntermediatePrivKey to file: %w", err)
+			return
+		}
+	}
+	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("cert%s.pem", outputSuffix)), certBuf.Bytes(), 0600)
+	if err != nil {
+		err = fmt.Errorf("error writing cert to file: %w", err)
+		return
+	}
+	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("key%s.pem", outputSuffix)), keyBuf.Bytes(), 0600)
+	if err != nil {
+		err = fmt.Errorf("error writing key to file: %w", err)
+		return
+	}
+	// write the contents of certChainBuf to a file
+	certChainFile = filepath.Join(td, fmt.Sprintf("certchain%s.pem", outputSuffix))
+	err = os.WriteFile(certChainFile, certChainBuf.Bytes(), 0600)
+	if err != nil {
+		err = fmt.Errorf("error writing certificate chain to file: %w", err)
+		return
+	}
+	// write the public key to a file
+	pubKeyFile = filepath.Join(td, fmt.Sprintf("pubkey%s.pem", outputSuffix))
+	pubKeyBuf := &bytes.Buffer{}
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(pubkey)
+	if err != nil {
+		err = fmt.Errorf("error marshalling public key: %w", err)
+		return
+	}
+	err = pem.Encode(pubKeyBuf, &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKeyBytes,
+	})
+	return
+}
+
+func generateCertificateBundle(genIntermediate bool) (
+	caCertBuf *bytes.Buffer,
+	caPrivKeyBuf *bytes.Buffer,
+	caIntermediateCertBuf *bytes.Buffer,
+	caIntermediatePrivKeyBuf *bytes.Buffer,
+	certBuf *bytes.Buffer,
+	keyBuf *bytes.Buffer,
+	pubkeyBuf *bytes.Buffer,
+	certBundleBuf *bytes.Buffer,
+	err error,
+) {
+	// set up our CA certificate
+	ca := &x509.Certificate{
+		SerialNumber: big.NewInt(2019),
+		Subject: pkix.Name{
+			Organization:       []string{"CA Company, INC."},
+			OrganizationalUnit: []string{"CA Root Team"},
+			Country:            []string{"US"},
+			Province:           []string{""},
+			Locality:           []string{"San Francisco"},
+			StreetAddress:      []string{"Golden Gate Bridge"},
+			PostalCode:         []string{"94016"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning /*, x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth */},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+		EmailAddresses:        []string{"ca@example.com"},
+	}
+
+	// create our private and public key
+	caPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubkey := &caPrivKey.PublicKey
+	// create the CA
+	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	caCertBuf = &bytes.Buffer{}
+	err = pem.Encode(caCertBuf, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	})
+	if err != nil {
+		log.Fatalf("unable to write PEM encode: %v", err)
+	}
+
+	caPrivKeyBuf = &bytes.Buffer{}
+	err = pem.Encode(caPrivKeyBuf, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
+	})
+	if err != nil {
+		log.Fatalf("unable to PEM encode private key to buffer: %v", err) //nolint:gocritic
+	}
+	pubkeyBuf = &bytes.Buffer{}
+	// PEM encode to pubkeyBuf the public key of caPrivKey
+	pubkeyBytes, err := x509.MarshalPKIXPublicKey(pubkey)
+	if err != nil {
+		log.Fatalf("failed to marshal public key: %v", err)
+	}
+	err = pem.Encode(pubkeyBuf, &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubkeyBytes,
+	})
+	if err != nil {
+		log.Fatalf("failed to PME-encode public key to buffer: %v", err)
+	}
+
+	// generate intermediate CA if requested
+	var caIntermediate *x509.Certificate
+	var caIntermediatePrivKey *rsa.PrivateKey
+	if genIntermediate {
+		caIntermediate = &x509.Certificate{
+			SerialNumber: big.NewInt(2019),
+			Subject: pkix.Name{
+				Organization:       []string{"CA Company, INC."},
+				OrganizationalUnit: []string{"CA Intermediate Team"},
+				Country:            []string{"US"},
+				Province:           []string{""},
+				Locality:           []string{"San Francisco"},
+				StreetAddress:      []string{"Golden Gate Bridge"},
+				PostalCode:         []string{"94016"},
+			},
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().AddDate(10, 0, 0),
+			IsCA:                  true,
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning /*, x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth */},
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			BasicConstraintsValid: true,
+			EmailAddresses:        []string{"ca@example.com"},
+		}
+		// create our private and public key
+		caIntermediatePrivKey, err = rsa.GenerateKey(rand.Reader, 4096)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// create the Intermediate CA
+		caIntermediateBytes, err := x509.CreateCertificate(rand.Reader, caIntermediate, ca, &caIntermediatePrivKey.PublicKey, caPrivKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		caIntermediateCertBuf = &bytes.Buffer{}
+		err = pem.Encode(caIntermediateCertBuf, &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: caIntermediateBytes,
+		})
+		if err != nil {
+			log.Fatalf("unable to write to buffer: %v", err)
+		}
+		caIntermediatePrivKeyBuf = &bytes.Buffer{}
+		err = pem.Encode(caIntermediatePrivKeyBuf, &pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(caIntermediatePrivKey),
+		})
+		if err != nil {
+			log.Fatalf("unable to PEM encode caIntermediatePrivKey: %v", err)
+		}
+	}
+	// set up our server certificate
+	cert := &x509.Certificate{
+		SerialNumber: big.NewInt(2019),
+		Subject: pkix.Name{
+			Organization:       []string{"End User"},
+			OrganizationalUnit: []string{"End Node Team"},
+			Country:            []string{"US"},
+			Province:           []string{""},
+			Locality:           []string{"San Francisco"},
+			StreetAddress:      []string{"Golden Gate Bridge"},
+			PostalCode:         []string{"94016"},
+		},
+		IPAddresses:    []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
+		NotBefore:      time.Now(),
+		NotAfter:       time.Now().AddDate(10, 0, 0),
+		SubjectKeyId:   []byte{1, 2, 3, 4, 6},
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning /* x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth */},
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		EmailAddresses: []string{"xyz@nosuchprovider.com"},
+		DNSNames:       []string{"next.hugeunicorn.xyz"},
+	}
+
+	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var certBytes []byte
+	if !genIntermediate {
+		certBytes, err = x509.CreateCertificate(rand.Reader, cert, ca, &certPrivKey.PublicKey, caPrivKey)
+	} else {
+		certBytes, err = x509.CreateCertificate(rand.Reader, cert, caIntermediate, &caIntermediatePrivKey.PublicKey, caIntermediatePrivKey)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	certBuf = &bytes.Buffer{}
+	err = pem.Encode(certBuf, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	})
+	if err != nil {
+		log.Fatalf("failed to encode cert: %v", err)
+	}
+
+	// concatenate into certChainBuf the contents of caIntermediateCertBuf and caCertBuf
+	certBundleBuf = &bytes.Buffer{}
+	if genIntermediate {
+		_, err = certBundleBuf.Write(caIntermediateCertBuf.Bytes())
+		if err != nil {
+			log.Fatalf("failed to write caIntermediateCertBuf to certChainBuf: %v", err)
+		}
+	}
+	_, err = certBundleBuf.Write(caCertBuf.Bytes())
+	if err != nil {
+		log.Fatalf("failed to write caCertBuf to certChainBuf: %v", err)
+	}
+
+	return caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, keyBuf, pubkeyBuf, certBundleBuf, nil
 }
