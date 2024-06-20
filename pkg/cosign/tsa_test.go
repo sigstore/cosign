@@ -117,3 +117,10 @@ func TestGetTSACertsFromTUF(t *testing.T) {
 	require.NotNil(t, tsaCerts.RootCert)
 	require.Len(t, tsaCerts.RootCert, 1)
 }
+
+func TestGetTSACertsFromLocalTUF(t *testing.T) {
+	_, err := GetTSACerts(context.Background(), "", GetTufTargets)
+	if err != nil {
+		t.Fatalf("Failed to get TSA certs from TUF: %v", err)
+	}
+}
