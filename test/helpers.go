@@ -119,9 +119,10 @@ var verifyCertBundle = func(keyRef, caCertFile, caIntermediates, certFile, image
 		MaxWorkers:    10,
 		IgnoreTlog:    skipTlogVerify,
 		CertVerifyOptions: options.CertVerifyOptions{
-			Cert:            certFile,
-			CAIntermediates: caIntermediates,
-			CARoots:         caCertFile,
+			CAIntermediates:      caIntermediates,
+			CARoots:              caCertFile,
+			CertOidcIssuerRegexp: ".*",
+			CertIdentityRegexp:   ".*",
 		},
 	}
 
@@ -503,12 +504,10 @@ func generateCertificateBundleFiles(td string, genIntermediate bool, outputSuffi
 	caIntermediateCertFile string,
 	caIntermediatePrivKeyFile string,
 	certFile string,
-	keyFile string,
-	pubKeyFile string,
 	certChainFile string,
 	err error,
 ) {
-	caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, keyBuf, pubkey, certChainBuf, err := generateCertificateBundle(genIntermediate)
+	caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, certChainBuf, err := generateCertificateBundle(genIntermediate)
 	if err != nil {
 		err = fmt.Errorf("error generating certificate bundle: %w", err)
 		return
@@ -540,11 +539,7 @@ func generateCertificateBundleFiles(td string, genIntermediate bool, outputSuffi
 		err = fmt.Errorf("error writing cert to file: %w", err)
 		return
 	}
-	err = os.WriteFile(filepath.Join(td, fmt.Sprintf("key%s.pem", outputSuffix)), keyBuf.Bytes(), 0600)
-	if err != nil {
-		err = fmt.Errorf("error writing key to file: %w", err)
-		return
-	}
+
 	// write the contents of certChainBuf to a file
 	certChainFile = filepath.Join(td, fmt.Sprintf("certchain%s.pem", outputSuffix))
 	err = os.WriteFile(certChainFile, certChainBuf.Bytes(), 0600)
@@ -552,18 +547,6 @@ func generateCertificateBundleFiles(td string, genIntermediate bool, outputSuffi
 		err = fmt.Errorf("error writing certificate chain to file: %w", err)
 		return
 	}
-	// write the public key to a file
-	pubKeyFile = filepath.Join(td, fmt.Sprintf("pubkey%s.pem", outputSuffix))
-	pubKeyBuf := &bytes.Buffer{}
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(pubkey)
-	if err != nil {
-		err = fmt.Errorf("error marshalling public key: %w", err)
-		return
-	}
-	err = pem.Encode(pubKeyBuf, &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubKeyBytes,
-	})
 	return
 }
 
@@ -573,8 +556,6 @@ func generateCertificateBundle(genIntermediate bool) (
 	caIntermediateCertBuf *bytes.Buffer,
 	caIntermediatePrivKeyBuf *bytes.Buffer,
 	certBuf *bytes.Buffer,
-	keyBuf *bytes.Buffer,
-	pubkeyBuf *bytes.Buffer,
 	certBundleBuf *bytes.Buffer,
 	err error,
 ) {
@@ -604,7 +585,6 @@ func generateCertificateBundle(genIntermediate bool) (
 	if err != nil {
 		log.Fatal(err)
 	}
-	pubkey := &caPrivKey.PublicKey
 	// create the CA
 	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
 	if err != nil {
@@ -627,19 +607,6 @@ func generateCertificateBundle(genIntermediate bool) (
 	})
 	if err != nil {
 		log.Fatalf("unable to PEM encode private key to buffer: %v", err) //nolint:gocritic
-	}
-	pubkeyBuf = &bytes.Buffer{}
-	// PEM encode to pubkeyBuf the public key of caPrivKey
-	pubkeyBytes, err := x509.MarshalPKIXPublicKey(pubkey)
-	if err != nil {
-		log.Fatalf("failed to marshal public key: %v", err)
-	}
-	err = pem.Encode(pubkeyBuf, &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubkeyBytes,
-	})
-	if err != nil {
-		log.Fatalf("failed to PME-encode public key to buffer: %v", err)
 	}
 
 	// generate intermediate CA if requested
@@ -753,5 +720,5 @@ func generateCertificateBundle(genIntermediate bool) (
 		log.Fatalf("failed to write caCertBuf to certChainBuf: %v", err)
 	}
 
-	return caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, keyBuf, pubkeyBuf, certBundleBuf, nil
+	return caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, certBundleBuf, nil
 }

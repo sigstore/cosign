@@ -19,7 +19,7 @@ func TestGenerateCertificateBundle(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, _, _, _, _, _, _, _, err := generateCertificateBundle(true)
+			_, _, _, _, _, _, err := generateCertificateBundle(true)
 			if err != nil {
 				t.Fatalf("Error generating certificate bundle: %v", err)
 			}
