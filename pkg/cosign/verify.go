@@ -710,6 +710,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			}
 			t := time.Unix(*e.IntegratedTime, 0)
 			acceptableRekorBundleTime = &t
+			bundleVerified = true
 		}
 	}
 
