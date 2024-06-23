@@ -80,7 +80,7 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*
 
 	var raw []byte
 	var err error
-	var isExist bool
+	var exists bool
 	switch {
 	case altTSACert != "":
 		raw, err = os.ReadFile(altTSACert)
@@ -90,11 +90,11 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*
 		certNames := []string{tsaLeafCertStr, tsaRootCertStr}
 		for i := 0; ; i++ {
 			intermediateCertStr := fmt.Sprintf(tsaIntermediateCertStrPattern, i)
-			isExist, err = isTufTargetExist(ctx, intermediateCertStr)
+			exists, err = isTufTargetExist(ctx, intermediateCertStr)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching TSA certificates: %w", err)
 			}
-			if !isExist {
+			if !exists {
 				break
 			}
 			certNames = append(certNames, intermediateCertStr)
