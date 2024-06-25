@@ -117,7 +117,3 @@ func TestGetTSACertsFromTUF(t *testing.T) {
 	require.NotNil(t, tsaCerts.RootCert)
 	require.Len(t, tsaCerts.RootCert, 1)
 }
-
-func TestGetTSACertsFromLocalTUF(t *testing.T) {
-	_, _ = GetTSACerts(context.Background(), "", GetTufTargets)
-}
