@@ -58,6 +58,18 @@ func GetTufTargets(ctx context.Context, usage tuf.UsageKind, names []string) ([]
 	return buffer.Bytes(), nil
 }
 
+func isTufTargetExist(ctx context.Context, name string) (bool, error) {
+	tufClient, err := tuf.NewFromEnv(ctx)
+	if err != nil {
+		return false, fmt.Errorf("error creating TUF client: %w", err)
+	}
+	_, err = tufClient.GetTarget(name)
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
 // GetTSACerts retrieves trusted TSA certificates from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
 // By default, the certificates come from TUF, but you can override this for test
@@ -68,7 +80,7 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*
 
 	var raw []byte
 	var err error
-
+	var exists bool
 	switch {
 	case altTSACert != "":
 		raw, err = os.ReadFile(altTSACert)
@@ -78,8 +90,11 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*
 		certNames := []string{tsaLeafCertStr, tsaRootCertStr}
 		for i := 0; ; i++ {
 			intermediateCertStr := fmt.Sprintf(tsaIntermediateCertStrPattern, i)
-			_, err := fn(ctx, tuf.TSA, []string{intermediateCertStr})
+			exists, err = isTufTargetExist(ctx, intermediateCertStr)
 			if err != nil {
+				return nil, fmt.Errorf("error fetching TSA certificates: %w", err)
+			}
+			if !exists {
 				break
 			}
 			certNames = append(certNames, intermediateCertStr)
@@ -99,8 +114,8 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*
 		return nil, fmt.Errorf("error splitting TSA certificates: %w", err)
 	}
 
-	if len(leaves) > 1 {
-		return nil, fmt.Errorf("TSA certificate chain must contain at most one leaf certificate")
+	if len(leaves) != 1 {
+		return nil, fmt.Errorf("TSA certificate chain must contain exactly one leaf certificate")
 	}
 
 	if len(roots) == 0 {
