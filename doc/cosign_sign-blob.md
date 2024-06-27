@@ -54,6 +54,7 @@ cosign sign-blob [flags]
       --output string                    write the signature to FILE
       --output-certificate string        write the certificate to FILE
       --output-signature string          write the signature to FILE
+      --protobuf-bundle-format           output bundle in sigstore/protobuf-specs format
       --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp string         write the RFC3161 timestamp to a file
       --sk                               whether to use a hardware security key

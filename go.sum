@@ -603,6 +603,8 @@ github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
 github.com/sigstore/fulcio v1.5.1 h1:Iasy1zfNjaq8BV4S8o6pXspLDU28PQC2z07GmOu9zpM=
 github.com/sigstore/fulcio v1.5.1/go.mod h1:W1A/UHrTopy1IBZPMtHmxg7GPYAu+vt5dRXM3W6yjPo=
+github.com/sigstore/protobuf-specs v0.3.0 h1:E49qS++llp4psM+3NNVEb+C4AD422bT9VkOQIPrNLpA=
+github.com/sigstore/protobuf-specs v0.3.0/go.mod h1:ynKzXpqr3dUj2Xk9O/5ZUhjnpi0F53DNi5AdH6pS3jc=
 github.com/sigstore/rekor v1.3.6 h1:QvpMMJVWAp69a3CHzdrLelqEqpTM3ByQRt5B5Kspbi8=
 github.com/sigstore/rekor v1.3.6/go.mod h1:JDTSNNMdQ/PxdsS49DJkJ+pRJCO/83nbR5p3aZQteXc=
 github.com/sigstore/sigstore v1.8.7 h1:L7/zKauHTg0d0Hukx7qlR4nifh6T6O6UIt9JBwAmTIg=

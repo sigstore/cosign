@@ -32,10 +32,11 @@ type AttestBlobOptions struct {
 	Hash      string
 	Predicate PredicateLocalOptions
 
-	OutputSignature   string
-	OutputAttestation string
-	OutputCertificate string
-	BundlePath        string
+	OutputSignature      string
+	OutputAttestation    string
+	OutputCertificate    string
+	BundlePath           string
+	ProtobufBundleFormat bool
 
 	RekorEntryType string
 
@@ -84,6 +85,10 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
 	_ = cmd.Flags().SetAnnotation("bundle", cobra.BashCompFilenameExt, []string{})
+
+	// TODO: have this default to true as a breaking change
+	cmd.Flags().BoolVar(&o.ProtobufBundleFormat, "protobuf-bundle-format", false,
+		"output bundle in sigstore/protobuf-specs format")
 
 	cmd.Flags().StringVar(&o.Hash, "hash", "",
 		"hash of blob in hexadecimal (base16). Used if you want to sign an artifact stored elsewhere and have the hash")
