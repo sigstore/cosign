@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -30,6 +31,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
@@ -39,6 +42,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -154,12 +159,15 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
+	var timestampBytes []byte
+	var rekorEntry *models.LogEntryAnon
+
 	if c.TSAServerURL != "" {
-		respBytes, err := tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
+		timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
 		if err != nil {
 			return err
 		}
-		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
+		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 		// TODO: Consider uploading RFC3161 TS to Rekor
 
 		if rfc3161Timestamp == nil {
@@ -189,28 +197,69 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return err
 		}
-		var entry *models.LogEntryAnon
 		if c.RekorEntryType == "intoto" {
-			entry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+			rekorEntry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
 		} else {
-			entry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
+			rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
 		}
 
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-		signedPayload.Bundle = cbundle.EntryToBundle(entry)
+		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *rekorEntry.LogIndex)
+		signedPayload.Bundle = cbundle.EntryToBundle(rekorEntry)
 	}
 
 	if c.BundlePath != "" {
-		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+		var contents []byte
+		if c.ProtobufBundleFormat {
+			// Determine if signature is certificate or not
+			var hint string
+			var rawCert []byte
 
-		contents, err := json.Marshal(signedPayload)
-		if err != nil {
-			return err
+			signer, err := sv.Bytes(ctx)
+			if err != nil {
+				return fmt.Errorf("error getting signer: %w", err)
+			}
+			cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+			if err != nil || len(cert) == 0 {
+				hashedBytes := sha256.Sum256(signer)
+				hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
+			} else {
+				rawCert = cert[0].Raw
+			}
+
+			bundle, err := cbundle.MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
+			if err != nil {
+				return err
+			}
+
+			bundle.Content = &protobundle.Bundle_DsseEnvelope{
+				DsseEnvelope: &protodsse.Envelope{
+					Payload:     payload,
+					PayloadType: c.PredicateType,
+					Signatures: []*protodsse.Signature{
+						&protodsse.Signature{
+							Sig: sig,
+						},
+					},
+				},
+			}
+
+			contents, err = protojson.Marshal(bundle)
+			if err != nil {
+				return err
+			}
+		} else {
+			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
+			signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+
+			contents, err = json.Marshal(signedPayload)
+			if err != nil {
+				return err
+			}
 		}
+
 		if err := os.WriteFile(c.BundlePath, contents, 0600); err != nil {
 			return fmt.Errorf("create bundle file: %w", err)
 		}
