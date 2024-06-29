@@ -564,11 +564,11 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 	logID, err := calculateLogID(rekorPublicKey)
 	require.NoError(t, err, "error calculating Rekor log ID")
 
-	rekorEntry := createRekorEntry(t, ctx, logID, rekorSigner, blob, blobSignature, publicKeyPEM)
+	rekorEntry := createRekorEntry(ctx, t, logID, rekorSigner, blob, blobSignature, publicKeyPEM)
 
 	mockClient := &client.Rekor{
 		Entries: &mockEntriesClient{
-			searchLogQueryFunc: func(params *entries.SearchLogQueryParams, opts ...entries.ClientOption) (*entries.SearchLogQueryOK, error) {
+			searchLogQueryFunc: func(_ *entries.SearchLogQueryParams, _ ...entries.ClientOption) (*entries.SearchLogQueryOK, error) {
 				return &entries.SearchLogQueryOK{
 					Payload: []models.LogEntry{*rekorEntry},
 				}, nil
@@ -1608,7 +1608,7 @@ func (m *mockEntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams,
 	return nil, nil
 }
 
-func createRekorEntry(t *testing.T, ctx context.Context, logID string, rekorSigner signature.SignerVerifier, payload, signature, publicKeyPEM []byte) *models.LogEntry {
+func createRekorEntry(ctx context.Context, t *testing.T, logID string, rekorSigner signature.SignerVerifier, payload, signature, publicKeyPEM []byte) *models.LogEntry {
 	hashedRekorEntry := &hashedrekord_v001.V001Entry{}
 	payloadHash := sha256.Sum256(payload)
 
