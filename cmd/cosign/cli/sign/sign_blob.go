@@ -54,6 +54,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	} else {
 		ui.Infof(ctx, "Using payload from: %s", payloadPath)
 		f, err := os.Open(filepath.Clean(payloadPath))
+		defer f.Close()
 		if err != nil {
 			return nil, err
 		}
