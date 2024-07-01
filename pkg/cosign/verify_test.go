@@ -1590,7 +1590,6 @@ func (m *mockEntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams,
 
 // createRekorEntry creates a mock Rekor log entry.
 func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer signature.Signer, payload, signature []byte, publicKey crypto.PublicKey) *models.LogEntry {
-	hashedRekorEntry := &hashedrekord_v001.V001Entry{}
 	payloadHash := sha256.Sum256(payload)
 
 	publicKeyBytes, err := cryptoutils.MarshalPublicKeyToPEM(publicKey)
@@ -1603,7 +1602,8 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer si
 		PKIFormat:      "x509",
 	}
 
-	entryProps, err := hashedRekorEntry.CreateFromArtifactProperties(ctx, artifactProperties)
+	// Create and canonicalize Rekor entry
+	entryProps, err := hashedrekord_v001.V001Entry{}.CreateFromArtifactProperties(ctx, artifactProperties)
 	require.NoError(t, err)
 
 	rekorEntry, err := rtypes.UnmarshalEntry(entryProps)
@@ -1612,14 +1612,16 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer si
 	canonicalEntry, err := rekorEntry.Canonicalize(ctx)
 	require.NoError(t, err)
 
-	integratedTime := time.Now()
+	// Create log entry
+	integratedTime := time.Now().Unix()
 	logEntry := models.LogEntryAnon{
 		Body:           base64.StdEncoding.EncodeToString(canonicalEntry),
-		IntegratedTime: swag.Int64(integratedTime.Unix()),
+		IntegratedTime: swag.Int64(integratedTime),
 		LogIndex:       swag.Int64(0),
 		LogID:          swag.String(logID),
 	}
 
+	// Canonicalize the log entry and sign it
 	jsonLogEntry, err := json.Marshal(logEntry)
 	require.NoError(t, err)
 
@@ -1629,6 +1631,7 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer si
 	signedEntryTimestamp, err := signer.SignMessage(bytes.NewReader(canonicalPayload))
 	require.NoError(t, err)
 
+	// Calculate leaf hash and add verification
 	entryUUID, err := ComputeLeafHash(&logEntry)
 	require.NoError(t, err)
 
@@ -1641,6 +1644,8 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer si
 			Hashes:   []string{},
 		},
 	}
+
+	// Return the constructed log entry
 	return &models.LogEntry{hex.EncodeToString(entryUUID): logEntry}
 }
 
