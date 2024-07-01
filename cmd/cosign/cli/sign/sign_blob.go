@@ -149,16 +149,15 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			var hint string
 			var rawCert []byte
 
-			signatureBytes, err := extractCertificate(ctx, sv)
+			signer, err := sv.Bytes(ctx)
 			if err != nil {
-				hashedBytes := sha256.Sum256(signatureBytes)
+				return nil, fmt.Errorf("error getting signer: %w", err)
+			}
+			cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+			if err != nil || len(cert) == 0 {
+				hashedBytes := sha256.Sum256(signer)
 				hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
 			} else {
-				cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signatureBytes)
-				if err != nil || len(cert) == 0 {
-					return nil, fmt.Errorf("unable to get cert: %w", err)
-				}
-
 				rawCert = cert[0].Raw
 			}
 
@@ -241,7 +240,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	return sig, nil
 }
 
-// Extract an encoded certificate from the SignerVerifier. Always return bytes, but return an error if verifier is not a certificate.
+// Extract an encoded certificate from the SignerVerifier. Returns (nil, nil) if verifier is not a certificate.
 func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error) {
 	signer, err := sv.Bytes(ctx)
 	if err != nil {
@@ -252,5 +251,5 @@ func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error)
 	if err == nil && len(cert) == 1 {
 		return signer, nil
 	}
-	return signer, fmt.Errorf("not a certificate")
+	return nil, nil
 }

@@ -122,6 +122,7 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				keyref       string
 				certref      string
 				certchainref string
+				protobuf     bool
 				errString    string
 			}{
 				{
@@ -132,6 +133,12 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 					name:    "cert matches key",
 					keyref:  keyRef,
 					certref: certRef,
+				},
+				{
+					name:     "protobuf generation",
+					keyref:   keyRef,
+					certref:  certRef,
+					protobuf: true,
 				},
 				{
 					name:      "fail: cert no match key",
@@ -160,6 +167,10 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
+					keyOpts := options.KeyOpts{KeyRef: tc.keyref}
+					if tc.protobuf {
+						keyOpts.ProtobufBundleFormat = true
+					}
 					at := AttestBlobCommand{
 						KeyOpts:        options.KeyOpts{KeyRef: tc.keyref},
 						CertPath:       tc.certref,
