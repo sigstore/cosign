@@ -108,7 +108,7 @@ var verifyCertChain = func(keyRef, certChain, certFile, imageRef string, checkCl
 	return cmd.Exec(context.Background(), args)
 }
 
-var verifyCertBundle = func(keyRef, caCertFile, caIntermediates, certFile, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
+var verifyCertBundle = func(keyRef, caCertFile, caIntermediateCertFile, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
 	cmd := cliverify.VerifyCommand{
 		KeyRef:        keyRef,
 		RekorURL:      rekorURL,
@@ -119,7 +119,7 @@ var verifyCertBundle = func(keyRef, caCertFile, caIntermediates, certFile, image
 		MaxWorkers:    10,
 		IgnoreTlog:    skipTlogVerify,
 		CertVerifyOptions: options.CertVerifyOptions{
-			CAIntermediates:      caIntermediates,
+			CAIntermediates:      caIntermediateCertFile,
 			CARoots:              caCertFile,
 			CertOidcIssuerRegexp: ".*",
 			CertIdentityRegexp:   ".*",

@@ -151,7 +151,7 @@ func TestSignVerifyCertBundle(t *testing.T) {
 
 	ctx := context.Background()
 	// Verify should fail at first
-	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, certFile, imgName, true, nil, "", true), t)
+	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, nil, "", true), t)
 	// So should download
 	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
@@ -170,13 +170,13 @@ func TestSignVerifyCertBundle(t *testing.T) {
 
 	// Now verify and download should work!
 	ignoreTlog := true
-	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, certFile, imgName, true, nil, "", ignoreTlog), t)
+	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, nil, "", ignoreTlog), t)
 	// verification with certificate chain instead of root/intermediate files should work as well
 	must(verifyCertChain(pubKeyPath, certChainFile, certFile, imgName, true, nil, "", ignoreTlog), t)
 	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
 	// Look for a specific annotation
-	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, certFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
+	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
 
 	so.AnnotationOptions = options.AnnotationOptions{
 		Annotations: []string{"foo=bar"},
@@ -185,10 +185,10 @@ func TestSignVerifyCertBundle(t *testing.T) {
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
 
 	// It should match this time.
-	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, certFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
+	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
 
 	// But two doesn't work
-	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, certFile, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}, "", ignoreTlog), t)
+	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}, "", ignoreTlog), t)
 }
 
 func TestSignVerifyClean(t *testing.T) {

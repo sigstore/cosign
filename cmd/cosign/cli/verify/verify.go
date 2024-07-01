@@ -295,7 +295,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return err
 			}
 		default:
-			return errors.New("internal error in handling CertChain and RootCerts - default case should never happen")
+			return errors.New("no certificate chain provided to verify certificate")
 		}
 
 		if c.SCTRef != "" {
