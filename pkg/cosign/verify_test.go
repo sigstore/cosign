@@ -533,39 +533,22 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Generate signer and public key
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err, "error generating private key")
+	// Generate ECDSA signer and public key for signing the blob.
+	signer, publicKey := generateSigner(t)
+	blob, blobSignature, blobSignatureBase64 := generateBlobSignature(t, signer)
 
-	signer, err := signature.LoadECDSASignerVerifier(privateKey, crypto.SHA256)
-	require.NoError(t, err, "error loading signer")
-
-	publicKey, err := signer.PublicKey()
-	require.NoError(t, err, "error getting public key")
-	publicKeyPEM, err := cryptoutils.MarshalPublicKeyToPEM(publicKey)
-	require.NoError(t, err, "error marshalling public key to PEM")
-
-	blob := []byte("foo")
-	blobSignature, err := signer.SignMessage(bytes.NewReader(blob))
-	require.NoError(t, err, "error signing blob")
-	blobSignatureBase64 := base64.StdEncoding.EncodeToString(blobSignature)
-
+	// Create an OCI signature which will be verified.
 	ociSignature, err := static.NewSignature(blob, blobSignatureBase64)
 	require.NoError(t, err, "error creating OCI signature")
 
-	// Mock Rekor entry setup
-	rekorPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err, "error generating Rekor private key")
+	// Set up mock Rekor signer and log ID.
+	rekorSigner, rekorPublicKey := generateSigner(t)
+	logID := calculateLogID(t, rekorPublicKey)
 
-	rekorSigner, err := signature.LoadECDSASignerVerifier(rekorPrivateKey, crypto.SHA256)
-	require.NoError(t, err, "error loading Rekor signer")
+	// Create a mock Rekor log entry to simulate Rekor behavior.
+	rekorEntry := createRekorEntry(ctx, t, logID, rekorSigner, blob, blobSignature, publicKey)
 
-	rekorPublicKey := rekorPrivateKey.Public().(*ecdsa.PublicKey)
-	logID, err := calculateLogID(rekorPublicKey)
-	require.NoError(t, err, "error calculating Rekor log ID")
-
-	rekorEntry := createRekorEntry(ctx, t, logID, rekorSigner, blob, blobSignature, publicKeyPEM)
-
+	// Mock Rekor client to return the mock log entry for verification.
 	mockClient := &client.Rekor{
 		Entries: &mockEntriesClient{
 			searchLogQueryFunc: func(_ *entries.SearchLogQueryParams, _ ...entries.ClientOption) (*entries.SearchLogQueryOK, error) {
@@ -576,7 +559,7 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 		},
 	}
 
-	// Mock Rekor public key
+	// Define trusted Rekor public keys for verification.
 	trustedRekorPubKeys := &TrustedTransparencyLogPubKeys{
 		Keys: map[string]TransparencyLogPubKey{
 			logID: {
@@ -586,11 +569,8 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 		},
 	}
 
-	// Non-matching Rekor public key
-	nonMatchingPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err, "error generating invalid private key")
-	nonMatchingPublicKey := nonMatchingPrivateKey.Public().(*ecdsa.PublicKey)
-
+	// Generate non-matching public key for failure test cases.
+	_, nonMatchingPublicKey := generateSigner(t)
 	nonMatchingRekorPubKeys := &TrustedTransparencyLogPubKeys{
 		Keys: map[string]TransparencyLogPubKey{
 			logID: {
@@ -1608,14 +1588,18 @@ func (m *mockEntriesClient) SearchLogQuery(params *entries.SearchLogQueryParams,
 	return nil, nil
 }
 
-func createRekorEntry(ctx context.Context, t *testing.T, logID string, rekorSigner signature.SignerVerifier, payload, signature, publicKeyPEM []byte) *models.LogEntry {
+// createRekorEntry creates a mock Rekor log entry.
+func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer signature.Signer, payload, signature []byte, publicKey crypto.PublicKey) *models.LogEntry {
 	hashedRekorEntry := &hashedrekord_v001.V001Entry{}
 	payloadHash := sha256.Sum256(payload)
+
+	publicKeyBytes, err := cryptoutils.MarshalPublicKeyToPEM(publicKey)
+	require.NoError(t, err)
 
 	artifactProperties := rtypes.ArtifactProperties{
 		ArtifactHash:   hex.EncodeToString(payloadHash[:]),
 		SignatureBytes: signature,
-		PublicKeyBytes: [][]byte{publicKeyPEM},
+		PublicKeyBytes: [][]byte{publicKeyBytes},
 		PKIFormat:      "x509",
 	}
 
@@ -1629,11 +1613,6 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, rekorSign
 	require.NoError(t, err)
 
 	integratedTime := time.Now()
-	certificates, _ := cryptoutils.UnmarshalCertificatesFromPEM(publicKeyPEM)
-	if len(certificates) > 0 {
-		integratedTime = certificates[0].NotAfter.Add(-1 * time.Second)
-	}
-
 	logEntry := models.LogEntryAnon{
 		Body:           base64.StdEncoding.EncodeToString(canonicalEntry),
 		IntegratedTime: swag.Int64(integratedTime.Unix()),
@@ -1647,10 +1626,11 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, rekorSign
 	canonicalPayload, err := jsoncanonicalizer.Transform(jsonLogEntry)
 	require.NoError(t, err)
 
-	signedEntryTimestamp, err := rekorSigner.SignMessage(bytes.NewReader(canonicalPayload))
+	signedEntryTimestamp, err := signer.SignMessage(bytes.NewReader(canonicalPayload))
 	require.NoError(t, err)
 
-	entryUUID, _ := ComputeLeafHash(&logEntry)
+	entryUUID, err := ComputeLeafHash(&logEntry)
+	require.NoError(t, err)
 
 	logEntry.Verification = &models.LogEntryAnonVerification{
 		SignedEntryTimestamp: signedEntryTimestamp,
@@ -1664,11 +1644,33 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, rekorSign
 	return &models.LogEntry{hex.EncodeToString(entryUUID): logEntry}
 }
 
-func calculateLogID(pub crypto.PublicKey) (string, error) {
+// generateSigner creates an ECDSA signer and public key.
+func generateSigner(t *testing.T) (signature.SignerVerifier, crypto.PublicKey) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "error generating private key")
+
+	signer, err := signature.LoadECDSASignerVerifier(privateKey, crypto.SHA256)
+	require.NoError(t, err, "error loading signer")
+
+	publicKey, err := signer.PublicKey()
+	require.NoError(t, err, "error getting public key")
+
+	return signer, publicKey
+}
+
+// generateBlobSignature signs a blob and returns the blob, its signature, and the base64-encoded signature.
+func generateBlobSignature(t *testing.T, signer signature.Signer) ([]byte, []byte, string) {
+	blob := []byte("foo")
+	blobSignature, err := signer.SignMessage(bytes.NewReader(blob))
+	require.NoError(t, err, "error signing blob")
+	blobSignatureBase64 := base64.StdEncoding.EncodeToString(blobSignature)
+	return blob, blobSignature, blobSignatureBase64
+}
+
+// calculateLogID generates a SHA-256 hash of the given public key and returns it as a hexadecimal string.
+func calculateLogID(t *testing.T, pub crypto.PublicKey) string {
 	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
-	if err != nil {
-		return "", err
-	}
+	require.NoError(t, err, "error marshalling public key")
 	digest := sha256.Sum256(pubBytes)
-	return hex.EncodeToString(digest[:]), nil
+	return hex.EncodeToString(digest[:])
 }
