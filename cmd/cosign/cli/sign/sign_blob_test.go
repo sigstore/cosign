@@ -25,6 +25,7 @@ import (
 
 func TestSignBlobCmd(t *testing.T) {
 	td := t.TempDir()
+	bundlePath := filepath.Join(td, "bundle.sigstore.json")
 
 	keys, _ := cosign.GenerateKeyPair(nil)
 	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
@@ -33,13 +34,19 @@ func TestSignBlobCmd(t *testing.T) {
 	blobPath := writeFile(t, td, string(blob), "foo.txt")
 
 	rootOpts := &options.RootOptions{}
-	keyOpts := options.KeyOpts{KeyRef: keyRef}
+	keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath}
 
 	// Test happy path
-	_, err := SignBlobCmd(rootOpts, keyOpts, blobPath, false, "", "", false)
+	_, err := SignBlobCmd(rootOpts, keyOpts, blobPath, true, "", "", false)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
+
+	// Test file outputs
+	keyOpts.ProtobufBundleFormat = true
+	sigPath := filepath.Join(td, "output.sig")
+	certPath := filepath.Join(td, "output.pem")
+	_, err = SignBlobCmd(rootOpts, keyOpts, blobPath, false, sigPath, certPath, false)
 }
 
 func writeFile(t *testing.T, td string, blob string, name string) string {
