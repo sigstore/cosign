@@ -47,6 +47,9 @@ func TestSignBlobCmd(t *testing.T) {
 	sigPath := filepath.Join(td, "output.sig")
 	certPath := filepath.Join(td, "output.pem")
 	_, err = SignBlobCmd(rootOpts, keyOpts, blobPath, false, sigPath, certPath, false)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
 }
 
 func writeFile(t *testing.T, td string, blob string, name string) string {
