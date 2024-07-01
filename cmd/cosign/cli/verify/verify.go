@@ -59,6 +59,8 @@ type VerifyCommand struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
+	CAIntermediates              string
+	CARoots                      string
 	CertChain                    string
 	CertOidcProvider             string
 	IgnoreSCT                    bool
@@ -173,7 +175,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
-		if c.CertChain != "" {
+		switch {
+		case c.CertChain != "":
 			chain, err := loadCertChainFromFileOrURL(c.CertChain)
 			if err != nil {
 				return err
@@ -186,9 +189,32 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 					co.IntermediateCerts.AddCert(cert)
 				}
 			}
-		} else {
-			// This performs an online fetch of the Fulcio roots. This is needed
-			// for verifying keyless certificates (both online and offline).
+		case c.CARoots != "":
+			caRoots, err := loadCertChainFromFileOrURL(c.CARoots)
+			if err != nil {
+				return err
+			}
+			co.RootCerts = x509.NewCertPool()
+			if len(caRoots) > 0 {
+				for _, cert := range caRoots {
+					co.RootCerts.AddCert(cert)
+				}
+			}
+			if c.CAIntermediates != "" {
+				caIntermediates, err := loadCertChainFromFileOrURL(c.CAIntermediates)
+				if err != nil {
+					return err
+				}
+				if len(caIntermediates) > 0 {
+					co.IntermediateCerts = x509.NewCertPool()
+					for _, cert := range caIntermediates {
+						co.IntermediateCerts.AddCert(cert)
+					}
+				}
+			}
+		default:
+			// This performs an online fetch of the Fulcio roots from a TUF repository.
+			// This is needed for verifying keyless certificates (both online and offline).
 			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
 				return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -237,8 +263,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return err
 		}
-		if c.CertChain == "" {
-			// If no certChain is passed, the Fulcio root certificate will be used
+		switch {
+		case c.CertChain == "" && co.RootCerts == nil:
+			// If no certChain and no CARoots are passed, the Fulcio root certificate will be used
 			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
 				return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -251,7 +278,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
-		} else {
+		case c.CertChain != "":
 			// Verify certificate with chain
 			chain, err := loadCertChainFromFileOrURL(c.CertChain)
 			if err != nil {
@@ -261,7 +288,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
+		case co.RootCerts != nil:
+			// Verify certificate with root (and if given, intermediate) certificate
+			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
+			if err != nil {
+				return err
+			}
+		default:
+			return errors.New("no certificate chain provided to verify certificate")
 		}
+
 		if c.SCTRef != "" {
 			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
 			if err != nil {
@@ -269,6 +305,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 			co.SCT = sct
 		}
+	default:
+		// Do nothing. Neither keyRef, c.Sk, nor certRef were set - can happen for example when using Fulcio and TSA.
+		// For an example see the TestAttachWithRFC3161Timestamp test in test/e2e_test.go.
 	}
 	co.SigVerifier = pubKey
 
