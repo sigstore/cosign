@@ -81,8 +81,8 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	var timestampBytes []byte
 
 	if ko.TSAServerURL != "" {
-		if ko.RFC3161TimestampPath == "" {
-			return nil, fmt.Errorf("timestamp output path must be set")
+		if ko.RFC3161TimestampPath == "" && !ko.ProtobufBundleFormat {
+			return nil, fmt.Errorf("must use protobuf bundle or set timestamp output path")
 		}
 		var err error
 		if ko.TSAClientCACert == "" && ko.TSAClientCert == "" { // no mTLS params or custom CA
@@ -108,14 +108,17 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if rfc3161Timestamp == nil {
 			return nil, fmt.Errorf("rfc3161 timestamp is nil")
 		}
-		ts, err := json.Marshal(rfc3161Timestamp)
-		if err != nil {
-			return nil, err
+
+		if ko.RFC3161TimestampPath != "" {
+			ts, err := json.Marshal(rfc3161Timestamp)
+			if err != nil {
+				return nil, err
+			}
+			if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
+				return nil, fmt.Errorf("create RFC3161 timestamp file: %w", err)
+			}
+			ui.Infof(ctx, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 		}
-		if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
-			return nil, fmt.Errorf("create RFC3161 timestamp file: %w", err)
-		}
-		ui.Infof(ctx, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 	}
 	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 	if err != nil {
