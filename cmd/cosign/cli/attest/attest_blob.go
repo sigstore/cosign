@@ -93,8 +93,8 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		defer cancelFn()
 	}
 
-	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" {
-		return errors.New("expected an rfc3161-timestamp path when using a TSA server")
+	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" && !c.ProtobufBundleFormat {
+		return errors.New("expected either protobuf bundle or an rfc3161-timestamp path when using a TSA server")
 	}
 
 	var artifact []byte
@@ -173,14 +173,17 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if rfc3161Timestamp == nil {
 			return fmt.Errorf("rfc3161 timestamp is nil")
 		}
-		ts, err := json.Marshal(rfc3161Timestamp)
-		if err != nil {
-			return err
+
+		if c.RFC3161TimestampPath != "" {
+			ts, err := json.Marshal(rfc3161Timestamp)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
+				return fmt.Errorf("create RFC3161 timestamp file: %w", err)
+			}
+			fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
 		}
-		if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
-			return fmt.Errorf("create RFC3161 timestamp file: %w", err)
-		}
-		fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
 	}
 
 	rekorBytes, err := sv.Bytes(ctx)
