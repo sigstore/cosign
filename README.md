@@ -37,7 +37,7 @@ For Linux and macOS binaries see the [GitHub release assets](https://github.com/
 
 ## Developer Installation
 
-If you have Go 1.19+, you can setup a development environment:
+If you have Go 1.22+, you can setup a development environment:
 
 ```shell
 $ git clone https://github.com/sigstore/cosign
