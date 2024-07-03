@@ -305,7 +305,7 @@ func makeNewBundle(rekorEntry *models.LogEntryAnon, payload, sig, signer, timest
 			Payload:     payload,
 			PayloadType: payloadType,
 			Signatures: []*protodsse.Signature{
-				&protodsse.Signature{
+				{
 					Sig: sig,
 				},
 			},
