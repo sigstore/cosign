@@ -312,7 +312,7 @@ func makeNewBundle(rekorEntry *models.LogEntryAnon, payload, sig, signer, timest
 		},
 	}
 
-    contents, err := protojson.Marshal(bundle)
+	contents, err := protojson.Marshal(bundle)
 	if err != nil {
 		return nil, err
 	}

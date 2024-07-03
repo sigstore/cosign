@@ -45,6 +45,7 @@ cosign sign-blob [flags]
       --insecure-skip-verify             skip verifying fulcio published to the SCT (this should only be used for testing).
       --issue-certificate                issue a code signing certificate from Fulcio, even if a key is provided
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
+      --new-bundle-format                output bundle in new format that contains all verification material
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string   Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read
@@ -54,7 +55,6 @@ cosign sign-blob [flags]
       --output string                    write the signature to FILE
       --output-certificate string        write the certificate to FILE
       --output-signature string          write the signature to FILE
-      --new-bundle-format                output bundle in sigstore/protobuf-specs format
       --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp string         write the RFC3161 timestamp to a file
       --sk                               whether to use a hardware security key

@@ -43,6 +43,7 @@ cosign attest-blob [flags]
       --identity-token string             identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify              skip verifying fulcio published to the SCT (this should only be used for testing).
       --key string                        path to the private key file, KMS URI or Kubernetes Secret
+      --new-bundle-format                 output bundle in new format that contains all verification material
       --oidc-client-id string             OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string    Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers    Disable ambient OIDC providers. When true, ambient credentials will not be read
@@ -53,7 +54,6 @@ cosign attest-blob [flags]
       --output-certificate string         write the certificate to FILE
       --output-signature string           write the signature to FILE
       --predicate string                  path to the predicate file.
-      --new-bundle-format                 output bundle in sigstore/protobuf-specs format
       --rekor-entry-type string           specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default).  (default "dsse")
       --rekor-url string                  address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
