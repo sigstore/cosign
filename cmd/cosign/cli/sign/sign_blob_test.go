@@ -43,7 +43,7 @@ func TestSignBlobCmd(t *testing.T) {
 	}
 
 	// Test file outputs
-	keyOpts.ProtobufBundleFormat = true
+	keyOpts.NewBundleFormat = true
 	sigPath := filepath.Join(td, "output.sig")
 	certPath := filepath.Join(td, "output.pem")
 	_, err = SignBlobCmd(rootOpts, keyOpts, blobPath, false, sigPath, certPath, false)

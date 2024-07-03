@@ -33,7 +33,7 @@ type SignBlobOptions struct {
 	OIDC                 OIDCOptions
 	Registry             RegistryOptions
 	BundlePath           string
-	ProtobufBundleFormat bool
+	NewBundleFormat      bool
 	SkipConfirmation     bool
 	TlogUpload           bool
 	TSAClientCACert      string
@@ -77,8 +77,8 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().SetAnnotation("bundle", cobra.BashCompFilenameExt, []string{})
 
 	// TODO: have this default to true as a breaking change
-	cmd.Flags().BoolVar(&o.ProtobufBundleFormat, "protobuf-bundle-format", false,
-		"output bundle in sigstore/protobuf-specs format")
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
+		"output bundle in new format that contains all verification material")
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")

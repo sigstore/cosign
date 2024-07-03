@@ -93,8 +93,8 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		defer cancelFn()
 	}
 
-	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" && !c.ProtobufBundleFormat {
-		return errors.New("expected either protobuf bundle or an rfc3161-timestamp path when using a TSA server")
+	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" && !c.NewBundleFormat {
+		return errors.New("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
 	}
 
 	var artifact []byte
@@ -215,41 +215,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	if c.BundlePath != "" {
 		var contents []byte
-		if c.ProtobufBundleFormat {
-			// Determine if signature is certificate or not
-			var hint string
-			var rawCert []byte
-
+		if c.NewBundleFormat {
 			signer, err := sv.Bytes(ctx)
 			if err != nil {
 				return fmt.Errorf("error getting signer: %w", err)
 			}
-			cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
-			if err != nil || len(cert) == 0 {
-				hashedBytes := sha256.Sum256(signer)
-				hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
-			} else {
-				rawCert = cert[0].Raw
-			}
-
-			bundle, err := cbundle.MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
-			if err != nil {
-				return err
-			}
-
-			bundle.Content = &protobundle.Bundle_DsseEnvelope{
-				DsseEnvelope: &protodsse.Envelope{
-					Payload:     payload,
-					PayloadType: c.PredicateType,
-					Signatures: []*protodsse.Signature{
-						&protodsse.Signature{
-							Sig: sig,
-						},
-					},
-				},
-			}
-
-			contents, err = protojson.Marshal(bundle)
+			contents, err = makeNewBundle(rekorEntry, payload, sig, signer, timestampBytes, c.PredicateType)
 			if err != nil {
 				return err
 			}
@@ -309,4 +280,42 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	return nil
+}
+
+func makeNewBundle(rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte, payloadType string) ([]byte, error) {
+	// Determine if signature is certificate or not
+	var hint string
+	var rawCert []byte
+
+	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+	if err != nil || len(cert) == 0 {
+		hashedBytes := sha256.Sum256(signer)
+		hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
+	} else {
+		rawCert = cert[0].Raw
+	}
+
+	bundle, err := cbundle.MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	bundle.Content = &protobundle.Bundle_DsseEnvelope{
+		DsseEnvelope: &protodsse.Envelope{
+			Payload:     payload,
+			PayloadType: payloadType,
+			Signatures: []*protodsse.Signature{
+				&protodsse.Signature{
+					Sig: sig,
+				},
+			},
+		},
+	}
+
+    contents, err := protojson.Marshal(bundle)
+	if err != nil {
+		return nil, err
+	}
+
+	return contents, nil
 }

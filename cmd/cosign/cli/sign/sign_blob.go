@@ -82,7 +82,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	var timestampBytes []byte
 
 	if ko.TSAServerURL != "" {
-		if ko.RFC3161TimestampPath == "" && !ko.ProtobufBundleFormat {
+		if ko.RFC3161TimestampPath == "" && !ko.NewBundleFormat {
 			return nil, fmt.Errorf("must use protobuf bundle or set timestamp output path")
 		}
 		var err error
@@ -145,7 +145,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	// if bundle is specified, just do that and ignore the rest
 	if ko.BundlePath != "" {
 		var contents []byte
-		if ko.ProtobufBundleFormat {
+		if ko.NewBundleFormat {
 			// Determine if signature is certificate or not
 			var hint string
 			var rawCert []byte
