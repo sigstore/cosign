@@ -29,12 +29,14 @@ on:
       - main
       - release-*
 
-permissions: read-all
+permissions: {}
 
 jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+
+    if: github.repository == 'sigstore/cosign'
 
     permissions:
       id-token: write

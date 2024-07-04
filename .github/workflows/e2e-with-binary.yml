@@ -28,6 +28,8 @@ on:
     branches: [ 'main' ]
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   e2e-tests-with-binary:
     # Skip if running in a fork that might not have secrets configured.
@@ -41,6 +43,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
     env:
       COSIGN_YES: "true"
 

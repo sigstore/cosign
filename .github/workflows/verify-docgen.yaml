@@ -18,15 +18,20 @@ name: Docgen
 on:
   workflow_dispatch:
   push:
-    branches: ['main', 'release-*']
+    branches:
+      - 'main'
+      - 'release-*'
   pull_request:
 
-permissions: read-all
+permissions: {}
 
 jobs:
   docgen:
     name: Verify Docgen
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       - name: deps

@@ -15,10 +15,15 @@
 name: 'Dependency Review'
 on: [pull_request]
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   dependency-review:
     name: License and Vulnerability Scan
+
+    if: github.repository == 'sigstore/cosign'
+
+    permissions:
+      contents: read
+
     uses: sigstore/community/.github/workflows/reusable-dependency-review.yml@9b1b5aca605f92ec5b1bf3681b1e61b3dbc420cc
