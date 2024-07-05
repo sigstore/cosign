@@ -24,10 +24,14 @@ CONTAINER_ID=$(docker run -dit --name softhsm -v $(pwd):/root/cosign -p 2345:234
 
 docker exec -i $CONTAINER_ID /bin/bash << 'EOF'
 
+# to install the latest go that is not available in the alpine repository
+echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
 apk update
 
 # add make pcsc-lite-libs go command
-apk add make build-base go
+apk add make build-base
+
+apk add go@edge
 
 cd /root/cosign
 
