@@ -149,7 +149,7 @@ var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[
 	return cmd.Exec(context.Background(), args)
 }
 
-var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, skipTlogVerify bool) error {
+var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, skipTlogVerify bool) error { //nolint: unused
 	cmd := cliverify.VerifyCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuerRegexp: ".*",
@@ -241,7 +241,7 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 		t.Fatal(err)
 	}
 	defer func() {
-		os.Chdir(wd)
+		_ = os.Chdir(wd)
 	}()
 	keys, err := cosign.GenerateKeyPair(passFunc)
 	if err != nil {
@@ -261,7 +261,7 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 }
 
 func importKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
-
+	//nolint: gosec
 	const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAx5piWVlE62NnZ0UzJ8Z6oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+
 25yq6P+0JU/Qvr9veOGEb3R/J9u8JBo+hv2i5X8OtgvP2V2pi6f1s6vK7L0+6uRb
@@ -298,7 +298,7 @@ qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
 		t.Fatal(err)
 	}
 	defer func() {
-		os.Chdir(wd)
+		_ = os.Chdir(wd)
 	}()
 
 	err = os.WriteFile("validrsa1.key", []byte(validrsa1), 0600)
@@ -320,11 +320,11 @@ qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
 	if err := os.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
 		t.Fatal(err)
 	}
-	return keys, privKeyPath, pubKeyPath
 
+	return keys, privKeyPath, pubKeyPath
 }
 
-func mockStdin(contents, td string, t *testing.T) func() {
+func mockStdin(contents, td string, t *testing.T) func() { //nolint: unused
 	origin := os.Stdin
 
 	p := mkfile(contents, td, t)
@@ -438,7 +438,7 @@ func equals(v1, v2 interface{}, t *testing.T) {
 }
 
 func reg(t *testing.T) (string, func()) {
-	repo := os.Getenv("COSIGN_TEST_REPO")
+	repo := os.Getenv("COSIGN_TEST_REPO") //nolint: forbidigo
 	if repo != "" {
 		return repo, func() {}
 	}
@@ -480,7 +480,7 @@ func setLocalEnv(t *testing.T, dir string) error {
 
 // downloadAndSetEnv fetches a URL and sets the given environment variable to point to the downloaded file path.
 func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("error downloading file: %w", err)
 	}
@@ -562,7 +562,7 @@ func generateCertificateBundle(genIntermediate bool) (
 	caIntermediatePrivKeyBuf *bytes.Buffer,
 	certBuf *bytes.Buffer,
 	certBundleBuf *bytes.Buffer,
-	err error,
+	err error, //nolint: unparam
 ) {
 	// set up our CA certificate
 	ca := &x509.Certificate{

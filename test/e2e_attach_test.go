@@ -81,10 +81,10 @@ func TestAttachSignature(t *testing.T) {
 	pemSub1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert1.Raw})
 	pemLeaf1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert1.Raw})
 	pemLeafRef1 := mkfile(string(pemLeaf1), td, t)
-	certChainRef1 := mkfile(string(append(pemSub1[:], pemRoot1[:]...)), td, t)
+	certChainRef1 := mkfile(string(append(pemSub1, pemRoot1...)), td, t)
 
 	signature1, _ := privKey1.Sign(rand.Reader, hash[:], crypto.SHA256)
-	b64signature1 := base64.StdEncoding.EncodeToString([]byte(signature1))
+	b64signature1 := base64.StdEncoding.EncodeToString(signature1)
 	sigRef1 := mkfile(b64signature1, td, t)
 
 	err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef1, payloadRef, pemLeafRef1, certChainRef1, "", "", imgName)
@@ -130,10 +130,10 @@ func TestAttachSignature(t *testing.T) {
 	pemSub2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert2.Raw})
 	pemLeaf2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert2.Raw})
 	pemLeafRef2 := mkfile(string(pemLeaf2), td, t)
-	certChainRef2 := mkfile(string(append(pemSub2[:], pemRoot2[:]...)), td, t)
+	certChainRef2 := mkfile(string(append(pemSub2, pemRoot2...)), td, t)
 
 	signature2, _ := privKey2.Sign(rand.Reader, hash[:], crypto.SHA256)
-	b64signature2 := base64.StdEncoding.EncodeToString([]byte(signature2))
+	b64signature2 := base64.StdEncoding.EncodeToString(signature2)
 	sigRef2 := mkfile(b64signature2, td, t)
 
 	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef2, payloadRef, pemLeafRef2, certChainRef2, "", "", imgName)
@@ -198,12 +198,12 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 
 	h := sha256.Sum256(b.Bytes())
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	b64signature := base64.StdEncoding.EncodeToString(signature)
 	sigRef := mkfile(b64signature, td, t)
 	pemleafRef := mkfile(string(pemLeaf), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 
-	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
 
 	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
 
@@ -268,14 +268,14 @@ func TestAttachWithRekorBundle(t *testing.T) {
 
 	h := sha256.Sum256(b.Bytes())
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	b64signature := base64.StdEncoding.EncodeToString(signature)
 	sigRef := mkfile(b64signature, td, t)
 	pemleafRef := mkfile(string(pemLeaf), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 
 	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
 
-	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
 
 	localPayload := cosign.LocalSignedPayload{
 		Base64Signature: b64signature,
@@ -350,12 +350,12 @@ func TestUploadDownload(t *testing.T) {
 			restoreStdin := func() {}
 
 			var sigRef string
-			if testCase.signatureType == attach.FileSignature {
+			switch {
+			case testCase.signatureType == attach.FileSignature:
 				sigRef = mkfile(signature, td, t)
-			} else if testCase.signatureType == attach.StdinSignature {
-				sigRef = "-"
-				restoreStdin = mockStdin(signature, td, t)
-			} else {
+			case testCase.signatureType == attach.StdinSignature:
+				sigRef = mkfile(signature, td, t)
+			default:
 				sigRef = signature
 			}
 			// Upload it!
@@ -444,12 +444,13 @@ func TestAttachSBOM_bom_flag(t *testing.T) {
 			img, _, cleanup := mkimage(t, imgName)
 			var sbomRef string
 			restoreStdin := func() {}
-			if testCase.bomType == attach.FileSignature {
+			switch {
+			case testCase.bomType == attach.FileSignature:
 				sbomRef = mkfile(testCase.bom, td, t)
-			} else if testCase.bomType == attach.StdinSignature {
+			case testCase.bomType == attach.StdinSignature:
 				sbomRef = "-"
 				restoreStdin = mockStdin(testCase.bom, td, t)
-			} else {
+			default:
 				sbomRef = testCase.bom
 			}
 

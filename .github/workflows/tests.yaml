@@ -31,7 +31,7 @@ on:
 permissions: read-all
 
 env:
-  GO_VERSION: '1.21'
+  GO_VERSION: '1.22'
 
 jobs:
   unit-tests:
@@ -215,19 +215,3 @@ jobs:
         run: |
           set -e
           addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -v *
-
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
-        with:
-          go-version: '1.22'
-          check-latest: true
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
-        with:
-          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.59
-          args: --timeout=5m

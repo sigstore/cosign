@@ -28,19 +28,25 @@ on:
     - cron: '0 1 * * *' # 1AM UTC
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   build:
+    runs-on: ubuntu-latest
+    if: github.repository == 'sigstore/cosign'
+
     permissions:
       id-token: write
       packages: write
       contents: read
+
     env:
       GIT_HASH: ${{ github.sha }}
       GIT_VERSION: unstable
       GITHUB_RUN_ID: ${{ github.run_id }}
       GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
       KO_PREFIX: ghcr.io/${{ github.repository }}
-    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1

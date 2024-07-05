@@ -41,7 +41,7 @@ linters-settings:
       # Reference: https://github.com/sigstore/cosign/issues/2236
       - 'os\.Getenv.*'
       - 'os\.LookupEnv.*'
-    exclude_godoc_examples: false
+    exclude-godoc-examples: false
 output:
   uniq-by-line: false
 issues:

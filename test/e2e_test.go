@@ -147,6 +147,7 @@ func TestSignVerifyCertBundle(t *testing.T) {
 
 	_, privKeyPath, pubKeyPath := keypair(t, td)
 	caCertFile, _ /* caPrivKeyFile */, caIntermediateCertFile, _ /* caIntermediatePrivKeyFile */, certFile, certChainFile, err := generateCertificateBundleFiles(td, true, "foobar")
+	must(err, t)
 
 	ctx := context.Background()
 	// Verify should fail at first
@@ -615,7 +616,7 @@ func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
 	}
 	must(attestCommand.Exec(ctx, imgName), t)
 
-	// Call download.AttestationCmd() to ensure failure with non-existant --predicate-type
+	// Call download.AttestationCmd() to ensure failure with non-existent --predicate-type
 	attOpts := options.AttestationDownloadOptions{
 		PredicateType: "vuln",
 	}
@@ -904,15 +905,15 @@ func TestVerifyWithCARoots(t *testing.T) {
 
 	h := sha256.Sum256(b.Bytes())
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	b64signature := base64.StdEncoding.EncodeToString(signature)
 	sigRef := mkfile(b64signature, td, t)
 	pemsubRef := mkfile(string(pemSub), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 	pemleafRef := mkfile(string(pemLeaf), td, t)
-	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
+	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
 
-	pemrootBundleRef := mkfile(string(append(pemRoot[:], pemRoot02[:]...)), td, t)
-	pemsubBundleRef := mkfile(string(append(pemSub[:], pemSub02[:]...)), td, t)
+	pemrootBundleRef := mkfile(string(append(pemRoot, pemRoot02...)), td, t)
+	pemsubBundleRef := mkfile(string(append(pemSub, pemSub02...)), td, t)
 
 	tsclient, err := tsaclient.GetTimestampClient(server.URL)
 	if err != nil {
@@ -2185,6 +2186,8 @@ func TestOffline(t *testing.T) {
 	must(err, t)
 
 	sigsTag, err := ociremote.SignatureTag(imgRef)
+	must(err, t)
+
 	if err := remote.Delete(sigsTag); err != nil {
 		t.Fatal(err)
 	}

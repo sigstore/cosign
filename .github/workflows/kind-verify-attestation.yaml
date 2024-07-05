@@ -23,7 +23,7 @@ defaults:
   run:
     shell: bash
 
-permissions: read-all
+permissions: {}
 
 jobs:
   cip-test:
@@ -37,6 +37,9 @@ jobs:
         tuf-root:
         - remote
         - air-gap
+
+    permissions:
+      contents: read
 
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"

@@ -30,10 +30,14 @@ on:
 env:
   CODEQL_EXTRACTOR_GO_BUILD_TRACING: true
 
+permissions: {}
+
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+
+    if: github.repository == 'sigstore/cosign'
 
     permissions:
       security-events: write
