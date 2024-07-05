@@ -43,7 +43,7 @@ jobs:
           args: --timeout=5m
 
   golangci-test-e2e:
-    name: lint
+    name: lint-test-e2e
     runs-on: ubuntu-latest
 
     permissions:

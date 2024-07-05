@@ -20,8 +20,8 @@ package test
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 )
 
@@ -65,7 +65,7 @@ func TestGenerateCertificateBundleFiles(t *testing.T) {
 func verifyCertificate(t *testing.T, certFile string) {
 	t.Helper()
 	// open and parse certFile, ensure it is a TLS certificate
-	data, err := ioutil.ReadFile(certFile)
+	data, err := os.ReadFile(certFile)
 	if err != nil {
 		t.Fatalf("Error reading certificate file %s: %v\n", certFile, err)
 		return
@@ -80,7 +80,7 @@ func verifyCertificate(t *testing.T, certFile string) {
 func verifyCertificateChain(t *testing.T, certChainFile string) {
 	t.Helper()
 	// open and parse certChainFile, ensure it is a TLS certificate chain
-	data, err := ioutil.ReadFile(certChainFile)
+	data, err := os.ReadFile(certChainFile)
 	if err != nil {
 		t.Fatalf("Error reading certificate file %s: %v\n", certChainFile, err)
 	}
@@ -102,17 +102,13 @@ func isPEMEncodedCert(data []byte) bool {
 
 	// Parse the certificate to ensure it is valid
 	_, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func verifyPrivateKey(t *testing.T, privKeyFile string) {
 	t.Helper()
 	// open and parse certFile, ensure it is a TLS certificate
-	data, err := ioutil.ReadFile(privKeyFile)
+	data, err := os.ReadFile(privKeyFile)
 	if err != nil {
 		t.Fatalf("Error reading private key file %s: %v\n", privKeyFile, err)
 		return
@@ -175,8 +171,5 @@ func isPEMEncodedCertChain(data []byte) bool {
 		blockCnt++
 	}
 	// we want exactly two blocks in the certificate chain - intermediate and root
-	if blockCnt != 2 {
-		return false
-	}
-	return true
+	return blockCnt == 2
 }
