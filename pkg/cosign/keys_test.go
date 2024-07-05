@@ -407,7 +407,7 @@ func TestImportPrivateKey(t *testing.T) {
 		{
 			fileName: "invalidecp224.key",
 			pemData:  invalidecp224,
-			expected: errors.New("error validating ecdsa key: unsupported ec curve, expected NIST P-256, P-384, or P-521"),
+			expected: errors.New("error validating ecdsa key: ECDSA curve P-224 not allowed"),
 		},
 		{
 			fileName: "invalidecunsupported.key",
