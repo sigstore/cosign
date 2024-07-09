@@ -247,7 +247,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	_, _, _ = mkimage(t, imgName)
 
-	_, privKeyPath, pubKeyPath := importKeyPair(t, td)
+	_, privKeyPath, pubKeyPath := importSampleKeyPair(t, td)
 
 	ctx := context.Background()
 
@@ -887,11 +887,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 	rootCert, rootKey, _ := GenerateRootCa()
 	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
-	privKeyPEM, err := ecdsaPrivateKeyToPEM(privKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	privKeyRef := mkfile(string(privKeyPEM), td, t)
+	privKeyRef := importECDSAPrivateKey(t, privKey, td, "cosign-test-key.pem")
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})

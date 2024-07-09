@@ -74,7 +74,6 @@ func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
-// TODO(jason): Move this to the only place it's used in cmd/cosign/cli/importkeypair, and unexport it.
 func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {

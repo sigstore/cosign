@@ -283,7 +283,32 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 	return keys, privKeyPath, pubKeyPath
 }
 
-func importKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
+// convert the given ecdsa.PrivateKey to a PEM encoded string, import into sigstore format,
+// and write to the given file path. Returns the path to the imported key (<td>/<fname>)
+func importECDSAPrivateKey(t *testing.T, priv *ecdsa.PrivateKey, td, fname string) string {
+	t.Helper()
+	pemBytes, err := ecdsaPrivateKeyToPEM(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// write the PEM encoded private key to a file
+	privKeyPath := filepath.Join(td, fname)
+	if err := os.WriteFile(privKeyPath, pemBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	// import the private key into sigstore format
+	keys, err := cosign.ImportKeyPair(privKeyPath, passFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cosignKeyPath := filepath.Join(td, fname)
+	if err := os.WriteFile(cosignKeyPath, keys.PrivateBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	return cosignKeyPath
+}
+
+func importSampleKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 	//nolint: gosec
 	const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAx5piWVlE62NnZ0UzJ8Z6oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+
