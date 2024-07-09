@@ -514,7 +514,7 @@ func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
 // loadCertsKeylessVerification loads certificates for the verification of keyless signatures
 // for the verify command.
 //
-// TODO(dmitris) - mention additionally verify-attestation, verify-blob, verify-blob-attestation
+// TODO - mention additionally verify-attestation, verify-blob, verify-blob-attestation
 // commands when they are extended to call this function.
 //
 // The co *cosign.CheckOpts is both input and output parameter - it gets updated
