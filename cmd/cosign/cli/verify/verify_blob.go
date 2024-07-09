@@ -263,7 +263,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return err
 		}
 	case c.CARoots != "":
-		// TODO insert CA roots + intermediates into the signature options for verification
+		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
+		// loadCertsKeylessVerification above.
 	}
 
 	// Gather the cert for the signature and add the cert along with the
