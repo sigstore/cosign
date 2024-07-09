@@ -47,6 +47,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/theupdateframework/go-tuf/encrypted"
 
 	// Initialize all known client auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -285,24 +286,16 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 
 // convert the given ecdsa.PrivateKey to a PEM encoded string, import into sigstore format,
 // and write to the given file path. Returns the path to the imported key (<td>/<fname>)
-func importECDSAPrivateKey(t *testing.T, priv *ecdsa.PrivateKey, td, fname string) string {
+func importECDSAPrivateKey(t *testing.T, privKey *ecdsa.PrivateKey, td, fname string) string {
 	t.Helper()
-	pemBytes, err := ecdsaPrivateKeyToPEM(priv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// write the PEM encoded private key to a file
-	privKeyPath := filepath.Join(td, fname)
-	if err := os.WriteFile(privKeyPath, pemBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-	// import the private key into sigstore format
-	keys, err := cosign.ImportKeyPair(privKeyPath, passFunc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	x509Encoded, _ := x509.MarshalECPrivateKey(privKey)
+	encBytes, _ := encrypted.Encrypt(x509Encoded, keyPass)
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  cosign.CosignPrivateKeyPemType,
+		Bytes: encBytes})
+
 	cosignKeyPath := filepath.Join(td, fname)
-	if err := os.WriteFile(cosignKeyPath, keys.PrivateBytes, 0600); err != nil {
+	if err := os.WriteFile(cosignKeyPath, keyPEM, 0600); err != nil {
 		t.Fatal(err)
 	}
 	return cosignKeyPath

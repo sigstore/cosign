@@ -953,7 +953,8 @@ func TestVerifyWithCARoots(t *testing.T) {
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
-		KeyRef: privKeyRef,
+		KeyRef:   privKeyRef,
+		PassFunc: passFunc,
 	}
 	blobSig, err := sign.SignBlobCmd(ro, ko, blobRef, true, "", "", false)
 	if err != nil {
@@ -970,6 +971,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 		rootRef   string
 		subRef    string
 		leafRef   string
+		skipBlob  bool // skip the verify-blob test (for cases that need the image)
 		wantError bool
 	}{
 		{
@@ -977,6 +979,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			pemleafRef,
+			false,
 			false,
 		},
 		// NB - "confusely" switching the root and intermediate PEM files does _NOT_ (currently) produce an error
@@ -991,12 +994,14 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemleafRef,
 			false,
+			false,
 		},
 		{
 			"leave out the root certificate",
 			"",
 			pemsubRef,
 			pemleafRef,
+			false,
 			true,
 		},
 		{
@@ -1004,6 +1009,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			"",
 			pemleafRef,
+			false,
 			true,
 		},
 		{
@@ -1011,6 +1017,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			"",
+			true,
 			false,
 		},
 		{
@@ -1018,6 +1025,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			pemleafRef02,
+			false,
 			true,
 		},
 		{
@@ -1026,12 +1034,14 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemsubBundleRef,
 			pemleafRef,
 			false,
+			false,
 		},
 		{
 			"wrong root and intermediates bundles",
 			pemrootRef02,
 			pemsubRef02,
 			pemleafRef,
+			false,
 			true,
 		},
 		{
@@ -1039,6 +1049,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef02,
 			pemsubBundleRef,
 			pemleafRef,
+			false,
 			true,
 		},
 		{
@@ -1046,6 +1057,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef02,
 			pemleafRef,
+			false,
 			true,
 		},
 	}
@@ -1064,6 +1076,9 @@ func TestVerifyWithCARoots(t *testing.T) {
 			} else {
 				t.Errorf("%s - unexpected error: %v", tt.name, err)
 			}
+		}
+		if tt.skipBlob {
+			continue
 		}
 		err = verifyBlobKeylessWithCARoots(blobRef,
 			string(blobSig),

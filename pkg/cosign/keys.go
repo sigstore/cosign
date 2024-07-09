@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -221,7 +222,15 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 
 	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return nil, fmt.Errorf("parsing private key: %w", err)
+		if strings.Contains(err.Error(), "x509: failed to parse private key (use ParseECPrivateKey instead for this key format)") {
+			pk2, err2 := x509.ParseECPrivateKey(x509Encoded)
+			if err2 != nil {
+				return nil, fmt.Errorf("parsing EC private key: %w, x509.ParsePKCS8PrivateKey: %w", err2, err)
+			}
+			pk = pk2
+		} else {
+			return nil, fmt.Errorf("parsing private key: %w", err)
+		}
 	}
 	switch pk := pk.(type) {
 	case *rsa.PrivateKey:
