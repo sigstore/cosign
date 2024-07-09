@@ -873,17 +873,25 @@ func TestVerifyWithCARoots(t *testing.T) {
 	td := t.TempDir()
 
 	imgName := path.Join(repo, "cosign-verify-caroots-e2e")
-
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
+	blob := "someblob2sign"
 
 	b := bytes.Buffer{}
+	blobRef := filepath.Join(td, blob)
+	if err := os.WriteFile(blobRef, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
 	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
 	rootCert, rootKey, _ := GenerateRootCa()
 	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
-
+	privKeyPEM, err := ecdsaPrivateKeyToPEM(privKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	privKeyRef := mkfile(string(privKeyPEM), td, t)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
@@ -947,6 +955,14 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Now sign the blob with one key
+	ko := options.KeyOpts{
+		KeyRef: privKeyRef,
+	}
+	blobSig, err := sign.SignBlobCmd(ro, ko, blobRef, true, "", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// the following fields with non-changing values are logically "factored out" for brevity
 	// and passed to verifyKeylessTSAWithCARoots in the testing loop:
 	// imageName string
@@ -1046,6 +1062,21 @@ func TestVerifyWithCARoots(t *testing.T) {
 			true,
 			true)
 		hasErr := (err != nil)
+		if hasErr != tt.wantError {
+			if tt.wantError {
+				t.Errorf("%s - no expected error", tt.name)
+			} else {
+				t.Errorf("%s - unexpected error: %v", tt.name, err)
+			}
+		}
+		err = verifyBlobKeylessWithCARoots(blobRef,
+			string(blobSig),
+			tt.rootRef,
+			tt.subRef,
+			tt.leafRef,
+			false,
+			false)
+		hasErr = (err != nil)
 		if hasErr != tt.wantError {
 			if tt.wantError {
 				t.Errorf("%s - no expected error", tt.name)

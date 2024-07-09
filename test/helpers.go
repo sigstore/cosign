@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -193,6 +194,28 @@ var verifyKeylessTSAWithCARoots = func(imageRef string,
 	args := []string{imageRef}
 
 	return cmd.Exec(context.Background(), args)
+}
+
+var verifyBlobKeylessWithCARoots = func(blobRef string,
+	sig string,
+	caroots string, // filename of a PEM file with CA Roots certificates
+	intermediates string, // empty or filename of a PEM file with Intermediate certificates
+	certFile string, // filename of a PEM file with the codesigning certificate
+	skipSCT bool,
+	skipTlogVerify bool) error {
+	cmd := cliverify.VerifyBlobCmd{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuerRegexp: ".*",
+			CertIdentityRegexp:   ".*",
+		},
+		SigRef:          sig,
+		CertRef:         certFile,
+		CARoots:         caroots,
+		CAIntermediates: intermediates,
+		IgnoreSCT:       skipSCT,
+		IgnoreTlog:      skipTlogVerify,
+	}
+	return cmd.Exec(context.Background(), blobRef)
 }
 
 // Used to verify local images stored on disk
@@ -726,4 +749,16 @@ func generateCertificateBundle(genIntermediate bool) (
 	}
 
 	return caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, certBundleBuf, nil
+}
+
+func ecdsaPrivateKeyToPEM(priv *ecdsa.PrivateKey) ([]byte, error) {
+	der, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return nil, err
+	}
+	block := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: der,
+	}
+	return pem.EncodeToMemory(block), nil
 }
