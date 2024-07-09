@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -35,13 +36,90 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	"github.com/stretchr/testify/assert"
 )
+
+type certData struct {
+	RootCert    *x509.Certificate
+	RootKey     *ecdsa.PrivateKey
+	SubCert     *x509.Certificate
+	SubKey      *ecdsa.PrivateKey
+	LeafCert    *x509.Certificate
+	PrivKey     *ecdsa.PrivateKey
+	RootCertPEM []byte
+	SubCertPEM  []byte
+	LeafCertPEM []byte
+}
+
+func getTestCerts(t *testing.T) *certData {
+	t.Helper()
+	eexts := []pkix.Extension{
+		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 2}, Value: []byte("myWorkflowTrigger")},
+		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 3}, Value: []byte("myWorkflowSha")},
+		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 4}, Value: []byte("myWorkflowName")},
+		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 5}, Value: []byte("myWorkflowRepository")},
+		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 6}, Value: []byte("myWorkflowRef")},
+	}
+	cd := &certData{}
+	var err error
+	if cd.RootCert, cd.RootKey, err = test.GenerateRootCa(); err != nil {
+		t.Fatal(err)
+	}
+	if cd.SubCert, cd.SubKey, err = test.GenerateSubordinateCa(cd.RootCert, cd.RootKey); err != nil {
+		t.Fatal(err)
+	}
+	if cd.LeafCert, cd.PrivKey, err = test.GenerateLeafCert("subject", "oidc-issuer", cd.SubCert, cd.SubKey, eexts...); err != nil {
+		t.Fatal(err)
+	}
+	cd.RootCertPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cd.RootCert.Raw})
+	cd.SubCertPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cd.SubCert.Raw})
+	cd.LeafCertPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cd.LeafCert.Raw})
+	return cd
+}
+
+func makeCertChainFile(t *testing.T, rootCert, subCert, leafCert []byte) string {
+	t.Helper()
+	f, err := os.CreateTemp("", "certchain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	_, err = f.Write(append(append(rootCert, subCert...), leafCert...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f.Name()
+}
+
+func makeRootsIntermediatesFiles(t *testing.T, roots, intermediates []byte) (string, string) {
+	t.Helper()
+	rootF, err := os.CreateTemp("", "roots")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rootF.Close()
+	_, err = rootF.Write(roots)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateF, err := os.CreateTemp("", "intermediates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer intermediateF.Close()
+	_, err = intermediateF.Write(intermediates)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rootF.Name(), intermediateF.Name()
+}
 
 func TestPrintVerification(t *testing.T) {
 	// while we are adding a more human-readable output for cert extensions, on the other hand
@@ -76,22 +154,9 @@ func TestPrintVerification(t *testing.T) {
     }
 ]
 `
-	eexts := []pkix.Extension{
-		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 2}, Value: []byte("myWorkflowTrigger")},
-		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 3}, Value: []byte("myWorkflowSha")},
-		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 4}, Value: []byte("myWorkflowName")},
-		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 5}, Value: []byte("myWorkflowRepository")},
-		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 6}, Value: []byte("myWorkflowRef")},
-	}
-	rootCert, rootKey, _ := test.GenerateRootCa()
-	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey, eexts...)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-
+	certs := getTestCerts(t)
 	rootPool := x509.NewCertPool()
-	rootPool.AddCert(rootCert)
+	rootPool.AddCert(certs.RootCert)
 
 	// Generate the payload for the image, and check the digest.
 	b := bytes.Buffer{}
@@ -107,11 +172,11 @@ func TestPrintVerification(t *testing.T) {
 
 	p := b.Bytes()
 	h := sha256.Sum256(p)
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	signature, _ := certs.PrivKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	ociSig, _ := static.NewSignature(p,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+		static.WithCertChain(certs.LeafCertPEM, appendSlices([][]byte{certs.SubCertPEM, certs.RootCertPEM})))
 
 	captureOutput := func(f func()) string {
 		reader, writer, err := os.Pipe()
@@ -196,5 +261,88 @@ func TestVerifyCertMissingIssuer(t *testing.T) {
 	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
 	if err == nil {
 		t.Fatal("verify expected 'need --certificate-oidc-issuer'")
+	}
+}
+
+func TestLoadCertsKeylessVerification(t *testing.T) {
+	certs := getTestCerts(t)
+	certChainFile := makeCertChainFile(t, certs.RootCertPEM, certs.SubCertPEM, certs.LeafCertPEM)
+	rootsFile, intermediatesFile := makeRootsIntermediatesFiles(t, certs.RootCertPEM, certs.SubCertPEM)
+	tests := []struct {
+		name             string
+		certChain        string
+		caRoots          string
+		caIntermediates  string
+		co               *cosign.CheckOpts
+		sigstoreRootFile string
+		wantErr          bool
+	}{
+		{
+			name:    "default fulcio",
+			wantErr: false,
+		},
+		{
+			name:             "non-existent SIGSTORE_ROOT_FILE",
+			sigstoreRootFile: "tesdata/nosuch-asdfjkl.pem",
+			wantErr:          true,
+		},
+		{
+			name:      "good certchain",
+			certChain: certChainFile,
+			wantErr:   false,
+		},
+		{
+			name:      "bad certchain",
+			certChain: "testdata/nosuch-certchain-file.pem",
+			wantErr:   true,
+		},
+		{
+			name:    "roots",
+			caRoots: rootsFile,
+			wantErr: false,
+		},
+		{
+			name:    "bad roots",
+			caRoots: "testdata/nosuch-roots-file.pem",
+			wantErr: true,
+		},
+		{
+			name:            "roots and intermediate",
+			caRoots:         rootsFile,
+			caIntermediates: intermediatesFile,
+			wantErr:         false,
+		},
+		{
+			name:            "bad roots good intermediate",
+			caRoots:         "testdata/nosuch-roots-file.pem",
+			caIntermediates: intermediatesFile,
+			wantErr:         true,
+		},
+		{
+			name:            "good roots bad intermediate",
+			caRoots:         rootsFile,
+			caIntermediates: "testdata/nosuch-intermediates-file.pem",
+			wantErr:         true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.sigstoreRootFile != "" {
+				os.Setenv("SIGSTORE_ROOT_FILE", tt.sigstoreRootFile)
+			} else {
+				t.Setenv("SIGSTORE_ROOT_FILE", "")
+			}
+			fulcioroots.ReInit()
+			if tt.co == nil {
+				tt.co = &cosign.CheckOpts{}
+			}
+
+			err := loadCertsKeylessVerification(tt.certChain, tt.caRoots, tt.caIntermediates, tt.co)
+			if err == nil && tt.wantErr {
+				t.Fatalf("expected error but got none")
+			} else if err != nil && !tt.wantErr {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }

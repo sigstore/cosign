@@ -86,7 +86,6 @@ func verifyCertificateChain(t *testing.T, certChainFile string) {
 	}
 
 	// Check if the file contents are a PEM-encoded TLS certificate
-	t.Logf("DMDEBUG 76 before isPEMEncodedCertChain")
 	if !isPEMEncodedCertChain(data) {
 		t.Fatalf("file %s doesn't contain a valid PEM-encoded TLS certificate chain", certChainFile)
 	}
