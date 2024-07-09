@@ -47,7 +47,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/theupdateframework/go-tuf/encrypted"
+	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 
 	// Initialize all known client auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -767,16 +767,4 @@ func generateCertificateBundle(genIntermediate bool) (
 	}
 
 	return caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, certBundleBuf, nil
-}
-
-func ecdsaPrivateKeyToPEM(priv *ecdsa.PrivateKey) ([]byte, error) {
-	der, err := x509.MarshalECPrivateKey(priv)
-	if err != nil {
-		return nil, err
-	}
-	block := &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: der,
-	}
-	return pem.EncodeToMemory(block), nil
 }
