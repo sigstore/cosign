@@ -515,9 +515,6 @@ func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
 // loadCertsKeylessVerification loads certificates provided as a certificate chain or CA roots + CA intermediate
 // certificate files. If both certChain and caRootsFile are empty strings, the Fulcio roots are loaded.
 //
-// TODO - mention additionally verify-attestation, verify-blob, verify-blob-attestation
-// commands when they are extended to call this function.
-//
 // The co *cosign.CheckOpts is both input and output parameter - it gets updated
 // with the root and intermediate certificates needed for verification.
 func loadCertsKeylessVerification(certChainFile string,
