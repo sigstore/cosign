@@ -114,14 +114,14 @@ against the transparency log.`,
 				CheckClaims:                  o.CheckClaims,
 				KeyRef:                       o.Key,
 				CertRef:                      o.CertVerify.Cert,
+				CertChain:                    o.CertVerify.CertChain,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
+				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				CARoots:                      o.CertVerify.CARoots,
-				CertChain:                    o.CertVerify.CertChain,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				SCTRef:                       o.CertVerify.SCT,
 				Sk:                           o.SecurityKey.Use,
@@ -223,6 +223,8 @@ against the transparency log.`,
 				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
+				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
@@ -281,6 +283,12 @@ The blob may be specified as a path to a file or - for stdin.`,
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
+# Verify a signature with certificate and CA certificate chain
+  cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
+
+  # Verify a signature with CA roots and optional intermediate certificates
+  cosign verify-blob --certificate cert.pem --ca-roots caroots.pem [--ca-intermediates caintermediates.pem] --signature $sig <blob>
+
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
 
@@ -333,6 +341,8 @@ The blob may be specified as a path to a file or - for stdin.`,
 				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
+				CARoots:                      o.CertVerify.CARoots,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
 				SigRef:                       o.Signature,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
@@ -402,6 +412,8 @@ The blob may be specified as a path to a file.`,
 				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
+				CARoots:                      o.CertVerify.CARoots,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,

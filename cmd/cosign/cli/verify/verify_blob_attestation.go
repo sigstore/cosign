@@ -30,7 +30,6 @@ import (
 	"path/filepath"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	internal "github.com/sigstore/cosign/v2/internal/pkg/cosign"
@@ -52,8 +51,10 @@ type VerifyBlobAttestationCommand struct {
 	options.KeyOpts
 	options.CertVerifyOptions
 
-	CertRef   string
-	CertChain string
+	CertRef         string
+	CertChain       string
+	CAIntermediates string
+	CARoots         string
 
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSHA        string
@@ -170,20 +171,11 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
-		// Use default TUF roots if a cert chain is not provided.
-		// This performs an online fetch of the Fulcio roots. This is needed
-		// for verifying keyless certificates (both online and offline).
-		if c.CertChain == "" {
-			co.RootCerts, err = fulcio.GetRoots()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio roots: %w", err)
-			}
-			co.IntermediateCerts, err = fulcio.GetIntermediates()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio intermediates: %w", err)
-			}
+		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
+			return err
 		}
 	}
+
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
 	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)

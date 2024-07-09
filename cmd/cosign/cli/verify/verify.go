@@ -179,6 +179,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return err
 		}
 	}
+
 	keyRef := c.KeyRef
 	certRef := c.CertRef
 
@@ -511,15 +512,14 @@ func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
 	return true
 }
 
-// loadCertsKeylessVerification loads certificates for the verification of keyless signatures
-// for the verify command.
+// loadCertsKeylessVerification loads certificates provided as a certificate chain or CA roots + CA intermediate
+// certificate files. If both certChain and caRootsFile are empty strings, the Fulcio roots are loaded.
 //
 // TODO - mention additionally verify-attestation, verify-blob, verify-blob-attestation
 // commands when they are extended to call this function.
 //
 // The co *cosign.CheckOpts is both input and output parameter - it gets updated
 // with the root and intermediate certificates needed for verification.
-// If both certChain and caRootsFile are empty strings, the Fulcio roots are loaded.
 func loadCertsKeylessVerification(certChainFile string,
 	caRootsFile string,
 	caIntermediatesFile string,
@@ -574,5 +574,6 @@ func loadCertsKeylessVerification(certChainFile string,
 			return fmt.Errorf("getting Fulcio intermediates: %w", err)
 		}
 	}
+
 	return nil
 }
