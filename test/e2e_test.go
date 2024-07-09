@@ -1085,8 +1085,8 @@ func TestVerifyWithCARoots(t *testing.T) {
 			tt.rootRef,
 			tt.subRef,
 			tt.leafRef,
-			false,
-			false)
+			true,
+			true)
 		hasErr = (err != nil)
 		if hasErr != tt.wantError {
 			if tt.wantError {
