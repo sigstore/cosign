@@ -58,7 +58,6 @@ type Keys struct {
 	public  crypto.PublicKey
 }
 
-// TODO(jason): Move this to an internal package.
 type KeysBytes struct {
 	PrivateBytes []byte
 	PublicBytes  []byte
@@ -69,12 +68,16 @@ func (k *KeysBytes) Password() []byte {
 	return k.password
 }
 
-// TODO(jason): Move this to an internal package.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
-// TODO(jason): Move this to the only place it's used in cmd/cosign/cli/importkeypair, and unexport it.
+// ImportKeyPair imports a key pair from a file containing a PEM-encoded
+// private key encoded with a password provided by the 'pf' function.
+// The private key can be in one of the following formats:
+// - RSA private key (PKCS #1)
+// - ECDSA private key
+// - PKCS #8 private key (RSA, ECDSA or ED25519).
 func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
@@ -180,7 +183,6 @@ func marshalKeyPair(ptype string, keypair Keys, pf PassFunc) (key *KeysBytes, er
 	}, nil
 }
 
-// TODO(jason): Move this to an internal package.
 func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	priv, err := GeneratePrivateKey()
 	if err != nil {
@@ -191,7 +193,6 @@ func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(SigstorePrivateKeyPemType, Keys{priv, priv.Public()}, pf)
 }
 
-// TODO(jason): Move this to an internal package.
 func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
@@ -204,7 +205,13 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	return ecdsaPub, nil
 }
 
-// TODO(jason): Move this to pkg/signature, the only place it's used, and unimport it.
+// LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
+// and returns a SignerVerifier instance.
+//
+// Once decrypted, the private key can be in one of the following formats:
+// - RSA private key (PKCS #1)
+// - ECDSA private key
+// - PKCS #8 private key (RSA, ECDSA or ED25519).
 func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
@@ -219,10 +226,9 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decrypt: %w", err)
 	}
-
-	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
+	pk, err := parsePrivateKey(x509Encoded)
 	if err != nil {
-		return nil, fmt.Errorf("parsing private key: %w", err)
+		return nil, err
 	}
 	switch pk := pk.(type) {
 	case *rsa.PrivateKey:
@@ -234,4 +240,19 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	default:
 		return nil, errors.New("unsupported key type")
 	}
+}
+
+// given already decrypted blob with x509 encoded private key, try different x509.Parse<*>PrivateKey
+// functions to load it.
+func parsePrivateKey(key []byte) (crypto.PrivateKey, error) {
+	if pk, err := x509.ParsePKCS8PrivateKey(key); err == nil {
+		return pk, nil
+	}
+	if pk, err := x509.ParseECPrivateKey(key); err == nil {
+		return pk, nil
+	}
+	if pk, err := x509.ParsePKCS1PrivateKey(key); err == nil {
+		return pk, nil
+	}
+	return nil, errors.New("parse private key: unknown type")
 }
