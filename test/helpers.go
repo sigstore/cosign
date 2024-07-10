@@ -288,7 +288,7 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 // and write to the given file path. Returns the path to the imported key (<td>/<fname>)
 func importECDSAPrivateKey(t *testing.T, privKey *ecdsa.PrivateKey, td, fname string) string {
 	t.Helper()
-	x509Encoded, _ := x509.MarshalECPrivateKey(privKey)
+	x509Encoded, _ := x509.MarshalPKCS8PrivateKey(privKey)
 	encBytes, _ := encrypted.Encrypt(x509Encoded, keyPass)
 	keyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  cosign.CosignPrivateKeyPemType,

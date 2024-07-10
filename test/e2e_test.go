@@ -1062,39 +1062,40 @@ func TestVerifyWithCARoots(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		err := verifyKeylessTSAWithCARoots(imgName,
-			tt.rootRef,
-			tt.subRef,
-			tt.leafRef,
-			tsaChainRef.Name(),
-			true,
-			true)
-		hasErr := (err != nil)
-		if hasErr != tt.wantError {
-			if tt.wantError {
-				t.Errorf("%s - no expected error", tt.name)
-			} else {
-				t.Errorf("%s - unexpected error: %v", tt.name, err)
+		t.Run(tt.name, func(t *testing.T) {
+			err := verifyKeylessTSAWithCARoots(imgName,
+				tt.rootRef,
+				tt.subRef,
+				tt.leafRef,
+				tsaChainRef.Name(),
+				true,
+				true)
+			hasErr := (err != nil)
+			if hasErr != tt.wantError {
+				if tt.wantError {
+					t.Errorf("%s - no expected error", tt.name)
+				} else {
+					t.Errorf("%s - unexpected error: %v", tt.name, err)
+				}
 			}
-		}
-		if tt.skipBlob {
-			continue
-		}
-		err = verifyBlobKeylessWithCARoots(blobRef,
-			string(blobSig),
-			tt.rootRef,
-			tt.subRef,
-			tt.leafRef,
-			true,
-			true)
-		hasErr = (err != nil)
-		if hasErr != tt.wantError {
-			if tt.wantError {
-				t.Errorf("%s - no expected error", tt.name)
-			} else {
-				t.Errorf("%s - unexpected error: %v", tt.name, err)
+			if !tt.skipBlob {
+				err = verifyBlobKeylessWithCARoots(blobRef,
+					string(blobSig),
+					tt.rootRef,
+					tt.subRef,
+					tt.leafRef,
+					true,
+					true)
+				hasErr = (err != nil)
+				if hasErr != tt.wantError {
+					if tt.wantError {
+						t.Errorf("%s - no expected error", tt.name)
+					} else {
+						t.Errorf("%s - unexpected error: %v", tt.name, err)
+					}
+				}
 			}
-		}
+		})
 	}
 }
 
