@@ -58,7 +58,6 @@ type Keys struct {
 	public  crypto.PublicKey
 }
 
-// TODO(jason): Move this to an internal package.
 type KeysBytes struct {
 	PrivateBytes []byte
 	PublicBytes  []byte
@@ -69,12 +68,17 @@ func (k *KeysBytes) Password() []byte {
 	return k.password
 }
 
-// TODO(jason): Move this to an internal package.
+// GeneratePrivateKey generates an ECDSA private key with the P-256 curve.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
-// TODO(jason): Move this to the only place it's used in cmd/cosign/cli/importkeypair, and unexport it.
+// ImportKeyPair imports a key pair from a file containing a PEM-encoded
+// private key encoded with a password provided by the 'pf' function.
+// The private key can be in one of the following formats:
+// - RSA private key (PKCS #1)
+// - ECDSA private key
+// - PKCS #8 private key (RSA, ECDSA or ED25519).
 func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 	kb, err := os.ReadFile(filepath.Clean(keyPath))
 	if err != nil {
@@ -180,7 +184,6 @@ func marshalKeyPair(ptype string, keypair Keys, pf PassFunc) (key *KeysBytes, er
 	}, nil
 }
 
-// TODO(jason): Move this to an internal package.
 func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	priv, err := GeneratePrivateKey()
 	if err != nil {
@@ -191,7 +194,7 @@ func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(SigstorePrivateKeyPemType, Keys{priv, priv.Public()}, pf)
 }
 
-// TODO(jason): Move this to an internal package.
+// PemToECDSAKey marshals and returns the PEM-encoded ECDSA public key.
 func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
@@ -204,7 +207,8 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	return ecdsaPub, nil
 }
 
-// TODO(jason): Move this to pkg/signature, the only place it's used, and unimport it.
+// LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
+// and returns a SignerVerifier instance. The private key must be in the PKCS #8 format.
 func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
@@ -219,7 +223,6 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decrypt: %w", err)
 	}
-
 	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
