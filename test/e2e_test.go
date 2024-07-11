@@ -1045,7 +1045,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			true,
 		},
 		{
-			"wrong root undle",
+			"wrong root bundle",
 			pemrootRef02,
 			pemsubBundleRef,
 			pemleafRef,
