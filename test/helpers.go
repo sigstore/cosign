@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -46,6 +47,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 
 	// Initialize all known client auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -195,6 +197,28 @@ var verifyKeylessTSAWithCARoots = func(imageRef string,
 	return cmd.Exec(context.Background(), args)
 }
 
+var verifyBlobKeylessWithCARoots = func(blobRef string,
+	sig string,
+	caroots string, // filename of a PEM file with CA Roots certificates
+	intermediates string, // empty or filename of a PEM file with Intermediate certificates
+	certFile string, // filename of a PEM file with the codesigning certificate
+	skipSCT bool,
+	skipTlogVerify bool) error {
+	cmd := cliverify.VerifyBlobCmd{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuerRegexp: ".*",
+			CertIdentityRegexp:   ".*",
+		},
+		SigRef:          sig,
+		CertRef:         certFile,
+		CARoots:         caroots,
+		CAIntermediates: intermediates,
+		IgnoreSCT:       skipSCT,
+		IgnoreTlog:      skipTlogVerify,
+	}
+	return cmd.Exec(context.Background(), blobRef)
+}
+
 // Used to verify local images stored on disk
 var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
 	cmd := cliverify.VerifyCommand{
@@ -260,7 +284,24 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 	return keys, privKeyPath, pubKeyPath
 }
 
-func importKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
+// convert the given ecdsa.PrivateKey to a PEM encoded string, import into sigstore format,
+// and write to the given file path. Returns the path to the imported key (<td>/<fname>)
+func importECDSAPrivateKey(t *testing.T, privKey *ecdsa.PrivateKey, td, fname string) string {
+	t.Helper()
+	x509Encoded, _ := x509.MarshalPKCS8PrivateKey(privKey)
+	encBytes, _ := encrypted.Encrypt(x509Encoded, keyPass)
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  cosign.CosignPrivateKeyPemType,
+		Bytes: encBytes})
+
+	cosignKeyPath := filepath.Join(td, fname)
+	if err := os.WriteFile(cosignKeyPath, keyPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+	return cosignKeyPath
+}
+
+func importSampleKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 	//nolint: gosec
 	const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAx5piWVlE62NnZ0UzJ8Z6oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+

@@ -52,6 +52,8 @@ type VerifyAttestationCommand struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
+	CAIntermediates              string
+	CARoots                      string
 	CertChain                    string
 	IgnoreSCT                    bool
 	SCTRef                       string
@@ -156,15 +158,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	if keylessVerification(c.KeyRef, c.Sk) {
-		// This performs an online fetch of the Fulcio roots. This is needed
-		// for verifying keyless certificates (both online and offline).
-		co.RootCerts, err = fulcio.GetRoots()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio roots: %w", err)
-		}
-		co.IntermediateCerts, err = fulcio.GetIntermediates()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
+			return err
 		}
 	}
 
@@ -228,6 +223,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 			co.SCT = sct
 		}
+	case c.CARoots != "":
+		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
+		// loadCertsKeylessVerification above.
 	}
 
 	// NB: There are only 2 kinds of verification right now:

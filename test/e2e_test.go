@@ -247,7 +247,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	_, _, _ = mkimage(t, imgName)
 
-	_, privKeyPath, pubKeyPath := importKeyPair(t, td)
+	_, privKeyPath, pubKeyPath := importSampleKeyPair(t, td)
 
 	ctx := context.Background()
 
@@ -873,17 +873,21 @@ func TestVerifyWithCARoots(t *testing.T) {
 	td := t.TempDir()
 
 	imgName := path.Join(repo, "cosign-verify-caroots-e2e")
-
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
+	blob := "someblob2sign"
 
 	b := bytes.Buffer{}
+	blobRef := filepath.Join(td, blob)
+	if err := os.WriteFile(blobRef, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
 	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
 	rootCert, rootKey, _ := GenerateRootCa()
 	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
-
+	privKeyRef := importECDSAPrivateKey(t, privKey, td, "cosign-test-key.pem")
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
@@ -947,6 +951,15 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Now sign the blob with one key
+	ko := options.KeyOpts{
+		KeyRef:   privKeyRef,
+		PassFunc: passFunc,
+	}
+	blobSig, err := sign.SignBlobCmd(ro, ko, blobRef, true, "", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// the following fields with non-changing values are logically "factored out" for brevity
 	// and passed to verifyKeylessTSAWithCARoots in the testing loop:
 	// imageName string
@@ -958,6 +971,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 		rootRef   string
 		subRef    string
 		leafRef   string
+		skipBlob  bool // skip the verify-blob test (for cases that need the image)
 		wantError bool
 	}{
 		{
@@ -965,6 +979,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			pemleafRef,
+			false,
 			false,
 		},
 		// NB - "confusely" switching the root and intermediate PEM files does _NOT_ (currently) produce an error
@@ -979,12 +994,14 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemleafRef,
 			false,
+			false,
 		},
 		{
 			"leave out the root certificate",
 			"",
 			pemsubRef,
 			pemleafRef,
+			false,
 			true,
 		},
 		{
@@ -992,6 +1009,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			"",
 			pemleafRef,
+			false,
 			true,
 		},
 		{
@@ -999,6 +1017,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			"",
+			true,
 			false,
 		},
 		{
@@ -1006,6 +1025,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			pemleafRef02,
+			false,
 			true,
 		},
 		{
@@ -1014,19 +1034,22 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemsubBundleRef,
 			pemleafRef,
 			false,
+			false,
 		},
 		{
 			"wrong root and intermediates bundles",
 			pemrootRef02,
 			pemsubRef02,
 			pemleafRef,
+			false,
 			true,
 		},
 		{
-			"wrong root undle",
+			"wrong root bundle",
 			pemrootRef02,
 			pemsubBundleRef,
 			pemleafRef,
+			false,
 			true,
 		},
 		{
@@ -1034,25 +1057,45 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef02,
 			pemleafRef,
+			false,
 			true,
 		},
 	}
 	for _, tt := range tests {
-		err := verifyKeylessTSAWithCARoots(imgName,
-			tt.rootRef,
-			tt.subRef,
-			tt.leafRef,
-			tsaChainRef.Name(),
-			true,
-			true)
-		hasErr := (err != nil)
-		if hasErr != tt.wantError {
-			if tt.wantError {
-				t.Errorf("%s - no expected error", tt.name)
-			} else {
-				t.Errorf("%s - unexpected error: %v", tt.name, err)
+		t.Run(tt.name, func(t *testing.T) {
+			err := verifyKeylessTSAWithCARoots(imgName,
+				tt.rootRef,
+				tt.subRef,
+				tt.leafRef,
+				tsaChainRef.Name(),
+				true,
+				true)
+			hasErr := (err != nil)
+			if hasErr != tt.wantError {
+				if tt.wantError {
+					t.Errorf("%s - no expected error", tt.name)
+				} else {
+					t.Errorf("%s - unexpected error: %v", tt.name, err)
+				}
 			}
-		}
+			if !tt.skipBlob {
+				err = verifyBlobKeylessWithCARoots(blobRef,
+					string(blobSig),
+					tt.rootRef,
+					tt.subRef,
+					tt.leafRef,
+					true,
+					true)
+				hasErr = (err != nil)
+				if hasErr != tt.wantError {
+					if tt.wantError {
+						t.Errorf("%s - no expected error", tt.name)
+					} else {
+						t.Errorf("%s - unexpected error: %v", tt.name, err)
+					}
+				}
+			}
+		})
 	}
 }
 
