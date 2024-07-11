@@ -359,6 +359,7 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 }
 
 func TestReadingPrivatePemTypes(t *testing.T) {
+	pemECErrMsg := "parsing private key: x509: failed to parse private key (use ParseECPrivateKey instead for this key format)"
 	testCases := []struct {
 		pemType  string
 		pemData  []byte
@@ -372,7 +373,7 @@ func TestReadingPrivatePemTypes(t *testing.T) {
 		{
 			pemType:  "COSIGN PEM EC Type",
 			pemData:  []byte(pemcosigneckey),
-			expected: nil,
+			expected: errors.New(pemECErrMsg),
 		},
 		{
 			pemType:  "SISTORE PEM Type",
@@ -384,7 +385,11 @@ func TestReadingPrivatePemTypes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.pemType, func(t *testing.T) {
 			_, err := LoadPrivateKey(tc.pemData, []byte("hello"))
-			require.Equal(t, tc.expected, err)
+			if tc.expected == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tc.expected.Error())
+			}
 		})
 	}
 }

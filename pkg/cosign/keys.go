@@ -68,6 +68,7 @@ func (k *KeysBytes) Password() []byte {
 	return k.password
 }
 
+// GeneratePrivateKey generates an ECDSA private key with the P-256 curve.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
@@ -193,6 +194,7 @@ func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(SigstorePrivateKeyPemType, Keys{priv, priv.Public()}, pf)
 }
 
+// PemToECDSAKey marshals and returns the PEM-encoded ECDSA public key.
 func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
 	if err != nil {
@@ -206,12 +208,7 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 }
 
 // LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
-// and returns a SignerVerifier instance.
-//
-// Once decrypted, the private key can be in one of the following formats:
-// - RSA private key (PKCS #1)
-// - ECDSA private key
-// - PKCS #8 private key (RSA, ECDSA or ED25519).
+// and returns a SignerVerifier instance. The private key must be in the PKCS #8 format.
 func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
@@ -226,9 +223,9 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decrypt: %w", err)
 	}
-	pk, err := parsePrivateKey(x509Encoded)
+	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
 	switch pk := pk.(type) {
 	case *rsa.PrivateKey:
@@ -240,19 +237,4 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	default:
 		return nil, errors.New("unsupported key type")
 	}
-}
-
-// given already decrypted blob with x509 encoded private key, try different x509.Parse<*>PrivateKey
-// functions to load it.
-func parsePrivateKey(key []byte) (crypto.PrivateKey, error) {
-	if pk, err := x509.ParsePKCS8PrivateKey(key); err == nil {
-		return pk, nil
-	}
-	if pk, err := x509.ParseECPrivateKey(key); err == nil {
-		return pk, nil
-	}
-	if pk, err := x509.ParsePKCS1PrivateKey(key); err == nil {
-		return pk, nil
-	}
-	return nil, errors.New("parse private key: unknown type")
 }
