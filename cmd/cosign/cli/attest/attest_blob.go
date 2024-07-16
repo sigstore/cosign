@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -186,7 +187,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		}
 	}
 
-	rekorBytes, err := sv.Bytes(ctx)
+	signer, err := sv.Bytes(ctx)
 	if err != nil {
 		return err
 	}
@@ -201,9 +202,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return err
 		}
 		if c.RekorEntryType == "intoto" {
-			rekorEntry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+			rekorEntry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, signer)
 		} else {
-			rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
+			rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, signer)
 		}
 
 		if err != nil {
@@ -216,17 +217,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if c.BundlePath != "" {
 		var contents []byte
 		if c.NewBundleFormat {
-			signer, err := sv.Bytes(ctx)
-			if err != nil {
-				return fmt.Errorf("error getting signer: %w", err)
-			}
-			contents, err = makeNewBundle(rekorEntry, payload, sig, signer, timestampBytes, c.PredicateType)
+			contents, err = makeNewBundle(sv, rekorEntry, payload, sig, signer, timestampBytes, c.PredicateType)
 			if err != nil {
 				return err
 			}
 		} else {
 			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-			signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+			signedPayload.Cert = base64.StdEncoding.EncodeToString(signer)
 
 			contents, err = json.Marshal(signedPayload)
 			if err != nil {
@@ -282,14 +279,22 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	return nil
 }
 
-func makeNewBundle(rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte, payloadType string) ([]byte, error) {
+func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte, payloadType string) ([]byte, error) {
 	// Determine if signature is certificate or not
 	var hint string
 	var rawCert []byte
 
 	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
 	if err != nil || len(cert) == 0 {
-		hashedBytes := sha256.Sum256(signer)
+		pubKey, err := sv.PublicKey()
+		if err != nil {
+			return nil, err
+		}
+		pkixPubKey, err := x509.MarshalPKIXPublicKey(pubKey)
+		if err != nil {
+			return nil, err
+		}
+		hashedBytes := sha256.Sum256(pkixPubKey)
 		hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
 	} else {
 		rawCert = cert[0].Raw

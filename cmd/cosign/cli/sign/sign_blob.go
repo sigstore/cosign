@@ -18,6 +18,7 @@ package sign
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -156,7 +157,15 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			}
 			cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
 			if err != nil || len(cert) == 0 {
-				hashedBytes := sha256.Sum256(signer)
+				pubKey, err := sv.PublicKey()
+				if err != nil {
+					return nil, err
+				}
+				pkixPubKey, err := x509.MarshalPKIXPublicKey(pubKey)
+				if err != nil {
+					return nil, err
+				}
+				hashedBytes := sha256.Sum256(pkixPubKey)
 				hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
 			} else {
 				rawCert = cert[0].Raw
