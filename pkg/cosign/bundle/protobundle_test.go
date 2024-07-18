@@ -20,7 +20,6 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	// for type lookup that's part of hashedrekord serialization
 	_ "github.com/sigstore/rekor/pkg/types/hashedrekord"
 	_ "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 )
