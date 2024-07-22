@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -48,7 +49,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
+	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -135,7 +136,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return fmt.Errorf("getting signer: %w", err)
 	}
 	defer sv.Close()
-	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
+	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)
 
 	base := path.Base(artifactPath)
 
@@ -217,7 +218,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if c.BundlePath != "" {
 		var contents []byte
 		if c.NewBundleFormat {
-			contents, err = makeNewBundle(sv, rekorEntry, payload, sig, signer, timestampBytes, c.PredicateType)
+			contents, err = makeNewBundle(sv, rekorEntry, payload, sig, signer, timestampBytes)
 			if err != nil {
 				return err
 			}
@@ -279,7 +280,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	return nil
 }
 
-func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte, payloadType string) ([]byte, error) {
+func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte) ([]byte, error) {
 	// Determine if signature is certificate or not
 	var hint string
 	var rawCert []byte
@@ -305,13 +306,28 @@ func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, pay
 		return nil, err
 	}
 
+	var envelope dsse.Envelope
+	err = json.Unmarshal(sig, &envelope)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(envelope.Signatures) == 0 {
+		return nil, fmt.Errorf("no signature in DSSE envelope")
+	}
+
+	sigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
+	if err != nil {
+		return nil, err
+	}
+
 	bundle.Content = &protobundle.Bundle_DsseEnvelope{
 		DsseEnvelope: &protodsse.Envelope{
 			Payload:     payload,
-			PayloadType: payloadType,
+			PayloadType: envelope.PayloadType,
 			Signatures: []*protodsse.Signature{
 				{
-					Sig: sig,
+					Sig: sigBytes,
 				},
 			},
 		},
