@@ -1,3 +1,50 @@
+# v2.3.0
+
+## Features
+
+* Add PayloadProvider interface to decouple AttestationToPayloadJSON from oci.Signature interface (#3693)
+* add registry options to cosign save (#3645)
+* Add debug providers command. (#3728)
+* Make config layers in ociremote mountable (#3741)
+* upgrade to go1.22 (#3739)
+* adds tsa cert chain check for env var or tuf targets. (#3600)
+* add --ca-roots and --ca-intermediates flags to 'cosign verify' (#3464)
+* add handling of keyless verification for all verify commands (#3761)
+
+## Bug Fixes
+
+* fix: close attestationFile (#3679)
+* Set `bundleVerified` to true after Rekor verification (Resolves #3740)  (#3745)
+
+## Documentation
+
+* Document ImportKeyPair and LoadPrivateKey functions in pkg/cosign (#3776)
+
+## Testing
+
+* Refactor KMS E2E tests (#3684)
+* Remove sign\_blob\_test.sh test (#3707)
+* Remove KMS E2E test script (#3702)
+* Refactor insecure registry E2E tests (#3701)
+
+## Contributors
+
+* Billy Lynch
+* bminahan73
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Cody Soyland
+* Colleen Murphy
+* Dmitry Savintsev
+* guangwu
+* Hayden B
+* Hector Fernandez
+* ian hundere
+* Jason Power
+* Jon Johnson
+* Max Lambrecht
+* Meeki1l
+
 # v2.2.4
 
 ## Bug Fixes
