@@ -56,6 +56,7 @@ type VerifyBlobCmd struct {
 	CARoots                      string
 	CertChain                    string
 	SigRef                       string
+	TrustedRootPath              string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSHA        string
 	CertGithubWorkflowName       string
@@ -81,9 +82,6 @@ func (c *VerifyBlobCmd) loadTSACertificates(ctx context.Context) (*cosign.TSACer
 
 // nolint
 func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
-	var cert *x509.Certificate
-	opts := make([]static.Option, 0)
-
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
 		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --certificate, or a bundle with --bundle")
@@ -93,6 +91,17 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	if options.NOf(c.KeyRef, c.Sk, c.CertRef) > 1 {
 		return &options.PubKeyParseError{}
 	}
+
+	if c.KeyOpts.NewBundleFormat {
+		err := verifyNewBundle(ctx, c.BundlePath, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, blobRef, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+		if err == nil {
+			ui.Infof(ctx, "Verified OK")
+		}
+		return err
+	}
+
+	var cert *x509.Certificate
+	opts := make([]static.Option, 0)
 
 	var identities []cosign.Identity
 	var err error
