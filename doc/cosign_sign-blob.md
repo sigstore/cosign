@@ -45,6 +45,7 @@ cosign sign-blob [flags]
       --insecure-skip-verify             skip verifying fulcio published to the SCT (this should only be used for testing).
       --issue-certificate                issue a code signing certificate from Fulcio, even if a key is provided
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
+      --new-bundle-format                output bundle in new format that contains all verification material
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string   Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read

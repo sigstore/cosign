@@ -122,6 +122,7 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				keyref       string
 				certref      string
 				certchainref string
+				newBundle    bool
 				errString    string
 			}{
 				{
@@ -132,6 +133,12 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 					name:    "cert matches key",
 					keyref:  keyRef,
 					certref: certRef,
+				},
+				{
+					name:      "new bundle generation",
+					keyref:    keyRef,
+					certref:   certRef,
+					newBundle: true,
 				},
 				{
 					name:      "fail: cert no match key",
@@ -160,8 +167,12 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
+					keyOpts := options.KeyOpts{KeyRef: tc.keyref}
+					if tc.newBundle {
+						keyOpts.NewBundleFormat = true
+					}
 					at := AttestBlobCommand{
-						KeyOpts:        options.KeyOpts{KeyRef: tc.keyref},
+						KeyOpts:        keyOpts,
 						CertPath:       tc.certref,
 						CertChainPath:  tc.certchainref,
 						PredicatePath:  predicatePath,

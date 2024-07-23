@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -30,6 +32,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
@@ -39,10 +44,12 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
+	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -88,8 +95,8 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		defer cancelFn()
 	}
 
-	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" {
-		return errors.New("expected an rfc3161-timestamp path when using a TSA server")
+	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" && !c.NewBundleFormat {
+		return errors.New("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
 	}
 
 	var artifact []byte
@@ -129,7 +136,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return fmt.Errorf("getting signer: %w", err)
 	}
 	defer sv.Close()
-	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
+	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)
 
 	base := path.Base(artifactPath)
 
@@ -154,28 +161,34 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
+	var timestampBytes []byte
+	var rekorEntry *models.LogEntryAnon
+
 	if c.TSAServerURL != "" {
-		respBytes, err := tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
+		timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
 		if err != nil {
 			return err
 		}
-		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(respBytes)
+		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 		// TODO: Consider uploading RFC3161 TS to Rekor
 
 		if rfc3161Timestamp == nil {
 			return fmt.Errorf("rfc3161 timestamp is nil")
 		}
-		ts, err := json.Marshal(rfc3161Timestamp)
-		if err != nil {
-			return err
+
+		if c.RFC3161TimestampPath != "" {
+			ts, err := json.Marshal(rfc3161Timestamp)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
+				return fmt.Errorf("create RFC3161 timestamp file: %w", err)
+			}
+			fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
 		}
-		if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
-			return fmt.Errorf("create RFC3161 timestamp file: %w", err)
-		}
-		fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
 	}
 
-	rekorBytes, err := sv.Bytes(ctx)
+	signer, err := sv.Bytes(ctx)
 	if err != nil {
 		return err
 	}
@@ -189,28 +202,36 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return err
 		}
-		var entry *models.LogEntryAnon
 		if c.RekorEntryType == "intoto" {
-			entry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, rekorBytes)
+			rekorEntry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, signer)
 		} else {
-			entry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, rekorBytes)
+			rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, signer)
 		}
 
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-		signedPayload.Bundle = cbundle.EntryToBundle(entry)
+		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *rekorEntry.LogIndex)
+		signedPayload.Bundle = cbundle.EntryToBundle(rekorEntry)
 	}
 
 	if c.BundlePath != "" {
-		signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+		var contents []byte
+		if c.NewBundleFormat {
+			contents, err = makeNewBundle(sv, rekorEntry, payload, sig, signer, timestampBytes)
+			if err != nil {
+				return err
+			}
+		} else {
+			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
+			signedPayload.Cert = base64.StdEncoding.EncodeToString(signer)
 
-		contents, err := json.Marshal(signedPayload)
-		if err != nil {
-			return err
+			contents, err = json.Marshal(signedPayload)
+			if err != nil {
+				return err
+			}
 		}
+
 		if err := os.WriteFile(c.BundlePath, contents, 0600); err != nil {
 			return fmt.Errorf("create bundle file: %w", err)
 		}
@@ -257,4 +278,65 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	return nil
+}
+
+func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte) ([]byte, error) {
+	// Determine if signature is certificate or not
+	var hint string
+	var rawCert []byte
+
+	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+	if err != nil || len(cert) == 0 {
+		pubKey, err := sv.PublicKey()
+		if err != nil {
+			return nil, err
+		}
+		pkixPubKey, err := x509.MarshalPKIXPublicKey(pubKey)
+		if err != nil {
+			return nil, err
+		}
+		hashedBytes := sha256.Sum256(pkixPubKey)
+		hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
+	} else {
+		rawCert = cert[0].Raw
+	}
+
+	bundle, err := cbundle.MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	var envelope dsse.Envelope
+	err = json.Unmarshal(sig, &envelope)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(envelope.Signatures) == 0 {
+		return nil, fmt.Errorf("no signature in DSSE envelope")
+	}
+
+	sigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
+	if err != nil {
+		return nil, err
+	}
+
+	bundle.Content = &protobundle.Bundle_DsseEnvelope{
+		DsseEnvelope: &protodsse.Envelope{
+			Payload:     payload,
+			PayloadType: envelope.PayloadType,
+			Signatures: []*protodsse.Signature{
+				{
+					Sig: sigBytes,
+				},
+			},
+		},
+	}
+
+	contents, err := protojson.Marshal(bundle)
+	if err != nil {
+		return nil, err
+	}
+
+	return contents, nil
 }

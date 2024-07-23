@@ -73,6 +73,7 @@ func AttestBlob() *cobra.Command {
 				TSAServerURL:             o.TSAServerURL,
 				RFC3161TimestampPath:     o.RFC3161TimestampPath,
 				BundlePath:               o.BundlePath,
+				NewBundleFormat:          o.NewBundleFormat,
 			}
 			v := attest.AttestBlobCommand{
 				KeyOpts:           ko,
