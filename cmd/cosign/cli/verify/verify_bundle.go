@@ -99,7 +99,7 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 	verificationMaterial := bundle.GetVerificationMaterial()
 
 	if verificationMaterial == nil {
-		return fmt.Errorf("No verification material in bundle")
+		return fmt.Errorf("no verification material in bundle")
 	}
 
 	if verificationMaterial.GetPublicKey() != nil {
