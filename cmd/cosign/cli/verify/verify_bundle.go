@@ -40,10 +40,6 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 }
 
 func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, slot, certOIDCIssuer, certOIDCIssuerRegex, certIdentity, certIdentityRegexp, githubWorkflowTrigger, githubWorkflowSHA, githubWorkflowName, githubWorkflowRepository, githubWorkflowRef, artifactRef string, sk, ignoreTlog, useSignedTimestamps, ignoreSCT bool) error {
-	if certOIDCIssuerRegex != "" {
-		return fmt.Errorf("--new-bundle-format does not support --certificate-oidc-issuer-regexp")
-	}
-
 	bundle, err := sgbundle.LoadJSONFromPath(bundlePath)
 	if err != nil {
 		return err
@@ -110,8 +106,12 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 			return err
 		}
 
+		issuerMatcher, err := verify.NewIssuerMatcher(certOIDCIssuer, certOIDCIssuerRegex)
+		if err != nil {
+			return err
+		}
+
 		extensions := certificate.Extensions{
-			Issuer:                   certOIDCIssuer,
 			GithubWorkflowTrigger:    githubWorkflowTrigger,
 			GithubWorkflowSHA:        githubWorkflowSHA,
 			GithubWorkflowName:       githubWorkflowName,
@@ -119,7 +119,7 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 			GithubWorkflowRef:        githubWorkflowRef,
 		}
 
-		certIdentity, err := verify.NewCertificateIdentity(sanMatcher, extensions)
+		certIdentity, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
 		if err != nil {
 			return err
 		}
