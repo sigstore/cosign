@@ -131,7 +131,7 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 	verifierConfig := []verify.VerifierOption{}
 
 	if len(trustedroot.RekorLogs()) > 0 && !ignoreTlog {
-		verifierConfig = append(verifierConfig, verify.WithTransparencyLog(1), verify.WithObserverTimestamps(1))
+		verifierConfig = append(verifierConfig, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
 	}
 
 	if len(trustedroot.TimestampingAuthorities()) > 0 && useSignedTimestamps {
