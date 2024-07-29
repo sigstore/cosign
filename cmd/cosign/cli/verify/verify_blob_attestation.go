@@ -55,6 +55,7 @@ type VerifyBlobAttestationCommand struct {
 	CertChain       string
 	CAIntermediates string
 	CARoots         string
+	TrustedRootPath string
 
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSHA        string
@@ -89,6 +90,14 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	// We can't have both a key and a security key
 	if options.NOf(c.KeyRef, c.Sk) > 1 {
 		return &options.KeyParseError{}
+	}
+
+	if c.KeyOpts.NewBundleFormat {
+		err = verifyNewBundle(ctx, c.BundlePath, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, artifactPath, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+		if err == nil {
+			fmt.Fprintln(os.Stderr, "Verified OK")
+		}
+		return err
 	}
 
 	var identities []cosign.Identity

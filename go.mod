@@ -32,9 +32,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0
 	github.com/sigstore/fulcio v1.5.1
-	github.com/sigstore/protobuf-specs v0.3.0
+	github.com/sigstore/protobuf-specs v0.3.2
 	github.com/sigstore/rekor v1.3.6
 	github.com/sigstore/sigstore v1.8.7
+	github.com/sigstore/sigstore-go v0.5.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.7
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.7
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.7
@@ -240,6 +241,7 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
 	github.com/theupdateframework/go-tuf v0.7.0 // indirect
+	github.com/theupdateframework/go-tuf/v2 v2.0.0 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
