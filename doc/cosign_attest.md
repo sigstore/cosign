@@ -9,7 +9,7 @@ cosign attest [flags]
 ### Examples
 
 ```
-  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--f] [--r] <image uri>
+  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--record-creation-timestamp=true|false] [--f] [--r] <image uri>
 
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
@@ -37,6 +37,9 @@ cosign attest [flags]
 
   # supply attestation via stdin
   echo <PAYLOAD> | cosign attest --predicate - <IMAGE>
+
+  # attach an attestation to a container image and honor the creation timestamp of the signature
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>
 ```
 
 ### Options
@@ -62,6 +65,7 @@ cosign attest [flags]
       --oidc-provider string                                                                     Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string                                                                 OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --predicate string                                                                         path to the predicate file.
+      --record-creation-timestamp                                                                set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --registry-password string                                                                 registry basic auth password
       --registry-token string                                                                    registry bearer auth token

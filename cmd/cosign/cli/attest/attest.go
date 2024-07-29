@@ -71,16 +71,17 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 type AttestCommand struct {
 	options.KeyOpts
 	options.RegistryOptions
-	CertPath       string
-	CertChainPath  string
-	NoUpload       bool
-	PredicatePath  string
-	PredicateType  string
-	Replace        bool
-	Timeout        time.Duration
-	TlogUpload     bool
-	TSAServerURL   string
-	RekorEntryType string
+	CertPath                string
+	CertChainPath           string
+	NoUpload                bool
+	PredicatePath           string
+	PredicateType           string
+	Replace                 bool
+	Timeout                 time.Duration
+	TlogUpload              bool
+	TSAServerURL            string
+	RekorEntryType          string
+	RecordCreationTimestamp bool
 }
 
 // nolint
@@ -226,6 +227,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 
 	signOpts := []mutate.SignOption{
 		mutate.WithDupeDetector(dd),
+		mutate.WithRecordCreationTimestamp(c.RecordCreationTimestamp),
 	}
 
 	if c.Replace {
