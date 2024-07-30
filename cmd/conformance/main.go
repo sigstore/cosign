@@ -230,7 +230,7 @@ func main() {
 	args = append(args, os.Args[len(os.Args)-1])
 
 	dir := filepath.Dir(os.Args[0])
-	cmd := exec.Command(filepath.Join(dir, "cosign"), args...)
+	cmd := exec.Command(filepath.Join(dir, "cosign"), args...) // #nosec G204
 	var out strings.Builder
 	cmd.Stdout = &out
 	cmd.Stderr = &out
