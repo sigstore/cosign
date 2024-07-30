@@ -1656,6 +1656,7 @@ func TestSignBlobNewBundle(t *testing.T) {
 	// Produce signed bundle
 	ko := options.KeyOpts{
 		KeyRef:          privKeyPath,
+		PassFunc:        passFunc,
 		BundlePath:      bundlePath,
 		NewBundleFormat: true,
 	}
