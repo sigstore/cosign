@@ -135,6 +135,8 @@ jobs:
             php-igbinary php-memcache php-memcached php-mongodb php-redis php-xdebug \
             php-zmq snmp pollinate libpq-dev postgresql-client powershell ruby-full \
             sphinxsearch subversion mongodb-org -yq >/dev/null 2>&1 || true
+          apt-get remove -y '^llvm.*' || true
+          apt-get remove -y '^dotnet.*' || true
           apt-get remove -y 'php.*' || true
           apt-get autoremove -y >/dev/null 2>&1 || true
           apt-get autoclean -y >/dev/null 2>&1 || true
