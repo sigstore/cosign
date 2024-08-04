@@ -109,7 +109,7 @@ jobs:
             php-zmq snmp pollinate libpq-dev postgresql-client powershell ruby-full \
             sphinxsearch subversion mongodb-org -yq >/dev/null 2>&1 || true
           apt-get remove -y 'php.*' || true
-          find $ANDROID_HOME
+          find $ANDROID_SDK_ROOT
           /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --uninstall "platform-tools" "platforms" "buildtools"
           apt-get autoremove -y >/dev/null 2>&1 || true
           apt-get autoclean -y >/dev/null 2>&1 || true
