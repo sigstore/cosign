@@ -65,7 +65,7 @@ export FULCIO_CONFIG=/tmp/fulcio-config.json
 for repo in rekor fulcio; do
     pushd $repo
     if [ "$repo" == "fulcio" ]; then
-       yq -y '.networks={"fulcio_default":{ "name":"fulcio_default","external":true }}' docker-compose.yml | sponge docker-compose.yml
+       yq -i '.networks={"fulcio_default":{ "name":"fulcio_default","external":true }}' docker-compose.yml
     fi
     ${docker_compose} up -d
     echo -n "waiting up to 60 sec for system to start"
