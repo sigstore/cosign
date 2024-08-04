@@ -24,7 +24,7 @@ fi
 echo "setting up OIDC provider"
 pushd ./test/fakeoidc
 oidcimg=$(ko build main.go --local)
-docker network ls | grep fulcio_default || docker network create fulcio_default
+docker network ls | grep fulcio_default || docker network create fulcio_default --label "com.docker.compose.network=fulcio_default,com.docker.compose.project=fulcio"
 docker run -d --rm -p 8080:8080 --network fulcio_default --name fakeoidc $oidcimg
 cleanup_oidc() {
     echo "cleaning up oidc"
