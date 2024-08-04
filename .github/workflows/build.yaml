@@ -67,5 +67,5 @@ jobs:
       - name: containers-cosign
         run: make sign-ci-containers
         env:
-          KO_PREFIX: gcr.io/projectsigstore/cosign/ci
+          KO_PREFIX: ghcr.io/sigstore/cosign/cosign/ci
           COSIGN_PASSWORD: "${{secrets.COSIGN_PASSWORD}}"
