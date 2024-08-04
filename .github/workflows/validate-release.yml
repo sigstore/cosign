@@ -64,7 +64,7 @@ jobs:
       # Related to https://github.com/sigstore/cosign/issues/3149
       - name: free up disk space for the release
         run: |
-          rm -rf /usr/local/lib/android/
+          sudo rm -rf /usr/local/lib/android/
           rm -rf /usr/share/dotnet/
           rm -rf "$AGENT_TOOLSDIRECTORY"
           rm -rf "/usr/local/share/boost"
