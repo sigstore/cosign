@@ -19,7 +19,7 @@ set -ex
 echo "setting up OIDC provider"
 pushd ./test/fakeoidc
 oidcimg=$(ko build main.go --local)
-docker network ls | grep fulcio_default || docker network create fulcio_default
+docker network ls | grep fulcio_default || docker network create --label com.docker.compose.network=fulcio_default fulcio_default
 docker run -d --rm -p 8080:8080 --network fulcio_default --name fakeoidc $oidcimg
 cleanup_oidc() {
     echo "cleaning up oidc"
@@ -59,10 +59,10 @@ export FULCIO_METRICS_PORT=2113
 export FULCIO_CONFIG=/tmp/fulcio-config.json
 for repo in rekor fulcio; do
     pushd $repo
-    docker compose --compatibility up -d
+    docker compose up -d
     echo -n "waiting up to 60 sec for system to start"
     count=0
-    until [ $(docker compose --compatibility ps | grep -c "(healthy)") == 3 ];
+    until [ $(docker compose ps | grep -c "(healthy)") == 3 ];
     do
         if [ $count -eq 6 ]; then
            echo "! timeout reached"
@@ -80,7 +80,7 @@ cleanup_services() {
     cleanup_oidc
     for repo in rekor fulcio; do
         pushd $HOME/$repo
-        docker compose --compatibility down
+        docker compose down
         popd
     done
 }
