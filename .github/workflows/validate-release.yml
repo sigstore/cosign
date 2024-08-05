@@ -109,7 +109,8 @@ jobs:
             php-zmq snmp pollinate libpq-dev postgresql-client powershell ruby-full \
             sphinxsearch subversion mongodb-org -yq >/dev/null 2>&1 || true
           apt-get remove -y 'php.*' || true
-          cd /usr && du -sch * .[!.]* | sort -rh
+          cd /usr/lib && du -sch * .[!.]* | sort -rh
+          cd /usr/lib/local && du -sch * .[!.]* | sort -rh
           apt-get autoremove -y >/dev/null 2>&1 || true
           apt-get autoclean -y >/dev/null 2>&1 || true
       - name: check disk space
