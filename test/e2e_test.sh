@@ -59,10 +59,10 @@ export FULCIO_METRICS_PORT=2113
 export FULCIO_CONFIG=/tmp/fulcio-config.json
 for repo in rekor fulcio; do
     pushd $repo
-    docker-compose up -d
+    docker compose up -d
     echo -n "waiting up to 60 sec for system to start"
     count=0
-    until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+    until [ $(docker compose ps | grep -c "(healthy)") == 3 ];
     do
         if [ $count -eq 6 ]; then
            echo "! timeout reached"
@@ -80,7 +80,7 @@ cleanup_services() {
     cleanup_oidc
     for repo in rekor fulcio; do
         pushd $HOME/$repo
-        docker-compose down
+        docker compose down
         popd
     done
 }
