@@ -1628,12 +1628,6 @@ func TestSignBlobNewBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	trustedRoot := "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}"
-	trustedRootPath := filepath.Join(td1, "trusted_root.json")
-	if err := os.WriteFile(trustedRootPath, []byte(trustedRoot), 0644); err != nil {
-		t.Fatal(err)
-	}
-
 	bundlePath := filepath.Join(td1, "bundle.sigstore.json")
 
 	ctx := context.Background()
