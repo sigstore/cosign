@@ -66,6 +66,7 @@ for repo in rekor fulcio; do
     pushd $repo
     if [ "$repo" == "fulcio" ]; then
        yq -i e '.networks={"fulcio_default":{ "name":"fulcio_default","external":true }}' docker-compose.yml
+       yq -i e '.services.fulcio-server.networks=["fulcio_default"]' docker-compose.yml
        tail docker-compose.yml
     fi
     ${docker_compose} up -d
