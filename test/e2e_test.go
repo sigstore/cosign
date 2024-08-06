@@ -1619,6 +1619,50 @@ func TestSignBlobBundle(t *testing.T) {
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
+func TestSignBlobNewBundle(t *testing.T) {
+	td1 := t.TempDir()
+
+	blob := "someblob"
+	blobPath := filepath.Join(td1, blob)
+	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+
+	ctx := context.Background()
+	_, privKeyPath, pubKeyPath := keypair(t, td1)
+
+	ko1 := options.KeyOpts{
+		KeyRef:          pubKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts:    ko1,
+		IgnoreTlog: true,
+	}
+
+	// Verify should fail before bundle is written
+	mustErr(verifyBlobCmd.Exec(ctx, blobPath), t)
+
+	// Produce signed bundle
+	ko := options.KeyOpts{
+		KeyRef:          privKeyPath,
+		PassFunc:        passFunc,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+
+	if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should succeed now that bundle is written
+	must(verifyBlobCmd.Exec(ctx, blobPath), t)
+}
+
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	td := t.TempDir()
 	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)

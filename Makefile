@@ -65,7 +65,7 @@ export KO_DOCKER_REPO=$(KO_PREFIX)
 GHCR_PREFIX ?= ghcr.io/sigstore/cosign
 LATEST_TAG ?=
 
-.PHONY: all lint test clean cosign cross
+.PHONY: all lint test clean cosign conformance cross
 all: cosign
 
 log-%:
@@ -105,6 +105,9 @@ lint: golangci-lint ## Run golangci-lint linter
 
 test:
 	$(GOEXE) test $(shell $(GOEXE) list ./... | grep -v third_party/)
+
+conformance:
+	$(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/conformance
 
 clean:
 	rm -rf cosign
