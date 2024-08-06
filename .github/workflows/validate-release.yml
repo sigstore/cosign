@@ -45,7 +45,8 @@ jobs:
     container:
       image: ghcr.io/gythialy/golang-cross:v1.22.5-0@sha256:5cf8fca7fe80392c8d1597fe89d291d49120507390f25507746f73d4b7f8a8f2
       volumes:
-        - /:/host
+        - /usr:/host_usr
+        - /opt:/host_opt
 
     permissions: {}
 
@@ -66,23 +67,22 @@ jobs:
       # Related to https://github.com/sigstore/cosign/issues/3149
       - name: free up disk space for the release
         run: |
-          rm -rf /host/usr/share/dotnet || true
-          rm -rf /host/usr/share/swift || true
-          rm -rf /host/usr/local/lib/android || true
-          rm -rf /host/opt/ghc || true
-          rm -rf /host/usr/local/.ghcup || true
-          rm -rf /host/opt/hostedtoolcache/ || true
-          rm -rf /host/usr/local/graalvm/ || true
-          rm -rf /host/usr/local/share/powershell || true
-          rm -rf /host/usr/local/share/chromium || true
-          rm -rf /host/usr/local/lib/node_modules || true
-          rm -rf /host/usr/lib/google-cloud-sdk
-          rm -rf /host/opt/hostedtoolcache/CodeQL
-          rm -rf "/host/$AGENT_TOOLSDIRECTORY"
-          rm -rf "/host/usr/local/share/boost"
-          docker rmi $(docker image ls -aq) || true
-          swapoff /swapfile || true
-          rm -rf /host/swapfile || true
+          rm -rf /host_usr/share/dotnet || true
+          rm -rf /host_usr/share/swift || true
+          rm -rf /host_usr/local/lib/android || true
+          rm -rf /host_opt/ghc || true
+          rm -rf /host_usr/local/.ghcup || true
+          rm -rf /host_opt/hostedtoolcache/ || true
+          rm -rf /host_usr/local/graalvm/ || true
+          rm -rf /host_usr/local/share/powershell || true
+          rm -rf /host_usr/local/share/chromium || true
+          rm -rf /host_usr/local/lib/node_modules || true
+          rm -rf /host_usr/lib/google-cloud-sdk || true
+          rm -rf /host_opt/hostedtoolcache/CodeQL || true
+          rm -rf "/host_usr/local/share/boost" || true
+          # docker rmi $(docker image ls -aq) || true
+          # swapoff /swapfile || true
+          # rm -rf /host/swapfile || true
           apt purge aria2 ansible hhvm mono-devel azure-cli shellcheck rpm xorriso zsync \
             clang-6.0 lldb-6.0 lld-6.0 clang-format-6.0 clang-8 lldb-8 lld-8 clang-format-8 \
             clang-9 lldb-9 lld-9 clangd-9 clang-format-9 dotnet-sdk-3.0 dotnet-sdk-3.1=3.1.101-1 \
