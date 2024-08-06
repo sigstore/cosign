@@ -15,6 +15,8 @@ In future updates, we'll include:
   Cosign-specific bundle format
 * Bundle support with container signing
 
+We have also moved nightly Cosign container builds to GHCR instead of GCR.
+
 ## Features
 
 * Add new bundle support to `verify-blob` and `verify-blob-attestation` (#3796)
