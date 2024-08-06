@@ -67,7 +67,6 @@ for repo in rekor fulcio; do
     if [ "$repo" == "fulcio" ]; then
        yq -i e '.networks={"default":{ "name":"fulcio_default","external":true }}' docker-compose.yml
        yq -i e '.services.fulcio-server.networks=["default"]' docker-compose.yml
-       tail docker-compose.yml
     fi
     ${docker_compose} up -d
     echo -n "waiting up to 60 sec for system to start"
