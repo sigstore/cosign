@@ -24,7 +24,7 @@ fi
 echo "setting up OIDC provider"
 pushd ./test/fakeoidc
 oidcimg=$(ko build main.go --local)
-docker network ls | grep fulcio_default || docker network create fulcio_default
+docker network ls | grep fulcio_default || docker network create fulcio_default --label "com.docker.compose.network=fulcio_default"
 docker run -d --rm -p 8080:8080 --network fulcio_default --name fakeoidc $oidcimg
 cleanup_oidc() {
     echo "cleaning up oidc"
@@ -65,8 +65,8 @@ export FULCIO_CONFIG=/tmp/fulcio-config.json
 for repo in rekor fulcio; do
     pushd $repo
     if [ "$repo" == "fulcio" ]; then
-       yq -i e '.networks={"fulcio_default":{ "name":"fulcio_default","external":true }}' docker-compose.yml
-       yq -i e '.services.fulcio-server.networks=["fulcio_default"]' docker-compose.yml
+       yq -i e '.networks={"default":{ "name":"fulcio_default","external":true }}' docker-compose.yml
+       yq -i e '.services.fulcio-server.networks=["default"]' docker-compose.yml
        tail docker-compose.yml
     fi
     ${docker_compose} up -d
