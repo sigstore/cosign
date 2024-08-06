@@ -64,6 +64,18 @@ jobs:
       # Related to https://github.com/sigstore/cosign/issues/3149
       - name: free up disk space for the release
         run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/.ghcup || true
+          sudo rm -rf "/usr/local/share/boost" || true
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
+          sudo rm -rf /opt/hostedtoolcache/ || true
+          sudo rm -rf /usr/local/graalvm/ || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf /usr/local/lib/node_modules || true
           rm -rf /usr/lib/google-cloud-sdk
           rm -rf /opt/hostedtoolcache/CodeQL
           rm -rf /usr/share/dotnet/
@@ -110,10 +122,9 @@ jobs:
             php-zmq snmp pollinate libpq-dev postgresql-client powershell ruby-full \
             sphinxsearch subversion mongodb-org -yq >/dev/null 2>&1 || true
           apt-get remove -y 'php.*' || true
-          cd /usr/lib && du -sch * .[!.]* | sort -rh
-          cd /usr/lib/local && du -sch * .[!.]* | sort -rh
           apt-get autoremove -y >/dev/null 2>&1 || true
           apt-get autoclean -y >/dev/null 2>&1 || true
+          apt-get clean -y >/dev/null 2>&1 || true
       - name: check disk space
         run: df -h
 
