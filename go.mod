@@ -18,7 +18,7 @@ require (
 	github.com/go-piv/piv-go v1.11.0
 	github.com/google/certificate-transparency-go v1.2.1
 	github.com/google/go-cmp v0.6.0
-	github.com/google/go-containerregistry v0.20.1
+	github.com/google/go-containerregistry v0.20.2
 	github.com/google/go-github/v55 v55.0.0
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -28,7 +28,7 @@ require (
 	github.com/moby/term v0.5.0
 	github.com/mozillazg/docker-credential-acr-helper v0.3.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
-	github.com/open-policy-agent/opa v0.67.0
+	github.com/open-policy-agent/opa v0.67.1
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0
 	github.com/sigstore/fulcio v1.5.1
@@ -141,9 +141,8 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v24.0.7+incompatible // indirect
+	github.com/docker/cli v27.1.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v26.1.5+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
