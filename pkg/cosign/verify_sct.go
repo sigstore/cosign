@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 
 	ct "github.com/google/certificate-transparency-go"
 	ctx509 "github.com/google/certificate-transparency-go/x509"
@@ -29,7 +28,6 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/fulcioverifier/ctutil"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 // ContainsSCT checks if the certificate contains embedded SCTs. cert can either be
@@ -110,9 +108,6 @@ func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *Tru
 			if err != nil {
 				return fmt.Errorf("error verifying embedded SCT: %w", err)
 			}
-			if pubKeyMetadata.Status != tuf.Active {
-				fmt.Fprintf(os.Stderr, "**Info** Successfully verified embedded SCT using an expired verification key\n")
-			}
 		}
 		return nil
 	}
@@ -133,9 +128,6 @@ func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *Tru
 	err = ctutil.VerifySCT(pubKeyMetadata.PubKey, []*ctx509.Certificate{cert}, sct, false)
 	if err != nil {
 		return fmt.Errorf("error verifying SCT")
-	}
-	if pubKeyMetadata.Status != tuf.Active {
-		fmt.Fprintf(os.Stderr, "**Info** Successfully verified SCT using an expired verification key\n")
 	}
 	return nil
 }

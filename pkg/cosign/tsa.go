@@ -22,8 +22,10 @@ import (
 	"os"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/tuf"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/tuf"
+	tufv1 "github.com/sigstore/sigstore/pkg/tuf"
 )
 
 const (
@@ -38,95 +40,73 @@ type TSACertificates struct {
 	RootCert          []*x509.Certificate
 }
 
-type GetTargetStub func(ctx context.Context, usage tuf.UsageKind, names []string) ([]byte, error)
-
-func GetTufTargets(ctx context.Context, usage tuf.UsageKind, names []string) ([]byte, error) {
-	tufClient, err := tuf.NewFromEnv(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error creating TUF client: %w", err)
-	}
-	targets, err := tufClient.GetTargetsByMeta(usage, names)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching targets by metadata with usage %v: %w", usage, err)
-	}
-
-	var buffer bytes.Buffer
-	for _, target := range targets {
-		buffer.Write(target.Target)
-		buffer.WriteByte('\n')
-	}
-	return buffer.Bytes(), nil
-}
-
-func isTufTargetExist(ctx context.Context, name string) (bool, error) {
-	tufClient, err := tuf.NewFromEnv(ctx)
-	if err != nil {
-		return false, fmt.Errorf("error creating TUF client: %w", err)
-	}
-	_, err = tufClient.GetTarget(name)
-	if err != nil {
-		return false, nil
-	}
-	return true, nil
-}
-
 // GetTSACerts retrieves trusted TSA certificates from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
 // By default, the certificates come from TUF, but you can override this for test
 // purposes by using an env variable `SIGSTORE_TSA_CERTIFICATE_FILE` or a file path
 // specified in `TSACertChainPath`. If using an alternate, the file should be in PEM format.
-func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*TSACertificates, error) {
+func GetTSACerts(ctx context.Context, certChainPath string) (*TSACertificates, error) {
 	altTSACert := env.Getenv(env.VariableSigstoreTSACertificateFile)
 
 	var raw []byte
 	var err error
-	var exists bool
 	switch {
 	case altTSACert != "":
 		raw, err = os.ReadFile(altTSACert)
 	case certChainPath != "":
 		raw, err = os.ReadFile(certChainPath)
-	default:
-		certNames := []string{tsaLeafCertStr, tsaRootCertStr}
-		for i := 0; ; i++ {
-			intermediateCertStr := fmt.Sprintf(tsaIntermediateCertStrPattern, i)
-			exists, err = isTufTargetExist(ctx, intermediateCertStr)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching TSA certificates: %w", err)
-			}
-			if !exists {
-				break
-			}
-			certNames = append(certNames, intermediateCertStr)
-		}
-		raw, err = fn(ctx, tuf.TSA, certNames)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching TSA certificates: %w", err)
-		}
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("error reading TSA certificate file: %w", err)
 	}
+	if len(raw) > 0 {
+		leaves, intermediates, roots, err := splitPEMCertificateChain(raw)
+		if err != nil {
+			return nil, fmt.Errorf("error splitting TSA certificates: %w", err)
+		}
+		if len(leaves) != 1 {
+			return nil, fmt.Errorf("TSA certificate chain must contain exactly one leaf certificate")
+		}
 
-	leaves, intermediates, roots, err := splitPEMCertificateChain(raw)
+		if len(roots) == 0 {
+			return nil, fmt.Errorf("TSA certificate chain must contain at least one root certificate")
+		}
+		return &TSACertificates{
+			LeafCert:          leaves[0],
+			IntermediateCerts: intermediates,
+			RootCert:          roots,
+		}, nil
+	}
+
+	if useNewTUFClient() {
+		opts, err := setTUFOpts()
+		if err != nil {
+			return nil, fmt.Errorf("error setting TUF options: %w", err)
+		}
+		trustedRoot, _ := root.NewLiveTrustedRoot(opts)
+		if trustedRoot == nil {
+			certs, err := getTSAKeysFromTUF(opts)
+			if err != nil {
+				return nil, fmt.Errorf("error adding TSA certs from TUF targets: %w", err)
+			}
+			return certs, nil
+		}
+		tsas := trustedRoot.TimestampingAuthorities()
+		if len(tsas) < 1 {
+			return nil, fmt.Errorf("could not find timestamp authorities in trusted root")
+		}
+		return &TSACertificates{
+			LeafCert:          tsas[0].Leaf,
+			IntermediateCerts: tsas[0].Intermediates,
+			RootCert:          []*x509.Certificate{tsas[0].Root},
+		}, nil
+	}
+
+	certs, err := legacyGetTSAKeysFromTUF(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error splitting TSA certificates: %w", err)
+		return nil, fmt.Errorf("error adding TSA certs from TUF (v1) targets: %w", err)
 	}
-
-	if len(leaves) != 1 {
-		return nil, fmt.Errorf("TSA certificate chain must contain exactly one leaf certificate")
-	}
-
-	if len(roots) == 0 {
-		return nil, fmt.Errorf("TSA certificate chain must contain at least one root certificate")
-	}
-
-	return &TSACertificates{
-		LeafCert:          leaves[0],
-		IntermediateCerts: intermediates,
-		RootCert:          roots,
-	}, nil
+	return certs, nil
 }
 
 // splitPEMCertificateChain returns a list of leaf (non-CA) certificates, a certificate pool for
@@ -151,4 +131,84 @@ func splitPEMCertificateChain(pem []byte) (leaves, intermediates, roots []*x509.
 	}
 
 	return leaves, intermediates, roots, nil
+}
+
+func getTSAKeysFromTUF(opts *tuf.Options) (*TSACertificates, error) {
+	tufClient, err := tuf.New(opts)
+	if err != nil {
+		return nil, fmt.Errorf("error creating TUF client: %w", err)
+	}
+	leafCertBytes, err := tufClient.GetTarget(tsaLeafCertStr)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching TSA leaf cert: %w", err)
+	}
+	rootCertBytes, err := tufClient.GetTarget(tsaRootCertStr)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching TSA root CA cert: %w", err)
+	}
+	var intermediateChainBytes []byte
+	for i := 0; ; i++ {
+		intermediateCertStr := fmt.Sprintf(tsaIntermediateCertStrPattern, i)
+		intermediateCertBytes, _ := tufClient.GetTarget(intermediateCertStr)
+		if len(intermediateCertBytes) == 0 {
+			break
+		}
+		intermediateChainBytes = append(intermediateChainBytes, intermediateCertBytes...)
+	}
+	leafCert, err := cryptoutils.UnmarshalCertificatesFromPEM(leafCertBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling TSA leaf cert: %w", err)
+	}
+	rootCert, err := cryptoutils.UnmarshalCertificatesFromPEM(rootCertBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling TSA root CA cert: %w", err)
+	}
+	var intermediates []*x509.Certificate
+	if len(intermediateChainBytes) > 0 {
+		intermediates, err = cryptoutils.UnmarshalCertificatesFromPEM(intermediateChainBytes)
+		if err != nil {
+			return nil, fmt.Errorf("error unmarshalling intermediate certs: %w", err)
+		}
+	}
+	return &TSACertificates{
+		LeafCert:          leafCert[0],
+		IntermediateCerts: intermediates,
+		RootCert:          rootCert,
+	}, nil
+}
+
+func legacyGetTSAKeysFromTUF(ctx context.Context) (*TSACertificates, error) {
+	tufClient, err := tufv1.NewFromEnv(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error creating legacy TUF client: %w", err)
+	}
+	targets, err := tufClient.GetTargetsByMeta(tufv1.TSA, []string{tsaLeafCertStr, tsaRootCertStr})
+	if err != nil {
+		return nil, fmt.Errorf("error fetching TSA certs: %w", err)
+	}
+	var buffer bytes.Buffer
+	for _, t := range targets {
+		buffer.Write(t.Target)
+		buffer.WriteByte('\n')
+	}
+	for i := 0; ; i++ {
+		target, err := tufClient.GetTarget(fmt.Sprintf(tsaIntermediateCertStrPattern, i))
+		if err != nil {
+			break
+		}
+		buffer.Write(target)
+		buffer.WriteByte('\n')
+	}
+	if buffer.Len() == 0 {
+		return nil, fmt.Errorf("could not find TSA keys")
+	}
+	leaves, intermediates, roots, err := splitPEMCertificateChain(buffer.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling TSA certs: %w", err)
+	}
+	return &TSACertificates{
+		LeafCert:          leaves[0],
+		IntermediateCerts: intermediates,
+		RootCert:          roots,
+	}, nil
 }
