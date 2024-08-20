@@ -2511,3 +2511,33 @@ func getOIDCToken() (string, error) {
 	}
 	return string(body), nil
 }
+
+func TestSignVerifyLocalImageNoUpload(t *testing.T) {
+	td := t.TempDir()
+
+	imgName := path.Join("unavailable.repo.sigstore.dev", "cosign-e2e@sha256:2bbea7758536b170efcb168dc7cea3379908c2649af3e75ebac10161ddd513c2")
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	// Verify should fail at first
+	mustErr(verify(pubKeyPath, imgName, true, nil, "", true), t)
+
+	// Now sign the image
+	outputSignature := filepath.Join(td, "signature")
+	outputCertificate := filepath.Join(td, "certificate")
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		OutputCertificate: outputCertificate,
+		OutputSignature:   outputSignature,
+		Upload:            false,
+		TlogUpload:        false,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Now verify should work!
+	must(verifyImageLocally(pubKeyPath, imgName, outputSignature, outputCertificate, true), t)
+}
