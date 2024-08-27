@@ -15,9 +15,7 @@
 package main
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"os"
@@ -25,10 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var bundlePath *string
@@ -111,83 +106,12 @@ func main() {
 	case "verify":
 		args = append(args, "verify-blob")
 
-		// TODO: for now, we handle `verify` by constructing a bundle
-		// (see https://github.com/sigstore/cosign/issues/3700)
-		//
-		// Today cosign only supports `--trusted-root` with the new bundle
-		// format. When cosign supports `--trusted-root` with detached signed
-		// material, we can supply this content with `--certificate`
-		// and `--signature` instead.
-		fileBytes, err := os.ReadFile(os.Args[len(os.Args)-1])
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fileDigest := sha256.Sum256(fileBytes)
-
-		pb := protobundle.Bundle{
-			MediaType: "application/vnd.dev.sigstore.bundle+json;version=0.1",
-		}
-
-		if signaturePath != nil {
-			sig, err := os.ReadFile(*signaturePath)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			sigBytes, err := base64.StdEncoding.DecodeString(string(sig))
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			pb.Content = &protobundle.Bundle_MessageSignature{
-				MessageSignature: &protocommon.MessageSignature{
-					MessageDigest: &protocommon.HashOutput{
-						Algorithm: protocommon.HashAlgorithm_SHA2_256,
-						Digest:    fileDigest[:],
-					},
-					Signature: sigBytes,
-				},
-			}
-		}
 		if certPath != nil {
-			cert, err := os.ReadFile(*certPath)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			pemCert, _ := pem.Decode(cert)
-			if pemCert == nil {
-				log.Fatalf("unable to load cerficate from %s", *certPath)
-			}
-
-			signingCert := protocommon.X509Certificate{
-				RawBytes: pemCert.Bytes,
-			}
-
-			pb.VerificationMaterial = &protobundle.VerificationMaterial{
-				Content: &protobundle.VerificationMaterial_X509CertificateChain{
-					X509CertificateChain: &protocommon.X509CertificateChain{
-						Certificates: []*protocommon.X509Certificate{&signingCert},
-					},
-				},
-			}
+			args = append(args, "--certificate", *certPath)
 		}
-
-		bundleFile, err := os.CreateTemp(os.TempDir(), "bundle.sigstore.json")
-		if err != nil {
-			log.Fatal(err)
+		if signaturePath != nil {
+			args = append(args, "--signature", *signaturePath)
 		}
-		bundleFileName := bundleFile.Name()
-		pbBytes, err := protojson.Marshal(&pb)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := os.WriteFile(bundleFileName, pbBytes, 0600); err != nil {
-			log.Fatal(err)
-		}
-		bundlePath = &bundleFileName
-		args = append(args, "--insecure-ignore-tlog")
 
 	case "verify-bundle":
 		args = append(args, "verify-blob")

@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
@@ -96,33 +97,25 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SigRef, c.SCTRef) > 1 {
 			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
 		}
-		err := verifyNewBundle(ctx, c.BundlePath, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, blobRef, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+		b, err := sgbundle.LoadJSONFromPath(c.BundlePath)
+		if err != nil {
+			return err
+		}
+		_, err = verifyNewBundle(ctx, b, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, blobRef, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
 		if err == nil {
 			ui.Infof(ctx, "Verified OK")
 		}
 		return err
-	} else if c.TrustedRootPath != "" {
-		return fmt.Errorf("--trusted-root only supported with --new-bundle-format")
 	}
 
 	var cert *x509.Certificate
 	opts := make([]static.Option, 0)
 
-	var identities []cosign.Identity
-	var err error
-	if c.KeyRef == "" {
-		identities, err = c.Identities()
-		if err != nil {
-			return err
-		}
-	}
-
 	sig, err := base64signature(c.SigRef, c.BundlePath)
 	if err != nil {
 		return err
 	}
-
-	blobBytes, err := payloadBytes(blobRef)
+	sigBytes, err := base64.StdEncoding.DecodeString(sig)
 	if err != nil {
 		return err
 	}
@@ -134,43 +127,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
-		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
-	}
-	if c.RFC3161TimestampPath != "" && !(c.TSACertChainPath != "" || c.UseSignedTimestamps) {
-		return fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set when using RFC3161 timestamp path")
-	}
-	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
-		tsaCertificates, err := c.loadTSACertificates(ctx)
-		if err != nil {
-			return err
-		}
-		co.TSACertificate = tsaCertificates.LeafCert
-		co.TSARootCertificates = tsaCertificates.RootCert
-		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
-	}
-
-	if !c.IgnoreTlog {
-		if c.RekorURL != "" {
-			rekorClient, err := rekor.NewClient(c.RekorURL)
-			if err != nil {
-				return fmt.Errorf("creating Rekor client: %w", err)
-			}
-			co.RekorClient = rekorClient
-		}
-		// This performs an online fetch of the Rekor public keys, but this is needed
-		// for verifying tlog entries (both online and offline).
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Rekor public keys: %w", err)
-		}
-	}
-
-	if keylessVerification(c.KeyRef, c.Sk) {
-		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
-			return err
-		}
 	}
 
 	// Keys are optional!
@@ -200,6 +158,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return err
 		}
 	}
+
 	if c.BundlePath != "" {
 		b, err := cosign.FetchLocalSignedPayloadFromPath(c.BundlePath)
 		if err != nil {
@@ -234,8 +193,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 		opts = append(opts, static.WithBundle(b.Bundle))
 	}
+
+	var rfc3161Timestamp bundle.RFC3161Timestamp
 	if c.RFC3161TimestampPath != "" {
-		var rfc3161Timestamp bundle.RFC3161Timestamp
 		ts, err := blob.LoadFileOrURL(c.RFC3161TimestampPath)
 		if err != nil {
 			return err
@@ -245,6 +205,62 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 		opts = append(opts, static.WithRFC3161Timestamp(&rfc3161Timestamp))
 	}
+
+	if !c.IgnoreTlog {
+		if c.RekorURL != "" {
+			rekorClient, err := rekor.NewClient(c.RekorURL)
+			if err != nil {
+				return fmt.Errorf("creating Rekor client: %w", err)
+			}
+			co.RekorClient = rekorClient
+		}
+		// This performs an online fetch of the Rekor public keys, but this is needed
+		// for verifying tlog entries (both online and offline).
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting Rekor public keys: %w", err)
+		}
+	}
+
+	if c.TrustedRootPath != "" {
+		b, err := assembleNewBundle(ctx, sigBytes, rfc3161Timestamp.SignedRFC3161Timestamp, nil, blobRef, cert, c.IgnoreTlog, co.SigVerifier, co.PKOpts, co.RekorClient)
+		if err != nil {
+			return err
+		}
+
+		_, err = verifyNewBundle(ctx, b, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, blobRef, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+		if err == nil {
+			ui.Infof(ctx, "Verified OK")
+		}
+		return err
+	}
+
+	if c.KeyRef == "" {
+		co.Identities, err = c.Identities()
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.RFC3161TimestampPath != "" && !(c.TSACertChainPath != "" || c.UseSignedTimestamps) {
+		return fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set when using RFC3161 timestamp path")
+	}
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+		tsaCertificates, err := c.loadTSACertificates(ctx)
+		if err != nil {
+			return err
+		}
+		co.TSACertificate = tsaCertificates.LeafCert
+		co.TSARootCertificates = tsaCertificates.RootCert
+		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
+	}
+
+	if keylessVerification(c.KeyRef, c.Sk) {
+		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
+			return err
+		}
+	}
+
 	// Set an SCT if provided via the CLI.
 	if c.SCTRef != "" {
 		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
@@ -300,6 +316,10 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
+	blobBytes, err := payloadBytes(blobRef)
+	if err != nil {
+		return err
+	}
 	signature, err := static.NewSignature(blobBytes, sig, opts...)
 	if err != nil {
 		return err
