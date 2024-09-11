@@ -165,7 +165,21 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	var rekorEntry *models.LogEntryAnon
 
 	if c.TSAServerURL != "" {
-		timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
+		// sig is the entire JSON DSSE Envelope; we just want the signature for TSA
+		var envelope dsse.Envelope
+		err = json.Unmarshal(sig, &envelope)
+		if err != nil {
+			return err
+		}
+		if len(envelope.Signatures) == 0 {
+			return fmt.Errorf("envelope has no signatures")
+		}
+		envelopeSigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
+		if err != nil {
+			return err
+		}
+
+		timestampBytes, err = tsa.GetTimestampedSignature(envelopeSigBytes, client.NewTSAClient(c.TSAServerURL))
 		if err != nil {
 			return err
 		}
