@@ -32,7 +32,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 )
 
-type TrustedRootCreateCmd struct {
+type CreateCmd struct {
 	CAIntermediates  string
 	CARoots          string
 	CertChain        string
@@ -41,7 +41,7 @@ type TrustedRootCreateCmd struct {
 	TSACertChainPath string
 }
 
-func (c *TrustedRootCreateCmd) Exec(ctx context.Context) error {
+func (c *CreateCmd) Exec(ctx context.Context) error {
 	var fulcioCertAuthorities []root.CertificateAuthority
 	var timestampAuthorities []root.CertificateAuthority
 	rekorTransparencyLogs := make(map[string]*root.TransparencyLog)
@@ -52,7 +52,6 @@ func (c *TrustedRootCreateCmd) Exec(ctx context.Context) error {
 			return err
 		}
 		fulcioCertAuthorities = append(fulcioCertAuthorities, *fulcioAuthority)
-
 	} else if c.CARoots != "" {
 		roots, err := parseCerts(c.CARoots)
 		if err != nil {
@@ -108,10 +107,10 @@ func (c *TrustedRootCreateCmd) Exec(ctx context.Context) error {
 
 		rekorTransparencyLog := root.TransparencyLog{
 			BaseURL:           c.RekorURL,
-			HashFunc:          crypto.Hash(crypto.SHA256),
+			HashFunc:          crypto.SHA256,
 			ID:                keyHash[:],
 			PublicKey:         pub,
-			SignatureHashFunc: crypto.Hash(crypto.SHA256),
+			SignatureHashFunc: crypto.SHA256,
 		}
 
 		rekorTransparencyLogs[keyID] = &rekorTransparencyLog
@@ -140,7 +139,7 @@ func (c *TrustedRootCreateCmd) Exec(ctx context.Context) error {
 	}
 
 	if c.Out != "" {
-		err = os.WriteFile(c.Out, trBytes, 0640)
+		err = os.WriteFile(c.Out, trBytes, 0600)
 		if err != nil {
 			return err
 		}
@@ -187,7 +186,7 @@ func parseCerts(path string) ([]*x509.Certificate, error) {
 	}
 
 	if len(certs) == 0 {
-		return nil, fmt.Errorf("No certificates in file %s", path)
+		return nil, fmt.Errorf("no certificates in file %s", path)
 	}
 
 	return certs, nil

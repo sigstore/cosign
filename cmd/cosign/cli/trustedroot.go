@@ -43,8 +43,8 @@ func trustedRootCreate() *cobra.Command {
 		Use:   "create",
 		Short: "Create a Sigstore protobuf trusted root",
 		Long:  "Create a Sigstore protobuf trusted root by supplying verification material",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			trCreateCmd := &trustedroot.TrustedRootCreateCmd{
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			trCreateCmd := &trustedroot.CreateCmd{
 				CAIntermediates:  o.CAIntermediates,
 				CARoots:          o.CARoots,
 				CertChain:        o.CertChain,

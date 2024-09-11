@@ -29,7 +29,7 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
-func TestTrustedRootCreate(t *testing.T) {
+func TestCreateCmd(t *testing.T) {
 	ctx := context.Background()
 
 	// Make some certificate chains
@@ -43,7 +43,7 @@ func TestTrustedRootCreate(t *testing.T) {
 
 	outPath := filepath.Join(td, "trustedroot.json")
 
-	trustedrootCreate := TrustedRootCreateCmd{
+	trustedrootCreate := CreateCmd{
 		CertChain:        fulcioChainPath,
 		Out:              outPath,
 		TSACertChainPath: tsaChainPath,
