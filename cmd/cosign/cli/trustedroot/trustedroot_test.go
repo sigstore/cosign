@@ -79,6 +79,8 @@ func makeChain(t *testing.T, path string, size int) {
 	fd, err := os.Create(path)
 	checkErr(t, err)
 
+	defer fd.Close()
+
 	chainCert := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		BasicConstraintsValid: true,
