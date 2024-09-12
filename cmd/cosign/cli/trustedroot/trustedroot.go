@@ -18,18 +18,14 @@ package trustedroot
 import (
 	"context"
 	"crypto"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/sigstore/sigstore-go/pkg/root"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
@@ -38,8 +34,8 @@ type CreateCmd struct {
 	CARoots          string
 	CertChain        string
 	IgnoreSCT        bool
+	IgnoreTlog       bool
 	Out              string
-	RekorURL         string
 	TSACertChainPath string
 }
 
@@ -96,47 +92,32 @@ func (c *CreateCmd) Exec(ctx context.Context) error {
 				return err
 			}
 			ctLogs[id] = &root.TransparencyLog{
-				ID:                idBytes,
 				HashFunc:          crypto.SHA256,
+				ID:                idBytes,
 				PublicKey:         key.PubKey,
 				SignatureHashFunc: crypto.SHA256,
 			}
 		}
 	}
 
-	if c.RekorURL != "" {
-		rekorClient, err := rekor.NewClient(c.RekorURL)
-		if err != nil {
-			return fmt.Errorf("creating Rekor client: %w", err)
-		}
-
-		rekorPubKey, err := rekorClient.Pubkey.GetPublicKey(nil)
+	if !c.IgnoreTlog {
+		tlogPubKeys, err := cosign.GetRekorPubs(ctx)
 		if err != nil {
 			return err
 		}
 
-		block, _ := pem.Decode([]byte(rekorPubKey.Payload))
-		if block == nil {
-			return errors.New("failed to decode public key of server")
+		for id, key := range tlogPubKeys.Keys {
+			idBytes, err := hex.DecodeString(id)
+			if err != nil {
+				return err
+			}
+			rekorTransparencyLogs[id] = &root.TransparencyLog{
+				HashFunc:          crypto.SHA256,
+				ID:                idBytes,
+				PublicKey:         key.PubKey,
+				SignatureHashFunc: crypto.SHA256,
+			}
 		}
-
-		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return err
-		}
-
-		keyHash := sha256.Sum256(block.Bytes)
-		keyID := base64.StdEncoding.EncodeToString(keyHash[:])
-
-		rekorTransparencyLog := root.TransparencyLog{
-			BaseURL:           c.RekorURL,
-			HashFunc:          crypto.SHA256,
-			ID:                keyHash[:],
-			PublicKey:         pub,
-			SignatureHashFunc: crypto.SHA256,
-		}
-
-		rekorTransparencyLogs[keyID] = &rekorTransparencyLog
 	}
 
 	if c.TSACertChainPath != "" {

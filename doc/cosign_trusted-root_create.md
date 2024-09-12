@@ -18,8 +18,8 @@ cosign trusted-root create [flags]
       --certificate-chain string             path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.
   -h, --help                                 help for create
       --ignore-sct                           when set, do not include key for verifying certificate transparency log. Set this if you signed with a key instead of using Fulcio.
+      --ignore-tlog                          when set, do not include key for verifying transparency. Set this if you did not sign with Rekor.
       --out string                           path to output trusted root
-      --rekor-url string                     address of rekor STL server
       --timestamp-certificate-chain string   path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates
 ```
 

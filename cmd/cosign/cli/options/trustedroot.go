@@ -24,8 +24,8 @@ type TrustedRootCreateOptions struct {
 	CARoots          string
 	CertChain        string
 	IgnoreSCT        bool
+	IgnoreTlog       bool
 	Out              string
-	RekorURL         string
 	TSACertChainPath string
 }
 
@@ -58,11 +58,12 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 		"when set, do not include key for verifying certificate transparency "+
 			"log. Set this if you signed with a key instead of using Fulcio.")
 
+	cmd.Flags().BoolVar(&o.IgnoreTlog, "ignore-tlog", false,
+		"when set, do not include key for verifying transparency. Set this if "+
+			"you did not sign with Rekor.")
+
 	cmd.Flags().StringVar(&o.Out, "out", "",
 		"path to output trusted root")
-
-	cmd.Flags().StringVar(&o.RekorURL, "rekor-url", "",
-		"address of rekor STL server")
 
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
