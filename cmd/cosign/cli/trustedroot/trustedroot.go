@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -29,19 +30,22 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
 type CreateCmd struct {
 	CAIntermediates  string
 	CARoots          string
 	CertChain        string
+	IgnoreSCT        bool
 	Out              string
 	RekorURL         string
 	TSACertChainPath string
 }
 
-func (c *CreateCmd) Exec(_ context.Context) error {
+func (c *CreateCmd) Exec(ctx context.Context) error {
 	var fulcioCertAuthorities []root.CertificateAuthority
+	ctLogs := make(map[string]*root.TransparencyLog)
 	var timestampAuthorities []root.CertificateAuthority
 	rekorTransparencyLogs := make(map[string]*root.TransparencyLog)
 
@@ -77,6 +81,26 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 				fulcioAuthority.Intermediates = []*x509.Certificate{intermediates[i]}
 			}
 			fulcioCertAuthorities = append(fulcioCertAuthorities, fulcioAuthority)
+		}
+	}
+
+	if !c.IgnoreSCT {
+		ctLogPubKeys, err := cosign.GetCTLogPubs(ctx)
+		if err != nil {
+			return err
+		}
+
+		for id, key := range ctLogPubKeys.Keys {
+			idBytes, err := hex.DecodeString(id)
+			if err != nil {
+				return err
+			}
+			ctLogs[id] = &root.TransparencyLog{
+				ID:                idBytes,
+				HashFunc:          crypto.SHA256,
+				PublicKey:         key.PubKey,
+				SignatureHashFunc: crypto.SHA256,
+			}
 		}
 	}
 
@@ -124,7 +148,8 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	}
 
 	newTrustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01,
-		fulcioCertAuthorities, nil, timestampAuthorities, rekorTransparencyLogs,
+		fulcioCertAuthorities, ctLogs, timestampAuthorities,
+		rekorTransparencyLogs,
 	)
 	if err != nil {
 		return err

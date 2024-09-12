@@ -45,6 +45,7 @@ func TestCreateCmd(t *testing.T) {
 
 	trustedrootCreate := CreateCmd{
 		CertChain:        fulcioChainPath,
+		IgnoreSCT:        true,
 		Out:              outPath,
 		TSACertChainPath: tsaChainPath,
 	}

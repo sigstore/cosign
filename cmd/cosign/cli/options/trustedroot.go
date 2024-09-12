@@ -23,6 +23,7 @@ type TrustedRootCreateOptions struct {
 	CAIntermediates  string
 	CARoots          string
 	CertChain        string
+	IgnoreSCT        bool
 	Out              string
 	RekorURL         string
 	TSACertChainPath string
@@ -52,6 +53,10 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.MarkFlagsMutuallyExclusive("ca-roots", "certificate-chain")
 	cmd.MarkFlagsMutuallyExclusive("ca-intermediates", "certificate-chain")
+
+	cmd.Flags().BoolVar(&o.IgnoreSCT, "ignore-sct", false,
+		"when set, do not include key for verifying certificate transparency "+
+			"log. Set this if you signed with a key instead of using Fulcio.")
 
 	cmd.Flags().StringVar(&o.Out, "out", "",
 		"path to output trusted root")
