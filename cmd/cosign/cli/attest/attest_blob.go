@@ -165,23 +165,35 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	var rekorEntry *models.LogEntryAnon
 
 	if c.TSAServerURL != "" {
-		// sig is the entire JSON DSSE Envelope; we just want the signature for TSA
-		var envelope dsse.Envelope
-		err = json.Unmarshal(sig, &envelope)
-		if err != nil {
-			return err
-		}
-		if len(envelope.Signatures) == 0 {
-			return fmt.Errorf("envelope has no signatures")
-		}
-		envelopeSigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
-		if err != nil {
-			return err
-		}
+		// We need to decide what signature to send to the timestamp authority.
+		//
+		// Historically, cosign sent `sig`, which is the entire JSON DSSE
+		// Envelope. However, when sigstore clients are verifying a bundle they
+		// will use the DSSE Sig field, so we choose what signature to send to
+		// the timestamp authority based on our output format.
+		if c.NewBundleFormat {
+			var envelope dsse.Envelope
+			err = json.Unmarshal(sig, &envelope)
+			if err != nil {
+				return err
+			}
+			if len(envelope.Signatures) == 0 {
+				return fmt.Errorf("envelope has no signatures")
+			}
+			envelopeSigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
+			if err != nil {
+				return err
+			}
 
-		timestampBytes, err = tsa.GetTimestampedSignature(envelopeSigBytes, client.NewTSAClient(c.TSAServerURL))
-		if err != nil {
-			return err
+			timestampBytes, err = tsa.GetTimestampedSignature(envelopeSigBytes, client.NewTSAClient(c.TSAServerURL))
+			if err != nil {
+				return err
+			}
+		} else {
+			timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
+			if err != nil {
+				return err
+			}
 		}
 		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 		// TODO: Consider uploading RFC3161 TS to Rekor
