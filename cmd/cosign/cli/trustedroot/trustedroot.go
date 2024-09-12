@@ -29,7 +29,6 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/internal/ui"
 )
 
 type CreateCmd struct {
@@ -41,7 +40,7 @@ type CreateCmd struct {
 	TSACertChainPath string
 }
 
-func (c *CreateCmd) Exec(ctx context.Context) error {
+func (c *CreateCmd) Exec(_ context.Context) error {
 	var fulcioCertAuthorities []root.CertificateAuthority
 	var timestampAuthorities []root.CertificateAuthority
 	rekorTransparencyLogs := make(map[string]*root.TransparencyLog)
@@ -144,7 +143,7 @@ func (c *CreateCmd) Exec(ctx context.Context) error {
 			return err
 		}
 	} else {
-		ui.Infof(ctx, string(trBytes))
+		fmt.Println(string(trBytes))
 	}
 
 	return nil
