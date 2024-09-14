@@ -134,6 +134,16 @@ CMD bin`,
 			},
 			expected: []string{"gcr.io/gauntlet/test/one", "gcr.io/gauntlet/test/two:latest", "gcr.io/gauntlet/test/runtime", "gcr.io/someorg/someimage"},
 		},
+		{
+			name: "from-stage-ignored",
+			fileContents: `
+FROM gcr.io/someorg/sometool:sometag AS tools_image
+FROM gcr.io/someorg/someimage AS base_image
+FROM base_image
+COPY --from=tools_image /bin/sometool
+CMD bin`,
+			expected: []string{"gcr.io/someorg/sometool:sometag", "gcr.io/someorg/someimage"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

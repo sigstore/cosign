@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/ui"
 )
@@ -110,7 +111,15 @@ func (fc *finderCache) getImagesFromDockerfile(ctx context.Context, dockerfile i
 	if err := fileScanner.Err(); err != nil {
 		return nil, err
 	}
-	return images, nil
+	validImages := []string{}
+	for _, image := range images {
+		if fc.isStage(image) {
+			logs.Debug.Printf("Ignoring stage name: %s", image)
+			continue
+		}
+		validImages = append(validImages, image)
+	}
+	return validImages, nil
 }
 
 func (fc *finderCache) getImageFromLine(line string) string {
