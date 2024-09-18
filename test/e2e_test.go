@@ -68,6 +68,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -857,6 +858,114 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 	}
 
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+}
+
+func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
+	// TSA server needed to create timestamp
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	blob := "someblob"
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicateType := "slsaprovenance"
+
+	td := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td)
+	})
+
+	bp := filepath.Join(td, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	predicatePath := filepath.Join(td, "predicate")
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(td, "bundle.sigstore.json")
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+	ko := options.KeyOpts{
+		KeyRef:          privKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+		TSAServerURL:    server.URL + "/api/v1/timestamp",
+		PassFunc:        passFunc,
+	}
+
+	attestBlobCmd := attest.AttestBlobCommand{
+		KeyOpts:        ko,
+		PredicatePath:  predicatePath,
+		PredicateType:  predicateType,
+		Timeout:        30 * time.Second,
+		TlogUpload:     false,
+		RekorEntryType: "dsse",
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	var certs []*x509.Certificate
+	for block, contents := pem.Decode([]byte(chain.Payload)); ; block, contents = pem.Decode(contents) {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			t.Error(err)
+		}
+		certs = append(certs, cert)
+
+		if len(contents) == 0 {
+			break
+		}
+	}
+
+	tsaCA := root.CertificateAuthority{
+		Root:          certs[len(certs)-1],
+		Intermediates: certs[:len(certs)-1],
+	}
+
+	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, []root.CertificateAuthority{tsaCA}, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	trustedRootPath := filepath.Join(td, "trustedroot.json")
+	trustedRootBytes, err := trustedRoot.MarshalJSON()
+	if err != nil {
+		t.Error(err)
+	}
+	if err := os.WriteFile(trustedRootPath, trustedRootBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ko = options.KeyOpts{
+		KeyRef:          pubKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+
+	verifyBlobAttestation := cliverify.VerifyBlobAttestationCommand{
+		KeyOpts:         ko,
+		PredicateType:   predicateType,
+		IgnoreTlog:      true,
+		CheckClaims:     true,
+		TrustedRootPath: trustedRootPath,
+	}
+
+	must(verifyBlobAttestation.Exec(ctx, bp), t)
 }
 
 func TestVerifyWithCARoots(t *testing.T) {
