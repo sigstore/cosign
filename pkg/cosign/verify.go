@@ -45,6 +45,8 @@ import (
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -163,6 +165,19 @@ type CheckOpts struct {
 	// Should the experimental OCI 1.1 behaviour be enabled or not.
 	// Defaults to false.
 	ExperimentalOCI11 bool
+
+	// These items are for verifying new bundles or verifying with a trusted root
+
+	// The verification material to use, including public key material
+	TrustedMaterial root.TrustedMaterial
+
+	// Options around the identity of the verification material,
+	// particularly for verifying certificates
+	IdentityPolicies []verify.PolicyOption
+
+	// Options around what sort of verification material you're expecting:
+	// transparency logs, signed timestamps, certificate transparency logs, etc
+	VerifierOptions []verify.VerifierOption
 }
 
 // This is a substitutable signature verification function that can be used for verifying

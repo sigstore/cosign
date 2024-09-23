@@ -28,6 +28,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sigstore/sigstore-go/pkg/root"
+
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/signature"
 )
 
@@ -76,7 +80,20 @@ func TestVerifyBundleWithKey(t *testing.T) {
 	err = os.WriteFile(publicKeyPath, pem.EncodeToMemory(pemBlock), 0600)
 	checkErr(t, err)
 
-	result, err := verifyNewBundle(ctx, bundle, trustedRootPath, publicKeyPath, "", "", "", "", "", "", "", "", "", "", artifactPath, false, true, false, true)
+	co := &cosign.CheckOpts{}
+	co.SigVerifier, err = signature.PublicKeyFromKeyRef(ctx, publicKeyPath)
+	checkErr(t, err)
+
+	var trustedroot *root.TrustedRoot
+	co.TrustedMaterial, trustedroot, err = makeTrustedMaterial(trustedRootPath, &co.SigVerifier)
+	checkErr(t, err)
+
+	co.IdentityPolicies, err = makeIdentityPolicy(bundle, options.CertVerifyOptions{}, "", "", "", "", "")
+	checkErr(t, err)
+
+	co.VerifierOptions = makeVerifierOptions(trustedroot, true, false, true)
+
+	result, err := verifyNewBundle(bundle, co, artifactPath)
 	checkErr(t, err)
 
 	if result == nil {

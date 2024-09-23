@@ -39,9 +39,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
 
 type verifyTrustedMaterial struct {
@@ -56,122 +55,31 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
 }
 
-func verifyNewBundle(ctx context.Context, bundle *sgbundle.Bundle, trustedRootPath, keyRef, slot, certOIDCIssuer, certOIDCIssuerRegex, certIdentity, certIdentityRegexp, githubWorkflowTrigger, githubWorkflowSHA, githubWorkflowName, githubWorkflowRepository, githubWorkflowRef, artifactRef string, sk, ignoreTlog, useSignedTimestamps, ignoreSCT bool) (*verify.VerificationResult, error) {
-	var trustedroot *root.TrustedRoot
-	var err error
-
-	if trustedRootPath == "" {
-		// Assume we're using public good instance; fetch via TUF
-		trustedroot, err = root.FetchTrustedRoot()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		trustedroot, err = root.NewTrustedRootFromPath(trustedRootPath)
-		if err != nil {
-			return nil, err
-		}
+func verifyNewBundle(bundle *sgbundle.Bundle, checkOpts *cosign.CheckOpts, artifactRef string) (*verify.VerificationResult, error) {
+	if checkOpts.TrustedMaterial == nil {
+		return nil, fmt.Errorf("checkOpts must have TrustedMaterial set")
 	}
 
-	trustedmaterial := &verifyTrustedMaterial{TrustedMaterial: trustedroot}
-
-	// See if we need to wrap trusted root with provided key
-	if keyRef != "" {
-		signatureVerifier, err := sigs.PublicKeyFromKeyRef(ctx, keyRef)
-		if err != nil {
-			return nil, err
-		}
-
-		newExpiringKey := root.NewExpiringKey(signatureVerifier, time.Time{}, time.Time{})
-		trustedmaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
-			return newExpiringKey, nil
-		})
-	} else if sk {
-		s, err := pivkey.GetKeyWithSlot(slot)
-		if err != nil {
-			return nil, fmt.Errorf("opening piv token: %w", err)
-		}
-		defer s.Close()
-		signatureVerifier, err := s.Verifier()
-		if err != nil {
-			return nil, fmt.Errorf("loading public key from token: %w", err)
-		}
-
-		newExpiringKey := root.NewExpiringKey(signatureVerifier, time.Time{}, time.Time{})
-		trustedmaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
-			return newExpiringKey, nil
-		})
+	if len(checkOpts.IdentityPolicies) == 0 {
+		return nil, fmt.Errorf("checkOpts IdentityPolicies must have at least 1 item")
 	}
 
-	identityPolicies := []verify.PolicyOption{}
-
-	verificationMaterial := bundle.GetVerificationMaterial()
-
-	if verificationMaterial == nil {
-		return nil, fmt.Errorf("no verification material in bundle")
+	if len(checkOpts.VerifierOptions) == 0 {
+		return nil, fmt.Errorf("checkOpts VerfierOption must have at least 1 item")
 	}
 
-	if verificationMaterial.GetPublicKey() != nil {
-		identityPolicies = append(identityPolicies, verify.WithKey())
-	} else {
-		sanMatcher, err := verify.NewSANMatcher(certIdentity, certIdentityRegexp)
-		if err != nil {
-			return nil, err
-		}
-
-		issuerMatcher, err := verify.NewIssuerMatcher(certOIDCIssuer, certOIDCIssuerRegex)
-		if err != nil {
-			return nil, err
-		}
-
-		extensions := certificate.Extensions{
-			GithubWorkflowTrigger:    githubWorkflowTrigger,
-			GithubWorkflowSHA:        githubWorkflowSHA,
-			GithubWorkflowName:       githubWorkflowName,
-			GithubWorkflowRepository: githubWorkflowRepository,
-			GithubWorkflowRef:        githubWorkflowRef,
-		}
-
-		certIdentity, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
-		if err != nil {
-			return nil, err
-		}
-
-		identityPolicies = append(identityPolicies, verify.WithCertificateIdentity(certIdentity))
-	}
-
-	// Make some educated guesses about verification policy
-	verifierConfig := []verify.VerifierOption{}
-
-	if len(trustedroot.RekorLogs()) > 0 && !ignoreTlog {
-		verifierConfig = append(verifierConfig, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
-	}
-
-	if len(trustedroot.TimestampingAuthorities()) > 0 && useSignedTimestamps {
-		verifierConfig = append(verifierConfig, verify.WithSignedTimestamps(1))
-	}
-
-	if !ignoreSCT {
-		verifierConfig = append(verifierConfig, verify.WithSignedCertificateTimestamps(1))
-	}
-
-	if ignoreTlog && !useSignedTimestamps {
-		verifierConfig = append(verifierConfig, verify.WithoutAnyObserverTimestampsUnsafe())
-	}
-
-	// Perform verification
 	payload, err := payloadBytes(artifactRef)
 	if err != nil {
 		return nil, err
 	}
 	buf := bytes.NewBuffer(payload)
 
-	sev, err := verify.NewSignedEntityVerifier(trustedmaterial, verifierConfig...)
+	sev, err := verify.NewSignedEntityVerifier(checkOpts.TrustedMaterial, checkOpts.VerifierOptions...)
 	if err != nil {
 		return nil, err
 	}
 
-	return sev.Verify(bundle, verify.NewPolicy(verify.WithArtifact(buf), identityPolicies...))
+	return sev.Verify(bundle, verify.NewPolicy(verify.WithArtifact(buf), checkOpts.IdentityPolicies...))
 }
 
 func assembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, envelope *dsse.Envelope, artifactRef string, cert *x509.Certificate, ignoreTlog bool, sigVerifier signature.Verifier, pkOpts []signature.PublicKeyOption, rekorClient *client.Rekor) (*sgbundle.Bundle, error) {
@@ -314,4 +222,97 @@ func assembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, en
 	}
 
 	return b, nil
+}
+
+func makeTrustedMaterial(trustedRootPath string, sigVerifier *signature.Verifier) (root.TrustedMaterial, *root.TrustedRoot, error) {
+	var trustedroot *root.TrustedRoot
+	var err error
+
+	if trustedRootPath == "" {
+		// Assume we're using public good instance; fetch via TUF
+		trustedroot, err = root.FetchTrustedRoot()
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		trustedroot, err = root.NewTrustedRootFromPath(trustedRootPath)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	trustedmaterial := &verifyTrustedMaterial{TrustedMaterial: trustedroot}
+
+	if sigVerifier != nil {
+		newExpiringKey := root.NewExpiringKey(*sigVerifier, time.Time{}, time.Time{})
+		trustedmaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
+			return newExpiringKey, nil
+		})
+	}
+
+	return trustedmaterial, trustedroot, nil
+}
+
+func makeIdentityPolicy(bundle *sgbundle.Bundle, certVerifyOpts options.CertVerifyOptions, githubWorkflowTrigger, githubWorkflowSHA, githubWorkflowName, githubWorkflowRepository, githubWorkflowRef string) ([]verify.PolicyOption, error) {
+	identityPolicies := []verify.PolicyOption{}
+
+	verificationMaterial := bundle.GetVerificationMaterial()
+
+	if verificationMaterial == nil {
+		return nil, fmt.Errorf("no verification material in bundle")
+	}
+
+	if verificationMaterial.GetPublicKey() != nil {
+		identityPolicies = append(identityPolicies, verify.WithKey())
+	} else {
+		sanMatcher, err := verify.NewSANMatcher(certVerifyOpts.CertIdentity, certVerifyOpts.CertIdentityRegexp)
+		if err != nil {
+			return nil, err
+		}
+
+		issuerMatcher, err := verify.NewIssuerMatcher(certVerifyOpts.CertOidcIssuer, certVerifyOpts.CertOidcIssuerRegexp)
+		if err != nil {
+			return nil, err
+		}
+
+		extensions := certificate.Extensions{
+			GithubWorkflowTrigger:    githubWorkflowTrigger,
+			GithubWorkflowSHA:        githubWorkflowSHA,
+			GithubWorkflowName:       githubWorkflowName,
+			GithubWorkflowRepository: githubWorkflowRepository,
+			GithubWorkflowRef:        githubWorkflowRef,
+		}
+
+		certIdentity, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
+		if err != nil {
+			return nil, err
+		}
+
+		identityPolicies = append(identityPolicies, verify.WithCertificateIdentity(certIdentity))
+	}
+
+	return identityPolicies, nil
+}
+
+func makeVerifierOptions(trustedroot *root.TrustedRoot, ignoreTlog, useSignedTimestamps, ignoreSCT bool) []verify.VerifierOption {
+	// Make some educated guesses about verification policy
+	verifierConfig := []verify.VerifierOption{}
+
+	if len(trustedroot.RekorLogs()) > 0 && !ignoreTlog {
+		verifierConfig = append(verifierConfig, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
+	}
+
+	if len(trustedroot.TimestampingAuthorities()) > 0 && useSignedTimestamps {
+		verifierConfig = append(verifierConfig, verify.WithSignedTimestamps(1))
+	}
+
+	if !ignoreSCT {
+		verifierConfig = append(verifierConfig, verify.WithSignedCertificateTimestamps(1))
+	}
+
+	if ignoreTlog && !useSignedTimestamps {
+		verifierConfig = append(verifierConfig, verify.WithoutAnyObserverTimestampsUnsafe())
+	}
+
+	return verifierConfig
 }

@@ -44,6 +44,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
@@ -94,36 +95,6 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		return &options.KeyParseError{}
 	}
 
-	if c.KeyOpts.NewBundleFormat {
-		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SCTRef) > 1 {
-			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
-		}
-		b, err := sgbundle.LoadJSONFromPath(c.BundlePath)
-		if err != nil {
-			return err
-		}
-		result, err := verifyNewBundle(ctx, b, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, artifactPath, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
-		if err != nil {
-			return err
-		}
-		if c.PredicateType != "" && result.Statement.GetPredicateType() != c.PredicateType {
-			return fmt.Errorf("invalid predicate type, expected %s got %s", c.PredicateType, result.Statement.GetPredicateType())
-		}
-		fmt.Fprintln(os.Stderr, "Verified OK")
-		return nil
-	}
-
-	var cert *x509.Certificate
-	opts := make([]static.Option, 0)
-
-	var encodedSig []byte
-	if c.SignaturePath != "" {
-		encodedSig, err = os.ReadFile(filepath.Clean(c.SignaturePath))
-		if err != nil {
-			return fmt.Errorf("reading %s: %w", c.SignaturePath, err)
-		}
-	}
-
 	co := &cosign.CheckOpts{
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSHA,
@@ -156,6 +127,53 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		if err != nil {
 			return fmt.Errorf("loading public key from token: %w", err)
 		}
+	}
+
+	var trustedroot *root.TrustedRoot
+	co.TrustedMaterial, trustedroot, err = makeTrustedMaterial(c.TrustedRootPath, &co.SigVerifier)
+	if err != nil {
+		return err
+	}
+
+	co.VerifierOptions = makeVerifierOptions(trustedroot, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+
+	if c.KeyOpts.NewBundleFormat {
+		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SCTRef) > 1 {
+			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
+		}
+		b, err := sgbundle.LoadJSONFromPath(c.BundlePath)
+		if err != nil {
+			return err
+		}
+
+		co.IdentityPolicies, err = makeIdentityPolicy(b, c.CertVerifyOptions, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef)
+		if err != nil {
+			return err
+		}
+
+		result, err := verifyNewBundle(b, co, artifactPath)
+		if err != nil {
+			return err
+		}
+		if c.PredicateType != "" && result.Statement.GetPredicateType() != c.PredicateType {
+			return fmt.Errorf("invalid predicate type, expected %s got %s", c.PredicateType, result.Statement.GetPredicateType())
+		}
+		fmt.Fprintln(os.Stderr, "Verified OK")
+		return nil
+	}
+
+	var cert *x509.Certificate
+	opts := make([]static.Option, 0)
+
+	var encodedSig []byte
+	if c.SignaturePath != "" {
+		encodedSig, err = os.ReadFile(filepath.Clean(c.SignaturePath))
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", c.SignaturePath, err)
+		}
+	}
+
+	switch {
 	case c.CertRef != "":
 		cert, err = loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
@@ -246,7 +264,12 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			return err
 		}
 
-		result, err := verifyNewBundle(ctx, b, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, artifactPath, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+		co.IdentityPolicies, err = makeIdentityPolicy(b, c.CertVerifyOptions, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef)
+		if err != nil {
+			return err
+		}
+
+		result, err := verifyNewBundle(b, co, artifactPath)
 		if err != nil {
 			return err
 		}

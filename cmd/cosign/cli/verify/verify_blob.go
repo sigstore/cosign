@@ -40,6 +40,7 @@ import (
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
@@ -82,7 +83,7 @@ func (c *VerifyBlobCmd) loadTSACertificates(ctx context.Context) (*cosign.TSACer
 }
 
 // nolint
-func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
+func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) (err error) {
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
 		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --certificate, or a bundle with --bundle")
@@ -91,33 +92,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	// Key, sk, and cert are mutually exclusive.
 	if options.NOf(c.KeyRef, c.Sk, c.CertRef) > 1 {
 		return &options.PubKeyParseError{}
-	}
-
-	if c.KeyOpts.NewBundleFormat {
-		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SigRef, c.SCTRef) > 1 {
-			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
-		}
-		b, err := sgbundle.LoadJSONFromPath(c.BundlePath)
-		if err != nil {
-			return err
-		}
-		_, err = verifyNewBundle(ctx, b, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, blobRef, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
-		if err == nil {
-			ui.Infof(ctx, "Verified OK")
-		}
-		return err
-	}
-
-	var cert *x509.Certificate
-	opts := make([]static.Option, 0)
-
-	sig, err := base64signature(c.SigRef, c.BundlePath)
-	if err != nil {
-		return err
-	}
-	sigBytes, err := base64.StdEncoding.DecodeString(sig)
-	if err != nil {
-		return err
 	}
 
 	co := &cosign.CheckOpts{
@@ -152,7 +126,50 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return fmt.Errorf("loading public key from token: %w", err)
 		}
-	case c.CertRef != "":
+	}
+
+	var trustedroot *root.TrustedRoot
+	co.TrustedMaterial, trustedroot, err = makeTrustedMaterial(c.TrustedRootPath, &co.SigVerifier)
+	if err != nil {
+		return err
+	}
+
+	co.VerifierOptions = makeVerifierOptions(trustedroot, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+
+	if c.KeyOpts.NewBundleFormat {
+		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SigRef, c.SCTRef) > 1 {
+			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
+		}
+		b, err := sgbundle.LoadJSONFromPath(c.BundlePath)
+		if err != nil {
+			return err
+		}
+
+		co.IdentityPolicies, err = makeIdentityPolicy(b, c.CertVerifyOptions, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef)
+		if err != nil {
+			return err
+		}
+
+		_, err = verifyNewBundle(b, co, blobRef)
+		if err == nil {
+			ui.Infof(ctx, "Verified OK")
+		}
+		return err
+	}
+
+	var cert *x509.Certificate
+	opts := make([]static.Option, 0)
+
+	sig, err := base64signature(c.SigRef, c.BundlePath)
+	if err != nil {
+		return err
+	}
+	sigBytes, err := base64.StdEncoding.DecodeString(sig)
+	if err != nil {
+		return err
+	}
+
+	if c.CertRef != "" {
 		cert, err = loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
@@ -228,7 +245,12 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return err
 		}
 
-		_, err = verifyNewBundle(ctx, b, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, blobRef, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
+		co.IdentityPolicies, err = makeIdentityPolicy(b, c.CertVerifyOptions, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef)
+
+		if err != nil {
+			return err
+		}
+		_, err = verifyNewBundle(b, co, blobRef)
 		if err == nil {
 			ui.Infof(ctx, "Verified OK")
 		}
