@@ -870,7 +870,7 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 
 	blob := "someblob"
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
-	predicateType := "slsaprovenance"
+	predicateType := "custompredicate"
 
 	td := t.TempDir()
 	t.Cleanup(func() {
