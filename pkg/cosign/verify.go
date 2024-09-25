@@ -43,8 +43,14 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+
+	ocibundle "github.com/sigstore/cosign/v2/pkg/oci/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -82,6 +88,14 @@ type Identity struct {
 	IssuerRegExp  string
 	SubjectRegExp string
 }
+
+// type CertPool struct {
+// 	certs []*x509.Certificate
+// }
+
+// func (c *CertPool) AddCert(cert *x509.Certificate) {
+// 	c.certs = append(c.certs, cert)
+// }
 
 // CheckOpts are the options for checking signatures.
 type CheckOpts struct {
@@ -163,6 +177,16 @@ type CheckOpts struct {
 	// Should the experimental OCI 1.1 behaviour be enabled or not.
 	// Defaults to false.
 	ExperimentalOCI11 bool
+
+	ExpectSigstoreBundle bool
+
+	// TrustedMaterial is the trusted material to use for verification.
+	// Currently, this is only applicable when ExpectSigstoreBundle is true.
+	TrustedMaterial root.TrustedMaterial
+
+	// TODO: Add the following, deprecate overlapping fields
+	//CertificateIdentities verify.CertificateIdentities
+	//VerifierOptions       []verify.VerifierOption
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -493,6 +517,10 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		if err == nil {
 			return verified, bundleVerified, nil
 		}
+	}
+
+	if co.ExpectSigstoreBundle {
+		return nil, false, errors.New("bundle support for image signatures is not yet implemented")
 	}
 
 	// Enforce this up front.
@@ -842,6 +870,24 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 		targetSig = []byte(sigRef)
 	}
 
+	if co.ExpectSigstoreBundle {
+		var bundle *sgbundle.Bundle
+		bundle.Bundle = new(protobundle.Bundle)
+
+		err = bundle.UnmarshalJSON(targetSig)
+		if err != nil {
+			return nil, err
+		}
+		signature, err := ocibundle.NewSignature(bundle, &ocibundle.Options{})
+		if err != nil {
+			return nil, err
+		}
+
+		return &fakeOCISignatures{
+			signatures: []oci.Signature{signature},
+		}, nil
+	}
+
 	_, err = base64.StdEncoding.DecodeString(string(targetSig))
 
 	if err == nil {
@@ -880,8 +926,11 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 // If there were no valid attestations, we return an error.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
-	if co.RootCerts == nil && co.SigVerifier == nil {
-		return nil, false, errors.New("one of verifier or root certs is required")
+	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
+		return nil, false, errors.New("one of verifier, root certs, or TrustedMaterial is required")
+	}
+	if co.ExpectSigstoreBundle {
+		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co)
 	}
 
 	// This is a carefully optimized sequence for fetching the attestations of
@@ -1412,4 +1461,105 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	}
 
 	return verifySignatures(ctx, sigs, h, co)
+}
+
+func getBundles(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
+	// Enforce this up front.
+	if co.TrustedMaterial == nil {
+		return nil, nil, errors.New("Sigstore bundle verification requires TrustedMaterial")
+	}
+
+	// This is a carefully optimized sequence for fetching the signatures of the
+	// entity that minimizes registry requests when supplied with a digest input
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		if terr := (&transport.Error{}); errors.As(err, &terr) && terr.StatusCode == http.StatusNotFound {
+			return nil, nil, &ErrImageTagNotFound{
+				fmt.Errorf("image tag not found: %w", err),
+			}
+		}
+		return nil, nil, err
+	}
+	h, err := v1.NewHash(digest.Identifier())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	index, err := ociremote.Referrers(digest, "", co.RegistryClientOpts...)
+	if err != nil {
+		return nil, nil, err
+	}
+	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
+	for _, result := range index.Manifests {
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()))
+		if err != nil {
+			return nil, nil, err
+		}
+		bundle, err := ociremote.Bundle(st, co.RegistryClientOpts...)
+		if err != nil {
+			return nil, nil, err
+		}
+		bundles = append(bundles, bundle)
+	}
+
+	return bundles, &h, nil
+}
+
+// verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
+func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	bundles, hash, err := getBundles(ctx, signedImgRef, co)
+	if err != nil {
+		return nil, false, err
+	}
+
+	digestBytes, err := hex.DecodeString(hash.Hex)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// TODO: build verifierConfig from CheckOpts
+	verifierConfig := []sgverify.VerifierOption{
+		sgverify.WithSignedCertificateTimestamps(1),
+		sgverify.WithTransparencyLog(1),
+		sgverify.WithIntegratedTimestamps(1),
+	}
+
+	sev, err := sgverify.NewSignedEntityVerifier(co.TrustedMaterial, verifierConfig...)
+	if err != nil {
+		return nil, false, err
+	}
+
+	policyOptions := make([]sgverify.PolicyOption, 0, len(co.Identities))
+	for _, i := range co.Identities {
+		id, err := sgverify.NewShortCertificateIdentity(i.Issuer, i.IssuerRegExp, i.Subject, i.SubjectRegExp)
+		if err != nil {
+			return nil, false, err
+		}
+		policyOptions = append(policyOptions, sgverify.WithCertificateIdentity(id))
+	}
+	policy := sgverify.NewPolicy(sgverify.WithArtifactDigest(hash.Algorithm, digestBytes), policyOptions...)
+
+	checkedSignatures = make([]oci.Signature, 0, len(bundles))
+	for _, bundle := range bundles {
+		_, err := sev.Verify(bundle, policy)
+		if err != nil {
+			continue
+		}
+		dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope)
+		if !ok {
+			continue
+		}
+		payload, err := json.Marshal(dsse.DsseEnvelope)
+		if err != nil {
+			continue
+		}
+		// TODO: Add additional data to oci.Signature (Cert, Rekor Bundle, Timestamp, etc)
+		sig, err := static.NewAttestation(payload)
+		if err != nil {
+			continue
+		}
+		checkedSignatures = append(checkedSignatures, sig)
+		bundleVerified = true
+	}
+	return checkedSignatures, bundleVerified, nil
 }

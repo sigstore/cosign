@@ -38,6 +38,8 @@ type CertVerifyOptions struct {
 	CertChain                    string
 	SCT                          string
 	IgnoreSCT                    bool
+	ExpectSigstoreBundle         bool
+	TrustedRootPath              string
 }
 
 var _ Interface = (*RekorOptions)(nil)
@@ -103,6 +105,8 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.IgnoreSCT, "insecure-ignore-sct", false,
 		"when set, verification will not check that a certificate contains an embedded SCT, a proof of "+
 			"inclusion in a certificate transparency log")
+	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "", "Path to a Sigstore TrustedRoot JSON file.")
+	cmd.Flags().BoolVar(&o.ExpectSigstoreBundle, "expect-sigstore-bundle", false, "expect the signature/attestation to be packaged in a Sigstore bundle")
 }
 
 func (o *CertVerifyOptions) Identities() ([]cosign.Identity, error) {
