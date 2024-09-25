@@ -60,7 +60,7 @@ func (p *HelpFlagPrinter) PrintHelpFlag(flag *flag.Flag) {
 	}
 	appendTabStr := strings.ReplaceAll(wrappedStr, "\n", "\n\t")
 
-	fmt.Fprintf(p.out, appendTabStr+"\n\n")
+	fmt.Fprintf(p.out, "%s\n\n", appendTabStr)
 }
 
 // writeFlag will output the help flag based

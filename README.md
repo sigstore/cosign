@@ -29,7 +29,7 @@ Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-mhs55zh0-XmY3bcf
 
 ## Installation
 
-For Homebrew, Arch, Nix, GitHub Action, and Kubernetes installs see the [installation docs](https://docs.sigstore.dev/system_config/installation/).
+For Homebrew, Arch, Nix, GitHub Action, and Kubernetes installs see the [installation docs](https://docs.sigstore.dev/cosign/system_config/installation/).
 
 For Linux and macOS binaries see the [GitHub release assets](https://github.com/sigstore/cosign/releases/latest).
 
@@ -77,7 +77,7 @@ ENTRYPOINT [ "cosign" ]
 ## Quick Start
 
 This shows how to:
-* sign a container image with the default identity-based "keyless signing" method (see [the documentation for more information](https://docs.sigstore.dev/signing/overview/))
+* sign a container image with the default identity-based "keyless signing" method (see [the documentation for more information](https://docs.sigstore.dev/cosign/signing/overview/))
 * verify the container image
 
 ### Sign a container and store the signature in the registry
@@ -190,7 +190,7 @@ OCI registries are useful for storing more than just container images!
 
 This section shows how to leverage these for an easy-to-use, backwards-compatible artifact distribution system that integrates well with the rest of Sigstore.
 
-See [the documentation](https://docs.sigstore.dev/signing/other_types/) for more information.
+See [the documentation](https://docs.sigstore.dev/cosign/signing/other_types/) for more information.
 
 ### Blobs
 
@@ -314,11 +314,11 @@ $ cosign verify-attestation --key cosign.pub $IMAGE_URI
 
 ## Detailed Usage
 
-See the [Usage documentation](https://docs.sigstore.dev/signing/overview/) for more information.
+See the [Usage documentation](https://docs.sigstore.dev/cosign/signing/overview/) for more information.
 
 ## Hardware-based Tokens
 
-See the [Hardware Tokens documentation](https://docs.sigstore.dev/key_management/hardware-based-tokens/) for information on how to use `cosign` with hardware.
+See the [Hardware Tokens documentation](https://docs.sigstore.dev/cosign/key_management/hardware-based-tokens/) for information on how to use `cosign` with hardware.
 
 ## Registry Support
 
@@ -492,7 +492,7 @@ The proposed mechanism is flexible enough to support signing arbitrary things.
 `cosign` supports using a KMS provider to generate and sign keys.
 Right now cosign supports Hashicorp Vault, AWS KMS, GCP KMS, Azure Key Vault and we are hoping to support more in the future!
 
-See the [KMS docs](https://docs.sigstore.dev/key_management/overview/) for more details.
+See the [KMS docs](https://docs.sigstore.dev/cosign/key_management/overview/) for more details.
 
 ### OCI Artifacts
 
