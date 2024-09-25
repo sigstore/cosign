@@ -49,7 +49,7 @@ import (
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*models.LogEntryAnon, error) {
 	rekorBytes, err := sv.Bytes(ctx)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 		return nil, err
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return cbundle.EntryToBundle(entry), nil
+	return entry, nil
 }
 
 // nolint
@@ -208,8 +208,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return fmt.Errorf("should upload to tlog: %w", err)
 	}
+	var rekorEntry *models.LogEntryAnon
 	if shouldUpload {
-		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		rekorEntry, err = uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			if c.RekorEntryType == "intoto" {
 				return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 			} else {
@@ -220,12 +221,25 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		opts = append(opts, static.WithBundle(bundle))
+		opts = append(opts, static.WithBundle(cbundle.EntryToBundle(rekorEntry)))
 	}
 
 	sig, err := static.NewAttestation(signedPayload, opts...)
 	if err != nil {
 		return err
+	}
+
+	if c.KeyOpts.NewBundleFormat {
+		signerBytes, err := sv.Bytes(ctx)
+		if err != nil {
+			return err
+		}
+		// TODO: Add TSA timestamp
+		bundleBytes, err := makeNewBundle(sv, rekorEntry, payload, signedPayload, signerBytes, nil)
+		if err != nil {
+			return err
+		}
+		return ociremote.WriteAttestationNewBundleFormat(digest.Repository, bundleBytes, ociremoteOpts...)
 	}
 
 	// We don't actually need to access the remote entity to attach things to it

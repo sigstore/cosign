@@ -87,6 +87,7 @@ func Attest() *cobra.Command {
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
 				TSAServerURL:             o.TSAServerURL,
+				NewBundleFormat:          o.NewBundleFormat,
 			}
 			attestCommand := attest.AttestCommand{
 				KeyOpts:                 ko,
