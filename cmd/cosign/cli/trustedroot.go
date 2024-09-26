@@ -48,9 +48,9 @@ func trustedRootCreate() *cobra.Command {
 				CAIntermediates:  o.CAIntermediates,
 				CARoots:          o.CARoots,
 				CertChain:        o.CertChain,
-				IgnoreSCT:        o.IgnoreSCT,
-				IgnoreTlog:       o.IgnoreTlog,
+				CtfeKeyPath:      o.CtfeKeyPath,
 				Out:              o.Out,
+				RekorKeyPath:     o.RekorKeyPath,
 				TSACertChainPath: o.TSACertChainPath,
 			}
 

@@ -25,6 +25,7 @@ import (
 	"os"
 
 	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
@@ -33,13 +34,13 @@ type CreateCmd struct {
 	CAIntermediates  string
 	CARoots          string
 	CertChain        string
-	IgnoreSCT        bool
-	IgnoreTlog       bool
+	CtfeKeyPath      string
 	Out              string
+	RekorKeyPath     string
 	TSACertChainPath string
 }
 
-func (c *CreateCmd) Exec(ctx context.Context) error {
+func (c *CreateCmd) Exec(_ context.Context) error {
 	var fulcioCertAuthorities []root.CertificateAuthority
 	ctLogs := make(map[string]*root.TransparencyLog)
 	var timestampAuthorities []root.CertificateAuthority
@@ -80,43 +81,31 @@ func (c *CreateCmd) Exec(ctx context.Context) error {
 		}
 	}
 
-	if !c.IgnoreSCT {
-		ctLogPubKeys, err := cosign.GetCTLogPubs(ctx)
+	if c.CtfeKeyPath != "" {
+		ctLogPubKey, id, idBytes, err := getPubKey(c.CtfeKeyPath)
 		if err != nil {
 			return err
 		}
 
-		for id, key := range ctLogPubKeys.Keys {
-			idBytes, err := hex.DecodeString(id)
-			if err != nil {
-				return err
-			}
-			ctLogs[id] = &root.TransparencyLog{
-				HashFunc:          crypto.SHA256,
-				ID:                idBytes,
-				PublicKey:         key.PubKey,
-				SignatureHashFunc: crypto.SHA256,
-			}
+		ctLogs[id] = &root.TransparencyLog{
+			HashFunc:          crypto.SHA256,
+			ID:                idBytes,
+			PublicKey:         *ctLogPubKey,
+			SignatureHashFunc: crypto.SHA256,
 		}
 	}
 
-	if !c.IgnoreTlog {
-		tlogPubKeys, err := cosign.GetRekorPubs(ctx)
+	if c.RekorKeyPath != "" {
+		tlogPubKey, id, idBytes, err := getPubKey(c.RekorKeyPath)
 		if err != nil {
 			return err
 		}
 
-		for id, key := range tlogPubKeys.Keys {
-			idBytes, err := hex.DecodeString(id)
-			if err != nil {
-				return err
-			}
-			rekorTransparencyLogs[id] = &root.TransparencyLog{
-				HashFunc:          crypto.SHA256,
-				ID:                idBytes,
-				PublicKey:         key.PubKey,
-				SignatureHashFunc: crypto.SHA256,
-			}
+		rekorTransparencyLogs[id] = &root.TransparencyLog{
+			HashFunc:          crypto.SHA256,
+			ID:                idBytes,
+			PublicKey:         *tlogPubKey,
+			SignatureHashFunc: crypto.SHA256,
 		}
 	}
 
@@ -195,4 +184,28 @@ func parseCerts(path string) ([]*x509.Certificate, error) {
 	}
 
 	return certs, nil
+}
+
+func getPubKey(path string) (*crypto.PublicKey, string, []byte, error) {
+	pemBytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	keyID, err := cosign.GetTransparencyLogID(pubKey)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	idBytes, err := hex.DecodeString(keyID)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	return &pubKey, keyID, idBytes, nil
 }
