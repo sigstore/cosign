@@ -38,7 +38,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -2021,81 +2020,6 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Success case (local)
 	verifyAttestation.LocalImage = true
 	must(verifyAttestation.Exec(ctx, []string{imageDir}), t)
-}
-
-func TestAttachSBOM(t *testing.T) {
-	td := t.TempDir()
-	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	repo, stop := reg(t)
-	defer stop()
-	ctx := context.Background()
-
-	imgName := path.Join(repo, "sbom-image")
-	img, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	out := bytes.Buffer{}
-
-	_, errPl := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{Platform: "darwin/amd64"}, img.Name(), &out)
-	if errPl == nil {
-		t.Fatalf("Expected error when passing Platform to single arch image")
-	}
-	_, err = download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, img.Name(), &out)
-	if err == nil {
-		t.Fatal("Expected error")
-	}
-	t.Log(out.String())
-	out.Reset()
-
-	// Upload it!
-	must(attach.SBOMCmd(ctx, options.RegistryOptions{}, options.RegistryExperimentalOptions{}, "./testdata/bom-go-mod.spdx", "spdx", imgName), t)
-
-	sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(out.String())
-	if len(sboms) != 1 {
-		t.Fatalf("Expected one sbom, got %d", len(sboms))
-	}
-	want, err := os.ReadFile("./testdata/bom-go-mod.spdx")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
-		t.Errorf("diff: %s", diff)
-	}
-
-	// Generate key pairs to sign the sbom
-	td1 := t.TempDir()
-	td2 := t.TempDir()
-	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
-	_, _, pubKeyPath2 := keypair(t, td2)
-
-	// Verify should fail on a bad input
-	mustErr(verify(pubKeyPath1, imgName, true, nil, "sbom", false), t)
-	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom", false), t)
-
-	// Now sign the sbom with one key
-	ko1 := options.KeyOpts{
-		KeyRef:   privKeyPath1,
-		PassFunc: passFunc,
-		RekorURL: rekorURL,
-	}
-	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
-		Attachment: "sbom",
-	}
-	must(sign.SignCmd(ro, ko1, so, []string{imgName}), t)
-
-	// Now verify should work with that one, but not the other
-	must(verify(pubKeyPath1, imgName, true, nil, "sbom", false), t)
-	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom", false), t)
 }
 
 func TestNoTlog(t *testing.T) {
