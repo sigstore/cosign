@@ -254,6 +254,22 @@ var verifyOffline = func(keyRef, imageRef string, checkClaims bool, annotations 
 	return cmd.Exec(context.Background(), args)
 }
 
+var verifyImageLocally = func(keyRef, imageRef, sigFile, certFile string, skipTlogVerify bool) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:       keyRef,
+		MaxWorkers:   10,
+		IgnoreTlog:   skipTlogVerify,
+		SignatureRef: sigFile,
+		CertVerifyOptions: options.CertVerifyOptions{
+			Cert: certFile,
+		},
+	}
+
+	args := []string{imageRef}
+
+	return cmd.Exec(context.Background(), args)
+}
+
 var ro = &options.RootOptions{Timeout: options.DefaultTimeout}
 
 func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
