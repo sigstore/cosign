@@ -31,10 +31,33 @@ const (
 	ReferenceScheme = "gitlab"
 )
 
+type glContext uint8
+
+const (
+	contextProject glContext = iota
+	contextGroup   glContext = iota
+)
+
 type Gl struct{}
 
 func New() *Gl {
 	return &Gl{}
+}
+
+func (g *Gl) getGitlabContext(client *gitlab.Client, ref string) (glContext, error) {
+	_, resp, err := client.Projects.GetProject(ref, &gitlab.GetProjectOptions{})
+	if err == nil {
+		return contextProject, nil
+	} else if resp.StatusCode == 404 {
+		_, _, err := client.Groups.GetGroup(ref, &gitlab.GetGroupOptions{})
+		if err == nil {
+			return contextGroup, nil
+		} else {
+			return contextGroup, err
+		}
+	} else {
+		return contextProject, err
+	}
 }
 
 func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
