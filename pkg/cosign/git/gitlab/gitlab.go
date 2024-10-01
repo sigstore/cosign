@@ -85,57 +85,97 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		}
 	}
 
-	_, passwordResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-		Key:              gitlab.Ptr("COSIGN_PASSWORD"),
-		Value:            gitlab.Ptr(string(keys.Password())),
-		VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
-		Protected:        gitlab.Ptr(false),
-		Masked:           gitlab.Ptr(false),
-		EnvironmentScope: gitlab.Ptr("*"),
-	})
+	context, err := g.getGitlabContext(client, ref)
+	if err != nil {
+		return fmt.Errorf("cannot determine if \"%s\" is project or group: %w", ref, err)
+	}
+
+	var resp *gitlab.Response
+
+	if context == contextProject {
+		_, resp, err = client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
+			Key:              gitlab.Ptr("COSIGN_PASSWORD"),
+			Value:            gitlab.Ptr(string(keys.Password())),
+			VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:        gitlab.Ptr(false),
+			Masked:           gitlab.Ptr(false),
+			EnvironmentScope: gitlab.Ptr("*"),
+		})
+	} else if context == contextGroup {
+		_, resp, err = client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
+			Key:              gitlab.Ptr("COSIGN_PASSWORD"),
+			Value:            gitlab.Ptr(string(keys.Password())),
+			VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:        gitlab.Ptr(false),
+			Masked:           gitlab.Ptr(false),
+			EnvironmentScope: gitlab.Ptr("*"),
+		})
+	}
 	if err != nil {
 		ui.Warnf(ctx, "If you are using a self-hosted gitlab please set the \"GITLAB_HOST\" your server name.")
 		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
 	}
 
-	if passwordResp.StatusCode < 200 && passwordResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(passwordResp.Body)
+	if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	ui.Infof(ctx, "Password written to \"COSIGN_PASSWORD\" variable")
 
-	_, privateKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-		Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
-		Value:        gitlab.Ptr(string(keys.PrivateBytes)),
-		VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-		Protected:    gitlab.Ptr(false),
-		Masked:       gitlab.Ptr(false),
-	})
+	if context == contextProject {
+		_, resp, err = client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
+			Value:        gitlab.Ptr(string(keys.PrivateBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+	} else if context == contextGroup {
+		_, resp, err = client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
+			Value:        gitlab.Ptr(string(keys.PrivateBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+
+	}
 	if err != nil {
 		return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" variable: %w", err)
 	}
 
-	if privateKeyResp.StatusCode < 200 && privateKeyResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(privateKeyResp.Body)
+	if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	ui.Infof(ctx, "Private key written to \"COSIGN_PRIVATE_KEY\" variable")
 
-	_, publicKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-		Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
-		Value:        gitlab.Ptr(string(keys.PublicBytes)),
-		VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-		Protected:    gitlab.Ptr(false),
-		Masked:       gitlab.Ptr(false),
-	})
+	if context == contextProject {
+		_, resp, err = client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
+			Value:        gitlab.Ptr(string(keys.PublicBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+	} else if context == contextGroup {
+		_, resp, err = client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
+			Value:        gitlab.Ptr(string(keys.PublicBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+
+	}
 	if err != nil {
 		return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" variable: %w", err)
 	}
 
-	if publicKeyResp.StatusCode < 200 && publicKeyResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(publicKeyResp.Body)
+	if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
