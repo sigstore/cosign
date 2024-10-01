@@ -151,9 +151,9 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 func (g *Gl) GetSecret(_ context.Context, ref string, key string) (string, error) {
 	token, tokenExists := env.LookupEnv(env.VariableGitLabToken)
-	var varPubKeyValue string
+	var varKeyValue string
 	if !tokenExists {
-		return varPubKeyValue, fmt.Errorf("could not find %q", env.VariableGitLabToken.String())
+		return varKeyValue, fmt.Errorf("could not find %q", env.VariableGitLabToken.String())
 	}
 
 	var client *gitlab.Client
@@ -161,26 +161,44 @@ func (g *Gl) GetSecret(_ context.Context, ref string, key string) (string, error
 	if url, baseURLExists := env.LookupEnv(env.VariableGitLabHost); baseURLExists {
 		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
 		if err != nil {
-			return varPubKeyValue, fmt.Errorf("could not create GitLab client): %w", err)
+			return varKeyValue, fmt.Errorf("could not create GitLab client): %w", err)
 		}
 	} else {
 		client, err = gitlab.NewClient(token)
 		if err != nil {
-			return varPubKeyValue, fmt.Errorf("could not create GitLab client: %w", err)
+			return varKeyValue, fmt.Errorf("could not create GitLab client: %w", err)
 		}
 	}
 
-	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, key, nil)
+	context, err := g.getGitlabContext(client, ref)
 	if err != nil {
-		return varPubKeyValue, fmt.Errorf("could not retrieve \"COSIGN_PUBLIC_KEY\" variable: %w", err)
+		return "", fmt.Errorf("cannot determine if \"%s\" is project or group: %w", ref, err)
 	}
 
-	varPubKeyValue = varPubKey.Value
+	var statusCode int
+	var bodyBytes []byte
 
-	if pubKeyResp.StatusCode < 200 && pubKeyResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(pubKeyResp.Body)
-		return varPubKeyValue, fmt.Errorf("%s", bodyBytes)
+	if context == contextProject {
+		varKey, resp, err := client.ProjectVariables.GetVariable(ref, key, nil)
+		if err != nil {
+			return "", fmt.Errorf("could not retrieve \"%s\" variable: %w", key, err)
+		}
+		varKeyValue = varKey.Value
+		statusCode = resp.StatusCode
+		bodyBytes, _ = io.ReadAll(resp.Body)
+	} else if context == contextGroup {
+		varKey, resp, err := client.GroupVariables.GetVariable(ref, key, nil)
+		if err != nil {
+			return "", fmt.Errorf("could not retrieve \"%s\" variable: %w", key, err)
+		}
+		varKeyValue = varKey.Value
+		statusCode = resp.StatusCode
+		bodyBytes, _ = io.ReadAll(resp.Body)
 	}
 
-	return varPubKeyValue, nil
+	if statusCode < 200 && statusCode >= 300 {
+		return varKeyValue, fmt.Errorf("%s", bodyBytes)
+	}
+
+	return varKeyValue, nil
 }
