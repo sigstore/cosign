@@ -1,3 +1,25 @@
+# v2.4.1
+
+v2.4.1 largely contains bug fixes and updates dependencies.
+
+## Features
+
+* Added fuzzing coverage to multiple packages
+
+## Bug Fixes
+* Fix bug in attest-blob when using a timestamp authority with new bundles (#3877)
+* fix: documentation link for installation guide (#3884)
+
+## Contributors
+
+* AdamKorcz
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Hayden B
+* Hemil K
+* Sota Sugiura
+* Zach Steindler
+
 # v2.4.0
 
 v2.4.0 begins the modernization of the Cosign client, which includes:
