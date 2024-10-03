@@ -113,7 +113,7 @@ func (k *Key) GetAttestationCertificate() (*x509.Certificate, error) {
 	return k.card.AttestationCertificate()
 }
 
-func (k *Key) SetManagementKey(old, new [24]byte) error {
+func (k *Key) SetManagementKey(old, new []byte) error {
 	if k.card == nil {
 		return KeyNotInitialized
 	}
@@ -153,7 +153,7 @@ func (k *Key) Unblock(puk, newPIN string) error {
 	return k.card.Unblock(puk, newPIN)
 }
 
-func (k *Key) GenerateKey(mgmtKey [24]byte, slot piv.Slot, opts piv.Key) (crypto.PublicKey, error) {
+func (k *Key) GenerateKey(mgmtKey []byte, slot piv.Slot, opts piv.Key) (crypto.PublicKey, error) {
 	if k.card == nil {
 		return nil, KeyNotInitialized
 	}
