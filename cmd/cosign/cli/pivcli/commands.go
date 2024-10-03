@@ -29,7 +29,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-piv/piv-go/piv"
+	"github.com/go-piv/piv-go/v2/piv"
 	"github.com/manifoldco/promptui"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"

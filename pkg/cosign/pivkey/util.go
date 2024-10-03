@@ -18,7 +18,7 @@
 package pivkey
 
 import (
-	"github.com/go-piv/piv-go/piv"
+	"github.com/go-piv/piv-go/v2/piv"
 )
 
 func SlotForName(slotName string) *piv.Slot {
