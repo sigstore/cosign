@@ -66,7 +66,7 @@ introduce breaking changes may be accepted, but will be considered lower priorit
 Here is how to install and use cosign inside a Dockerfile through the ghcr.io/sigstore/cosign/cosign image:
 
 ```shell
-FROM gcr.io/sigstore/cosign/cosign:v2.4.1 as cosign-bin
+FROM ghcr.io/sigstore/cosign/cosign:v2.4.1 as cosign-bin
 
 # Source: https://github.com/chainguard-images/static
 FROM cgr.dev/chainguard/static:latest
