@@ -39,7 +39,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attach"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
@@ -398,98 +397,6 @@ func TestUploadDownload(t *testing.T) {
 			}
 
 			// Now delete it!
-			cleanup()
-		})
-	}
-}
-
-func TestAttachSBOM_bom_flag(t *testing.T) {
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-	ctx := context.Background()
-	bomData, err := os.ReadFile("./testdata/bom-go-mod.spdx")
-	must(err, t)
-
-	testCases := map[string]struct {
-		bom         string
-		bomType     attach.SignatureArgType
-		expectedErr bool
-	}{
-		"stdin containing bom": {
-			bom:         string(bomData),
-			bomType:     attach.StdinSignature,
-			expectedErr: false,
-		},
-		"file containing bom": {
-			bom:         string(bomData),
-			bomType:     attach.FileSignature,
-			expectedErr: false,
-		},
-		"raw bom as argument": {
-			bom:         string(bomData),
-			bomType:     attach.RawSignature,
-			expectedErr: true,
-		},
-		"empty bom as argument": {
-			bom:         "",
-			bomType:     attach.RawSignature,
-			expectedErr: true,
-		},
-	}
-
-	for testName, testCase := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			imgName := path.Join(repo, "sbom-image")
-			img, _, cleanup := mkimage(t, imgName)
-			var sbomRef string
-			restoreStdin := func() {}
-			switch {
-			case testCase.bomType == attach.FileSignature:
-				sbomRef = mkfile(testCase.bom, td, t)
-			case testCase.bomType == attach.StdinSignature:
-				sbomRef = "-"
-				restoreStdin = mockStdin(testCase.bom, td, t)
-			default:
-				sbomRef = testCase.bom
-			}
-
-			out := bytes.Buffer{}
-			_, errPl := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{Platform: "darwin/amd64"}, img.Name(), &out)
-			if errPl == nil {
-				t.Fatalf("Expected error when passing Platform to single arch image")
-			}
-			_, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, img.Name(), &out)
-			if err == nil {
-				t.Fatal("Expected error")
-			}
-			t.Log(out.String())
-			out.Reset()
-
-			// Upload it!
-			err = attach.SBOMCmd(ctx, options.RegistryOptions{}, options.RegistryExperimentalOptions{}, sbomRef, "spdx", imgName)
-			restoreStdin()
-
-			if testCase.expectedErr {
-				mustErr(err, t)
-			} else {
-				sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
-				if err != nil {
-					t.Fatal(err)
-				}
-				t.Log(out.String())
-				if len(sboms) != 1 {
-					t.Fatalf("Expected one sbom, got %d", len(sboms))
-				}
-				want, err := os.ReadFile("./testdata/bom-go-mod.spdx")
-				if err != nil {
-					t.Fatal(err)
-				}
-				if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
-					t.Errorf("diff: %s", diff)
-				}
-			}
-
 			cleanup()
 		})
 	}

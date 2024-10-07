@@ -16,9 +16,6 @@
 package cli
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/download"
@@ -33,7 +30,6 @@ func Download() *cobra.Command {
 
 	cmd.AddCommand(
 		downloadSignature(),
-		downloadSBOM(),
 		downloadAttestation(),
 	)
 
@@ -54,31 +50,6 @@ func downloadSignature() *cobra.Command {
 		},
 	}
 
-	o.AddFlags(cmd)
-
-	return cmd
-}
-
-func downloadSBOM() *cobra.Command {
-	o := &options.RegistryOptions{}
-	do := &options.SBOMDownloadOptions{}
-
-	cmd := &cobra.Command{
-		Use:              "sbom",
-		Short:            "DEPRECATED: Download SBOMs from the supplied container image",
-		Long:             "Download SBOMs from the supplied container image\n\n" + options.SBOMAttachmentDeprecation,
-		Example:          "  cosign download sbom <image uri>",
-		Args:             cobra.ExactArgs(1),
-		PersistentPreRun: options.BindViper,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
-			fmt.Fprintln(os.Stderr, "WARNING: Downloading SBOMs this way does not ensure its authenticity. If you want to ensure a tamper-proof SBOM, download it using 'cosign download attestation <image uri>'.")
-			_, err := download.SBOMCmd(cmd.Context(), *o, *do, args[0], cmd.OutOrStdout())
-			return err
-		},
-	}
-
-	do.AddFlags(cmd)
 	o.AddFlags(cmd)
 
 	return cmd
