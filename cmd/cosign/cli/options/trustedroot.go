@@ -20,51 +20,43 @@ import (
 )
 
 type TrustedRootCreateOptions struct {
-	CAIntermediates  string
-	CARoots          string
-	CertChain        string
-	CtfeKeyPath      string
-	RekorKeyPath     string
+	CertChain        []string
+	CtfeKeyPath      []string
+	CtfeStartTime    []string
 	Out              string
-	TSACertChainPath string
+	RekorKeyPath     []string
+	RekorStartTime   []string
+	TSACertChainPath []string
 }
 
 var _ Interface = (*TrustedRootCreateOptions)(nil)
 
 func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.CAIntermediates, "ca-intermediates", "",
-		"path to a file of intermediate CA certificates in PEM format which will be needed "+
-			"when building the certificate chains for the signing certificate. "+
-			"The flag is optional and must be used together with --ca-roots, conflicts with "+
-			"--certificate-chain.")
-	_ = cmd.Flags().SetAnnotation("ca-intermediates", cobra.BashCompFilenameExt, []string{"cert"})
-
-	cmd.Flags().StringVar(&o.CARoots, "ca-roots", "",
-		"path to a bundle file of CA certificates in PEM format which will be needed "+
-			"when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.")
-	_ = cmd.Flags().SetAnnotation("ca-roots", cobra.BashCompFilenameExt, []string{"cert"})
-
-	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
+	cmd.Flags().StringArrayVar(&o.CertChain, "certificate-chain", nil,
 		"path to a list of CA certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.")
 	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
 
-	cmd.MarkFlagsMutuallyExclusive("ca-roots", "certificate-chain")
-	cmd.MarkFlagsMutuallyExclusive("ca-intermediates", "certificate-chain")
-
-	cmd.Flags().StringVar(&o.CtfeKeyPath, "ctfe-key", "",
+	cmd.Flags().StringArrayVar(&o.CtfeKeyPath, "ctfe-key", nil,
 		"path to a PEM-encoded public key used by certificate authority for "+
 			"certificate transparency log.")
 
-	cmd.Flags().StringVar(&o.RekorKeyPath, "rekor-key", "",
+	cmd.Flags().StringArrayVar(&o.CtfeStartTime, "ctfe-start-time", nil,
+		"RFC 3339 string describing validity start time for key use by "+
+			"certificate transparency log.")
+
+	cmd.Flags().StringVar(&o.Out, "out", "", "path to output trusted root")
+
+	cmd.Flags().StringArrayVar(&o.RekorKeyPath, "rekor-key", nil,
 		"path to a PEM-encoded public key used by transparency log like Rekor.")
 
-	cmd.Flags().StringVar(&o.Out, "out", "",
-		"path to output trusted root")
+	cmd.Flags().StringArrayVar(&o.RekorStartTime, "rekor-start-time", nil,
+		"RFC 3339 string describing validity start time for key use by "+
+			"transparency log like Rekor.")
 
-	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
+	cmd.Flags().StringArrayVar(&o.TSACertChainPath, "timestamp-certificate-chain", nil,
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
 			"Optionally may contain intermediate CA certificates")
 }

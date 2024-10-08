@@ -44,9 +44,9 @@ func TestCreateCmd(t *testing.T) {
 	outPath := filepath.Join(td, "trustedroot.json")
 
 	trustedrootCreate := CreateCmd{
-		CertChain:        fulcioChainPath,
+		CertChain:        []string{fulcioChainPath},
 		Out:              outPath,
-		TSACertChainPath: tsaChainPath,
+		TSACertChainPath: []string{tsaChainPath},
 	}
 
 	err := trustedrootCreate.Exec(ctx)

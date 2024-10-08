@@ -45,12 +45,12 @@ func trustedRootCreate() *cobra.Command {
 		Long:  "Create a Sigstore protobuf trusted root by supplying verification material",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			trCreateCmd := &trustedroot.CreateCmd{
-				CAIntermediates:  o.CAIntermediates,
-				CARoots:          o.CARoots,
 				CertChain:        o.CertChain,
 				CtfeKeyPath:      o.CtfeKeyPath,
+				CtfeStartTime:    o.CtfeStartTime,
 				Out:              o.Out,
 				RekorKeyPath:     o.RekorKeyPath,
+				RekorStartTime:   o.RekorStartTime,
 				TSACertChainPath: o.TSACertChainPath,
 			}
 

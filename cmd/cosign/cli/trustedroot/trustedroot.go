@@ -23,6 +23,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -31,13 +32,13 @@ import (
 )
 
 type CreateCmd struct {
-	CAIntermediates  string
-	CARoots          string
-	CertChain        string
-	CtfeKeyPath      string
+	CertChain        []string
+	CtfeKeyPath      []string
+	CtfeStartTime    []string
 	Out              string
-	RekorKeyPath     string
-	TSACertChainPath string
+	RekorKeyPath     []string
+	RekorStartTime   []string
+	TSACertChainPath []string
 }
 
 func (c *CreateCmd) Exec(_ context.Context) error {
@@ -46,71 +47,64 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	var timestampAuthorities []root.CertificateAuthority
 	rekorTransparencyLogs := make(map[string]*root.TransparencyLog)
 
-	if c.CertChain != "" {
-		fulcioAuthority, err := parsePEMFile(c.CertChain)
+	for i := 0; i < len(c.CertChain); i++ {
+		fulcioAuthority, err := parsePEMFile(c.CertChain[i])
 		if err != nil {
 			return err
 		}
 		fulcioCertAuthorities = append(fulcioCertAuthorities, *fulcioAuthority)
-	} else if c.CARoots != "" {
-		roots, err := parseCerts(c.CARoots)
+	}
+
+	for i := 0; i < len(c.CtfeKeyPath); i++ {
+		ctLogPubKey, id, idBytes, err := getPubKey(c.CtfeKeyPath[i])
 		if err != nil {
 			return err
 		}
 
-		var intermediates []*x509.Certificate
-		if c.CAIntermediates != "" {
-			intermediates, err = parseCerts(c.CAIntermediates)
+		startTime := time.Unix(0, 0)
+
+		if i < len(c.CtfeStartTime) {
+			startTime, err = time.Parse(time.RFC3339, c.CtfeStartTime[i])
 			if err != nil {
 				return err
 			}
 		}
 
-		// Here we're trying to "flatten" the x509.CertPool cosign was using
-		// into a trusted root with a clear mapping between roots and
-		// intermediates. Make a guess that if there are intermediates, there
-		// is one per root.
-
-		for i, rootCert := range roots {
-			var fulcioAuthority root.CertificateAuthority
-			fulcioAuthority.Root = rootCert
-			if i < len(intermediates) {
-				fulcioAuthority.Intermediates = []*x509.Certificate{intermediates[i]}
-			}
-			fulcioCertAuthorities = append(fulcioCertAuthorities, fulcioAuthority)
-		}
-	}
-
-	if c.CtfeKeyPath != "" {
-		ctLogPubKey, id, idBytes, err := getPubKey(c.CtfeKeyPath)
-		if err != nil {
-			return err
-		}
-
 		ctLogs[id] = &root.TransparencyLog{
-			HashFunc:          crypto.SHA256,
-			ID:                idBytes,
-			PublicKey:         *ctLogPubKey,
-			SignatureHashFunc: crypto.SHA256,
+			HashFunc:            crypto.SHA256,
+			ID:                  idBytes,
+			ValidityPeriodStart: startTime,
+			PublicKey:           *ctLogPubKey,
+			SignatureHashFunc:   crypto.SHA256,
 		}
 	}
 
-	if c.RekorKeyPath != "" {
-		tlogPubKey, id, idBytes, err := getPubKey(c.RekorKeyPath)
+	for i := 0; i < len(c.RekorKeyPath); i++ {
+		tlogPubKey, id, idBytes, err := getPubKey(c.RekorKeyPath[i])
 		if err != nil {
 			return err
+		}
+
+		startTime := time.Unix(0, 0)
+
+		if i < len(c.RekorStartTime) {
+			startTime, err = time.Parse(time.RFC3339, c.RekorStartTime[i])
+			if err != nil {
+				return err
+			}
 		}
 
 		rekorTransparencyLogs[id] = &root.TransparencyLog{
-			HashFunc:          crypto.SHA256,
-			ID:                idBytes,
-			PublicKey:         *tlogPubKey,
-			SignatureHashFunc: crypto.SHA256,
+			HashFunc:            crypto.SHA256,
+			ID:                  idBytes,
+			ValidityPeriodStart: startTime,
+			PublicKey:           *tlogPubKey,
+			SignatureHashFunc:   crypto.SHA256,
 		}
 	}
 
-	if c.TSACertChainPath != "" {
-		timestampAuthority, err := parsePEMFile(c.TSACertChainPath)
+	for i := 0; i < len(c.TSACertChainPath); i++ {
+		timestampAuthority, err := parsePEMFile(c.TSACertChainPath[i])
 		if err != nil {
 			return err
 		}
@@ -152,6 +146,7 @@ func parsePEMFile(path string) (*root.CertificateAuthority, error) {
 
 	var ca root.CertificateAuthority
 	ca.Root = certs[len(certs)-1]
+	ca.ValidityPeriodStart = certs[len(certs)-1].NotBefore
 	if len(certs) > 1 {
 		ca.Intermediates = certs[:len(certs)-1]
 	}
