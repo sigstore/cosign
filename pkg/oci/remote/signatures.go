@@ -17,6 +17,7 @@ package remote
 
 import (
 	"errors"
+	"io"
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -26,6 +27,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/empty"
 	"github.com/sigstore/cosign/v2/pkg/oci/internal/signature"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 const maxLayers = 1000
@@ -47,6 +49,28 @@ func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
 	return &sigs{
 		Image: img,
 	}, nil
+}
+
+func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
+	signatures, err := Signatures(ref, opts...)
+	if err != nil {
+		return nil, err
+	}
+	layers, err := signatures.(*sigs).Image.Layers()
+	if err != nil {
+		return nil, err
+	}
+	layer0, err := layers[0].Uncompressed()
+	if err != nil {
+		return nil, err
+	}
+	bundleBytes, err := io.ReadAll(layer0)
+	if err != nil {
+		return nil, err
+	}
+	b := &sgbundle.Bundle{}
+	err = b.UnmarshalJSON(bundleBytes)
+	return b, err
 }
 
 type sigs struct {

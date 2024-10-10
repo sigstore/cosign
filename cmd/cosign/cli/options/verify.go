@@ -162,7 +162,6 @@ type VerifyBlobOptions struct {
 	Signature       string
 	BundlePath      string
 	NewBundleFormat bool
-	TrustedRootPath string
 
 	SecurityKey         SecurityKeyOptions
 	CertVerify          CertVerifyOptions
@@ -193,9 +192,6 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	// TODO: have this default to true as a breaking change
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
 		"output bundle in new format that contains all verification material")
-
-	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
-		"path to trusted root FILE")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")
@@ -258,9 +254,6 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	// TODO: have this default to true as a breaking change
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
 		"output bundle in new format that contains all verification material")
-
-	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
-		"path to trusted root FILE")
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"if true, verifies the provided blob's sha256 digest exists as an in-toto subject within the attestation. If false, only the DSSE envelope is verified.")

@@ -41,6 +41,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -144,7 +145,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
 		ExperimentalOCI11:            c.ExperimentalOCI11,
+		ExpectSigstoreBundle:         c.ExpectSigstoreBundle,
 	}
+
+	if c.TrustedRootPath != "" {
+		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
+		if err != nil {
+			return fmt.Errorf("loading trusted root: %w", err)
+		}
+	}
+
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
