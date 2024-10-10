@@ -73,7 +73,7 @@ func (c *VerifyBlobCmd) loadTSACertificates(ctx context.Context) (*cosign.TSACer
 	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
 		return nil, fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set")
 	}
-	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
 	}

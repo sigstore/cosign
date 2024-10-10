@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"os"
 	"strconv"
 	"strings"
 
@@ -47,18 +46,21 @@ import (
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/tuf"
+	tufv1 "github.com/sigstore/sigstore/pkg/tuf"
 )
 
 // This is the rekor transparency log public key target name
-var rekorTargetStr = `rekor.pub`
+var (
+	rekorTargetStr = `rekor.pub`
+	rekorDesc      = `rekor public key`
+)
 
 // TransparencyLogPubKey contains the ECDSA verification key and the current status
 // of the key according to TUF metadata, whether it's active or expired.
 type TransparencyLogPubKey struct {
 	PubKey crypto.PublicKey
-	Status tuf.StatusKind
 }
 
 // This is a map of TransparencyLog public keys indexed by log ID that's used
@@ -124,33 +126,37 @@ func GetRekorPubs(ctx context.Context) (*TrustedTransparencyLogPubKeys, error) {
 	altRekorPub := env.Getenv(env.VariableSigstoreRekorPublicKey)
 
 	if altRekorPub != "" {
-		raw, err := os.ReadFile(altRekorPub)
+		if err := addKeyFromFile(&publicKeys, altRekorPub, rekorDesc); err != nil {
+			return nil, fmt.Errorf("error adding key from environment variable: %w", err)
+		}
+		return &publicKeys, nil
+	}
+
+	if useNewTUFClient() {
+		opts, err := setTUFOpts()
 		if err != nil {
-			return nil, fmt.Errorf("error reading alternate Rekor public key file: %w", err)
+			return nil, fmt.Errorf("error setting TUF options: %w", err)
 		}
-		if err := publicKeys.AddTransparencyLogPubKey(raw, tuf.Active); err != nil {
-			return nil, fmt.Errorf("AddRekorPubKey: %w", err)
+		trustedRoot, _ := root.NewLiveTrustedRoot(opts)
+		if trustedRoot == nil {
+			if err := addKeyFromTUF(&publicKeys, opts, rekorTargetStr, rekorDesc); err != nil {
+				return nil, fmt.Errorf("error adding Rekor key from TUF target: %w", err)
+			}
+			return &publicKeys, err
 		}
-	} else {
-		tufClient, err := tuf.NewFromEnv(ctx)
-		if err != nil {
-			return nil, err
-		}
-		targets, err := tufClient.GetTargetsByMeta(tuf.Rekor, []string{rekorTargetStr})
-		if err != nil {
-			return nil, err
-		}
-		for _, t := range targets {
-			if err := publicKeys.AddTransparencyLogPubKey(t.Target, t.Status); err != nil {
-				return nil, fmt.Errorf("AddRekorPubKey: %w", err)
+		tlogs := trustedRoot.RekorLogs()
+		for _, t := range tlogs {
+			if err := publicKeys.AddTransparencyLogPubKey(t.PublicKey); err != nil {
+				return nil, fmt.Errorf("error adding Rekor public key from trusted root: %w", err)
 			}
 		}
 	}
-
-	if len(publicKeys.Keys) == 0 {
-		return nil, errors.New("none of the Rekor public keys have been found")
+	if err := legacyAddKeyFromTUF(ctx, &publicKeys, tufv1.Rekor, []string{rekorTargetStr}, rekorDesc); err != nil {
+		return nil, fmt.Errorf("error adding Rekor key from TUF (v1) target: %w", err)
 	}
-
+	if len(publicKeys.Keys) == 0 {
+		return nil, fmt.Errorf("no Rekor public keys found")
+	}
 	return &publicKeys, nil
 }
 
@@ -163,7 +169,7 @@ func rekorPubsFromClient(rekorClient *client.Rekor) (*TrustedTransparencyLogPubK
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)
 	}
-	if err := publicKeys.AddTransparencyLogPubKey([]byte(pubOK.Payload), tuf.Active); err != nil {
+	if err := publicKeys.AddTransparencyLogPubKey([]byte(pubOK.Payload)); err != nil {
 		return nil, fmt.Errorf("constructRekorPubKey: %w", err)
 	}
 	return &publicKeys, nil
@@ -219,7 +225,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntryOffline(ctx, e, rekorPubsFromAPI)
+			return e, VerifyTLogEntryOffline(e, rekorPubsFromAPI)
 		}
 		return nil, err
 	}
@@ -443,7 +449,7 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 
 // VerifyTLogEntryOffline verifies a TLog entry against a map of trusted rekorPubKeys indexed
 // by log id.
-func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPubKeys *TrustedTransparencyLogPubKeys) error {
+func VerifyTLogEntryOffline(e *models.LogEntryAnon, rekorPubKeys *TrustedTransparencyLogPubKeys) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
@@ -493,9 +499,6 @@ func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPu
 	if err != nil {
 		return fmt.Errorf("verifying signedEntryTimestamp: %w", err)
 	}
-	if pubKey.Status != tuf.Active {
-		ui.Infof(ctx, "Successfully verified Rekor entry using an expired verification key")
-	}
 	return nil
 }
 
@@ -504,16 +507,22 @@ func NewTrustedTransparencyLogPubKeys() TrustedTransparencyLogPubKeys {
 }
 
 // constructRekorPubkey returns a log ID and RekorPubKey from a given
-// byte-array representing the PEM-encoded Rekor key and a status.
-func (t *TrustedTransparencyLogPubKeys) AddTransparencyLogPubKey(pemBytes []byte, status tuf.StatusKind) error {
-	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
-	if err != nil {
-		return err
+// byte-array representing the PEM-encoded Rekor key.
+func (t *TrustedTransparencyLogPubKeys) AddTransparencyLogPubKey(pem any) error {
+	var pubKey crypto.PublicKey
+	var err error
+	if pemBytes, ok := pem.([]byte); ok {
+		pubKey, err = cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
+		if err != nil {
+			return err
+		}
+	} else {
+		pubKey = pem.(crypto.PublicKey)
 	}
 	keyID, err := GetTransparencyLogID(pubKey)
 	if err != nil {
 		return err
 	}
-	t.Keys[keyID] = TransparencyLogPubKey{PubKey: pubKey, Status: status}
+	t.Keys[keyID] = TransparencyLogPubKey{PubKey: pubKey}
 	return nil
 }

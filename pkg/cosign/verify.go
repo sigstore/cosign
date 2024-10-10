@@ -69,7 +69,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
-	"github.com/sigstore/sigstore/pkg/tuf"
 	tsaverification "github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
@@ -457,7 +456,7 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *
 	entryVerificationErrs := make([]string, 0)
 	for _, e := range tlogEntries {
 		entry := e
-		if err := VerifyTLogEntryOffline(ctx, &entry, rekorPubKeys); err != nil {
+		if err := VerifyTLogEntryOffline(&entry, rekorPubKeys); err != nil {
 			entryVerificationErrs = append(entryVerificationErrs, err.Error())
 			continue
 		}
@@ -1087,9 +1086,6 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey.(*ecdsa.PublicKey))
 	if err != nil {
 		return false, err
-	}
-	if pubKey.Status != tuf.Active {
-		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
 	payload, err := sig.Payload()

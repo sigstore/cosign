@@ -16,15 +16,10 @@
 package fulcioroots
 
 import (
-	"bytes"
 	"crypto/x509"
-	"fmt"
-	"os"
 	"sync"
 
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/fulcioroots"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
 var (
@@ -64,41 +59,5 @@ func ReInit() error {
 }
 
 func initRoots() (*x509.CertPool, *x509.CertPool, error) {
-	rootPool := x509.NewCertPool()
-	// intermediatePool should be nil if no intermediates are found
-	var intermediatePool *x509.CertPool
-
-	rootEnv := env.Getenv(env.VariableSigstoreRootFile)
-	if rootEnv != "" {
-		raw, err := os.ReadFile(rootEnv)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error reading root PEM file: %w", err)
-		}
-		certs, err := cryptoutils.UnmarshalCertificatesFromPEM(raw)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error unmarshalling certificates: %w", err)
-		}
-		for _, cert := range certs {
-			// root certificates are self-signed
-			if bytes.Equal(cert.RawSubject, cert.RawIssuer) {
-				rootPool.AddCert(cert)
-			} else {
-				if intermediatePool == nil {
-					intermediatePool = x509.NewCertPool()
-				}
-				intermediatePool.AddCert(cert)
-			}
-		}
-	} else {
-		var err error
-		rootPool, err = fulcioroots.Get()
-		if err != nil {
-			return nil, nil, err
-		}
-		intermediatePool, err = fulcioroots.GetIntermediates()
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return rootPool, intermediatePool, nil
+	return cosign.GetFulcioCerts()
 }

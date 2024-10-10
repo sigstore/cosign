@@ -28,7 +28,6 @@ import (
 	ttestdata "github.com/google/certificate-transparency-go/trillian/testdata"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 var (
@@ -169,11 +168,11 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 		t.Fatalf("Unable to marshal RSA test key: %v", err)
 	}
 	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
-	if err = rekorPubKeys.AddTransparencyLogPubKey(rsaPEM, tuf.Active); err != nil {
+	if err = rekorPubKeys.AddTransparencyLogPubKey(rsaPEM); err != nil {
 		t.Fatalf("failed to add RSA key to transparency log public keys: %v", err)
 	}
 
-	err = VerifyTLogEntryOffline(context.Background(), &models.LogEntryAnon{Verification: &models.LogEntryAnonVerification{InclusionProof: &models.InclusionProof{}}}, &rekorPubKeys)
+	err = VerifyTLogEntryOffline(&models.LogEntryAnon{Verification: &models.LogEntryAnonVerification{InclusionProof: &models.InclusionProof{}}}, &rekorPubKeys)
 	if err == nil {
 		t.Fatal("Wanted error got none")
 	}

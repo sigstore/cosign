@@ -59,6 +59,10 @@ const (
 	VariableSigstoreRekorPublicKey     Variable = "SIGSTORE_REKOR_PUBLIC_KEY"
 	VariableSigstoreIDToken            Variable = "SIGSTORE_ID_TOKEN" //nolint:gosec
 	VariableSigstoreTSACertificateFile Variable = "SIGSTORE_TSA_CERTIFICATE_FILE"
+	VariableTUFMirror                  Variable = "SIGSTORE_TUF_MIRROR"
+	VariableTUFRootDir                 Variable = "SIGSTORE_TUF_ROOT"
+	VariableTUFRootJSON                Variable = "SIGSTORE_TUF_ROOT_JSON"
+	VariableForceTrustedRoot           Variable = "SIGSTORE_TUF_USE_TRUSTED_ROOT"
 
 	// Other external environment variables
 	VariableGitHubHost                Variable = "GITHUB_HOST"
@@ -142,6 +146,30 @@ var (
 		VariableSigstoreTSACertificateFile: {
 			Description: "path to the concatenated PEM-encoded TSA certificate file (leaf, intermediate(s), root) used by Sigstore",
 			Expects:     "path to the TSA certificate file",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableTUFMirror: {
+			Description: "URL of the TUF mirror. Use with TUF_ROOT_JSON to refresh TUF metadata during signing and verification commands. Setting this will cause cosign to attempt to use trusted_root.json if available and will ignore custom TUF metadata.",
+			Expects:     "URL of the TUF mirror",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableTUFRootDir: {
+			Description: "path to the TUF cache directory",
+			Expects:     "path fo the TUF cache directory",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableTUFRootJSON: {
+			Description: "path to the TUF root.json file used to initialize and update a local TUF repository. Use with TUF_MIRROR to refresh TUF metadata during signing and verification commands. Setting this will cause cosign to attempt to use trusted_root.json if available and will ignore custom TUF metadata.",
+			Expects:     "path to root.json",
+			Sensitive:   false,
+			External:    true,
+		},
+		VariableForceTrustedRoot: {
+			Description: "boolean, try to use trusted_root.json as the source of TUF metadata if available. If not available, cosign will fall back to fetching TUF targets by name. Setting this will cause cosign to ignore custom TUF metadata, which is deprecated.",
+			Expects:     "set or unset",
 			Sensitive:   false,
 			External:    true,
 		},
