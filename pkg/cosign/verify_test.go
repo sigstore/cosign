@@ -60,7 +60,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
-	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/transparency-dev/merkle/rfc6962"
@@ -306,7 +305,7 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
 	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
 	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
-	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes)
 
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
@@ -350,7 +349,7 @@ func TestVerifyImageSignatureWithInvalidPublicKeyType(t *testing.T) {
 	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
 	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
 	// Add one valid key here.
-	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes)
 
 	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
 	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
@@ -371,7 +370,7 @@ func TestVerifyImageSignatureWithInvalidPublicKeyType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to marshal RSA test key: %v", err)
 	}
-	if err = rekorPubKeys.AddTransparencyLogPubKey(rsaPEM, tuf.Active); err != nil {
+	if err = rekorPubKeys.AddTransparencyLogPubKey(rsaPEM); err != nil {
 		t.Fatalf("failed to add RSA key to transparency log public keys: %v", err)
 	}
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
@@ -564,7 +563,6 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 		Keys: map[string]TransparencyLogPubKey{
 			logID: {
 				PubKey: rekorPublicKey,
-				Status: tuf.Active,
 			},
 		},
 	}
@@ -575,7 +573,6 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 		Keys: map[string]TransparencyLogPubKey{
 			logID: {
 				PubKey: nonMatchingPublicKey,
-				Status: tuf.Active,
 			},
 		},
 	}

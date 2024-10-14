@@ -76,7 +76,7 @@ func (c *VerifyAttestationCommand) loadTSACertificates(ctx context.Context) (*co
 	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
 		return nil, fmt.Errorf("TSA certificate chain path not provided and use-signed-timestamps not set")
 	}
-	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
 	}

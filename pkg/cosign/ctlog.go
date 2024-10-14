@@ -16,16 +16,18 @@ package cosign
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
-	"github.com/sigstore/sigstore/pkg/tuf"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	tufv1 "github.com/sigstore/sigstore/pkg/tuf"
 )
 
 // This is the CT log public key target name
-var ctPublicKeyStr = `ctfe.pub`
+var (
+	ctPublicKeyStr  = `ctfe.pub`
+	ctPublicKeyDesc = `CT log public key`
+)
 
 // GetCTLogPubs retrieves trusted CTLog public keys from the embedded or cached
 // TUF root. If expired, makes a network call to retrieve the updated targets.
@@ -37,32 +39,37 @@ func GetCTLogPubs(ctx context.Context) (*TrustedTransparencyLogPubKeys, error) {
 	altCTLogPub := env.Getenv(env.VariableSigstoreCTLogPublicKeyFile)
 
 	if altCTLogPub != "" {
-		raw, err := os.ReadFile(altCTLogPub)
+		if err := addKeyFromFile(&publicKeys, altCTLogPub, ctPublicKeyDesc); err != nil {
+			return nil, fmt.Errorf("error adding key from environment variable: %w", err)
+		}
+		return &publicKeys, nil
+	}
+
+	if useNewTUFClient() {
+		opts, err := setTUFOpts()
 		if err != nil {
-			return nil, fmt.Errorf("error reading alternate CTLog public key file: %w", err)
+			return nil, fmt.Errorf("error setting TUF options: %w", err)
 		}
-		if err := publicKeys.AddTransparencyLogPubKey(raw, tuf.Active); err != nil {
-			return nil, fmt.Errorf("AddCTLogPubKey: %w", err)
+		trustedRoot, _ := root.NewLiveTrustedRoot(opts)
+		if trustedRoot == nil {
+			if err = addKeyFromTUF(&publicKeys, opts, ctPublicKeyStr, ctPublicKeyDesc); err != nil {
+				return nil, fmt.Errorf("error adding CT log public key from TUF target: %w", err)
+			}
+			return &publicKeys, err
 		}
-	} else {
-		tufClient, err := tuf.NewFromEnv(ctx)
-		if err != nil {
-			return nil, err
-		}
-		targets, err := tufClient.GetTargetsByMeta(tuf.CTFE, []string{ctPublicKeyStr})
-		if err != nil {
-			return nil, err
-		}
-		for _, t := range targets {
-			if err := publicKeys.AddTransparencyLogPubKey(t.Target, t.Status); err != nil {
-				return nil, fmt.Errorf("AddCTLogPubKey: %w", err)
+		ctlogs := trustedRoot.CTLogs()
+		for _, ct := range ctlogs {
+			if err := publicKeys.AddTransparencyLogPubKey(ct.PublicKey); err != nil {
+				return nil, fmt.Errorf("error adding CT log public key from trusted root: %w", err)
 			}
 		}
+		return &publicKeys, err
 	}
-
+	if err := legacyAddKeyFromTUF(ctx, &publicKeys, tufv1.CTFE, []string{ctPublicKeyStr}, ctPublicKeyDesc); err != nil {
+		return nil, fmt.Errorf("error adding CT log public key from TUF (v1) target: %w", err)
+	}
 	if len(publicKeys.Keys) == 0 {
-		return nil, errors.New("none of the CTLog public keys have been found")
+		return nil, fmt.Errorf("none of the CT log public keys have been found")
 	}
-
 	return &publicKeys, nil
 }

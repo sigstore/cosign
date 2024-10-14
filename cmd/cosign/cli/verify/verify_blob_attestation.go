@@ -160,7 +160,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 
 	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
-		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
+		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath)
 		if err != nil {
 			return fmt.Errorf("unable to load or get TSA certificates: %w", err)
 		}
