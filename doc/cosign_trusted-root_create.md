@@ -13,7 +13,7 @@ cosign trusted-root create [flags]
 ### Options
 
 ```
-      --certificate-chain stringArray             path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.
+      --certificate-chain stringArray             path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate.
       --ctfe-key stringArray                      path to a PEM-encoded public key used by certificate authority for certificate transparency log.
       --ctfe-start-time stringArray               RFC 3339 string describing validity start time for key use by certificate transparency log.
   -h, --help                                      help for create

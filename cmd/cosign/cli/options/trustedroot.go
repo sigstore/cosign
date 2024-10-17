@@ -36,7 +36,7 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 		"path to a list of CA certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
-			"signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.")
+			"signing certificate and end with the root certificate.")
 	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
 
 	cmd.Flags().StringArrayVar(&o.CtfeKeyPath, "ctfe-key", nil,

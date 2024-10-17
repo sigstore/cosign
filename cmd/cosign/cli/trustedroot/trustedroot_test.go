@@ -35,10 +35,10 @@ func TestCreateCmd(t *testing.T) {
 	// Make some certificate chains
 	td := t.TempDir()
 
-	fulcioChainPath := filepath.Join(td, "fulcio.crt")
+	fulcioChainPath := filepath.Join(td, "fulcio.pem")
 	makeChain(t, fulcioChainPath, 2)
 
-	tsaChainPath := filepath.Join(td, "timestamp.crt")
+	tsaChainPath := filepath.Join(td, "timestamp.pem")
 	makeChain(t, tsaChainPath, 3)
 
 	outPath := filepath.Join(td, "trustedroot.json")
@@ -73,6 +73,7 @@ func TestCreateCmd(t *testing.T) {
 	if len(timestampAuthorities[0].Intermediates) != 2 {
 		t.Fatal("unexpected number of timestamp intermediate certificates")
 	}
+
 }
 
 func makeChain(t *testing.T, path string, size int) {
@@ -119,6 +120,10 @@ func makeChain(t *testing.T, path string, size int) {
 		Bytes: rootDer,
 	}
 	err = pem.Encode(fd, block)
+	checkErr(t, err)
+
+	// Ensure we handle unexpected content at the end of the PEM file
+	_, err = fd.Write([]byte("asdf\n"))
 	checkErr(t, err)
 }
 

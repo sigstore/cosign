@@ -162,7 +162,7 @@ func parseCerts(path string) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 
-	for block, contents := pem.Decode(contents); ; block, contents = pem.Decode(contents) {
+	for block, contents := pem.Decode(contents); block != nil; block, contents = pem.Decode(contents) {
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return nil, err
