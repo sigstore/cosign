@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -119,6 +120,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
+		ExpectSigstoreBundle:         c.ExpectSigstoreBundle,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
@@ -222,6 +224,14 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return fmt.Errorf("reading sct from file: %w", err)
 			}
 			co.SCT = sct
+		}
+	case c.TrustedRootPath != "":
+		if !c.ExpectSigstoreBundle {
+			return fmt.Errorf("unsupported: trusted root path currently only supported with --expect-sigstore-bundle")
+		}
+		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
+		if err != nil {
+			return fmt.Errorf("loading trusted root: %w", err)
 		}
 	case c.CARoots != "":
 		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
