@@ -73,7 +73,6 @@ func TestCreateCmd(t *testing.T) {
 	if len(timestampAuthorities[0].Intermediates) != 2 {
 		t.Fatal("unexpected number of timestamp intermediate certificates")
 	}
-
 }
 
 func makeChain(t *testing.T, path string, size int) {
