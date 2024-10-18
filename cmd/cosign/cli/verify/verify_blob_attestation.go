@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -113,6 +114,16 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		}
 	}
 
+	trustedMaterial, _ := cosign.TrustedRoot()
+	if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath) > 0 ||
+		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) != "" ||
+		env.Getenv(env.VariableSigstoreRootFile) != "" ||
+		env.Getenv(env.VariableSigstoreRekorPublicKey) != "" ||
+		env.Getenv(env.VariableSigstoreTSACertificateFile) != "" {
+		// trusted_root.json was found, but a cert chain was explicitly provided, so don't overrule the user's intentions.
+		trustedMaterial = nil
+	}
+
 	co := &cosign.CheckOpts{
 		Identities:                   identities,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
@@ -123,6 +134,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		IgnoreSCT:                    c.IgnoreSCT,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		TrustedMaterial:              trustedMaterial,
 	}
 	var h v1.Hash
 	if c.CheckClaims {
@@ -177,11 +189,13 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			}
 			co.RekorClient = rekorClient
 		}
-		// This performs an online fetch of the Rekor public keys, but this is needed
-		// for verifying tlog entries (both online and offline).
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Rekor public keys: %w", err)
+		if co.TrustedMaterial == nil {
+			// This performs an online fetch of the Rekor public keys, but this is needed
+			// for verifying tlog entries (both online and offline).
+			co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+			if err != nil {
+				return fmt.Errorf("getting Rekor public keys: %w", err)
+			}
 		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
@@ -191,7 +205,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
