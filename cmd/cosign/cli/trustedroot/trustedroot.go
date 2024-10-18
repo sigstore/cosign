@@ -25,10 +25,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-
-	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
 type CreateCmd struct {
