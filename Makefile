@@ -84,6 +84,12 @@ cosign: $(SRCS)
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 $(GOEXE) build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
+install: $(SRCS)
+	CGO_ENABLED=1 $(GOEXE) install -trimpath -ldflags "$(LDFLAGS)" ./cmd/cosign
+
+install-pivkey-pkcs11key: $(SRCS)
+	CGO_ENABLED=1 $(GOEXE) install -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" ./cmd/cosign
+
 .PHONY: cross
 cross:
 	$(foreach GOOS, $(PLATFORMS),\
