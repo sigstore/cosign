@@ -38,12 +38,14 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -181,16 +183,29 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 
+	if c.TrustedRootPath != "" {
+		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
+		if err != nil {
+			return fmt.Errorf("loading trusted root: %w", err)
+		}
+	} else if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath) == 0 &&
+		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" &&
+		env.Getenv(env.VariableSigstoreRootFile) == "" &&
+		env.Getenv(env.VariableSigstoreRekorPublicKey) == "" &&
+		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
+		co.TrustedMaterial, err = cosign.TrustedRoot()
+		if err != nil {
+			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+		}
+	}
+
 	if co.NewBundleFormat {
 		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SCTRef) > 0 {
 			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
 		}
 
 		if co.TrustedMaterial == nil {
-			co.TrustedMaterial, err = loadTrustedRoot(ctx, c.TrustedRootPath)
-			if err != nil {
-				return err
-			}
+			return fmt.Errorf("trusted root is required when using new bundle format")
 		}
 
 		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
@@ -215,7 +230,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	} else if c.RFC3161TimestampPath == "" && co.UseSignedTimestamps {
 		return fmt.Errorf("when specifying --use-signed-timestamps or --timestamp-certificate-chain, you must also specify --rfc3161-timestamp-path")
 	}
-	if co.UseSignedTimestamps {
+	if co.UseSignedTimestamps && co.TrustedMaterial == nil {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -233,21 +248,23 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			}
 			co.RekorClient = rekorClient
 		}
-		// This performs an online fetch of the Rekor public keys, but this is needed
-		// for verifying tlog entries (both online and offline).
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Rekor public keys: %w", err)
+		if co.TrustedMaterial == nil {
+			// This performs an online fetch of the Rekor public keys, but this is needed
+			// for verifying tlog entries (both online and offline).
+			co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+			if err != nil {
+				return fmt.Errorf("getting Rekor public keys: %w", err)
+			}
 		}
 	}
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && keylessVerification(c.KeyRef, c.Sk) {
 		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
 			return err
 		}
 	}
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
