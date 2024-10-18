@@ -819,6 +819,7 @@ func makeLocalNewBundle(t *testing.T, sig []byte, digest [32]byte) string {
 }
 
 func TestVerifyBlobCmdWithBundle(t *testing.T) {
+	t.Setenv("TUF_ROOT", t.TempDir())
 	keyless := newKeylessStack(t)
 	defer os.RemoveAll(keyless.td)
 
@@ -1332,6 +1333,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 }
 
 func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
+	t.Setenv("TUF_ROOT", t.TempDir())
 	keyless := newKeylessStack(t)
 	defer os.RemoveAll(keyless.td)
 
