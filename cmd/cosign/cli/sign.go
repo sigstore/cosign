@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
 func Sign() *cobra.Command {
@@ -103,6 +106,12 @@ race conditions or (worse) malicious tampering.
 			if err != nil {
 				return err
 			}
+
+			trustedMaterial, err := cosign.TrustedRoot()
+			if err != nil {
+				ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+			}
+
 			ko := options.KeyOpts{
 				KeyRef:                         o.Key,
 				PassFunc:                       generate.GetPass,
@@ -126,6 +135,7 @@ race conditions or (worse) malicious tampering.
 				TSAServerName:                  o.TSAServerName,
 				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
+				TrustedMaterial:                trustedMaterial,
 			}
 			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {

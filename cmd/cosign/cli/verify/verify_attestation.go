@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/cue"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
@@ -107,6 +108,21 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 
+	trustedMaterial, err := cosign.TrustedRoot()
+	if err != nil {
+		ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+	}
+
+	if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath) > 0 ||
+		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) != "" ||
+		env.Getenv(env.VariableSigstoreRootFile) != "" ||
+		env.Getenv(env.VariableSigstoreRekorPublicKey) != "" ||
+		env.Getenv(env.VariableSigstoreTSACertificateFile) != "" {
+		// trusted_root.json was found, but a cert chain was explicitly provided, or environment variables point to the key material,
+		// so don't overrule the user's intentions.
+		trustedMaterial = nil
+	}
+
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
@@ -119,12 +135,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
+		TrustedMaterial:              trustedMaterial,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
@@ -149,11 +166,13 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			}
 			co.RekorClient = rekorClient
 		}
-		// This performs an online fetch of the Rekor public keys, but this is needed
-		// for verifying tlog entries (both online and offline).
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Rekor public keys: %w", err)
+		if co.TrustedMaterial == nil {
+			// This performs an online fetch of the Rekor public keys, but this is needed
+			// for verifying tlog entries (both online and offline).
+			co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+			if err != nil {
+				return fmt.Errorf("getting Rekor public keys: %w", err)
+			}
 		}
 	}
 
@@ -193,13 +212,15 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 		if c.CertChain == "" {
 			// If no certChain is passed, the Fulcio root certificate will be used
-			co.RootCerts, err = fulcio.GetRoots()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio roots: %w", err)
-			}
-			co.IntermediateCerts, err = fulcio.GetIntermediates()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			if co.TrustedMaterial == nil {
+				co.RootCerts, err = fulcio.GetRoots()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio roots: %w", err)
+				}
+				co.IntermediateCerts, err = fulcio.GetIntermediates()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio intermediates: %w", err)
+				}
 			}
 			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
