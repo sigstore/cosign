@@ -120,6 +120,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(VerifyBlob())
 	cmd.AddCommand(VerifyBlobAttestation())
 	cmd.AddCommand(Triangulate())
+	cmd.AddCommand(TrustedRoot())
 	cmd.AddCommand(Env())
 	cmd.AddCommand(version.WithFont("starwars"))
 
