@@ -23,6 +23,8 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore-go/pkg/verify"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -32,12 +34,26 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 		return nil, err
 	}
 
-	// Grab the PublicKeys for the CTFE, either from tuf or env.
+	if ko.TrustedMaterial != nil && len(fs.SCT) == 0 {
+		// We assume that if a trusted_root.json was found, the fulcio chain was included in it.
+		// fs.Chain will be ignored as root.VerifySignedCertificateTimestamp relies on the trusted root.
+		// Detached SCTs cannot be verified with this function.
+		certs, err := cryptoutils.UnmarshalCertificatesFromPEM(fs.Cert)
+		if err != nil || len(certs) < 1 {
+			return nil, fmt.Errorf("unmarshalling SCT from PEM: %w", err)
+		}
+		if err := verify.VerifySignedCertificateTimestamp(certs[0], 1, ko.TrustedMaterial); err != nil {
+			return nil, fmt.Errorf("verifying SCT using trusted root: %w", err)
+		}
+		ui.Infof(ctx, "Successfully verified SCT...")
+		return fs, nil
+	}
+
+	// There was no trusted_root.json or we need to verify a detached SCT, so grab the PublicKeys for the CTFE, either from tuf or env.
 	pubKeys, err := cosign.GetCTLogPubs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting CTFE public keys: %w", err)
 	}
-
 	// verify the sct
 	if err := cosign.VerifySCT(ctx, fs.Cert, fs.Chain, fs.SCT, pubKeys); err != nil {
 		return nil, fmt.Errorf("verifying SCT: %w", err)

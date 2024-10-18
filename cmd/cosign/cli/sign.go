@@ -24,6 +24,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
 func Sign() *cobra.Command {
@@ -103,6 +104,9 @@ race conditions or (worse) malicious tampering.
 			if err != nil {
 				return err
 			}
+
+			trustedMaterial, _ := cosign.TrustedRoot()
+
 			ko := options.KeyOpts{
 				KeyRef:                         o.Key,
 				PassFunc:                       generate.GetPass,
@@ -126,6 +130,7 @@ race conditions or (worse) malicious tampering.
 				TSAServerName:                  o.TSAServerName,
 				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
+				TrustedMaterial:                trustedMaterial,
 			}
 			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {
