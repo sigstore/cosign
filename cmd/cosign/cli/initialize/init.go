@@ -20,9 +20,14 @@ import (
 	_ "embed" // To enable the `go:embed` directive.
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
-	"github.com/sigstore/sigstore/pkg/tuf"
+	tufroot "github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/tuf"
+	tufv1 "github.com/sigstore/sigstore/pkg/tuf"
 )
 
 func DoInitialize(ctx context.Context, root, mirror string) error {
@@ -36,11 +41,36 @@ func DoInitialize(ctx context.Context, root, mirror string) error {
 		}
 	}
 
-	if err := tuf.Initialize(ctx, mirror, rootFileBytes); err != nil {
+	opts := tuf.DefaultOptions()
+	if root != "" {
+		opts.Root = rootFileBytes
+	}
+	if mirror != "" {
+		opts.RepositoryBaseURL = mirror
+	}
+	trustedRoot, err := tufroot.NewLiveTrustedRoot(opts)
+	if err != nil {
+		ui.Warnf(ctx, "Could not find trusted_root.json in TUF mirror, falling back to individual targets. It is recommended to update your TUF metadata repository to include trusted_root.json.")
+	}
+	// Leave a hint for where the current remote is. Adopted from sigstore/sigstore TUF client.
+	remote := map[string]string{"remote": opts.RepositoryBaseURL}
+	remoteBytes, err := json.Marshal(remote)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.FromSlash(filepath.Join(opts.CachePath, "remote.json")), remoteBytes, 0o600); err != nil {
+		return fmt.Errorf("storing remote: %w", err)
+	}
+	if trustedRoot != nil {
+		return nil
+	}
+
+	// The mirror did not have a trusted_root.json, so initialize the legacy TUF targets.
+	if err := tufv1.Initialize(ctx, mirror, rootFileBytes); err != nil {
 		return err
 	}
 
-	status, err := tuf.GetRootStatus(ctx)
+	status, err := tufv1.GetRootStatus(ctx)
 	if err != nil {
 		return err
 	}

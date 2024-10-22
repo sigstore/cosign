@@ -65,6 +65,9 @@ import (
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	intoto_v002 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/tlog"
+	"github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -93,6 +96,9 @@ type CheckOpts struct {
 
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
 	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
+
+	// TrustedMaterial contains trusted metadata for all Sigstore services. It is exclusive with RekorPubKeys, RootCerts, IntermediateCerts, CTLogPubKeys, and the TSA* cert fields.
+	TrustedMaterial root.TrustedMaterial
 
 	// RekorClient, if set, is used to make online tlog calls use to verify signatures and public keys.
 	RekorClient *client.Rekor
@@ -248,10 +254,26 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	}
 
 	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(cert, co.RootCerts, intermediateCerts)
 
+	shouldVerifyEmbeddedSCT := !co.IgnoreSCT
+	contains, err := ContainsSCT(cert.Raw)
 	if err != nil {
 		return nil, err
+	}
+	shouldVerifyEmbeddedSCT = shouldVerifyEmbeddedSCT && contains
+	// If trusted root is available and the SCT is embedded, use the verifiers from sigstore-go (preferred).
+	var chains [][]*x509.Certificate
+	if co.TrustedMaterial != nil && shouldVerifyEmbeddedSCT {
+		if err = verify.VerifyLeafCertificate(cert.NotBefore, cert, co.TrustedMaterial); err != nil {
+			return nil, err
+		}
+	} else {
+		// If the trusted root is not available, OR if the SCT is detached, use the verifiers from cosign (legacy).
+		// The certificate chains will be needed for the legacy SCT verifiers, which is why we can't use sigstore-go.
+		chains, err = TrustedCert(cert, co.RootCerts, intermediateCerts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = CheckCertificatePolicy(cert, co)
@@ -263,15 +285,20 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	if co.IgnoreSCT {
 		return verifier, nil
 	}
-	contains, err := ContainsSCT(cert.Raw)
-	if err != nil {
-		return nil, err
-	}
 	if !contains && len(co.SCT) == 0 {
 		return nil, &VerificationFailure{
 			fmt.Errorf("certificate does not include required embedded SCT and no detached SCT was set"),
 		}
 	}
+
+	// If trusted root is available and the SCT is embedded, use the verifiers from sigstore-go (preferred).
+	if co.TrustedMaterial != nil && contains {
+		if err := verify.VerifySignedCertificateTimestamp(cert, 1, co.TrustedMaterial); err != nil {
+			return nil, err
+		}
+		return verifier, nil
+	}
+
 	// handle if chains has more than one chain - grab first and print message
 	if len(chains) > 1 {
 		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
@@ -280,22 +307,22 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 		if err := VerifyEmbeddedSCT(context.Background(), chains[0], co.CTLogPubKeys); err != nil {
 			return nil, err
 		}
-	} else {
-		chain := chains[0]
-		if len(chain) < 2 {
-			return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
-		}
-		certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
-		if err != nil {
-			return nil, err
-		}
-		chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
-		if err != nil {
-			return nil, err
-		}
-		if err := VerifySCT(context.Background(), certPEM, chainPEM, co.SCT, co.CTLogPubKeys); err != nil {
-			return nil, err
-		}
+		return verifier, nil
+	}
+	chain := chains[0]
+	if len(chain) < 2 {
+		return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
+	}
+	certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
+	if err != nil {
+		return nil, err
+	}
+	chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
+	if err != nil {
+		return nil, err
+	}
+	if err := VerifySCT(context.Background(), certPEM, chainPEM, co.SCT, co.CTLogPubKeys); err != nil {
+		return nil, err
 	}
 
 	return verifier, nil
@@ -433,7 +460,7 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedTransparencyLogPubKeys,
+func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedTransparencyLogPubKeys, trustedMaterial root.TrustedMaterial,
 	sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
@@ -457,7 +484,7 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *
 	entryVerificationErrs := make([]string, 0)
 	for _, e := range tlogEntries {
 		entry := e
-		if err := VerifyTLogEntryOffline(ctx, &entry, rekorPubKeys); err != nil {
+		if err := VerifyTLogEntryOffline(ctx, &entry, rekorPubKeys, trustedMaterial); err != nil {
 			entryVerificationErrs = append(entryVerificationErrs, err.Error())
 			continue
 		}
@@ -704,7 +731,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				return false, err
 			}
 
-			e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, sig, pemBytes)
+			e, err := tlogValidateEntry(ctx, co.RekorClient, co.RekorPubKeys, co.TrustedMaterial, sig, pemBytes)
 			if err != nil {
 				return false, err
 			}
@@ -1060,8 +1087,21 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, nil
 	}
 
-	if co.RekorPubKeys == nil || co.RekorPubKeys.Keys == nil {
+	if co.TrustedMaterial == nil && (co.RekorPubKeys == nil || co.RekorPubKeys.Keys == nil) {
 		return false, errors.New("no trusted rekor public keys provided")
+	}
+
+	if co.TrustedMaterial != nil {
+		payload := bundle.Payload
+		body, _ := base64.StdEncoding.DecodeString(payload.Body.(string))
+		entry, err := tlog.NewEntry(body, payload.IntegratedTime, payload.LogIndex, []byte(payload.LogID), bundle.SignedEntryTimestamp, nil)
+		if err != nil {
+			return false, fmt.Errorf("converting tlog entry: %w", err)
+		}
+		if err := tlog.VerifySET(entry, co.TrustedMaterial.RekorLogs()); err != nil {
+			return false, fmt.Errorf("verifying bundle with trusted root: %w", err)
+		}
+		return true, nil
 	}
 	// Make sure all the rekorPubKeys are ecsda.PublicKeys
 	for k, v := range co.RekorPubKeys.Keys {
@@ -1151,6 +1191,28 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 			return nil, err
 		}
 		tsBytes = rawSig
+	}
+
+	if co.TrustedMaterial != nil {
+		for _, ca := range co.TrustedMaterial.TimestampingAuthorities() {
+			ts, err := tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
+				tsaverification.VerifyOpts{
+					TSACertificate: ca.Leaf,
+					Intermediates:  ca.Intermediates,
+					Roots:          []*x509.Certificate{ca.Root},
+				})
+			if err != nil {
+				continue
+			}
+			if !ca.ValidityPeriodStart.IsZero() && ts.Time.Before(ca.ValidityPeriodStart) {
+				continue
+			}
+			if !ca.ValidityPeriodEnd.IsZero() && ts.Time.After(ca.ValidityPeriodEnd) {
+				continue
+			}
+			return ts, nil
+		}
+		return nil, fmt.Errorf("unable to verify signed timestamps with trusted root")
 	}
 
 	return tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
