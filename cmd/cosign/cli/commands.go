@@ -95,6 +95,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Attach())
 	cmd.AddCommand(Attest())
 	cmd.AddCommand(AttestBlob())
+	cmd.AddCommand(Bundle())
 	cmd.AddCommand(Clean())
 	cmd.AddCommand(Debug())
 	cmd.AddCommand(Tree())
