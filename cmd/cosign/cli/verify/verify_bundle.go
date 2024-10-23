@@ -277,7 +277,7 @@ func AssembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, en
 		}
 		var sigB64 string
 		var payload []byte
-		if envelope != nil {
+		if envelope != nil && len(envelope.Signatures) > 0 {
 			payload, err = json.Marshal(*envelope)
 			if err != nil {
 				return nil, err
