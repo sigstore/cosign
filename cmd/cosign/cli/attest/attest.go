@@ -174,20 +174,28 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
+	var timestampBytes []byte
+	var tsaPayload []byte
 	if c.KeyOpts.TSAServerURL != "" {
-		// TODO - change this when we implement protobuf / new bundle support
+		// We need to decide what signature to send to the timestamp authority.
 		//
-		// Historically, cosign sent the entire JSON DSSE Envelope to the
-		// timestamp authority. However, when sigstore clients are verifying a
-		// bundle they will use the DSSE Sig field, so we choose what signature
-		// to send to the timestamp authority based on our output format.
-		//
-		// See cmd/cosign/cli/attest/attest_blob.go
-		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL))
+		// Historically, cosign sent `signedPayload`, which is the entire JSON DSSE
+		// Envelope. However, when sigstore clients are verifying a bundle they
+		// will use the DSSE Sig field, so we choose what signature to send to
+		// the timestamp authority based on our output format.
+		if c.KeyOpts.NewBundleFormat {
+			tsaPayload, err = getEnvelopeSigBytes(signedPayload)
+			if err != nil {
+				return err
+			}
+		} else {
+			tsaPayload = signedPayload
+		}
+		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL))
 		if err != nil {
 			return err
 		}
-		bundle := cbundle.TimestampToRFC3161Timestamp(responseBytes)
+		bundle := cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 
 		opts = append(opts, static.WithRFC3161Timestamp(bundle))
 	}
@@ -234,8 +242,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		// TODO: Add TSA timestamp
-		bundleBytes, err := makeNewBundle(sv, rekorEntry, payload, signedPayload, signerBytes, nil)
+		bundleBytes, err := makeNewBundle(sv, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
 		if err != nil {
 			return err
 		}
