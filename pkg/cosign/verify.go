@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -201,6 +202,62 @@ func verifyOCIAttestation(ctx context.Context, verifier signature.Verifier, att 
 	return err
 }
 
+// supportedHashAlgorithms returns the list of supported hash algorithms for a key type
+func supportedHashAlgorithms(key crypto.PublicKey) []crypto.Hash {
+	switch key.(type) {
+	case *ecdsa.PublicKey:
+		return []crypto.Hash{crypto.SHA256}
+	case *rsa.PublicKey:
+		return []crypto.Hash{
+			crypto.SHA256,
+			crypto.SHA384,
+			crypto.SHA512,
+		}
+	default:
+		return []crypto.Hash{crypto.SHA256}
+	}
+}
+
+// verifySignatureWithHash attempts signature verification using supported hash algorithms
+func verifySignatureWithHash(verifier signature.Verifier, signature, payload []byte, opts ...signature.VerifyOption) error {
+	key, err := verifier.PublicKey()
+	if err != nil {
+		return fmt.Errorf("getting public key: %w", err)
+	}
+
+	var lastErr error
+	for _, hash := range supportedHashAlgorithms(key) {
+		h := hash.New()
+		if _, err := h.Write(payload); err != nil {
+			lastErr = fmt.Errorf("hashing payload: %w", err)
+			continue
+		}
+
+		hashed := h.Sum(nil)
+
+		switch pub := key.(type) {
+		case *rsa.PublicKey:
+			// Try PSS first
+			if err := rsa.VerifyPSS(pub, hash, hashed, signature, nil); err == nil {
+				return nil
+			} else {
+				// Fall back to PKCS1v15
+				if err := rsa.VerifyPKCS1v15(pub, hash, hashed, signature); err == nil {
+					return nil
+				}
+				lastErr = err
+			}
+		default:
+			// For non-RSA keys, use standard verification
+			if err := verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), opts...); err == nil {
+				return nil
+			}
+			lastErr = err
+		}
+	}
+	return lastErr
+}
+
 func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig payloader) error {
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
@@ -214,7 +271,7 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	if err != nil {
 		return err
 	}
-	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
+	return verifySignatureWithHash(verifier, signature, payload, options.WithContext(ctx))
 }
 
 // ValidateAndUnpackCert creates a Verifier from a certificate. Verifies that the
@@ -228,7 +285,8 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 // certificate chains up to a trusted root using intermediate cert passed as separate argument.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
-	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+	verifier, err := signature.LoadVerifier(cert.PublicKey, supportedHashAlgorithms(cert.PublicKey)[0])
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
