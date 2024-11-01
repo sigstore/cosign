@@ -44,12 +44,15 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 
+	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
+
 	ocibundle "github.com/sigstore/cosign/v2/pkg/oci/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/verify"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
@@ -170,6 +173,9 @@ type CheckOpts struct {
 	// IgnoreTlog skip tlog verification
 	IgnoreTlog bool
 
+	// UseSignedTimestamps use signed timestamps if available
+	UseSignedTimestamps bool
+
 	// The amount of maximum workers for parallel executions.
 	// Defaults to 10.
 	MaxWorkers int
@@ -184,9 +190,93 @@ type CheckOpts struct {
 	// Currently, this is only applicable when ExpectSigstoreBundle is true.
 	TrustedMaterial root.TrustedMaterial
 
-	// TODO: Add the following, deprecate overlapping fields
-	//CertificateIdentities verify.CertificateIdentities
-	//VerifierOptions       []verify.VerifierOption
+	// VerifierOptions are the options to be passed to the verifier.
+	VerifierOptions []verify.VerifierOption
+
+	// PolicyOptions are the policy options to be passed to the verifier.
+	PolicyOptions []verify.PolicyOption
+}
+
+type verifyTrustedMaterial struct {
+	root.TrustedMaterial
+	keyTrustedMaterial root.TrustedMaterial
+}
+
+func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstrainedVerifier, error) {
+	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
+}
+
+// SigstoreGoOptions returns the verification options for verifying with sigstore-go.
+func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
+	var sanMatcher verify.SubjectAlternativeNameMatcher
+	var issuerMatcher verify.IssuerMatcher
+
+	if len(co.Identities) > 0 {
+		if len(co.Identities) > 1 {
+			return nil, nil, nil, fmt.Errorf("unsupported: multiple identities are not supported at this time")
+		}
+		sanMatcher, err = verify.NewSANMatcher(co.Identities[0].Subject, co.Identities[0].SubjectRegExp)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		issuerMatcher, err = verify.NewIssuerMatcher(co.Identities[0].Issuer, co.Identities[0].IssuerRegExp)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	extensions := certificate.Extensions{
+		GithubWorkflowTrigger:    co.CertGithubWorkflowTrigger,
+		GithubWorkflowSHA:        co.CertGithubWorkflowSha,
+		GithubWorkflowName:       co.CertGithubWorkflowName,
+		GithubWorkflowRepository: co.CertGithubWorkflowRepository,
+		GithubWorkflowRef:        co.CertGithubWorkflowRef,
+	}
+
+	certificateIdentities, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	policyOptions = append(policyOptions, co.PolicyOptions...)
+	policyOptions = append(policyOptions, verify.WithCertificateIdentity(certificateIdentities))
+
+	// Wrap TrustedMaterial
+	vTrustedMaterial := &verifyTrustedMaterial{TrustedMaterial: co.TrustedMaterial}
+
+	// If TrustedMaterial is not set, fetch it from TUF
+	if vTrustedMaterial.TrustedMaterial == nil {
+		vTrustedMaterial.TrustedMaterial, err = root.FetchTrustedRoot()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	if co.SigVerifier != nil {
+		policyOptions = append(policyOptions, verify.WithKey())
+		newExpiringKey := root.NewExpiringKey(co.SigVerifier, time.Time{}, time.Time{})
+		vTrustedMaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
+			return newExpiringKey, nil
+		})
+	}
+
+	// Make some educated guesses about verification policy
+	verifierOptions = append(verifierOptions, co.VerifierOptions...)
+	if !co.IgnoreTlog {
+		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
+	}
+	if co.UseSignedTimestamps {
+		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
+	}
+	if !co.IgnoreSCT {
+		verifierOptions = append(verifierOptions, verify.WithSignedCertificateTimestamps(1))
+	}
+	if co.IgnoreSCT && !co.UseSignedTimestamps {
+		verifierOptions = append(verifierOptions, verify.WithoutAnyObserverTimestampsUnsafe())
+	}
+
+	return vTrustedMaterial, verifierOptions, policyOptions, nil
 }
 
 // This is a substitutable signature verification function that can be used for verifying
@@ -1463,12 +1553,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	return verifySignatures(ctx, sigs, h, co)
 }
 
-func getBundles(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
-	// Enforce this up front.
-	if co.TrustedMaterial == nil {
-		return nil, nil, errors.New("Sigstore bundle verification requires TrustedMaterial")
-	}
-
+func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
 	// This is a carefully optimized sequence for fetching the signatures of the
 	// entity that minimizes registry requests when supplied with a digest input
 	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
@@ -1517,31 +1602,11 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 		return nil, false, err
 	}
 
-	// TODO: build verifierConfig from CheckOpts
-	verifierConfig := []sgverify.VerifierOption{
-		sgverify.WithSignedCertificateTimestamps(1),
-		sgverify.WithTransparencyLog(1),
-		sgverify.WithIntegratedTimestamps(1),
-	}
-
-	sev, err := sgverify.NewSignedEntityVerifier(co.TrustedMaterial, verifierConfig...)
-	if err != nil {
-		return nil, false, err
-	}
-
-	policyOptions := make([]sgverify.PolicyOption, 0, len(co.Identities))
-	for _, i := range co.Identities {
-		id, err := sgverify.NewShortCertificateIdentity(i.Issuer, i.IssuerRegExp, i.Subject, i.SubjectRegExp)
-		if err != nil {
-			return nil, false, err
-		}
-		policyOptions = append(policyOptions, sgverify.WithCertificateIdentity(id))
-	}
-	policy := sgverify.NewPolicy(sgverify.WithArtifactDigest(hash.Algorithm, digestBytes), policyOptions...)
+	artifactPolicyOption := sgverify.WithArtifactDigest(hash.Algorithm, digestBytes)
 
 	checkedSignatures = make([]oci.Signature, 0, len(bundles))
 	for _, bundle := range bundles {
-		_, err := sev.Verify(bundle, policy)
+		_, err := VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
 		if err != nil {
 			continue
 		}

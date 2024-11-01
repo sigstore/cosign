@@ -137,6 +137,7 @@ against the transparency log.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
 			}
@@ -244,6 +245,7 @@ against the transparency log.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 			}
 

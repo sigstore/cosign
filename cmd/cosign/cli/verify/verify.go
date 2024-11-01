@@ -143,6 +143,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		UseSignedTimestamps:          c.UseSignedTimestamps,
 		MaxWorkers:                   c.MaxWorkers,
 		ExperimentalOCI11:            c.ExperimentalOCI11,
 		ExpectSigstoreBundle:         c.ExpectSigstoreBundle,

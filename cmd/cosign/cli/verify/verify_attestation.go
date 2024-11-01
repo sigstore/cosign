@@ -119,21 +119,29 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		UseSignedTimestamps:          c.UseSignedTimestamps,
 		MaxWorkers:                   c.MaxWorkers,
 		ExpectSigstoreBundle:         c.ExpectSigstoreBundle,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
+
+	if c.ExpectSigstoreBundle {
+		if err = checkSigstoreBundleUnsupportedOptions(c); err != nil {
+			return err
+		}
+	}
+
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
+	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) && !c.ExpectSigstoreBundle {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
 		}
 	}
 
-	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps && !c.ExpectSigstoreBundle {
 		tsaCertificates, err := c.loadTSACertificates(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -143,7 +151,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
-	if !c.IgnoreTlog {
+	if !c.IgnoreTlog && !co.ExpectSigstoreBundle {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -189,6 +197,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case c.CertRef != "":
+		if c.ExpectSigstoreBundle {
+			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
+			return fmt.Errorf("unsupported: certificate reference currently not supported with --expect-sigstore-bundle")
+		}
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return fmt.Errorf("loading certificate from reference: %w", err)
@@ -229,9 +241,14 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if !c.ExpectSigstoreBundle {
 			return fmt.Errorf("unsupported: trusted root path currently only supported with --expect-sigstore-bundle")
 		}
-		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
-		if err != nil {
-			return fmt.Errorf("loading trusted root: %w", err)
+
+		// If a trusted root path is provided, we will use it to verify the bundle.
+		// Otherwise, the verifier will default to the public good instance.
+		if c.TrustedRootPath == "" {
+			co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
+			if err != nil {
+				return fmt.Errorf("creating trusted root from path: %w", err)
+			}
 		}
 	case c.CARoots != "":
 		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
@@ -335,5 +352,21 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		PrintVerification(ctx, checked, "text")
 	}
 
+	return nil
+}
+
+func checkSigstoreBundleUnsupportedOptions(c *VerifyAttestationCommand) error {
+	if c.Cert != "" || c.CertRef != "" {
+		return fmt.Errorf("unsupported: certificate may not be provided using --cert when using --expect-sigstore-bundle (cert must be in bundle)")
+	}
+	if c.CertChain != "" {
+		return fmt.Errorf("unsupported: certificate chain may not be provided using --cert-chain when using --expect-sigstore-bundle (cert must be in bundle)")
+	}
+	if c.CARoots != "" || c.CAIntermediates != "" {
+		return fmt.Errorf("unsupported: CA roots/intermediates must be provided using --trusted-root when using --expect-sigstore-bundle")
+	}
+	if c.TSACertChainPath != "" {
+		return fmt.Errorf("unsupported: TSA certificate chain path may only be provided using --trusted-root when using --expect-sigstore-bundle")
+	}
 	return nil
 }
