@@ -108,7 +108,12 @@ func (c *CreateCmd) Exec(ctx context.Context) (err error) {
 	}
 
 	if c.SignaturePath != "" {
-		sigBytes, err = os.ReadFile(c.SignaturePath)
+		signatureB64, err := os.ReadFile(c.SignaturePath)
+		if err != nil {
+			return err
+		}
+
+		sigBytes, err = base64.StdEncoding.DecodeString(string(signatureB64))
 		if err != nil {
 			return err
 		}

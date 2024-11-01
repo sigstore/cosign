@@ -31,7 +31,6 @@ import (
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/tle"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
@@ -294,18 +293,11 @@ func AssembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, en
 		if len(tlogEntries) == 0 {
 			return nil, fmt.Errorf("unable to find tlog entry")
 		}
-		// Attempt to verify with the earliest integrated entry
-		var earliestLogEntry models.LogEntryAnon
-		var earliestLogEntryTime *time.Time
-		for _, e := range tlogEntries {
-			entryTime := time.Unix(*e.IntegratedTime, 0)
-			if earliestLogEntryTime == nil || entryTime.Before(*earliestLogEntryTime) {
-				earliestLogEntryTime = &entryTime
-				earliestLogEntry = e
-			}
+		if len(tlogEntries) > 1 {
+			return nil, fmt.Errorf("too many tlog entries; should only have 1")
 		}
 
-		tlogEntry, err := tle.GenerateTransparencyLogEntry(earliestLogEntry)
+		tlogEntry, err := tle.GenerateTransparencyLogEntry(tlogEntries[0])
 		if err != nil {
 			return nil, err
 		}

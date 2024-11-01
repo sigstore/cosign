@@ -24,12 +24,16 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/test"
 	sgBundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 func TestCreateCmd(t *testing.T) {
@@ -43,6 +47,7 @@ func TestCreateCmd(t *testing.T) {
 	err := os.WriteFile(artifactPath, []byte(artifact), 0600)
 	checkErr(t, err)
 
+	// Test signing with a key
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	checkErr(t, err)
 	sigBytes, err := privateKey.Sign(rand.Reader, digest[:], crypto.SHA256)
@@ -85,6 +90,52 @@ func TestCreateCmd(t *testing.T) {
 
 	if b.Bundle.VerificationMaterial.GetPublicKey() == nil {
 		t.Fatal("bundle verification material does not have public key")
+	}
+
+	if b.Bundle.GetMessageSignature() == nil {
+		t.Fatal("bundle does not have message signature")
+	}
+
+	// Test using an identity certificate in an old bundle format
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+
+	sigBytes, err = privKey.Sign(rand.Reader, digest[:], crypto.SHA256)
+	checkErr(t, err)
+
+	signedPayload := cosign.LocalSignedPayload{}
+	signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sigBytes)
+
+	certBytes, err := cryptoutils.MarshalCertificateToPEM(leafCert)
+	checkErr(t, err)
+
+	signedPayload.Cert = base64.StdEncoding.EncodeToString(certBytes)
+	bundleContents, err := json.Marshal(signedPayload)
+	checkErr(t, err)
+
+	bundlePath := filepath.Join(td, "old-bundle.json")
+	err = os.WriteFile(bundlePath, bundleContents, 0600)
+	checkErr(t, err)
+
+	bundleCreate = CreateCmd{
+		Artifact:   artifactPath,
+		BundlePath: bundlePath,
+		IgnoreTlog: true,
+		Out:        outPath,
+	}
+
+	err = bundleCreate.Exec(ctx)
+	checkErr(t, err)
+
+	b, err = sgBundle.LoadJSONFromPath(outPath)
+	checkErr(t, err)
+
+	if b.Bundle.VerificationMaterial == nil {
+		t.Fatal("bundle does not have verification material")
+	}
+
+	if b.Bundle.VerificationMaterial.GetCertificate() == nil {
+		t.Fatal("bundle verification material does not have certificate")
 	}
 
 	if b.Bundle.GetMessageSignature() == nil {
