@@ -92,14 +92,6 @@ type Identity struct {
 	SubjectRegExp string
 }
 
-// type CertPool struct {
-// 	certs []*x509.Certificate
-// }
-
-// func (c *CertPool) AddCert(cert *x509.Certificate) {
-// 	c.certs = append(c.certs, cert)
-// }
-
 // CheckOpts are the options for checking signatures.
 type CheckOpts struct {
 	// RegistryClientOpts are the options for interacting with the container registry.
@@ -190,11 +182,12 @@ type CheckOpts struct {
 	// Currently, this is only applicable when ExpectSigstoreBundle is true.
 	TrustedMaterial root.TrustedMaterial
 
-	// VerifierOptions are the options to be passed to the verifier.
-	VerifierOptions []verify.VerifierOption
+	// TODO: Add these to replace above fields?
+	// // VerifierOptions are the options to be passed to the verifier.
+	// VerifierOptions []verify.VerifierOption
 
-	// PolicyOptions are the policy options to be passed to the verifier.
-	PolicyOptions []verify.PolicyOption
+	// // PolicyOptions are the policy options to be passed to the verifier.
+	// PolicyOptions []verify.PolicyOption
 }
 
 type verifyTrustedMaterial struct {
@@ -239,8 +232,7 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 		return nil, nil, nil, err
 	}
 
-	policyOptions = append(policyOptions, co.PolicyOptions...)
-	policyOptions = append(policyOptions, verify.WithCertificateIdentity(certificateIdentities))
+	policyOptions = []sgverify.PolicyOption{verify.WithCertificateIdentity(certificateIdentities)}
 
 	// Wrap TrustedMaterial
 	vTrustedMaterial := &verifyTrustedMaterial{TrustedMaterial: co.TrustedMaterial}
@@ -262,7 +254,7 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 	}
 
 	// Make some educated guesses about verification policy
-	verifierOptions = append(verifierOptions, co.VerifierOptions...)
+	verifierOptions = make([]sgverify.VerifierOption, 0)
 	if !co.IgnoreTlog {
 		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
 	}

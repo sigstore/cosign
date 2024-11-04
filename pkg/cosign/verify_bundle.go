@@ -19,7 +19,6 @@ import (
 	"context"
 
 	"github.com/sigstore/sigstore-go/pkg/verify"
-	// sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
 
 // VerifyNewBundle verifies a SigstoreBundle with the given parameters
