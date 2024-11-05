@@ -1,3 +1,17 @@
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package options
 
 import (
@@ -9,6 +23,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -48,12 +63,12 @@ func generateCertificate(t *testing.T, isCa bool) (certficateLocation, privateKe
 		Subject: pkix.Name{
 			CommonName: "Test CA",
 		},
-		NotBefore:             time.Now().Add(time.Hour*-24),
-		NotAfter:              time.Now().Add(time.Hour*24),
+		NotBefore:             time.Now().Add(time.Hour * -24),
+		NotAfter:              time.Now().Add(time.Hour * 24),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
 		IsCA:                  isCa,
-		SerialNumber: big.NewInt(1337),
+		SerialNumber:          big.NewInt(1337),
 	}
 
 	caCertDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &privateKey.PublicKey, privateKey)
@@ -77,7 +92,6 @@ func generateCertificate(t *testing.T, isCa bool) (certficateLocation, privateKe
 
 	return certficateLocation, privateKeyLocation
 }
-
 
 func TestGetTLSConfig(t *testing.T) {
 	validCaCertificate, validCaKey := generateCertificate(t, true)
@@ -108,31 +122,31 @@ func TestGetTLSConfig(t *testing.T) {
 			allowInsecure:      true,
 		},
 		{
-			name: "Wrong key for client cert",
-			registryCACert: validCaCertificate,
+			name:               "Wrong key for client cert",
+			registryCACert:     validCaCertificate,
 			registryClientCert: validClientCertificate,
-			registryClientKey: validCaKey, // using ca key for client cert must fail
+			registryClientKey:  validCaKey, // using ca key for client cert must fail
 			registryServerName: "example.com",
-			allowInsecure: true,
-			expectError: fmt.Sprintf("unable to read client certs from cert %s, key %s: tls: private key does not match public key", validClientCertificate, validCaKey),
+			allowInsecure:      true,
+			expectError:        fmt.Sprintf("unable to read client certs from cert %s, key %s: tls: private key does not match public key", validClientCertificate, validCaKey),
 		},
 		{
-			name: "Wrong ca key",
-			registryCACert: validClientKey, // using client key for ca cert must fail
+			name:               "Wrong ca key",
+			registryCACert:     validClientKey, // using client key for ca cert must fail
 			registryClientCert: validClientCertificate,
-			registryClientKey: validClientKey,
+			registryClientKey:  validClientKey,
 			registryServerName: "example.com",
-			allowInsecure: true,
-			expectError: fmt.Sprintf("no valid CA certs found in %s", validClientKey),
+			allowInsecure:      true,
+			expectError:        fmt.Sprintf("no valid CA certs found in %s", validClientKey),
 		},
 		{
-			name: "Invalid CA path",
-			registryCACert: "/not/existing/path/fooobar", // this path is not expected to exist
+			name:               "Invalid CA path",
+			registryCACert:     "/not/existing/path/fooobar", // this path is not expected to exist
 			registryClientCert: validClientCertificate,
-			registryClientKey: validClientKey,
+			registryClientKey:  validClientKey,
 			registryServerName: "example.com",
-			allowInsecure: true,
-			expectError: fmt.Sprintf("open /not/existing/path/fooobar: no such file or directory"),
+			allowInsecure:      true,
+			expectError:        "open /not/existing/path/fooobar: ", // the error message is OS dependent
 		},
 	}
 
@@ -148,7 +162,7 @@ func TestGetTLSConfig(t *testing.T) {
 
 			tlsConfig, err := o.getTLSConfig()
 			if tt.expectError != "" {
-				if err == nil || err.Error() != tt.expectError {
+				if err == nil || !strings.HasPrefix(err.Error(), tt.expectError) {
 					t.Errorf("getTLSConfig()\nerror: \"%v\",\nexpectError: \"%v\"", err, tt.expectError)
 					return
 				}
