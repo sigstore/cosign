@@ -16,9 +16,6 @@
 package cli
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/spf13/cobra"
@@ -32,7 +29,6 @@ func Attach() *cobra.Command {
 
 	cmd.AddCommand(
 		attachSignature(),
-		attachSBOM(),
 		attachAttestation(),
 	)
 
@@ -67,32 +63,6 @@ func attachSignature() *cobra.Command {
 		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attach.SignatureCmd(cmd.Context(), o.Registry, o.Signature, o.Payload, o.Cert, o.CertChain, o.TimeStampedSig, o.RekorBundle, args[0])
-		},
-	}
-
-	o.AddFlags(cmd)
-
-	return cmd
-}
-
-func attachSBOM() *cobra.Command {
-	o := &options.AttachSBOMOptions{}
-
-	cmd := &cobra.Command{
-		Use:              "sbom",
-		Short:            "DEPRECATED: Attach sbom to the supplied container image",
-		Long:             "Attach sbom to the supplied container image\n\n" + options.SBOMAttachmentDeprecation,
-		Example:          "  cosign attach sbom <image uri>",
-		Args:             cobra.ExactArgs(1),
-		PersistentPreRun: options.BindViper,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
-			mediaType, err := o.MediaType()
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(os.Stderr, "WARNING: Attaching SBOMs this way does not sign them. To sign them, use 'cosign attest --predicate %s --key <key path>'.\n", o.SBOM)
-			return attach.SBOMCmd(cmd.Context(), o.Registry, o.RegistryExperimental, o.SBOM, mediaType, args[0])
 		},
 	}
 
