@@ -201,10 +201,11 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 
 // SigstoreGoOptions returns the verification options for verifying with sigstore-go.
 func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
-	var sanMatcher verify.SubjectAlternativeNameMatcher
-	var issuerMatcher verify.IssuerMatcher
+	policyOptions = make([]sgverify.PolicyOption, 0)
 
 	if len(co.Identities) > 0 {
+		var sanMatcher verify.SubjectAlternativeNameMatcher
+		var issuerMatcher verify.IssuerMatcher
 		if len(co.Identities) > 1 {
 			return nil, nil, nil, fmt.Errorf("unsupported: multiple identities are not supported at this time")
 		}
@@ -217,22 +218,21 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 		if err != nil {
 			return nil, nil, nil, err
 		}
-	}
 
-	extensions := certificate.Extensions{
-		GithubWorkflowTrigger:    co.CertGithubWorkflowTrigger,
-		GithubWorkflowSHA:        co.CertGithubWorkflowSha,
-		GithubWorkflowName:       co.CertGithubWorkflowName,
-		GithubWorkflowRepository: co.CertGithubWorkflowRepository,
-		GithubWorkflowRef:        co.CertGithubWorkflowRef,
-	}
+		extensions := certificate.Extensions{
+			GithubWorkflowTrigger:    co.CertGithubWorkflowTrigger,
+			GithubWorkflowSHA:        co.CertGithubWorkflowSha,
+			GithubWorkflowName:       co.CertGithubWorkflowName,
+			GithubWorkflowRepository: co.CertGithubWorkflowRepository,
+			GithubWorkflowRef:        co.CertGithubWorkflowRef,
+		}
 
-	certificateIdentities, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
-	if err != nil {
-		return nil, nil, nil, err
+		certificateIdentities, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		policyOptions = []sgverify.PolicyOption{verify.WithCertificateIdentity(certificateIdentities)}
 	}
-
-	policyOptions = []sgverify.PolicyOption{verify.WithCertificateIdentity(certificateIdentities)}
 
 	// Wrap TrustedMaterial
 	vTrustedMaterial := &verifyTrustedMaterial{TrustedMaterial: co.TrustedMaterial}
@@ -245,26 +245,28 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 		}
 	}
 
+	verifierOptions = make([]sgverify.VerifierOption, 0)
+
 	if co.SigVerifier != nil {
+		// We are verifying with a public key
 		policyOptions = append(policyOptions, verify.WithKey())
 		newExpiringKey := root.NewExpiringKey(co.SigVerifier, time.Time{}, time.Time{})
 		vTrustedMaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
 			return newExpiringKey, nil
 		})
+	} else {
+		if !co.IgnoreSCT {
+			verifierOptions = append(verifierOptions, verify.WithSignedCertificateTimestamps(1))
+		}
 	}
 
-	// Make some educated guesses about verification policy
-	verifierOptions = make([]sgverify.VerifierOption, 0)
 	if !co.IgnoreTlog {
 		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
 	}
 	if co.UseSignedTimestamps {
 		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
 	}
-	if !co.IgnoreSCT {
-		verifierOptions = append(verifierOptions, verify.WithSignedCertificateTimestamps(1))
-	}
-	if co.IgnoreSCT && !co.UseSignedTimestamps {
+	if co.IgnoreTlog && !co.UseSignedTimestamps {
 		verifierOptions = append(verifierOptions, verify.WithoutAnyObserverTimestampsUnsafe())
 	}
 
