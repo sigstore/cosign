@@ -236,7 +236,7 @@ func (o *RegistryOptions) getTLSConfig() (*tls.Config, error) {
 	if o.RegistryClientCert != "" && o.RegistryClientKey != "" {
 		cert, err := tls.LoadX509KeyPair(o.RegistryClientCert, o.RegistryClientKey)
 		if err != nil {
-			return nil, fmt.Errorf("unable to read CA certs from cert %s, key %s: %w",
+			return nil, fmt.Errorf("unable to read client certs from cert %s, key %s: %w",
 				o.RegistryClientCert, o.RegistryClientKey, err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
