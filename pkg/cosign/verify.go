@@ -1610,7 +1610,10 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 		if err != nil {
 			continue
 		}
+
 		// TODO: Add additional data to oci.Signature (Cert, Rekor Bundle, Timestamp, etc)
+		// This can be done by passing a list of static.Option to NewAttestation (e.g. static.WithCertChain())
+		// This depends on https://github.com/sigstore/sigstore-go/issues/328
 		sig, err := static.NewAttestation(payload)
 		if err != nil {
 			continue
