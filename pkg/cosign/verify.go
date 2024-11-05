@@ -46,7 +46,6 @@ import (
 
 	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 
-	ocibundle "github.com/sigstore/cosign/v2/pkg/oci/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -952,24 +951,6 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 			return nil, err
 		}
 		targetSig = []byte(sigRef)
-	}
-
-	if co.ExpectSigstoreBundle {
-		var bundle *sgbundle.Bundle
-		bundle.Bundle = new(protobundle.Bundle)
-
-		err = bundle.UnmarshalJSON(targetSig)
-		if err != nil {
-			return nil, err
-		}
-		signature, err := ocibundle.NewSignature(bundle, &ocibundle.Options{})
-		if err != nil {
-			return nil, err
-		}
-
-		return &fakeOCISignatures{
-			signatures: []oci.Signature{signature},
-		}, nil
 	}
 
 	_, err = base64.StdEncoding.DecodeString(string(targetSig))
