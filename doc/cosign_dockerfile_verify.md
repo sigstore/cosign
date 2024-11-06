@@ -69,6 +69,7 @@ cosign dockerfile verify [flags]
       --certificate-oidc-issuer string                                                           The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --certificate-oidc-issuer-regexp string                                                    A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --check-claims                                                                             whether to check the claims found (default true)
+      --expect-sigstore-bundle                                                                   expect the signature/attestation to be packaged in a Sigstore bundle
       --experimental-oci11                                                                       set to true to enable experimental OCI 1.1 behaviour
   -h, --help                                                                                     help for verify
       --insecure-ignore-sct                                                                      when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
@@ -91,7 +92,8 @@ cosign dockerfile verify [flags]
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string                                                       path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
-      --use-signed-timestamps                                                                    use signed timestamps if available
+      --trusted-root string                                                                      Path to a Sigstore TrustedRoot JSON file.
+      --use-signed-timestamps                                                                    verify rfc3161 timestamps
 ```
 
 ### Options inherited from parent commands
