@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -223,7 +224,7 @@ func (taggable taggableManifest) MediaType() (types.MediaType, error) {
 	return taggable.mediaType, nil
 }
 
-func WriteAttestationNewBundleFormat(d name.Repository, bundleBytes []byte, opts ...Option) error {
+func WriteAttestationNewBundleFormat(d name.Repository, bundleBytes []byte, predicateType string, opts ...Option) error {
 	o := makeOptions(d, opts...)
 
 	signTarget := d.String()
@@ -296,8 +297,11 @@ func WriteAttestationNewBundleFormat(d name.Repository, bundleBytes []byte, opts
 			Digest:    desc.Digest,
 			Size:      desc.Size,
 		},
-		// TODO: Add annotations org.opencontainers.image.created, dev.sigstore.bundle.content, and dev.sigstore.bundle.predicateType
-		// See https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md
+		Annotations: map[string]string{
+			"org.opencontainers.image.created":  time.Now().UTC().Format(time.RFC3339),
+			"dev.sigstore.bundle.content":       "dsse-envelope",
+			"dev.sigstore.bundle.predicateType": predicateType,
+		},
 	}, bundleMediaType}
 
 	targetRef, err := manifest.targetRef(d)

@@ -246,7 +246,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		return ociremote.WriteAttestationNewBundleFormat(digest.Repository, bundleBytes, ociremoteOpts...)
+		return ociremote.WriteAttestationNewBundleFormat(digest.Repository, bundleBytes, predicateType, ociremoteOpts...)
 	}
 
 	// We don't actually need to access the remote entity to attach things to it
