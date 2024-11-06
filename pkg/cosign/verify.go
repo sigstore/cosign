@@ -1551,6 +1551,12 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 	}
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
+		if !strings.HasPrefix(result.ArtifactType, "application/vnd.dev.sigstore.bundle") {
+			continue
+		}
+		// TODO: We could filter by PredicateType here, but we'd need to thread
+		// the predicate type from the CLI flag to this function (we could add
+		// it to CheckOpts perhaps?)
 		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()))
 		if err != nil {
 			return nil, nil, err
