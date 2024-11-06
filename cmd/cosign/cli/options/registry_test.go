@@ -51,9 +51,9 @@ func writePrivateKey(t *testing.T, privateKey *rsa.PrivateKey, fileLocation stri
 	}
 }
 
-func generateCertificate(t *testing.T, isCa bool) (certficateLocation, privateKeyLocation string) {
-	certficateLocation = createTempFile(t)
-	privateKeyLocation = createTempFile(t)
+func generateCertificate(t *testing.T, dir string, isCa bool) (certficateLocation, privateKeyLocation string) {
+	certficateLocation = createTempFile(t, dir)
+	privateKeyLocation = createTempFile(t, dir)
 
 	// Generate a private key for the CA
 	privateKey := generatePrivateKey(t)
@@ -94,15 +94,12 @@ func generateCertificate(t *testing.T, isCa bool) (certficateLocation, privateKe
 }
 
 func TestGetTLSConfig(t *testing.T) {
-	validCaCertificate, validCaKey := generateCertificate(t, true)
-	validClientCertificate, validClientKey := generateCertificate(t, false)
-
+	tempDir := t.TempDir() // Create a temporary directory for testing
 	t.Cleanup(func() {
-		removeTempFile(t, validCaCertificate)
-		removeTempFile(t, validCaKey)
-		removeTempFile(t, validClientCertificate)
-		removeTempFile(t, validClientKey)
+		os.RemoveAll(tempDir)
 	})
+	validCaCertificate, validCaKey := generateCertificate(t, tempDir, true)
+	validClientCertificate, validClientKey := generateCertificate(t, tempDir, false)
 
 	tests := []struct {
 		name               string
@@ -203,18 +200,12 @@ func TestGetTLSConfig(t *testing.T) {
 }
 
 // Helper function to create temporary files for testing
-func createTempFile(t *testing.T) string {
-	tmpfile, err := os.CreateTemp("", "registry-test-")
+func createTempFile(t *testing.T, dir string) string {
+	tmpfile, err := os.CreateTemp(dir, "registry-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer tmpfile.Close()
 
 	return tmpfile.Name()
-}
-
-// Helper function to remove temporary files after testing
-func removeTempFile(t *testing.T, filename string) {
-	if err := os.Remove(filename); err != nil {
-		t.Fatal(err)
-	}
 }
