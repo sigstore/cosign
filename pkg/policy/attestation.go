@@ -60,10 +60,9 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	if predicateType == "" {
 		return nil, "", errors.New("missing predicate type")
 	}
-	predicateURI, ok := options.PredicateTypeMap[predicateType]
-	if !ok {
-		// Not a custom one, use it as is.
-		predicateURI = predicateType
+	predicateURI, err := options.ParsePredicateType(predicateType)
+	if err != nil {
+		return nil, "", err
 	}
 	var payloadData map[string]interface{}
 
