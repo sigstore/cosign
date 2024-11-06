@@ -52,7 +52,6 @@ import (
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/verify"
-	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -200,7 +199,7 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 
 // SigstoreGoOptions returns the verification options for verifying with sigstore-go.
 func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
-	policyOptions = make([]sgverify.PolicyOption, 0)
+	policyOptions = make([]verify.PolicyOption, 0)
 
 	if len(co.Identities) > 0 {
 		var sanMatcher verify.SubjectAlternativeNameMatcher
@@ -230,7 +229,7 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		policyOptions = []sgverify.PolicyOption{verify.WithCertificateIdentity(certificateIdentities)}
+		policyOptions = []verify.PolicyOption{verify.WithCertificateIdentity(certificateIdentities)}
 	}
 
 	// Wrap TrustedMaterial
@@ -244,7 +243,7 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 		}
 	}
 
-	verifierOptions = make([]sgverify.VerifierOption, 0)
+	verifierOptions = make([]verify.VerifierOption, 0)
 
 	if co.SigVerifier != nil {
 		// We are verifying with a public key
@@ -253,7 +252,8 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 		vTrustedMaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
 			return newExpiringKey, nil
 		})
-	} else {
+	} else { //nolint:gocritic
+		// We are verifiying with a certificate
 		if !co.IgnoreSCT {
 			verifierOptions = append(verifierOptions, verify.WithSignedCertificateTimestamps(1))
 		}
@@ -1577,7 +1577,7 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 		return nil, false, err
 	}
 
-	artifactPolicyOption := sgverify.WithArtifactDigest(hash.Algorithm, digestBytes)
+	artifactPolicyOption := verify.WithArtifactDigest(hash.Algorithm, digestBytes)
 
 	checkedSignatures = make([]oci.Signature, 0, len(bundles))
 	for _, bundle := range bundles {
