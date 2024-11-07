@@ -1551,19 +1551,15 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 	}
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
-		if !strings.HasPrefix(result.ArtifactType, "application/vnd.dev.sigstore.bundle") {
-			continue
-		}
-		// TODO: We could filter by PredicateType here, but we'd need to thread
-		// the predicate type from the CLI flag to this function (we could add
-		// it to CheckOpts perhaps?)
 		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()))
 		if err != nil {
 			return nil, nil, err
 		}
 		bundle, err := ociremote.Bundle(st, co.RegistryClientOpts...)
 		if err != nil {
-			return nil, nil, err
+			// There may be non-Sigstore referrers in the index, so we can ignore them.
+			// TODO: Should we surface any errors here (e.g. if the bundle is invalid)?
+			continue
 		}
 		bundles = append(bundles, bundle)
 	}
@@ -1572,7 +1568,7 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 }
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
-func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	bundles, hash, err := getBundles(ctx, signedImgRef, co)
 	if err != nil {
 		return nil, false, err
@@ -1585,30 +1581,74 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 
 	artifactPolicyOption := verify.WithArtifactDigest(hash.Algorithm, digestBytes)
 
-	checkedSignatures = make([]oci.Signature, 0, len(bundles))
-	for _, bundle := range bundles {
-		_, err := VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
-		if err != nil {
-			continue
+	attestations := make([]oci.Signature, len(bundles))
+	bundlesVerified := make([]bool, len(bundles))
+
+	workers := co.MaxWorkers
+	if co.MaxWorkers == 0 {
+		workers = cosign.DefaultMaxWorkers
+	}
+	t := throttler.New(workers, len(bundles))
+	for i, bundle := range bundles {
+		go func(bundle *sgbundle.Bundle, index int) {
+			var att oci.Signature
+			if err := func(bundle *sgbundle.Bundle) error {
+				_, err := VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
+				if err != nil {
+					return err
+				}
+				dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope)
+				if !ok {
+					return errors.New("bundle does not contain a DSSE envelope")
+				}
+				payload, err := json.Marshal(dsse.DsseEnvelope)
+				if err != nil {
+					return fmt.Errorf("marshaling DSSE envelope: %w", err)
+				}
+
+				// TODO: Add additional data to oci.Signature (Cert, Rekor Bundle, Timestamp, etc)
+				// This can be done by passing a list of static.Option to NewAttestation (e.g. static.WithCertChain())
+				// This depends on https://github.com/sigstore/sigstore-go/issues/328
+				att, err = static.NewAttestation(payload)
+				if err != nil {
+					return err
+				}
+				bundlesVerified[index] = true
+
+				return err
+			}(bundle); err != nil {
+				t.Done(err)
+				return
+			}
+
+			attestations[index] = att
+			t.Done(nil)
+		}(bundle, i)
+
+		// wait till workers are available
+		t.Throttle()
+	}
+
+	for _, a := range attestations {
+		if a != nil {
+			checkedAttestations = append(checkedAttestations, a)
 		}
-		dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope)
-		if !ok {
-			continue
-		}
-		payload, err := json.Marshal(dsse.DsseEnvelope)
-		if err != nil {
-			continue
+	}
+
+	for _, verified := range bundlesVerified {
+		bundleVerified = bundleVerified || verified
+	}
+
+	if len(checkedAttestations) == 0 {
+		var combinedErrors []string
+		for _, err := range t.Errs() {
+			combinedErrors = append(combinedErrors, err.Error())
 		}
 
-		// TODO: Add additional data to oci.Signature (Cert, Rekor Bundle, Timestamp, etc)
-		// This can be done by passing a list of static.Option to NewAttestation (e.g. static.WithCertChain())
-		// This depends on https://github.com/sigstore/sigstore-go/issues/328
-		sig, err := static.NewAttestation(payload)
-		if err != nil {
-			continue
+		return nil, false, &ErrNoMatchingAttestations{
+			fmt.Errorf("no matching attestations: %s", strings.Join(combinedErrors, "\n ")),
 		}
-		checkedSignatures = append(checkedSignatures, sig)
-		bundleVerified = true
 	}
-	return checkedSignatures, bundleVerified, nil
+
+	return checkedAttestations, bundleVerified, nil
 }

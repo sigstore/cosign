@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -52,13 +53,27 @@ func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
 }
 
 func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
-	signatures, err := Signatures(ref, opts...)
+	o := makeOptions(ref.Context(), opts...)
+	img, err := remoteImage(ref, o.ROpt...)
 	if err != nil {
 		return nil, err
 	}
-	layers, err := signatures.(*sigs).Image.Layers()
+	// TODO: We can check for a specific predicate type here using
+	// img.Manifest() and looking at the annotations. To do so, we would need
+	// to thread the CLI flag through to here.
+	layers, err := img.Layers()
 	if err != nil {
 		return nil, err
+	}
+	if len(layers) != 1 {
+		return nil, errors.New("expected exactly one layer")
+	}
+	mediaType, err := layers[0].MediaType()
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(string(mediaType), "application/vnd.dev.sigstore.bundle") {
+		return nil, errors.New("expected bundle layer")
 	}
 	layer0, err := layers[0].Uncompressed()
 	if err != nil {
