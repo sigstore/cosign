@@ -92,7 +92,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.PubKeyParseError{}
 	}
 
-	if c.KeyOpts.NewBundleFormat {
+	if c.KeyOpts.NewBundleFormat || checkNewBundle(c.BundlePath) {
 		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SigRef, c.SCTRef) > 1 {
 			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
 		}

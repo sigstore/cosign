@@ -53,6 +53,11 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
 }
 
+func checkNewBundle(bundlePath string) bool {
+	_, err := sgbundle.LoadJSONFromPath(bundlePath)
+	return err == nil
+}
+
 func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, slot, certOIDCIssuer, certOIDCIssuerRegex, certIdentity, certIdentityRegexp, githubWorkflowTrigger, githubWorkflowSHA, githubWorkflowName, githubWorkflowRepository, githubWorkflowRef, artifactRef string, sk, ignoreTlog, useSignedTimestamps, ignoreSCT bool) (*verify.VerificationResult, error) {
 	bundle, err := sgbundle.LoadJSONFromPath(bundlePath)
 	if err != nil {
