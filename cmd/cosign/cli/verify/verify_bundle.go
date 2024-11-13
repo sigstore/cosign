@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
@@ -62,6 +63,7 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 	var trustedroot *root.TrustedRoot
 
 	if trustedRootPath == "" {
+		ui.Infof(ctx, "no --trusted-root specified; fetching public good instance verification material via TUF")
 		// Assume we're using public good instance; fetch via TUF
 		trustedroot, err = root.FetchTrustedRoot()
 		if err != nil {
