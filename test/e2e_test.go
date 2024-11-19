@@ -366,7 +366,7 @@ func attestVerify(t *testing.T, newBundleFormat bool, predicateType, attestation
 	}
 
 	if newBundleFormat {
-		verifyAttestation.ExpectSigstoreBundle = true
+		verifyAttestation.NewBundleFormat = true
 	}
 
 	// Fail case when using without type and policy flag

@@ -146,7 +146,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		MaxWorkers:                   c.MaxWorkers,
 		ExperimentalOCI11:            c.ExperimentalOCI11,
-		ExpectSigstoreBundle:         c.ExpectSigstoreBundle,
+		NewBundleFormat:              c.NewBundleFormat,
 	}
 
 	if c.TrustedRootPath != "" {

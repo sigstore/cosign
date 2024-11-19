@@ -174,10 +174,10 @@ type CheckOpts struct {
 	// Defaults to false.
 	ExperimentalOCI11 bool
 
-	ExpectSigstoreBundle bool
+	NewBundleFormat bool
 
 	// TrustedMaterial is the trusted material to use for verification.
-	// Currently, this is only applicable when ExpectSigstoreBundle is true.
+	// Currently, this is only applicable when NewBundleFormat is true.
 	TrustedMaterial root.TrustedMaterial
 
 	// TODO: Add these to replace above fields?
@@ -602,7 +602,7 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		}
 	}
 
-	if co.ExpectSigstoreBundle {
+	if co.NewBundleFormat {
 		return nil, false, errors.New("bundle support for image signatures is not yet implemented")
 	}
 
@@ -994,7 +994,7 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
 		return nil, false, errors.New("one of verifier, root certs, or TrustedMaterial is required")
 	}
-	if co.ExpectSigstoreBundle {
+	if co.NewBundleFormat {
 		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co)
 	}
 

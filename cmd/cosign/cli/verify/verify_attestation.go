@@ -121,27 +121,27 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		MaxWorkers:                   c.MaxWorkers,
-		ExpectSigstoreBundle:         c.ExpectSigstoreBundle,
+		NewBundleFormat:              c.NewBundleFormat,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 
-	if c.ExpectSigstoreBundle {
+	if c.NewBundleFormat {
 		if err = checkSigstoreBundleUnsupportedOptions(c); err != nil {
 			return err
 		}
 	}
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) && !c.ExpectSigstoreBundle {
+	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) && !c.NewBundleFormat {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
 		}
 	}
 
-	if c.TSACertChainPath != "" || c.UseSignedTimestamps && !c.ExpectSigstoreBundle {
+	if c.TSACertChainPath != "" || c.UseSignedTimestamps && !c.NewBundleFormat {
 		tsaCertificates, err := c.loadTSACertificates(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -151,7 +151,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
-	if !c.IgnoreTlog && !co.ExpectSigstoreBundle {
+	if !c.IgnoreTlog && !co.NewBundleFormat {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -197,7 +197,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case c.CertRef != "":
-		if c.ExpectSigstoreBundle {
+		if c.NewBundleFormat {
 			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
 			return fmt.Errorf("unsupported: certificate reference currently not supported with --expect-sigstore-bundle")
 		}
@@ -238,7 +238,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			co.SCT = sct
 		}
 	case c.TrustedRootPath != "":
-		if !c.ExpectSigstoreBundle {
+		if !c.NewBundleFormat {
 			return fmt.Errorf("unsupported: trusted root path currently only supported with --expect-sigstore-bundle")
 		}
 
