@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -35,12 +36,15 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/theupdateframework/go-tuf/v2/metadata"
+	"github.com/theupdateframework/go-tuf/v2/metadata/repository"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -54,6 +58,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/initialize"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
@@ -69,6 +74,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -274,6 +280,134 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	// It doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, nil, "", false), t)
+}
+
+func downloadTargets(td string, targetsMeta *metadata.Metadata[metadata.TargetsType], t *testing.T) {
+	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
+	must(err, t)
+	targets := map[string]string{
+		"rekor.pub":      rekorURL + "/api/v1/log/publicKey",
+		"fulcio.crt.pem": fulcioURL + "/api/v1/rootCert",
+		"ctfe.pub":       filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+	}
+	targetsDir := filepath.Join(td, "targets")
+	must(os.Mkdir(targetsDir, 0700), t)
+	for name, path := range targets {
+		targetLocalPath := filepath.Join(targetsDir, name)
+		if strings.HasPrefix(path, "http") {
+			fp, err := os.Create(targetLocalPath)
+			must(err, t)
+			defer fp.Close()
+			must(downloadFile(path, fp), t)
+		}
+		if strings.HasPrefix(path, "/") {
+			must(copyFile(path, targetLocalPath), t)
+		}
+		targetFileInfo, err := metadata.TargetFile().FromFile(targetLocalPath, "sha256")
+		must(err, t)
+		targetsMeta.Signed.Targets[name] = targetFileInfo
+	}
+}
+
+func setUpTUF(td string, t *testing.T) {
+	// source: https://github.com/theupdateframework/go-tuf/blob/v2.0.2/examples/repository/basic_repository.go
+	roles := repository.New()
+	expiration := time.Now().AddDate(0, 0, 1).UTC()
+	targets := metadata.Targets(expiration)
+	roles.SetTargets("targets", targets)
+	downloadTargets(td, roles.Targets("targets"), t)
+	snapshot := metadata.Snapshot(expiration)
+	roles.SetSnapshot(snapshot)
+	timestamp := metadata.Timestamp(expiration)
+	roles.SetTimestamp(timestamp)
+	root := metadata.Root(expiration)
+	root.Signed.ConsistentSnapshot = false
+	roles.SetRoot(root)
+
+	_, private, err := ed25519.GenerateKey(nil)
+	must(err, t)
+	public, err := metadata.KeyFromPublicKey(private.Public())
+	must(err, t)
+	for _, name := range []string{"targets", "snapshot", "timestamp", "root"} {
+		err = roles.Root().Signed.AddKey(public, name)
+		must(err, t)
+		signer, err := signature.LoadSigner(private, crypto.Hash(0))
+		must(err, t)
+		switch name {
+		case "targets":
+			_, err = roles.Targets("targets").Sign(signer)
+		case "snapshot":
+			_, err = roles.Snapshot().Sign(signer)
+		case "timestamp":
+			_, err = roles.Timestamp().Sign(signer)
+		case "root":
+			_, err = roles.Root().Sign(signer)
+		}
+		must(err, t)
+	}
+	must(roles.Targets("targets").ToFile(filepath.Join(td, "targets.json"), false), t)
+	must(roles.Snapshot().ToFile(filepath.Join(td, "snapshot.json"), false), t)
+	must(roles.Timestamp().ToFile(filepath.Join(td, "timestamp.json"), false), t)
+	must(roles.Root().ToFile(filepath.Join(td, fmt.Sprintf("%d.%s.json", roles.Root().Signed.Version, "root")), false), t)
+
+	must(roles.Root().VerifyDelegate("root", roles.Root()), t)
+	must(roles.Root().VerifyDelegate("targets", roles.Targets("targets")), t)
+	must(roles.Root().VerifyDelegate("snapshot", roles.Snapshot()), t)
+	must(roles.Root().VerifyDelegate("timestamp", roles.Timestamp()), t)
+}
+
+func TestSignVerifyWithTUFMirror(t *testing.T) {
+	ctx := context.Background()
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	setUpTUF(tufMirror, t)
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	// unset the roots that were generated for timestamp signing, they won't work here
+	err := fulcioroots.ReInit()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+	imgName := path.Join(repo, "cosign-e2e-tuf")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	ko := options.KeyOpts{
+		FulcioURL:        fulcioURL,
+		RekorURL:         rekorURL,
+		IDToken:          identityToken,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:           true,
+		TlogUpload:       true,
+		SkipConfirmation: true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	issuer := os.Getenv("OIDC_URL")
+	verifyCmd := cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: issuer,
+			CertIdentity:   certID,
+		},
+		Offline:     true,
+		CheckClaims: true,
+	}
+	must(verifyCmd.Exec(ctx, []string{imgName}), t)
 }
 
 func TestAttestVerify(t *testing.T) {
