@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
 	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
@@ -29,12 +30,15 @@ import (
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/cliplugin"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/kmsgoplugin"
+	"github.com/sigstore/sigstore/pkg/signature/kms/kmsgoplugin"
 )
 
 func main() {
+	defer kmsgoplugin.CleanupClients()
+	defer time.Sleep(time.Second * 10)
 	// Fix up flags to POSIX standard flags.
 	ctx := context.Background()
 	for i, arg := range os.Args {
@@ -63,6 +67,9 @@ func main() {
 	}
 
 	if err := cli.New().Execute(); err != nil {
+		kmsgoplugin.CleanupClients()
+		time.Sleep(time.Second * 10)
+
 		// if the error is a `CosignError` then we want to use the exit code that
 		// is related to the type of error that has occurred.
 		var cosignError *cosignError.CosignError
