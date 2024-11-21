@@ -23,11 +23,14 @@ import (
 	"io"
 	"os"
 
+	"github.com/go-openapi/runtime"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	cosignv1 "github.com/sigstore/cosign/v2/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	"github.com/sigstore/rekor/pkg/generated/client/entries"
 
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -53,6 +56,35 @@ type signerWrapper struct {
 }
 
 var _ cosign.Signer = (*signerWrapper)(nil)
+
+type loggingRekorEntry struct {
+	inner entries.ClientService
+}
+
+func (l *loggingRekorEntry) CreateLogEntry(params *entries.CreateLogEntryParams, opts ...entries.ClientOption) (*entries.CreateLogEntryCreated, error) {
+	entry, err := l.inner.CreateLogEntry(params, opts...)
+	if err != nil {
+		return nil, err
+	}
+	ui.Infof(params.Context, "tlog entry created with entryId: %s", entry.ETag)
+	return entry, nil
+}
+
+func (l *loggingRekorEntry) GetLogEntryByIndex(params *entries.GetLogEntryByIndexParams, opts ...entries.ClientOption) (*entries.GetLogEntryByIndexOK, error) {
+	return l.inner.GetLogEntryByIndex(params, opts...)
+}
+
+func (l *loggingRekorEntry) GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParams, opts ...entries.ClientOption) (*entries.GetLogEntryByUUIDOK, error) {
+	return l.inner.GetLogEntryByUUID(params, opts...)
+}
+
+func (l *loggingRekorEntry) SearchLogQuery(params *entries.SearchLogQueryParams, opts ...entries.ClientOption) (*entries.SearchLogQueryOK, error) {
+	return l.inner.SearchLogQuery(params, opts...)
+}
+
+func (l *loggingRekorEntry) SetTransport(transport runtime.ClientTransport) {
+	l.inner.SetTransport(transport)
+}
 
 // Sign implements `cosign.Signer`
 func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error) {
@@ -89,8 +121,15 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	if err != nil {
 		return nil, nil, err
 	}
+	loggingRClient := client.Rekor{
+		Entries:   &loggingRekorEntry{inner: rs.rClient.Entries},
+		Index:     rs.rClient.Index,
+		Pubkey:    rs.rClient.Pubkey,
+		Tlog:      rs.rClient.Tlog,
+		Transport: rs.rClient.Transport,
+	}
 
-	bundle, err := uploadToTlog(rekorBytes, rs.rClient, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+	bundle, err := uploadToTlog(rekorBytes, &loggingRClient, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 		checkSum := sha256.New()
 		if _, err := checkSum.Write(payloadBytes); err != nil {
 			return nil, err
