@@ -73,7 +73,6 @@ cosign verify-attestation [flags]
       --certificate-oidc-issuer string                                                           The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --certificate-oidc-issuer-regexp string                                                    A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --check-claims                                                                             whether to check the claims found (default true)
-      --expect-sigstore-bundle                                                                   expect the signature/attestation to be packaged in a Sigstore bundle
       --experimental-oci11                                                                       set to true to enable experimental OCI 1.1 behaviour
   -h, --help                                                                                     help for verify-attestation
       --insecure-ignore-sct                                                                      when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
@@ -82,6 +81,7 @@ cosign verify-attestation [flags]
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
+      --new-bundle-format                                                                        expect the signature/attestation to be packaged in a Sigstore bundle
       --offline                                                                                  only allow offline verification
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files with policies to be used for validation

@@ -78,14 +78,13 @@ cosign verify-blob [flags]
       --certificate-identity-regexp string              A regular expression alternative to --certificate-identity. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.
       --certificate-oidc-issuer string                  The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --certificate-oidc-issuer-regexp string           A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
-      --expect-sigstore-bundle                          expect the signature/attestation to be packaged in a Sigstore bundle
       --experimental-oci11                              set to true to enable experimental OCI 1.1 behaviour
   -h, --help                                            help for verify-blob
       --insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                               output bundle in new format that contains all verification material
+      --new-bundle-format                               expect the signature/attestation to be packaged in a Sigstore bundle
       --offline                                         only allow offline verification
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
