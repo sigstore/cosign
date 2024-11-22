@@ -199,7 +199,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	case c.CertRef != "":
 		if c.NewBundleFormat {
 			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
-			return fmt.Errorf("unsupported: certificate reference currently not supported with --expect-sigstore-bundle")
+			return fmt.Errorf("unsupported: certificate reference currently not supported with --new-bundle-format")
 		}
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
@@ -239,7 +239,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 	case c.TrustedRootPath != "":
 		if !c.NewBundleFormat {
-			return fmt.Errorf("unsupported: trusted root path currently only supported with --expect-sigstore-bundle")
+			return fmt.Errorf("unsupported: trusted root path currently only supported with --new-bundle-format")
 		}
 
 		// If a trusted root path is provided, we will use it to verify the bundle.
@@ -357,16 +357,16 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 
 func checkSigstoreBundleUnsupportedOptions(c *VerifyAttestationCommand) error {
 	if c.Cert != "" || c.CertRef != "" {
-		return fmt.Errorf("unsupported: certificate may not be provided using --cert when using --expect-sigstore-bundle (cert must be in bundle)")
+		return fmt.Errorf("unsupported: certificate may not be provided using --cert when using --new-bundle-format (cert must be in bundle)")
 	}
 	if c.CertChain != "" {
-		return fmt.Errorf("unsupported: certificate chain may not be provided using --cert-chain when using --expect-sigstore-bundle (cert must be in bundle)")
+		return fmt.Errorf("unsupported: certificate chain may not be provided using --cert-chain when using --new-bundle-format (cert must be in bundle)")
 	}
 	if c.CARoots != "" || c.CAIntermediates != "" {
-		return fmt.Errorf("unsupported: CA roots/intermediates must be provided using --trusted-root when using --expect-sigstore-bundle")
+		return fmt.Errorf("unsupported: CA roots/intermediates must be provided using --trusted-root when using --new-bundle-format")
 	}
 	if c.TSACertChainPath != "" {
-		return fmt.Errorf("unsupported: TSA certificate chain path may only be provided using --trusted-root when using --expect-sigstore-bundle")
-	}
+		return fmt.Errorf("unsupported: TSA certificate chain path may only be provided using --trusted-root when using --new-bundle-format")
+
 	return nil
 }
