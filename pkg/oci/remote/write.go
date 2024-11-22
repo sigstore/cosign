@@ -313,8 +313,6 @@ func WriteAttestationNewBundleFormat(d name.Repository, bundleBytes []byte, pred
 		return fmt.Errorf("failed to upload manifest: %w", err)
 	}
 
-	// TODO: add support for tag fallback scheme for non-compliant registries
-
 	return nil
 }
 
