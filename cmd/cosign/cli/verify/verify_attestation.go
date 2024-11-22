@@ -367,6 +367,6 @@ func checkSigstoreBundleUnsupportedOptions(c *VerifyAttestationCommand) error {
 	}
 	if c.TSACertChainPath != "" {
 		return fmt.Errorf("unsupported: TSA certificate chain path may only be provided using --trusted-root when using --new-bundle-format")
-
+	}
 	return nil
 }
