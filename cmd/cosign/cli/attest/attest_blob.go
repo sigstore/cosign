@@ -162,6 +162,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	var timestampBytes []byte
+	var tsaPayload []byte
 	var rekorEntry *models.LogEntryAnon
 
 	if c.TSAServerURL != "" {
@@ -172,28 +173,16 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		// will use the DSSE Sig field, so we choose what signature to send to
 		// the timestamp authority based on our output format.
 		if c.NewBundleFormat {
-			var envelope dsse.Envelope
-			err = json.Unmarshal(sig, &envelope)
-			if err != nil {
-				return err
-			}
-			if len(envelope.Signatures) == 0 {
-				return fmt.Errorf("envelope has no signatures")
-			}
-			envelopeSigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
-			if err != nil {
-				return err
-			}
-
-			timestampBytes, err = tsa.GetTimestampedSignature(envelopeSigBytes, client.NewTSAClient(c.TSAServerURL))
+			tsaPayload, err = getEnvelopeSigBytes(sig)
 			if err != nil {
 				return err
 			}
 		} else {
-			timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
-			if err != nil {
-				return err
-			}
+			tsaPayload = sig
+		}
+		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, client.NewTSAClient(c.TSAServerURL))
+		if err != nil {
+			return err
 		}
 		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 		// TODO: Consider uploading RFC3161 TS to Rekor
