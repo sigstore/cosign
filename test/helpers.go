@@ -519,21 +519,48 @@ func setLocalEnv(t *testing.T, dir string) error {
 	return nil
 }
 
-// downloadAndSetEnv fetches a URL and sets the given environment variable to point to the downloaded file path.
-func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
+// copyFile copies a file from a source to a destination.
+func copyFile(src, dst string) error {
+	f, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("error opening source file: %w", err)
+	}
+	defer f.Close()
+	cp, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("error creating destination file: %w", err)
+	}
+	defer cp.Close()
+	_, err = io.Copy(cp, f)
+	if err != nil {
+		return fmt.Errorf("error copying file: %w", err)
+	}
+	return nil
+}
+
+// downloadFile fetches a URL and stores it at the given file path.
+func downloadFile(url string, fp *os.File) error {
 	resp, err := http.Get(url) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("error downloading file: %w", err)
 	}
 	defer resp.Body.Close()
+	_, err = io.Copy(fp, resp.Body)
+	if err != nil {
+		return fmt.Errorf("error writing to file: %w", err)
+	}
+	return nil
+}
+
+// downloadAndSetEnv fetches a URL and sets the given environment variable to point to the downloaded file path.
+func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
 	f, err := os.CreateTemp(dir, "")
 	if err != nil {
 		return fmt.Errorf("error creating temp file: %w", err)
 	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.Body)
+	err = downloadFile(url, f)
 	if err != nil {
-		return fmt.Errorf("error writing to file: %w", err)
+		return fmt.Errorf("error downloading file: %w", err)
 	}
 	t.Setenv(envVar, f.Name())
 	return nil

@@ -99,8 +99,12 @@ cosign sign [flags]
       --payload string                                                                           path to a payload file to use rather than generating one
       --record-creation-timestamp                                                                set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
+      --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
+      --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
+      --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
       --registry-password string                                                                 registry basic auth password
       --registry-referrers-mode registryReferrersMode                                            mode for fetching references from the registry. allowed: legacy, oci-1-1
+      --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
