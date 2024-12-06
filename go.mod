@@ -1,6 +1,10 @@
 module github.com/sigstore/cosign/v2
 
-go 1.22.8
+go 1.23.2
+
+toolchain go1.23.3
+
+replace github.com/sigstore/sigstore/pkg/signature/kms/cliplugin => ../sigstore/pkg/signature/kms/cliplugin
 
 require (
 	cuelang.org/go v0.9.2
@@ -34,10 +38,11 @@ require (
 	github.com/sigstore/fulcio v1.6.3
 	github.com/sigstore/protobuf-specs v0.3.2
 	github.com/sigstore/rekor v1.3.6
-	github.com/sigstore/sigstore v1.8.9
+	github.com/sigstore/sigstore v1.8.10
 	github.com/sigstore/sigstore-go v0.6.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.8
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.8
+	github.com/sigstore/sigstore/pkg/signature/kms/cliplugin v0.0.0-00010101000000-000000000000
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.8
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.8
 	github.com/sigstore/timestamp-authority v1.2.2
@@ -51,10 +56,10 @@ require (
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	github.com/xanzy/go-gitlab v0.109.0
 	go.step.sm/crypto v0.51.2
-	golang.org/x/crypto v0.27.0
+	golang.org/x/crypto v0.29.0
 	golang.org/x/oauth2 v0.23.0
-	golang.org/x/sync v0.8.0
-	golang.org/x/term v0.24.0
+	golang.org/x/sync v0.9.0
+	golang.org/x/term v0.26.0
 	google.golang.org/api v0.196.0
 	google.golang.org/protobuf v1.34.2
 	k8s.io/api v0.28.3
@@ -263,14 +268,14 @@ require (
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/grpc v1.66.0 // indirect
+	google.golang.org/grpc v1.67.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
