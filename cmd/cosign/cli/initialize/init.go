@@ -20,17 +20,38 @@ import (
 	_ "embed" // To enable the `go:embed` directive.
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
 func DoInitialize(ctx context.Context, root, mirror string) error {
+	return doInitialize(ctx, root, mirror, "", true)
+}
+
+func DoInitializeWithRootChecksum(ctx context.Context, root, mirror, rootChecksum string) error {
+	return doInitialize(ctx, root, mirror, rootChecksum, false)
+}
+
+func doInitialize(ctx context.Context, root, mirror, rootChecksum string, forceSkipChecksumValidation bool) error {
 	// Get the initial trusted root contents.
 	var rootFileBytes []byte
 	var err error
 	if root != "" {
-		rootFileBytes, err = blob.LoadFileOrURL(root)
+		if !forceSkipChecksumValidation {
+			if rootChecksum == "" && (strings.HasPrefix(root, "http://") || strings.HasPrefix(root, "https://")) {
+				fmt.Fprintln(os.Stderr, options.RootWithoutChecksumDeprecation)
+			}
+		}
+		verifyChecksum := !forceSkipChecksumValidation && (rootChecksum != "")
+		if verifyChecksum {
+			rootFileBytes, err = blob.LoadFileOrURLWithChecksum(root, rootChecksum)
+		} else {
+			rootFileBytes, err = blob.LoadFileOrURL(root)
+		}
 		if err != nil {
 			return err
 		}
