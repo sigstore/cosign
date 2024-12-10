@@ -1640,13 +1640,8 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 	}
 
 	if len(checkedAttestations) == 0 {
-		var combinedErrors []string
-		for _, err := range t.Errs() {
-			combinedErrors = append(combinedErrors, err.Error())
-		}
-
 		return nil, false, &ErrNoMatchingAttestations{
-			fmt.Errorf("no matching attestations: %s", strings.Join(combinedErrors, "\n ")),
+			fmt.Errorf("no matching attestations: %w", errors.Join(t.Errs()...)),
 		}
 	}
 
