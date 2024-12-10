@@ -1568,7 +1568,7 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 }
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
-func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
 	bundles, hash, err := getBundles(ctx, signedImgRef, co)
 	if err != nil {
 		return nil, false, err
@@ -1636,7 +1636,7 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 	}
 
 	for _, verified := range bundlesVerified {
-		bundleVerified = bundleVerified || verified
+		atLeastOneBundleVerified = atLeastOneBundleVerified || verified
 	}
 
 	if len(checkedAttestations) == 0 {
@@ -1650,5 +1650,5 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 		}
 	}
 
-	return checkedAttestations, bundleVerified, nil
+	return checkedAttestations, atLeastOneBundleVerified, nil
 }
