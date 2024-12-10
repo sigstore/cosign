@@ -15,9 +15,13 @@
 package attest
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
 func predicateReader(predicatePath string) (io.ReadCloser, error) {
@@ -32,4 +36,16 @@ func predicateReader(predicatePath string) (io.ReadCloser, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+func getEnvelopeSigBytes(envelopeBytes []byte) ([]byte, error) {
+	var envelope dsse.Envelope
+	err := json.Unmarshal(envelopeBytes, &envelope)
+	if err != nil {
+		return nil, err
+	}
+	if len(envelope.Signatures) == 0 {
+		return nil, fmt.Errorf("envelope has no signatures")
+	}
+	return base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
 }
