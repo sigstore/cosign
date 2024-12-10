@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
-	"github.com/pkg/errors"
 )
 
 // TimestampAuthorityClient should be implemented by clients that want to request timestamp responses
@@ -133,13 +132,13 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 
 	req, err := http.NewRequest("POST", t.URL, bytes.NewReader(tsq))
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating HTTP request")
+		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/timestamp-query")
 
 	tsr, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "error making request to timestamp authority")
+		return nil, fmt.Errorf("error making request to timestamp authority: %w", err)
 	}
 	if tsr.StatusCode != 200 && tsr.StatusCode != 201 {
 		return nil, fmt.Errorf("request to timestamp authority failed with status code %d", tsr.StatusCode)
@@ -147,7 +146,7 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 
 	resp, err := io.ReadAll(tsr.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "error reading timestamp response")
+		return nil, fmt.Errorf("error reading timestamp response: %w", err)
 	}
 
 	// validate that the timestamp response is parseable

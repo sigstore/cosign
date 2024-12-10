@@ -28,8 +28,9 @@ import (
 	"strings"
 	"testing"
 
+	"errors"
+
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"

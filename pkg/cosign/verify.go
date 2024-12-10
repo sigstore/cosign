@@ -34,7 +34,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime"

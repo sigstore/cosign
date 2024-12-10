@@ -18,12 +18,12 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
 	"github.com/digitorus/timestamp"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -38,7 +38,7 @@ import (
 func GetTimestampedSignature(sigBytes []byte, tsaClient client.TimestampAuthorityClient) ([]byte, error) {
 	requestBytes, err := createTimestampAuthorityRequest(sigBytes, crypto.SHA256, "")
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating timestamp request")
+		return nil, fmt.Errorf("error creating timestamp request: %w", err)
 	}
 
 	return tsaClient.GetTimestampResponse(requestBytes)

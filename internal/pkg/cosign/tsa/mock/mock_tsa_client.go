@@ -20,9 +20,8 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/asn1"
+	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
@@ -65,7 +64,7 @@ func NewTSAClient(o TSAClientOptions) (*TSAClient, error) {
 	}
 	certChain, err := signer.NewTimestampingCertWithChain(sv)
 	if err != nil {
-		return nil, errors.Wrap(err, "generating timestamping cert chain")
+		return nil, fmt.Errorf("generating timestamping cert chain: %w", err)
 	}
 
 	return &TSAClient{
