@@ -354,11 +354,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 }
 
 func checkSigstoreBundleUnsupportedOptions(c *VerifyAttestationCommand) error {
-	if c.Cert != "" || c.CertRef != "" {
-		return fmt.Errorf("unsupported: certificate may not be provided using --cert when using --new-bundle-format (cert must be in bundle)")
+	if c.CertRef != "" {
+		return fmt.Errorf("unsupported: certificate may not be provided using --certificate when using --new-bundle-format (cert must be in bundle)")
 	}
 	if c.CertChain != "" {
-		return fmt.Errorf("unsupported: certificate chain may not be provided using --cert-chain when using --new-bundle-format (cert must be in bundle)")
+		return fmt.Errorf("unsupported: certificate chain may not be provided using --certificate-chain when using --new-bundle-format (cert must be in bundle)")
 	}
 	if c.CARoots != "" || c.CAIntermediates != "" {
 		return fmt.Errorf("unsupported: CA roots/intermediates must be provided using --trusted-root when using --new-bundle-format")
