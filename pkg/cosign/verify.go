@@ -235,7 +235,7 @@ func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, 
 	// Wrap TrustedMaterial
 	vTrustedMaterial := &verifyTrustedMaterial{TrustedMaterial: co.TrustedMaterial}
 
-	// If TrustedMaterial is not set, fetch it from TUF
+	// If TrustedMaterial is not set, fetch it from TUF (TODO: should this even be done? Old verifier requires co.RootCerts to be set)
 	if vTrustedMaterial.TrustedMaterial == nil {
 		vTrustedMaterial.TrustedMaterial, err = root.FetchTrustedRoot()
 		if err != nil {
