@@ -210,10 +210,9 @@ func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 
 // VerifyBlobAttestationOptions is the top level wrapper for the `verify-blob-attestation` command.
 type VerifyBlobAttestationOptions struct {
-	Key             string
-	SignaturePath   string
-	BundlePath      string
-	TrustedRootPath string
+	Key           string
+	SignaturePath string
+	BundlePath    string
 
 	PredicateOptions
 	CheckClaims bool
