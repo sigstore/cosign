@@ -18,13 +18,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pkg/errors"
+	"errors"
 )
 
 func TestErrors(t *testing.T) {
 	for _, want := range []error{
-		&VerificationFailure{errors.Errorf("not a constant %d", 3)},
-		&VerificationFailure{errors.Errorf("not a string %s", "i am a string")},
+		&VerificationFailure{fmt.Errorf("not a constant %d", 3)},
+		&VerificationFailure{fmt.Errorf("not a string %s", "i am a string")},
 	} {
 		t.Run(want.Error(), func(t *testing.T) {
 			verr := &VerificationFailure{}

@@ -31,7 +31,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"errors"
+
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -157,7 +158,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
-		return errors.Wrap(err, "signing")
+		return fmt.Errorf("signing: %w", err)
 	}
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
