@@ -28,11 +28,6 @@ on:
     branches: ['main', 'release-*']
   pull_request:
 
-permissions: read-all
-
-env:
-  GO_VERSION: '1.22'
-
 jobs:
   unit-tests:
     name: Run unit tests
@@ -47,6 +42,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
       - uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
@@ -65,7 +62,7 @@ jobs:
             ${{ runner.os }}-go-
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           check-latest: true
       - name: Run Go tests
         env:
@@ -86,9 +83,13 @@ jobs:
   e2e-tests:
     name: Run e2e tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       # Related to https://github.com/sigstore/cosign/issues/3149
       - name: free up disk space
         run: |
@@ -160,7 +161,7 @@ jobs:
             ${{ runner.os }}-go-
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           check-latest: true
       - uses: ko-build/setup-ko@3aebd0597dc1e9d1a26bcfdb7cbeb19c131d3037 # v0.7
       - name: setup kind cluster
@@ -179,11 +180,15 @@ jobs:
   e2e-windows-powershell-tests:
     name: Run PowerShell E2E tests
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           check-latest: true
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
@@ -205,11 +210,15 @@ jobs:
   license-check:
     name: license boilerplate check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           check-latest: true
       - name: Install addlicense
         run: go install github.com/google/addlicense@latest
