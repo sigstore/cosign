@@ -6,6 +6,8 @@ toolchain go1.23.3
 
 replace github.com/sigstore/sigstore/pkg/signature/kms/cliplugin => ../sigstore/pkg/signature/kms/cliplugin
 
+replace github.com/sigstore/sigstore => ../sigstore
+
 require (
 	cuelang.org/go v0.9.2
 	github.com/ThalesIgnite/crypto11 v1.2.5
@@ -57,7 +59,7 @@ require (
 	github.com/xanzy/go-gitlab v0.109.0
 	go.step.sm/crypto v0.51.2
 	golang.org/x/crypto v0.29.0
-	golang.org/x/oauth2 v0.23.0
+	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sync v0.9.0
 	golang.org/x/term v0.26.0
 	google.golang.org/api v0.196.0
