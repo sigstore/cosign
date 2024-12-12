@@ -162,7 +162,7 @@ func main() {
 				MessageSignature: &protocommon.MessageSignature{
 					MessageDigest: &protocommon.HashOutput{
 						Algorithm: protocommon.HashAlgorithm_SHA2_256,
-						Digest:    fileDigest[:],
+						Digest:    fileDigest,
 					},
 					Signature: sigBytes,
 				},
