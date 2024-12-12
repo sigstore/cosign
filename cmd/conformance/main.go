@@ -17,11 +17,13 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -118,12 +120,28 @@ func main() {
 		// format. When cosign supports `--trusted-root` with detached signed
 		// material, we can supply this content with `--certificate`
 		// and `--signature` instead.
-		fileBytes, err := os.ReadFile(os.Args[len(os.Args)-1])
-		if err != nil {
-			log.Fatal(err)
-		}
+		var fileDigest []byte
 
-		fileDigest := sha256.Sum256(fileBytes)
+		fileOrDigest := os.Args[len(os.Args)-1]
+		digestStr, ok := strings.CutPrefix("sha256:", fileOrDigest)
+		if ok {
+			var err error
+			fileDigest, err = hex.DecodeString(digestStr)
+			if err == nil && len(fileDigest) != sha256.Size {
+				err = fmt.Errorf("length of digest %d does not match a SHA256 digest", len(fileDigest))
+			}
+			if err != nil {
+				log.Fatal(fmt.Errorf("parsing file_or_digest: %w", err))
+			}
+		} else {
+			fileBytes, err := os.ReadFile(path.Clean(fileOrDigest))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			fileDigest32 := sha256.Sum256(fileBytes)
+			fileDigest = fileDigest32[:]
+		}
 
 		pb := protobundle.Bundle{
 			MediaType: "application/vnd.dev.sigstore.bundle+json;version=0.1",
