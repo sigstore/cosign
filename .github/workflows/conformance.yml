@@ -32,13 +32,13 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
           go-version-file: 'go.mod'
           check-latest: true
 
       - run: make cosign conformance
 
-      - uses: sigstore/sigstore-conformance@ee4de0e602873beed74cf9e49d5332529fe69bf6 # v0.0.11
+      - uses: sigstore/sigstore-conformance@b0635d4101f11dbd18a50936568a1f7f55b17760 # v0.0.14
         with:
           entrypoint: ${{ github.workspace }}/conformance
