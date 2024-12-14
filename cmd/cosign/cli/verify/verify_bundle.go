@@ -173,15 +173,15 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 	// Check if artifactRef is a digest or a file path
 	var artifactOpt verify.ArtifactPolicyOption
 	if _, err := os.Stat(artifactRef); err != nil {
-		if hexAlg, hexDigest, ok := strings.Cut(artifactRef, ":"); !ok {
+		hexAlg, hexDigest, ok := strings.Cut(artifactRef, ":")
+		if !ok {
 			return nil, err
-		} else {
-			digestBytes, err := hex.DecodeString(hexDigest)
-			if err != nil {
-				return nil, err
-			}
-			artifactOpt = verify.WithArtifactDigest(hexAlg, digestBytes)
 		}
+		digestBytes, err := hex.DecodeString(hexDigest)
+		if err != nil {
+			return nil, err
+		}
+		artifactOpt = verify.WithArtifactDigest(hexAlg, digestBytes)
 	} else {
 		// Perform verification
 		payload, err := payloadBytes(artifactRef)
