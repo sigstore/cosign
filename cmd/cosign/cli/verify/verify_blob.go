@@ -27,7 +27,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/internal/ui"
@@ -118,11 +120,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	sig, err := base64signature(c.SigRef, c.BundlePath)
-	if err != nil {
-		return err
-	}
-
-	blobBytes, err := payloadBytes(blobRef)
 	if err != nil {
 		return err
 	}
@@ -300,12 +297,36 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
+	var hash *v1.Hash
+	var blobBytes []byte
+	if _, err := os.Stat(blobRef); err != nil {
+		if hexAlg, hexDigest, ok := strings.Cut(blobRef, ":"); !ok {
+			return err
+		} else {
+			hash = &v1.Hash{
+				Algorithm: hexAlg,
+				Hex:       hexDigest,
+			}
+		}
+	} else {
+		blobBytes, err = payloadBytes(blobRef)
+		if err != nil {
+			return err
+		}
+	}
+
 	signature, err := static.NewSignature(blobBytes, sig, opts...)
 	if err != nil {
 		return err
 	}
-	if _, err = cosign.VerifyBlobSignature(ctx, signature, co); err != nil {
-		return err
+	if hash == nil {
+		if _, err = cosign.VerifyBlobSignature(ctx, signature, co); err != nil {
+			return err
+		}
+	} else {
+		if _, err = cosign.VerifyImageSignature(ctx, signature, *hash, co); err != nil {
+			return err
+		}
 	}
 
 	ui.Infof(ctx, "Verified OK")
