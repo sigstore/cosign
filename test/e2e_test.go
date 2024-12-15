@@ -1066,12 +1066,12 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 		}
 	}
 
-	tsaCA := root.CertificateAuthority{
+	tsaCA := &root.SigstoreTimestampingAuthority{
 		Root:          certs[len(certs)-1],
 		Intermediates: certs[:len(certs)-1],
 	}
 
-	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, []root.CertificateAuthority{tsaCA}, nil)
+	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, []root.TimestampingAuthority{tsaCA}, nil)
 	if err != nil {
 		t.Error(err)
 	}
