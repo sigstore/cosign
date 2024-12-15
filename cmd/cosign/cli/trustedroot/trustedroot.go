@@ -43,15 +43,15 @@ type CreateCmd struct {
 func (c *CreateCmd) Exec(_ context.Context) error {
 	var fulcioCertAuthorities []root.CertificateAuthority
 	ctLogs := make(map[string]*root.TransparencyLog)
-	var timestampAuthorities []root.CertificateAuthority
+	var timestampAuthorities []root.TimestampingAuthority
 	rekorTransparencyLogs := make(map[string]*root.TransparencyLog)
 
 	for i := 0; i < len(c.CertChain); i++ {
-		fulcioAuthority, err := parsePEMFile(c.CertChain[i])
+		fulcioAuthority, err := parseCAPEMFile(c.CertChain[i])
 		if err != nil {
 			return err
 		}
-		fulcioCertAuthorities = append(fulcioCertAuthorities, *fulcioAuthority)
+		fulcioCertAuthorities = append(fulcioCertAuthorities, fulcioAuthority)
 	}
 
 	for i := 0; i < len(c.CtfeKeyPath); i++ {
@@ -103,11 +103,11 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	}
 
 	for i := 0; i < len(c.TSACertChainPath); i++ {
-		timestampAuthority, err := parsePEMFile(c.TSACertChainPath[i])
+		timestampAuthority, err := parseTAPEMFile(c.TSACertChainPath[i])
 		if err != nil {
 			return err
 		}
-		timestampAuthorities = append(timestampAuthorities, *timestampAuthority)
+		timestampAuthorities = append(timestampAuthorities, timestampAuthority)
 	}
 
 	newTrustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01,
@@ -137,13 +137,13 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	return nil
 }
 
-func parsePEMFile(path string) (*root.CertificateAuthority, error) {
+func parseCAPEMFile(path string) (root.CertificateAuthority, error) {
 	certs, err := parseCerts(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var ca root.CertificateAuthority
+	var ca root.FulcioCertificateAuthority
 	ca.Root = certs[len(certs)-1]
 	ca.ValidityPeriodStart = certs[len(certs)-1].NotBefore
 	if len(certs) > 1 {
@@ -151,6 +151,22 @@ func parsePEMFile(path string) (*root.CertificateAuthority, error) {
 	}
 
 	return &ca, nil
+}
+
+func parseTAPEMFile(path string) (root.TimestampingAuthority, error) {
+	certs, err := parseCerts(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var ta root.SigstoreTimestampingAuthority
+	ta.Root = certs[len(certs)-1]
+	ta.ValidityPeriodStart = certs[len(certs)-1].NotBefore
+	if len(certs) > 1 {
+		ta.Intermediates = certs[:len(certs)-1]
+	}
+
+	return &ta, nil
 }
 
 func parseCerts(path string) ([]*x509.Certificate, error) {

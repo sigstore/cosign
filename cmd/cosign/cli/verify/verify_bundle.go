@@ -167,7 +167,7 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 	}
 
 	if ignoreTlog && !useSignedTimestamps {
-		verifierConfig = append(verifierConfig, verify.WithoutAnyObserverTimestampsUnsafe())
+		verifierConfig = append(verifierConfig, verify.WithCurrentTime())
 	}
 
 	// Check if artifactRef is a digest or a file path
