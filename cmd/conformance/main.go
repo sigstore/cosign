@@ -15,30 +15,20 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var bundlePath *string
-var certPath *string
 var certOIDC *string
 var certSAN *string
 var identityToken *string
-var signaturePath *string
 var trustedRootPath *string
 
 func usage() {
@@ -59,9 +49,6 @@ func parseArgs() {
 		case "--bundle":
 			bundlePath = &os.Args[i+1]
 			i += 2
-		case "--certificate":
-			certPath = &os.Args[i+1]
-			i += 2
 		case "--certificate-oidc-issuer":
 			certOIDC = &os.Args[i+1]
 			i += 2
@@ -70,9 +57,6 @@ func parseArgs() {
 			i += 2
 		case "--identity-token":
 			identityToken = &os.Args[i+1]
-			i += 2
-		case "--signature":
-			signaturePath = &os.Args[i+1]
 			i += 2
 		case "--trusted-root":
 			trustedRootPath = &os.Args[i+1]
