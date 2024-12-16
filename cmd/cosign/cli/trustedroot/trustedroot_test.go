@@ -61,7 +61,7 @@ func TestCreateCmd(t *testing.T) {
 		t.Fatal("unexpected number of fulcio certificate authorities")
 	}
 
-	if len(fulcioCAs[0].Intermediates) != 1 {
+	if len(fulcioCAs[0].(*root.FulcioCertificateAuthority).Intermediates) != 1 {
 		t.Fatal("unexpected number of fulcio intermediate certificates")
 	}
 
@@ -70,7 +70,7 @@ func TestCreateCmd(t *testing.T) {
 		t.Fatal("unexpected number of timestamp authorities")
 	}
 
-	if len(timestampAuthorities[0].Intermediates) != 2 {
+	if len(timestampAuthorities[0].(*root.SigstoreTimestampingAuthority).Intermediates) != 2 {
 		t.Fatal("unexpected number of timestamp intermediate certificates")
 	}
 }

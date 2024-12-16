@@ -23,7 +23,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -36,6 +38,7 @@ func TestVerifyBundleWithKey(t *testing.T) {
 	ctx := context.Background()
 	artifact := "hello world"
 	digest := sha256.Sum256([]byte(artifact))
+	hexDigest := hex.EncodeToString(digest[:])
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	checkErr(t, err)
@@ -86,6 +89,13 @@ func TestVerifyBundleWithKey(t *testing.T) {
 	checkErr(t, err)
 
 	if result == nil {
+		t.Fatal("invalid verification result")
+	}
+
+	result2, err := verifyNewBundle(ctx, bundlePath, trustedRootPath, publicKeyPath, "", "", "", "", "", "", "", "", "", "", fmt.Sprintf("sha256:%s", hexDigest), false, true, false, true)
+	checkErr(t, err)
+
+	if result2 == nil {
 		t.Fatal("invalid verification result")
 	}
 }

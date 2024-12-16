@@ -21,8 +21,11 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -164,22 +167,36 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 	}
 
 	if ignoreTlog && !useSignedTimestamps {
-		verifierConfig = append(verifierConfig, verify.WithoutAnyObserverTimestampsUnsafe())
+		verifierConfig = append(verifierConfig, verify.WithCurrentTime())
 	}
 
-	// Perform verification
-	payload, err := payloadBytes(artifactRef)
-	if err != nil {
-		return nil, err
+	// Check if artifactRef is a digest or a file path
+	var artifactOpt verify.ArtifactPolicyOption
+	if _, err := os.Stat(artifactRef); err != nil {
+		hexAlg, hexDigest, ok := strings.Cut(artifactRef, ":")
+		if !ok {
+			return nil, err
+		}
+		digestBytes, err := hex.DecodeString(hexDigest)
+		if err != nil {
+			return nil, err
+		}
+		artifactOpt = verify.WithArtifactDigest(hexAlg, digestBytes)
+	} else {
+		// Perform verification
+		payload, err := payloadBytes(artifactRef)
+		if err != nil {
+			return nil, err
+		}
+		artifactOpt = verify.WithArtifact(bytes.NewBuffer(payload))
 	}
-	buf := bytes.NewBuffer(payload)
 
 	sev, err := verify.NewSignedEntityVerifier(trustedmaterial, verifierConfig...)
 	if err != nil {
 		return nil, err
 	}
 
-	return sev.Verify(bundle, verify.NewPolicy(verify.WithArtifact(buf), identityPolicies...))
+	return sev.Verify(bundle, verify.NewPolicy(artifactOpt, identityPolicies...))
 }
 
 func AssembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, envelope *dsse.Envelope, artifactRef string, cert *x509.Certificate, ignoreTlog bool, sigVerifier signature.Verifier, pkOpts []signature.PublicKeyOption, rekorClient *client.Rekor) (*sgbundle.Bundle, error) {
