@@ -130,8 +130,8 @@ func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) (warnings 
 	return nil, fmt.Errorf("policy is not compliant for query '%s'", query)
 }
 
-func evaluateRegoEvalMapResult(query string, response []interface{}) (warning error, error error) {
-	error = fmt.Errorf("policy is not compliant for query %q", query) //nolint: revive
+func evaluateRegoEvalMapResult(query string, response []interface{}) (warning error, retErr error) {
+	retErr = fmt.Errorf("policy is not compliant for query %q", query) //nolint: revive
 	for _, r := range response {
 		rMap := r.(map[string]interface{})
 		mapBytes, err := json.Marshal(rMap)
@@ -152,7 +152,7 @@ func evaluateRegoEvalMapResult(query string, response []interface{}) (warning er
 			return fmt.Errorf("warning: %s", resultObject.Warning), nil
 		}
 		warning = errors.New(resultObject.Warning)
-		error = fmt.Errorf("policy is not compliant for query '%s' with errors: %s", query, resultObject.Error) //nolint: revive
+		retErr = fmt.Errorf("policy is not compliant for query '%s' with errors: %s", query, resultObject.Error) //nolint: revive
 	}
-	return warning, error
+	return warning, retErr
 }
