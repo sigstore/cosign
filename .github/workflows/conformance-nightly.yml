@@ -42,16 +42,17 @@ jobs:
 
       - name: Create Issue on Failure
         if: failure()
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
+            const runId = context.runId;
             const issueTitle = 'Conformance Tests Failed';
-            const issueBody = `The nightly conformance tests have failed. Please check the logs for more details.`;
+            const issueBody = `The nightly conformance tests have failed. Please check the logs for more details.\n\nWorkflow run: https://github.com/${owner}/${repo}/actions/runs/${runId}\n\ncc @sigstore/security-response-team`;
             const issueLabel = 'bug';
 
-            const existingIssues = await github.issues.listForRepo({
+            const existingIssues = await github.rest.issues.listForRepo({
               owner,
               repo,
               state: 'open',
@@ -61,7 +62,7 @@ jobs:
             const issueExists = existingIssues.data.some(issue => issue.title === issueTitle);
 
             if (!issueExists) {
-              await github.issues.create({
+              await github.rest.issues.create({
                 owner,
                 repo,
                 title: issueTitle,
