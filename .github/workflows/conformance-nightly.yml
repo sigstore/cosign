@@ -17,6 +17,7 @@ name: Conformance Tests Nightly
 on:
   schedule:
     - cron: '0 0 * * *' # 12:00 AM UTC
+  workflow_dispatch:
 
 permissions:
   contents: read
