@@ -39,6 +39,6 @@ jobs:
 
       - run: make cosign conformance
 
-      - uses: sigstore/sigstore-conformance@b0635d4101f11dbd18a50936568a1f7f55b17760 # v0.0.14
+      - uses: sigstore/sigstore-conformance@main
         with:
           entrypoint: ${{ github.workspace }}/conformance
