@@ -23,7 +23,7 @@ import (
 
 // VerifyNewBundle verifies a SigstoreBundle with the given parameters
 func VerifyNewBundle(_ context.Context, co *CheckOpts, artifactPolicyOption verify.ArtifactPolicyOption, bundle verify.SignedEntity) (*verify.VerificationResult, error) {
-	trustedMaterial, verifierOptions, policyOptions, err := co.SigstoreGoOptions()
+	trustedMaterial, verifierOptions, policyOptions, err := co.verificationOptions()
 	if err != nil {
 		return nil, err
 	}

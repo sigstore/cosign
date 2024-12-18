@@ -191,8 +191,8 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
 }
 
-// SigstoreGoOptions returns the verification options for verifying with sigstore-go.
-func (co *CheckOpts) SigstoreGoOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
+// verificationOptions returns the verification options for verifying with sigstore-go.
+func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
 	policyOptions = make([]verify.PolicyOption, 0)
 
 	if len(co.Identities) > 0 {
