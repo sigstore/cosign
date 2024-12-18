@@ -50,7 +50,7 @@ jobs:
             const { owner, repo } = context.repo;
             const runId = context.runId;
             const issueTitle = 'Conformance Tests Failed';
-            const issueBody = `The nightly conformance tests have failed. Please check the logs for more details.\n\nWorkflow run: https://github.com/${owner}/${repo}/actions/runs/${runId}\n\ncc @sigstore/security-response-team`;
+            const issueBody = `The nightly conformance tests have failed. Please check the logs for more details.\n\nWorkflow run: https://github.com/${owner}/${repo}/actions/runs/${runId}\n\ncc @sigstore/security-response-team @sigstore/cosign-codeowners`;
             const issueLabel = 'bug';
 
             const existingIssues = await github.rest.issues.listForRepo({
