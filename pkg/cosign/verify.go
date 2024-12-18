@@ -260,7 +260,7 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
 	}
 	if co.IgnoreTlog && !co.UseSignedTimestamps {
-		verifierOptions = append(verifierOptions, verify.WithoutAnyObserverTimestampsUnsafe())
+		verifierOptions = append(verifierOptions, verify.WithCurrentTime())
 	}
 
 	return vTrustedMaterial, verifierOptions, policyOptions, nil
