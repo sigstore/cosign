@@ -180,13 +180,6 @@ type CheckOpts struct {
 	// TrustedMaterial is the trusted material to use for verification.
 	// Currently, this is only applicable when NewBundleFormat is true.
 	TrustedMaterial root.TrustedMaterial
-
-	// TODO: Add these to replace above fields?
-	// // VerifierOptions are the options to be passed to the verifier.
-	// VerifierOptions []verify.VerifierOption
-
-	// // PolicyOptions are the policy options to be passed to the verifier.
-	// PolicyOptions []verify.PolicyOption
 }
 
 type verifyTrustedMaterial struct {
