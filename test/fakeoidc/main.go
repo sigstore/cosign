@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Mock OIDC server, based on https://github.com/sigstore/fulcio/blob/4a80ee645c69bac2128b03197e04b4d285c0b81e/pkg/server/grpc_server_test.go#L1626
+// Mock OIDC server, based on https://github.com/sigstore/fulcio/blob/efec18aaed12d1f91eeaaba96e90f86170c2ada4/pkg/server/grpc_server_test.go#L2235
 package main
 
 import (
@@ -25,8 +25,8 @@ import (
 	"net/http"
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 var (
@@ -73,7 +73,7 @@ func token(w http.ResponseWriter, r *http.Request) {
 	}).Claims(customClaims{
 		Email:         "foo@bar.com",
 		EmailVerified: true,
-	}).CompactSerialize()
+	}).Serialize()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

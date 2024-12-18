@@ -29,7 +29,11 @@ cosign attach attestation [flags]
       --attestation stringArray                                                                  path to the attestation envelope
   -h, --help                                                                                     help for attestation
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
+      --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
+      --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
       --registry-password string                                                                 registry basic auth password
+      --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
 ```

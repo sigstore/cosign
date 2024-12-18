@@ -1,3 +1,35 @@
+# v2.4.2
+
+## Features
+
+* Detect if user supplied a valid protobuf bundle (#3931)
+* Add a log message if user doesn't provide `--trusted-root` (#3933)
+* Support mTLS towards container registry (#3922)
+* Add bundle create helper command (#3901)
+* Add trusted-root create helper command (#3876)
+
+## Bug Fixes
+
+* Fix copy --only for signatures + update/align docs (#3904)
+
+## Documentation
+
+* Remove usage.md from spec, point to client spec (#3918)
+* move reference from gcr to ghcr (#3897)
+
+## Contributors
+
+* Aditya Sirish
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Cody Soyland
+* Colleen Murphy
+* Hayden B
+* Jussi Kukkonen
+* Marco Franssen
+* Søren Juul
+* Zach Steindler
+
 # v2.4.1
 
 v2.4.1 largely contains bug fixes and updates dependencies.

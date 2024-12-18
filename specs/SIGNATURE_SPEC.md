@@ -127,12 +127,14 @@ Gyp4apdU7AXEwysEQIb034aPrTlpmxh90SnTZFs2DHOvCjCPPAmoWfuQUwPhSPRb
     - The `logIndex` is the index of the log entry in the transparency log
     - The `logID` is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
 
-For instructions on using the `bundle` for verification, see [USAGE.md](../USAGE.md#verify-a-signature-was-added-to-the-transparency-log).
-
 * `rfc3161timestamp` string
 
   This OPTIONAL property contains a JSON formatted `RFC3161Timestamp` containing the timestamp response from a
   timestamp authority.
+
+### Verification
+
+See the [client specification on verification](https://github.com/sigstore/architecture-docs/blob/main/client-spec.md#4-verification).
 
 ## Storage
 

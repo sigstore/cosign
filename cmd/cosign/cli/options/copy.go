@@ -35,7 +35,7 @@ func (o *CopyOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.CopyOnly, "only", "",
-		"custom string array to only copy specific items, this flag is comma delimited. ex: --only=sbom,sign,att")
+		"custom string array to only copy specific items, this flag is comma delimited. ex: --only=sig,att,sbom")
 
 	cmd.Flags().BoolVar(&o.SignatureOnly, "sig-only", false,
 		"[DEPRECATED] only copy the image signature")
