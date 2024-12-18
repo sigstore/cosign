@@ -174,6 +174,7 @@ type CheckOpts struct {
 	// Defaults to false.
 	ExperimentalOCI11 bool
 
+	// NewBundleFormat enables the new bundle format (Cosign Bundle Spec) and the new verifier.
 	NewBundleFormat bool
 
 	// TrustedMaterial is the trusted material to use for verification.
