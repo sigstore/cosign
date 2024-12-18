@@ -1593,7 +1593,7 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 				}
 				dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope)
 				if !ok {
-					return errors.New("bundle does not contain a DSSE envelope")
+					return fmt.Errorf("bundle does not contain a DSSE envelope")
 				}
 				payload, err := json.Marshal(dsse.DsseEnvelope)
 				if err != nil {
