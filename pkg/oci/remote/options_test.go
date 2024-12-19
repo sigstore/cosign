@@ -16,6 +16,7 @@
 package remote
 
 import (
+	"context"
 	"errors"
 	"os"
 	"reflect"
@@ -40,6 +41,10 @@ func TestOptions(t *testing.T) {
 	otherROpt := []remote.Option{
 		remote.WithAuthFromKeychain(authn.DefaultKeychain),
 		// TODO(mattmoor): Incorporate user agent.
+	}
+
+	moreROpt := []remote.Option{
+		remote.WithContext(context.Background()),
 	}
 
 	tests := []struct {
@@ -105,6 +110,16 @@ func TestOptions(t *testing.T) {
 			TargetRepository:  repo,
 			ROpt:              otherROpt,
 		},
+	}, {
+		name: "more remote options option",
+		opts: []Option{WithRemoteOptions(otherROpt...), WithMoreRemoteOptions(moreROpt...)},
+		want: &options{
+			SignatureSuffix:   SignatureTagSuffix,
+			AttestationSuffix: AttestationTagSuffix,
+			SBOMSuffix:        SBOMTagSuffix,
+			TargetRepository:  repo,
+			ROpt:              append(append([]remote.Option{}, otherROpt...), moreROpt...),
+		},
 	}}
 
 	for _, test := range tests {
@@ -112,7 +127,7 @@ func TestOptions(t *testing.T) {
 			got := makeOptions(repo, test.opts...)
 			test.want.OriginalOptions = test.opts
 
-			if !reflect.DeepEqual(got, test.want) {
+			if !optionsEqual(got, test.want) {
 				t.Errorf("makeOptions() = %#v, wanted %#v", got, test.want)
 			}
 		})
@@ -169,4 +184,55 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			}
 		})
 	}
+}
+
+// this is required due to the fact that reflect.DeepEquals reports
+// two different slices of function points, with identical length and
+// contents at each position as being different
+func optionsEqual(o1, o2 *options) bool {
+	if (o1 == nil) != (o2 == nil) {
+		return false
+	}
+	if o1 == nil {
+		return true
+	}
+
+	if o1.AttestationSuffix != o2.AttestationSuffix {
+		return false
+	}
+	if o1.SignatureSuffix != o2.SignatureSuffix {
+		return false
+	}
+	if o1.SBOMSuffix != o2.SBOMSuffix {
+		return false
+	}
+	if o1.TagPrefix != o2.TagPrefix {
+		return false
+	}
+	if !slicesEqual(o1.ROpt, o2.ROpt) {
+		return false
+	}
+	if !slicesEqual(o1.NameOpts, o2.NameOpts) {
+		return false
+	}
+	if !slicesEqual(o1.OriginalOptions, o2.OriginalOptions) {
+		return false
+	}
+	return true
+}
+
+func slicesEqual[T any](o1, o2 []T) bool {
+	if len(o1) != len(o2) {
+		return false
+	}
+
+	for i := range o1 {
+		v1 := reflect.ValueOf(o1[i])
+		v2 := reflect.ValueOf(o2[i])
+		if v1 != v2 {
+			return false
+		}
+	}
+
+	return true
 }
