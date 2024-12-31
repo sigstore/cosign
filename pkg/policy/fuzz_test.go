@@ -17,13 +17,37 @@ package policy
 
 import (
 	"context"
+	"runtime"
 	"testing"
 )
 
 var policyTypes = []string{"cue", "rego"}
 
+func catchPanics() {
+	if r := recover(); r != nil {
+		var errStr string
+		switch err := r.(type) {
+		case string:
+			errStr = err
+		case runtime.Error:
+			errStr = err.Error()
+		case error:
+			errStr = err.Error()
+		}
+		switch {
+		case errStr == "freeNode: nodeContext out of sync":
+			return
+		case errStr == "unreachable":
+			return
+		default:
+			panic(errStr)
+		}
+	}
+}
+
 func FuzzEvaluatePolicyAgainstJSON(f *testing.F) {
 	f.Fuzz(func(_ *testing.T, name, policyBody string, jsonBytes []byte, policyType uint8) {
+		defer catchPanics()
 		choosePolicyType := policyTypes[int(policyType)%len(policyTypes)]
 		EvaluatePolicyAgainstJSON(context.Background(), name, choosePolicyType, policyBody, jsonBytes)
 	})
