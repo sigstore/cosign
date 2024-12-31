@@ -180,11 +180,15 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 		}
 
 		if digest, ok := ref.(name.Digest); ok && !signOpts.Recursive {
-			se, err := ociremote.SignedEntity(ref, opts...)
-			if _, isEntityNotFoundErr := err.(*ociremote.EntityNotFoundError); isEntityNotFoundErr {
-				se = ociremote.SignedUnknown(digest)
-			} else if err != nil {
-				return fmt.Errorf("accessing image: %w", err)
+			var se *oci.SignedEntity = nil
+			if signOpts.Upload {
+				tmpse, err := ociremote.SignedEntity(ref, opts...)
+				if _, isEntityNotFoundErr := err.(*ociremote.EntityNotFoundError); isEntityNotFoundErr {
+					tmpse = ociremote.SignedUnknown(digest)
+				} else if err != nil {
+					return fmt.Errorf("accessing image: %w", err)
+				}
+				se = &tmpse
 			}
 			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
 			if err != nil {
@@ -205,7 +209,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 				return fmt.Errorf("computing digest: %w", err)
 			}
 			digest := ref.Context().Digest(d.String())
-			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, &se)
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -220,7 +224,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
 	annotations map[string]interface{},
-	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
+	dd mutate.DupeDetector, sv *SignerVerifier, se *oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
 	if len(payload) == 0 {
@@ -232,6 +236,11 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		if err != nil {
 			return fmt.Errorf("payload: %w", err)
 		}
+	}
+
+	if se == nil && signOpts.Upload {
+		// this will only happen if this function is used wrong by the caller
+		return fmt.Errorf("can't upload signature without OCI repository reference")
 	}
 
 	var s icos.Signer
@@ -329,7 +338,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	// Attach the signature to the entity.
-	newSE, err := mutate.AttachSignatureToEntity(se, ociSig, mutate.WithDupeDetector(dd), mutate.WithRecordCreationTimestamp(signOpts.RecordCreationTimestamp))
+	newSE, err := mutate.AttachSignatureToEntity(*se, ociSig, mutate.WithDupeDetector(dd), mutate.WithRecordCreationTimestamp(signOpts.RecordCreationTimestamp))
 	if err != nil {
 		return err
 	}
