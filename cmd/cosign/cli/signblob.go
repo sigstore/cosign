@@ -22,6 +22,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -68,6 +69,7 @@ func SignBlob() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			trustedMaterial, _ := cosign.TrustedRoot()
 			ko := options.KeyOpts{
 				KeyRef:                         o.Key,
 				PassFunc:                       generate.GetPass,
@@ -93,6 +95,7 @@ func SignBlob() *cobra.Command {
 				TSAServerURL:                   o.TSAServerURL,
 				RFC3161TimestampPath:           o.RFC3161TimestampPath,
 				IssueCertificateForExistingKey: o.IssueCertificate,
+				TrustedMaterial:                trustedMaterial,
 			}
 
 			for _, blob := range args {

@@ -54,6 +54,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -391,7 +392,7 @@ func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier
 	}, nil
 }
 
-func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc) (*SignerVerifier, error) {
+func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc, trustedMaterial root.TrustedMaterial) (*SignerVerifier, error) {
 	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc)
 	if err != nil {
 		return nil, fmt.Errorf("reading key: %w", err)
@@ -505,9 +506,14 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 		return nil, err
 	}
 	if contains {
-		pubKeys, err := cosign.GetCTLogPubs(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("getting CTLog public keys: %w", err)
+		var pubKeys any
+		if trustedMaterial != nil {
+			pubKeys = trustedMaterial.CTLogs()
+		} else {
+			pubKeys, err = cosign.GetCTLogPubs(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("getting CTLog public keys: %w", err)
+			}
 		}
 		var chain []*x509.Certificate
 		chain = append(chain, leafCert)
@@ -567,7 +573,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	case ko.Sk:
 		sv, err = signerFromSecurityKey(ctx, ko.Slot)
 	case ko.KeyRef != "":
-		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
+		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, ko.TrustedMaterial)
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
