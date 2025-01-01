@@ -628,8 +628,6 @@ github.com/sigstore/protobuf-specs v0.3.2 h1:nCVARCN+fHjlNCk3ThNXwrZRqIommIeNKWw
 github.com/sigstore/protobuf-specs v0.3.2/go.mod h1:RZ0uOdJR4OB3tLQeAyWoJFbNCBFrPQdcokntde4zRBA=
 github.com/sigstore/rekor v1.3.7 h1:Z5UW5TmqbTZnyOFkMRfi32q/CWcxK6VuzIkx+33mbq8=
 github.com/sigstore/rekor v1.3.7/go.mod h1:TihqJscZ6L6398x68EHY82t0AOnGYfrQ0siXe3WgbR4=
-github.com/sigstore/sigstore v1.8.11 h1:tEqeQqbT+awtM87ec9KEeSUxT/AFvJNawneYJyAkFrQ=
-github.com/sigstore/sigstore v1.8.11/go.mod h1:fdrFQosxCQ4wTL5H1NrZcQkqQ72AQbPjtpcL2QOGKV0=
 github.com/sigstore/sigstore-go v0.6.3-0.20241213162223-378b249542ef h1:Xrq2GrtCGRsgCoBvEecflRfuTmuffPhh3APPuoSu2hg=
 github.com/sigstore/sigstore-go v0.6.3-0.20241213162223-378b249542ef/go.mod h1:lH0Xk35luNBkWpBkCcIOX/qTHbzcNXxhhSMBNZwPFqM=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.11 h1:4jIEBOtqDZHyQNQSw/guGmIY0y3CVdOGQu3l2FNlqpY=
