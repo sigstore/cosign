@@ -15,6 +15,9 @@
 package blob
 
 import (
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -71,4 +74,36 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 		}
 	}
 	return raw, nil
+}
+
+func LoadFileOrURLWithChecksum(fileRef string, checksum string) ([]byte, error) {
+	checksumParts := strings.Split(checksum, ":")
+	if len(checksumParts) >= 3 {
+		return nil, fmt.Errorf("wrong checksum input format, must have at most 1 colon: %s", checksum)
+	}
+
+	checksumAlgo := sha256.New()
+	checksumValue := checksumParts[len(checksumParts)-1]
+	if len(checksumParts) == 2 {
+		switch checksumParts[0] {
+		case "sha256": // the default set above
+		case "sha512":
+			checksumAlgo = sha512.New()
+		default:
+			return nil, fmt.Errorf("unsupported checksum algorithm: %s", checksumParts[0])
+		}
+	}
+
+	fileContent, err := LoadFileOrURL(fileRef)
+	if err != nil {
+		return nil, err
+	}
+
+	checksumAlgo.Write(fileContent)
+	computedChecksum := hex.EncodeToString(checksumAlgo.Sum(nil))
+	if computedChecksum != checksumValue {
+		return nil, fmt.Errorf("incorrect checksum for file %s: expected %s but got %s", fileRef, checksumValue, computedChecksum)
+	}
+
+	return fileContent, nil
 }
