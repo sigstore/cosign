@@ -22,5 +22,5 @@ const SBOMAttachmentDeprecation = "WARNING: SBOM attachments are deprecated " +
 
 const RootWithoutChecksumDeprecation = "WARNING: Fetching initial root from URL " +
 	"without providing its checksum is deprecated and will be disallowed in " +
-	"a Cosing release soon after TODO. Please provide the initial root checksum " +
+	"a future Cosign release. Please provide the initial root checksum " +
 	"via the --root-checksum argument."
