@@ -39,5 +39,5 @@ func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().SetAnnotation("root", cobra.BashCompSubdirsInDir, []string{})
 
 	cmd.Flags().StringVar(&o.RootChecksum, "root-checksum", "",
-		"checksum of the initial root, required if root is downloaded via http(s). expects sha512 by default, can be changed to sha256 by providing sha256:<checksum>")
+		"checksum of the initial root, required if root is downloaded via http(s). expects sha256 by default, can be changed to sha512 by providing sha512:<checksum>")
 }

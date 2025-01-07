@@ -82,13 +82,13 @@ func LoadFileOrURLWithChecksum(fileRef string, checksum string) ([]byte, error) 
 		return nil, fmt.Errorf("wrong checksum input format, must have at most 1 colon: %s", checksum)
 	}
 
-	checksumAlgo := sha512.New()
+	checksumAlgo := sha256.New()
 	checksumValue := checksumParts[len(checksumParts)-1]
 	if len(checksumParts) == 2 {
 		switch checksumParts[0] {
-		case "sha512": // the default set above
-		case "sha256":
-			checksumAlgo = sha256.New()
+		case "sha256": // the default set above
+		case "sha512":
+			checksumAlgo = sha512.New()
 		default:
 			return nil, fmt.Errorf("unsupported checksum algorithm: %s", checksumParts[0])
 		}

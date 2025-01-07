@@ -37,7 +37,7 @@ cosign initialize --root <url>
 cosign initialize --mirror <url> --root <url>
 
 # initialize with an out-of-band root key file and custom repository mirror while verifying root checksum.
-cosign initialize --mirror <url> --root <url> --root-checksum <sha512>
+cosign initialize --mirror <url> --root <url> --root-checksum <sha256>
 ```
 
 ### Options
@@ -46,7 +46,7 @@ cosign initialize --mirror <url> --root <url> --root-checksum <sha512>
   -h, --help                   help for initialize
       --mirror string          GCS bucket to a SigStore TUF repository, or HTTP(S) base URL, or file:/// for local filestore remote (air-gap) (default "https://tuf-repo-cdn.sigstore.dev")
       --root string            path to trusted initial root. defaults to embedded root
-      --root-checksum string   checksum of the initial root, required if root is downloaded via http(s). expects sha512 by default, can be changed to sha256 by providing sha256:<checksum>
+      --root-checksum string   checksum of the initial root, required if root is downloaded via http(s). expects sha256 by default, can be changed to sha512 by providing sha512:<checksum>
 ```
 
 ### Options inherited from parent commands

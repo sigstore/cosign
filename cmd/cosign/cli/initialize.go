@@ -53,7 +53,7 @@ cosign initialize --root <url>
 cosign initialize --mirror <url> --root <url>
 
 # initialize with an out-of-band root key file and custom repository mirror while verifying root checksum.
-cosign initialize --mirror <url> --root <url> --root-checksum <sha512>`,
+cosign initialize --mirror <url> --root <url> --root-checksum <sha256>`,
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return initialize.DoInitializeWithRootChecksum(cmd.Context(), o.Root, o.Mirror, o.RootChecksum)
