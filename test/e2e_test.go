@@ -44,7 +44,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
-	"github.com/theupdateframework/go-tuf/v2/metadata/repository"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -74,6 +73,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
@@ -282,132 +282,471 @@ func TestImportSignVerifyClean(t *testing.T) {
 	mustErr(verify(pubKeyPath, imgName, true, nil, "", false), t)
 }
 
-func downloadTargets(td string, targetsMeta *metadata.Metadata[metadata.TargetsType], t *testing.T) {
-	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
-	must(err, t)
-	targets := map[string]string{
-		"rekor.pub":      rekorURL + "/api/v1/log/publicKey",
-		"fulcio.crt.pem": fulcioURL + "/api/v1/rootCert",
-		"ctfe.pub":       filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
-	}
-	targetsDir := filepath.Join(td, "targets")
-	must(os.Mkdir(targetsDir, 0700), t)
-	for name, path := range targets {
-		targetLocalPath := filepath.Join(targetsDir, name)
-		if strings.HasPrefix(path, "http") {
-			fp, err := os.Create(targetLocalPath)
-			must(err, t)
-			defer fp.Close()
-			must(downloadFile(path, fp), t)
-		}
-		if strings.HasPrefix(path, "/") {
-			must(copyFile(path, targetLocalPath), t)
-		}
-		targetFileInfo, err := metadata.TargetFile().FromFile(targetLocalPath, "sha256")
-		must(err, t)
-		targetsMeta.Signed.Targets[name] = targetFileInfo
-	}
+type targetInfo struct {
+	name   string
+	source string
+	usage  string
 }
 
-func setUpTUF(td string, t *testing.T) {
+func downloadTargets(td string, targets []targetInfo, targetsMeta *metadata.Metadata[metadata.TargetsType]) error {
+	targetsDir := filepath.Join(td, "targets")
+	err := os.RemoveAll(targetsDir)
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir(targetsDir, 0700)
+	if err != nil {
+		return err
+	}
+	targetsMeta.Signed.Targets = make(map[string]*metadata.TargetFiles)
+	for _, target := range targets {
+		targetLocalPath := filepath.Join(targetsDir, target.name)
+		if strings.HasPrefix(target.source, "http") {
+			fp, err := os.Create(targetLocalPath)
+			if err != nil {
+				return err
+			}
+			defer fp.Close()
+			err = downloadFile(target.source, fp)
+			if err != nil {
+				return err
+			}
+		}
+		if strings.HasPrefix(target.source, "/") {
+			err = copyFile(target.source, targetLocalPath)
+			if err != nil {
+				return err
+			}
+		}
+		targetFileInfo, err := metadata.TargetFile().FromFile(targetLocalPath, "sha256")
+		if err != nil {
+			return err
+		}
+		if target.usage != "" {
+			customMsg := fmt.Sprintf(`{"sigstore":{"usage": "%s"}}`, target.usage)
+			custom := json.RawMessage([]byte(customMsg))
+			targetFileInfo.Custom = &custom
+		}
+		targetsMeta.Signed.Targets[target.name] = targetFileInfo
+	}
+	return nil
+}
+
+type tuf struct {
+	publicKey *metadata.Key
+	signer    signature.Signer
+	root      *metadata.Metadata[metadata.RootType]
+	snapshot  *metadata.Metadata[metadata.SnapshotType]
+	timestamp *metadata.Metadata[metadata.TimestampType]
+	targets   *metadata.Metadata[metadata.TargetsType]
+}
+
+func newKey() (*metadata.Key, signature.Signer, error) {
+	pub, private, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	public, err := metadata.KeyFromPublicKey(pub)
+	if err != nil {
+		return nil, nil, err
+	}
+	signer, err := signature.LoadSigner(private, crypto.Hash(0))
+	if err != nil {
+		return nil, nil, err
+	}
+	return public, signer, nil
+}
+
+func newTUF(td string, targetList []targetInfo) (*tuf, error) {
 	// source: https://github.com/theupdateframework/go-tuf/blob/v2.0.2/examples/repository/basic_repository.go
-	roles := repository.New()
 	expiration := time.Now().AddDate(0, 0, 1).UTC()
 	targets := metadata.Targets(expiration)
-	roles.SetTargets("targets", targets)
-	downloadTargets(td, roles.Targets("targets"), t)
+	err := downloadTargets(td, targetList, targets)
+	if err != nil {
+		return nil, err
+	}
 	snapshot := metadata.Snapshot(expiration)
-	roles.SetSnapshot(snapshot)
 	timestamp := metadata.Timestamp(expiration)
-	roles.SetTimestamp(timestamp)
 	root := metadata.Root(expiration)
 	root.Signed.ConsistentSnapshot = false
-	roles.SetRoot(root)
 
-	_, private, err := ed25519.GenerateKey(nil)
-	must(err, t)
-	public, err := metadata.KeyFromPublicKey(private.Public())
-	must(err, t)
+	public, signer, err := newKey()
+	if err != nil {
+		return nil, err
+	}
+
+	tuf := &tuf{
+		publicKey: public,
+		signer:    signer,
+		root:      root,
+		snapshot:  snapshot,
+		timestamp: timestamp,
+		targets:   targets,
+	}
 	for _, name := range []string{"targets", "snapshot", "timestamp", "root"} {
-		err = roles.Root().Signed.AddKey(public, name)
-		must(err, t)
-		signer, err := signature.LoadSigner(private, crypto.Hash(0))
-		must(err, t)
+		err := tuf.root.Signed.AddKey(tuf.publicKey, name)
+		if err != nil {
+			return nil, err
+		}
 		switch name {
 		case "targets":
-			_, err = roles.Targets("targets").Sign(signer)
+			_, err = tuf.targets.Sign(tuf.signer)
 		case "snapshot":
-			_, err = roles.Snapshot().Sign(signer)
+			_, err = tuf.snapshot.Sign(tuf.signer)
 		case "timestamp":
-			_, err = roles.Timestamp().Sign(signer)
+			_, err = tuf.timestamp.Sign(tuf.signer)
 		case "root":
-			_, err = roles.Root().Sign(signer)
+			_, err = tuf.root.Sign(tuf.signer)
 		}
-		must(err, t)
+		if err != nil {
+			return nil, err
+		}
 	}
-	must(roles.Targets("targets").ToFile(filepath.Join(td, "targets.json"), false), t)
-	must(roles.Snapshot().ToFile(filepath.Join(td, "snapshot.json"), false), t)
-	must(roles.Timestamp().ToFile(filepath.Join(td, "timestamp.json"), false), t)
-	must(roles.Root().ToFile(filepath.Join(td, fmt.Sprintf("%d.%s.json", roles.Root().Signed.Version, "root")), false), t)
+	err = tuf.targets.ToFile(filepath.Join(td, "targets.json"), false)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.snapshot.ToFile(filepath.Join(td, "snapshot.json"), false)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.timestamp.ToFile(filepath.Join(td, "timestamp.json"), false)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.ToFile(filepath.Join(td, fmt.Sprintf("%d.%s.json", tuf.root.Signed.Version, "root")), false)
+	if err != nil {
+		return nil, err
+	}
 
-	must(roles.Root().VerifyDelegate("root", roles.Root()), t)
-	must(roles.Root().VerifyDelegate("targets", roles.Targets("targets")), t)
-	must(roles.Root().VerifyDelegate("snapshot", roles.Snapshot()), t)
-	must(roles.Root().VerifyDelegate("timestamp", roles.Timestamp()), t)
+	err = tuf.root.VerifyDelegate("root", tuf.root)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.VerifyDelegate("targets", tuf.targets)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.VerifyDelegate("snapshot", tuf.snapshot)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.VerifyDelegate("timestamp", tuf.timestamp)
+	if err != nil {
+		return nil, err
+	}
+
+	return tuf, nil
+}
+
+func (tr *tuf) update(td string, targetList []targetInfo) error {
+	err := downloadTargets(td, targetList, tr.targets)
+	if err != nil {
+		return err
+	}
+	tr.targets.Signatures = make([]metadata.Signature, 0)
+	tr.targets.Signed.Version++
+	_, err = tr.targets.Sign(tr.signer)
+	if err != nil {
+		return err
+	}
+	tr.snapshot.Signatures = make([]metadata.Signature, 0)
+	tr.snapshot.Signed.Meta["targets.json"].Version++
+	tr.snapshot.Signed.Version++
+	tr.snapshot.Sign(tr.signer)
+	tr.timestamp.Signatures = make([]metadata.Signature, 0)
+	tr.timestamp.Signed.Meta["snapshot.json"].Version++
+	tr.timestamp.Signed.Version++
+	tr.timestamp.Sign(tr.signer)
+	err = tr.targets.ToFile(filepath.Join(td, "targets.json"), false)
+	if err != nil {
+		return err
+	}
+	err = tr.snapshot.ToFile(filepath.Join(td, "snapshot.json"), false)
+	if err != nil {
+		return err
+	}
+	err = tr.timestamp.ToFile(filepath.Join(td, "timestamp.json"), false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func downloadTSACerts(downloadDirectory string, tsaServer string) (string, string, string, error) {
+	resp, err := http.Get(tsaServer + "/api/v1/timestamp/certchain")
+	if err != nil {
+		return "", "", "", err
+	}
+	defer resp.Body.Close()
+	buffer := new(bytes.Buffer)
+	buffer.ReadFrom(resp.Body)
+	b := buffer.Bytes()
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(b)
+	if err != nil {
+		return "", "", "", err
+	}
+	leaves := make([]*x509.Certificate, 0)
+	intermediates := make([]*x509.Certificate, 0)
+	roots := make([]*x509.Certificate, 0)
+	for _, cert := range certs {
+		if !cert.IsCA {
+			leaves = append(leaves, cert)
+		} else {
+			// root certificates are self-signed
+			if bytes.Equal(cert.RawSubject, cert.RawIssuer) {
+				roots = append(roots, cert)
+			} else {
+				intermediates = append(intermediates, cert)
+			}
+		}
+	}
+	if len(leaves) != 1 {
+		return "", "", "", fmt.Errorf("unexpected number of certificate leaves")
+	}
+	if len(roots) != 1 {
+		return "", "", "", fmt.Errorf("unexpected number of certificate roots")
+	}
+	leafPath := filepath.Join(downloadDirectory, "tsa_leaf.crt.pem")
+	leafFP, err := os.Create(leafPath)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer leafFP.Close()
+	err = pem.Encode(leafFP, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: leaves[0].Raw,
+	})
+	if err != nil {
+		return "", "", "", err
+	}
+	rootPath := filepath.Join(downloadDirectory, "tsa_root.crt.pem")
+	rootFP, err := os.Create(rootPath)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer rootFP.Close()
+	err = pem.Encode(rootFP, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: roots[0].Raw,
+	})
+	if err != nil {
+		return "", "", "", err
+	}
+	intermediatePath := filepath.Join(downloadDirectory, "tsa_intermediate_0.crt.pem")
+	intermediateFP, err := os.Create(intermediatePath)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer intermediateFP.Close()
+	intermediateBuffer := new(bytes.Buffer)
+	for _, i := range intermediates {
+		_, err = intermediateBuffer.Write(i.Raw)
+		if err != nil {
+			return "", "", "", err
+		}
+	}
+	err = pem.Encode(intermediateFP, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: intermediateBuffer.Bytes(),
+	})
+	if err != nil {
+		return "", "", "", err
+	}
+	return leafPath, intermediatePath, rootPath, nil
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
-	ctx := context.Background()
+	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
+	must(err, t)
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
-	setUpTUF(tufMirror, t)
-	rootPath := filepath.Join(tufMirror, "1.root.json")
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
 	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
 	}))
 	mirror := tufServer.URL
-	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
-
-	// unset the roots that were generated for timestamp signing, they won't work here
-	err := fulcioroots.ReInit()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	identityToken, err := getOIDCToken()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	repo, stop := reg(t)
-	defer stop()
-	imgName := path.Join(repo, "cosign-e2e-tuf")
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	ko := options.KeyOpts{
-		FulcioURL:        fulcioURL,
-		RekorURL:         rekorURL,
-		IDToken:          identityToken,
-		SkipConfirmation: true,
-	}
-	so := options.SignOptions{
-		Upload:           true,
-		TlogUpload:       true,
-		SkipConfirmation: true,
-	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	issuer := os.Getenv("OIDC_URL")
-	verifyCmd := cliverify.VerifyCommand{
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: issuer,
-			CertIdentity:   certID,
+	tsaLeaf, tsaInter, tsaRoot, err := downloadTSACerts(t.TempDir(), tsaServer.URL)
+	must(err, t)
+	tests := []struct {
+		name          string
+		targets       []targetInfo
+		wantSignErr   bool
+		wantVerifyErr bool
+	}{
+		{
+			name: "invalid CT key name with no usage",
+			targets: []targetInfo{
+				{
+					name:   "ct.pub",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+			},
+			wantSignErr: true,
 		},
-		Offline:     true,
-		CheckClaims: true,
+		{
+			name: "standard key names",
+			targets: []targetInfo{
+				{
+					name:   "rekor.pub",
+					source: rekorURL + "/api/v1/log/publicKey",
+				},
+				{
+					name:   "fulcio.crt.pem",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "ctfe.pub",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+				{
+					name:   "tsa_leaf.crt.pem",
+					source: tsaLeaf,
+				},
+				{
+					name:   "tsa_root.crt.pem",
+					source: tsaRoot,
+				},
+				{
+					name:   "tsa_intermediate_0.crt.pem",
+					source: tsaInter,
+				},
+			},
+		},
+		{
+			name: "invalid verifier key names with no usage",
+			targets: []targetInfo{
+				{
+					name:   "tlog.pubkey",
+					source: rekorURL + "/api/v1/log/publicKey",
+				},
+				{
+					name:   "ca.cert",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "ctfe.pub",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+				{
+					name:   "tsaleaf.pem",
+					source: tsaLeaf,
+				},
+				{
+					name:   "tsaca.pem",
+					source: tsaRoot,
+				},
+				{
+					name:   "tsachain.pem",
+					source: tsaInter,
+				},
+			},
+			wantVerifyErr: true,
+		},
+		{
+			name: "nonstandard key names with valid usage",
+			targets: []targetInfo{
+				{
+					name:   "tlog.pubkey",
+					usage:  "Rekor",
+					source: rekorURL + "/api/v1/log/publicKey",
+				},
+				{
+					name:   "ca.cert",
+					usage:  "Fulcio",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "intermediate.cert",
+					usage:  "Fulcio",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "cert-transparency.pem",
+					usage:  "CTFE",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+				{
+					name:   "tsaleaf.pem",
+					source: tsaLeaf,
+					usage:  "TSA",
+				},
+				{
+					name:   "tsaca.pem",
+					source: tsaRoot,
+					usage:  "TSA",
+				},
+				{
+					name:   "tsachain.pem",
+					source: tsaInter,
+					usage:  "TSA",
+				},
+			},
+		},
 	}
-	must(verifyCmd.Exec(ctx, []string{imgName}), t)
+	tuf, err := newTUF(tufMirror, tests[0].targets)
+	must(err, t)
+	for i, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			if i > 0 {
+				must(tuf.update(tufMirror, test.targets), t)
+			}
+			rootPath := filepath.Join(tufMirror, "1.root.json")
+			must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+			identityToken, err := getOIDCToken()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			repo, stop := reg(t)
+			defer stop()
+			imgName := path.Join(repo, "cosign-e2e-tuf")
+			_, _, cleanup := mkimage(t, imgName)
+			defer cleanup()
+
+			ko := options.KeyOpts{
+				FulcioURL:        fulcioURL,
+				RekorURL:         rekorURL,
+				IDToken:          identityToken,
+				SkipConfirmation: true,
+				TSAServerURL:     tsaServer.URL + "/api/v1/timestamp",
+			}
+			so := options.SignOptions{
+				Upload:           true,
+				TlogUpload:       true,
+				SkipConfirmation: true,
+			}
+			gotErr := sign.SignCmd(ro, ko, so, []string{imgName})
+			if test.wantSignErr {
+				mustErr(gotErr, t)
+				return
+			}
+			must(gotErr, t)
+			issuer := os.Getenv("OIDC_URL")
+			verifyCmd := cliverify.VerifyCommand{
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertOidcIssuer: issuer,
+					CertIdentity:   certID,
+				},
+				Offline:             true,
+				CheckClaims:         true,
+				UseSignedTimestamps: true,
+			}
+			gotErr = verifyCmd.Exec(ctx, []string{imgName})
+			if test.wantVerifyErr {
+				mustErr(gotErr, t)
+			} else {
+				must(gotErr, t)
+			}
+		})
+	}
 }
 
 func TestAttestVerify(t *testing.T) {
