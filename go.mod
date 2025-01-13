@@ -32,14 +32,14 @@ require (
 	github.com/open-policy-agent/opa v0.68.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/fulcio v1.6.5
-	github.com/sigstore/protobuf-specs v0.3.2
+	github.com/sigstore/protobuf-specs v0.3.3
 	github.com/sigstore/rekor v1.3.7
-	github.com/sigstore/sigstore v1.8.11
+	github.com/sigstore/sigstore v1.8.12
 	github.com/sigstore/sigstore-go v0.6.3-0.20241213162223-378b249542ef
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.11
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.11
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.11
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.11
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.12
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.12
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.12
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.12
 	github.com/sigstore/timestamp-authority v1.2.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -55,7 +55,7 @@ require (
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.28.0
 	google.golang.org/api v0.214.0
-	google.golang.org/protobuf v1.36.1
+	google.golang.org/protobuf v1.36.2
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
@@ -69,7 +69,7 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.6 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/iam v1.2.2 // indirect
-	cloud.google.com/go/kms v1.20.2 // indirect
+	cloud.google.com/go/kms v1.20.4 // indirect
 	cloud.google.com/go/longrunning v0.6.2 // indirect
 	cuelabs.dev/go/oci/ociregistry v0.0.0-20240906074133-82eb438dd565 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -107,21 +107,21 @@ require (
 	github.com/aliyun/credentials-go v1.3.2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go v1.55.5 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.32.6 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.28.6 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.47 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.21 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.25 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.25 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.32.7 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.28.7 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.48 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.20.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.18.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.37.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.24.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.37.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.24.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.3 // indirect
 	github.com/aws/smithy-go v1.22.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
-	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.12.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
