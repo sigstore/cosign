@@ -137,6 +137,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		UseSignedTimestamps:          c.UseSignedTimestamps,
 	}
 	if c.RFC3161TimestampPath != "" && !(c.TSACertChainPath != "" || c.UseSignedTimestamps) {
 		return fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set when using RFC3161 timestamp path")
