@@ -6,7 +6,7 @@ require (
 	cuelang.org/go v0.11.1
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20231024185945-8841054dbdb8
-	github.com/buildkite/agent/v3 v3.89.0
+	github.com/buildkite/agent/v3 v3.90.0
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46
 	github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936
@@ -127,7 +127,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/buildkite/go-pipeline v0.13.3 // indirect
 	github.com/buildkite/interpolate v0.1.5 // indirect
-	github.com/buildkite/roko v1.2.0 // indirect
+	github.com/buildkite/roko v1.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
