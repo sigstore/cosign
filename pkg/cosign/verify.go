@@ -112,6 +112,8 @@ type CheckOpts struct {
 	RootCerts *x509.CertPool
 	// IntermediateCerts are the optional intermediate CA certs used to verify a certificate chain.
 	IntermediateCerts *x509.CertPool
+	// CodeSigningCert is the code signing certificate, if provided
+	CodeSigningCert *x509.Certificate
 
 	// CertGithubWorkflowTrigger is the GitHub Workflow Trigger name expected for a certificate to be valid. The empty string means any certificate can be valid.
 	CertGithubWorkflowTrigger string
@@ -704,7 +706,13 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 				return false, fmt.Errorf("rekor client not provided for online verification")
 			}
 
-			pemBytes, err := keyBytes(sig, co)
+			certBytes, err := sig.Cert()
+			if err != nil {
+				return false, err
+			} else if certBytes == nil || len(certBytes.Raw) == 0 {
+				return false, fmt.Errorf("code signing certificate not provided for rekor lookup")
+			}
+			pemBytes, err := cryptoutils.MarshalCertificateToPEM(certBytes)
 			if err != nil {
 				return false, err
 			}
@@ -715,7 +723,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			}
 			t := time.Unix(*e.IntegratedTime, 0)
 			acceptableRekorBundleTime = &t
-			bundleVerified = true
+			bundleVerified = false
 		}
 	}
 
@@ -872,7 +880,28 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 		}
 	}
 
-	sig, err := static.NewSignature(payload, b64sig)
+	// Gather the cert for the signature and add the cert along with the
+	// cert chain into the signature object.
+	opts := []static.Option{}
+	var certPEM []byte
+	if co.CodeSigningCert != nil {
+		certPEM, err = cryptoutils.MarshalCertificateToPEM(co.CodeSigningCert)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: what if there are no chains?
+		chains, err := TrustedCert(co.CodeSigningCert, co.RootCerts, co.IntermediateCerts)
+		if err != nil {
+			return nil, err
+		}
+		chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chains[0])
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, static.WithCertChain(certPEM, chainPEM))
+	}
+
+	sig, err := static.NewSignature(payload, b64sig, opts...)
 	if err != nil {
 		return nil, err
 	}
