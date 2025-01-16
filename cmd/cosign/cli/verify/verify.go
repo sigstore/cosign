@@ -243,6 +243,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		default:
 			return errors.New("no certificate chain provided to verify certificate")
 		}
+		co.CodeSigningCert = cert
 
 		if c.SCTRef != "" {
 			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
