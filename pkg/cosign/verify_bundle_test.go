@@ -18,15 +18,23 @@ package cosign_test
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"testing"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/testing/ca"
 	"github.com/sigstore/sigstore-go/pkg/tlog"
 	"github.com/sigstore/sigstore-go/pkg/verify"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,7 +59,7 @@ func (b *bundleMutator) TlogEntries() ([]*tlog.Entry, error) {
 	return b.SignedEntity.TlogEntries()
 }
 
-func TestVerifyBundleAttestation(t *testing.T) {
+func TestVerifyBundle(t *testing.T) {
 	virtualSigstore, err := ca.NewVirtualSigstore()
 	assert.NoError(t, err)
 	virtualSigstore2, err := ca.NewVirtualSigstore() // for testing invalid trusted material
@@ -72,7 +80,12 @@ func TestVerifyBundleAttestation(t *testing.T) {
 		},
 	}
 
-	entity, err := virtualSigstore.Attest(identity, issuer, statementCorrect)
+	attestation, err := virtualSigstore.Attest(identity, issuer, statementCorrect)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	blobSig, err := virtualSigstore.Sign(identity, issuer, artifact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +106,19 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               entity,
+			entity:               attestation,
+			wantErr:              false,
+		},
+		{
+			name: "valid blob signature",
+			checkOpts: &cosign.CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               blobSig,
 			wantErr:              false,
 		},
 		{
@@ -105,7 +130,19 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader([]byte("not the artifact"))),
-			entity:               entity,
+			entity:               attestation,
+			wantErr:              true,
+		},
+		{
+			name: "invalid blob signature, wrong artifact",
+			checkOpts: &cosign.CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader([]byte("not the artifact"))),
+			entity:               blobSig,
 			wantErr:              true,
 		},
 		{
@@ -122,7 +159,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               entity,
+			entity:               attestation,
 			wantErr:              false,
 		},
 		{
@@ -139,7 +176,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               entity,
+			entity:               attestation,
 			wantErr:              false,
 		},
 		{
@@ -156,7 +193,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               entity,
+			entity:               attestation,
 			wantErr:              true,
 		},
 		{
@@ -173,7 +210,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               entity,
+			entity:               attestation,
 			wantErr:              true,
 		},
 		{
@@ -184,7 +221,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial: virtualSigstore2,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               entity,
+			entity:               attestation,
 			wantErr:              true,
 		},
 		{
@@ -197,7 +234,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               &bundleMutator{SignedEntity: entity, eraseTlog: true},
+			entity:               &bundleMutator{SignedEntity: attestation, eraseTlog: true},
 			wantErr:              false,
 		},
 		{
@@ -210,7 +247,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               &bundleMutator{SignedEntity: entity, eraseTSA: true},
+			entity:               &bundleMutator{SignedEntity: attestation, eraseTSA: true},
 			wantErr:              false,
 		},
 		{
@@ -222,7 +259,7 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               &bundleMutator{SignedEntity: entity, eraseTlog: true},
+			entity:               &bundleMutator{SignedEntity: attestation, eraseTlog: true},
 			wantErr:              true,
 		},
 		{
@@ -234,7 +271,106 @@ func TestVerifyBundleAttestation(t *testing.T) {
 				TrustedMaterial:     virtualSigstore,
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
-			entity:               &bundleMutator{SignedEntity: entity, eraseTSA: true},
+			entity:               &bundleMutator{SignedEntity: attestation, eraseTSA: true},
+			wantErr:              true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err = cosign.VerifyNewBundle(context.Background(), tc.checkOpts, tc.artifactPolicyOption, tc.entity)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestVerifyBundleWithSigVerifier(t *testing.T) {
+	virtualSigstore, err := ca.NewVirtualSigstore()
+	assert.NoError(t, err)
+
+	artifact := []byte("artifact")
+	digest := sha256.Sum256(artifact)
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+
+	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+	assert.NoError(t, err)
+
+	sig, err := sv.SignMessage(bytes.NewReader(artifact))
+	assert.NoError(t, err)
+	assert.NotNil(t, sig)
+
+	ts, err := virtualSigstore.TimestampResponse(sig)
+	assert.NoError(t, err)
+
+	b, err := sgbundle.NewBundle(&protobundle.Bundle{
+		MediaType: "application/vnd.dev.sigstore.bundle+json;version=0.3",
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_PublicKey{
+				PublicKey: &protocommon.PublicKeyIdentifier{
+					Hint: "",
+				},
+			},
+			TimestampVerificationData: &protobundle.TimestampVerificationData{
+				Rfc3161Timestamps: []*protocommon.RFC3161SignedTimestamp{{SignedTimestamp: ts}},
+			},
+		},
+		Content: &protobundle.Bundle_MessageSignature{
+			MessageSignature: &protocommon.MessageSignature{
+				MessageDigest: &protocommon.HashOutput{
+					Algorithm: protocommon.HashAlgorithm_SHA2_256,
+					Digest:    digest[:],
+				},
+				Signature: sig,
+			},
+		},
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, b)
+
+	for _, tc := range []struct {
+		name                 string
+		checkOpts            *cosign.CheckOpts
+		artifactPolicyOption verify.ArtifactPolicyOption
+		entity               verify.SignedEntity
+		wantErr              bool
+	}{
+		{
+			name: "valid",
+			checkOpts: &cosign.CheckOpts{
+				UseSignedTimestamps: true,
+				IgnoreTlog:          true,
+				TrustedMaterial:     virtualSigstore,
+				SigVerifier:         sv,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               b,
+			wantErr:              false,
+		},
+		{
+			name: "invalid, wrong artifact",
+			checkOpts: &cosign.CheckOpts{
+				UseSignedTimestamps: true,
+				IgnoreTlog:          true,
+				TrustedMaterial:     virtualSigstore,
+				SigVerifier:         sv,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader([]byte("wrong artifact"))),
+			entity:               b,
+			wantErr:              true,
+		},
+		{
+			name: "invalid, sigverifier not set",
+			checkOpts: &cosign.CheckOpts{
+				UseSignedTimestamps: true,
+				IgnoreTlog:          true,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader([]byte("wrong artifact"))),
+			entity:               b,
 			wantErr:              true,
 		},
 	} {
