@@ -16,6 +16,7 @@
 package verify
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
@@ -38,6 +39,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -81,22 +84,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.PubKeyParseError{}
 	}
 
-	if c.KeyOpts.NewBundleFormat || checkNewBundle(c.BundlePath) {
-		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SigRef, c.SCTRef) > 1 {
-			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
-		}
-		_, err := verifyNewBundle(ctx, c.BundlePath, c.TrustedRootPath, c.KeyRef, c.Slot, c.CertVerifyOptions.CertOidcIssuer, c.CertVerifyOptions.CertOidcIssuerRegexp, c.CertVerifyOptions.CertIdentity, c.CertVerifyOptions.CertIdentityRegexp, c.CertGithubWorkflowTrigger, c.CertGithubWorkflowSHA, c.CertGithubWorkflowName, c.CertGithubWorkflowRepository, c.CertGithubWorkflowRef, blobRef, c.Sk, c.IgnoreTlog, c.UseSignedTimestamps, c.IgnoreSCT)
-		if err == nil {
-			ui.Infof(ctx, "Verified OK")
-		}
-		return err
-	} else if c.TrustedRootPath != "" {
-		return fmt.Errorf("--trusted-root only supported with --new-bundle-format")
-	}
-
-	var cert *x509.Certificate
-	opts := make([]static.Option, 0)
-
 	var identities []cosign.Identity
 	var err error
 	if c.KeyRef == "" {
@@ -104,11 +91,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	sig, err := base64signature(c.SigRef, c.BundlePath)
-	if err != nil {
-		return err
 	}
 
 	blobBytes, err := payloadBytes(blobRef)
@@ -127,8 +109,62 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
+		NewBundleFormat:              c.KeyOpts.NewBundleFormat || checkNewBundle(c.BundlePath),
 	}
 
+	var cert *x509.Certificate
+	opts := make([]static.Option, 0)
+
+	// Keys are optional!
+	switch {
+	case c.KeyRef != "":
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
+		if err != nil {
+			return fmt.Errorf("loading public key: %w", err)
+		}
+		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
+		if ok {
+			defer pkcs11Key.Close()
+		}
+	case c.Sk:
+		sk, err := pivkey.GetKeyWithSlot(c.Slot)
+		if err != nil {
+			return fmt.Errorf("opening piv token: %w", err)
+		}
+		defer sk.Close()
+		co.SigVerifier, err = sk.Verifier()
+		if err != nil {
+			return fmt.Errorf("loading public key from token: %w", err)
+		}
+	case c.CertRef != "":
+		cert, err = loadCertFromFileOrURL(c.CertRef)
+		if err != nil {
+			return err
+		}
+	}
+
+	if co.NewBundleFormat {
+		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SigRef, c.SCTRef) > 1 {
+			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
+		}
+
+		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
+		if err != nil {
+			return err
+		}
+
+		_, err = cosign.VerifyNewBundle(ctx, co, sgverify.WithArtifact(bytes.NewReader(blobBytes)), bundle)
+		if err != nil {
+			return err
+		}
+
+		ui.Infof(ctx, "Verified OK")
+		return nil
+	}
+
+	if c.TrustedRootPath != "" {
+		return fmt.Errorf("--trusted-root only supported with --new-bundle-format")
+	}
 	if c.RFC3161TimestampPath != "" && !co.UseSignedTimestamps {
 		return fmt.Errorf("when specifying --rfc3161-timestamp-path, you must also specify --use-signed-timestamps or --timestamp-certificate-chain")
 	} else if c.RFC3161TimestampPath == "" && co.UseSignedTimestamps {
@@ -162,34 +198,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 
 	if keylessVerification(c.KeyRef, c.Sk) {
 		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
-			return err
-		}
-	}
-
-	// Keys are optional!
-	switch {
-	case c.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
-		if err != nil {
-			return fmt.Errorf("loading public key: %w", err)
-		}
-		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
-		if ok {
-			defer pkcs11Key.Close()
-		}
-	case c.Sk:
-		sk, err := pivkey.GetKeyWithSlot(c.Slot)
-		if err != nil {
-			return fmt.Errorf("opening piv token: %w", err)
-		}
-		defer sk.Close()
-		co.SigVerifier, err = sk.Verifier()
-		if err != nil {
-			return fmt.Errorf("loading public key from token: %w", err)
-		}
-	case c.CertRef != "":
-		cert, err = loadCertFromFileOrURL(c.CertRef)
-		if err != nil {
 			return err
 		}
 	}
@@ -293,6 +301,10 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
+	sig, err := base64signature(c.SigRef, c.BundlePath)
+	if err != nil {
+		return err
+	}
 	signature, err := static.NewSignature(blobBytes, sig, opts...)
 	if err != nil {
 		return err
