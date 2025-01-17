@@ -28,6 +28,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"regexp"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -75,6 +77,9 @@ type VerifyBlobAttestationCommand struct {
 	SignaturePath       string // Path to the signature
 	UseSignedTimestamps bool
 }
+
+// Add validation helper
+var sha256RegExp = regexp.MustCompile("^[a-f0-9]{64}$")
 
 // Exec runs the verification command
 func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath string) (err error) {
@@ -127,29 +132,39 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 	var h v1.Hash
 	if c.CheckClaims {
-		// Get the actual digest of the blob
-		var payload internal.HashReader
-		f, err := os.Open(filepath.Clean(artifactPath))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		fileInfo, err := f.Stat()
-		if err != nil {
-			return err
-		}
-		err = payloadsize.CheckSize(uint64(fileInfo.Size()))
-		if err != nil {
-			return err
-		}
+		var hexDigest string
+		if strings.HasPrefix(artifactPath, "sha256:") {
+			// log that we are using a sha256 hash
+			fmt.Fprintf(os.Stderr, "Using sha256 hash %s\n", artifactPath)
+			hexDigest = strings.TrimPrefix(artifactPath, "sha256:")
+			if !sha256RegExp.MatchString(hexDigest) {
+				return fmt.Errorf("invalid sha256 hash format: must be 64 hex characters")
+			}
+		} else {
+			// Get the actual digest of the blob
+			var payload internal.HashReader
+			f, err := os.Open(filepath.Clean(artifactPath))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			fileInfo, err := f.Stat()
+			if err != nil {
+				return err
+			}
+			err = payloadsize.CheckSize(uint64(fileInfo.Size()))
+			if err != nil {
+				return err
+			}
 
-		payload = internal.NewHashReader(f, sha256.New())
-		if _, err := io.ReadAll(&payload); err != nil {
-			return err
+			payload = internal.NewHashReader(f, sha256.New())
+			if _, err := io.ReadAll(&payload); err != nil {
+				return err
+			}
+			hexDigest = hex.EncodeToString(payload.Sum(nil))
 		}
-		digest := payload.Sum(nil)
 		h = v1.Hash{
-			Hex:       hex.EncodeToString(digest),
+			Hex:       hexDigest,
 			Algorithm: "sha256",
 		}
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
