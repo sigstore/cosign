@@ -2,6 +2,10 @@ module github.com/sigstore/cosign/v2
 
 go 1.23.4
 
+replace github.com/sigstore/sigstore/pkg/signature/kms/cliplugin => ../sigstore/pkg/signature/kms/cliplugin
+
+replace github.com/sigstore/sigstore => ../sigstore
+
 require (
 	cuelang.org/go v0.11.1
 	github.com/ThalesIgnite/crypto11 v1.2.5
@@ -38,6 +42,7 @@ require (
 	github.com/sigstore/sigstore-go v0.6.3-0.20241213162223-378b249542ef
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.11
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.11
+	github.com/sigstore/sigstore/pkg/signature/kms/cliplugin v0.0.0-00010101000000-000000000000
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.11
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.11
 	github.com/sigstore/timestamp-authority v1.2.3
