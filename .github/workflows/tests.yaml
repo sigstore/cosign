@@ -70,7 +70,7 @@ jobs:
           GODEBUG: x509sha1=1
         run: go test -tags=sct -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           env_vars: OS
       - name: Run Go tests w/ `-race`
@@ -163,7 +163,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           check-latest: true
-      - uses: ko-build/setup-ko@3aebd0597dc1e9d1a26bcfdb7cbeb19c131d3037 # v0.7
+      - uses: ko-build/setup-ko@d982fec422852203cfb2053a8ec6ad302280d04d # v0.8
       - name: setup kind cluster
         run: |
           # Used to test: cosign generate-key-pair k8s://...
