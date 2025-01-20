@@ -210,6 +210,10 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 // LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
 // and returns a SignerVerifier instance. The private key must be in the PKCS #8 format.
 func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
+	return LoadPrivateKeyWithOpts(key, pass)
+}
+
+func LoadPrivateKeyWithOpts(key []byte, pass []byte, opts ...signature.LoadOption) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
@@ -227,14 +231,5 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
-	switch pk := pk.(type) {
-	case *rsa.PrivateKey:
-		return signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
-	case *ecdsa.PrivateKey:
-		return signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
-	case ed25519.PrivateKey:
-		return signature.LoadED25519SignerVerifier(pk)
-	default:
-		return nil, errors.New("unsupported key type")
-	}
+	return signature.LoadSignerVerifierWithOpts(pk, opts...)
 }
