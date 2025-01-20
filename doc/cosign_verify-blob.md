@@ -23,6 +23,12 @@ cosign verify-blob [flags]
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
+# Verify a signature with certificate and CA certificate chain
+  cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
+
+  # Verify a signature with CA roots and optional intermediate certificates
+  cosign verify-blob --certificate cert.pem --ca-roots caroots.pem [--ca-intermediates caintermediates.pem] --signature $sig <blob>
+
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
 
@@ -59,8 +65,10 @@ cosign verify-blob [flags]
 
 ```
       --bundle string                                   path to bundle FILE
+      --ca-intermediates string                         path to a file of intermediate CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. The flag is optional and must be used together with --ca-roots, conflicts with --certificate-chain.
+      --ca-roots string                                 path to a bundle file of CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.
       --certificate string                              path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.
-      --certificate-chain string                        path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate
+      --certificate-chain string                        path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.
       --certificate-github-workflow-name string         contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
       --certificate-github-workflow-ref string          contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.
       --certificate-github-workflow-repository string   contains the repository claim from the GitHub OIDC Identity token that contains the repository that the workflow run was based upon
@@ -76,6 +84,7 @@ cosign verify-blob [flags]
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
+      --new-bundle-format                               output bundle in new format that contains all verification material
       --offline                                         only allow offline verification
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
@@ -85,6 +94,8 @@ cosign verify-blob [flags]
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string              path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
+      --trusted-root string                             path to trusted root FILE
+      --use-signed-timestamps                           use signed timestamps if available
 ```
 
 ### Options inherited from parent commands

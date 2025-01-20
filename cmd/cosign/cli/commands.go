@@ -62,7 +62,7 @@ func New() *cobra.Command {
 		Short:             "A tool for Container Signing, Verification and Storage in an OCI registry.",
 		DisableAutoGenTag: true,
 		SilenceUsage:      true, // Don't show usage on errors
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if ro.OutputFile != "" {
 				var err error
 				out, err = os.Create(ro.OutputFile)
@@ -80,7 +80,7 @@ func New() *cobra.Command {
 
 			return nil
 		},
-		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		PersistentPostRun: func(_ *cobra.Command, _ []string) {
 			if out != nil {
 				_ = out.Close()
 			}
@@ -95,7 +95,9 @@ func New() *cobra.Command {
 	cmd.AddCommand(Attach())
 	cmd.AddCommand(Attest())
 	cmd.AddCommand(AttestBlob())
+	cmd.AddCommand(Bundle())
 	cmd.AddCommand(Clean())
+	cmd.AddCommand(Debug())
 	cmd.AddCommand(Tree())
 	cmd.AddCommand(Completion())
 	cmd.AddCommand(Copy())
@@ -119,6 +121,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(VerifyBlob())
 	cmd.AddCommand(VerifyBlobAttestation())
 	cmd.AddCommand(Triangulate())
+	cmd.AddCommand(TrustedRoot())
 	cmd.AddCommand(Env())
 	cmd.AddCommand(version.WithFont("starwars"))
 

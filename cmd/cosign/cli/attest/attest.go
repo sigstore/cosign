@@ -71,16 +71,17 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 type AttestCommand struct {
 	options.KeyOpts
 	options.RegistryOptions
-	CertPath       string
-	CertChainPath  string
-	NoUpload       bool
-	PredicatePath  string
-	PredicateType  string
-	Replace        bool
-	Timeout        time.Duration
-	TlogUpload     bool
-	TSAServerURL   string
-	RekorEntryType string
+	CertPath                string
+	CertChainPath           string
+	NoUpload                bool
+	PredicatePath           string
+	PredicateType           string
+	Replace                 bool
+	Timeout                 time.Duration
+	TlogUpload              bool
+	TSAServerURL            string
+	RekorEntryType          string
+	RecordCreationTimestamp bool
 }
 
 // nolint
@@ -174,7 +175,14 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
 	if c.KeyOpts.TSAServerURL != "" {
-		// Here we get the response from the timestamped authority server
+		// TODO - change this when we implement protobuf / new bundle support
+		//
+		// Historically, cosign sent the entire JSON DSSE Envelope to the
+		// timestamp authority. However, when sigstore clients are verifying a
+		// bundle they will use the DSSE Sig field, so we choose what signature
+		// to send to the timestamp authority based on our output format.
+		//
+		// See cmd/cosign/cli/attest/attest_blob.go
 		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL))
 		if err != nil {
 			return err
@@ -226,6 +234,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 
 	signOpts := []mutate.SignOption{
 		mutate.WithDupeDetector(dd),
+		mutate.WithRecordCreationTimestamp(c.RecordCreationTimestamp),
 	}
 
 	if c.Replace {

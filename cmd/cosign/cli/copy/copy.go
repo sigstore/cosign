@@ -80,7 +80,10 @@ func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstIm
 	}
 
 	onlyFlagSet := false
-	tags := parseOnlyOpt(copyOnly, sigOnly)
+	tags, err := parseOnlyOpt(copyOnly, sigOnly)
+	if err != nil {
+		return err
+	}
 	if len(tags) > 0 {
 		onlyFlagSet = true
 	} else {
@@ -180,13 +183,20 @@ func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Refer
 	return pusher.Push(ctx, dest, got)
 }
 
-func parseOnlyOpt(onlyFlag string, sigOnly bool) []tagMap {
+func parseOnlyOpt(onlyFlag string, sigOnly bool) ([]tagMap, error) {
 	var tags []tagMap
 	tagSet := sets.New(strings.Split(onlyFlag, ",")...)
 
 	if sigOnly {
 		fmt.Fprintf(os.Stderr, "--sig-only is deprecated, use --only=sig instead")
-		tagSet.Insert("sign")
+		tagSet.Insert("sig")
+	}
+
+	validTags := sets.New("sig", "sbom", "att")
+	for tag := range tagSet {
+		if !validTags.Has(tag) {
+			return nil, fmt.Errorf("invalid value for --only: %s, only following values are supported, %s", tag, validTags)
+		}
 	}
 
 	if tagSet.Has("sig") {
@@ -198,5 +208,5 @@ func parseOnlyOpt(onlyFlag string, sigOnly bool) []tagMap {
 	if tagSet.Has("att") {
 		tags = append(tags, ociremote.AttestationTag)
 	}
-	return tags
+	return tags, nil
 }

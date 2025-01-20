@@ -13,8 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e
-// +build e2e
+//go:build e2e && !cross && !kms && !registry
 
 package test
 
@@ -22,8 +21,10 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -35,16 +36,14 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/registry"
-	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/theupdateframework/go-tuf/v2/metadata"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -58,6 +57,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/initialize"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
@@ -72,115 +72,14 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/spf13/viper"
 )
-
-const (
-	rekorURL  = "http://127.0.0.1:3000"
-	fulcioURL = "http://127.0.0.1:5555"
-	certID    = "foo@bar.com"
-)
-
-var keyPass = []byte("hello")
-
-var passFunc = func(_ bool) ([]byte, error) {
-	return keyPass, nil
-}
-
-var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
-	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-		IgnoreTlog:    skipTlogVerify,
-	}
-
-	args := []string{imageRef}
-
-	return cmd.Exec(context.Background(), args)
-}
-
-var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaCertChain string, skipTlogVerify bool) error {
-	cmd := cliverify.VerifyCommand{
-		KeyRef:           keyRef,
-		RekorURL:         rekorURL,
-		CheckClaims:      checkClaims,
-		Annotations:      sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:       attachment,
-		HashAlgorithm:    crypto.SHA256,
-		TSACertChainPath: tsaCertChain,
-		IgnoreTlog:       skipTlogVerify,
-		MaxWorkers:       10,
-	}
-
-	args := []string{imageRef}
-
-	return cmd.Exec(context.Background(), args)
-}
-
-var verifyKeylessTSA = func(imageRef string, tsaCertChain string, skipSCT bool, skipTlogVerify bool) error {
-	cmd := cliverify.VerifyCommand{
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuerRegexp: ".*",
-			CertIdentityRegexp:   ".*",
-		},
-		RekorURL:         rekorURL,
-		HashAlgorithm:    crypto.SHA256,
-		TSACertChainPath: tsaCertChain,
-		IgnoreSCT:        skipSCT,
-		IgnoreTlog:       skipTlogVerify,
-		MaxWorkers:       10,
-	}
-
-	args := []string{imageRef}
-
-	return cmd.Exec(context.Background(), args)
-}
-
-// Used to verify local images stored on disk
-var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
-	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		LocalImage:    true,
-		MaxWorkers:    10,
-	}
-
-	args := []string{path}
-
-	return cmd.Exec(context.Background(), args)
-}
-
-var verifyOffline = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
-	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      "notreal",
-		Offline:       true,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-	}
-
-	args := []string{imageRef}
-
-	return cmd.Exec(context.Background(), args)
-}
-
-var ro = &options.RootOptions{Timeout: options.DefaultTimeout}
 
 func TestSignVerify(t *testing.T) {
 	td := t.TempDir()
@@ -236,6 +135,67 @@ func TestSignVerify(t *testing.T) {
 
 	// But two doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}, "", false), t)
+}
+
+func TestSignVerifyCertBundle(t *testing.T) {
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+	caCertFile, _ /* caPrivKeyFile */, caIntermediateCertFile, _ /* caIntermediatePrivKeyFile */, certFile, certChainFile, err := generateCertificateBundleFiles(td, true, "foobar")
+	must(err, t)
+
+	ctx := context.Background()
+	// Verify should fail at first
+	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, nil, "", true), t)
+	// So should download
+	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+
+	// Now sign the image
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:     true,
+		TlogUpload: true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Now verify and download should work!
+	ignoreTlog := true
+	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, nil, "", ignoreTlog), t)
+	// verification with certificate chain instead of root/intermediate files should work as well
+	must(verifyCertChain(pubKeyPath, certChainFile, certFile, imgName, true, nil, "", ignoreTlog), t)
+	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+
+	// Look for a specific annotation
+	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
+
+	so.AnnotationOptions = options.AnnotationOptions{
+		Annotations: []string{"foo=bar"},
+	}
+	// Sign the image with an annotation
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// It should match this time.
+	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
+
+	// But two doesn't work
+	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar", "baz": "bat"}, "", ignoreTlog), t)
 }
 
 func TestSignVerifyClean(t *testing.T) {
@@ -294,7 +254,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	_, _, _ = mkimage(t, imgName)
 
-	_, privKeyPath, pubKeyPath := importKeyPair(t, td)
+	_, privKeyPath, pubKeyPath := importSampleKeyPair(t, td)
 
 	ctx := context.Background()
 
@@ -320,6 +280,473 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	// It doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, nil, "", false), t)
+}
+
+type targetInfo struct {
+	name   string
+	source string
+	usage  string
+}
+
+func downloadTargets(td string, targets []targetInfo, targetsMeta *metadata.Metadata[metadata.TargetsType]) error {
+	targetsDir := filepath.Join(td, "targets")
+	err := os.RemoveAll(targetsDir)
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir(targetsDir, 0700)
+	if err != nil {
+		return err
+	}
+	targetsMeta.Signed.Targets = make(map[string]*metadata.TargetFiles)
+	for _, target := range targets {
+		targetLocalPath := filepath.Join(targetsDir, target.name)
+		if strings.HasPrefix(target.source, "http") {
+			fp, err := os.Create(targetLocalPath)
+			if err != nil {
+				return err
+			}
+			defer fp.Close()
+			err = downloadFile(target.source, fp)
+			if err != nil {
+				return err
+			}
+		}
+		if strings.HasPrefix(target.source, "/") {
+			err = copyFile(target.source, targetLocalPath)
+			if err != nil {
+				return err
+			}
+		}
+		targetFileInfo, err := metadata.TargetFile().FromFile(targetLocalPath, "sha256")
+		if err != nil {
+			return err
+		}
+		if target.usage != "" {
+			customMsg := fmt.Sprintf(`{"sigstore":{"usage": "%s"}}`, target.usage)
+			custom := json.RawMessage([]byte(customMsg))
+			targetFileInfo.Custom = &custom
+		}
+		targetsMeta.Signed.Targets[target.name] = targetFileInfo
+	}
+	return nil
+}
+
+type tuf struct {
+	publicKey *metadata.Key
+	signer    signature.Signer
+	root      *metadata.Metadata[metadata.RootType]
+	snapshot  *metadata.Metadata[metadata.SnapshotType]
+	timestamp *metadata.Metadata[metadata.TimestampType]
+	targets   *metadata.Metadata[metadata.TargetsType]
+}
+
+func newKey() (*metadata.Key, signature.Signer, error) {
+	pub, private, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	public, err := metadata.KeyFromPublicKey(pub)
+	if err != nil {
+		return nil, nil, err
+	}
+	signer, err := signature.LoadSigner(private, crypto.Hash(0))
+	if err != nil {
+		return nil, nil, err
+	}
+	return public, signer, nil
+}
+
+func newTUF(td string, targetList []targetInfo) (*tuf, error) {
+	// source: https://github.com/theupdateframework/go-tuf/blob/v2.0.2/examples/repository/basic_repository.go
+	expiration := time.Now().AddDate(0, 0, 1).UTC()
+	targets := metadata.Targets(expiration)
+	err := downloadTargets(td, targetList, targets)
+	if err != nil {
+		return nil, err
+	}
+	snapshot := metadata.Snapshot(expiration)
+	timestamp := metadata.Timestamp(expiration)
+	root := metadata.Root(expiration)
+	root.Signed.ConsistentSnapshot = false
+
+	public, signer, err := newKey()
+	if err != nil {
+		return nil, err
+	}
+
+	tuf := &tuf{
+		publicKey: public,
+		signer:    signer,
+		root:      root,
+		snapshot:  snapshot,
+		timestamp: timestamp,
+		targets:   targets,
+	}
+	for _, name := range []string{"targets", "snapshot", "timestamp", "root"} {
+		err := tuf.root.Signed.AddKey(tuf.publicKey, name)
+		if err != nil {
+			return nil, err
+		}
+		switch name {
+		case "targets":
+			_, err = tuf.targets.Sign(tuf.signer)
+		case "snapshot":
+			_, err = tuf.snapshot.Sign(tuf.signer)
+		case "timestamp":
+			_, err = tuf.timestamp.Sign(tuf.signer)
+		case "root":
+			_, err = tuf.root.Sign(tuf.signer)
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = tuf.targets.ToFile(filepath.Join(td, "targets.json"), false)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.snapshot.ToFile(filepath.Join(td, "snapshot.json"), false)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.timestamp.ToFile(filepath.Join(td, "timestamp.json"), false)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.ToFile(filepath.Join(td, fmt.Sprintf("%d.%s.json", tuf.root.Signed.Version, "root")), false)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tuf.root.VerifyDelegate("root", tuf.root)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.VerifyDelegate("targets", tuf.targets)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.VerifyDelegate("snapshot", tuf.snapshot)
+	if err != nil {
+		return nil, err
+	}
+	err = tuf.root.VerifyDelegate("timestamp", tuf.timestamp)
+	if err != nil {
+		return nil, err
+	}
+
+	return tuf, nil
+}
+
+func (tr *tuf) update(td string, targetList []targetInfo) error {
+	err := downloadTargets(td, targetList, tr.targets)
+	if err != nil {
+		return err
+	}
+	tr.targets.Signatures = make([]metadata.Signature, 0)
+	tr.targets.Signed.Version++
+	_, err = tr.targets.Sign(tr.signer)
+	if err != nil {
+		return err
+	}
+	tr.snapshot.Signatures = make([]metadata.Signature, 0)
+	tr.snapshot.Signed.Meta["targets.json"].Version++
+	tr.snapshot.Signed.Version++
+	tr.snapshot.Sign(tr.signer)
+	tr.timestamp.Signatures = make([]metadata.Signature, 0)
+	tr.timestamp.Signed.Meta["snapshot.json"].Version++
+	tr.timestamp.Signed.Version++
+	tr.timestamp.Sign(tr.signer)
+	err = tr.targets.ToFile(filepath.Join(td, "targets.json"), false)
+	if err != nil {
+		return err
+	}
+	err = tr.snapshot.ToFile(filepath.Join(td, "snapshot.json"), false)
+	if err != nil {
+		return err
+	}
+	err = tr.timestamp.ToFile(filepath.Join(td, "timestamp.json"), false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func downloadTSACerts(downloadDirectory string, tsaServer string) (string, string, string, error) {
+	resp, err := http.Get(tsaServer + "/api/v1/timestamp/certchain")
+	if err != nil {
+		return "", "", "", err
+	}
+	defer resp.Body.Close()
+	buffer := new(bytes.Buffer)
+	buffer.ReadFrom(resp.Body)
+	b := buffer.Bytes()
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(b)
+	if err != nil {
+		return "", "", "", err
+	}
+	leaves := make([]*x509.Certificate, 0)
+	intermediates := make([]*x509.Certificate, 0)
+	roots := make([]*x509.Certificate, 0)
+	for _, cert := range certs {
+		if !cert.IsCA {
+			leaves = append(leaves, cert)
+		} else {
+			// root certificates are self-signed
+			if bytes.Equal(cert.RawSubject, cert.RawIssuer) {
+				roots = append(roots, cert)
+			} else {
+				intermediates = append(intermediates, cert)
+			}
+		}
+	}
+	if len(leaves) != 1 {
+		return "", "", "", fmt.Errorf("unexpected number of certificate leaves")
+	}
+	if len(roots) != 1 {
+		return "", "", "", fmt.Errorf("unexpected number of certificate roots")
+	}
+	leafPath := filepath.Join(downloadDirectory, "tsa_leaf.crt.pem")
+	leafFP, err := os.Create(leafPath)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer leafFP.Close()
+	err = pem.Encode(leafFP, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: leaves[0].Raw,
+	})
+	if err != nil {
+		return "", "", "", err
+	}
+	rootPath := filepath.Join(downloadDirectory, "tsa_root.crt.pem")
+	rootFP, err := os.Create(rootPath)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer rootFP.Close()
+	err = pem.Encode(rootFP, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: roots[0].Raw,
+	})
+	if err != nil {
+		return "", "", "", err
+	}
+	intermediatePath := filepath.Join(downloadDirectory, "tsa_intermediate_0.crt.pem")
+	intermediateFP, err := os.Create(intermediatePath)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer intermediateFP.Close()
+	intermediateBuffer := new(bytes.Buffer)
+	for _, i := range intermediates {
+		_, err = intermediateBuffer.Write(i.Raw)
+		if err != nil {
+			return "", "", "", err
+		}
+	}
+	err = pem.Encode(intermediateFP, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: intermediateBuffer.Bytes(),
+	})
+	if err != nil {
+		return "", "", "", err
+	}
+	return leafPath, intermediatePath, rootPath, nil
+}
+
+func TestSignVerifyWithTUFMirror(t *testing.T) {
+	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
+	must(err, t)
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	tsaLeaf, tsaInter, tsaRoot, err := downloadTSACerts(t.TempDir(), tsaServer.URL)
+	must(err, t)
+	tests := []struct {
+		name          string
+		targets       []targetInfo
+		wantSignErr   bool
+		wantVerifyErr bool
+	}{
+		{
+			name: "invalid CT key name with no usage",
+			targets: []targetInfo{
+				{
+					name:   "ct.pub",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+			},
+			wantSignErr: true,
+		},
+		{
+			name: "standard key names",
+			targets: []targetInfo{
+				{
+					name:   "rekor.pub",
+					source: rekorURL + "/api/v1/log/publicKey",
+				},
+				{
+					name:   "fulcio.crt.pem",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "ctfe.pub",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+				{
+					name:   "tsa_leaf.crt.pem",
+					source: tsaLeaf,
+				},
+				{
+					name:   "tsa_root.crt.pem",
+					source: tsaRoot,
+				},
+				{
+					name:   "tsa_intermediate_0.crt.pem",
+					source: tsaInter,
+				},
+			},
+		},
+		{
+			name: "invalid verifier key names with no usage",
+			targets: []targetInfo{
+				{
+					name:   "tlog.pubkey",
+					source: rekorURL + "/api/v1/log/publicKey",
+				},
+				{
+					name:   "ca.cert",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "ctfe.pub",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+				{
+					name:   "tsaleaf.pem",
+					source: tsaLeaf,
+				},
+				{
+					name:   "tsaca.pem",
+					source: tsaRoot,
+				},
+				{
+					name:   "tsachain.pem",
+					source: tsaInter,
+				},
+			},
+			wantVerifyErr: true,
+		},
+		{
+			name: "nonstandard key names with valid usage",
+			targets: []targetInfo{
+				{
+					name:   "tlog.pubkey",
+					usage:  "Rekor",
+					source: rekorURL + "/api/v1/log/publicKey",
+				},
+				{
+					name:   "ca.cert",
+					usage:  "Fulcio",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "intermediate.cert",
+					usage:  "Fulcio",
+					source: fulcioURL + "/api/v1/rootCert",
+				},
+				{
+					name:   "cert-transparency.pem",
+					usage:  "CTFE",
+					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+				},
+				{
+					name:   "tsaleaf.pem",
+					source: tsaLeaf,
+					usage:  "TSA",
+				},
+				{
+					name:   "tsaca.pem",
+					source: tsaRoot,
+					usage:  "TSA",
+				},
+				{
+					name:   "tsachain.pem",
+					source: tsaInter,
+					usage:  "TSA",
+				},
+			},
+		},
+	}
+	tuf, err := newTUF(tufMirror, tests[0].targets)
+	must(err, t)
+	for i, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			if i > 0 {
+				must(tuf.update(tufMirror, test.targets), t)
+			}
+			rootPath := filepath.Join(tufMirror, "1.root.json")
+			must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+			identityToken, err := getOIDCToken()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			repo, stop := reg(t)
+			defer stop()
+			imgName := path.Join(repo, "cosign-e2e-tuf")
+			_, _, cleanup := mkimage(t, imgName)
+			defer cleanup()
+
+			ko := options.KeyOpts{
+				FulcioURL:        fulcioURL,
+				RekorURL:         rekorURL,
+				IDToken:          identityToken,
+				SkipConfirmation: true,
+				TSAServerURL:     tsaServer.URL + "/api/v1/timestamp",
+			}
+			so := options.SignOptions{
+				Upload:           true,
+				TlogUpload:       true,
+				SkipConfirmation: true,
+			}
+			gotErr := sign.SignCmd(ro, ko, so, []string{imgName})
+			if test.wantSignErr {
+				mustErr(gotErr, t)
+				return
+			}
+			must(gotErr, t)
+			issuer := os.Getenv("OIDC_URL")
+			verifyCmd := cliverify.VerifyCommand{
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertOidcIssuer: issuer,
+					CertIdentity:   certID,
+				},
+				Offline:             true,
+				CheckClaims:         true,
+				UseSignedTimestamps: true,
+			}
+			gotErr = verifyCmd.Exec(ctx, []string{imgName})
+			if test.wantVerifyErr {
+				mustErr(gotErr, t)
+			} else {
+				must(gotErr, t)
+			}
+		})
+	}
 }
 
 func TestAttestVerify(t *testing.T) {
@@ -663,7 +1090,7 @@ func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
 	}
 	must(attestCommand.Exec(ctx, imgName), t)
 
-	// Call download.AttestationCmd() to ensure failure with non-existant --predicate-type
+	// Call download.AttestationCmd() to ensure failure with non-existent --predicate-type
 	attOpts := options.AttestationDownloadOptions{
 		PredicateType: "vuln",
 	}
@@ -906,7 +1333,115 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 }
 
-func TestAttachWithRFC3161Timestamp(t *testing.T) {
+func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
+	// TSA server needed to create timestamp
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	blob := "someblob"
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicateType := "slsaprovenance"
+
+	td := t.TempDir()
+	t.Cleanup(func() {
+		os.RemoveAll(td)
+	})
+
+	bp := filepath.Join(td, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	predicatePath := filepath.Join(td, "predicate")
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(td, "bundle.sigstore.json")
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+	ko := options.KeyOpts{
+		KeyRef:          privKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+		TSAServerURL:    server.URL + "/api/v1/timestamp",
+		PassFunc:        passFunc,
+	}
+
+	attestBlobCmd := attest.AttestBlobCommand{
+		KeyOpts:        ko,
+		PredicatePath:  predicatePath,
+		PredicateType:  predicateType,
+		Timeout:        30 * time.Second,
+		TlogUpload:     false,
+		RekorEntryType: "dsse",
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	client, err := tsaclient.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	var certs []*x509.Certificate
+	for block, contents := pem.Decode([]byte(chain.Payload)); ; block, contents = pem.Decode(contents) {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			t.Error(err)
+		}
+		certs = append(certs, cert)
+
+		if len(contents) == 0 {
+			break
+		}
+	}
+
+	tsaCA := &root.SigstoreTimestampingAuthority{
+		Root:          certs[len(certs)-1],
+		Intermediates: certs[:len(certs)-1],
+	}
+
+	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, []root.TimestampingAuthority{tsaCA}, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	trustedRootPath := filepath.Join(td, "trustedroot.json")
+	trustedRootBytes, err := trustedRoot.MarshalJSON()
+	if err != nil {
+		t.Error(err)
+	}
+	if err := os.WriteFile(trustedRootPath, trustedRootBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	ko = options.KeyOpts{
+		KeyRef:          pubKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+
+	verifyBlobAttestation := cliverify.VerifyBlobAttestationCommand{
+		KeyOpts:         ko,
+		PredicateType:   predicateType,
+		IgnoreTlog:      true,
+		CheckClaims:     true,
+		TrustedRootPath: trustedRootPath,
+	}
+
+	must(verifyBlobAttestation.Exec(ctx, bp), t)
+}
+
+func TestVerifyWithCARoots(t *testing.T) {
 	ctx := context.Background()
 	// TSA server needed to create timestamp
 	viper.Set("timestamp-signer", "memory")
@@ -919,33 +1454,52 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	defer stop()
 	td := t.TempDir()
 
-	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
-
+	imgName := path.Join(repo, "cosign-verify-caroots-e2e")
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
+	blob := "someblob2sign"
 
 	b := bytes.Buffer{}
+	blobRef := filepath.Join(td, blob)
+	if err := os.WriteFile(blobRef, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
 	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
 	rootCert, rootKey, _ := GenerateRootCa()
 	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	privKeyRef := importECDSAPrivateKey(t, privKey, td, "cosign-test-key.pem")
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootCert02, rootKey02, _ := GenerateRootCa()
+	subCert02, subKey02, _ := GenerateSubordinateCa(rootCert02, rootKey02)
+	leafCert02, _, _ := GenerateLeafCert("subject02@mail.com", "oidc-issuer02", subCert02, subKey02)
+	pemRoot02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert02.Raw})
+	pemSub02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert02.Raw})
+	pemLeaf02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert02.Raw})
+	pemsubRef02 := mkfile(string(pemSub02), td, t)
+	pemrootRef02 := mkfile(string(pemRoot02), td, t)
+	pemleafRef02 := mkfile(string(pemLeaf02), td, t)
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
 
 	payloadref := mkfile(b.String(), td, t)
 
 	h := sha256.Sum256(b.Bytes())
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
+	b64signature := base64.StdEncoding.EncodeToString(signature)
 	sigRef := mkfile(b64signature, td, t)
-	pemleafRef := mkfile(string(pemLeaf), td, t)
+	pemsubRef := mkfile(string(pemSub), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
 
-	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
-
-	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
+	pemrootBundleRef := mkfile(string(append(pemRoot, pemRoot02...)), td, t)
+	pemsubBundleRef := mkfile(string(append(pemSub, pemSub02...)), td, t)
 
 	tsclient, err := tsaclient.GetTimestampClient(server.URL)
 	if err != nil {
@@ -957,12 +1511,12 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	tsaChainRef, err := os.CreateTemp(os.TempDir(), "tempfile")
 	if err != nil {
 		t.Fatalf("error creating temp file: %v", err)
 	}
-	defer os.Remove(file.Name())
-	_, err = file.WriteString(chain.Payload)
+	defer os.Remove(tsaChainRef.Name())
+	_, err = tsaChainRef.WriteString(chain.Payload)
 	if err != nil {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
@@ -979,71 +1533,151 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	must(verifyKeylessTSA(imgName, file.Name(), true, true), t)
-}
-
-func TestAttachWithRekorBundle(t *testing.T) {
-	ctx := context.Background()
-
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-
-	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
-
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	b := bytes.Buffer{}
-	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
-
-	rootCert, rootKey, _ := GenerateRootCa()
-	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-
-	payloadref := mkfile(b.String(), td, t)
-
-	h := sha256.Sum256(b.Bytes())
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString([]byte(signature))
-	sigRef := mkfile(b64signature, td, t)
-	pemleafRef := mkfile(string(pemLeaf), td, t)
-	pemrootRef := mkfile(string(pemRoot), td, t)
-
-	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
-
-	certchainRef := mkfile(string(append(pemSub[:], pemRoot[:]...)), td, t)
-
-	localPayload := cosign.LocalSignedPayload{
-		Base64Signature: b64signature,
-		Cert:            string(pemLeaf),
-		Bundle: &bundle.RekorBundle{
-			SignedEntryTimestamp: strfmt.Base64("MEUCIEDcarEwRYkrxE9ne+kzEVvUhnWaauYzxhUyXOLy1hwAAiEA4VdVCvNRs+D/5o33C2KBy+q2YX3lP4Y7nqRFU+K3hi0="),
-			Payload: bundle.RekorPayload{
-				Body:           "REMOVED",
-				IntegratedTime: 1631646761,
-				LogIndex:       693591,
-				LogID:          "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d",
-			},
+	// Now sign the blob with one key
+	ko := options.KeyOpts{
+		KeyRef:   privKeyRef,
+		PassFunc: passFunc,
+	}
+	blobSig, err := sign.SignBlobCmd(ro, ko, blobRef, true, "", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the following fields with non-changing values are logically "factored out" for brevity
+	// and passed to verifyKeylessTSAWithCARoots in the testing loop:
+	// imageName string
+	// tsaCertChainRef string
+	// skipSCT   bool
+	// skipTlogVerify bool
+	tests := []struct {
+		name      string
+		rootRef   string
+		subRef    string
+		leafRef   string
+		skipBlob  bool // skip the verify-blob test (for cases that need the image)
+		wantError bool
+	}{
+		{
+			"verify with root, intermediate and leaf certificates",
+			pemrootRef,
+			pemsubRef,
+			pemleafRef,
+			false,
+			false,
+		},
+		// NB - "confusely" switching the root and intermediate PEM files does _NOT_ (currently) produce an error
+		// - the Go crypto/x509 package doesn't strictly verify that the certificate chain is anchored
+		// in a self-signed root certificate.  In this case, only the chain up to the intermediate
+		// certificate is verified, and the root certificate is ignored.
+		// See also https://gist.github.com/dmitris/15160f703b3038b1b00d03d3c7b66ce0 and in particular
+		// https://gist.github.com/dmitris/15160f703b3038b1b00d03d3c7b66ce0#file-main-go-L133-L135 as an example.
+		{
+			"switch root and intermediate no error",
+			pemsubRef,
+			pemrootRef,
+			pemleafRef,
+			false,
+			false,
+		},
+		{
+			"leave out the root certificate",
+			"",
+			pemsubRef,
+			pemleafRef,
+			false,
+			true,
+		},
+		{
+			"leave out the intermediate certificate",
+			pemrootRef,
+			"",
+			pemleafRef,
+			false,
+			true,
+		},
+		{
+			"leave out the codesigning leaf certificate which is extracted from the image",
+			pemrootRef,
+			pemsubRef,
+			"",
+			true,
+			false,
+		},
+		{
+			"wrong leaf certificate",
+			pemrootRef,
+			pemsubRef,
+			pemleafRef02,
+			false,
+			true,
+		},
+		{
+			"root and intermediates bundles",
+			pemrootBundleRef,
+			pemsubBundleRef,
+			pemleafRef,
+			false,
+			false,
+		},
+		{
+			"wrong root and intermediates bundles",
+			pemrootRef02,
+			pemsubRef02,
+			pemleafRef,
+			false,
+			true,
+		},
+		{
+			"wrong root bundle",
+			pemrootRef02,
+			pemsubBundleRef,
+			pemleafRef,
+			false,
+			true,
+		},
+		{
+			"wrong intermediates bundle",
+			pemrootRef,
+			pemsubRef02,
+			pemleafRef,
+			false,
+			true,
 		},
 	}
-
-	jsonBundle, err := json.Marshal(localPayload)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bundlePath := filepath.Join(td, "bundle.json")
-	if err := os.WriteFile(bundlePath, jsonBundle, 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, "", bundlePath, imgName)
-	if err != nil {
-		t.Fatal(err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := verifyKeylessTSAWithCARoots(imgName,
+				tt.rootRef,
+				tt.subRef,
+				tt.leafRef,
+				tsaChainRef.Name(),
+				true,
+				true)
+			hasErr := (err != nil)
+			if hasErr != tt.wantError {
+				if tt.wantError {
+					t.Errorf("%s - no expected error", tt.name)
+				} else {
+					t.Errorf("%s - unexpected error: %v", tt.name, err)
+				}
+			}
+			if !tt.skipBlob {
+				err = verifyBlobKeylessWithCARoots(blobRef,
+					string(blobSig),
+					tt.rootRef,
+					tt.subRef,
+					tt.leafRef,
+					true,
+					true)
+				hasErr = (err != nil)
+				if hasErr != tt.wantError {
+					if tt.wantError {
+						t.Errorf("%s - no expected error", tt.name)
+					} else {
+						t.Errorf("%s - unexpected error: %v", tt.name, err)
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -1567,6 +2201,50 @@ func TestSignBlobBundle(t *testing.T) {
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
+func TestSignBlobNewBundle(t *testing.T) {
+	td1 := t.TempDir()
+
+	blob := "someblob"
+	blobPath := filepath.Join(td1, blob)
+	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+
+	ctx := context.Background()
+	_, privKeyPath, pubKeyPath := keypair(t, td1)
+
+	ko1 := options.KeyOpts{
+		KeyRef:          pubKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts:    ko1,
+		IgnoreTlog: true,
+	}
+
+	// Verify should fail before bundle is written
+	mustErr(verifyBlobCmd.Exec(ctx, blobPath), t)
+
+	// Produce signed bundle
+	ko := options.KeyOpts{
+		KeyRef:          privKeyPath,
+		PassFunc:        passFunc,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+
+	if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should succeed now that bundle is written
+	must(verifyBlobCmd.Exec(ctx, blobPath), t)
+}
+
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	td := t.TempDir()
 	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
@@ -1676,194 +2354,6 @@ func TestGenerate(t *testing.T) {
 
 	equals(desc.Digest.String(), ss.Critical.Image.DockerManifestDigest, t)
 	equals(ss.Optional["foo"], "bar", t)
-}
-
-func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(td); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		os.Chdir(wd)
-	}()
-	keys, err := cosign.GenerateKeyPair(passFunc)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	privKeyPath := filepath.Join(td, "cosign.key")
-	if err := os.WriteFile(privKeyPath, keys.PrivateBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	pubKeyPath := filepath.Join(td, "cosign.pub")
-	if err := os.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-	return keys, privKeyPath, pubKeyPath
-}
-
-func importKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
-
-	const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
-MIIEogIBAAKCAQEAx5piWVlE62NnZ0UzJ8Z6oKiKOC4dbOZ1HsNhIRtqkM+Oq4G+
-25yq6P+0JU/Qvr9veOGEb3R/J9u8JBo+hv2i5X8OtgvP2V2pi6f1s6vK7L0+6uRb
-4YTT/UdMshaVf97MgEqbq41Jf/cuvh+3AV0tZ1BpixZg4aXMKpY6HUP69lbsu27o
-SUN1myMv7TSgZiV4CYs3l/gkEfpysBptWlcHRuw5RsB+C0RbjRtbJ/5VxmE/vd3M
-lafd5t1WSpMb8yf0a84u5NFaXwZ7CweMfXeOddS0yb19ShSuW3PPRadruBM1mq15
-js9GfagPxDS75Imcs+fA62lWvHxEujTGjYHxawIDAQABAoIBAH+sgLwmHa9zJfEo
-klAe5NFe/QpydN/ziXbkAnzqzH9URC3wD+TpkWj4JoK3Sw635NWtasjf+3XDV9S/
-9L7j/g5N91r6sziWcJykEsWaXXKQmm4lI6BdFjwsHyLKz1W7bZOiJXDWLu1rbrqu
-DqEQuLoc9WXCKrYrFy0maoXNtfla/1p05kKN0bMigcnnyAQ+xBTwoyco4tkIz5se
-IYxorz7qzXrkHQI+knz5BawmNe3ekoSaXUPoLoOR7TRTGsLteL5yukvWAi8S/0rE
-gftC+PZCQpoQhSUYq7wXe7RowJ1f+kXb7HsSedOTfTSW1D/pUb/uW+CcRKig42ZI
-I9H9TAECgYEA5XGBML6fJyWVqx64sHbUAjQsmQ0RwU6Zo7sqHIEPf6tYVYp7KtzK
-KOfi8seOOL5FSy4pjCo11Dzyrh9bn45RNmtjSYTgOnVPSoCfuRNfOcpG+/wCHjYf
-EjDvdrCpbg59kVUeaMeBDiyWAlM48HJAn8O7ez2U/iKQCyJmOIwFhSkCgYEA3rSz
-Fi1NzqYWxWos4NBmg8iKcQ9SMkmPdgRLAs/WNnZJ8fdgJZwihevkXGytRGJEmav2
-GMKRx1g6ey8fjXTQH9WM8X/kJC5fv8wLHnUCH/K3Mcp9CYwn7PFvSnBr4kQoc/el
-bURhcF1+/opEC8vNX/Wk3zAG7Xs1PREXlH2SIHMCgYBV/3kgwBH/JkM25EjtO1yz
-hsLAivmAruk/SUO7c1RP0fVF+qW3pxHOyztxLALOmeJ3D1JbSubqKf377Zz17O3b
-q9yHDdrNjnKtxhAX2n7ytjJs+EQC9t4mf1kB761RpvTBqFnBhCWHHocLUA4jcW9v
-cnmu86IIrwO2aKpPv4vCIQKBgHU9gY3qOazRSOmSlJ+hdmZn+2G7pBTvHsQNTIPl
-cCrpqNHl3crO4GnKHkT9vVVjuiOAIKU2QNJFwzu4Og8Y8LvhizpTjoHxm9x3iV72
-UDELcJ+YrqyJCTe2flUcy96o7Pbn50GXnwgtYD6WAW6IUszyn2ITgYIhu4wzZEt6
-s6O7AoGAPTKbRA87L34LMlXyUBJma+etMARIP1zu8bXJ7hSJeMcog8zaLczN7ruT
-pGAaLxggvtvuncMuTrG+cdmsR9SafSFKRS92NCxhOUonQ+NP6mLskIGzJZoQ5JvQ
-qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
------END RSA PRIVATE KEY-----`
-
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(td); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		os.Chdir(wd)
-	}()
-
-	err = os.WriteFile("validrsa1.key", []byte(validrsa1), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	keys, err := cosign.ImportKeyPair("validrsa1.key", passFunc)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	privKeyPath := filepath.Join(td, "import-cosign.key")
-	if err := os.WriteFile(privKeyPath, keys.PrivateBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	pubKeyPath := filepath.Join(td, "import-cosign.pub")
-	if err := os.WriteFile(pubKeyPath, keys.PublicBytes, 0600); err != nil {
-		t.Fatal(err)
-	}
-	return keys, privKeyPath, pubKeyPath
-
-}
-
-func TestUploadDownload(t *testing.T) {
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-	ctx := context.Background()
-
-	testCases := map[string]struct {
-		signature     string
-		signatureType attach.SignatureArgType
-		expectedErr   bool
-	}{
-		"stdin containing signature": {
-			signature:     "testsignatureraw",
-			signatureType: attach.StdinSignature,
-			expectedErr:   false,
-		},
-		"file containing signature": {
-			signature:     "testsignaturefile",
-			signatureType: attach.FileSignature,
-			expectedErr:   false,
-		},
-		"raw signature as argument": {
-			signature:     "testsignatureraw",
-			signatureType: attach.RawSignature,
-			expectedErr:   true,
-		},
-		"empty signature as argument": {
-			signature:     "",
-			signatureType: attach.RawSignature,
-			expectedErr:   true,
-		},
-	}
-
-	imgName := path.Join(repo, "cosign-e2e")
-	for testName, testCase := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			ref, _, cleanup := mkimage(t, imgName)
-			payload := "testpayload"
-			payloadPath := mkfile(payload, td, t)
-			signature := base64.StdEncoding.EncodeToString([]byte(testCase.signature))
-			restoreStdin := func() {}
-
-			var sigRef string
-			if testCase.signatureType == attach.FileSignature {
-				sigRef = mkfile(signature, td, t)
-			} else if testCase.signatureType == attach.StdinSignature {
-				sigRef = "-"
-				restoreStdin = mockStdin(signature, td, t)
-			} else {
-				sigRef = signature
-			}
-			// Upload it!
-			err := attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadPath, "", "", "", "", imgName)
-			if testCase.expectedErr {
-				mustErr(err, t)
-			} else {
-				must(err, t)
-			}
-			restoreStdin()
-
-			// Now download it!
-			se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
-			must(err, t)
-			sigs, err := se.Signatures()
-			must(err, t)
-			signatures, err := sigs.Get()
-			must(err, t)
-
-			if testCase.expectedErr {
-				if len(signatures) != 0 {
-					t.Fatalf("unexpected signatures %d, wanted 0", len(signatures))
-				}
-			} else {
-				if len(signatures) != 1 {
-					t.Fatalf("unexpected signatures %d, wanted 1", len(signatures))
-				}
-
-				if b64sig, err := signatures[0].Base64Signature(); err != nil {
-					t.Fatalf("Base64Signature() = %v", err)
-				} else if diff := cmp.Diff(b64sig, signature); diff != "" {
-					t.Error(diff)
-				}
-
-				if p, err := signatures[0].Payload(); err != nil {
-					t.Fatalf("Payload() = %v", err)
-				} else if diff := cmp.Diff(p, []byte(payload)); diff != "" {
-					t.Error(diff)
-				}
-			}
-
-			// Now delete it!
-			cleanup()
-		})
-	}
 }
 
 func TestSaveLoad(t *testing.T) {
@@ -2081,97 +2571,6 @@ func TestAttachSBOM(t *testing.T) {
 	mustErr(verify(pubKeyPath2, imgName, true, nil, "sbom", false), t)
 }
 
-func TestAttachSBOM_bom_flag(t *testing.T) {
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-	ctx := context.Background()
-	bomData, err := os.ReadFile("./testdata/bom-go-mod.spdx")
-	must(err, t)
-
-	testCases := map[string]struct {
-		bom         string
-		bomType     attach.SignatureArgType
-		expectedErr bool
-	}{
-		"stdin containing bom": {
-			bom:         string(bomData),
-			bomType:     attach.StdinSignature,
-			expectedErr: false,
-		},
-		"file containing bom": {
-			bom:         string(bomData),
-			bomType:     attach.FileSignature,
-			expectedErr: false,
-		},
-		"raw bom as argument": {
-			bom:         string(bomData),
-			bomType:     attach.RawSignature,
-			expectedErr: true,
-		},
-		"empty bom as argument": {
-			bom:         "",
-			bomType:     attach.RawSignature,
-			expectedErr: true,
-		},
-	}
-
-	for testName, testCase := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			imgName := path.Join(repo, "sbom-image")
-			img, _, cleanup := mkimage(t, imgName)
-			var sbomRef string
-			restoreStdin := func() {}
-			if testCase.bomType == attach.FileSignature {
-				sbomRef = mkfile(testCase.bom, td, t)
-			} else if testCase.bomType == attach.StdinSignature {
-				sbomRef = "-"
-				restoreStdin = mockStdin(testCase.bom, td, t)
-			} else {
-				sbomRef = testCase.bom
-			}
-
-			out := bytes.Buffer{}
-			_, errPl := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{Platform: "darwin/amd64"}, img.Name(), &out)
-			if errPl == nil {
-				t.Fatalf("Expected error when passing Platform to single arch image")
-			}
-			_, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, img.Name(), &out)
-			if err == nil {
-				t.Fatal("Expected error")
-			}
-			t.Log(out.String())
-			out.Reset()
-
-			// Upload it!
-			err = attach.SBOMCmd(ctx, options.RegistryOptions{}, options.RegistryExperimentalOptions{}, sbomRef, "spdx", imgName)
-			restoreStdin()
-
-			if testCase.expectedErr {
-				mustErr(err, t)
-			} else {
-				sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
-				if err != nil {
-					t.Fatal(err)
-				}
-				t.Log(out.String())
-				if len(sboms) != 1 {
-					t.Fatalf("Expected one sbom, got %d", len(sboms))
-				}
-				want, err := os.ReadFile("./testdata/bom-go-mod.spdx")
-				if err != nil {
-					t.Fatal(err)
-				}
-				if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
-					t.Errorf("diff: %s", diff)
-				}
-			}
-
-			cleanup()
-		})
-	}
-}
-
 func TestNoTlog(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
@@ -2220,141 +2619,6 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	output, err := os.ReadFile(outPath)
 	must(err, t)
 	equals(keys.PublicBytes, output, t)
-}
-
-func mockStdin(contents, td string, t *testing.T) func() {
-	origin := os.Stdin
-
-	p := mkfile(contents, td, t)
-	f, err := os.Open(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	os.Stdin = f
-
-	return func() { os.Stdin = origin }
-}
-
-func mkfile(contents, td string, t *testing.T) string {
-	f, err := os.CreateTemp(td, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	if _, err := f.Write([]byte(contents)); err != nil {
-		t.Fatal(err)
-	}
-	return f.Name()
-}
-
-func mkfileWithExt(contents, td, ext string, t *testing.T) string {
-	f := mkfile(contents, td, t)
-	newName := f + ext
-	err := os.Rename(f, newName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return newName
-}
-
-func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()) {
-	ref, err := name.ParseReference(n, name.WeakValidation)
-	if err != nil {
-		t.Fatal(err)
-	}
-	img, err := random.Image(512, 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	regClientOpts := registryClientOpts(context.Background())
-
-	if err := remote.Write(ref, img, regClientOpts...); err != nil {
-		t.Fatal(err)
-	}
-
-	remoteImage, err := remote.Get(ref, regClientOpts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cleanup := func() {
-		_ = remote.Delete(ref, regClientOpts...)
-		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteImage.Descriptor.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
-		_ = remote.Delete(ref, regClientOpts...)
-	}
-	return ref, remoteImage, cleanup
-}
-
-func mkimageindex(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()) {
-	ref, err := name.ParseReference(n, name.WeakValidation)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ii, err := random.Index(512, 5, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	regClientOpts := registryClientOpts(context.Background())
-
-	if err := remote.WriteIndex(ref, ii, regClientOpts...); err != nil {
-		t.Fatal(err)
-	}
-
-	remoteIndex, err := remote.Get(ref, regClientOpts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cleanup := func() {
-		_ = remote.Delete(ref, regClientOpts...)
-		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteIndex.Descriptor.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
-		_ = remote.Delete(ref, regClientOpts...)
-	}
-	return ref, remoteIndex, cleanup
-}
-
-func must(err error, t *testing.T) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func mustErr(err error, t *testing.T) {
-	t.Helper()
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func equals(v1, v2 interface{}, t *testing.T) {
-	if diff := cmp.Diff(v1, v2); diff != "" {
-		t.Error(diff)
-	}
-}
-
-func reg(t *testing.T) (string, func()) {
-	repo := os.Getenv("COSIGN_TEST_REPO")
-	if repo != "" {
-		return repo, func() {}
-	}
-
-	t.Log("COSIGN_TEST_REPO unset, using fake registry")
-	r := httptest.NewServer(registry.New())
-	u, err := url.Parse(r.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return u.Host, r.Close
-}
-
-func registryClientOpts(ctx context.Context) []remote.Option {
-	return []remote.Option{
-		remote.WithAuthFromKeychain(authn.DefaultKeychain),
-		remote.WithContext(ctx),
-	}
 }
 
 // If a signature has a bundle, but *not for that signature*, cosign verification should fail.
@@ -2591,6 +2855,8 @@ func TestOffline(t *testing.T) {
 	must(err, t)
 
 	sigsTag, err := ociremote.SignatureTag(imgRef)
+	must(err, t)
+
 	if err := remote.Delete(sigsTag); err != nil {
 		t.Fatal(err)
 	}
@@ -2870,41 +3136,4 @@ func getOIDCToken() (string, error) {
 		return "", err
 	}
 	return string(body), nil
-}
-
-func setLocalEnv(t *testing.T, dir string) error {
-	// fulcio repo is downloaded to the user's home directory by e2e_test.sh
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("error getting home directory: %w", err)
-	}
-	t.Setenv(env.VariableSigstoreCTLogPublicKeyFile.String(), path.Join(home, "fulcio/config/ctfe/pubkey.pem"))
-	err = downloadAndSetEnv(t, fulcioURL+"/api/v1/rootCert", env.VariableSigstoreRootFile.String(), dir)
-	if err != nil {
-		return fmt.Errorf("error setting %s env var: %w", env.VariableSigstoreRootFile.String(), err)
-	}
-	err = downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), dir)
-	if err != nil {
-		return fmt.Errorf("error setting %s env var: %w", env.VariableSigstoreRekorPublicKey.String(), err)
-	}
-	return nil
-}
-
-func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("error downloading file: %w", err)
-	}
-	defer resp.Body.Close()
-	f, err := os.CreateTemp(dir, "")
-	if err != nil {
-		return fmt.Errorf("error creating temp file: %w", err)
-	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.Body)
-	if err != nil {
-		return fmt.Errorf("error writing to file: %w", err)
-	}
-	t.Setenv(envVar, f.Name())
-	return nil
 }

@@ -9,7 +9,7 @@ cosign attest [flags]
 ### Examples
 
 ```
-  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--f] [--r] <image uri>
+  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--record-creation-timestamp=true|false] [--f] [--r] <image uri>
 
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
@@ -37,6 +37,9 @@ cosign attest [flags]
 
   # supply attestation via stdin
   echo <PAYLOAD> | cosign attest --predicate - <IMAGE>
+
+  # attach an attestation to a container image and honor the creation timestamp of the signature
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>
 ```
 
 ### Options
@@ -47,6 +50,7 @@ cosign attest [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --certificate string                                                                       path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
+      --fulcio-auth-flow string                                                                  fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
       --fulcio-url string                                                                        address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for attest
       --identity-token string                                                                    identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
@@ -61,8 +65,13 @@ cosign attest [flags]
       --oidc-provider string                                                                     Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string                                                                 OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --predicate string                                                                         path to the predicate file.
+      --record-creation-timestamp                                                                set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
+      --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
+      --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
+      --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
       --registry-password string                                                                 registry basic auth password
+      --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
       --rekor-entry-type string                                                                  specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default).  (default "dsse")

@@ -18,9 +18,15 @@ import (
 	"context"
 	"encoding/base64"
 	"os"
+	"path/filepath"
 	"testing"
 
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 )
 
 const pubkey = `-----BEGIN PUBLIC KEY-----
@@ -32,6 +38,7 @@ gZPFIp557+TOoDxf14FODWc+sIPETk0OgCplAk60doVXbCv33IU4rXZHrg==
 const (
 	blobContents                         = "some-payload"
 	anotherBlobContents                  = "another-blob"
+	hugeBlobContents                     = "hugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayload"
 	blobSLSAProvenanceSignature          = "eyJwYXlsb2FkVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJwYXlsb2FkIjoiZXlKZmRIbHdaU0k2SW1oMGRIQnpPaTh2YVc0dGRHOTBieTVwYnk5VGRHRjBaVzFsYm5RdmRqQXVNU0lzSW5CeVpXUnBZMkYwWlZSNWNHVWlPaUpvZEhSd2N6b3ZMM05zYzJFdVpHVjJMM0J5YjNabGJtRnVZMlV2ZGpBdU1pSXNJbk4xWW1wbFkzUWlPbHQ3SW01aGJXVWlPaUppYkc5aUlpd2laR2xuWlhOMElqcDdJbk5vWVRJMU5pSTZJalkxT0RjNE1XTmtOR1ZrT1dKallUWXdaR0ZqWkRBNVpqZGlZamt4TkdKaU5URTFNREpsT0dJMVpEWXhPV1kxTjJZek9XRXhaRFkxTWpVNU5tTmpNalFpZlgxZExDSndjbVZrYVdOaGRHVWlPbnNpWW5WcGJHUmxjaUk2ZXlKcFpDSTZJaklpZlN3aVluVnBiR1JVZVhCbElqb2llQ0lzSW1sdWRtOWpZWFJwYjI0aU9uc2lZMjl1Wm1sblUyOTFjbU5sSWpwN2ZYMTlmUT09Iiwic2lnbmF0dXJlcyI6W3sia2V5aWQiOiIiLCJzaWciOiJNRVVDSUE4S2pacWtydDkwZnpCb2pTd3d0ajNCcWI0MUU2cnV4UWs5N1RMbnB6ZFlBaUVBek9Bak9Uenl2VEhxYnBGREFuNnpocmc2RVp2N2t4SzVmYVJvVkdZTWgyYz0ifV19"
 	dssePredicateEmptySubject            = "eyJwYXlsb2FkVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJwYXlsb2FkIjoiZXlKZmRIbHdaU0k2SW1oMGRIQnpPaTh2YVc0dGRHOTBieTVwYnk5VGRHRjBaVzFsYm5RdmRqQXVNU0lzSW5CeVpXUnBZMkYwWlZSNWNHVWlPaUpvZEhSd2N6b3ZMM05zYzJFdVpHVjJMM0J5YjNabGJtRnVZMlV2ZGpBdU1pSXNJbk4xWW1wbFkzUWlPbHRkTENKd2NtVmthV05oZEdVaU9uc2lZblZwYkdSbGNpSTZleUpwWkNJNklqSWlmU3dpWW5WcGJHUlVlWEJsSWpvaWVDSXNJbWx1ZG05allYUnBiMjRpT25zaVkyOXVabWxuVTI5MWNtTmxJanA3ZlgxOWZRPT0iLCJzaWduYXR1cmVzIjpbeyJrZXlpZCI6IiIsInNpZyI6Ik1FWUNJUUNrTEV2NkhZZ0svZDdUK0N3NTdXbkZGaHFUTC9WalAyVDA5Q2t1dk1nbDRnSWhBT1hBM0lhWWg1M1FscVk1eVU4cWZxRXJma2tGajlEakZnaWovUTQ2NnJSViJ9XX0="
 	dssePredicateMissingSha256           = "eyJwYXlsb2FkVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJwYXlsb2FkIjoiZXlKZmRIbHdaU0k2SW1oMGRIQnpPaTh2YVc0dGRHOTBieTVwYnk5VGRHRjBaVzFsYm5RdmRqQXVNU0lzSW5CeVpXUnBZMkYwWlZSNWNHVWlPaUpvZEhSd2N6b3ZMM05zYzJFdVpHVjJMM0J5YjNabGJtRnVZMlV2ZGpBdU1pSXNJbk4xWW1wbFkzUWlPbHQ3SW01aGJXVWlPaUppYkc5aUlpd2laR2xuWlhOMElqcDdmWDFkTENKd2NtVmthV05oZEdVaU9uc2lZblZwYkdSbGNpSTZleUpwWkNJNklqSWlmU3dpWW5WcGJHUlVlWEJsSWpvaWVDSXNJbWx1ZG05allYUnBiMjRpT25zaVkyOXVabWxuVTI5MWNtTmxJanA3ZlgxOWZRPT0iLCJzaWduYXR1cmVzIjpbeyJrZXlpZCI6IiIsInNpZyI6Ik1FVUNJQysvM2M4RFo1TGFZTEx6SFZGejE3ZmxHUENlZXVNZ2tIKy8wa2s1cFFLUEFpRUFqTStyYnBBRlJybDdpV0I2Vm9BYVZPZ3U3NjRRM0JKdHI1bHk4VEFHczNrPSJ9XX0="
@@ -46,13 +53,16 @@ func TestVerifyBlobAttestation(t *testing.T) {
 
 	blobPath := writeBlobFile(t, td, blobContents, "blob")
 	anotherBlobPath := writeBlobFile(t, td, anotherBlobContents, "other-blob")
+	hugeBlobPath := writeBlobFile(t, td, hugeBlobContents, "huge-blob")
 	keyRef := writeBlobFile(t, td, pubkey, "cosign.pub")
 
 	tests := []struct {
 		description   string
 		blobPath      string
+		bundlePath    string
 		signature     string
 		predicateType string
+		env           map[string]string
 		shouldErr     bool
 	}{
 		{
@@ -98,11 +108,31 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			signature:     dssePredicateMultipleSubjectsInvalid,
 			blobPath:      blobPath,
 			shouldErr:     true,
+		}, {
+			description: "override file size limit",
+			signature:   blobSLSAProvenanceSignature,
+			blobPath:    hugeBlobPath,
+			env:         map[string]string{"COSIGN_MAX_ATTACHMENT_SIZE": "128"},
+			shouldErr:   true,
+		}, {
+			description: "verify new bundle with public key",
+			// From blobSLSAProvenanceSignature
+			bundlePath: makeLocalAttestNewBundle(t, "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJibG9iIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjY1ODc4MWNkNGVkOWJjYTYwZGFjZDA5ZjdiYjkxNGJiNTE1MDJlOGI1ZDYxOWY1N2YzOWExZDY1MjU5NmNjMjQifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6IjIifSwiYnVpbGRUeXBlIjoieCIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX19fQ==", "application/vnd.in-toto+json", "MEUCIA8KjZqkrt90fzBojSwwtj3Bqb41E6ruxQk97TLnpzdYAiEAzOAjOTzyvTHqbpFDAn6zhrg6EZv7kxK5faRoVGYMh2c="),
+			blobPath:   blobPath,
+		}, {
+			description: "verify new bundle with public key - bad sig",
+			// From blobSLSAProvenanceSignature
+			bundlePath: makeLocalAttestNewBundle(t, "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJibG9iIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjY1ODc4MWNkNGVkOWJjYTYwZGFjZDA5ZjdiYjkxNGJiNTE1MDJlOGI1ZDYxOWY1N2YzOWExZDY1MjU5NmNjMjQifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6IjIifSwiYnVpbGRUeXBlIjoieCIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX19fQ==", "application/vnd.in-toto+json", "c29tZXRoaW5nCg=="),
+			blobPath:   blobPath,
+			shouldErr:  true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
+			for k, v := range test.env {
+				t.Setenv(k, v)
+			}
 			decodedSig, err := base64.StdEncoding.DecodeString(test.signature)
 			if err != nil {
 				t.Fatal(err)
@@ -115,6 +145,11 @@ func TestVerifyBlobAttestation(t *testing.T) {
 				IgnoreTlog:    true,
 				CheckClaims:   true,
 				PredicateType: test.predicateType,
+			}
+			if test.bundlePath != "" {
+				cmd.KeyOpts.BundlePath = test.bundlePath
+				cmd.KeyOpts.NewBundleFormat = true
+				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
 			}
 			err = cmd.Exec(ctx, test.blobPath)
 
@@ -178,4 +213,46 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 			}
 		})
 	}
+}
+
+func makeLocalAttestNewBundle(t *testing.T, payload, payloadType, sig string) string {
+	b, err := bundle.MakeProtobufBundle("hint", []byte{}, nil, []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decodedPayload, err := base64.StdEncoding.DecodeString(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decodedSig, err := base64.StdEncoding.DecodeString(sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b.Content = &protobundle.Bundle_DsseEnvelope{
+		DsseEnvelope: &protodsse.Envelope{
+			Payload:     decodedPayload,
+			PayloadType: payloadType,
+			Signatures: []*protodsse.Signature{
+				{
+					Sig: decodedSig,
+				},
+			},
+		},
+	}
+
+	contents, err := protojson.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// write bundle to disk
+	td := t.TempDir()
+	bundlePath := filepath.Join(td, "bundle.sigstore.json")
+	if err := os.WriteFile(bundlePath, contents, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return bundlePath
 }

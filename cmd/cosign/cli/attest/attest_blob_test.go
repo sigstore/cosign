@@ -28,8 +28,9 @@ import (
 	"strings"
 	"testing"
 
+	"errors"
+
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/pkg/errors"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
@@ -122,6 +123,7 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				keyref       string
 				certref      string
 				certchainref string
+				newBundle    bool
 				errString    string
 			}{
 				{
@@ -132,6 +134,12 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 					name:    "cert matches key",
 					keyref:  keyRef,
 					certref: certRef,
+				},
+				{
+					name:      "new bundle generation",
+					keyref:    keyRef,
+					certref:   certRef,
+					newBundle: true,
 				},
 				{
 					name:      "fail: cert no match key",
@@ -160,8 +168,12 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
+					keyOpts := options.KeyOpts{KeyRef: tc.keyref}
+					if tc.newBundle {
+						keyOpts.NewBundleFormat = true
+					}
 					at := AttestBlobCommand{
-						KeyOpts:        options.KeyOpts{KeyRef: tc.keyref},
+						KeyOpts:        keyOpts,
 						CertPath:       tc.certref,
 						CertChainPath:  tc.certchainref,
 						PredicatePath:  predicatePath,

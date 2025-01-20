@@ -28,11 +28,6 @@ on:
     branches: ['main', 'release-*']
   pull_request:
 
-permissions: read-all
-
-env:
-  GO_VERSION: '1.21'
-
 jobs:
   unit-tests:
     name: Run unit tests
@@ -46,9 +41,11 @@ jobs:
       OS: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+      - uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           # In order:
           # * Module download cache
@@ -63,9 +60,9 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           check-latest: true
       - name: Run Go tests
         env:
@@ -73,7 +70,7 @@ jobs:
           GODEBUG: x509sha1=1
         run: go test -tags=sct -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
+        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
         with:
           env_vars: OS
       - name: Run Go tests w/ `-race`
@@ -86,11 +83,68 @@ jobs:
   e2e-tests:
     name: Run e2e tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      # Related to https://github.com/sigstore/cosign/issues/3149
+      - name: free up disk space
+        run: |
+          rm -rf /opt/hostedtoolcache/CodeQL
+          rm -rf /usr/share/dotnet/
+          rm -rf "$AGENT_TOOLSDIRECTORY"
+          rm -rf "/usr/local/share/boost"
+          rm -rf /opt/ghc
+          docker rmi $(docker image ls -aq) || true
+          swapoff /swapfile || true
+          rm -rf /swapfile /usr/share/dotnet /usr/local/lib/android /opt/ghc  || true
+          apt purge aria2 ansible hhvm mono-devel azure-cli shellcheck rpm xorriso zsync \
+            clang-6.0 lldb-6.0 lld-6.0 clang-format-6.0 clang-8 lldb-8 lld-8 clang-format-8 \
+            clang-9 lldb-9 lld-9 clangd-9 clang-format-9 dotnet-sdk-3.0 dotnet-sdk-3.1=3.1.101-1 \
+            esl-erlang firefox g++-8 g++-9 gfortran-8 gfortran-9 google-chrome-stable \
+            google-cloud-sdk ghc-8.0.2 ghc-8.2.2 ghc-8.4.4 ghc-8.6.2 ghc-8.6.3 ghc-8.6.4 \
+            ghc-8.6.5 ghc-8.8.1 ghc-8.8.2 ghc-8.8.3 ghc-8.10.1 cabal-install-2.0 cabal-install-2.2 \
+            cabal-install-2.4 cabal-install-3.0 cabal-install-3.2 heroku imagemagick \
+            libmagickcore-dev libmagickwand-dev libmagic-dev ant ant-optional kubectl \
+            mercurial apt-transport-https mono-complete mysql-client libmysqlclient-dev \
+            mysql-server mssql-tools unixodbc-dev yarn bazel chrpath libssl-dev libxft-dev \
+            libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev php7.1 php7.1-bcmath \
+            php7.1-bz2 php7.1-cgi php7.1-cli php7.1-common php7.1-curl php7.1-dba php7.1-dev \
+            php7.1-enchant php7.1-fpm php7.1-gd php7.1-gmp php7.1-imap php7.1-interbase php7.1-intl \
+            php7.1-json php7.1-ldap php7.1-mbstring php7.1-mcrypt php7.1-mysql php7.1-odbc \
+            php7.1-opcache php7.1-pgsql php7.1-phpdbg php7.1-pspell php7.1-readline php7.1-recode \
+            php7.1-snmp php7.1-soap php7.1-sqlite3 php7.1-sybase php7.1-tidy php7.1-xml \
+            php7.1-xmlrpc php7.1-xsl php7.1-zip php7.2 php7.2-bcmath php7.2-bz2 php7.2-cgi \
+            php7.2-cli php7.2-common php7.2-curl php7.2-dba php7.2-dev php7.2-enchant php7.2-fpm \
+            php7.2-gd php7.2-gmp php7.2-imap php7.2-interbase php7.2-intl php7.2-json php7.2-ldap \
+            php7.2-mbstring php7.2-mysql php7.2-odbc php7.2-opcache php7.2-pgsql php7.2-phpdbg \
+            php7.2-pspell php7.2-readline php7.2-recode php7.2-snmp php7.2-soap php7.2-sqlite3 \
+            php7.2-sybase php7.2-tidy php7.2-xml php7.2-xmlrpc php7.2-xsl php7.2-zip php7.3 \
+            php7.3-bcmath php7.3-bz2 php7.3-cgi php7.3-cli php7.3-common php7.3-curl php7.3-dba \
+            php7.3-dev php7.3-enchant php7.3-fpm php7.3-gd php7.3-gmp php7.3-imap php7.3-interbase \
+            php7.3-intl php7.3-json php7.3-ldap php7.3-mbstring php7.3-mysql php7.3-odbc \
+            php7.3-opcache php7.3-pgsql php7.3-phpdbg php7.3-pspell php7.3-readline php7.3-recode \
+            php7.3-snmp php7.3-soap php7.3-sqlite3 php7.3-sybase php7.3-tidy php7.3-xml \
+            php7.3-xmlrpc php7.3-xsl php7.3-zip php7.4 php7.4-bcmath php7.4-bz2 php7.4-cgi \
+            php7.4-cli php7.4-common php7.4-curl php7.4-dba php7.4-dev php7.4-enchant php7.4-fpm \
+            php7.4-gd php7.4-gmp php7.4-imap php7.4-interbase php7.4-intl php7.4-json php7.4-ldap \
+            php7.4-mbstring php7.4-mysql php7.4-odbc php7.4-opcache php7.4-pgsql php7.4-phpdbg \
+            php7.4-pspell php7.4-readline php7.4-snmp php7.4-soap php7.4-sqlite3 php7.4-sybase \
+            php7.4-tidy php7.4-xml php7.4-xmlrpc php7.4-xsl php7.4-zip php-amqp php-apcu \
+            php-igbinary php-memcache php-memcached php-mongodb php-redis php-xdebug \
+            php-zmq snmp pollinate libpq-dev postgresql-client powershell ruby-full \
+            sphinxsearch subversion mongodb-org -yq >/dev/null 2>&1 || true
+          apt-get remove -y '^llvm.*' || true
+          apt-get remove -y 'php.*' || true
+          apt-get autoremove -y >/dev/null 2>&1 || true
+          apt-get autoclean -y >/dev/null 2>&1 || true
+      - name: check disk space
+        run: df -h
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+      - uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           # In order:
           # * Module download cache
@@ -105,11 +159,11 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           check-latest: true
-      - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+      - uses: ko-build/setup-ko@3aebd0597dc1e9d1a26bcfdb7cbeb19c131d3037 # v0.7
       - name: setup kind cluster
         run: |
           # Used to test: cosign generate-key-pair k8s://...
@@ -121,20 +175,24 @@ jobs:
 
       - name: Collect diagnostics
         if: ${{ failure() }}
-        uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+        uses: chainguard-dev/actions/kind-diag@9ba949ac63357c725a9438f3e05a1e33d313498e # main
 
   e2e-windows-powershell-tests:
     name: Run PowerShell E2E tests
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          persist-credentials: false
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version-file: 'go.mod'
           check-latest: true
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+      - uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           # In order:
           # * Module download cache
@@ -152,11 +210,15 @@ jobs:
   license-check:
     name: license boilerplate check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          persist-credentials: false
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version-file: 'go.mod'
           check-latest: true
       - name: Install addlicense
         run: go install github.com/google/addlicense@latest
@@ -164,19 +226,3 @@ jobs:
         run: |
           set -e
           addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -v *
-
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
-        with:
-          go-version: '1.21'
-          check-latest: true
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804 # v4.0.0
-        with:
-          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.55
-          args: --timeout=5m

@@ -64,6 +64,9 @@ cosign sign [flags]
 
   # sign a container image by manually setting the container image identity
   cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>
+
+  # sign a container image and honor the creation timestamp of the signature
+  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>
 ```
 
 ### Options
@@ -76,6 +79,7 @@ cosign sign [flags]
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
       --certificate string                                                                       path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
+      --fulcio-auth-flow string                                                                  fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
       --fulcio-url string                                                                        address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                                                                                     help for sign
       --identity-token string                                                                    identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
@@ -93,9 +97,14 @@ cosign sign [flags]
       --output-payload string                                                                    write the signed payload to FILE
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
+      --record-creation-timestamp                                                                set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value
   -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
+      --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
+      --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
+      --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
       --registry-password string                                                                 registry basic auth password
       --registry-referrers-mode registryReferrersMode                                            mode for fetching references from the registry. allowed: legacy, oci-1-1
+      --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")

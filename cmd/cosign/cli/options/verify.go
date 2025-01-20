@@ -30,6 +30,7 @@ type CommonVerifyOptions struct {
 	// it for other verify options.
 	ExperimentalOCI11     bool
 	PrivateInfrastructure bool
+	UseSignedTimestamps   bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -39,6 +40,9 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
 			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
+
+	cmd.Flags().BoolVar(&o.UseSignedTimestamps, "use-signed-timestamps", false,
+		"use signed timestamps if available")
 
 	cmd.Flags().BoolVar(&o.IgnoreTlog, "insecure-ignore-tlog", false,
 		"ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
@@ -154,9 +158,11 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 // VerifyBlobOptions is the top level wrapper for the `verify blob` command.
 type VerifyBlobOptions struct {
-	Key        string
-	Signature  string
-	BundlePath string
+	Key             string
+	Signature       string
+	BundlePath      string
+	NewBundleFormat bool
+	TrustedRootPath string
 
 	SecurityKey         SecurityKeyOptions
 	CertVerify          CertVerifyOptions
@@ -184,6 +190,13 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
 
+	// TODO: have this default to true as a breaking change
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
+		"output bundle in new format that contains all verification material")
+
+	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
+		"path to trusted root FILE")
+
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")
 }
@@ -206,9 +219,11 @@ func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 
 // VerifyBlobAttestationOptions is the top level wrapper for the `verify-blob-attestation` command.
 type VerifyBlobAttestationOptions struct {
-	Key           string
-	SignaturePath string
-	BundlePath    string
+	Key             string
+	SignaturePath   string
+	BundlePath      string
+	NewBundleFormat bool
+	TrustedRootPath string
 
 	PredicateOptions
 	CheckClaims bool
@@ -239,6 +254,13 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
+
+	// TODO: have this default to true as a breaking change
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
+		"output bundle in new format that contains all verification material")
+
+	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
+		"path to trusted root FILE")
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"if true, verifies the provided blob's sha256 digest exists as an in-toto subject within the attestation. If false, only the DSSE envelope is verified.")

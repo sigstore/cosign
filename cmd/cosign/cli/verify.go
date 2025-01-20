@@ -62,6 +62,10 @@ against the transparency log.`,
   # verify image with local certificate and certificate chain
   cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
+  # verify image with local certificate and certificate bundles of CA roots
+  # and (optionally) CA intermediates
+  cosign verify --cert cosign.crt --ca-roots ca-roots.pem --ca-intermediates ca-intermediates.pem <IMAGE>
+
   # verify image using keyless verification with the given certificate
   # chain and identity parameters, without Fulcio roots (for BYO PKI):
   cosign verify --cert-chain chain.crt --certificate-oidc-issuer https://issuer.example.com --certificate-identity foo@example.com <IMAGE>
@@ -110,12 +114,14 @@ against the transparency log.`,
 				CheckClaims:                  o.CheckClaims,
 				KeyRef:                       o.Key,
 				CertRef:                      o.CertVerify.Cert,
+				CertChain:                    o.CertVerify.CertChain,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
+				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
-				CertChain:                    o.CertVerify.CertChain,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				SCTRef:                       o.CertVerify.SCT,
 				Sk:                           o.SecurityKey.Use,
@@ -133,6 +139,7 @@ against the transparency log.`,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
@@ -217,6 +224,8 @@ against the transparency log.`,
 				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
+				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
@@ -237,6 +246,7 @@ against the transparency log.`,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
@@ -274,6 +284,12 @@ The blob may be specified as a path to a file or - for stdin.`,
 
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
+
+# Verify a signature with certificate and CA certificate chain
+  cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
+
+  # Verify a signature with CA roots and optional intermediate certificates
+  cosign verify-blob --certificate cert.pem --ca-roots caroots.pem [--ca-intermediates caintermediates.pem] --signature $sig <blob>
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
@@ -319,6 +335,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				Slot:                 o.SecurityKey.Slot,
 				RekorURL:             o.Rekor.URL,
 				BundlePath:           o.BundlePath,
+				NewBundleFormat:      o.NewBundleFormat,
 				RFC3161TimestampPath: o.RFC3161TimestampPath,
 				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
 			}
@@ -327,7 +344,10 @@ The blob may be specified as a path to a file or - for stdin.`,
 				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
+				CARoots:                      o.CertVerify.CARoots,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
 				SigRef:                       o.Signature,
+				TrustedRootPath:              o.TrustedRootPath,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
@@ -337,6 +357,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				SCTRef:                       o.CertVerify.SCT,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
@@ -385,6 +406,7 @@ The blob may be specified as a path to a file.`,
 				Slot:                 o.SecurityKey.Slot,
 				RekorURL:             o.Rekor.URL,
 				BundlePath:           o.BundlePath,
+				NewBundleFormat:      o.NewBundleFormat,
 				RFC3161TimestampPath: o.RFC3161TimestampPath,
 				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
 			}
@@ -394,8 +416,11 @@ The blob may be specified as a path to a file.`,
 				CheckClaims:                  o.CheckClaims,
 				SignaturePath:                o.SignaturePath,
 				CertVerifyOptions:            o.CertVerify,
+				TrustedRootPath:              o.TrustedRootPath,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
+				CARoots:                      o.CertVerify.CARoots,
+				CAIntermediates:              o.CertVerify.CAIntermediates,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
@@ -405,6 +430,7 @@ The blob may be specified as a path to a file.`,
 				SCTRef:                       o.CertVerify.SCT,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 			// We only use the blob if we are checking claims.
 			if len(args) == 0 && o.CheckClaims {

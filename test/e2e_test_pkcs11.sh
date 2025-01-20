@@ -19,14 +19,19 @@ set -o nounset
 set -o pipefail
 
 # Test pkcs11 token signing
-CONTAINER_ID=$(docker run -dit --name softhsm -v $(pwd):/root/cosign -p 2345:2345 vegardit/softhsm2-pkcs11-proxy@sha256:557a65d2a14e3986f2389d36ddce75609cbd8fb7ee6cf08a78adcc8236c2a80e)
+# using a fork of https://github.com/vegardit/docker-softhsm2-pkcs11-proxy that stopped to build 5 months ago
+CONTAINER_ID=$(docker run -dit --name softhsm -v $(pwd):/root/cosign -p 2345:2345 ghcr.io/cpanato/softhsm2-pkcs11-proxy:latest@sha256:2614345f73f9432d85365f0ac450c4bf0abac51b205b54241a94f9cf9e671772)
 
 docker exec -i $CONTAINER_ID /bin/bash << 'EOF'
 
+# to install the latest go that is not available in the alpine repository
+echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
 apk update
 
 # add make pcsc-lite-libs go command
-apk add make build-base go
+apk add make build-base
+
+apk add go@edge
 
 cd /root/cosign
 

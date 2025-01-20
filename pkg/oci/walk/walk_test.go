@@ -35,7 +35,7 @@ func TestMapImage(t *testing.T) {
 
 	t.Run("walk image, no errors", func(t *testing.T) {
 		calls := 0
-		err := SignedEntity(context.Background(), si, func(c context.Context, se oci.SignedEntity) error {
+		err := SignedEntity(context.Background(), si, func(_ context.Context, _ oci.SignedEntity) error {
 			calls++
 			return nil
 		})
@@ -49,7 +49,7 @@ func TestMapImage(t *testing.T) {
 
 	t.Run("error propagates", func(t *testing.T) {
 		want := errors.New("this is the error I expect")
-		got := SignedEntity(context.Background(), si, func(c context.Context, se oci.SignedEntity) error {
+		got := SignedEntity(context.Background(), si, func(_ context.Context, _ oci.SignedEntity) error {
 			return want
 		})
 		if !errors.Is(got, want) {
@@ -73,7 +73,7 @@ func TestMapImageIndex(t *testing.T) {
 
 	t.Run("six calls to identity mutator", func(t *testing.T) {
 		calls := 0
-		err := SignedEntity(context.Background(), sii, func(ctx context.Context, se oci.SignedEntity) error {
+		err := SignedEntity(context.Background(), sii, func(_ context.Context, _ oci.SignedEntity) error {
 			calls++
 			return nil
 		})

@@ -65,7 +65,7 @@ export KO_DOCKER_REPO=$(KO_PREFIX)
 GHCR_PREFIX ?= ghcr.io/sigstore/cosign
 LATEST_TAG ?=
 
-.PHONY: all lint test clean cosign cross
+.PHONY: all lint test clean cosign conformance cross
 all: cosign
 
 log-%:
@@ -83,6 +83,12 @@ cosign: $(SRCS)
 
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 $(GOEXE) build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
+
+install: $(SRCS)
+	CGO_ENABLED=1 $(GOEXE) install -trimpath -ldflags "$(LDFLAGS)" ./cmd/cosign
+
+install-pivkey-pkcs11key: $(SRCS)
+	CGO_ENABLED=1 $(GOEXE) install -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" ./cmd/cosign
 
 .PHONY: cross
 cross:
@@ -105,6 +111,9 @@ lint: golangci-lint ## Run golangci-lint linter
 
 test:
 	$(GOEXE) test $(shell $(GOEXE) list ./... | grep -v third_party/)
+
+conformance:
+	$(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/conformance
 
 clean:
 	rm -rf cosign
@@ -144,7 +153,7 @@ ko-cosign-dev:
 	$(create_kocache_path)
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KOCACHE=$(KOCACHE_PATH) KO_DEFAULTBASEIMAGE=gcr.io/distroless/static-debian12:debug-nonroot ko build --base-import-paths \
-		--platform=all --tags $(GIT_VERSION)-dev --tags $(GIT_HASH)-dev \
+		--platform=all --tags $(GIT_VERSION)-dev --tags $(GIT_HASH)-dev$(LATEST_TAG)-dev \
 		$(ARTIFACT_HUB_LABELS) --image-refs cosignDevImagerefs \
 		github.com/sigstore/cosign/v2/cmd/cosign
 

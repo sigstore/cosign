@@ -59,8 +59,10 @@ cosign verify-attestation [flags]
       --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --ca-intermediates string                                                                  path to a file of intermediate CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. The flag is optional and must be used together with --ca-roots, conflicts with --certificate-chain.
+      --ca-roots string                                                                          path to a bundle file of CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.
       --certificate string                                                                       path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.
-      --certificate-chain string                                                                 path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate
+      --certificate-chain string                                                                 path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.
       --certificate-github-workflow-name string                                                  contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
       --certificate-github-workflow-ref string                                                   contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.
       --certificate-github-workflow-repository string                                            contains the repository claim from the GitHub OIDC Identity token that contains the repository that the workflow run was based upon
@@ -83,7 +85,11 @@ cosign verify-attestation [flags]
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files with policies to be used for validation
       --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure
+      --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
+      --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
+      --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
       --registry-password string                                                                 registry basic auth password
+      --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
@@ -92,6 +98,7 @@ cosign verify-attestation [flags]
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string                                                       path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
       --type string                                                                              specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
+      --use-signed-timestamps                                                                    use signed timestamps if available
 ```
 
 ### Options inherited from parent commands

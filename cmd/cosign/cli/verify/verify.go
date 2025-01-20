@@ -34,7 +34,6 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -61,6 +60,8 @@ type VerifyCommand struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
+	CAIntermediates              string
+	CARoots                      string
 	CertChain                    string
 	CertOidcProvider             string
 	IgnoreSCT                    bool
@@ -78,6 +79,7 @@ type VerifyCommand struct {
 	NameOptions                  []name.Option
 	Offline                      bool
 	TSACertChainPath             string
+	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	ExperimentalOCI11            bool
@@ -132,34 +134,21 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
 		ExperimentalOCI11:            c.ExperimentalOCI11,
+		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	if c.TSACertChainPath != "" {
-		_, err := os.Stat(c.TSACertChainPath)
+	// If we are using signed timestamps, we need to load the TSA certificates
+	if co.UseSignedTimestamps {
+		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
-			return fmt.Errorf("unable to open timestamp certificate chain file: %w", err)
+			return fmt.Errorf("unable to load TSA certificates: %w", err)
 		}
-		// TODO: Add support for TUF certificates.
-		pemBytes, err := os.ReadFile(filepath.Clean(c.TSACertChainPath))
-		if err != nil {
-			return fmt.Errorf("error reading certification chain path file: %w", err)
-		}
-
-		leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(pemBytes)
-		if err != nil {
-			return fmt.Errorf("error splitting certificates: %w", err)
-		}
-		if len(leaves) > 1 {
-			return fmt.Errorf("certificate chain must contain at most one TSA certificate")
-		}
-		if len(leaves) == 1 {
-			co.TSACertificate = leaves[0]
-		}
-		co.TSAIntermediateCertificates = intermediates
-		co.TSARootCertificates = roots
+		co.TSACertificate = tsaCertificates.LeafCert
+		co.TSARootCertificates = tsaCertificates.RootCert
+		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
 	if !c.IgnoreTlog {
@@ -178,32 +167,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 	if keylessVerification(c.KeyRef, c.Sk) {
-		if c.CertChain != "" {
-			chain, err := loadCertChainFromFileOrURL(c.CertChain)
-			if err != nil {
-				return err
-			}
-			co.RootCerts = x509.NewCertPool()
-			co.RootCerts.AddCert(chain[len(chain)-1])
-			if len(chain) > 1 {
-				co.IntermediateCerts = x509.NewCertPool()
-				for _, cert := range chain[:len(chain)-1] {
-					co.IntermediateCerts.AddCert(cert)
-				}
-			}
-		} else {
-			// This performs an online fetch of the Fulcio roots. This is needed
-			// for verifying keyless certificates (both online and offline).
-			co.RootCerts, err = fulcio.GetRoots()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio roots: %w", err)
-			}
-			co.IntermediateCerts, err = fulcio.GetIntermediates()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio intermediates: %w", err)
-			}
+		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
+			return err
 		}
 	}
+
 	keyRef := c.KeyRef
 	certRef := c.CertRef
 
@@ -247,8 +215,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return err
 		}
-		if c.CertChain == "" {
-			// If no certChain is passed, the Fulcio root certificate will be used
+		switch {
+		case c.CertChain == "" && co.RootCerts == nil:
+			// If no certChain and no CARoots are passed, the Fulcio root certificate will be used
 			co.RootCerts, err = fulcio.GetRoots()
 			if err != nil {
 				return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -261,7 +230,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
-		} else {
+		case c.CertChain != "":
 			// Verify certificate with chain
 			chain, err := loadCertChainFromFileOrURL(c.CertChain)
 			if err != nil {
@@ -271,7 +240,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
+		case co.RootCerts != nil:
+			// Verify certificate with root (and if given, intermediate) certificate
+			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
+			if err != nil {
+				return err
+			}
+		default:
+			return errors.New("no certificate chain provided to verify certificate")
 		}
+
 		if c.SCTRef != "" {
 			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
 			if err != nil {
@@ -279,6 +257,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 			co.SCT = sct
 		}
+	default:
+		// Do nothing. Neither keyRef, c.Sk, nor certRef were set - can happen for example when using Fulcio and TSA.
+		// For an example see the TestAttachWithRFC3161Timestamp test in test/e2e_test.go.
 	}
 	co.SigVerifier = pubKey
 
@@ -526,4 +507,67 @@ func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
 		return false
 	}
 	return true
+}
+
+// loadCertsKeylessVerification loads certificates provided as a certificate chain or CA roots + CA intermediate
+// certificate files. If both certChain and caRootsFile are empty strings, the Fulcio roots are loaded.
+//
+// The co *cosign.CheckOpts is both input and output parameter - it gets updated
+// with the root and intermediate certificates needed for verification.
+func loadCertsKeylessVerification(certChainFile string,
+	caRootsFile string,
+	caIntermediatesFile string,
+	co *cosign.CheckOpts) error {
+	var err error
+	switch {
+	case certChainFile != "":
+		chain, err := loadCertChainFromFileOrURL(certChainFile)
+		if err != nil {
+			return err
+		}
+		co.RootCerts = x509.NewCertPool()
+		co.RootCerts.AddCert(chain[len(chain)-1])
+		if len(chain) > 1 {
+			co.IntermediateCerts = x509.NewCertPool()
+			for _, cert := range chain[:len(chain)-1] {
+				co.IntermediateCerts.AddCert(cert)
+			}
+		}
+	case caRootsFile != "":
+		caRoots, err := loadCertChainFromFileOrURL(caRootsFile)
+		if err != nil {
+			return err
+		}
+		co.RootCerts = x509.NewCertPool()
+		if len(caRoots) > 0 {
+			for _, cert := range caRoots {
+				co.RootCerts.AddCert(cert)
+			}
+		}
+		if caIntermediatesFile != "" {
+			caIntermediates, err := loadCertChainFromFileOrURL(caIntermediatesFile)
+			if err != nil {
+				return err
+			}
+			if len(caIntermediates) > 0 {
+				co.IntermediateCerts = x509.NewCertPool()
+				for _, cert := range caIntermediates {
+					co.IntermediateCerts.AddCert(cert)
+				}
+			}
+		}
+	default:
+		// This performs an online fetch of the Fulcio roots from a TUF repository.
+		// This is needed for verifying keyless certificates (both online and offline).
+		co.RootCerts, err = fulcio.GetRoots()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio roots: %w", err)
+		}
+		co.IntermediateCerts, err = fulcio.GetIntermediates()
+		if err != nil {
+			return fmt.Errorf("getting Fulcio intermediates: %w", err)
+		}
+	}
+
+	return nil
 }

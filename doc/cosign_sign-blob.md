@@ -38,12 +38,14 @@ cosign sign-blob [flags]
 ```
       --b64                              whether to base64 encode the output (default true)
       --bundle string                    write everything required to verify the blob to a FILE
+      --fulcio-auth-flow string          fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
       --fulcio-url string                address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                             help for sign-blob
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify             skip verifying fulcio published to the SCT (this should only be used for testing).
       --issue-certificate                issue a code signing certificate from Fulcio, even if a key is provided
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
+      --new-bundle-format                output bundle in new format that contains all verification material
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string   Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read

@@ -1,3 +1,169 @@
+# v2.4.2
+
+## Features
+
+* Detect if user supplied a valid protobuf bundle (#3931)
+* Add a log message if user doesn't provide `--trusted-root` (#3933)
+* Support mTLS towards container registry (#3922)
+* Add bundle create helper command (#3901)
+* Add trusted-root create helper command (#3876)
+
+## Bug Fixes
+
+* Fix copy --only for signatures + update/align docs (#3904)
+
+## Documentation
+
+* Remove usage.md from spec, point to client spec (#3918)
+* move reference from gcr to ghcr (#3897)
+
+## Contributors
+
+* Aditya Sirish
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Cody Soyland
+* Colleen Murphy
+* Hayden B
+* Jussi Kukkonen
+* Marco Franssen
+* Søren Juul
+* Zach Steindler
+
+# v2.4.1
+
+v2.4.1 largely contains bug fixes and updates dependencies.
+
+## Features
+
+* Added fuzzing coverage to multiple packages
+
+## Bug Fixes
+* Fix bug in attest-blob when using a timestamp authority with new bundles (#3877)
+* fix: documentation link for installation guide (#3884)
+
+## Contributors
+
+* AdamKorcz
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Hayden B
+* Hemil K
+* Sota Sugiura
+* Zach Steindler
+
+# v2.4.0
+
+v2.4.0 begins the modernization of the Cosign client, which includes:
+
+* Support for the newer Sigstore specification-compliant bundle format
+* Support for providing trust roots (e.g. Fulcio certificates, Rekor keys)
+  through a trust root file, instead of many different flags
+* Conformance test suite integration to verify signing and verification behavior
+
+In future updates, we'll include:
+
+* General support for the trust root file, instead of only when using the bundle
+  format during verification
+* Simplification of trust root flags and deprecation of the
+  Cosign-specific bundle format
+* Bundle support with container signing
+
+We have also moved nightly Cosign container builds to GHCR instead of GCR.
+
+## Features
+
+* Add new bundle support to `verify-blob` and `verify-blob-attestation` (#3796)
+* Adding protobuf bundle support to sign-blob and attest-blob (#3752)
+* Bump sigstore/sigstore to support `email_verified` as string or boolean (#3819)
+* Conformance testing for cosign (#3806)
+* move incremental builds per commit to GHCR instead of GCR (#3808)
+* Add support for recording creation timestamp for cosign attest (#3797)
+* Include SCT verification failure details in error message (#3799)
+
+## Contributors
+
+* Bob Callaway
+* Hayden B
+* Slavek Kabrda
+* Zach Steindler
+* Zsolt Horvath
+
+# v2.3.0
+
+## Features
+
+* Add PayloadProvider interface to decouple AttestationToPayloadJSON from oci.Signature interface (#3693)
+* add registry options to cosign save (#3645)
+* Add debug providers command. (#3728)
+* Make config layers in ociremote mountable (#3741)
+* upgrade to go1.22 (#3739)
+* adds tsa cert chain check for env var or tuf targets. (#3600)
+* add --ca-roots and --ca-intermediates flags to 'cosign verify' (#3464)
+* add handling of keyless verification for all verify commands (#3761)
+
+## Bug Fixes
+
+* fix: close attestationFile (#3679)
+* Set `bundleVerified` to true after Rekor verification (Resolves #3740)  (#3745)
+
+## Documentation
+
+* Document ImportKeyPair and LoadPrivateKey functions in pkg/cosign (#3776)
+
+## Testing
+
+* Refactor KMS E2E tests (#3684)
+* Remove sign\_blob\_test.sh test (#3707)
+* Remove KMS E2E test script (#3702)
+* Refactor insecure registry E2E tests (#3701)
+
+## Contributors
+
+* Billy Lynch
+* bminahan73
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Cody Soyland
+* Colleen Murphy
+* Dmitry Savintsev
+* guangwu
+* Hayden B
+* Hector Fernandez
+* ian hundere
+* Jason Power
+* Jon Johnson
+* Max Lambrecht
+* Meeki1l
+
+# v2.2.4
+
+## Bug Fixes
+
+* Fixes for GHSA-88jx-383q-w4qc and GHSA-95pr-fxf5-86gv (#3661)
+* ErrNoSignaturesFound should be used when there is no signature attached to an image. (#3526)
+* fix semgrep issues for dgryski.semgrep-go ruleset (#3541)
+* Honor creation timestamp for signatures again (#3549)
+
+## Features
+
+* Adds Support for Fulcio Client Credentials Flow, and Argument to Set Flow Explicitly (#3578)
+
+## Documentation
+
+* add oci bundle spec (#3622)
+* Correct help text of triangulate cmd (#3551)
+* Correct help text of verify-attestation policy argument (#3527)
+* feat: add OVHcloud MPR registry tested with cosign (#3639)
+
+## Testing
+
+* Refactor e2e-tests.yml workflow (#3627)
+* Clean up and clarify e2e scripts (#3628)
+* Don't ignore transparency log in tests if possible (#3528)
+* Make E2E tests hermetic (#3499)
+* add e2e test for pkcs11 token signing (#3495)
+
 # v2.2.3
 
 ## Bug Fixes
@@ -548,6 +714,24 @@ Critical breaking changes include:
 * Zack Newman
 * asraa
 * priyawadhwa
+
+# v1.13.6
+
+_Note: v1.13.3, .4, and .5 were skipped due to issues in the release pipeline_
+
+This release backports support for the latest TUF specification. We encourage users to upgrade to Cosign v2.
+
+## Updates
+* V1 go tuf update (#3598)
+* Update cloud build script to latest for v1.13.x (#3615)
+
+# v1.13.2
+
+This release backports a security fix. We encourage users to upgrade to Cosign v2.
+
+## Updates
+* [release-1.13] update builder image that uses go 1.19.4 (#2521)
+* Backport GHSA-vfp6-jrw2-99g9 in (#3364)
 
 # v1.13.1
 

@@ -53,6 +53,35 @@ pGAaLxggvtvuncMuTrG+cdmsR9SafSFKRS92NCxhOUonQ+NP6mLskIGzJZoQ5JvQ
 qGzRVIDGbNkrVHM0IsAtHRpC0rYrtZY+9OwiraGcsqUMLwwQdCA=
 -----END RSA PRIVATE KEY-----`
 
+// RSA 2048 key encoded with PCKS#1
+const validrsapkcs1 = `-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAqvVkqzBrMzl4TC5VsBgXnQiCo861QcB1TqdwgGzYkrNdF6fr
+UisPWgjMJixolmpwHv+088rsbiSlD9hc9DmzgCJPto7wvGeTILa9cNHCGKm12q7K
+TFnVUTH9z6D4E3F/IsI22Pg8+cSyeDn+LKxMadTohlcXJ8jqcH75KezoGngMp5OJ
+vqs93lkLep+UJMspV029z7PzF9uoT8gI02Adfq5Zkfu8VmIy8gkpYgTBCpNnD01u
+vo6HoAYG/mHqgPYivWBwi221GPjJWmCPB1rIJHlpAYUETA5jUY2UwP1oQx54ybcj
+eNjMRP5J0cGyOI8MT0j9ul7/DJde3Ds5A7BA9QIDAQABAoIBAQCJ3Q5rhsZMLsI2
+HP943FTei+heFOnStlNjNF/jEOOtmfsugnmgb50XrBSFjDZjZj44oVjZaQE06VQ6
+7O44/PcmE4VY4Ph91sCtFvC6NE1j+ifuzBnTbHY73iah81tawqIV86yrV7REbzzE
++29fsyqEBe/ltgG0Ua/NPHfOOYALJwZVx8ozkz7xOyU23kNxSzp3T0FBnYYIuzrI
+a4h7FVxGLbIJQ3xWBU5xkd4m7EqgFYkWCfSXAVoLT2z7eJSYAmITuiQXl8uDz1XY
+lWKgOwkRJrMVVD8hDME7Hoc/RlKmYX64IZ3lv70NuyKDPTuhmoIQRJ49mVaqdPtH
+v0Z9L0tBAoGBAMPFcJFaR+VdmsZ2DXQlsPQNAB064SYbIXx/pxNVoDYkHyMfZsf3
+vjf4gMKNsHTM4u812UpsE5762OqdVKmWXQc60mkuEk7N55iXuBJiJxSpuj6IbiLw
+ogV+B40UC9luOISQpDYdY1Km1ho4HRngNkXMlJ48tFuwIP3lwwz3FtFZAoGBAN+N
+wVssBvNhHzGfcUMxxCwJKfHCx1ANWuTe+AsDtpZRTExMcX1PH1euxUV9aII9Klg7
+A7FN1It78pDrQBNQJoeMON+5N53//geY6stDfhPkOoT8Zqg2VEz4WRihUgAUHESk
+pUVYSvEXG7J7AG5iGgn0B3P9PMvvReIHnTeQ1rz9AoGAWAR31NHrSyMniBzhdZvQ
+kBkcOQgU3AYMqyXVXyr7KfxZh3gBxNwMyKtQcKg1cn3/dZ8XP4+RzsNnLSxpOQni
+b3Kx0RomnwmSG5fy6Uj52x9oHd9G7SyVG7UK/hHKNgqJHIjPW4kg87MQxZ7+7nhQ
+zlbpZq9SQ3rPind3l2er+ZkCgYASFs9ZiEN7uBUlF8i7bjB4e7lYJbGpCZucP2qE
+waUpnqR03A6m3BsmJi8yQ0aMm1Rs1UGkPC8BpmLnVRHXPjoP58nGWJ9meotcpAQD
+tI9kHqiZkC7iV5sUq1fSRWN0PCxZZZU1+kH+JieIlqlfRTLkMUnVGd2shsz50DHp
+iB/IJQKBgAO3kRRVszif2jdo7gzDsiSQ+fSyD6yEE9eP+uNwLZw9bQhyW5wlXF+t
+dR5olNrc0bP542MHL5vigRnezq9hT1hbLkQg/MA2k5FrMHIZshfWITnI5B5I2sw6
+wu/XEVtNr8RincoHXjov4DiqgbLPWubM7FHLN5CW6nRLXhGkb4+7
+-----END RSA PRIVATE KEY-----`
+
 // RSA 2048 key encoded with PKCS#8
 const validrsapkcs8 = `-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCwDtRl4McMhk4Q
@@ -257,7 +286,7 @@ const ed25519key = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIALEbo1EFnWFqBK/wC+hhypG/8hXEerwdNetAoFoFVdv
 -----END PRIVATE KEY-----`
 
-// COSIGN labeled key
+// COSIGN labeled RSA key
 const pemcosignkey = `-----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----
 eyJrZGYiOnsibmFtZSI6InNjcnlwdCIsInBhcmFtcyI6eyJOIjozMjc2OCwiciI6
 OCwicCI6MX0sInNhbHQiOiJ4WWdoc09JTUxUWGNOT0RsclNIOUNKc1FlOVFnZmN1
@@ -268,6 +297,19 @@ eS9aVE1MSXRsL3B1YS9jWVJvbytLRGxMWWdmOW1kSjk4K1FnQW9oTktoYnJPMTcw
 MHdBY1JTMjFDOE4zQUNJRUVZaWpOMllBNnMraGJSbkhjUnd4eGhDMDFtb2FvL0dO
 Y1pmbEJheXZMV3pXblo4d2NDZ2ZpT1o1VXlRTEFJMHh0dnR6dEh3cTdDV1Vhd3V4
 RlhlNDZzck9TUE9SNHN6bytabWErUGovSFE9PSJ9
+-----END ENCRYPTED COSIGN PRIVATE KEY-----`
+
+// COSIGN labeled EC key
+const pemcosigneckey = `-----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----
+eyJrZGYiOnsibmFtZSI6InNjcnlwdCIsInBhcmFtcyI6eyJOIjo2NTUzNiwiciI6
+OCwicCI6MX0sInNhbHQiOiJHK3F5WTYrNzhNS0JzMXNGTGs1ajYwcS9kS3Z1czBW
+VkhlSHZybC9POTF3PSJ9LCJjaXBoZXIiOnsibmFtZSI6Im5hY2wvc2VjcmV0Ym94
+Iiwibm9uY2UiOiJRc2JGdG13WDRDK2ttV3ZCcVRaMEFGOUFYdk1jRmg1SCJ9LCJj
+aXBoZXJ0ZXh0IjoiREM5T28zeldiYVQzSXYwdFVnWEdycjUxYW1samwwNlQ5MTNP
+VkxPbWpuMWhnK2o2WXRUbWg3SGhZSlY1N2J5eGE0Q281bE9YYmRqbTJ3aklubEd1
+Um5aZCt5OExnekpSNzFSeEhKVzgrWmRlcFJmYWJMTjdHbDgrSFZEcERVQ3NxQnRh
+VngyblpGbFEwWUl1anZwbFphblNGaUVvdERLVGkxZ3VhUXIwUHNzYU01NXZxbTRY
+WS9rPSJ9
 -----END ENCRYPTED COSIGN PRIVATE KEY-----`
 
 // SIGSTORE labeled key
@@ -317,15 +359,21 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 }
 
 func TestReadingPrivatePemTypes(t *testing.T) {
+	pemECErrMsg := "parsing private key: x509: failed to parse private key (use ParseECPrivateKey instead for this key format)"
 	testCases := []struct {
 		pemType  string
 		pemData  []byte
 		expected error
 	}{
 		{
-			pemType:  "COSIGN PEM Type",
+			pemType:  "COSIGN PEM RSA Type",
 			pemData:  []byte(pemcosignkey),
 			expected: nil,
+		},
+		{
+			pemType:  "COSIGN PEM EC Type",
+			pemData:  []byte(pemcosigneckey),
+			expected: errors.New(pemECErrMsg),
 		},
 		{
 			pemType:  "SISTORE PEM Type",
@@ -337,7 +385,11 @@ func TestReadingPrivatePemTypes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.pemType, func(t *testing.T) {
 			_, err := LoadPrivateKey(tc.pemData, []byte("hello"))
-			require.Equal(t, tc.expected, err)
+			if tc.expected == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tc.expected.Error())
+			}
 		})
 	}
 }
@@ -361,6 +413,11 @@ func TestImportPrivateKey(t *testing.T) {
 		{
 			fileName: "validrsa.key",
 			pemData:  validrsa,
+			expected: nil,
+		},
+		{
+			fileName: "validrsapkcs1.key",
+			pemData:  validrsapkcs1,
 			expected: nil,
 		},
 		{
@@ -407,7 +464,7 @@ func TestImportPrivateKey(t *testing.T) {
 		{
 			fileName: "invalidecp224.key",
 			pemData:  invalidecp224,
-			expected: errors.New("error validating ecdsa key: unsupported ec curve, expected NIST P-256, P-384, or P-521"),
+			expected: errors.New("error validating ecdsa key: ECDSA curve P-224 not allowed"),
 		},
 		{
 			fileName: "invalidecunsupported.key",

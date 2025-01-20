@@ -9,7 +9,3 @@ sign-ci-containers: ko
 .PHONY: sign-ci-keyless-containers
 sign-ci-keyless-containers: ko
 	./scripts/sign-images-ci.sh
-
-.PHONY: sign-blob-experimental
-sign-blob-experimental:
-	./test/sign_blob_test.sh

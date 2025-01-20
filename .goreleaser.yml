@@ -1,17 +1,17 @@
 project_name: cosign
+version: 2
 
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
   - DOCKER_CLI_EXPERIMENTAL=enabled
   - COSIGN_YES=true
-  - LATEST_TAG=,latest
 
 # Prevents parallel builds from stepping on each others toes downloading modules
 before:
   hooks:
     - go mod tidy
-    - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+    - git --no-pager diff --exit-code go.mod go.sum
 
 gomod:
   proxy: true
@@ -115,8 +115,8 @@ builds:
     binary: cosign-darwin-arm64
     no_unique_dist_dir: true
     env:
-      - CC=aarch64-apple-darwin22-clang
-      - CXX=aarch64-apple-darwin22-clang++
+      - CC=aarch64-apple-darwin23-clang
+      - CXX=aarch64-apple-darwin23-clang++
     main: ./cmd/cosign
     flags:
       - -trimpath

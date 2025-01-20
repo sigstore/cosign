@@ -16,6 +16,7 @@
 package static
 
 import (
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -27,12 +28,18 @@ import (
 
 func TestNewFile(t *testing.T) {
 	payload := "this is the content!"
-	file, err := NewFile([]byte(payload), WithLayerMediaType("foo"), WithAnnotations(map[string]string{"foo": "bar"}))
+	f, err := NewFile([]byte(payload), WithLayerMediaType("foo"), WithAnnotations(map[string]string{"foo": "bar"}))
 	if err != nil {
 		t.Fatalf("NewFile() = %v", err)
 	}
 
-	layers, err := file.Layers()
+	timestampedFile, err := NewFile([]byte(payload), WithLayerMediaType("foo"), WithAnnotations(map[string]string{"foo": "bar"}), WithRecordCreationTimestamp(true))
+
+	if err != nil {
+		t.Fatalf("NewFile() = %v", err)
+	}
+
+	layers, err := f.Layers()
 	if err != nil {
 		t.Fatalf("Layers() = %v", err)
 	} else if got, want := len(layers), 1; got != want {
@@ -53,7 +60,7 @@ func TestNewFile(t *testing.T) {
 
 	t.Run("check media type", func(t *testing.T) {
 		wantMT := types.MediaType("foo")
-		gotMT, err := file.FileMediaType()
+		gotMT, err := f.FileMediaType()
 		if err != nil {
 			t.Fatalf("MediaType() = %v", err)
 		}
@@ -112,7 +119,7 @@ func TestNewFile(t *testing.T) {
 			t.Errorf("Uncompressed() = %s, wanted %s", got, want)
 		}
 
-		gotPayload, err := file.Payload()
+		gotPayload, err := f.Payload()
 		if err != nil {
 			t.Fatalf("Payload() = %v", err)
 		}
@@ -122,17 +129,24 @@ func TestNewFile(t *testing.T) {
 	})
 
 	t.Run("check date", func(t *testing.T) {
-		fileCfg, err := file.ConfigFile()
+		fileCfg, err := f.ConfigFile()
 		if err != nil {
 			t.Fatalf("ConfigFile() = %v", err)
 		}
 		if !fileCfg.Created.Time.IsZero() {
 			t.Errorf("Date of Signature was not Zero")
 		}
+		tsCfg, err := timestampedFile.ConfigFile()
+		if err != nil {
+			t.Fatalf("ConfigFile() = %v", err)
+		}
+		if tsCfg.Created.Time.IsZero() {
+			t.Errorf("Date of Signature was Zero")
+		}
 	})
 
 	t.Run("check annotations", func(t *testing.T) {
-		m, err := file.Manifest()
+		m, err := f.Manifest()
 		if err != nil {
 			t.Fatalf("Manifest() = %v", err)
 		}
@@ -141,4 +155,39 @@ func TestNewFile(t *testing.T) {
 			t.Errorf("Annotations = %s, wanted %s", got, want)
 		}
 	})
+
+	t.Run("huge file payload", func(t *testing.T) {
+		// default limit
+		f := file{
+			layer: &mockLayer{200000000},
+		}
+		want := errors.New("size of layer (200000000) exceeded the limit (134217728)")
+		_, err = f.Payload()
+		if err == nil || want.Error() != err.Error() {
+			t.Errorf("Payload() = %v, wanted %v", err, want)
+		}
+		// override limit
+		t.Setenv("COSIGN_MAX_ATTACHMENT_SIZE", "512MiB")
+		_, err = f.Payload()
+		if err != nil {
+			t.Errorf("Payload() = %v, wanted nil", err)
+		}
+	})
 }
+
+type mockLayer struct {
+	size int64
+}
+
+func (m *mockLayer) Size() (int64, error) {
+	return m.size, nil
+}
+
+func (m *mockLayer) Uncompressed() (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader("data")), nil
+}
+
+func (m *mockLayer) Digest() (v1.Hash, error)            { panic("not implemented") }
+func (m *mockLayer) DiffID() (v1.Hash, error)            { panic("not implemented") }
+func (m *mockLayer) Compressed() (io.ReadCloser, error)  { panic("not implemented") }
+func (m *mockLayer) MediaType() (types.MediaType, error) { panic("not implemented") }

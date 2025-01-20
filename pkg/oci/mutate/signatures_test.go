@@ -16,8 +16,11 @@
 package mutate
 
 import (
+	"errors"
 	"testing"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/empty"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
@@ -38,17 +41,17 @@ func TestAppendSignatures(t *testing.T) {
 		t.Fatalf("NewSignature() = %v", err)
 	}
 
-	oneSig, err := AppendSignatures(base, s1)
+	oneSig, err := AppendSignatures(base, false, s1)
 	if err != nil {
 		t.Fatalf("AppendSignatures() = %v", err)
 	}
 
-	twoSig, err := AppendSignatures(oneSig, s2)
+	twoSig, err := AppendSignatures(oneSig, false, s2)
 	if err != nil {
 		t.Fatalf("AppendSignatures() = %v", err)
 	}
 
-	threeSig, err := AppendSignatures(oneSig, s2, s3)
+	threeSig, err := AppendSignatures(oneSig, true, s2, s3)
 	if err != nil {
 		t.Fatalf("AppendSignatures() = %v", err)
 	}
@@ -73,7 +76,73 @@ func TestAppendSignatures(t *testing.T) {
 
 	if testCfg, err := threeSig.ConfigFile(); err != nil {
 		t.Fatalf("ConfigFile() = %v", err)
-	} else if !testCfg.Created.Time.IsZero() {
-		t.Errorf("Date of Signature was not Zero")
+	} else if testCfg.Created.Time.IsZero() {
+		t.Errorf("Date of Signature was Zero")
 	}
+
+	if testDefaultCfg, err := twoSig.ConfigFile(); err != nil {
+		t.Fatalf("ConfigFile() = %v", err)
+	} else if !testDefaultCfg.Created.Time.IsZero() {
+		t.Errorf("Date of Signature was Zero")
+	}
+}
+
+func TestGet(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseLayers   int
+		appendLayers int
+		wantError    error
+	}{
+		{
+			name:         "within limit",
+			baseLayers:   1,
+			appendLayers: 1,
+			wantError:    nil,
+		},
+		{
+			name:         "base exceeds limit",
+			baseLayers:   2000,
+			appendLayers: 1,
+			wantError:    errors.New("number of layers (2001) exceeded the limit (1000)"),
+		},
+		{
+			name:         "append exceeds limit",
+			baseLayers:   1,
+			appendLayers: 1300,
+			wantError:    errors.New("number of layers (1301) exceeded the limit (1000)"),
+		},
+		{
+			name:         "sum exceeds limit",
+			baseLayers:   666,
+			appendLayers: 666,
+			wantError:    errors.New("number of layers (1332) exceeded the limit (1000)"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sa := sigAppender{
+				base: &mockOCISignatures{
+					signatures: make([]oci.Signature, test.baseLayers),
+				},
+				sigs: make([]oci.Signature, test.appendLayers),
+			}
+			_, err := sa.Get()
+			if test.wantError != nil && test.wantError.Error() != err.Error() {
+				t.Fatalf("Get() = %v, wanted %v", err, test.wantError)
+			}
+			if test.wantError == nil && err != nil {
+				t.Fatalf("Get() = %v, wanted %v", err, test.wantError)
+			}
+		})
+	}
+}
+
+type mockOCISignatures struct {
+	v1.Image
+	signatures []oci.Signature
+}
+
+func (m *mockOCISignatures) Get() ([]oci.Signature, error) {
+	return m.signatures, nil
 }

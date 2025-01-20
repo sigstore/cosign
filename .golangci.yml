@@ -41,7 +41,10 @@ linters-settings:
       # Reference: https://github.com/sigstore/cosign/issues/2236
       - 'os\.Getenv.*'
       - 'os\.LookupEnv.*'
-    exclude_godoc_examples: false
+    exclude-godoc-examples: false
+  gosec:
+    excludes:
+      - G115  # integer overflow conversion int64 -> uint64
 output:
   uniq-by-line: false
 issues:

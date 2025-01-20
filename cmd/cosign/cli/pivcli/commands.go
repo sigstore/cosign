@@ -29,7 +29,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-piv/piv-go/piv"
+	"github.com/go-piv/piv-go/v2/piv"
 	"github.com/manifoldco/promptui"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
@@ -46,7 +46,7 @@ func SetManagementKeyCmd(_ context.Context, oldKey, newKey string, randomKey boo
 	if err != nil {
 		return err
 	}
-	var newBytes *[24]byte
+	var newBytes *[]byte
 	if randomKey {
 		if !Confirm("Resetting management key to random value. You must factory reset the device to change this value") {
 			return nil
@@ -286,14 +286,14 @@ func ResetKeyCmd(ctx context.Context) error {
 	return yk.Reset()
 }
 
-func keyBytes(s string) (*[24]byte, error) {
+func keyBytes(s string) (*[]byte, error) {
 	if s == "" {
 		return &piv.DefaultManagementKey, nil
 	}
 	if len(s) > 24 {
 		return nil, errors.New("key too long, must be <24 characters")
 	}
-	ret := [24]byte{}
+	ret := []byte{}
 	copy(ret[:], s)
 	return &ret, nil
 }
@@ -312,8 +312,8 @@ var Confirm = func(p string) bool {
 	return strings.ToLower(result) == "y"
 }
 
-func randomManagementKey() (*[24]byte, error) {
-	var newKeyBytes [24]byte
+func randomManagementKey() (*[]byte, error) {
+	var newKeyBytes []byte
 	n, err := io.ReadFull(rand.Reader, newKeyBytes[:])
 	if err != nil {
 		return nil, err

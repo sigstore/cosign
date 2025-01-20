@@ -61,6 +61,7 @@ func AttestBlob() *cobra.Command {
 				Slot:                     o.SecurityKey.Slot,
 				FulcioURL:                o.Fulcio.URL,
 				IDToken:                  o.Fulcio.IdentityToken,
+				FulcioAuthFlow:           o.Fulcio.AuthFlow,
 				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
 				RekorURL:                 o.Rekor.URL,
 				OIDCIssuer:               o.OIDC.Issuer,
@@ -72,6 +73,7 @@ func AttestBlob() *cobra.Command {
 				TSAServerURL:             o.TSAServerURL,
 				RFC3161TimestampPath:     o.RFC3161TimestampPath,
 				BundlePath:               o.BundlePath,
+				NewBundleFormat:          o.NewBundleFormat,
 			}
 			v := attest.AttestBlobCommand{
 				KeyOpts:           ko,

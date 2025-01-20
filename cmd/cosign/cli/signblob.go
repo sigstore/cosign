@@ -57,13 +57,13 @@ func SignBlob() *cobra.Command {
   cosign sign-blob --key hashivault://[KEY] <FILE>`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if options.NOf(o.Key, o.SecurityKey.Use) > 1 {
 				return &options.KeyParseError{}
 			}
 			return nil
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -75,6 +75,7 @@ func SignBlob() *cobra.Command {
 				Slot:                           o.SecurityKey.Slot,
 				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
+				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
 				InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
 				RekorURL:                       o.Rekor.URL,
 				OIDCIssuer:                     o.OIDC.Issuer,
@@ -83,6 +84,7 @@ func SignBlob() *cobra.Command {
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
 				OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
 				BundlePath:                     o.BundlePath,
+				NewBundleFormat:                o.NewBundleFormat,
 				SkipConfirmation:               o.SkipConfirmation,
 				TSAClientCACert:                o.TSAClientCACert,
 				TSAClientCert:                  o.TSAClientCert,

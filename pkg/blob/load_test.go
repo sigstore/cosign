@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -58,7 +59,7 @@ func TestLoadFile(t *testing.T) {
 func TestLoadURL(t *testing.T) {
 	data := []byte("test")
 
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.Write(data)
 	}))
 	defer server.Close()
@@ -95,5 +96,54 @@ func TestLoadURL(t *testing.T) {
 	_, err = LoadFileOrURL("invalid://url")
 	if err == nil {
 		t.Error("LoadFileOrURL(): expected error for invalid scheme")
+	}
+}
+
+func TestLoadURLWithChecksum(t *testing.T) {
+	data := []byte("test")
+
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.Write(data)
+	}))
+	defer server.Close()
+
+	// default behavior with sha256
+	actual, err := LoadFileOrURLWithChecksum(
+		server.URL,
+		"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+	)
+	if err != nil {
+		t.Errorf("Reading from HTTP failed: %v", err)
+	} else if !bytes.Equal(actual, data) {
+		t.Errorf("LoadFileOrURL(HTTP) = '%s'; want '%s'", actual, data)
+	}
+
+	// override checksum algo to sha512
+	actual, err = LoadFileOrURLWithChecksum(
+		server.URL,
+		"sha512:ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff",
+	)
+	if err != nil {
+		t.Errorf("Reading from HTTP failed: %v", err)
+	} else if !bytes.Equal(actual, data) {
+		t.Errorf("LoadFileOrURL(HTTP) = '%s'; want '%s'", actual, data)
+	}
+
+	// ensure it fails with the wrong checksum
+	_, err = LoadFileOrURLWithChecksum(
+		server.URL,
+		"certainly not a correct checksum value",
+	)
+	if err == nil || !strings.Contains(err.Error(), "incorrect checksum") {
+		t.Errorf("Expected an 'incorrect checksum' error, got: %v", err)
+	}
+
+	// ensure it fails with incorrect algorithm
+	_, err = LoadFileOrURLWithChecksum(
+		server.URL,
+		"sha321123:foobar",
+	)
+	if err == nil || !strings.Contains(err.Error(), "unsupported checksum") {
+		t.Errorf("Expected an 'unsupported checksum' error, got: %v", err)
 	}
 }

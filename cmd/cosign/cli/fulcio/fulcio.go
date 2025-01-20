@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
@@ -33,14 +34,14 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"go.step.sm/crypto/jose"
 	"golang.org/x/term"
 )
 
 const (
-	flowNormal = "normal"
-	flowDevice = "device"
-	flowToken  = "token"
+	flowNormal            = "normal"
+	flowDevice            = "device"
+	flowToken             = "token"
+	flowClientCredentials = "client_credentials"
 )
 
 type oidcConnector interface {
@@ -89,6 +90,8 @@ func getCertForOauthID(sv signature.SignerVerifier, fc api.LegacyClient, connect
 func GetCert(_ context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
 	c := &realConnector{}
 	switch flow {
+	case flowClientCredentials:
+		c.flow = oauthflow.NewClientCredentialsFlow(oidcIssuer)
 	case flowDevice:
 		c.flow = oauthflow.NewDeviceFlowTokenGetterForIssuer(oidcIssuer)
 	case flowNormal:
@@ -210,7 +213,7 @@ func NewClient(fulcioURL string) (api.LegacyClient, error) {
 // or a path to an identity token via the --identity-token flag
 func idToken(s string) (string, error) {
 	// If this is a valid raw token or is empty, just return it
-	if _, err := jose.ParseSigned(s); err == nil || s == "" {
+	if _, err := jwt.ParseSigned(s); err == nil || s == "" {
 		return s, nil
 	}
 

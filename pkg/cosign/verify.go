@@ -36,7 +36,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime"
@@ -154,6 +154,8 @@ type CheckOpts struct {
 	TSARootCertificates []*x509.Certificate
 	// TSAIntermediateCertificates are the set of intermediates for chain building
 	TSAIntermediateCertificates []*x509.Certificate
+	// UseSignedTimestamps enables timestamp verification using a TSA
+	UseSignedTimestamps bool
 
 	// IgnoreTlog skip tlog verification
 	IgnoreTlog bool
@@ -757,12 +759,15 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
-	acceptableRFC3161Timestamp, err := VerifyRFC3161Timestamp(sig, co)
-	if err != nil {
-		return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
-	}
-	if acceptableRFC3161Timestamp != nil {
-		acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
+	var acceptableRFC3161Timestamp *timestamp.Timestamp
+	if co.UseSignedTimestamps {
+		acceptableRFC3161Timestamp, err = VerifyRFC3161Timestamp(sig, co)
+		if err != nil {
+			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
+		}
+		if acceptableRFC3161Timestamp != nil {
+			acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
+		}
 	}
 
 	if !co.IgnoreTlog {
@@ -801,6 +806,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 			}
 			t := time.Unix(*e.IntegratedTime, 0)
 			acceptableRekorBundleTime = &t
+			bundleVerified = true
 		}
 	}
 

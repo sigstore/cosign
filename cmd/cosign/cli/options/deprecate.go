@@ -19,3 +19,8 @@ const SBOMAttachmentDeprecation = "WARNING: SBOM attachments are deprecated " +
 	"and support will be removed in a Cosign release soon after 2024-02-22 " +
 	"(see https://github.com/sigstore/cosign/issues/2755). " +
 	"Instead, please use SBOM attestations."
+
+const RootWithoutChecksumDeprecation = "WARNING: Fetching initial root from URL " +
+	"without providing its checksum is deprecated and will be disallowed in " +
+	"a future Cosign release. Please provide the initial root checksum " +
+	"via the --root-checksum argument."

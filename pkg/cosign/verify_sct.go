@@ -108,7 +108,7 @@ func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *Tru
 			}
 			err = ctutil.VerifySCT(pubKeyMetadata.PubKey, []*ctx509.Certificate{cert, certChain[0]}, sct, true)
 			if err != nil {
-				return fmt.Errorf("error verifying embedded SCT")
+				return fmt.Errorf("error verifying embedded SCT: %w", err)
 			}
 			if pubKeyMetadata.Status != tuf.Active {
 				fmt.Fprintf(os.Stderr, "**Info** Successfully verified embedded SCT using an expired verification key\n")

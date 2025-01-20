@@ -45,6 +45,8 @@ import (
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/cosign/v2/test"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
@@ -57,6 +59,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestSignaturesRef(t *testing.T) {
@@ -235,6 +238,7 @@ func TestVerifyBlob(t *testing.T) {
 		key        []byte
 		cert       *x509.Certificate
 		bundlePath string
+		newBundle  bool
 		// The rekor entry response when Rekor is enabled
 		rekorEntry     []*models.LogEntry
 		skipTlogVerify bool
@@ -319,6 +323,26 @@ func TestVerifyBlob(t *testing.T) {
 			bundlePath: makeLocalBundle(t, *rekorSigner, otherBytes, []byte(otherSignature),
 				pubKeyBytes, true),
 			shouldErr: true,
+		},
+		{
+			name:           "valid signature with public key - new bundle",
+			blob:           blobBytes,
+			signature:      blobSignature,
+			key:            pubKeyBytes,
+			bundlePath:     makeLocalNewBundle(t, []byte(blobSignature), sha256.Sum256(blobBytes)),
+			newBundle:      true,
+			skipTlogVerify: true,
+			shouldErr:      false,
+		},
+		{
+			name:           "invalid signature with public key - new bundle",
+			blob:           blobBytes,
+			signature:      otherSignature,
+			key:            pubKeyBytes,
+			bundlePath:     makeLocalNewBundle(t, []byte(blobSignature), sha256.Sum256(blobBytes)),
+			newBundle:      true,
+			skipTlogVerify: true,
+			shouldErr:      false,
 		},
 		{
 			name:      "invalid signature with public key",
@@ -553,7 +577,7 @@ func TestVerifyBlob(t *testing.T) {
 				entries = append(entries, *entry)
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
+				func(w http.ResponseWriter, _ *http.Request) {
 					w.Header().Set("Content-Type", "application/json")
 					json.NewEncoder(w).Encode(entries)
 				}))
@@ -563,6 +587,7 @@ func TestVerifyBlob(t *testing.T) {
 			cmd := VerifyBlobCmd{
 				KeyOpts: options.KeyOpts{
 					BundlePath:           tt.bundlePath,
+					NewBundleFormat:      tt.newBundle,
 					RekorURL:             testServer.URL,
 					RFC3161TimestampPath: tt.tsPath,
 					TSACertChainPath:     tt.tsChainPath,
@@ -591,6 +616,13 @@ func TestVerifyBlob(t *testing.T) {
 			if tt.key != nil {
 				keyPath := writeBlobFile(t, td, string(tt.key), "key.pem")
 				cmd.KeyRef = keyPath
+			}
+			if tt.newBundle {
+				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
+				cmd.KeyOpts.RekorURL = ""
+				cmd.KeyOpts.RFC3161TimestampPath = ""
+				cmd.KeyOpts.TSACertChainPath = ""
+				cmd.CertChain = ""
 			}
 
 			err := cmd.Exec(context.Background(), blobPath)
@@ -752,6 +784,36 @@ func makeLocalBundleWithoutRekorBundle(t *testing.T, sig []byte, svBytes []byte)
 	}
 	bundlePath := filepath.Join(td, "bundle.sig")
 	if err := os.WriteFile(bundlePath, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return bundlePath
+}
+
+func makeLocalNewBundle(t *testing.T, sig []byte, digest [32]byte) string {
+	b, err := bundle.MakeProtobufBundle("hint", []byte{}, nil, []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b.Content = &protobundle.Bundle_MessageSignature{
+		MessageSignature: &protocommon.MessageSignature{
+			MessageDigest: &protocommon.HashOutput{
+				Algorithm: protocommon.HashAlgorithm_SHA2_256,
+				Digest:    digest[:],
+			},
+			Signature: sig,
+		},
+	}
+
+	contents, err := protojson.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// write bundle to disk
+	td := t.TempDir()
+	bundlePath := filepath.Join(td, "bundle.sigstore.json")
+	if err := os.WriteFile(bundlePath, contents, 0644); err != nil {
 		t.Fatal(err)
 	}
 	return bundlePath
@@ -1570,6 +1632,14 @@ func writeTimestampFile(t *testing.T, td string, ts *bundle.RFC3161Timestamp, na
 	}
 	path := filepath.Join(td, name)
 	if err := os.WriteFile(path, jsonBundle, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func writeTrustedRootFile(t *testing.T, td, contents string) string {
+	path := filepath.Join(td, "trusted_root.json")
+	if err := os.WriteFile(path, []byte(contents), 0644); err != nil {
 		t.Fatal(err)
 	}
 	return path

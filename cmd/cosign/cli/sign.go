@@ -83,11 +83,14 @@ race conditions or (worse) malicious tampering.
   cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
 
   # sign a container image by manually setting the container image identity
-  cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>`,
+  cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>
+
+  # sign a container image and honor the creation timestamp of the signature
+  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			switch o.Attachment {
 			case "sbom":
 				fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
@@ -107,6 +110,7 @@ race conditions or (worse) malicious tampering.
 				Slot:                           o.SecurityKey.Slot,
 				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
+				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
 				InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
 				RekorURL:                       o.Rekor.URL,
 				OIDCIssuer:                     o.OIDC.Issuer,

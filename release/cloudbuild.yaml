@@ -32,20 +32,20 @@ steps:
         echo "Checking out ${_GIT_TAG}"
         git checkout ${_GIT_TAG}
 
-  - name: 'gcr.io/projectsigstore/cosign:v2.2.2-dev@sha256:1a49e2f6cf3580935863d9d8d46066db9aad3dbd673ca24cb83d143221c6e64b'
+  - name: 'ghcr.io/sigstore/cosign/cosign:v2.4.1-dev@sha256:a1bb112f1758703aa1d222bf30b9655d04cf196c0b7feaf3479d1222c2283590'
     dir: "go/src/sigstore/cosign"
     env:
       - TUF_ROOT=/tmp
     args:
       - 'verify'
-      - 'ghcr.io/gythialy/golang-cross:v1.21.6-0@sha256:c00bdb060aff03e8042f41ed0c11a0bbbb01e2ea3f65733ce037497fcb83d5d7'
+      - 'ghcr.io/gythialy/golang-cross:v1.23.4-0@sha256:fac6f9675e3e3a4ccc2b8cdab87b907cabae3a9c4e046d16816b9876315005e4'
       - '--certificate-oidc-issuer'
       - "https://token.actions.githubusercontent.com"
       - '--certificate-identity'
-      - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.21.6-0"
+      - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.23.4-0"
 
   # maybe we can build our own image and use that to be more in a safe side
-  - name: ghcr.io/gythialy/golang-cross:v1.21.6-0@sha256:c00bdb060aff03e8042f41ed0c11a0bbbb01e2ea3f65733ce037497fcb83d5d7
+  - name: ghcr.io/gythialy/golang-cross:v1.23.4-0@sha256:fac6f9675e3e3a4ccc2b8cdab87b907cabae3a9c4e046d16816b9876315005e4
     entrypoint: /bin/sh
     dir: "go/src/sigstore/cosign"
     env:
@@ -68,7 +68,7 @@ steps:
         gcloud auth configure-docker \
         && make release
 
-  - name: ghcr.io/gythialy/golang-cross:v1.21.6-0@sha256:c00bdb060aff03e8042f41ed0c11a0bbbb01e2ea3f65733ce037497fcb83d5d7
+  - name: ghcr.io/gythialy/golang-cross:v1.23.4-0@sha256:fac6f9675e3e3a4ccc2b8cdab87b907cabae3a9c4e046d16816b9876315005e4
     entrypoint: 'bash'
     dir: "go/src/sigstore/cosign"
     env:
@@ -84,6 +84,7 @@ steps:
       - COSIGN_YES=true
       - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
       - GITHUB_USER=${_GITHUB_USER}
+      - LATEST_TAG=",latest"
     secretEnv:
       - GITHUB_TOKEN
     args:

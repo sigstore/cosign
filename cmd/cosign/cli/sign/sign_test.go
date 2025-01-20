@@ -219,7 +219,7 @@ func Test_ParseOCIReference(t *testing.T) {
 		{"image:@sha256:abcdef", ""},
 	}
 	for _, tt := range tests {
-		stderr := ui.RunWithTestCtx(func(ctx context.Context, write ui.WriteFunc) {
+		stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
 			ParseOCIReference(ctx, tt.ref)
 		})
 		if len(tt.expectedWarning) > 0 {

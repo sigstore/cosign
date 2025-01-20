@@ -23,7 +23,7 @@ defaults:
   run:
     shell: bash
 
-permissions: read-all
+permissions: {}
 
 jobs:
   cip-test:
@@ -33,31 +33,36 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.25.x
+        - v1.27.x
         tuf-root:
         - remote
         - air-gap
 
+    permissions:
+      contents: read
+
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.6.14"
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.11"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
       COSIGN_YES: "true"
 
     steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-    - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
-        go-version: '1.21'
+        persist-credentials: false
+    - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+      with:
+        go-version-file: 'go.mod'
         check-latest: true
 
     # will use the latest release available for ko
-    - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+    - uses: ko-build/setup-ko@3aebd0597dc1e9d1a26bcfdb7cbeb19c131d3037 # v0.7
 
     - name: Install yq
-      uses: mikefarah/yq@9adde1ac14bb283b8955d2b0d567bcaf3c69e639 # v4.42.1
+      uses: mikefarah/yq@4839dbbf80445070a31c7a9c1055da527db2d5ee # v4.44.6
 
     - name: build cosign
       run: |
@@ -105,25 +110,25 @@ jobs:
 
     - name: Sign demoimage with cosign
       run: |
-        ./cosign sign --rekor-url ${{ env.REKOR_URL }} --fulcio-url ${{ env.FULCIO_URL }} --yes --allow-insecure-registry ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+        ./cosign sign --rekor-url ${REKOR_URL} --fulcio-url ${FULCIO_URL} --yes --allow-insecure-registry ${demoimage} --identity-token ${OIDC_TOKEN}
 
     - name: Create attestation for it
       run: |
         echo -n 'foobar e2e test' > ./predicate-file
-        ./cosign attest --predicate ./predicate-file --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --yes ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+        ./cosign attest --predicate ./predicate-file --fulcio-url ${FULCIO_URL} --rekor-url ${REKOR_URL} --allow-insecure-registry --yes ${demoimage} --identity-token ${OIDC_TOKEN}
 
     - name: Sign a blob
       run: |
-        ./cosign sign-blob README.md --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --output-certificate cert.pem --output-signature sig --yes --identity-token ${{ env.OIDC_TOKEN }}
+        ./cosign sign-blob README.md --fulcio-url ${FULCIO_URL} --rekor-url ${REKOR_URL} --output-certificate cert.pem --output-signature sig --yes --identity-token ${OIDC_TOKEN}
 
     - name: Verify with cosign
       run: |
-        ./cosign verify --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
+        ./cosign verify --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
 
     - name: Verify custom attestation with cosign, works
       run: |
         echo '::group:: test custom verify-attestation success'
-        if ! ./cosign verify-attestation --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" --policy ./test/testdata/policies/cue-works.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} ; then
+        if ! ./cosign verify-attestation --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" --policy ./test/testdata/policies/cue-works.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} ; then
           echo Failed to verify attestation with a valid policy
           exit 1
         else
@@ -134,7 +139,7 @@ jobs:
     - name: Verify custom attestation with cosign, fails
       run: |
         echo '::group:: test custom verify-attestation success'
-        if ./cosign verify-attestation --policy ./test/testdata/policies/cue-fails.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
+        if ./cosign verify-attestation --policy ./test/testdata/policies/cue-fails.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
           echo custom verify-attestation succeeded with cue policy that should not work
           exit 1
         else
@@ -144,20 +149,20 @@ jobs:
 
     - name: Verify a blob
       run: |
-        ./cosign verify-blob README.md --rekor-url ${{ env.REKOR_URL }} --certificate ./cert.pem --signature sig --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
+        ./cosign verify-blob README.md --rekor-url ${REKOR_URL} --certificate ./cert.pem --signature sig --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+      uses: chainguard-dev/actions/kind-diag@9ba949ac63357c725a9438f3e05a1e33d313498e # main
 
     - name: Create vuln attestation for it
       run: |
-        ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --type vuln --fulcio-url ${{ env.FULCIO_URL }} --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry --yes ${{ env.demoimage }} --identity-token ${{ env.OIDC_TOKEN }}
+        ./cosign attest --predicate ./test/testdata/attestations/vuln-predicate.json --type vuln --fulcio-url ${FULCIO_URL} --rekor-url ${REKOR_URL} --allow-insecure-registry --yes ${demoimage} --identity-token ${OIDC_TOKEN}
 
     - name: Verify vuln attestation with cosign, works
       run: |
         echo '::group:: test vuln verify-attestation success'
-        if ! ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-works.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
+        if ! ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-works.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
           echo Failed to verify attestation with a valid policy
           exit 1
         else
@@ -168,7 +173,7 @@ jobs:
     - name: Verify vuln attestation with cosign, fails
       run: |
         echo '::group:: test vuln verify-attestation success'
-        if ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-fails.cue --rekor-url ${{ env.REKOR_URL }} --allow-insecure-registry ${{ env.demoimage }} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
+        if ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-fails.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
           echo verify-attestation succeeded with cue policy that should not work
           exit 1
         else
