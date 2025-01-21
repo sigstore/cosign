@@ -21,6 +21,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -40,6 +42,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -93,11 +96,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
-	blobBytes, err := payloadBytes(blobRef)
-	if err != nil {
-		return err
-	}
-
 	co := &cosign.CheckOpts{
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSHA,
@@ -112,10 +110,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		NewBundleFormat:              c.KeyOpts.NewBundleFormat || checkNewBundle(c.BundlePath),
 	}
 
+	// Keys are optional!
 	var cert *x509.Certificate
 	opts := make([]static.Option, 0)
-
-	// Keys are optional!
 	switch {
 	case c.KeyRef != "":
 		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
@@ -148,18 +145,52 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
 		}
 
+		if co.TrustedMaterial == nil {
+			if c.TrustedRootPath == "" {
+				ui.Infof(ctx, "no --trusted-root specified; fetching public good instance verification material via TUF")
+				// Assume we're using public good instance; fetch via TUF
+				// TODO: allow custom TUF settings
+				co.TrustedMaterial, err = root.FetchTrustedRoot()
+				if err != nil {
+					return err
+				}
+			} else {
+				co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
 		if err != nil {
 			return err
 		}
 
-		_, err = cosign.VerifyNewBundle(ctx, co, sgverify.WithArtifact(bytes.NewReader(blobBytes)), bundle)
+		var artifactPolicyOption sgverify.ArtifactPolicyOption
+		blobBytes, err := payloadBytes(blobRef)
+		if err != nil {
+			alg, digest, payloadDigestError := payloadDigest(blobRef)
+			if payloadDigestError != nil {
+				return err
+			}
+			artifactPolicyOption = sgverify.WithArtifactDigest(alg, digest)
+		} else {
+			artifactPolicyOption = sgverify.WithArtifact(bytes.NewReader(blobBytes))
+		}
+
+		_, err = cosign.VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
 		if err != nil {
 			return err
 		}
 
 		ui.Infof(ctx, "Verified OK")
 		return nil
+	}
+
+	blobBytes, err := payloadBytes(blobRef)
+	if err != nil {
+		return err
 	}
 
 	if c.TrustedRootPath != "" {
@@ -359,4 +390,16 @@ func payloadBytes(blobRef string) ([]byte, error) {
 		return nil, err
 	}
 	return blobBytes, nil
+}
+
+func payloadDigest(blobRef string) (string, []byte, error) {
+	hexAlg, hexDigest, ok := strings.Cut(blobRef, ":")
+	if !ok {
+		return "", nil, fmt.Errorf("invalid digest format")
+	}
+	digestBytes, err := hex.DecodeString(hexDigest)
+	if err != nil {
+		return "", nil, err
+	}
+	return hexAlg, digestBytes, nil
 }
