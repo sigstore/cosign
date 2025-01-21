@@ -186,6 +186,13 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
 		}
 
+		if co.TrustedMaterial == nil {
+			co.TrustedMaterial, err = loadTrustedRoot(ctx, c.TrustedRootPath)
+			if err != nil {
+				return err
+			}
+		}
+
 		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
 		if err != nil {
 			return err

@@ -146,19 +146,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 
 		if co.TrustedMaterial == nil {
-			if c.TrustedRootPath == "" {
-				ui.Infof(ctx, "no --trusted-root specified; fetching public good instance verification material via TUF")
-				// Assume we're using public good instance; fetch via TUF
-				// TODO: allow custom TUF settings
-				co.TrustedMaterial, err = root.FetchTrustedRoot()
-				if err != nil {
-					return err
-				}
-			} else {
-				co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
-				if err != nil {
-					return err
-				}
+			co.TrustedMaterial, err = loadTrustedRoot(ctx, c.TrustedRootPath)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -402,4 +392,14 @@ func payloadDigest(blobRef string) (string, []byte, error) {
 		return "", nil, err
 	}
 	return hexAlg, digestBytes, nil
+}
+
+func loadTrustedRoot(ctx context.Context, trustedRootPath string) (*root.TrustedRoot, error) {
+	if trustedRootPath != "" {
+		return root.NewTrustedRootFromPath(trustedRootPath)
+	}
+	ui.Infof(ctx, "no --trusted-root specified; fetching public good instance verification material via TUF")
+	// Assume we're using public good instance; fetch via TUF
+	// TODO: allow custom TUF settings
+	return root.FetchTrustedRoot()
 }
