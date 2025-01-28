@@ -182,7 +182,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 
 	if co.NewBundleFormat {
-		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.RekorURL, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SCTRef) > 0 {
+		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SCTRef) > 0 {
 			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
 		}
 
