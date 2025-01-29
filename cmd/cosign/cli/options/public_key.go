@@ -34,9 +34,9 @@ func (o *PublicKeyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
-	_ = cmd.MarkFlagFilename("key")
+	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
 
 	cmd.Flags().StringVar(&o.OutFile, "outfile", "",
 		"path to a payload file to use rather than generating one")
-	_ = cmd.MarkFlagFilename("outfile")
+	_ = cmd.MarkFlagFilename("outfile", publicKeyExts...)
 }

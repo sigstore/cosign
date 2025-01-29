@@ -39,6 +39,7 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.IdentityToken, "identity-token", "",
 		"identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.")
+	// _ = cmd.MarkFlagFilename("identity-token") // no typical extensions
 
 	cmd.Flags().StringVar(&o.AuthFlow, "fulcio-auth-flow", "",
 		"fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials")
