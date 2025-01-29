@@ -52,6 +52,7 @@ import (
 type VerifyCommand struct {
 	options.RegistryOptions
 	options.CertVerifyOptions
+	options.CommonVerifyOptions
 	CheckClaims                  bool
 	KeyRef                       string
 	CertRef                      string
