@@ -1,0 +1,4 @@
+payroll:
+  for: 'chais fitzwater'
+    amount: '$20,000.00(USD)',
+DATE START: 'TODAY'
