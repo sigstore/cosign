@@ -31,6 +31,8 @@ type CommonVerifyOptions struct {
 	ExperimentalOCI11     bool
 	PrivateInfrastructure bool
 	UseSignedTimestamps   bool
+	NewBundleFormat       bool
+	TrustedRootPath       string
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -56,6 +58,12 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().IntVar(&o.MaxWorkers, "max-workers", cosign.DefaultMaxWorkers,
 		"the amount of maximum workers for parallel executions")
+
+	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
+		"Path to a Sigstore TrustedRoot JSON file.")
+
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
+		"expect the signature/attestation to be packaged in a Sigstore bundle")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.

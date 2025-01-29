@@ -333,9 +333,9 @@ The blob may be specified as a path to a file or - for stdin.`,
 				Slot:                 o.SecurityKey.Slot,
 				RekorURL:             o.Rekor.URL,
 				BundlePath:           o.BundlePath,
-				NewBundleFormat:      o.CertVerify.NewBundleFormat,
 				RFC3161TimestampPath: o.RFC3161TimestampPath,
 				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
+				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
 			}
 			verifyBlobCmd := &verify.VerifyBlobCmd{
 				KeyOpts:                      ko,
@@ -345,7 +345,6 @@ The blob may be specified as a path to a file or - for stdin.`,
 				CARoots:                      o.CertVerify.CARoots,
 				CAIntermediates:              o.CertVerify.CAIntermediates,
 				SigRef:                       o.Signature,
-				TrustedRootPath:              o.CertVerify.TrustedRootPath,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
@@ -356,6 +355,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
@@ -404,9 +404,9 @@ The blob may be specified as a path to a file.`,
 				Slot:                 o.SecurityKey.Slot,
 				RekorURL:             o.Rekor.URL,
 				BundlePath:           o.BundlePath,
-				NewBundleFormat:      o.CertVerify.NewBundleFormat,
 				RFC3161TimestampPath: o.RFC3161TimestampPath,
 				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
+				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
 			}
 			v := verify.VerifyBlobAttestationCommand{
 				KeyOpts:                      ko,
@@ -414,7 +414,6 @@ The blob may be specified as a path to a file.`,
 				CheckClaims:                  o.CheckClaims,
 				SignaturePath:                o.SignaturePath,
 				CertVerifyOptions:            o.CertVerify,
-				TrustedRootPath:              o.CertVerify.TrustedRootPath,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
 				CARoots:                      o.CertVerify.CARoots,
@@ -429,6 +428,7 @@ The blob may be specified as a path to a file.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 			}
 			// We only use the blob if we are checking claims.
 			if len(args) == 0 && o.CheckClaims {
