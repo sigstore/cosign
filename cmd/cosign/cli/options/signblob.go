@@ -56,25 +56,25 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("key")
 
 	cmd.Flags().BoolVar(&o.Base64Output, "b64", true,
 		"whether to base64 encode the output")
 
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
-	_ = cmd.Flags().SetAnnotation("output-signature", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("output-signature")
 
 	// TODO: remove when output flag is fully deprecated
 	cmd.Flags().StringVar(&o.Output, "output", "", "write the signature to FILE")
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("output-certificate")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
-	_ = cmd.Flags().SetAnnotation("bundle", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("bundle")
 
 	// TODO: have this default to true as a breaking change
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
@@ -103,7 +103,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"write the RFC3161 timestamp to a file")
-	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("rfc3161-timestamp")
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")

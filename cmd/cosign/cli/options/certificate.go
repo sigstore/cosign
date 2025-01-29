@@ -46,7 +46,7 @@ var _ Interface = (*RekorOptions)(nil)
 func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
-	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate", "cert")
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
 		"The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
@@ -82,18 +82,18 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 			"when building the certificate chains for the signing certificate. "+
 			"The flag is optional and must be used together with --ca-roots, conflicts with "+
 			"--certificate-chain.")
-	_ = cmd.Flags().SetAnnotation("ca-intermediates", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("ca-intermediates", "cert")
 	cmd.Flags().StringVar(&o.CARoots, "ca-roots", "",
 		"path to a bundle file of CA certificates in PEM format which will be needed "+
 			"when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.")
-	_ = cmd.Flags().SetAnnotation("ca-roots", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("ca-roots", "cert")
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.")
-	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate-chain", "cert")
 	cmd.MarkFlagsMutuallyExclusive("ca-roots", "certificate-chain")
 	cmd.MarkFlagsMutuallyExclusive("ca-intermediates", "certificate-chain")
 

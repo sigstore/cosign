@@ -44,7 +44,7 @@ var _ Interface = (*RootOptions)(nil)
 func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&o.OutputFile, "output-file", "",
 		"log output to a file")
-	_ = cmd.Flags().SetAnnotation("output-file", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("output-file")
 
 	cmd.PersistentFlags().BoolVarP(&o.Verbose, "verbose", "d", false,
 		"log debug output")
