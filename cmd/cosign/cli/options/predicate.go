@@ -94,6 +94,7 @@ func (o *PredicateLocalOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Path, "predicate", "",
 		"path to the predicate file.")
+	_ = cmd.MarkFlagFilename("predicate", sbomExts...)
 	_ = cmd.MarkFlagRequired("predicate")
 }
 
