@@ -30,5 +30,7 @@ cosignImagerefs
 bundle
 signature
 certificate
+sigstore-conformance
+conformance
 
 **verify-experimental*
