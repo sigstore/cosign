@@ -36,11 +36,11 @@ var _ Interface = (*ImportKeyPairOptions)(nil)
 func (o *ImportKeyPairOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.Key, "key", "k", "",
 		"import key pair to use for signing")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
 
 	cmd.Flags().StringVarP(&o.OutputKeyPrefix, "output-key-prefix", "o", "import-cosign",
 		"name used for outputted key pairs")
-	_ = cmd.Flags().SetAnnotation("output-key-prefix", cobra.BashCompFilenameExt, []string{})
+	// _ = cmd.MarkFlagFilename("output-key-prefix") // no typical extensions
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for overwriting existing key")

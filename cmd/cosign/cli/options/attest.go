@@ -54,18 +54,18 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{"key"})
+	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
 
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the X.509 certificate in PEM format to include in the OCI Signature")
-	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Included in the OCI Signature")
-	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
 	cmd.Flags().BoolVar(&o.NoUpload, "no-upload", false,
 		"do not upload the generated attestation")

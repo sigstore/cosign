@@ -54,6 +54,6 @@ func (o *UploadWASMOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVarP(&o.File, "file", "f", "",
 		"path to the wasm file to upload")
-	_ = cmd.Flags().SetAnnotation("file", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("file", wasmExts...)
 	_ = cmd.MarkFlagRequired("file")
 }

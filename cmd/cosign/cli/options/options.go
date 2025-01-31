@@ -21,3 +21,37 @@ type Interface interface {
 	// AddFlags adds this options' flags to the cobra command.
 	AddFlags(cmd *cobra.Command)
 }
+
+var bundleExts = []string{
+	"bundle",
+}
+var certificateExts = []string{
+	"cert",
+	"crt",
+	"pem",
+}
+var logExts = []string{
+	"log",
+}
+var moduleExts = []string{
+	"dll",
+	"dylib",
+	"so",
+}
+var privateKeyExts = []string{
+	"key",
+}
+var publicKeyExts = []string{
+	"pub",
+}
+var sbomExts = []string{
+	"json",
+	"xml",
+	"spdx",
+}
+var signatureExts = []string{
+	"sig",
+}
+var wasmExts = []string{
+	"wasm",
+}
