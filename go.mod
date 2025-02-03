@@ -32,7 +32,7 @@ require (
 	github.com/open-policy-agent/opa v0.68.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/fulcio v1.6.6
-	github.com/sigstore/protobuf-specs v0.3.3
+	github.com/sigstore/protobuf-specs v0.4.0
 	github.com/sigstore/rekor v1.3.8
 	github.com/sigstore/sigstore v1.8.12
 	github.com/sigstore/sigstore-go v0.6.3-0.20241213162223-378b249542ef
@@ -55,7 +55,7 @@ require (
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.28.0
 	google.golang.org/api v0.218.0
-	google.golang.org/protobuf v1.36.3
+	google.golang.org/protobuf v1.36.4
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
