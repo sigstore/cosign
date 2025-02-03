@@ -69,9 +69,11 @@ func Attest() *cobra.Command {
   # attach an attestation to a container image and honor the creation timestamp of the signature
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>`,
 
-		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.Predicate.Statement == "" && len(args) != 1 {
+				return cobra.ExactArgs(1)(cmd, args)
+			}
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -113,6 +115,7 @@ func Attest() *cobra.Command {
 				CertPath:                o.Cert,
 				CertChainPath:           o.CertChain,
 				NoUpload:                o.NoUpload,
+				StatementPath:           o.Predicate.Statement,
 				PredicatePath:           o.Predicate.Path,
 				PredicateType:           o.Predicate.Type,
 				Replace:                 o.Replace,

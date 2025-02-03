@@ -59,6 +59,7 @@ cosign attest-blob [flags]
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
       --sk                                whether to use a hardware security key
       --slot string                       security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --statement string                  path to the statement file.
       --timestamp-client-cacert string    path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server
       --timestamp-client-cert string      path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server
       --timestamp-client-key string       path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server
