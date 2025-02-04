@@ -35,7 +35,7 @@ require (
 	github.com/sigstore/protobuf-specs v0.4.0
 	github.com/sigstore/rekor v1.3.9
 	github.com/sigstore/sigstore v1.8.12
-	github.com/sigstore/sigstore-go v0.6.3-0.20241213162223-378b249542ef
+	github.com/sigstore/sigstore-go v0.7.0
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.12
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.12
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.12
