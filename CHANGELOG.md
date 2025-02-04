@@ -2,6 +2,10 @@
 
 ## Features
 
+* Updated open-policy-agent to 1.1.0 library (#4036)
+  - Note that only Rego v0 policies are supported at this time
+* Add UseSignedTimestamps to CheckOpts, refactor TSA options (#4006)
+* Add support for verifying root checksum in cosign initialize (#3953)
 * Detect if user supplied a valid protobuf bundle (#3931)
 * Add a log message if user doesn't provide `--trusted-root` (#3933)
 * Support mTLS towards container registry (#3922)
@@ -10,6 +14,10 @@
 
 ## Bug Fixes
 
+* fix: set tls config while retaining other fields from default http transport (#4007)
+* policy fuzzer: ignore known panics (#3993)
+* Fix for multiple WithRemote options (#3982)
+* Add nightly conformance test workflow (#3979)
 * Fix copy --only for signatures + update/align docs (#3904)
 
 ## Documentation
@@ -19,6 +27,7 @@
 
 ## Contributors
 
+* AdamKorcz
 * Aditya Sirish
 * Bob Callaway
 * Carlos Tadeu Panato Junior
@@ -27,7 +36,10 @@
 * Hayden B
 * Jussi Kukkonen
 * Marco Franssen
+* Nianyu Shen
+* Slavek Kabrda
 * Søren Juul
+* Warren Hodgkinson
 * Zach Steindler
 
 # v2.4.1
