@@ -45,8 +45,6 @@ linters-settings:
   gosec:
     excludes:
       - G115  # integer overflow conversion int64 -> uint64
-output:
-  uniq-by-line: false
 issues:
   exclude-rules:
     - path: _test\.go
@@ -58,6 +56,7 @@ issues:
         - forbidigo
   max-issues-per-linter: 0
   max-same-issues: 0
+  uniq-by-line: false
 run:
   issues-exit-code: 1
   timeout: 10m
