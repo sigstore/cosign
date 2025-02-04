@@ -22,7 +22,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/rego"
 )
 
 // The query below should meet the following requirements:
@@ -48,7 +49,9 @@ func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 
 	r := rego.New(
 		rego.Query(QUERY),
-		rego.Load(entrypoints, nil))
+		rego.Load(entrypoints, nil),
+		rego.SetRegoVersion(ast.RegoV0),
+	)
 
 	query, err := r.PrepareForEval(ctx)
 	if err != nil {
@@ -97,7 +100,9 @@ func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) (warnings 
 
 	r := rego.New(
 		rego.Query(query),
-		rego.Module(module, moduleInput))
+		rego.Module(module, moduleInput),
+		rego.SetRegoVersion(ast.RegoV0),
+	)
 
 	evalQuery, err := r.PrepareForEval(ctx)
 	if err != nil {
