@@ -29,7 +29,7 @@ require (
 	github.com/moby/term v0.5.2
 	github.com/mozillazg/docker-credential-acr-helper v0.4.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
-	github.com/open-policy-agent/opa v0.68.0
+	github.com/open-policy-agent/opa v1.1.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/fulcio v1.6.6
 	github.com/sigstore/protobuf-specs v0.4.0
@@ -93,7 +93,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230923063757-afb1ddc0824c // indirect
-	github.com/agnivade/levenshtein v1.1.1 // indirect
+	github.com/agnivade/levenshtein v1.2.0 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect
 	github.com/alibabacloud-go/cr-20160607 v1.0.1 // indirect
 	github.com/alibabacloud-go/cr-20181201 v1.0.10 // indirect
@@ -167,7 +167,6 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/flatbuffers v2.0.8+incompatible // indirect
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -237,7 +236,7 @@ require (
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
-	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
+	github.com/tchap/go-patricia/v2 v2.3.2 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
 	github.com/theupdateframework/go-tuf v0.7.0 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
@@ -251,7 +250,7 @@ require (
 	go.mongodb.org/mongo-driver v1.14.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.57.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0 // indirect
 	go.opentelemetry.io/otel v1.34.0 // indirect
 	go.opentelemetry.io/otel/metric v1.34.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
