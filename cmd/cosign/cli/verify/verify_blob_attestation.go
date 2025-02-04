@@ -123,6 +123,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		IgnoreSCT:                    c.IgnoreSCT,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 	}
 	var h v1.Hash
 	if c.CheckClaims {
@@ -154,15 +155,15 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 
-	// Set up TSA, Fulcio roots and tlog public keys and clients.
-	if c.RFC3161TimestampPath != "" && !(c.TSACertChainPath != "" || c.UseSignedTimestamps) {
-		return fmt.Errorf("either TSA certificate chain path must be provided or use-signed-timestamps must be set when using RFC3161 timestamp path")
+	if c.RFC3161TimestampPath != "" && !co.UseSignedTimestamps {
+		return fmt.Errorf("when specifying --rfc3161-timestamp-path, you must also specify --use-signed-timestamps or --timestamp-certificate-chain")
+	} else if c.RFC3161TimestampPath == "" && co.UseSignedTimestamps {
+		return fmt.Errorf("when specifying --use-signed-timestamps or --timestamp-certificate-chain, you must also specify --rfc3161-timestamp-path")
 	}
-
-	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
+	if co.UseSignedTimestamps {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
-			return fmt.Errorf("unable to load or get TSA certificates: %w", err)
+			return fmt.Errorf("unable to load TSA certificates: %w", err)
 		}
 		co.TSACertificate = tsaCertificates.LeafCert
 		co.TSARootCertificates = tsaCertificates.RootCert

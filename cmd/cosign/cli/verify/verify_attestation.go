@@ -72,17 +72,6 @@ type VerifyAttestationCommand struct {
 	UseSignedTimestamps          bool
 }
 
-func (c *VerifyAttestationCommand) loadTSACertificates(ctx context.Context) (*cosign.TSACertificates, error) {
-	if c.TSACertChainPath == "" && !c.UseSignedTimestamps {
-		return nil, fmt.Errorf("TSA certificate chain path not provided and use-signed-timestamps not set")
-	}
-	tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load TSA certificates: %w", err)
-	}
-	return tsaCertificates, nil
-}
-
 // Exec runs the verification command
 func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (err error) {
 	if len(images) == 0 {
@@ -119,6 +108,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
+		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
@@ -131,8 +121,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 	}
 
-	if c.TSACertChainPath != "" || c.UseSignedTimestamps {
-		tsaCertificates, err := c.loadTSACertificates(ctx)
+	// If we are using signed timestamps, we need to load the TSA certificates
+	if co.UseSignedTimestamps {
+		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
 		}
