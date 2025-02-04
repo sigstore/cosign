@@ -33,7 +33,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/fulcio v1.6.6
 	github.com/sigstore/protobuf-specs v0.4.0
-	github.com/sigstore/rekor v1.3.8
+	github.com/sigstore/rekor v1.3.9
 	github.com/sigstore/sigstore v1.8.12
 	github.com/sigstore/sigstore-go v0.6.3-0.20241213162223-378b249542ef
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.12
@@ -42,7 +42,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.12
 	github.com/sigstore/timestamp-authority v1.2.4
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
 	github.com/spiffe/go-spiffe/v2 v2.5.0
 	github.com/stretchr/testify v1.10.0
