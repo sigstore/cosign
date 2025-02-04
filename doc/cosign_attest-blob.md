@@ -59,6 +59,7 @@ cosign attest-blob [flags]
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
       --sk                                whether to use a hardware security key
       --slot string                       security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --statement string                  path to the statement file.
       --timestamp-server-url string       url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                       whether or not to upload to the tlog (default true)
       --type string                       specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
