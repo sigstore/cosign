@@ -236,7 +236,7 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 			return newExpiringKey, nil
 		})
 	} else { //nolint:gocritic
-		// We are verifiying with a certificate
+		// We are verifying with a certificate
 		if !co.IgnoreSCT {
 			verifierOptions = append(verifierOptions, verify.WithSignedCertificateTimestamps(1))
 		}
