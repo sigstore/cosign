@@ -84,7 +84,7 @@ func VerifierForKeyRefWithOpts(ctx context.Context, keyRef string, opts ...signa
 	return signature.LoadVerifierWithOpts(pubKey, opts...)
 }
 
-func loadKey(keyPath string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
+func loadKey(keyPath string, pf cosign.PassFunc, opts ...signature.LoadOption) (signature.SignerVerifier, error) {
 	kb, err := blob.LoadFileOrURL(keyPath)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func loadKey(keyPath string, pf cosign.PassFunc) (signature.SignerVerifier, erro
 			return nil, err
 		}
 	}
-	return cosign.LoadPrivateKey(kb, pass)
+	return cosign.LoadPrivateKeyWithOpts(kb, pass, opts...)
 }
 
 // LoadPublicKeyRaw loads a verifier from a PEM-encoded public key
@@ -118,6 +118,10 @@ func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (s
 }
 
 func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (signature.SignerVerifier, error) {
+	return SignerVerifierFromKeyRefWithOpts(ctx, keyRef, pf)
+}
+
+func SignerVerifierFromKeyRefWithOpts(ctx context.Context, keyRef string, pf cosign.PassFunc, opts ...signature.LoadOption) (signature.SignerVerifier, error) {
 	switch {
 	case strings.HasPrefix(keyRef, pkcs11key.ReferenceScheme):
 		pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
@@ -146,7 +150,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		if len(s.Data) > 0 {
-			return cosign.LoadPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"])
+			return cosign.LoadPrivateKeyWithOpts(s.Data["cosign.key"], s.Data["cosign.password"], opts...)
 		}
 	case strings.HasPrefix(keyRef, gitlab.ReferenceScheme):
 		split := strings.Split(keyRef, "://")
@@ -167,7 +171,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 			return nil, err
 		}
 
-		return cosign.LoadPrivateKey([]byte(pk), []byte(pass))
+		return cosign.LoadPrivateKeyWithOpts([]byte(pk), []byte(pass), opts...)
 	}
 
 	if strings.Contains(keyRef, "://") {
@@ -182,7 +186,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		// ProviderNotFoundError is okay; loadKey handles other URL schemes
 	}
 
-	return loadKey(keyRef, pf)
+	return loadKey(keyRef, pf, opts...)
 }
 
 func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier, error) {

@@ -65,7 +65,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		return nil, err
 	}
 
-	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
+	sv, err := SignerFromKeyOptsWithSVOpts(ctx, "", "", ko)
 	if err != nil {
 		return nil, err
 	}
