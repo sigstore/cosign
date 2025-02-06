@@ -17,7 +17,6 @@ package cosign
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -167,6 +166,60 @@ type CheckOpts struct {
 	ExperimentalOCI11 bool
 }
 
+type validateCertOpts struct {
+	chain  []*x509.Certificate
+	svOpts []signature.LoadOption
+	pool   *x509.CertPool
+}
+
+type ValidateAndUnpackCertOption func(*validateCertOpts)
+
+func WithChain(chain []*x509.Certificate) ValidateAndUnpackCertOption {
+	return func(o *validateCertOpts) {
+		o.chain = chain
+	}
+}
+
+func WithPool(pool *x509.CertPool) ValidateAndUnpackCertOption {
+	return func(o *validateCertOpts) {
+		o.pool = pool
+	}
+}
+
+func WithSignerVerifierOptions(svOpts ...signature.LoadOption) ValidateAndUnpackCertOption {
+	return func(o *validateCertOpts) {
+		o.svOpts = svOpts
+	}
+}
+
+func makeValidateAndUnpackCertOpts(co *CheckOpts, opts ...ValidateAndUnpackCertOption) (*validateCertOpts, error) {
+	o := &validateCertOpts{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	// Pool Option has precedence over chain option
+	if o.pool == nil && o.chain != nil {
+		if len(o.chain) == 0 {
+			return nil, errors.New("no chain provided to validate certificate")
+		}
+		rootPool := x509.NewCertPool()
+		rootPool.AddCert(o.chain[len(o.chain)-1])
+		co.RootCerts = rootPool
+
+		subPool := x509.NewCertPool()
+		for _, c := range o.chain[:len(o.chain)-1] {
+			subPool.AddCert(c)
+		}
+		o.pool = subPool
+	}
+	// If no pool or chain is provided, use the one from the CheckOpts
+	if o.pool == nil {
+		o.pool = co.IntermediateCerts
+	}
+	return o, nil
+}
+
 // This is a substitutable signature verification function that can be used for verifying
 // attestations of blobs.
 type signatureVerificationFn func(
@@ -223,14 +276,33 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 // certificate chains up to a trusted root using intermediate certificate chain coming from CheckOpts.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	return ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
+	return ValidateAndUnpackCertWithOpts(cert, co)
 }
 
 // ValidateAndUnpackCertWithIntermediates creates a Verifier from a certificate. Verifies that the
 // certificate chains up to a trusted root using intermediate cert passed as separate argument.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
-	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+	return ValidateAndUnpackCertWithOpts(cert, co, WithPool(intermediateCerts))
+}
+
+// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
+// chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
+// Optionally verifies the subject and issuer of the certificate.
+func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
+	return ValidateAndUnpackCertWithOpts(cert, co, WithChain(chain))
+}
+
+// ValidateAndUnpackCertWithOpts creates a Verifier from a certificate. Verifies that the certificate
+// chains up to a trusted root. Optionally verifies the subject and issuer of the certificate.
+// Accept chain and signerVerifierOptions as optional parameters.
+func ValidateAndUnpackCertWithOpts(cert *x509.Certificate, co *CheckOpts, opts ...ValidateAndUnpackCertOption) (signature.Verifier, error) {
+	o, err := makeValidateAndUnpackCertOpts(co, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	verifier, err := signature.LoadVerifierWithOpts(cert.PublicKey, o.svOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
@@ -250,7 +322,7 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	}
 
 	// Now verify the cert, then the signature.
-	chains, err := TrustedCert(cert, co.RootCerts, intermediateCerts)
+	chains, err := TrustedCert(cert, co.RootCerts, o.pool)
 
 	if err != nil {
 		return nil, err
@@ -413,26 +485,6 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 		}
 	}
 	return nil
-}
-
-// ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
-// chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
-// Optionally verifies the subject and issuer of the certificate.
-func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	if len(chain) == 0 {
-		return nil, errors.New("no chain provided to validate certificate")
-	}
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(chain[len(chain)-1])
-	co.RootCerts = rootPool
-
-	subPool := x509.NewCertPool()
-	for _, c := range chain[:len(chain)-1] {
-		subPool.AddCert(c)
-	}
-	co.IntermediateCerts = subPool
-
-	return ValidateAndUnpackCert(cert, co)
 }
 
 func tlogValidateEntry(ctx context.Context, client *client.Rekor, rekorPubKeys *TrustedTransparencyLogPubKeys,
