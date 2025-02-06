@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -38,7 +37,7 @@ import (
 
 // CopyCmd implements the logic to copy the supplied container image and signatures.
 // nolint
-func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool, copyOnly, platform string) error {
+func CopyCmd(ctx context.Context, regOpts options.RegistryOptions, srcImg, dstImg string, sigOnly, force bool, copyOnly []string, platform string) error {
 	no := regOpts.NameOptions()
 	srcRef, err := name.ParseReference(srcImg, no...)
 	if err != nil {
@@ -183,9 +182,9 @@ func remoteCopy(ctx context.Context, pusher *remote.Pusher, src, dest name.Refer
 	return pusher.Push(ctx, dest, got)
 }
 
-func parseOnlyOpt(onlyFlag string, sigOnly bool) ([]tagMap, error) {
+func parseOnlyOpt(onlyFlag []string, sigOnly bool) ([]tagMap, error) {
 	var tags []tagMap
-	tagSet := sets.New(strings.Split(onlyFlag, ",")...)
+	tagSet := sets.New(onlyFlag...)
 
 	if sigOnly {
 		fmt.Fprintf(os.Stderr, "--sig-only is deprecated, use --only=sig instead")
