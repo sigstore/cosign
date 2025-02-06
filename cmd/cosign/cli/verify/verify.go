@@ -230,7 +230,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
-			pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			pubKey, err = cosign.ValidateAndUnpackCertWithOpts(cert, co, cosign.WithChain(chain))
 			if err != nil {
 				return err
 			}

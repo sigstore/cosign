@@ -891,7 +891,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if pool == nil {
 			pool = co.IntermediateCerts
 		}
-		verifier, err = ValidateAndUnpackCertWithIntermediates(cert, co, pool)
+		verifier, err = ValidateAndUnpackCertWithOpts(cert, co, WithPool(pool))
 		if err != nil {
 			return false, err
 		}

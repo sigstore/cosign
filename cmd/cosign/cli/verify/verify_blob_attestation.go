@@ -46,6 +46,7 @@ import (
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // VerifyBlobAttestationCommand verifies an attestation on a supplied blob
@@ -283,7 +284,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			bundleCert, err := loadCertFromPEM(certBytes)
 			if err != nil {
 				// check if cert is actually a public key
-				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
+				co.SigVerifier, err = sigs.LoadPublicKeyRawWithOpts(certBytes, signatureoptions.WithHash(crypto.SHA256))
 				if err != nil {
 					return fmt.Errorf("loading verifier from bundle: %w", err)
 				}

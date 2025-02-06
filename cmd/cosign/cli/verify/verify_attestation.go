@@ -202,7 +202,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			if err != nil {
 				return err
 			}
-			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithOpts(cert, co, cosign.WithChain(chain))
 			if err != nil {
 				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
