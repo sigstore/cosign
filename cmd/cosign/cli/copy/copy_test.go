@@ -142,10 +142,8 @@ func TestParseOnlyOpt(t *testing.T) {
 		result, err := parseOnlyOpt(test.only, test.sigOnly)
 		if (err != nil) != test.expectErr {
 			t.Errorf("unexpected failure from parseOnlyOpt: expectErr=%v, err = %v", test.expectErr, err)
-		} else {
-			if !compareTagMaps(result, test.expectTagMap) {
-				t.Errorf("result tag map did not match expected value: result: %v expected: %v", result, test.expectTagMap)
-			}
+		} else if !compareTagMaps(result, test.expectTagMap) {
+			t.Errorf("result tag map did not match expected value: result: %v expected: %v", result, test.expectTagMap)
 		}
 	}
 }

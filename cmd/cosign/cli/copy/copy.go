@@ -191,10 +191,11 @@ func parseOnlyOpt(onlyFlag []string, sigOnly bool) ([]tagMap, error) {
 		tagSet.Insert("sig")
 	}
 
-	validTags := sets.New("sig", "sbom", "att")
+	validTags := []string{"sig", "sbom", "att"}
+	validTagsSet := sets.New(validTags...)
 	for tag := range tagSet {
-		if !validTags.Has(tag) {
-			return nil, fmt.Errorf("invalid value for --only: %s, only following values are supported, %s", tag, validTags)
+		if !validTagsSet.Has(tag) {
+			return nil, fmt.Errorf("invalid value for --only: %s, only the following values are supported: %s", tag, validTags)
 		}
 	}
 
