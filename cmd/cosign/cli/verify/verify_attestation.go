@@ -231,7 +231,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		var bundleVerified bool
 
 		if c.LocalImage {
-			verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, imageRef, co)
+			verified, bundleVerified, err = cosign.VerifyLocalImageAttestationsWithOpts(ctx, imageRef, co)
 			if err != nil {
 				return err
 			}
@@ -241,7 +241,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return err
 			}
 
-			verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co)
+			verified, bundleVerified, err = cosign.VerifyImageAttestationsWithOpts(ctx, ref, co)
 			if err != nil {
 				return err
 			}

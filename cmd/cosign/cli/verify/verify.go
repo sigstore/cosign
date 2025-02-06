@@ -267,7 +267,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 
 	for _, img := range images {
 		if c.LocalImage {
-			verified, bundleVerified, err := cosign.VerifyLocalImageSignatures(ctx, img, co)
+			verified, bundleVerified, err := cosign.VerifyLocalImageSignaturesWithOpts(ctx, img, co)
 			if err != nil {
 				return err
 			}
@@ -283,7 +283,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return fmt.Errorf("resolving attachment type %s for image %s: %w", c.Attachment, img, err)
 			}
 
-			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
+			verified, bundleVerified, err := cosign.VerifyImageSignaturesWithOpts(ctx, ref, co)
 			if err != nil {
 				return cosignError.WrapError(err)
 			}

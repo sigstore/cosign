@@ -331,7 +331,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	if err != nil {
 		return err
 	}
-	if _, err = cosign.VerifyBlobSignature(ctx, signature, co); err != nil {
+	if _, err = cosign.VerifyBlobSignatureWithOpts(ctx, signature, co); err != nil {
 		return err
 	}
 
