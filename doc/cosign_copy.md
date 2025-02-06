@@ -36,7 +36,7 @@ cosign copy [flags]
   -f, --force                                                                                    overwrite destination image(s), if necessary
   -h, --help                                                                                     help for copy
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
-      --only string                                                                              custom string array to only copy specific items, this flag is comma delimited. ex: --only=sig,att,sbom
+      --only strings                                                                             custom string array to only copy specific items, this flag is comma delimited. ex: --only=sig,att,sbom
       --platform string                                                                          only copy container image and its signatures for a specific platform image
       --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
