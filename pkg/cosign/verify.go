@@ -536,14 +536,18 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 	return fos.signatures, nil
 }
 
-// VerifyImageSignatures does all the main cosign checks in a loop, returning the verified signatures.
+func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	return VerifyImageSignaturesWithOpts(ctx, signedImgRef, co)
+}
+
+// VerifyImageSignaturesWithOpts does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error.
 // Note that if co.ExperimentlOCI11 is set, we will attempt to verify
 // signatures using the experimental OCI 1.1 behavior.
-func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func VerifyImageSignaturesWithOpts(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Try first using OCI 1.1 behavior if experimental flag is set.
 	if co.ExperimentalOCI11 {
-		verified, bundleVerified, err := verifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co)
+		verified, bundleVerified, err := verifyImageSignaturesExperimentalOCI(ctx, signedImgRef, co, svOpts...)
 		if err == nil {
 			return verified, bundleVerified, nil
 		}
@@ -588,12 +592,16 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		}
 	}
 
-	return verifySignatures(ctx, sigs, h, co)
+	return verifySignatures(ctx, sigs, h, co, svOpts...)
 }
 
-// VerifyLocalImageSignatures verifies signatures from a saved, local image, without any network calls, returning the verified signatures.
-// If there were no valid signatures, we return an error.
 func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+	return VerifyLocalImageSignaturesWithOpts(ctx, path, co)
+}
+
+// VerifyLocalImageSignaturesWithOpts verifies signatures from a saved, local image, without any network calls, returning the verified signatures.
+// If there were no valid signatures, we return an error.
+func VerifyLocalImageSignaturesWithOpts(ctx context.Context, path string, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -637,10 +645,10 @@ func VerifyLocalImageSignatures(ctx context.Context, path string, co *CheckOpts)
 		return nil, false, fmt.Errorf("no signatures associated with the image saved in %s", path)
 	}
 
-	return verifySignatures(ctx, sigs, h, co)
+	return verifySignatures(ctx, sigs, h, co, svOpts...)
 }
 
-func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	sl, err := sigs.Get()
 	if err != nil {
 		return nil, false, err
@@ -668,7 +676,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 				return
 			}
 
-			verified, err := VerifyImageSignature(ctx, sig, h, co)
+			verified, err := VerifyImageSignatureWithOpts(ctx, sig, h, co, svOpts...)
 			bundlesVerified[index] = verified
 			if err != nil {
 				t.Done(err)
@@ -716,7 +724,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 //     we are in experimental mode).
 //  3. If a certificate is provided, check it's expiration using the transparency log timestamp.
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
-	verifyFn signatureVerificationFn, co *CheckOpts) (
+	verifyFn signatureVerificationFn, co *CheckOpts, svOpts ...signature.LoadOption) (
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
@@ -803,7 +811,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if pool == nil {
 			pool = co.IntermediateCerts
 		}
-		verifier, err = ValidateAndUnpackCertWithOpts(cert, co, WithPool(pool))
+		verifier, err = ValidateAndUnpackCertWithOpts(cert, co, WithPool(pool), WithSignerVerifierOptions(svOpts...))
 		if err != nil {
 			return false, err
 		}
@@ -880,13 +888,23 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 
 // VerifyBlobSignature verifies a blob signature.
 func VerifyBlobSignature(ctx context.Context, sig oci.Signature, co *CheckOpts) (bundleVerified bool, err error) {
+	return VerifyBlobSignatureWithOpts(ctx, sig, co)
+}
+
+// VerifyBlobSignatureWithOpts verifies a blob signature.
+func VerifyBlobSignatureWithOpts(ctx context.Context, sig oci.Signature, co *CheckOpts, svOpts ...signature.LoadOption) (bundleVerified bool, err error) {
 	// The hash of the artifact is unused.
-	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co)
+	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co, svOpts...)
 }
 
 // VerifyImageSignature verifies a signature
 func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
-	return verifyInternal(ctx, sig, h, verifyOCISignature, co)
+	return VerifyImageSignatureWithOpts(ctx, sig, h, co)
+}
+
+// VerifyImageSignatureWithOpts verifies a signature
+func VerifyImageSignatureWithOpts(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts, svOpts ...signature.LoadOption) (bundleVerified bool, err error) {
+	return verifyInternal(ctx, sig, h, verifyOCISignature, co, svOpts...)
 }
 
 func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
@@ -933,9 +951,13 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 	}, nil
 }
 
-// VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
-// If there were no valid attestations, we return an error.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	return VerifyImageAttestationsWithOpts(ctx, signedImgRef, co)
+}
+
+// VerifyImageAttestationsWithOpts does all the main cosign checks in a loop, returning the verified attestations.
+// If there were no valid attestations, we return an error.
+func VerifyImageAttestationsWithOpts(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, svOpts ...signature.LoadOption) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -961,13 +983,17 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 		return nil, false, err
 	}
 
-	return VerifyImageAttestation(ctx, atts, h, co)
+	return VerifyImageAttestationWithOpts(ctx, atts, h, co, svOpts...)
 }
 
-// VerifyLocalImageAttestations verifies attestations from a saved, local image, without any network calls,
+func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	return VerifyLocalImageAttestationsWithOpts(ctx, path, co)
+}
+
+// VerifyLocalImageAttestationsWithOpts verifies attestations from a saved, local image, without any network calls,
 // returning the verified attestations.
 // If there were no valid signatures, we return an error.
-func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func VerifyLocalImageAttestationsWithOpts(ctx context.Context, path string, co *CheckOpts, svOpts ...signature.LoadOption) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -1007,15 +1033,24 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	if err != nil {
 		return nil, false, err
 	}
-	return VerifyImageAttestation(ctx, atts, h, co)
+	return VerifyImageAttestationWithOpts(ctx, atts, h, co, svOpts...)
 }
 
 func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
 	bool, error) {
-	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
+	return VerifyBlobAttestationWithOpts(ctx, att, h, co)
+}
+
+func VerifyBlobAttestationWithOpts(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts, svOpts ...signature.LoadOption) (
+	bool, error) {
+	return verifyInternal(ctx, att, h, verifyOCIAttestation, co, svOpts...)
 }
 
 func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	return VerifyImageAttestationWithOpts(ctx, atts, h, co)
+}
+
+func VerifyImageAttestationWithOpts(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts, svOpts ...signature.LoadOption) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err
@@ -1037,7 +1072,7 @@ func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash,
 				return
 			}
 			if err := func(att oci.Signature) error {
-				verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co)
+				verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co, svOpts...)
 				bundlesVerified[index] = verified
 				return err
 			}(att); err != nil {
@@ -1415,7 +1450,7 @@ func correctAnnotations(wanted, have map[string]interface{}) bool {
 
 // verifyImageSignaturesExperimentalOCI does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error, using OCI 1.1+ behavior.
-func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
+func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, svOpts ...signature.LoadOption) (checkedSignatures []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil {
 		return nil, false, errors.New("one of verifier or root certs is required")
@@ -1468,5 +1503,5 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 		}
 	}
 
-	return verifySignatures(ctx, sigs, h, co)
+	return verifySignatures(ctx, sigs, h, co, svOpts...)
 }
