@@ -190,6 +190,10 @@ func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier
 }
 
 func PublicKeyFromKeyRefWithHashAlgo(ctx context.Context, keyRef string, hashAlgorithm crypto.Hash) (signature.Verifier, error) {
+	return PublicKeyFromKeyRefWithOpts(ctx, keyRef, options.WithHash(hashAlgorithm))
+}
+
+func PublicKeyFromKeyRefWithOpts(ctx context.Context, keyRef string, opts ...signature.LoadOption) (signature.Verifier, error) {
 	if strings.HasPrefix(keyRef, kubernetes.KeyReference) {
 		s, err := kubernetes.GetKeyPairSecret(ctx, keyRef)
 		if err != nil {
@@ -197,7 +201,7 @@ func PublicKeyFromKeyRefWithHashAlgo(ctx context.Context, keyRef string, hashAlg
 		}
 
 		if len(s.Data) > 0 {
-			return LoadPublicKeyRaw(s.Data["cosign.pub"], hashAlgorithm)
+			return LoadPublicKeyRawWithOpts(s.Data["cosign.pub"], opts...)
 		}
 	}
 
@@ -236,11 +240,11 @@ func PublicKeyFromKeyRefWithHashAlgo(ctx context.Context, keyRef string, hashAlg
 		}
 
 		if len(pubKey) > 0 {
-			return LoadPublicKeyRaw([]byte(pubKey), hashAlgorithm)
+			return LoadPublicKeyRawWithOpts([]byte(pubKey), opts...)
 		}
 	}
 
-	return VerifierForKeyRef(ctx, keyRef, hashAlgorithm)
+	return VerifierForKeyRefWithOpts(ctx, keyRef, opts...)
 }
 
 func PublicKeyPem(key signature.PublicKeyProvider, pkOpts ...signature.PublicKeyOption) ([]byte, error) {

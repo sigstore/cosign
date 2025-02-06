@@ -40,6 +40,7 @@ import (
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func isb64(data []byte) bool {
@@ -214,7 +215,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			bundleCert, err := loadCertFromPEM(certBytes)
 			if err != nil {
 				// check if cert is actually a public key
-				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
+				co.SigVerifier, err = sigs.LoadPublicKeyRawWithOpts(certBytes, signatureoptions.WithHash(crypto.SHA256))
 				if err != nil {
 					return fmt.Errorf("loading verifier from bundle: %w", err)
 				}
