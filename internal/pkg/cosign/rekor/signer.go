@@ -17,7 +17,6 @@ package rekor
 import (
 	"context"
 	"crypto"
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -49,7 +48,8 @@ func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn)
 type signerWrapper struct {
 	inner cosign.Signer
 
-	rClient *client.Rekor
+	rClient       *client.Rekor
+	hashAlgorithm crypto.Hash
 }
 
 var _ cosign.Signer = (*signerWrapper)(nil)
@@ -91,11 +91,11 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	}
 
 	bundle, err := uploadToTlog(rekorBytes, rs.rClient, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		checkSum := sha256.New()
+		checkSum := cosignv1.NewCryptoNamedHash(rs.hashAlgorithm)
 		if _, err := checkSum.Write(payloadBytes); err != nil {
 			return nil, err
 		}
-		return cosignv1.TLogUpload(ctx, r, sigBytes, checkSum, b)
+		return cosignv1.TLogUploadWithCustomHash(ctx, r, sigBytes, checkSum, b)
 	})
 	if err != nil {
 		return nil, nil, err
@@ -110,9 +110,10 @@ func (rs *signerWrapper) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 }
 
 // NewSigner returns a `cosign.Signer` which uploads the signature to Rekor
-func NewSigner(inner cosign.Signer, rClient *client.Rekor) cosign.Signer {
+func NewSigner(inner cosign.Signer, rClient *client.Rekor, hashAlgorithm crypto.Hash) cosign.Signer {
 	return &signerWrapper{
-		inner:   inner,
-		rClient: rClient,
+		inner:         inner,
+		rClient:       rClient,
+		hashAlgorithm: hashAlgorithm,
 	}
 }
