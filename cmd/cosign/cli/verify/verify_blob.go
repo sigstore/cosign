@@ -170,7 +170,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	// Keys are optional!
 	switch {
 	case c.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithOpts(ctx, c.KeyRef)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
