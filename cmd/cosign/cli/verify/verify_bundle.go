@@ -88,7 +88,7 @@ func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, s
 
 	// See if we need to wrap trusted root with provided key
 	if keyRef != "" {
-		signatureVerifier, err := sigs.PublicKeyFromKeyRef(ctx, keyRef)
+		signatureVerifier, err := sigs.PublicKeyFromKeyRefWithOpts(ctx, keyRef)
 		if err != nil {
 			return nil, err
 		}

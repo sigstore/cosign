@@ -43,6 +43,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // VerifyBlobAttestationCommand verifies an attestation on a supplied blob
@@ -212,7 +213,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	opts := make([]static.Option, 0)
 	switch {
 	case c.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithOpts(ctx, c.KeyRef)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
@@ -260,7 +261,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			bundleCert, err := loadCertFromPEM(certBytes)
 			if err != nil {
 				// check if cert is actually a public key
-				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
+				co.SigVerifier, err = sigs.LoadPublicKeyRawWithOpts(certBytes, signatureoptions.WithHash(crypto.SHA256))
 				if err != nil {
 					return fmt.Errorf("loading verifier from bundle: %w", err)
 				}
@@ -340,7 +341,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	// TODO: This verifier only supports verification of a single signer/signature on
 	// the envelope. Either have the verifier validate that only one signature exists,
 	// or use a multi-signature verifier.
-	if _, err = cosign.VerifyBlobAttestation(ctx, signature, h, co); err != nil {
+	if _, err = cosign.VerifyBlobAttestationWithOpts(ctx, signature, h, co); err != nil {
 		return err
 	}
 
