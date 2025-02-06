@@ -18,7 +18,6 @@ package sign
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -138,7 +137,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	sv, err := SignerFromKeyOptsWithSVOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
@@ -391,8 +390,8 @@ func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier
 	}, nil
 }
 
-func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc) (*SignerVerifier, error) {
-	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc)
+func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc, opts ...signature.LoadOption) (*SignerVerifier, error) {
+	k, err := sigs.SignerVerifierFromKeyRefWithOpts(ctx, keyRef, passFunc, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("reading key: %w", err)
 	}
@@ -521,12 +520,12 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func signerFromNewKey() (*SignerVerifier, error) {
+func signerFromNewKey(opts ...signature.LoadOption) (*SignerVerifier, error) {
 	privKey, err := cosign.GeneratePrivateKey()
 	if err != nil {
 		return nil, fmt.Errorf("generating cert: %w", err)
 	}
-	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+	sv, err := signature.LoadSignerVerifierWithOpts(privKey, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -559,7 +558,7 @@ func keylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) 
 	}, nil
 }
 
-func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
+func SignerFromKeyOptsWithSVOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts, svOpts ...signature.LoadOption) (*SignerVerifier, error) {
 	var sv *SignerVerifier
 	var err error
 	genKey := false
@@ -567,11 +566,11 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	case ko.Sk:
 		sv, err = signerFromSecurityKey(ctx, ko.Slot)
 	case ko.KeyRef != "":
-		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
+		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, svOpts...)
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
-		sv, err = signerFromNewKey()
+		sv, err = signerFromNewKey(svOpts...)
 	}
 	if err != nil {
 		return nil, err
@@ -582,6 +581,10 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	}
 
 	return sv, nil
+}
+
+func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
+	return SignerFromKeyOptsWithSVOpts(ctx, certPath, certChainPath, ko)
 }
 
 type SignerVerifier struct {
