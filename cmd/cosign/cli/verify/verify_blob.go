@@ -394,7 +394,7 @@ func payloadDigest(blobRef string) (string, []byte, error) {
 	return hexAlg, digestBytes, nil
 }
 
-func loadTrustedRoot(ctx context.Context, trustedRootPath string) (*root.TrustedRoot, error) {
+func loadTrustedRoot(_ context.Context, trustedRootPath string) (*root.TrustedRoot, error) {
 	if trustedRootPath != "" {
 		return root.NewTrustedRootFromPath(trustedRootPath)
 	}
