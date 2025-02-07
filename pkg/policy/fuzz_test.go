@@ -15,6 +15,7 @@
 
 package policy
 
+/* disabling since this effectively just fuzzes rego & cue vs something in cosign
 import (
 	"context"
 	"runtime"
@@ -52,3 +53,4 @@ func FuzzEvaluatePolicyAgainstJSON(f *testing.F) {
 		EvaluatePolicyAgainstJSON(context.Background(), name, choosePolicyType, policyBody, jsonBytes)
 	})
 }
+*/
