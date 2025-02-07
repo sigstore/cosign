@@ -327,7 +327,7 @@ func TestVerifyBlob(t *testing.T) {
 		{
 			name:           "valid signature with public key - new bundle",
 			blob:           blobBytes,
-			signature:      blobSignature,
+			signature:      "",
 			key:            pubKeyBytes,
 			bundlePath:     makeLocalNewBundle(t, []byte(blobSignature), sha256.Sum256(blobBytes)),
 			newBundle:      true,
@@ -337,12 +337,12 @@ func TestVerifyBlob(t *testing.T) {
 		{
 			name:           "invalid signature with public key - new bundle",
 			blob:           blobBytes,
-			signature:      otherSignature,
+			signature:      "",
 			key:            pubKeyBytes,
-			bundlePath:     makeLocalNewBundle(t, []byte(blobSignature), sha256.Sum256(blobBytes)),
+			bundlePath:     makeLocalNewBundle(t, []byte(otherSignature), sha256.Sum256(blobBytes)),
 			newBundle:      true,
 			skipTlogVerify: true,
-			shouldErr:      false,
+			shouldErr:      true,
 		},
 		{
 			name:      "invalid signature with public key",
@@ -624,7 +624,6 @@ func TestVerifyBlob(t *testing.T) {
 				cmd.KeyOpts.TSACertChainPath = ""
 				cmd.CertChain = ""
 			}
-
 			err := cmd.Exec(context.Background(), blobPath)
 			if (err != nil) != tt.shouldErr {
 				t.Fatalf("verifyBlob()= %s, expected shouldErr=%t ", err, tt.shouldErr)

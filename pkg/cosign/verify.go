@@ -43,8 +43,13 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+
+	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
+
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -165,6 +170,89 @@ type CheckOpts struct {
 	// Should the experimental OCI 1.1 behaviour be enabled or not.
 	// Defaults to false.
 	ExperimentalOCI11 bool
+
+	// NewBundleFormat enables the new bundle format (Cosign Bundle Spec) and the new verifier.
+	NewBundleFormat bool
+
+	// TrustedMaterial is the trusted material to use for verification.
+	// Currently, this is only applicable when NewBundleFormat is true.
+	TrustedMaterial root.TrustedMaterial
+}
+
+type verifyTrustedMaterial struct {
+	root.TrustedMaterial
+	keyTrustedMaterial root.TrustedMaterial
+}
+
+func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstrainedVerifier, error) {
+	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
+}
+
+// verificationOptions returns the verification options for verifying with sigstore-go.
+func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
+	policyOptions = make([]verify.PolicyOption, 0)
+
+	if len(co.Identities) > 0 {
+		var sanMatcher verify.SubjectAlternativeNameMatcher
+		var issuerMatcher verify.IssuerMatcher
+		if len(co.Identities) > 1 {
+			return nil, nil, nil, fmt.Errorf("unsupported: multiple identities are not supported at this time")
+		}
+		sanMatcher, err = verify.NewSANMatcher(co.Identities[0].Subject, co.Identities[0].SubjectRegExp)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		issuerMatcher, err = verify.NewIssuerMatcher(co.Identities[0].Issuer, co.Identities[0].IssuerRegExp)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		extensions := certificate.Extensions{
+			GithubWorkflowTrigger:    co.CertGithubWorkflowTrigger,
+			GithubWorkflowSHA:        co.CertGithubWorkflowSha,
+			GithubWorkflowName:       co.CertGithubWorkflowName,
+			GithubWorkflowRepository: co.CertGithubWorkflowRepository,
+			GithubWorkflowRef:        co.CertGithubWorkflowRef,
+		}
+
+		certificateIdentities, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		policyOptions = []verify.PolicyOption{verify.WithCertificateIdentity(certificateIdentities)}
+	}
+
+	// Wrap TrustedMaterial
+	vTrustedMaterial := &verifyTrustedMaterial{TrustedMaterial: co.TrustedMaterial}
+
+	verifierOptions = make([]verify.VerifierOption, 0)
+
+	if co.SigVerifier != nil {
+		// We are verifying with a public key
+		policyOptions = append(policyOptions, verify.WithKey())
+		newExpiringKey := root.NewExpiringKey(co.SigVerifier, time.Time{}, time.Time{})
+		vTrustedMaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
+			return newExpiringKey, nil
+		})
+	} else { //nolint:gocritic
+		// We are verifying with a certificate
+		if !co.IgnoreSCT {
+			verifierOptions = append(verifierOptions, verify.WithSignedCertificateTimestamps(1))
+		}
+	}
+
+	if !co.IgnoreTlog {
+		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
+	}
+	if co.UseSignedTimestamps {
+		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
+	}
+	if co.IgnoreTlog && !co.UseSignedTimestamps {
+		verifierOptions = append(verifierOptions, verify.WithCurrentTime())
+	}
+
+	return vTrustedMaterial, verifierOptions, policyOptions, nil
 }
 
 // This is a substitutable signature verification function that can be used for verifying

@@ -21,12 +21,8 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -36,167 +32,15 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/tle"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
-	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
-	"github.com/sigstore/sigstore-go/pkg/root"
-	"github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 
-	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 )
-
-type verifyTrustedMaterial struct {
-	root.TrustedMaterial
-	keyTrustedMaterial root.TrustedMaterial
-}
-
-func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstrainedVerifier, error) {
-	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
-}
 
 func checkNewBundle(bundlePath string) bool {
 	_, err := sgbundle.LoadJSONFromPath(bundlePath)
 	return err == nil
-}
-
-func verifyNewBundle(ctx context.Context, bundlePath, trustedRootPath, keyRef, slot, certOIDCIssuer, certOIDCIssuerRegex, certIdentity, certIdentityRegexp, githubWorkflowTrigger, githubWorkflowSHA, githubWorkflowName, githubWorkflowRepository, githubWorkflowRef, artifactRef string, sk, ignoreTlog, useSignedTimestamps, ignoreSCT bool) (*verify.VerificationResult, error) {
-	bundle, err := sgbundle.LoadJSONFromPath(bundlePath)
-	if err != nil {
-		return nil, err
-	}
-
-	var trustedroot *root.TrustedRoot
-
-	if trustedRootPath == "" {
-		ui.Infof(ctx, "no --trusted-root specified; fetching public good instance verification material via TUF")
-		// Assume we're using public good instance; fetch via TUF
-		trustedroot, err = root.FetchTrustedRoot()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		trustedroot, err = root.NewTrustedRootFromPath(trustedRootPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	trustedmaterial := &verifyTrustedMaterial{TrustedMaterial: trustedroot}
-
-	// See if we need to wrap trusted root with provided key
-	if keyRef != "" {
-		signatureVerifier, err := sigs.PublicKeyFromKeyRef(ctx, keyRef)
-		if err != nil {
-			return nil, err
-		}
-
-		newExpiringKey := root.NewExpiringKey(signatureVerifier, time.Time{}, time.Time{})
-		trustedmaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
-			return newExpiringKey, nil
-		})
-	} else if sk {
-		s, err := pivkey.GetKeyWithSlot(slot)
-		if err != nil {
-			return nil, fmt.Errorf("opening piv token: %w", err)
-		}
-		defer s.Close()
-		signatureVerifier, err := s.Verifier()
-		if err != nil {
-			return nil, fmt.Errorf("loading public key from token: %w", err)
-		}
-
-		newExpiringKey := root.NewExpiringKey(signatureVerifier, time.Time{}, time.Time{})
-		trustedmaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
-			return newExpiringKey, nil
-		})
-	}
-
-	identityPolicies := []verify.PolicyOption{}
-
-	verificationMaterial := bundle.GetVerificationMaterial()
-
-	if verificationMaterial == nil {
-		return nil, fmt.Errorf("no verification material in bundle")
-	}
-
-	if verificationMaterial.GetPublicKey() != nil {
-		identityPolicies = append(identityPolicies, verify.WithKey())
-	} else {
-		sanMatcher, err := verify.NewSANMatcher(certIdentity, certIdentityRegexp)
-		if err != nil {
-			return nil, err
-		}
-
-		issuerMatcher, err := verify.NewIssuerMatcher(certOIDCIssuer, certOIDCIssuerRegex)
-		if err != nil {
-			return nil, err
-		}
-
-		extensions := certificate.Extensions{
-			GithubWorkflowTrigger:    githubWorkflowTrigger,
-			GithubWorkflowSHA:        githubWorkflowSHA,
-			GithubWorkflowName:       githubWorkflowName,
-			GithubWorkflowRepository: githubWorkflowRepository,
-			GithubWorkflowRef:        githubWorkflowRef,
-		}
-
-		certIdentity, err := verify.NewCertificateIdentity(sanMatcher, issuerMatcher, extensions)
-		if err != nil {
-			return nil, err
-		}
-
-		identityPolicies = append(identityPolicies, verify.WithCertificateIdentity(certIdentity))
-	}
-
-	// Make some educated guesses about verification policy
-	verifierConfig := []verify.VerifierOption{}
-
-	if len(trustedroot.RekorLogs()) > 0 && !ignoreTlog {
-		verifierConfig = append(verifierConfig, verify.WithTransparencyLog(1), verify.WithIntegratedTimestamps(1))
-	}
-
-	if len(trustedroot.TimestampingAuthorities()) > 0 && useSignedTimestamps {
-		verifierConfig = append(verifierConfig, verify.WithSignedTimestamps(1))
-	}
-
-	if !ignoreSCT {
-		verifierConfig = append(verifierConfig, verify.WithSignedCertificateTimestamps(1))
-	}
-
-	if ignoreTlog && !useSignedTimestamps {
-		verifierConfig = append(verifierConfig, verify.WithCurrentTime())
-	}
-
-	// Check if artifactRef is a digest or a file path
-	var artifactOpt verify.ArtifactPolicyOption
-	if _, err := os.Stat(artifactRef); err != nil {
-		hexAlg, hexDigest, ok := strings.Cut(artifactRef, ":")
-		if !ok {
-			return nil, err
-		}
-		digestBytes, err := hex.DecodeString(hexDigest)
-		if err != nil {
-			return nil, err
-		}
-		artifactOpt = verify.WithArtifactDigest(hexAlg, digestBytes)
-	} else {
-		// Perform verification
-		payload, err := payloadBytes(artifactRef)
-		if err != nil {
-			return nil, err
-		}
-		artifactOpt = verify.WithArtifact(bytes.NewBuffer(payload))
-	}
-
-	sev, err := verify.NewSignedEntityVerifier(trustedmaterial, verifierConfig...)
-	if err != nil {
-		return nil, err
-	}
-
-	return sev.Verify(bundle, verify.NewPolicy(artifactOpt, identityPolicies...))
 }
 
 func AssembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, envelope *dsse.Envelope, artifactRef string, cert *x509.Certificate, ignoreTlog bool, sigVerifier signature.Verifier, pkOpts []signature.PublicKeyOption, rekorClient *client.Rekor) (*sgbundle.Bundle, error) {
