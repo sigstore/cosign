@@ -207,6 +207,9 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		return nil
 	}
 
+	if c.TrustedRootPath != "" {
+		return fmt.Errorf("--trusted-root only supported with --new-bundle-format")
+	}
 	if c.RFC3161TimestampPath != "" && !co.UseSignedTimestamps {
 		return fmt.Errorf("when specifying --rfc3161-timestamp-path, you must also specify --use-signed-timestamps or --timestamp-certificate-chain")
 	} else if c.RFC3161TimestampPath == "" && co.UseSignedTimestamps {
