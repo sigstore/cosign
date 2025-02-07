@@ -15,6 +15,7 @@
 package signature
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"errors"
@@ -23,9 +24,27 @@ import (
 
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature"
 	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
+
+const ed25519PrivateKey = `-----BEGIN ENCRYPTED SIGSTORE PRIVATE KEY-----
+eyJrZGYiOnsibmFtZSI6InNjcnlwdCIsInBhcmFtcyI6eyJOIjo2NTUzNiwiciI6
+OCwicCI6MX0sInNhbHQiOiJxYVVSY1ppbTN3RE9ZMVlselFGaFdVWHBnMU5tZlAv
+YndiM2ZpWE54ck5BPSJ9LCJjaXBoZXIiOnsibmFtZSI6Im5hY2wvc2VjcmV0Ym94
+Iiwibm9uY2UiOiJMRjNVN3crNXgzWmRvMlNGUkFicE1nY1N5Y2sxN3R1LyJ9LCJj
+aXBoZXJ0ZXh0IjoiY2lUQTYrODVWRDdsTlpwRTVLdmpMdjJrTXNZdmtvOHNHV0tq
+QTRYZDY2WFRaTUw3UG5xczQ2NloycDRyWGJUdXBlcStwSXlnSXhvS29UVmFHbG9N
+RXc9PSJ9
+-----END ENCRYPTED SIGSTORE PRIVATE KEY-----
+`
+
+const ed25519PublicKey = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAFs2AhZmYWkoEsqUf6yotyIwVb5uATpuKK194tq8OkoQ=
+-----END PUBLIC KEY-----
+`
 
 func generateKeyFile(t *testing.T, tmpDir string, pf cosign.PassFunc) (privFile, pubFile string) {
 	t.Helper()
@@ -165,5 +184,85 @@ func TestVerifierForKeyRefError(t *testing.T) {
 func pass(s string) cosign.PassFunc {
 	return func(_ bool) ([]byte, error) {
 		return []byte(s), nil
+	}
+}
+
+func TestPublicKeyFromKeyRefWithOpts(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	// Create a temporary public key file
+	tmpPubFile, err := os.CreateTemp(tmpDir, "cosign_test_*.pub")
+	if err != nil {
+		t.Fatalf("failed to create temp pub file: %v", err)
+	}
+	defer tmpPubFile.Close()
+
+	if _, err := tmpPubFile.Write([]byte(ed25519PublicKey)); err != nil {
+		t.Fatalf("failed to write pub file: %v", err)
+	}
+
+	// Test data to sign and verify
+	testData := []byte("test data")
+
+	testCases := []struct {
+		name         string
+		signerOpts   []signature.LoadOption
+		verifierOpts []signature.LoadOption
+		expectErr    bool
+	}{
+		{
+			name:         "pure ed25519 signer/verifier",
+			signerOpts:   []signature.LoadOption{},
+			verifierOpts: []signature.LoadOption{},
+			expectErr:    false,
+		},
+		{
+			name:         "ed25519ph signer/verifier",
+			signerOpts:   []signature.LoadOption{options.WithED25519ph()},
+			verifierOpts: []signature.LoadOption{options.WithED25519ph()},
+			expectErr:    false,
+		},
+		{
+			name:         "ed25519 pure signer/ed25519ph verifier",
+			signerOpts:   []signature.LoadOption{},
+			verifierOpts: []signature.LoadOption{options.WithED25519ph()},
+			expectErr:    true,
+		},
+		{
+			name:         "ed25519ph signer/ed25519 verifier",
+			signerOpts:   []signature.LoadOption{options.WithED25519ph()},
+			verifierOpts: []signature.LoadOption{},
+			expectErr:    true,
+		},
+	}
+
+	os.Setenv("MY_ENV_VAR", string(ed25519PrivateKey))
+	defer os.Unsetenv("MY_ENV_VAR")
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			verifier, err := PublicKeyFromKeyRefWithOpts(ctx, tmpPubFile.Name(), tc.verifierOpts...)
+			if err != nil {
+				t.Fatalf("failed to load public key: %v", err)
+			}
+
+			signerStandard, err := SignerVerifierFromKeyRefWithOpts(ctx, "env://MY_ENV_VAR", pass(""), tc.signerOpts...)
+			if err != nil {
+				t.Fatalf("failed to load standard signer: %v", err)
+			}
+			sig, err := signerStandard.SignMessage(bytes.NewReader(testData), options.WithContext(ctx))
+			if err != nil {
+				t.Fatalf("failed to sign message: %v", err)
+			}
+
+			err = verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(testData), options.WithContext(ctx))
+			if tc.expectErr && err == nil {
+				t.Fatalf("expected verification error, got none")
+			} else if !tc.expectErr && err != nil {
+				t.Fatalf("unexpected verification error: %v", err)
+			}
+		})
 	}
 }
