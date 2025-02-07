@@ -398,7 +398,6 @@ func loadTrustedRoot(ctx context.Context, trustedRootPath string) (*root.Trusted
 	if trustedRootPath != "" {
 		return root.NewTrustedRootFromPath(trustedRootPath)
 	}
-	ui.Infof(ctx, "no --trusted-root specified; fetching public good instance verification material via TUF")
 	// Assume we're using public good instance; fetch via TUF
 	// TODO: allow custom TUF settings
 	return root.FetchTrustedRoot()
