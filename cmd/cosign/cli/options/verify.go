@@ -92,22 +92,25 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"DEPRECATED, related image attachment to verify (sbom), default none")
+	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")
 
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
+	_ = cmd.MarkFlagFilename("signature", signatureExts...)
 
 	cmd.Flags().StringVar(&o.PayloadRef, "payload", "",
 		"payload path or remote URL")
+	// _ = cmd.MarkFlagFilename("payload") // no typical extensions
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")

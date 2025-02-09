@@ -36,7 +36,7 @@ func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Root, "root", "",
 		"path to trusted initial root. defaults to embedded root")
-	_ = cmd.Flags().SetAnnotation("root", cobra.BashCompSubdirsInDir, []string{})
+	_ = cmd.MarkFlagDirname("root")
 
 	cmd.Flags().StringVar(&o.RootChecksum, "root-checksum", "",
 		"checksum of the initial root, required if root is downloaded via http(s). expects sha256 by default, can be changed to sha512 by providing sha512:<checksum>")

@@ -58,33 +58,34 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{"key"})
+	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
 
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the X.509 certificate in PEM format to include in the OCI Signature")
-	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Included in the OCI Signature")
-	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
-	_ = cmd.Flags().SetAnnotation("output-signature", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("output-signature", signatureExts...)
 
 	cmd.Flags().StringVar(&o.OutputAttestation, "output-attestation", "",
 		"write the attestation to FILE")
+	// _ = cmd.MarkFlagFilename("output-attestation") // no typical extensions
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("key", certificateExts...)
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
-	_ = cmd.Flags().SetAnnotation("bundle", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	// TODO: have this default to true as a breaking change
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
@@ -107,5 +108,5 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
 		"path to an RFC 3161 timestamp bundle FILE")
-	_ = cmd.Flags().SetAnnotation("rfc3161-timestamp-bundle", cobra.BashCompFilenameExt, []string{})
+	// _ = cmd.MarkFlagFilename("rfc3161-timestamp-bundle") // no typical extensions
 }
