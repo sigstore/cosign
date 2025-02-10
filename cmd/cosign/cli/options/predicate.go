@@ -83,7 +83,8 @@ func ParsePredicateType(t string) (string, error) {
 // PredicateLocalOptions is the wrapper for predicate related options.
 type PredicateLocalOptions struct {
 	PredicateOptions
-	Path string
+	Path      string
+	Statement string
 }
 
 var _ Interface = (*PredicateLocalOptions)(nil)
@@ -94,7 +95,11 @@ func (o *PredicateLocalOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Path, "predicate", "",
 		"path to the predicate file.")
-	_ = cmd.MarkFlagRequired("predicate")
+
+	cmd.Flags().StringVar(&o.Statement, "statement", "",
+		"path to the statement file.")
+
+	cmd.MarkFlagsOneRequired("predicate", "statement")
 }
 
 // PredicateRemoteOptions is the wrapper for remote predicate related options.
