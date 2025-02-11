@@ -80,12 +80,15 @@ func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RegistryCACert, "registry-cacert", "",
 		"path to the X.509 CA certificate file in PEM format to be used for the connection to the registry")
+	_ = cmd.MarkFlagFilename("registry-cacert", certificateExts...)
 
 	cmd.Flags().StringVar(&o.RegistryClientCert, "registry-client-cert", "",
 		"path to the X.509 certificate file in PEM format to be used for the connection to the registry")
+	_ = cmd.MarkFlagFilename("registry-client-cert", certificateExts...)
 
 	cmd.Flags().StringVar(&o.RegistryClientKey, "registry-client-key", "",
 		"path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry")
+	_ = cmd.MarkFlagFilename("registry-client-key", privateKeyExts...)
 
 	cmd.Flags().StringVar(&o.RegistryServerName, "registry-server-name", "",
 		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry")

@@ -64,7 +64,7 @@ func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.clientSecretFile, "oidc-client-secret-file", "",
 		"Path to file containing OIDC client secret for application")
-	_ = cmd.Flags().SetAnnotation("oidc-client-secret-file", cobra.BashCompFilenameExt, []string{})
+	// _ = cmd.MarkFlagFilename("oidc-client-secret-file") // no typical extensions
 
 	cmd.Flags().StringVar(&o.RedirectURL, "oidc-redirect-url", "",
 		"OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.")
