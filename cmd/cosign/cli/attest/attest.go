@@ -132,7 +132,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	// each access.
 	ref = digest // nolint
 
-	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, err := sign.SignerFromKeyOptsWithSVOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}

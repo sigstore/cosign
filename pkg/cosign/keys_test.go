@@ -16,12 +16,16 @@
 package cosign
 
 import (
+	"bytes"
 	"crypto/rand"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/stretchr/testify/require"
 )
 
@@ -408,6 +412,7 @@ func TestImportPrivateKey(t *testing.T) {
 		fileName string
 		pemData  string
 		expected error
+		opts     []signature.LoadOption
 	}{
 		// RSA tests
 		{
@@ -477,6 +482,14 @@ func TestImportPrivateKey(t *testing.T) {
 			pemData:  ed25519key,
 			expected: nil,
 		},
+		{
+			fileName: "ed25519.key",
+			pemData:  ed25519key,
+			expected: nil,
+			opts: []signature.LoadOption{
+				options.WithED25519ph(),
+			},
+		},
 		// Additional tests
 		{
 			fileName: "invalidkey.key",
@@ -497,8 +510,21 @@ func TestImportPrivateKey(t *testing.T) {
 			if err == nil || tc.expected == nil {
 				require.Equal(t, tc.expected, err)
 				// Loading the private key should also work.
-				_, err = LoadPrivateKey(keyBytes.PrivateBytes, []byte("hello"))
+				sv, err := LoadPrivateKeyWithOpts(keyBytes.PrivateBytes, []byte("hello"), tc.opts...)
 				require.Equal(t, tc.expected, err)
+
+				// The signer/verifier should be correctly set up.
+				msg := []byte("hello")
+				sig, err := sv.SignMessage(bytes.NewReader(msg))
+				require.NoError(t, err)
+				require.NoError(t, sv.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)))
+
+				// Make sure the signer has signed the message with the correct signer and options
+				pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(keyBytes.PublicBytes)
+				require.NoError(t, err)
+				verifier, err := signature.LoadVerifierWithOpts(pubKey, tc.opts...)
+				require.NoError(t, err)
+				require.NoError(t, verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)))
 			} else {
 				require.Equal(t, tc.expected.Error(), err.Error())
 			}

@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -126,17 +127,8 @@ func TestSignaturesBundle(t *testing.T) {
 	}
 }
 
-// Does not test identity options, only blob verification with different
-// options.
-func TestVerifyBlob(t *testing.T) {
-	ctx := context.Background()
-	td := t.TempDir()
-
-	leafPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	signer, err := signature.LoadECDSASignerVerifier(leafPriv, crypto.SHA256)
+func testVerifyBlobLeafPriv(ctx context.Context, t *testing.T, leafPriv crypto.PrivateKey, hashFunc crypto.Hash, td string, svOpts ...signature.LoadOption) {
+	signer, err := signature.LoadSignerVerifierWithOpts(leafPriv, svOpts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +260,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			key:       pubKeyBytes,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				pubKeyBytes, true)},
+				pubKeyBytes, true, hashFunc)},
 			shouldErr: false,
 		},
 		{
@@ -277,7 +269,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				pubKeyBytes, true),
+				pubKeyBytes, true, hashFunc),
 			shouldErr: false,
 		},
 		{
@@ -293,8 +285,8 @@ func TestVerifyBlob(t *testing.T) {
 			blob:      blobBytes,
 			signature: blobSignature,
 			key:       pubKeyBytes,
-			bundlePath: makeLocalBundle(t, *signer, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+			bundlePath: makeLocalBundle(t, signer, blobBytes, []byte(blobSignature),
+				unexpiredCertPem, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -303,7 +295,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+				unexpiredCertPem, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -312,7 +304,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(makeSignature(blobBytes)),
-				pubKeyBytes, true),
+				pubKeyBytes, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -321,7 +313,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, otherBytes, []byte(otherSignature),
-				pubKeyBytes, true),
+				pubKeyBytes, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -371,7 +363,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			key:       pubKeyBytes,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+				unexpiredCertPem, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -380,7 +372,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      unexpiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(makeSignature(blobBytes)),
-				unexpiredCertPem, true),
+				unexpiredCertPem, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -389,7 +381,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      unexpiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, otherBytes, []byte(otherSignature),
-				unexpiredCertPem, true),
+				unexpiredCertPem, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -405,7 +397,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      unexpiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true)},
+				unexpiredCertPem, true, hashFunc)},
 			shouldErr: false,
 		},
 		{
@@ -414,7 +406,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      unexpiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true)},
+				unexpiredCertPem, true, hashFunc)},
 			shouldErr: false,
 		},
 		{
@@ -438,7 +430,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true)},
+				expiredLeafPem, true, hashFunc)},
 			shouldErr: false,
 		},
 		{
@@ -447,8 +439,8 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true), makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, false)},
+				expiredLeafPem, true, hashFunc), makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
+				expiredLeafPem, false, hashFunc)},
 			shouldErr: false,
 		},
 		{
@@ -457,7 +449,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, false)},
+				expiredLeafPem, false, hashFunc)},
 			shouldErr: true,
 		},
 
@@ -467,7 +459,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      unexpiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+				unexpiredCertPem, true, hashFunc),
 			shouldErr: false,
 		},
 		{
@@ -476,7 +468,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+				expiredLeafPem, true, hashFunc),
 			shouldErr: false,
 		},
 		{
@@ -485,7 +477,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, false),
+				expiredLeafPem, false, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -493,8 +485,8 @@ func TestVerifyBlob(t *testing.T) {
 			blob:      blobBytes,
 			signature: blobSignature,
 			cert:      expiredLeafCert,
-			bundlePath: makeLocalBundle(t, *signer, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+			bundlePath: makeLocalBundle(t, signer, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true, hashFunc),
 			shouldErr: true,
 		},
 		{
@@ -503,7 +495,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+				expiredLeafPem, true, hashFunc),
 			shouldErr: false,
 		},
 		{
@@ -512,8 +504,8 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			// This is the wrong signer for the SET!
-			rekorEntry: []*models.LogEntry{makeRekorEntry(t, *signer, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true)},
+			rekorEntry: []*models.LogEntry{makeRekorEntry(t, signer, blobBytes, []byte(blobSignature),
+				expiredLeafPem, true, hashFunc)},
 			shouldErr: true,
 		},
 		{
@@ -522,7 +514,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      expiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				expiredLeafPem, true),
+				expiredLeafPem, true, hashFunc),
 			tsPath:      expiredTSPath,
 			tsChainPath: expiredTSACertChainPath,
 			shouldErr:   false,
@@ -553,7 +545,7 @@ func TestVerifyBlob(t *testing.T) {
 			signature: blobSignature,
 			cert:      unexpiredLeafCert,
 			bundlePath: makeLocalBundle(t, *rekorSigner, blobBytes, []byte(blobSignature),
-				unexpiredCertPem, true),
+				unexpiredCertPem, true, hashFunc),
 			tsPath:      unexpiredTSPath,
 			tsChainPath: unexpiredTSACertChainPath,
 			shouldErr:   false,
@@ -632,6 +624,57 @@ func TestVerifyBlob(t *testing.T) {
 	}
 }
 
+// Does not test identity options, only blob verification with different
+// options.
+func TestVerifyBlob(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	sigTts := []struct {
+		description string
+		leafPriv    crypto.PrivateKey
+		hashFunc    crypto.Hash
+		svOpts      []signature.LoadOption
+		skip        bool
+	}{
+		{
+			description: "ECDSA P256 key",
+			leafPriv: func() crypto.PrivateKey {
+				priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return priv
+			}(),
+			hashFunc: crypto.SHA256,
+			svOpts:   []signature.LoadOption{},
+			skip:     false,
+		},
+		{
+			description: "Ed25519 key",
+			leafPriv: func() crypto.PrivateKey {
+				_, priv, err := ed25519.GenerateKey(rand.Reader)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return priv
+			}(),
+			hashFunc: crypto.SHA512,
+			svOpts:   []signature.LoadOption{signatureoptions.WithED25519ph()},
+			skip:     true, // TODO: Remove this once VerifyBlob command supports ED25519ph
+		},
+	}
+
+	for _, tt := range sigTts {
+		t.Run(tt.description, func(t *testing.T) {
+			if tt.skip {
+				t.Skip("Skipping test for " + tt.description)
+			}
+			testVerifyBlobLeafPriv(ctx, t, tt.leafPriv, tt.hashFunc, td, tt.svOpts...)
+		})
+	}
+}
+
 func TestVerifyBlobCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 
@@ -661,19 +704,25 @@ func TestVerifyBlobCertMissingIssuer(t *testing.T) {
 	}
 }
 
-func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
-	pyld, sig, svBytes []byte, expiryValid bool) *models.LogEntry {
+func makeRekorEntry(t *testing.T, rekorSigner signature.SignerVerifier,
+	pyld, sig, svBytes []byte, expiryValid bool, hashFunc crypto.Hash) *models.LogEntry {
 	ctx := context.Background()
 	// Calculate log ID, the digest of the Rekor public key
-	logID, err := getLogID(rekorSigner.Public())
+	pub, err := rekorSigner.PublicKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	logID, err := getLogID(pub)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	hashedrekord := &hashedrekord_v001.V001Entry{}
-	h := sha256.Sum256(pyld)
+	h := hashFunc.New()
+	h.Write(pyld)
+	digest := h.Sum(nil)
 	pe, err := hashedrekord.CreateFromArtifactProperties(ctx, types.ArtifactProperties{
-		ArtifactHash:   hex.EncodeToString(h[:]),
+		ArtifactHash:   hex.EncodeToString(digest),
 		SignatureBytes: sig,
 		PublicKeyBytes: [][]byte{svBytes},
 		PKIFormat:      "x509",
@@ -732,12 +781,12 @@ func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	return &models.LogEntry{hex.EncodeToString(uuid): e}
 }
 
-func makeLocalBundle(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
-	pyld []byte, sig []byte, svBytes []byte, expiryValid bool) string {
+func makeLocalBundle(t *testing.T, rekorSigner signature.SignerVerifier,
+	pyld []byte, sig []byte, svBytes []byte, expiryValid bool, hashFunc crypto.Hash) string {
 	td := t.TempDir()
 
 	// Create bundle.
-	entry := makeRekorEntry(t, rekorSigner, pyld, sig, svBytes, expiryValid)
+	entry := makeRekorEntry(t, rekorSigner, pyld, sig, svBytes, expiryValid, hashFunc)
 	var e models.LogEntryAnon
 	for _, v := range *entry {
 		e = v

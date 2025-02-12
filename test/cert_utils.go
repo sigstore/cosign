@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"errors"
 	"math/big"
 	"net"
 	"net/url"
@@ -118,8 +119,12 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 }
 
 func GenerateLeafCertWithExpiration(subject string, oidcIssuer string, expiration time.Time,
-	priv *ecdsa.PrivateKey,
+	priv crypto.PrivateKey,
 	parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, error) {
+	signer, ok := priv.(crypto.Signer)
+	if !ok {
+		return nil, errors.New("priv is not a crypto.Signer")
+	}
 	certTemplate := &x509.Certificate{
 		SerialNumber:   big.NewInt(1),
 		EmailAddresses: []string{subject},
@@ -137,7 +142,7 @@ func GenerateLeafCertWithExpiration(subject string, oidcIssuer string, expiratio
 		},
 	}
 
-	cert, err := createCertificate(certTemplate, parentTemplate, &priv.PublicKey, parentPriv)
+	cert, err := createCertificate(certTemplate, parentTemplate, signer.Public(), parentPriv)
 	if err != nil {
 		return nil, err
 	}
