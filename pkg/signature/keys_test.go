@@ -25,7 +25,6 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
-	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -160,7 +159,7 @@ func TestSignerVerifierFromEnvVar(t *testing.T) {
 }
 
 func TestVerifierForKeyRefError(t *testing.T) {
-	kms.AddProvider("errorkms://", func(_ context.Context, _ string, _ crypto.Hash, _ ...sigsignature.RPCOption) (kms.SignerVerifier, error) {
+	kms.AddProvider("errorkms://", func(_ context.Context, _ string, _ crypto.Hash, _ ...signature.RPCOption) (kms.SignerVerifier, error) {
 		return nil, errors.New("bad")
 	})
 	var uerr *blob.UnrecognizedSchemeError
@@ -197,7 +196,9 @@ func TestPublicKeyFromKeyRefWithOpts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp pub file: %v", err)
 	}
-	defer tmpPubFile.Close()
+	t.Cleanup(func() {
+		tmpPubFile.Close()
+	})
 
 	if _, err := tmpPubFile.Write([]byte(ed25519PublicKey)); err != nil {
 		t.Fatalf("failed to write pub file: %v", err)
@@ -239,10 +240,13 @@ func TestPublicKeyFromKeyRefWithOpts(t *testing.T) {
 	}
 
 	os.Setenv("MY_ENV_VAR", string(ed25519PrivateKey))
-	defer os.Unsetenv("MY_ENV_VAR")
+	t.Cleanup(func() {
+		os.Unsetenv("MY_ENV_VAR")
+	})
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			verifier, err := PublicKeyFromKeyRefWithOpts(ctx, tmpPubFile.Name(), tc.verifierOpts...)
 			if err != nil {
 				t.Fatalf("failed to load public key: %v", err)

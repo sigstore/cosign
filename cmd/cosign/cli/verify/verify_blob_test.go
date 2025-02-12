@@ -127,7 +127,7 @@ func TestSignaturesBundle(t *testing.T) {
 	}
 }
 
-func testVerifyBlobLeafPriv(t *testing.T, leafPriv crypto.PrivateKey, hashFunc crypto.Hash, ctx context.Context, td string, svOpts ...signature.LoadOption) {
+func testVerifyBlobLeafPriv(ctx context.Context, t *testing.T, leafPriv crypto.PrivateKey, hashFunc crypto.Hash, td string, svOpts ...signature.LoadOption) {
 	signer, err := signature.LoadSignerVerifierWithOpts(leafPriv, svOpts...)
 	if err != nil {
 		t.Fatal(err)
@@ -670,10 +670,9 @@ func TestVerifyBlob(t *testing.T) {
 			if tt.skip {
 				t.Skip("Skipping test for " + tt.description)
 			}
-			testVerifyBlobLeafPriv(t, tt.leafPriv, tt.hashFunc, ctx, td, tt.svOpts...)
+			testVerifyBlobLeafPriv(ctx, t, tt.leafPriv, tt.hashFunc, td, tt.svOpts...)
 		})
 	}
-
 }
 
 func TestVerifyBlobCertMissingSubject(t *testing.T) {
