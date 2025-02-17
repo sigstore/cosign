@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -33,8 +34,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"errors"
 
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime"
@@ -750,7 +749,7 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 //     a. Verifies the Rekor entry in the bundle, if provided. This works offline OR
 //     b. If we don't have a Rekor entry retrieved via cert, do an online lookup (assuming
 //     we are in experimental mode).
-//  3. If a certificate is provided, check it's expiration using the transparency log timestamp.
+//  3. If a certificate is provided, check its expiration using the transparency log timestamp.
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
