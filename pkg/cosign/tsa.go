@@ -74,7 +74,7 @@ func isTufTargetExist(ctx context.Context, name string) (bool, error) {
 // TUF root. If expired, makes a network call to retrieve the updated targets.
 // By default, the certificates come from TUF, but you can override this for test
 // purposes by using an env variable `SIGSTORE_TSA_CERTIFICATE_FILE` or a file path
-// specified in `TSACertChainPath`. If using an alternate, the file should be in PEM format.
+// specified in `certChainPath`. If using an alternate, the file should be in PEM format.
 func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*TSACertificates, error) {
 	altTSACert := env.Getenv(env.VariableSigstoreTSACertificateFile)
 
