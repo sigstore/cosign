@@ -159,7 +159,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	// Keys are optional!
 	switch {
 	case keyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithOpts(ctx, keyRef)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
@@ -202,7 +202,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			if err != nil {
 				return err
 			}
-			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithOpts(cert, co, cosign.WithChain(chain))
 			if err != nil {
 				return fmt.Errorf("creating certificate verifier: %w", err)
 			}
@@ -231,7 +231,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		var bundleVerified bool
 
 		if c.LocalImage {
-			verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, imageRef, co)
+			verified, bundleVerified, err = cosign.VerifyLocalImageAttestationsWithOpts(ctx, imageRef, co)
 			if err != nil {
 				return err
 			}
@@ -241,7 +241,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return err
 			}
 
-			verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co)
+			verified, bundleVerified, err = cosign.VerifyImageAttestationsWithOpts(ctx, ref, co)
 			if err != nil {
 				return err
 			}

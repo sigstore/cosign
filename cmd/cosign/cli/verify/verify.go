@@ -43,6 +43,7 @@ import (
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -186,7 +187,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	var pubKey signature.Verifier
 	switch {
 	case keyRef != "":
-		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
+		pubKey, err = sigs.PublicKeyFromKeyRefWithOpts(ctx, keyRef, signatureoptions.WithHash(c.HashAlgorithm))
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
@@ -230,7 +231,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
-			pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			pubKey, err = cosign.ValidateAndUnpackCertWithOpts(cert, co, cosign.WithChain(chain))
 			if err != nil {
 				return err
 			}
@@ -267,7 +268,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 
 	for _, img := range images {
 		if c.LocalImage {
-			verified, bundleVerified, err := cosign.VerifyLocalImageSignatures(ctx, img, co)
+			verified, bundleVerified, err := cosign.VerifyLocalImageSignaturesWithOpts(ctx, img, co)
 			if err != nil {
 				return err
 			}
@@ -283,7 +284,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return fmt.Errorf("resolving attachment type %s for image %s: %w", c.Attachment, img, err)
 			}
 
-			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
+			verified, bundleVerified, err := cosign.VerifyImageSignaturesWithOpts(ctx, ref, co)
 			if err != nil {
 				return cosignError.WrapError(err)
 			}
