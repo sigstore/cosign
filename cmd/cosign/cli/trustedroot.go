@@ -18,10 +18,9 @@ package cli
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/trustedroot"
+	"github.com/spf13/cobra"
 )
 
 func TrustedRoot() *cobra.Command {

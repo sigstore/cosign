@@ -20,10 +20,9 @@ package cli
 import (
 	"encoding/json"
 
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/pivcli"
+	"github.com/spf13/cobra"
 )
 
 var pivToolForce bool
