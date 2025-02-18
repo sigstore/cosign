@@ -20,12 +20,10 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/spf13/cobra"
 )
 
 const ignoreTLogMessage = "Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the %s."
