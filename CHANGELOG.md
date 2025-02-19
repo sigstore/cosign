@@ -1,3 +1,33 @@
+# v2.4.3
+
+## Features
+
+* Bump sigstore/sigstore to support KMS plugins (#4073)
+* Enable fetching signatures without remote get. (#4047)
+* Feat/file flag completion improvements (#4028)
+* Update builder to use go1.23.6 (#4052)
+
+## Bug Fixes
+
+* fix parsing error in --only for cosign copy (#4049)
+
+## Cleanup
+
+* Refactor verifyNewBundle into library function (#4013)
+* fix comment typo and imports order (#4061)
+* sync comment with parameter name in function signature (#4063)
+* sort properly Go imports (#4071)
+
+## Contributors
+
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Cody Soyland
+* Dmitry Savintsev
+* Hayden B
+* Tomasz Janiszewski
+* Ville Skyttä
+
 # v2.4.2
 
 ## Features
