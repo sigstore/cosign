@@ -58,9 +58,6 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: We can check for a specific predicate type here using
-	// img.Manifest() and looking at the annotations. To do so, we would need
-	// to thread the CLI flag through to here.
 	layers, err := img.Layers()
 	if err != nil {
 		return nil, err
