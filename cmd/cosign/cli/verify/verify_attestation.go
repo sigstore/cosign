@@ -121,6 +121,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if err = checkSigstoreBundleUnsupportedOptions(c); err != nil {
 			return err
 		}
+		co.TrustedMaterial, err = loadTrustedRoot(ctx, c.TrustedRootPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
