@@ -82,7 +82,13 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	}
 	b := &sgbundle.Bundle{}
 	err = b.UnmarshalJSON(bundleBytes)
-	return b, err
+	if err != nil {
+		return nil, err
+	}
+	if !b.MinVersion("v0.3") {
+		return nil, errors.New("bundle version too old")
+	}
+	return b, nil
 }
 
 type sigs struct {
