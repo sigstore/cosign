@@ -15,10 +15,9 @@
 package cosign
 
 import (
+	"errors"
 	"fmt"
 	"testing"
-
-	"errors"
 )
 
 func TestErrors(t *testing.T) {

@@ -17,9 +17,9 @@ package kubernetes
 import (
 	"fmt"
 
+	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/kubernetes"
 
-	utilversion "k8s.io/apimachinery/pkg/util/version"
 	// Initialize all known client auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"

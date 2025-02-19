@@ -18,7 +18,6 @@ package cue
 import (
 	"fmt"
 	"os"
-
 	"testing"
 )
 
