@@ -218,6 +218,7 @@ against the transparency log.`,
 
 			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
+				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
