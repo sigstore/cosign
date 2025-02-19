@@ -1551,6 +1551,12 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 		bundles = append(bundles, bundle)
 	}
 
+	if len(bundles) == 0 {
+		return nil, nil, &ErrNoMatchingAttestations{
+			fmt.Errorf("no valid bundles exist in registry"),
+		}
+	}
+
 	return bundles, &h, nil
 }
 
