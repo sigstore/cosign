@@ -40,7 +40,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	tsaclient "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -165,7 +165,16 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	var timestampBytes []byte
 	var rekorEntry *models.LogEntryAnon
 
-	if c.TSAServerURL != "" {
+	if c.KeyOpts.TSAServerURL != "" {
+		tc := tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL)
+		if c.TSAClientCert != "" {
+			tc = tsaclient.NewTSAClientMTLS(c.KeyOpts.TSAServerURL,
+				c.KeyOpts.TSAClientCACert,
+				c.KeyOpts.TSAClientCert,
+				c.KeyOpts.TSAClientKey,
+				c.KeyOpts.TSAServerName,
+			)
+		}
 		// We need to decide what signature to send to the timestamp authority.
 		//
 		// Historically, cosign sent `sig`, which is the entire JSON DSSE
@@ -186,12 +195,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 				return err
 			}
 
-			timestampBytes, err = tsa.GetTimestampedSignature(envelopeSigBytes, client.NewTSAClient(c.TSAServerURL))
+			timestampBytes, err = tsa.GetTimestampedSignature(envelopeSigBytes, tc)
 			if err != nil {
 				return err
 			}
 		} else {
-			timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
+			timestampBytes, err = tsa.GetTimestampedSignature(sig, tc)
 			if err != nil {
 				return err
 			}

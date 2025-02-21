@@ -86,6 +86,10 @@ func Attest() *cobra.Command {
 				OIDCRedirectURL:          o.OIDC.RedirectURL,
 				OIDCProvider:             o.OIDC.Provider,
 				SkipConfirmation:         o.SkipConfirmation,
+				TSAClientCACert:          o.TSAClientCACert,
+				TSAClientKey:             o.TSAClientKey,
+				TSAClientCert:            o.TSAClientCert,
+				TSAServerName:            o.TSAServerName,
 				TSAServerURL:             o.TSAServerURL,
 			}
 			attestCommand := attest.AttestCommand{
