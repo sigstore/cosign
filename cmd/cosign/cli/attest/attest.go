@@ -183,7 +183,16 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		// to send to the timestamp authority based on our output format.
 		//
 		// See cmd/cosign/cli/attest/attest_blob.go
-		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL))
+		tc := tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL)
+		if c.KeyOpts.TSAClientCert != "" {
+			tc = tsaclient.NewTSAClientMTLS(c.KeyOpts.TSAServerURL,
+				c.KeyOpts.TSAClientCACert,
+				c.KeyOpts.TSAClientCert,
+				c.KeyOpts.TSAClientKey,
+				c.KeyOpts.TSAServerName,
+			)
+		}
+		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, tc)
 		if err != nil {
 			return err
 		}
