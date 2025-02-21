@@ -26,6 +26,10 @@ type AttestBlobOptions struct {
 
 	SkipConfirmation     bool
 	TlogUpload           bool
+	TSAClientCACert      string
+	TSAClientCert        string
+	TSAClientKey         string
+	TSAServerName        string
 	TSAServerURL         string
 	RFC3161TimestampPath string
 
@@ -102,6 +106,18 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RekorEntryType, "rekor-entry-type", "dsse",
 		"specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default). ")
+
+	cmd.Flags().StringVar(&o.TSAClientCACert, "timestamp-client-cacert", "",
+		"path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server")
+
+	cmd.Flags().StringVar(&o.TSAClientCert, "timestamp-client-cert", "",
+		"path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server")
+
+	cmd.Flags().StringVar(&o.TSAClientKey, "timestamp-client-key", "",
+		"path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server")
+
+	cmd.Flags().StringVar(&o.TSAServerName, "timestamp-server-name", "",
+		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server")
 
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")
