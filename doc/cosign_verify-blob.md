@@ -94,7 +94,7 @@ cosign verify-blob [flags]
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string              path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
-      --trusted-root string                             Path to a Sigstore TrustedRoot JSON file.
+      --trusted-root string                             Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
       --use-signed-timestamps                           verify rfc3161 timestamps
 ```
 
