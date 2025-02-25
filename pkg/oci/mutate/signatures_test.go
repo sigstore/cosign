@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/oci/empty"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -84,6 +85,34 @@ func TestAppendSignatures(t *testing.T) {
 		t.Fatalf("ConfigFile() = %v", err)
 	} else if !testDefaultCfg.Created.Time.IsZero() {
 		t.Errorf("Date of Signature was Zero")
+	}
+}
+
+func TestReplaceSignatures(t *testing.T) {
+	base := empty.Signatures()
+
+	s1, err := static.NewSignature([]byte{}, "s1")
+	if err != nil {
+		t.Fatalf("NewSignature() = %v", err)
+	}
+
+	oneSig, err := AppendSignatures(base, false, s1)
+	if err != nil {
+		t.Fatalf("AppendSignatures() = %v", err)
+	}
+	replaceSig, err := ReplaceSignatures(oneSig)
+	if err != nil {
+		t.Fatalf("ReplaceSignatures() = %v", err)
+	}
+	if sl, err := replaceSig.Get(); err != nil {
+		t.Fatalf("Get() = %v", err)
+	} else if got, want := len(sl), 1; got != want {
+		t.Errorf("len(Get()) = %d, wanted %d", got, want)
+	}
+	if mt, err := replaceSig.MediaType(); err != nil {
+		t.Fatalf("MediaType() = %v", err)
+	} else if got, want := mt, types.OCIManifestSchema1; got != want {
+		t.Errorf("MediaType() = %v, wanted %v", got, want)
 	}
 }
 
