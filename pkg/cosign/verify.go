@@ -1599,9 +1599,13 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 					return fmt.Errorf("marshaling DSSE envelope: %w", err)
 				}
 
-				// TODO: Add additional data to oci.Signature (Cert, Rekor Bundle, Timestamp, etc)
-				// This can be done by passing a list of static.Option to NewAttestation (e.g. static.WithCertChain())
-				// This depends on https://github.com/sigstore/sigstore-go/issues/328
+				// We will return a slice of `[]oci.Signature` from this function for compatibility
+				// with the rest of the codebase. To do that, we wrap the verification output in a
+				// `oci.Signature` using static.NewAttestation(). This type may contain additional
+				// data such as the certificate chain, and rekor/tsa data, but for now we only use
+				// the payload (DSSE). TODO: Add additional data to returned `oci.Signature`. This
+				// can be done by passing a list of static.Option to NewAttestation (e.g. static.WithCertChain()).
+				// Depends on https://github.com/sigstore/sigstore-go/issues/328
 				att, err = static.NewAttestation(payload)
 				if err != nil {
 					return err
