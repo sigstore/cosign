@@ -73,7 +73,7 @@ for repo in rekor fulcio; do
     count=0
     until [ $(${docker_compose} ps | grep -c "(healthy)") == 3 ];
     do
-        if [ $count -eq 6 ]; then
+        if [ $count -eq 18 ]; then
            echo "! timeout reached"
            exit 1
         else
