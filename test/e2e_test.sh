@@ -71,7 +71,7 @@ for repo in rekor fulcio; do
     ${docker_compose} up -d
     echo -n "waiting up to 60 sec for system to start"
     count=0
-    until [ $(${docker_compose} ps | grep -c "(healthy)") == 3 ];
+    until $(docker compose ps --format '{{json .}}' | jq -s -e '.[] | .Health == "healthy" or .Health == ""');
     do
         if [ $count -eq 18 ]; then
            echo "! timeout reached"
