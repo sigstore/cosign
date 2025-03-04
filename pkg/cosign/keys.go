@@ -227,14 +227,5 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
-	switch pk := pk.(type) {
-	case *rsa.PrivateKey:
-		return signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
-	case *ecdsa.PrivateKey:
-		return signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
-	case ed25519.PrivateKey:
-		return signature.LoadED25519SignerVerifier(pk)
-	default:
-		return nil, errors.New("unsupported key type")
-	}
+	return signature.LoadSignerVerifierFromPrivateKey(pk)
 }
