@@ -17,6 +17,7 @@ package sign
 
 import (
 	"context"
+	"crypto"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -39,6 +40,7 @@ import (
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -50,8 +52,19 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
+	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
+	if err != nil {
+		return nil, err
+	}
+	defer sv.Close()
+
+	hashFunction, err := getHashFunction(sv)
+	if err != nil {
+		return nil, err
+	}
+
 	if payloadPath == "-" {
-		payload = internal.NewHashReader(os.Stdin, sha256.New())
+		payload = internal.NewHashReader(os.Stdin, hashFunction)
 	} else {
 		ui.Infof(ctx, "Using payload from: %s", payloadPath)
 		f, err := os.Open(filepath.Clean(payloadPath))
@@ -59,17 +72,11 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err != nil {
 			return nil, err
 		}
-		payload = internal.NewHashReader(f, sha256.New())
+		payload = internal.NewHashReader(f, hashFunction)
 	}
 	if err != nil {
 		return nil, err
 	}
-
-	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
-	if err != nil {
-		return nil, err
-	}
-	defer sv.Close()
 
 	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
 	if err != nil {
@@ -135,7 +142,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err != nil {
 			return nil, err
 		}
-		rekorEntry, err = cosign.TLogUpload(ctx, rekorClient, sig, &payload, rekorBytes)
+		rekorEntry, err = cosign.TLogUploadWithCustomHash(ctx, rekorClient, sig, &payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +186,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			bundle.Content = &protobundle.Bundle_MessageSignature{
 				MessageSignature: &protocommon.MessageSignature{
 					MessageDigest: &protocommon.HashOutput{
-						Algorithm: protocommon.HashAlgorithm_SHA2_256,
+						Algorithm: hashFuncToProtoBundle(payload.HashFunc()),
 						Digest:    digest,
 					},
 					Signature: sig,
@@ -262,4 +269,31 @@ func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error)
 		return signer, nil
 	}
 	return nil, nil
+}
+
+func getHashFunction(sv *SignerVerifier) (crypto.Hash, error) {
+	pubKey, err := sv.PublicKey()
+	if err != nil {
+		return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)
+	}
+
+	// TODO: Ideally the SignerVerifier should have a method to get the hash function
+	algo, err := signature.GetDefaultAlgorithmDetails(pubKey)
+	if err != nil {
+		return crypto.Hash(0), fmt.Errorf("error getting default algorithm details: %w", err)
+	}
+	return algo.GetHashType(), nil
+}
+
+func hashFuncToProtoBundle(hashFunc crypto.Hash) protocommon.HashAlgorithm {
+	switch hashFunc {
+	case crypto.SHA256:
+		return protocommon.HashAlgorithm_SHA2_256
+	case crypto.SHA384:
+		return protocommon.HashAlgorithm_SHA2_384
+	case crypto.SHA512:
+		return protocommon.HashAlgorithm_SHA2_512
+	default:
+		return protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED
+	}
 }
