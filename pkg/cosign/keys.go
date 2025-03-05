@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 const (
@@ -227,5 +228,6 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
-	return signature.LoadSignerVerifierFromPrivateKey(pk)
+	// Cosign uses ED25519ph by default for ED25519 keys
+	return signature.LoadSignerVerifierFromPrivateKey(pk, options.WithED25519ph())
 }
