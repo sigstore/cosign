@@ -58,6 +58,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
@@ -256,7 +258,11 @@ var verifyOffline = func(keyRef, imageRef string, checkClaims bool, annotations 
 
 var ro = &options.RootOptions{Timeout: options.DefaultTimeout}
 
-func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
+func keypairWithAlgorithm(t *testing.T, td string, publicKeyDetails v1.PublicKeyDetails) (*cosign.KeysBytes, string, string) {
+	algo, err := signature.GetAlgorithmDetails(publicKeyDetails)
+	if err != nil {
+		t.Fatal(err)
+	}
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -267,7 +273,7 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 	defer func() {
 		_ = os.Chdir(wd)
 	}()
-	keys, err := cosign.GenerateKeyPair(passFunc)
+	keys, err := cosign.GenerateKeyPairWithAlgorithm(&algo, passFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,6 +288,10 @@ func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 		t.Fatal(err)
 	}
 	return keys, privKeyPath, pubKeyPath
+}
+
+func keypair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
+	return keypairWithAlgorithm(t, td, v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
 }
 
 // convert the given ecdsa.PrivateKey to a PEM encoded string, import into sigstore format,
