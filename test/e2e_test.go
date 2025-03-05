@@ -72,6 +72,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -2243,6 +2244,64 @@ func TestSignBlobNewBundle(t *testing.T) {
 
 	// Verify should succeed now that bundle is written
 	must(verifyBlobCmd.Exec(ctx, blobPath), t)
+}
+
+func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
+	tts := []struct {
+		algo v1.PublicKeyDetails
+	}{
+		{v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384},
+		{v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256},
+		{v1.PublicKeyDetails_PKIX_ED25519},
+		{v1.PublicKeyDetails_PKIX_ED25519_PH},
+	}
+
+	for _, tt := range tts {
+		td1 := t.TempDir()
+
+		blob := "someblob"
+		blobPath := filepath.Join(td1, blob)
+		if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+
+		ctx := context.Background()
+		_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
+
+		ko1 := options.KeyOpts{
+			KeyRef:          pubKeyPath,
+			BundlePath:      bundlePath,
+			NewBundleFormat: true,
+		}
+
+		verifyBlobCmd := cliverify.VerifyBlobCmd{
+			KeyOpts:    ko1,
+			IgnoreTlog: true,
+		}
+
+		// Verify should fail before bundle is written
+		mustErr(verifyBlobCmd.Exec(ctx, blobPath), t)
+
+		// Produce signed bundle
+		ko := options.KeyOpts{
+			KeyRef:          privKeyPath,
+			PassFunc:        passFunc,
+			BundlePath:      bundlePath,
+			NewBundleFormat: true,
+		}
+
+		if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+			t.Fatal(err)
+		}
+
+		// Verify should succeed now that bundle is written
+		must(verifyBlobCmd.Exec(ctx, blobPath), t)
+	}
 }
 
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
