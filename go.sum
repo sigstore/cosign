@@ -686,10 +686,10 @@ github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399/go.mod h1:LdwHT
 github.com/tjfoc/gmsm v1.3.2/go.mod h1:HaUcFuY0auTiaHB9MHFGCPx5IaLhTUd2atbCFBQXn9w=
 github.com/tjfoc/gmsm v1.4.1 h1:aMe1GlZb+0bLjn+cKTPEvvn9oUEBlJitaZiiBwsbgho=
 github.com/tjfoc/gmsm v1.4.1/go.mod h1:j4INPkHWMrhJb38G+J6W4Tw0AbuN8Thu3PbdVYhVcTE=
-github.com/trail-of-forks/sigstore v0.0.0-20250304155941-f3b41554a19d h1:WvG34obQFHbHFptpRO/xm3N9bcNaJKD6DwpDE6uybDo=
-github.com/trail-of-forks/sigstore v0.0.0-20250304155941-f3b41554a19d/go.mod h1:zUoATYzR1J3rLNp3jmp4fzIJtWdhC3ZM6MnpcBtnsE4=
-github.com/trail-of-forks/sigstore-go v0.0.0-20250304162538-f87ab7381226 h1:D6MUnTS/WJ+nmXXRGNXZyHQzuGaj6RqQP1ndwSsdFvI=
-github.com/trail-of-forks/sigstore-go v0.0.0-20250304162538-f87ab7381226/go.mod h1:QMAJ01W1E/KpwG5v/AJ5BR/42rx/sgIMW8mcjMuI/pE=
+github.com/trail-of-forks/sigstore v0.0.0-20250305100229-6bb0c7c5e889 h1:UUy3aK/uLBRGsGorDEM7OERKw11JNvkG5qDU10ExZnw=
+github.com/trail-of-forks/sigstore v0.0.0-20250305100229-6bb0c7c5e889/go.mod h1:zUoATYzR1J3rLNp3jmp4fzIJtWdhC3ZM6MnpcBtnsE4=
+github.com/trail-of-forks/sigstore-go v0.0.0-20250305101832-9bba9e0f190a h1:PFSKqT4f3y8E8Q2kaLwKErYUdehTSkKrGXstmvJ5iiw=
+github.com/trail-of-forks/sigstore-go v0.0.0-20250305101832-9bba9e0f190a/go.mod h1:QKBt1sr8Z34ZeQCctOire3WuHbj49bgjQXuNiiqg7TA=
 github.com/transparency-dev/merkle v0.0.2 h1:Q9nBoQcZcgPamMkGn7ghV8XiTZ/kRxn1yCG81+twTK4=
 github.com/transparency-dev/merkle v0.0.2/go.mod h1:pqSy+OXefQ1EDUVmAJ8MUhHB9TXGuzVAT58PqBoHz1A=
 github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=
