@@ -1,6 +1,9 @@
 module github.com/sigstore/cosign/v2
 
-go 1.23.4
+go 1.23.6
+
+toolchain go1.24.0
+
 require (
 	cuelang.org/go v0.12.0
 	github.com/ThalesIgnite/crypto11 v1.2.5
