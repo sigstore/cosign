@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -44,6 +45,7 @@ import (
 type VerifyAttestationCommand struct {
 	options.RegistryOptions
 	options.CertVerifyOptions
+	options.CommonVerifyOptions
 	CheckClaims                  bool
 	KeyRef                       string
 	CertRef                      string
@@ -109,12 +111,24 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
+		NewBundleFormat:              c.NewBundleFormat,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
+
+	if c.NewBundleFormat {
+		if err = checkSigstoreBundleUnsupportedOptions(c); err != nil {
+			return err
+		}
+		co.TrustedMaterial, err = loadTrustedRoot(ctx, c.TrustedRootPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
+	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) && !c.NewBundleFormat {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
@@ -122,7 +136,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	// If we are using signed timestamps, we need to load the TSA certificates
-	if co.UseSignedTimestamps {
+	if co.UseSignedTimestamps && !c.NewBundleFormat {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -132,7 +146,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
-	if !c.IgnoreTlog {
+	if !c.IgnoreTlog && !co.NewBundleFormat {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -178,6 +192,10 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case c.CertRef != "":
+		if c.NewBundleFormat {
+			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
+			return fmt.Errorf("unsupported: certificate reference currently not supported with --new-bundle-format")
+		}
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return fmt.Errorf("loading certificate from reference: %w", err)
@@ -213,6 +231,17 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return fmt.Errorf("reading sct from file: %w", err)
 			}
 			co.SCT = sct
+		}
+	case c.TrustedRootPath != "":
+		if !c.NewBundleFormat {
+			return fmt.Errorf("unsupported: trusted root path currently only supported with --new-bundle-format")
+		}
+
+		// If a trusted root path is provided, we will use it to verify the bundle.
+		// Otherwise, the verifier will default to the public good instance.
+		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
+		if err != nil {
+			return fmt.Errorf("creating trusted root from path: %w", err)
 		}
 	case c.CARoots != "":
 		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
@@ -316,5 +345,21 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		PrintVerification(ctx, checked, "text")
 	}
 
+	return nil
+}
+
+func checkSigstoreBundleUnsupportedOptions(c *VerifyAttestationCommand) error {
+	if c.CertRef != "" {
+		return fmt.Errorf("unsupported: certificate may not be provided using --certificate when using --new-bundle-format (cert must be in bundle)")
+	}
+	if c.CertChain != "" {
+		return fmt.Errorf("unsupported: certificate chain may not be provided using --certificate-chain when using --new-bundle-format (cert must be in bundle)")
+	}
+	if c.CARoots != "" || c.CAIntermediates != "" {
+		return fmt.Errorf("unsupported: CA roots/intermediates must be provided using --trusted-root when using --new-bundle-format")
+	}
+	if c.TSACertChainPath != "" {
+		return fmt.Errorf("unsupported: TSA certificate chain path may only be provided using --trusted-root when using --new-bundle-format")
+	}
 	return nil
 }
