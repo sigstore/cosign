@@ -182,6 +182,9 @@ type verifyTrustedMaterial struct {
 }
 
 func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstrainedVerifier, error) {
+	if v.keyTrustedMaterial == nil {
+		return nil, fmt.Errorf("no public key material available")
+	}
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
 }
 
