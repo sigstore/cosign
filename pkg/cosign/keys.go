@@ -111,7 +111,7 @@ func GeneratePrivateKeyWithAlgorithm(algo *signature.AlgorithmDetails) (crypto.P
 		}
 		return priv, nil
 	default:
-		return nil, fmt.Errorf("unsupported key type: %s", algo.GetKeyType())
+		return nil, fmt.Errorf("unsupported key type: %v", currentAlgo.GetKeyType())
 	}
 }
 
@@ -282,6 +282,7 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
-	// Cosign uses ED25519ph by default for ED25519 keys
-	return signature.LoadSignerVerifierFromPrivateKey(pk, options.WithED25519ph())
+	// Cosign uses ED25519ph by default for ED25519 keys, because that's the
+	// only available option for hashedrekord entries
+	return signature.LoadDefaultSignerVerifier(pk, options.WithED25519ph())
 }
