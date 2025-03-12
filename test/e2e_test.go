@@ -2274,9 +2274,10 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
 
 		ko1 := options.KeyOpts{
-			KeyRef:          pubKeyPath,
-			BundlePath:      bundlePath,
-			NewBundleFormat: true,
+			KeyRef:                         pubKeyPath,
+			BundlePath:                     bundlePath,
+			NewBundleFormat:                true,
+			IssueCertificateForExistingKey: true,
 		}
 
 		verifyBlobCmd := cliverify.VerifyBlobCmd{
@@ -2289,10 +2290,11 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 
 		// Produce signed bundle
 		ko := options.KeyOpts{
-			KeyRef:          privKeyPath,
-			PassFunc:        passFunc,
-			BundlePath:      bundlePath,
-			NewBundleFormat: true,
+			KeyRef:                         privKeyPath,
+			PassFunc:                       passFunc,
+			BundlePath:                     bundlePath,
+			NewBundleFormat:                true,
+			IssueCertificateForExistingKey: true,
 		}
 
 		if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
