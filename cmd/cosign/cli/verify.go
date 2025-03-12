@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const ignoreTLogMessage = "Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the %s."
+const ignoreTLogMessage = "Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the %s."
 
 func Verify() *cobra.Command {
 	o := &options.VerifyOptions{}
