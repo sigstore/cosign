@@ -116,6 +116,11 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 	return NewSignerWithAdapter(ctx, ko, signer, signer)
 }
 
+// NewSignerWithAdapter creates a Fulcio Signer with a `fulcioSigner` that is
+// used to sign the Proof Of Possession sent to Fulcio. In most cases this will
+// be the same as the `signer`, however it is possible to use a different signer.
+// For example when ed25519ph is used for signing, the `fulcioSigner` will be
+// the equivalent PureED25519 signer, given that Fulcio does not support ed25519ph.
 func NewSignerWithAdapter(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier, fulcioSigner signature.SignerVerifier) (*Signer, error) {
 	fClient, err := NewClient(ko.FulcioURL)
 	if err != nil {
