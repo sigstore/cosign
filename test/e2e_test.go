@@ -1991,7 +1991,7 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := cosign.LoadPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
+	if _, err := cosign.LoadPrivateKey(keys.PrivateBytes, []byte("foo"), nil); err != nil {
 		t.Fatal(err)
 	}
 }

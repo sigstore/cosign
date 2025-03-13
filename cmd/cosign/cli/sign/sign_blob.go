@@ -52,13 +52,25 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
+	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
+	if err != nil {
+		return nil, fmt.Errorf("upload to tlog: %w", err)
+	}
+
+	if !shouldUpload {
+		// To maintain backwards compatibility with older cosign versions,
+		// we do not use ed25519ph for ed25519 keys when the signatures are not
+		// uploaded to the Tlog.
+		ko.DefaultLoadOptions = &[]signature.LoadOption{}
+	}
+
 	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
 		return nil, err
 	}
 	defer sv.Close()
 
-	hashFunction, err := getHashFunction(sv)
+	hashFunction, err := getHashFunction(sv, ko.DefaultLoadOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +140,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			}
 			ui.Infof(ctx, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 		}
-	}
-	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
-	if err != nil {
-		return nil, fmt.Errorf("upload to tlog: %w", err)
 	}
 	if shouldUpload {
 		rekorBytes, err := sv.Bytes(ctx)
@@ -271,15 +279,18 @@ func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error)
 	return nil, nil
 }
 
-func getHashFunction(sv *SignerVerifier) (crypto.Hash, error) {
+func getHashFunction(sv *SignerVerifier, defaultLoadOptions *[]signature.LoadOption) (crypto.Hash, error) {
 	pubKey, err := sv.PublicKey()
 	if err != nil {
 		return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)
 	}
 
+	if defaultLoadOptions == nil {
+		// Cosign uses ED25519ph by default for ED25519 keys
+		defaultLoadOptions = &[]signature.LoadOption{signatureoptions.WithED25519ph()}
+	}
 	// TODO: Ideally the SignerVerifier should have a method to get the hash function
-	// Cosign uses ED25519ph by default for ED25519 keys
-	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, signatureoptions.WithED25519ph())
+	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *defaultLoadOptions...)
 	if err != nil {
 		return crypto.Hash(0), fmt.Errorf("error getting default algorithm details: %w", err)
 	}

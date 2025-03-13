@@ -264,7 +264,7 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 
 // LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
 // and returns a SignerVerifier instance. The private key must be in the PKCS #8 format.
-func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
+func LoadPrivateKey(key []byte, pass []byte, defaultLoadOptions *[]signature.LoadOption) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
@@ -282,7 +282,13 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
-	// Cosign uses ED25519ph by default for ED25519 keys, because that's the
-	// only available option for hashedrekord entries
-	return signature.LoadDefaultSignerVerifier(pk, options.WithED25519ph())
+	if defaultLoadOptions == nil {
+		// Cosign uses ED25519ph by default for ED25519 keys, because that's the
+		// only available option for hashedrekord entries. This behaviour is
+		// configurable because we want to maintain compatibility with older
+		// cosign versions that used PureEd25519 for ED25519 keys (but which did
+		// not support TLog uploads).
+		defaultLoadOptions = &[]signature.LoadOption{options.WithED25519ph()}
+	}
+	return signature.LoadDefaultSignerVerifier(pk, *defaultLoadOptions...)
 }
