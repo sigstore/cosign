@@ -2274,6 +2274,8 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
 
 		ko1 := options.KeyOpts{
+			FulcioURL:                      fulcioURL,
+			RekorURL:                       rekorURL,
 			KeyRef:                         pubKeyPath,
 			BundlePath:                     bundlePath,
 			NewBundleFormat:                true,
@@ -2290,6 +2292,8 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 
 		// Produce signed bundle
 		ko := options.KeyOpts{
+			FulcioURL:                      fulcioURL,
+			RekorURL:                       rekorURL,
 			KeyRef:                         privKeyPath,
 			PassFunc:                       passFunc,
 			BundlePath:                     bundlePath,
