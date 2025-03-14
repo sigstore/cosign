@@ -32,10 +32,10 @@ require (
 	github.com/open-policy-agent/opa v1.1.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/fulcio v1.6.6
-	github.com/sigstore/protobuf-specs v0.4.0
+	github.com/sigstore/protobuf-specs v0.4.1-0.20250313180955-4752ba2fcab1
 	github.com/sigstore/rekor v1.3.9
-	github.com/sigstore/sigstore v1.8.15
-	github.com/sigstore/sigstore-go v0.7.0
+	github.com/sigstore/sigstore v1.9.0
+	github.com/sigstore/sigstore-go v0.7.1-0.20250314195357-b2d570704e5c
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.15
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.15
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.0
@@ -50,9 +50,9 @@ require (
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go v0.124.0
-	golang.org/x/crypto v0.35.0
+	golang.org/x/crypto v0.36.0
 	golang.org/x/oauth2 v0.27.0
-	golang.org/x/sync v0.11.0
+	golang.org/x/sync v0.12.0
 	golang.org/x/term v0.30.0
 	google.golang.org/api v0.223.0
 	google.golang.org/protobuf v1.36.5
@@ -187,7 +187,7 @@ require (
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
 	github.com/hashicorp/vault/api v1.16.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
-	github.com/in-toto/attestation v1.1.0 // indirect
+	github.com/in-toto/attestation v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20230811132847-661be99b8267 // indirect
 	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
@@ -259,10 +259,10 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
-	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
 	google.golang.org/genproto v0.0.0-20250122153221-138b5a5a4fd4 // indirect
