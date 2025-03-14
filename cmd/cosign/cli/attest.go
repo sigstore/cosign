@@ -91,6 +91,7 @@ func Attest() *cobra.Command {
 				TSAClientCert:            o.TSAClientCert,
 				TSAServerName:            o.TSAServerName,
 				TSAServerURL:             o.TSAServerURL,
+				NewBundleFormat:          o.NewBundleFormat,
 			}
 			attestCommand := attest.AttestCommand{
 				KeyOpts:                 ko,
