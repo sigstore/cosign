@@ -1,6 +1,7 @@
 module github.com/sigstore/cosign/v2
 
 go 1.23.4
+toolchain go1.24.1
 
 require (
 	cuelang.org/go v0.12.0
@@ -52,7 +53,7 @@ require (
 	gitlab.com/gitlab-org/api/client-go v0.124.0
 	golang.org/x/crypto v0.35.0
 	golang.org/x/oauth2 v0.27.0
-	golang.org/x/sync v0.11.0
+	golang.org/x/sync v0.12.0
 	golang.org/x/term v0.30.0
 	google.golang.org/api v0.223.0
 	google.golang.org/protobuf v1.36.5
