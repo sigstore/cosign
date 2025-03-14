@@ -66,6 +66,7 @@ func (o *BundleCreateOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RekorURL, "rekor-url", "https://rekor.sigstore.dev",
 		"address of rekor STL server")
+	_ = cmd.RegisterFlagCompletionFunc("rekor-url", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")
