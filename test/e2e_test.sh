@@ -24,8 +24,10 @@ fi
 echo "setting up OIDC provider"
 pushd ./test/fakeoidc
 
+# in CI ko-build/setup-ko, will set this var to ghcr.io
+KO_DOCKER_REPO="${KO_DOCKER_REPO:=ko.local}"
 ko build --local --base-import-paths
-docker start fakeoidc || docker run -d --rm -p 8080:8080 --hostname $(hostname) --name fakeoidc ko.local/fakeoidc
+docker start fakeoidc || docker run -d --rm -p 8080:8080 --hostname $(hostname) --name fakeoidc $KO_DOCKER_REPO/fakeoidc
 cleanup_oidc() {
     echo "cleaning up oidc"
     docker stop fakeoidc
