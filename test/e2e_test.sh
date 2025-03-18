@@ -56,7 +56,7 @@ wget -q https://raw.github.com/ramonpetgrave64/scaffolding/portable-testing/acti
 echo "starting services"
 export FULCIO_METRICS_PORT=2113
 export FULCIO_CONFIG=/tmp/fulcio-config.json
-export CHECKOUT_DIR=$(pwd)/CHECKOUT_DIR
+export CHECKOUT_DIR=$HOME
 make
 cleanup_services() {
     echo "cleaning up"
