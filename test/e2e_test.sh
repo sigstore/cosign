@@ -62,8 +62,7 @@ cleanup_services() {
     echo "cleaning up"
     cleanup_oidc
     pushd $HOME
-    make down
-    rm -rf $CHECKOUT_DIR
+    make down clean
     popd
 }
 trap cleanup_services EXIT
