@@ -23,16 +23,17 @@ fi
 
 echo "setting up OIDC provider"
 pushd ./test/fakeoidc
-oidcimg=$(ko build main.go --local)
-docker network ls | grep fulcio_default || docker network create fulcio_default --label "com.docker.compose.network=fulcio_default"
-docker run -d --rm -p 8080:8080 --network fulcio_default --name fakeoidc $oidcimg
+
+# in CI ko-build/setup-ko, will set this var to ghcr.io
+KO_DOCKER_REPO="${KO_DOCKER_REPO:=ko.local}"
+ko build --local --base-import-paths
+docker start fakeoidc || docker run -d --rm -p 8080:8080 --hostname $(hostname) --name fakeoidc $KO_DOCKER_REPO/fakeoidc
 cleanup_oidc() {
     echo "cleaning up oidc"
     docker stop fakeoidc
 }
 trap cleanup_oidc EXIT
-oidc_ip=$(docker inspect fakeoidc | jq -r '.[0].NetworkSettings.Networks.fulcio_default.IPAddress')
-export OIDC_URL="http://${oidc_ip}:8080"
+export OIDC_URL="http://$(hostname):8080"
 cat <<EOF > /tmp/fulcio-config.json
 {
   "OIDCIssuers": {
@@ -48,52 +49,27 @@ popd
 
 pushd $HOME
 
-echo "downloading service repos"
-for repo in rekor fulcio; do
-    if [[ ! -d $repo ]]; then
-        git clone https://github.com/sigstore/${repo}.git
-    else
-        pushd $repo
-        git pull
-        popd
-    fi
-done
+# fetch from https://github.com/ramonpetgrave64/scaffolding/blob/portable-testing/actions/portable_testing/Makefile
+echo "downloading scaffoding pertable sigstore Makefile"
+wget -q https://raw.github.com/ramonpetgrave64/scaffolding/portable-testing/actions/portable_testing/Makefile
 
 echo "starting services"
 export FULCIO_METRICS_PORT=2113
 export FULCIO_CONFIG=/tmp/fulcio-config.json
-for repo in rekor fulcio; do
-    pushd $repo
-    if [ "$repo" == "fulcio" ]; then
-       yq -i e '.networks={"default":{ "name":"fulcio_default","external":true }}' docker-compose.yml
-       yq -i e '.services.fulcio-server.networks=["default"]' docker-compose.yml
-    fi
-    ${docker_compose} up -d
-    echo -n "waiting up to 60 sec for system to start"
-    count=0
-    until [ $(${docker_compose} ps | grep -c "(healthy)") == 3 ];
-    do
-        if [ $count -eq 18 ]; then
-           echo "! timeout reached"
-           exit 1
-        else
-           echo -n "."
-           sleep 10
-           let 'count+=1'
-        fi
-    done
-    popd
-done
+export CHECKOUT_DIR=$HOME
+make
 cleanup_services() {
     echo "cleaning up"
     cleanup_oidc
-    for repo in rekor fulcio; do
-        pushd $HOME/$repo
-        ${docker_compose} down
-        popd
-    done
+    pushd $HOME
+    make down clean
+    popd
 }
 trap cleanup_services EXIT
+
+echo "atach fakeoidc"
+docker network disconnect fulcio_default fakeoidc || true
+docker network connect --alias $(hostname) fulcio_default fakeoidc
 
 echo
 echo "running tests"
