@@ -25,7 +25,7 @@ cosign bundle create [flags]
       --rfc3161-timestamp string   path to RFC3161 timestamp FILE
       --signature string           path to base64-encoded signature over attestation in DSSE format
       --sk                         whether to use a hardware security key
-      --slot string                security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --slot string                security key slot to use for generated key (authentication|signature|card-authentication|key-management) (default "signature")
 ```
 
 ### Options inherited from parent commands
