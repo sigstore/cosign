@@ -39,8 +39,9 @@ cosign generate-key-pair [flags]
   # generate a key-pair in GitHub
   cosign generate-key-pair github://[OWNER]/[PROJECT_NAME]
 
-  # generate a key-pair in GitLab with project name
+  # generate a key-pair in GitLab with project or group name
   cosign generate-key-pair gitlab://[OWNER]/[PROJECT_NAME]
+  cosign generate-key-pair gitlab://[GROUP_NAME]
 
   # generate a key-pair in GitLab with project id
   cosign generate-key-pair gitlab://[PROJECT_ID]
