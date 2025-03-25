@@ -19,6 +19,7 @@ run:
 linters:
   enable:
     - asciicheck
+    - errcheck
     - errorlint
     - forbidigo
     - gocritic
