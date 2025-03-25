@@ -147,8 +147,8 @@ func TestVerifyBlobAttestation(t *testing.T) {
 				PredicateType: test.predicateType,
 			}
 			if test.bundlePath != "" {
-				cmd.KeyOpts.BundlePath = test.bundlePath
-				cmd.KeyOpts.NewBundleFormat = true
+				cmd.BundlePath = test.bundlePath
+				cmd.NewBundleFormat = true
 				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
 			}
 			err = cmd.Exec(ctx, test.blobPath)

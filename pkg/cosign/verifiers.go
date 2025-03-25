@@ -76,7 +76,7 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, _ map[st
 	if err := json.Unmarshal(stBytes, &st); err != nil {
 		return err
 	}
-	for _, subj := range st.StatementHeader.Subject {
+	for _, subj := range st.Subject {
 		dgst, ok := subj.Digest["sha256"]
 		if !ok {
 			continue
