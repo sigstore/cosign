@@ -1,6 +1,7 @@
 module github.com/sigstore/cosign/v2
 
 go 1.23.4
+toolchain go1.24.1
 
 require (
 	cuelang.org/go v0.12.0
@@ -49,7 +50,7 @@ require (
 	github.com/theupdateframework/go-tuf/v2 v2.0.2
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
-	gitlab.com/gitlab-org/api/client-go v0.124.0
+	gitlab.com/gitlab-org/api/client-go v0.126.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/oauth2 v0.28.0
 	golang.org/x/sync v0.12.0
