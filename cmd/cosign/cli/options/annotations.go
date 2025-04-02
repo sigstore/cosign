@@ -50,4 +50,5 @@ func (o *AnnotationOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
 func (o *AnnotationOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSliceVarP(&o.Annotations, "annotations", "a", nil,
 		"extra key=value pairs to sign")
+	_ = cmd.RegisterFlagCompletionFunc("annotations", cobra.NoFileCompletions)
 }

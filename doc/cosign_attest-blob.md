@@ -54,7 +54,7 @@ cosign attest-blob [flags]
       --output-certificate string         write the certificate to FILE
       --output-signature string           write the signature to FILE
       --predicate string                  path to the predicate file.
-      --rekor-entry-type string           specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default).  (default "dsse")
+      --rekor-entry-type string           specifies the type to be used for a rekor entry upload (dsse|intoto) (default "dsse")
       --rekor-url string                  address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
       --sk                                whether to use a hardware security key
