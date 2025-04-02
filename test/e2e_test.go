@@ -751,12 +751,15 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 }
 
 func TestAttestVerify(t *testing.T) {
-	attestVerify(t,
-		"slsaprovenance",
-		`{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`,
-		`predicate: builder: id: "2"`,
-		`predicate: builder: id: "1"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"slsaprovenance",
+			`{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`,
+			`predicate: builder: id: "2"`,
+			`predicate: builder: id: "1"`,
+		)
+	}
 }
 
 func TestAttestVerifySPDXJSON(t *testing.T) {
@@ -764,12 +767,15 @@ func TestAttestVerifySPDXJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attestVerify(t,
-		"spdxjson",
-		string(attestationBytes),
-		`predicate: spdxVersion: "SPDX-2.2"`,
-		`predicate: spdxVersion: "SPDX-9.9"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"spdxjson",
+			string(attestationBytes),
+			`predicate: spdxVersion: "SPDX-2.2"`,
+			`predicate: spdxVersion: "SPDX-9.9"`,
+		)
+	}
 }
 
 func TestAttestVerifyCycloneDXJSON(t *testing.T) {
@@ -777,12 +783,15 @@ func TestAttestVerifyCycloneDXJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attestVerify(t,
-		"cyclonedx",
-		string(attestationBytes),
-		`predicate: specVersion: "1.4"`,
-		`predicate: specVersion: "7.7"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"cyclonedx",
+			string(attestationBytes),
+			`predicate: specVersion: "1.4"`,
+			`predicate: specVersion: "7.7"`,
+		)
+	}
 }
 
 func TestAttestVerifyURI(t *testing.T) {
@@ -790,15 +799,18 @@ func TestAttestVerifyURI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attestVerify(t,
-		"https://example.com/TestResult/v1",
-		string(attestationBytes),
-		`predicate: passed: true`,
-		`predicate: passed: false"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"https://example.com/TestResult/v1",
+			string(attestationBytes),
+			`predicate: passed: true`,
+			`predicate: passed: false"`,
+		)
+	}
 }
 
-func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue string) {
+func attestVerify(t *testing.T, newBundleFormat bool, predicateType, attestation, goodCue, badCue string) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -827,6 +839,10 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 		MaxWorkers: 10,
 	}
 
+	if newBundleFormat {
+		verifyAttestation.NewBundleFormat = true
+	}
+
 	// Fail case when using without type and policy flag
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
@@ -835,7 +851,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	}
 
 	// Now attest the image
-	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, NewBundleFormat: newBundleFormat}
 	attestCmd := attest.AttestCommand{
 		KeyOpts:        ko,
 		PredicatePath:  attestationPath,
