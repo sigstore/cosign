@@ -688,8 +688,8 @@ github.com/trail-of-forks/protobuf-specs v0.3.3-0.20250331162432-e5e775cafa56 h1
 github.com/trail-of-forks/protobuf-specs v0.3.3-0.20250331162432-e5e775cafa56/go.mod h1:+gXR+38nIa2oEupqDdzg4qSBT0Os+sP7oYv6alWewWc=
 github.com/trail-of-forks/sigstore v0.0.0-20250331165513-1846a6ef19c9 h1:PXPDIDYawbhvCNUTb4ggfVqWiu9B5hKRT1F4wqcMuKw=
 github.com/trail-of-forks/sigstore v0.0.0-20250331165513-1846a6ef19c9/go.mod h1:1GRErm4eDn8QE4nPiOuATTYh7iu34K7kQX4DUy5jlZ8=
-github.com/trail-of-forks/sigstore-go v0.0.0-20250402142042-b1a3e0e8bd7c h1:S5b8MRdHOmNQ1vqnHYoXichyvqPgOJcLmrYD3mtMBsY=
-github.com/trail-of-forks/sigstore-go v0.0.0-20250402142042-b1a3e0e8bd7c/go.mod h1:4BEPNMqc1rsaNYhjtaeKAahKpSDAApQ8z8HeryW2aN0=
+github.com/trail-of-forks/sigstore-go v0.0.0-20250402150123-943af1dcca61 h1:H1UgqWxMH7Sh2hkOpvkEoj0I3Zeg91ZeZG4cAnLrB8M=
+github.com/trail-of-forks/sigstore-go v0.0.0-20250402150123-943af1dcca61/go.mod h1:4BEPNMqc1rsaNYhjtaeKAahKpSDAApQ8z8HeryW2aN0=
 github.com/transparency-dev/merkle v0.0.2 h1:Q9nBoQcZcgPamMkGn7ghV8XiTZ/kRxn1yCG81+twTK4=
 github.com/transparency-dev/merkle v0.0.2/go.mod h1:pqSy+OXefQ1EDUVmAJ8MUhHB9TXGuzVAT58PqBoHz1A=
 github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=

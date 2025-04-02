@@ -280,7 +280,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/sigstore/sigstore-go => github.com/trail-of-forks/sigstore-go v0.0.0-20250402142042-b1a3e0e8bd7c
+replace github.com/sigstore/sigstore-go => github.com/trail-of-forks/sigstore-go v0.0.0-20250402150123-943af1dcca61
 
 replace github.com/sigstore/protobuf-specs => github.com/trail-of-forks/protobuf-specs v0.3.3-0.20250331162432-e5e775cafa56
 
