@@ -15,7 +15,7 @@ require (
 	github.com/go-jose/go-jose/v3 v3.0.4
 	github.com/go-openapi/runtime v0.28.0
 	github.com/go-openapi/strfmt v0.23.0
-	github.com/go-openapi/swag v0.23.0
+	github.com/go-openapi/swag v0.23.1
 	github.com/go-piv/piv-go/v2 v2.3.0
 	github.com/google/certificate-transparency-go v1.3.1
 	github.com/google/go-cmp v0.7.0
@@ -32,7 +32,7 @@ require (
 	github.com/open-policy-agent/opa v1.1.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/fulcio v1.6.6
-	github.com/sigstore/protobuf-specs v0.4.0
+	github.com/sigstore/protobuf-specs v0.4.1-0.20250313180955-4752ba2fcab1
 	github.com/sigstore/rekor v1.3.9
 	github.com/sigstore/sigstore v1.9.1
 	github.com/sigstore/sigstore-go v0.7.0
@@ -51,11 +51,11 @@ require (
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go v0.124.0
 	golang.org/x/crypto v0.36.0
-	golang.org/x/oauth2 v0.27.0
+	golang.org/x/oauth2 v0.28.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/term v0.30.0
 	google.golang.org/api v0.223.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
@@ -198,7 +198,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20240620165639-de9c06129bec // indirect
 	github.com/magiconair/properties v1.8.9 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -260,7 +260,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
@@ -280,4 +280,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/sigstore/sigstore-go => github.com/trail-of-forks/sigstore-go v0.0.0-20250312131043-c67a77c4f0b8
+replace github.com/sigstore/sigstore-go => github.com/trail-of-forks/sigstore-go v0.0.0-20250402142042-b1a3e0e8bd7c
+
+replace github.com/sigstore/protobuf-specs => github.com/trail-of-forks/protobuf-specs v0.3.3-0.20250331162432-e5e775cafa56
+
+replace github.com/sigstore/sigstore => github.com/trail-of-forks/sigstore v0.0.0-20250331165513-1846a6ef19c9
