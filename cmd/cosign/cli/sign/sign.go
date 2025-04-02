@@ -18,7 +18,6 @@ package sign
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -391,8 +390,8 @@ func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier
 	}, nil
 }
 
-func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc) (*SignerVerifier, error) {
-	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc)
+func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc, defaultLoadOptions)
 	if err != nil {
 		return nil, fmt.Errorf("reading key: %w", err)
 	}
@@ -521,12 +520,26 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func signerFromNewKey() (*SignerVerifier, error) {
-	privKey, err := cosign.GeneratePrivateKey()
+func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+	keyDetails, err := signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
+	}
+	algo, err := signature.GetAlgorithmDetails(keyDetails)
+	if err != nil {
+		return nil, fmt.Errorf("getting algorithm details: %w", err)
+	}
+
+	privKey, err := cosign.GeneratePrivateKeyWithAlgorithm(&algo)
 	if err != nil {
 		return nil, fmt.Errorf("generating cert: %w", err)
 	}
-	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+
+	if defaultLoadOptions == nil {
+		// Cosign uses ED25519ph by default for ED25519 keys
+		defaultLoadOptions = &[]signature.LoadOption{signatureoptions.WithED25519ph()}
+	}
+	sv, err := signature.LoadSignerVerifierFromAlgorithmDetails(privKey, algo, *defaultLoadOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -536,18 +549,45 @@ func signerFromNewKey() (*SignerVerifier, error) {
 	}, nil
 }
 
+// adaptSignerVerifierToFulcio adapts, if necessary, the SignerVerifier to be
+// used to interact with Fulcio.
+//
+// This is needed in particular for ED25519 keys with the pre-hashed version of
+// the algorithm, which is not supported by Fulcio. This function creates a
+// ED25519 SignerVerifier based on that instead.
+func adaptSignerVerifierToFulcio(sv *SignerVerifier) (*SignerVerifier, error) {
+	if ed25519phSV, ok := sv.SignerVerifier.(*signature.ED25519phSignerVerifier); ok {
+		signerVerifier, err := ed25519phSV.ToED25519SignerVerifier()
+		if err != nil {
+			return nil, err
+		}
+
+		return &SignerVerifier{
+			SignerVerifier: signerVerifier,
+			Cert:           sv.Cert,
+			Chain:          sv.Chain,
+		}, nil
+	}
+	return sv, nil
+}
+
 func keylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) (*SignerVerifier, error) {
 	var (
 		k   *fulcio.Signer
 		err error
 	)
 
+	fulcioSV, err := adaptSignerVerifierToFulcio(sv)
+	if err != nil {
+		return nil, fmt.Errorf("adapting signer verifier to Fulcio: %w", err)
+	}
+
 	if ko.InsecureSkipFulcioVerify {
-		if k, err = fulcio.NewSigner(ctx, ko, sv); err != nil {
+		if k, err = fulcio.NewSignerWithAdapter(ctx, ko, sv, fulcioSV); err != nil {
 			return nil, fmt.Errorf("getting key from Fulcio: %w", err)
 		}
 	} else {
-		if k, err = fulcioverifier.NewSigner(ctx, ko, sv); err != nil {
+		if k, err = fulcioverifier.NewSignerWithAdapter(ctx, ko, sv, fulcioSV); err != nil {
 			return nil, fmt.Errorf("getting key from Fulcio: %w", err)
 		}
 	}
@@ -567,11 +607,11 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	case ko.Sk:
 		sv, err = signerFromSecurityKey(ctx, ko.Slot)
 	case ko.KeyRef != "":
-		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc)
+		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, ko.DefaultLoadOptions)
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
-		sv, err = signerFromNewKey()
+		sv, err = signerFromNewKey(ko.SigningAlgorithm, ko.DefaultLoadOptions)
 	}
 	if err != nil {
 		return nil, err
