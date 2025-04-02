@@ -99,6 +99,7 @@ func SignBlob() *cobra.Command {
 				TSAServerURL:                   o.TSAServerURL,
 				RFC3161TimestampPath:           o.RFC3161TimestampPath,
 				IssueCertificateForExistingKey: o.IssueCertificate,
+				SigningAlgorithm:               o.SigningAlgorithm,
 			}
 			if (o.Key == "" || o.IssueCertificate) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" {
 				if o.TrustedRootPath != "" {

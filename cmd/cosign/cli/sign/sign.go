@@ -18,7 +18,6 @@ package sign
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -603,12 +602,26 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func signerFromNewKey() (*SignerVerifier, error) {
-	privKey, err := cosign.GeneratePrivateKey()
+func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+	keyDetails, err := signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
+	}
+	algo, err := signature.GetAlgorithmDetails(keyDetails)
+	if err != nil {
+		return nil, fmt.Errorf("getting algorithm details: %w", err)
+	}
+
+	privKey, err := cosign.GeneratePrivateKeyWithAlgorithm(&algo)
 	if err != nil {
 		return nil, fmt.Errorf("generating cert: %w", err)
 	}
-	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+
+	if defaultLoadOptions == nil {
+		// Cosign uses ED25519ph by default for ED25519 keys
+		defaultLoadOptions = &[]signature.LoadOption{signatureoptions.WithED25519ph()}
+	}
+	sv, err := signature.LoadSignerVerifierFromAlgorithmDetails(privKey, algo, *defaultLoadOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -680,7 +693,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
-		sv, err = signerFromNewKey()
+		sv, err = signerFromNewKey(ko.SigningAlgorithm, ko.DefaultLoadOptions)
 	}
 	if err != nil {
 		return nil, err
