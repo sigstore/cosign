@@ -61,7 +61,7 @@ func FuzzImportKeyPairLoadPrivateKey(f *testing.F) {
 			return
 		}
 		// Loading the private key should also work.
-		_, err = LoadPrivateKey(keyBytes.PrivateBytes, password)
+		_, err = LoadPrivateKey(keyBytes.PrivateBytes, password, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

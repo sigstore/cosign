@@ -15,7 +15,10 @@
 
 package options
 
-import "github.com/sigstore/cosign/v2/pkg/cosign"
+import (
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature"
+)
 
 type KeyOpts struct {
 	Sk                   bool
@@ -53,4 +56,13 @@ type KeyOpts struct {
 	// Modeled after InsecureSkipVerify in tls.Config, this disables
 	// verifying the SCT.
 	InsecureSkipFulcioVerify bool
+
+	// DefaultLoadOptions may be set to control the behaviour of
+	// `LoadDefaultSigner/Verifier` family of functions. Some public/private key
+	// types have ambiguities with regards to the signing algorithm to use (e.g.
+	// RSA can be RSASSA-PSS or RSASSA-PKCS1v15). This is a way to control that.
+	//
+	// By default, Ed25519ph is used for ed25519 keys and RSA-PKCS1v15 is used
+	// for RSA keys.
+	DefaultLoadOptions *[]signature.LoadOption
 }
