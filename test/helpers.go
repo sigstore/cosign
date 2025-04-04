@@ -423,7 +423,7 @@ func mkimage(t *testing.T, n string) (name.Reference, *remote.Descriptor, func()
 
 	cleanup := func() {
 		_ = remote.Delete(ref, regClientOpts...)
-		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteImage.Descriptor.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
+		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteImage.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
 		_ = remote.Delete(ref, regClientOpts...)
 	}
 	return ref, remoteImage, cleanup
@@ -452,7 +452,7 @@ func mkimageindex(t *testing.T, n string) (name.Reference, *remote.Descriptor, f
 
 	cleanup := func() {
 		_ = remote.Delete(ref, regClientOpts...)
-		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteIndex.Descriptor.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
+		ref, _ := ociremote.SignatureTag(ref.Context().Digest(remoteIndex.Digest.String()), ociremote.WithRemoteOptions(regClientOpts...))
 		_ = remote.Delete(ref, regClientOpts...)
 	}
 	return ref, remoteIndex, cleanup

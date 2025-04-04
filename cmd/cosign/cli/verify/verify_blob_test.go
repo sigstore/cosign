@@ -619,9 +619,9 @@ func TestVerifyBlob(t *testing.T) {
 			}
 			if tt.newBundle {
 				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
-				cmd.KeyOpts.RekorURL = ""
-				cmd.KeyOpts.RFC3161TimestampPath = ""
-				cmd.KeyOpts.TSACertChainPath = ""
+				cmd.RekorURL = ""
+				cmd.RFC3161TimestampPath = ""
+				cmd.TSACertChainPath = ""
 				cmd.CertChain = ""
 			}
 			err := cmd.Exec(context.Background(), blobPath)
