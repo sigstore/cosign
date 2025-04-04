@@ -2275,6 +2275,16 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		{v1.PublicKeyDetails_PKIX_ED25519_PH},
 	}
 
+	err := fulcioroots.ReInit()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for _, tt := range tts {
 		td1 := t.TempDir()
 
@@ -2292,6 +2302,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		ko1 := options.KeyOpts{
 			FulcioURL:                      fulcioURL,
 			RekorURL:                       rekorURL,
+			IDToken:                        identityToken,
 			KeyRef:                         pubKeyPath,
 			BundlePath:                     bundlePath,
 			NewBundleFormat:                true,
@@ -2310,6 +2321,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		ko := options.KeyOpts{
 			FulcioURL:                      fulcioURL,
 			RekorURL:                       rekorURL,
+			IDToken:                        identityToken,
 			KeyRef:                         privKeyPath,
 			PassFunc:                       passFunc,
 			BundlePath:                     bundlePath,
