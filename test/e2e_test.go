@@ -2286,55 +2286,57 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 	}
 
 	for _, tt := range tts {
-		td1 := t.TempDir()
+		t.Run(tt.algo.String(), func(t *testing.T) {
+			td1 := t.TempDir()
 
-		blob := "someblob"
-		blobPath := filepath.Join(td1, blob)
-		if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
-			t.Fatal(err)
-		}
+			blob := "someblob"
+			blobPath := filepath.Join(td1, blob)
+			if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+				t.Fatal(err)
+			}
 
-		bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+			bundlePath := filepath.Join(td1, "bundle.sigstore.json")
 
-		ctx := context.Background()
-		_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
+			ctx := context.Background()
+			_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
 
-		ko1 := options.KeyOpts{
-			FulcioURL:                      fulcioURL,
-			RekorURL:                       rekorURL,
-			IDToken:                        identityToken,
-			KeyRef:                         pubKeyPath,
-			BundlePath:                     bundlePath,
-			NewBundleFormat:                true,
-			IssueCertificateForExistingKey: true,
-		}
+			ko1 := options.KeyOpts{
+				FulcioURL:                      fulcioURL,
+				RekorURL:                       rekorURL,
+				IDToken:                        identityToken,
+				KeyRef:                         pubKeyPath,
+				BundlePath:                     bundlePath,
+				NewBundleFormat:                true,
+				IssueCertificateForExistingKey: true,
+			}
 
-		verifyBlobCmd := cliverify.VerifyBlobCmd{
-			KeyOpts:    ko1,
-			IgnoreTlog: true,
-		}
+			verifyBlobCmd := cliverify.VerifyBlobCmd{
+				KeyOpts:    ko1,
+				IgnoreTlog: true,
+			}
 
-		// Verify should fail before bundle is written
-		mustErr(verifyBlobCmd.Exec(ctx, blobPath), t)
+			// Verify should fail before bundle is written
+			mustErr(verifyBlobCmd.Exec(ctx, blobPath), t)
 
-		// Produce signed bundle
-		ko := options.KeyOpts{
-			FulcioURL:                      fulcioURL,
-			RekorURL:                       rekorURL,
-			IDToken:                        identityToken,
-			KeyRef:                         privKeyPath,
-			PassFunc:                       passFunc,
-			BundlePath:                     bundlePath,
-			NewBundleFormat:                true,
-			IssueCertificateForExistingKey: true,
-		}
+			// Produce signed bundle
+			ko := options.KeyOpts{
+				FulcioURL:                      fulcioURL,
+				RekorURL:                       rekorURL,
+				IDToken:                        identityToken,
+				KeyRef:                         privKeyPath,
+				PassFunc:                       passFunc,
+				BundlePath:                     bundlePath,
+				NewBundleFormat:                true,
+				IssueCertificateForExistingKey: true,
+			}
 
-		if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
-			t.Fatal(err)
-		}
+			if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+				t.Fatal(err)
+			}
 
-		// Verify should succeed now that bundle is written
-		must(verifyBlobCmd.Exec(ctx, blobPath), t)
+			// Verify should succeed now that bundle is written
+			must(verifyBlobCmd.Exec(ctx, blobPath), t)
+		})
 	}
 }
 
