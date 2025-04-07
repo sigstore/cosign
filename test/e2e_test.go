@@ -2377,7 +2377,6 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 
 			// Verify should succeed now that bundle is written
 			must(verifyBlobCmd.Exec(ctx, blobPath), t)
-
 		})
 	}
 
