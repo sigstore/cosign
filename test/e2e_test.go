@@ -2379,7 +2379,6 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 			must(verifyBlobCmd.Exec(ctx, blobPath), t)
 		})
 	}
-
 }
 
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
