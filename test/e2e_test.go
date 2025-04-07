@@ -62,6 +62,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/trustedroot"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
@@ -2275,13 +2276,41 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		{v1.PublicKeyDetails_PKIX_ED25519_PH},
 	}
 
-	err := fulcioroots.ReInit()
+	td := t.TempDir()
+
+	// set up SIGSTORE_ variables to point to keys for the local instances
+	err := setLocalEnv(t, td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = fulcioroots.ReInit()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	identityToken, err := getOIDCToken()
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Use the CreateCmd approach to create a trusted root
+	rootFile := os.Getenv("SIGSTORE_ROOT_FILE")
+	ctfePubKey := os.Getenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE")
+	rekorPubKey := os.Getenv("SIGSTORE_REKOR_PUBLIC_KEY")
+	// Create a temporary file for the trusted root JSON
+	trustedRootPath := filepath.Join(td, "trustedroot.json")
+
+	// Create a CreateCmd instance
+	createCmd := trustedroot.CreateCmd{
+		CertChain:    []string{rootFile},
+		Out:          trustedRootPath,
+		RekorKeyPath: []string{rekorPubKey},
+		CtfeKeyPath:  []string{ctfePubKey},
+	}
+
+	// Execute the command to create the trusted root
+	if err := createCmd.Exec(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2298,21 +2327,22 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 			bundlePath := filepath.Join(td1, "bundle.sigstore.json")
 
 			ctx := context.Background()
-			_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
-
-			ko1 := options.KeyOpts{
-				FulcioURL:                      fulcioURL,
-				RekorURL:                       rekorURL,
-				IDToken:                        identityToken,
-				KeyRef:                         pubKeyPath,
-				BundlePath:                     bundlePath,
-				NewBundleFormat:                true,
-				IssueCertificateForExistingKey: true,
-			}
+			_, privKeyPath, _ := keypairWithAlgorithm(t, td1, tt.algo)
 
 			verifyBlobCmd := cliverify.VerifyBlobCmd{
-				KeyOpts:    ko1,
-				IgnoreTlog: true,
+				TrustedRootPath: trustedRootPath,
+				KeyOpts: options.KeyOpts{
+					FulcioURL:        fulcioURL,
+					RekorURL:         rekorURL,
+					PassFunc:         passFunc,
+					BundlePath:       bundlePath,
+					NewBundleFormat:  true,
+					SkipConfirmation: true,
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertOidcIssuerRegexp: ".*",
+					CertIdentityRegexp:   ".*",
+				},
 			}
 
 			// Verify should fail before bundle is written
@@ -2328,16 +2358,29 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 				BundlePath:                     bundlePath,
 				NewBundleFormat:                true,
 				IssueCertificateForExistingKey: true,
+				SkipConfirmation:               true,
 			}
 
-			if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+			if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", true); err != nil {
+				t.Fatal(err)
+			}
+
+			// Copy bundle to /tmp with test name
+			bundleBytes, err := os.ReadFile(bundlePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tmpBundlePath := filepath.Join("/tmp", fmt.Sprintf("bundle-%s", tt.algo))
+			if err := os.WriteFile(tmpBundlePath, bundleBytes, 0644); err != nil {
 				t.Fatal(err)
 			}
 
 			// Verify should succeed now that bundle is written
 			must(verifyBlobCmd.Exec(ctx, blobPath), t)
+
 		})
 	}
+
 }
 
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
