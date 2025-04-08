@@ -282,13 +282,18 @@ func LoadPrivateKey(key []byte, pass []byte, defaultLoadOptions *[]signature.Loa
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
+	defaultLoadOptions = GetDefaultLoadOptions(defaultLoadOptions)
+	return signature.LoadDefaultSignerVerifier(pk, *defaultLoadOptions...)
+}
+
+func GetDefaultLoadOptions(defaultLoadOptions *[]signature.LoadOption) *[]signature.LoadOption {
 	if defaultLoadOptions == nil {
 		// Cosign uses ED25519ph by default for ED25519 keys, because that's the
 		// only available option for hashedrekord entries. This behaviour is
 		// configurable because we want to maintain compatibility with older
 		// cosign versions that used PureEd25519 for ED25519 keys (but which did
 		// not support TLog uploads).
-		defaultLoadOptions = &[]signature.LoadOption{options.WithED25519ph()}
+		return &[]signature.LoadOption{options.WithED25519ph()}
 	}
-	return signature.LoadDefaultSignerVerifier(pk, *defaultLoadOptions...)
+	return defaultLoadOptions
 }

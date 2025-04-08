@@ -285,10 +285,8 @@ func getHashFunction(sv *SignerVerifier, defaultLoadOptions *[]signature.LoadOpt
 		return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)
 	}
 
-	if defaultLoadOptions == nil {
-		// Cosign uses ED25519ph by default for ED25519 keys
-		defaultLoadOptions = &[]signature.LoadOption{signatureoptions.WithED25519ph()}
-	}
+	defaultLoadOptions = cosign.GetDefaultLoadOptions(defaultLoadOptions)
+
 	// TODO: Ideally the SignerVerifier should have a method to get the hash function
 	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *defaultLoadOptions...)
 	if err != nil {
