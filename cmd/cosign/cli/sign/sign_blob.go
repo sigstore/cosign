@@ -40,7 +40,6 @@ import (
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -66,13 +65,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
-
-	if ko.SigningAlgorithm == "" {
-		ko.SigningAlgorithm, err = signature.FormatSignatureAlgorithmFlag(v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
-		if err != nil {
-			return nil, fmt.Errorf("formatting signature algorithm: %w", err)
-		}
-	}
 
 	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 	if err != nil {

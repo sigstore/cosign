@@ -55,6 +55,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/cosign/v2/pkg/types"
+	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -603,6 +604,13 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 }
 
 func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+	if signingAlgorithm == "" {
+		var err error
+		signingAlgorithm, err = signature.FormatSignatureAlgorithmFlag(pb_go_v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
+		if err != nil {
+			return nil, fmt.Errorf("formatting signature algorithm: %w", err)
+		}
+	}
 	keyDetails, err := signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
 	if err != nil {
 		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
