@@ -131,7 +131,7 @@ func UploadFiles(ref name.Reference, files []File, annotations map[string]string
 			return name.Digest{}, err
 		}
 
-		blobURL := ref.Context().Registry.RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/" + layerHash.String()
+		blobURL := ref.Context().RegistryStr() + "/v2/" + ref.Context().RepositoryStr() + "/blobs/" + layerHash.String()
 		fmt.Fprintf(os.Stderr, "File [%s] is available directly at [%s]\n", f.Path(), blobURL)
 
 		if f.Platform() != nil {

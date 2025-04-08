@@ -139,7 +139,7 @@ func Test_signerFromKeyRefSuccess(t *testing.T) {
 		t.Fatalf("unexpected error generating signer: %v", err)
 	}
 	// Expect public key matches
-	pubKey, err := signer.SignerVerifier.PublicKey()
+	pubKey, err := signer.PublicKey()
 	if err != nil {
 		t.Fatalf("unexpected error fetching pubkey: %v", err)
 	}
