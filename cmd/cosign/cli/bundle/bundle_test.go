@@ -84,15 +84,15 @@ func TestCreateCmd(t *testing.T) {
 	b, err := sgBundle.LoadJSONFromPath(outPath)
 	checkErr(t, err)
 
-	if b.Bundle.VerificationMaterial == nil {
+	if b.VerificationMaterial == nil {
 		t.Fatal("bundle does not have verification material")
 	}
 
-	if b.Bundle.VerificationMaterial.GetPublicKey() == nil {
+	if b.VerificationMaterial.GetPublicKey() == nil {
 		t.Fatal("bundle verification material does not have public key")
 	}
 
-	if b.Bundle.GetMessageSignature() == nil {
+	if b.GetMessageSignature() == nil {
 		t.Fatal("bundle does not have message signature")
 	}
 
@@ -130,15 +130,15 @@ func TestCreateCmd(t *testing.T) {
 	b, err = sgBundle.LoadJSONFromPath(outPath)
 	checkErr(t, err)
 
-	if b.Bundle.VerificationMaterial == nil {
+	if b.VerificationMaterial == nil {
 		t.Fatal("bundle does not have verification material")
 	}
 
-	if b.Bundle.VerificationMaterial.GetCertificate() == nil {
+	if b.VerificationMaterial.GetCertificate() == nil {
 		t.Fatal("bundle verification material does not have certificate")
 	}
 
-	if b.Bundle.GetMessageSignature() == nil {
+	if b.GetMessageSignature() == nil {
 		t.Fatal("bundle does not have message signature")
 	}
 }

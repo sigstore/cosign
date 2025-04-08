@@ -411,7 +411,7 @@ The blob may be specified as a path to a file.`,
 			}
 			v := verify.VerifyBlobAttestationCommand{
 				KeyOpts:                      ko,
-				PredicateType:                o.PredicateOptions.Type,
+				PredicateType:                o.Type,
 				CheckClaims:                  o.CheckClaims,
 				SignaturePath:                o.SignaturePath,
 				CertVerifyOptions:            o.CertVerify,

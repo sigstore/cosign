@@ -83,7 +83,7 @@ func GenerateExitCodeDocs(dir string) error {
 	_, _ = exitCodesFile.WriteString("| Exit code | Meaning |\n")
 	_, _ = exitCodesFile.WriteString("| :----: | :---- |\n")
 	for _, code := range exitCodes {
-		_, err = exitCodesFile.WriteString(fmt.Sprintf("| %d | %s|\n", code.code, strings.Replace(code.doc, "\n", "", 1)))
+		_, err = fmt.Fprintf(exitCodesFile, "| %d | %s|\n", code.code, strings.Replace(code.doc, "\n", "", 1))
 		if err != nil {
 			return err
 		}

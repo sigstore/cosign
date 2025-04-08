@@ -157,10 +157,8 @@ func signatureBytes(sigRef string) ([]byte, error) {
 }
 
 func signatureType(sigRef string) SignatureArgType {
-	switch {
-	case sigRef == "-":
+	if sigRef == "-" {
 		return StdinSignature
-	default:
-		return FileSignature
 	}
+	return FileSignature
 }
