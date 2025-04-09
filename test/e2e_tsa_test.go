@@ -20,7 +20,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
-	"net/http/httptest"
+	"os"
 	"path"
 	"path/filepath"
 	"testing"
@@ -32,7 +32,6 @@ import (
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
-	tsaserver "github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/spf13/viper"
 )
 
@@ -50,8 +49,7 @@ func TestTSAMTLS(t *testing.T) {
 
 	// Set up TSA server with TLS
 	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
-	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
-	t.Cleanup(tsaCleanup)
+	timestampServerURL, timestampChainFile := setUpTSA(t, td, timestampCACert, timestampServerKey, timestampServerCert)
 
 	ko := options.KeyOpts{
 		KeyRef:          pemKeyRef,
@@ -95,8 +93,7 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 
 	// Set up TSA server with TLS
 	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
-	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
-	t.Cleanup(tsaCleanup)
+	timestampServerURL, timestampChainFile := setUpTSA(t, td, timestampCACert, timestampServerKey, timestampServerCert)
 
 	signingKO := options.KeyOpts{
 		KeyRef:               privKey,
@@ -175,22 +172,16 @@ func generateMTLSKeys(t *testing.T, td string) (string, string, string, string, 
 	return pemRootRef, serverPemLeafRef, serverPemKeyRef, clientPemLeafRef, clientPemKeyRef
 }
 
-func setUpTSAServerWithTLS(t *testing.T, td, timestampCACert, timestampServerKey, timestampServerCert string) (string, string, func()) {
+func setUpTSA(t *testing.T, td, timestampCACert, timestampServerKey, timestampServerCert string) (string, string) {
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
 	viper.Set("disable-ntp-monitoring", true)
-	viper.Set("tls-host", "0.0.0.0")
-	viper.Set("tls-port", 3000)
-	viper.Set("tls-ca", timestampCACert)
-	viper.Set("tls-key", timestampServerKey)
-	viper.Set("tls-certificate", timestampServerCert)
-	tsaAPIServer := tsaserver.NewRestAPIServer("localhost", 3000, []string{"https"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	tsaClient, err := tsaclient.GetTimestampClient(tsaServer.URL)
+	tsaURLPrefix := os.Getenv("TSA_URL")
+	tsaClient, err := tsaclient.GetTimestampClient(tsaURLPrefix)
 	must(err, t)
 	tsaChain, err := tsaClient.Timestamp.GetTimestampCertChain(nil)
 	must(err, t)
-	timestampServerURL := tsaServer.URL + "/api/v1/timestamp"
+	timestampServerURL := tsaURLPrefix + "/api/v1/timestamp"
 	timestampChainFile := mkfile(tsaChain.Payload, td, t)
-	return timestampServerURL, timestampChainFile, tsaServer.Close
+	return timestampServerURL, timestampChainFile
 }
