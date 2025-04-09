@@ -27,4 +27,6 @@ snapshot:
 .PHONY: copy-signed-release-to-ghcr
 copy-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:$(GIT_VERSION)
+	cosign copy $(GHCR_PREFIX)/cosign:$(GIT_VERSION) $(GHCR_PREFIX)/cosign:latest
 	cosign copy $(KO_PREFIX)/cosign:$(GIT_VERSION)-dev $(GHCR_PREFIX)/cosign:$(GIT_VERSION)-dev
+	cosign copy $(GHCR_PREFIX)/cosign:$(GIT_VERSION)-dev $(GHCR_PREFIX)/cosign:latest-dev
