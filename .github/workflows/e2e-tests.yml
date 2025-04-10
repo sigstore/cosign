@@ -47,6 +47,8 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
+      - uses: docker/setup-docker-action@b60f85385d03ac8acfca6d9996982511d8620a19 # v4.3.0
+
       - name: setup containers
         uses: ramonpetgrave64/scaffolding/actions/test_containers@test-containers # dev branch
 
