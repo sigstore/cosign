@@ -36,6 +36,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
+        with-containers: [true, false]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -46,6 +47,11 @@ jobs:
         with:
           go-version-file: 'go.mod'
           check-latest: true
+
+      # docker/setup-docker doesn't worth with macos-13 and above runners.
+      - if: matrix.with-containers && runner.os != 'macOS'
+        name: setup containers
+        uses: ramonpetgrave64/scaffolding/actions/test_containers@test-containers # dev branch
 
       - name: Run cross platform e2e tests
         run: go test -tags=e2e,cross -v ./test/...
