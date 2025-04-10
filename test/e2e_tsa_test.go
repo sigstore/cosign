@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"log/slog"
 	"net/http/httptest"
 	"os"
 	"path"
@@ -183,6 +184,7 @@ func setUpTSA(t *testing.T, td, timestampCACert, timestampServerKey, timestampSe
 	close := func() {}
 	tsaURLPrefix := os.Getenv("TSA_URL")
 	if tsaURLPrefix == "" { // use tsa as a library instead.
+		slog.Info("Using TSA as a library")
 		viper.Set("tls-host", "0.0.0.0")
 		viper.Set("tls-port", 3000)
 		viper.Set("tls-ca", timestampCACert)
