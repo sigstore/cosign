@@ -35,7 +35,7 @@ jobs:
   e2e-cross:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-12, ubuntu-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
