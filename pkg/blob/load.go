@@ -75,7 +75,42 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 	}
 	return raw, nil
 }
+func LoadFileOrURLUsingReader(fileRef string) (io.Reader, error) {
+	parts := strings.SplitAfterN(fileRef, "://", 2)
+	if len(parts) == 2 {
+		scheme := parts[0]
+		switch scheme {
+		case "http://":
+			fallthrough
+		case "https://":
+			// #nosec G107
+			resp, err := http.Get(fileRef)
+			if err != nil {
+				return nil, err
+			}
+			return resp.Body, nil
+		case "env://":
+			envVar := parts[1]
+			// Most of Cosign should use `env.LookupEnv` (see #2236) to restrict us to known environment variables
+			// (usually `$COSIGN_*`). However, in this case, `envVar` is user-provided and not one of the allow-listed
+			// env vars.
+			value, found := os.LookupEnv(envVar) //nolint:forbidigo
+			if !found {
+				return nil, fmt.Errorf("loading URL: env var $%s not found", envVar)
+			}
+			return strings.NewReader(value), nil
+		default:
+			return nil, &UnrecognizedSchemeError{Scheme: scheme}
+		}
+	}
 
+		file,err := os.Open(filepath.Clean(fileRef))
+		if err != nil {
+			return nil, err
+		}
+	
+	return file, nil
+}
 func LoadFileOrURLWithChecksum(fileRef string, checksum string) ([]byte, error) {
 	checksumParts := strings.Split(checksum, ":")
 	if len(checksumParts) >= 3 {
