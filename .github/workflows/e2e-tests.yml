@@ -47,6 +47,9 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
+      - name: setup containers
+        uses: ramonpetgrave64/scaffolding/actions/test_containers@test-containers # dev branch
+
       - name: Run cross platform e2e tests
         run: go test -tags=e2e,cross -v ./test/...
 
