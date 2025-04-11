@@ -93,6 +93,7 @@ func SignBlob() *cobra.Command {
 				TSAServerURL:                   o.TSAServerURL,
 				RFC3161TimestampPath:           o.RFC3161TimestampPath,
 				IssueCertificateForExistingKey: o.IssueCertificate,
+				SigningAlgorithm:               o.SigningAlgorithm,
 			}
 
 			for _, blob := range args {

@@ -611,14 +611,8 @@ github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
 github.com/sigstore/fulcio v1.6.6 h1:XaMYX6TNT+8n7Npe8D94nyZ7/ERjEsNGFC+REdi/wzw=
 github.com/sigstore/fulcio v1.6.6/go.mod h1:BhQ22lwaebDgIxVBEYOOqLRcN5+xOV+C9bh/GUXRhOk=
-github.com/sigstore/protobuf-specs v0.4.1 h1:5SsMqZbdkcO/DNHudaxuCUEjj6x29tS2Xby1BxGU7Zc=
-github.com/sigstore/protobuf-specs v0.4.1/go.mod h1:+gXR+38nIa2oEupqDdzg4qSBT0Os+sP7oYv6alWewWc=
 github.com/sigstore/rekor v1.3.9 h1:sUjRpKVh/hhgqGMs0t+TubgYsksArZ6poLEC3MsGAzU=
 github.com/sigstore/rekor v1.3.9/go.mod h1:xThNUhm6eNEmkJ/SiU/FVU7pLY2f380fSDZFsdDWlcM=
-github.com/sigstore/sigstore v1.9.1 h1:bNMsfFATsMPaagcf+uppLk4C9rQZ2dh5ysmCxQBYWaw=
-github.com/sigstore/sigstore v1.9.1/go.mod h1:zUoATYzR1J3rLNp3jmp4fzIJtWdhC3ZM6MnpcBtnsE4=
-github.com/sigstore/sigstore-go v0.7.1 h1:lyzi3AjO6+BHc5zCf9fniycqPYOt3RaC08M/FRmQhVY=
-github.com/sigstore/sigstore-go v0.7.1/go.mod h1:AIRj4I3LC82qd07VFm3T2zXYiddxeBV1k/eoS8nTz0E=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.1 h1:/YcNq687WnXpIRXl04nLfJX741G4iW+w+7Nem2Zy0f4=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.1/go.mod h1:ApL9RpKsi7gkSYN0bMNdm/3jZ9EefxMmfYHfUmq2ZYM=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.1 h1:FnusXyTIInnwfIOzzl5PFilRm1I97dxMSOcCkZBu9Kc=
@@ -686,6 +680,12 @@ github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399/go.mod h1:LdwHT
 github.com/tjfoc/gmsm v1.3.2/go.mod h1:HaUcFuY0auTiaHB9MHFGCPx5IaLhTUd2atbCFBQXn9w=
 github.com/tjfoc/gmsm v1.4.1 h1:aMe1GlZb+0bLjn+cKTPEvvn9oUEBlJitaZiiBwsbgho=
 github.com/tjfoc/gmsm v1.4.1/go.mod h1:j4INPkHWMrhJb38G+J6W4Tw0AbuN8Thu3PbdVYhVcTE=
+github.com/trail-of-forks/protobuf-specs v0.3.3-0.20250331162432-e5e775cafa56 h1:UZisRdPr/WrNS7Mz3kvo6VXDg92NFZixgxBVQB3DFUE=
+github.com/trail-of-forks/protobuf-specs v0.3.3-0.20250331162432-e5e775cafa56/go.mod h1:+gXR+38nIa2oEupqDdzg4qSBT0Os+sP7oYv6alWewWc=
+github.com/trail-of-forks/sigstore v0.0.0-20250331165513-1846a6ef19c9 h1:PXPDIDYawbhvCNUTb4ggfVqWiu9B5hKRT1F4wqcMuKw=
+github.com/trail-of-forks/sigstore v0.0.0-20250331165513-1846a6ef19c9/go.mod h1:1GRErm4eDn8QE4nPiOuATTYh7iu34K7kQX4DUy5jlZ8=
+github.com/trail-of-forks/sigstore-go v0.0.0-20250402150123-943af1dcca61 h1:H1UgqWxMH7Sh2hkOpvkEoj0I3Zeg91ZeZG4cAnLrB8M=
+github.com/trail-of-forks/sigstore-go v0.0.0-20250402150123-943af1dcca61/go.mod h1:4BEPNMqc1rsaNYhjtaeKAahKpSDAApQ8z8HeryW2aN0=
 github.com/transparency-dev/merkle v0.0.2 h1:Q9nBoQcZcgPamMkGn7ghV8XiTZ/kRxn1yCG81+twTK4=
 github.com/transparency-dev/merkle v0.0.2/go.mod h1:pqSy+OXefQ1EDUVmAJ8MUhHB9TXGuzVAT58PqBoHz1A=
 github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=
