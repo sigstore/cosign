@@ -224,8 +224,9 @@ func (taggable taggableManifest) MediaType() (types.MediaType, error) {
 	return taggable.mediaType, nil
 }
 
-func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicateType string, opts ...Option) error {
+func WriteAttestationNewBundleFormat(ad name.Digest, d name.Digest, bundleBytes []byte, predicateType string, opts []Option, aopts []Option) error {
 	o := makeOptions(d.Repository, opts...)
+	ao := makeOptions(ad.Repository, aopts...)
 
 	signTarget := d.String()
 	ref, err := name.ParseReference(signTarget, o.NameOpts...)
@@ -247,7 +248,7 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 	if err != nil {
 		return fmt.Errorf("failed to calculate size: %w", err)
 	}
-	err = remote.WriteLayer(d.Repository, configLayer, o.ROpt...)
+	err = remote.WriteLayer(ad.Repository, configLayer, ao.ROpt...)
 	if err != nil {
 		return fmt.Errorf("failed to upload layer: %w", err)
 	}
@@ -270,7 +271,7 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 		return fmt.Errorf("failed to calculate size: %w", err)
 	}
 
-	err = remote.WriteLayer(d.Repository, layer, o.ROpt...)
+	err = remote.WriteLayer(ad.Repository, layer, ao.ROpt...)
 	if err != nil {
 		return fmt.Errorf("failed to upload layer: %w", err)
 	}
@@ -304,12 +305,12 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 		},
 	}, bundleMediaType}
 
-	targetRef, err := manifest.targetRef(d.Repository)
+	targetRef, err := manifest.targetRef(ad.Repository)
 	if err != nil {
 		return fmt.Errorf("failed to create target reference: %w", err)
 	}
 
-	if err := remote.Put(targetRef, manifest, o.ROpt...); err != nil {
+	if err := remote.Put(targetRef, manifest, ao.ROpt...); err != nil {
 		return fmt.Errorf("failed to upload manifest: %w", err)
 	}
 

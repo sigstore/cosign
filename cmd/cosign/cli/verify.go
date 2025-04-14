@@ -246,6 +246,7 @@ against the transparency log.`,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+				BundleRegistry:               o.BundleRegistry,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {

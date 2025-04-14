@@ -77,7 +77,7 @@ func TestGetBundles_Empty(t *testing.T) {
 	digestRef := ref.Context().Digest(desc.Digest.String())
 
 	// Write invalid attestation
-	err = ociremote.WriteAttestationNewBundleFormat(digestRef, []byte("invalid"), "foo/bar")
+	err = ociremote.WriteAttestationNewBundleFormat(digestRef, digestRef, []byte("invalid"), "foo/bar", []ociremote.Option{}, []ociremote.Option{})
 	assert.NoError(t, err)
 
 	// Should still return no matching attestation error, as it failed to parse the bundle
@@ -107,7 +107,7 @@ func TestGetBundles_Valid(t *testing.T) {
 	digestRef := ref.Context().Digest(desc.Digest.String())
 
 	// Write valid test attestation
-	err = ociremote.WriteAttestationNewBundleFormat(digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1")
+	err = ociremote.WriteAttestationNewBundleFormat(digestRef, digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1", []ociremote.Option{}, []ociremote.Option{})
 	assert.NoError(t, err)
 
 	// Retrieve the attestation
@@ -175,7 +175,7 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	digestRef := ref.Context().Digest(desc.Digest.String())
 
 	// Write valid test attestation
-	err = ociremote.WriteAttestationNewBundleFormat(digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1")
+	err = ociremote.WriteAttestationNewBundleFormat(digestRef, digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1", []ociremote.Option{}, []ociremote.Option{})
 	assert.NoError(t, err)
 
 	// Verify the attestation
@@ -215,7 +215,7 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	digestRef = ref2.Context().Digest(desc.Digest.String())
 
 	// Write valid test attestation
-	err = ociremote.WriteAttestationNewBundleFormat(digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1")
+	err = ociremote.WriteAttestationNewBundleFormat(digestRef, digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1", []ociremote.Option{}, []ociremote.Option{})
 	assert.NoError(t, err)
 
 	// Verify the attestation

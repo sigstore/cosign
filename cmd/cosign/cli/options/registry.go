@@ -41,6 +41,7 @@ type Keychain = authn.Keychain
 
 // RegistryOptions is the wrapper for the registry options.
 type RegistryOptions struct {
+	prefix             string
 	AllowInsecure      bool
 	AllowHTTPRegistry  bool
 	KubernetesKeychain bool
@@ -60,40 +61,53 @@ var _ Interface = (*RegistryOptions)(nil)
 
 // AddFlags implements Interface
 func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&o.AllowInsecure, "allow-insecure-registry", false,
+	cmd.Flags().BoolVar(&o.AllowInsecure, o.prefixed("allow-insecure-registry"), false,
 		"whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing")
 
-	cmd.Flags().BoolVar(&o.AllowHTTPRegistry, "allow-http-registry", false,
+	cmd.Flags().BoolVar(&o.AllowHTTPRegistry, o.prefixed("allow-http-registry"), false,
 		"whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing")
 
-	cmd.Flags().BoolVar(&o.KubernetesKeychain, "k8s-keychain", false,
+	cmd.Flags().BoolVar(&o.KubernetesKeychain, o.prefixed("k8s-keychain"), false,
 		"whether to use the kubernetes keychain instead of the default keychain (supports workload identity).")
 
-	cmd.Flags().StringVar(&o.AuthConfig.Username, "registry-username", "",
+	cmd.Flags().StringVar(&o.AuthConfig.Username, o.prefixed("registry-username"), "",
 		"registry basic auth username")
 
-	cmd.Flags().StringVar(&o.AuthConfig.Password, "registry-password", "",
+	cmd.Flags().StringVar(&o.AuthConfig.Password, o.prefixed("registry-password"), "",
 		"registry basic auth password")
 
-	cmd.Flags().StringVar(&o.AuthConfig.RegistryToken, "registry-token", "",
+	cmd.Flags().StringVar(&o.AuthConfig.RegistryToken, o.prefixed("registry-token"), "",
 		"registry bearer auth token")
 
-	cmd.Flags().StringVar(&o.RegistryCACert, "registry-cacert", "",
+	cmd.Flags().StringVar(&o.RegistryCACert, o.prefixed("registry-cacert"), "",
 		"path to the X.509 CA certificate file in PEM format to be used for the connection to the registry")
 	_ = cmd.MarkFlagFilename("registry-cacert", certificateExts...)
 
-	cmd.Flags().StringVar(&o.RegistryClientCert, "registry-client-cert", "",
+	cmd.Flags().StringVar(&o.RegistryClientCert, o.prefixed("registry-client-cert"), "",
 		"path to the X.509 certificate file in PEM format to be used for the connection to the registry")
 	_ = cmd.MarkFlagFilename("registry-client-cert", certificateExts...)
 
-	cmd.Flags().StringVar(&o.RegistryClientKey, "registry-client-key", "",
+	cmd.Flags().StringVar(&o.RegistryClientKey, o.prefixed("registry-client-key"), "",
 		"path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry")
 	_ = cmd.MarkFlagFilename("registry-client-key", privateKeyExts...)
 
-	cmd.Flags().StringVar(&o.RegistryServerName, "registry-server-name", "",
+	cmd.Flags().StringVar(&o.RegistryServerName, o.prefixed("registry-server-name"), "",
 		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry")
 
-	o.RefOpts.AddFlags(cmd)
+	if o.prefix == "" {
+		o.RefOpts.AddFlags(cmd)
+	}
+}
+
+func (o *RegistryOptions) prefixed(flag string) string {
+	if o.prefix != "" {
+		return fmt.Sprintf("%s-%s", o.prefix, flag)
+	}
+	return flag
+}
+
+func (o *RegistryOptions) WithPrefix(prefix string) {
+	o.prefix = prefix
 }
 
 func (o *RegistryOptions) ClientOpts(ctx context.Context) ([]ociremote.Option, error) {

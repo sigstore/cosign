@@ -72,6 +72,8 @@ type VerifyAttestationCommand struct {
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	UseSignedTimestamps          bool
+
+	BundleRegistry options.RegistryOptions
 }
 
 // Exec runs the verification command
@@ -98,6 +100,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 
+	bundleOciremoteOpts, err := c.BundleRegistry.ClientOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("constructing client options: %w", err)
+	}
+
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
@@ -112,6 +119,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.NewBundleFormat,
+		BundleRepository:             c.BundleRepository,
+		BundleRegistryClientOpts:     bundleOciremoteOpts,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier

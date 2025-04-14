@@ -39,6 +39,8 @@ type AttestOptions struct {
 	RekorEntryType          string
 	RecordCreationTimestamp bool
 	NewBundleFormat         bool
+	BundleRepository        string
+	BundleRegistry          RegistryOptions
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -58,6 +60,9 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	o.OIDC.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
+
+	o.BundleRegistry.WithPrefix("bundle")
+	o.BundleRegistry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
@@ -113,4 +118,8 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 		"set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value")
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false, "attach a Sigstore bundle using OCI referrers API")
+
+	cmd.Flags().StringVar(&o.BundleRepository, "bundle-repository", "", "attach a Sigstore bundle into a different repository than the image being signed")
+
+	// TODO cdupuis add options for bundle repository auth
 }

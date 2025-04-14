@@ -106,6 +106,8 @@ func Attest() *cobra.Command {
 				TlogUpload:              o.TlogUpload,
 				RekorEntryType:          o.RekorEntryType,
 				RecordCreationTimestamp: o.RecordCreationTimestamp,
+				BundleRepository:        o.BundleRepository,
+				BundleRegistry:          o.BundleRegistry,
 			}
 
 			for _, img := range args {

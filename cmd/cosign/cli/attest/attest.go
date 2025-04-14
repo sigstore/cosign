@@ -82,6 +82,8 @@ type AttestCommand struct {
 	TSAServerURL            string
 	RekorEntryType          string
 	RecordCreationTimestamp bool
+	BundleRepository        string
+	BundleRegistry          options.RegistryOptions
 }
 
 // nolint
@@ -97,6 +99,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 
 	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
 		return fmt.Errorf("unknown value for rekor-entry-type")
+	}
+
+	if c.BundleRepository != "" && !c.KeyOpts.NewBundleFormat {
+		return fmt.Errorf("bundle-repository can only be used with new-bundle-format")
 	}
 
 	predicateURI, err := options.ParsePredicateType(c.PredicateType)
@@ -255,7 +261,20 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, ociremoteOpts...)
+		attestDigest := digest
+		attestOpts := []ociremote.Option{}
+		if c.BundleRepository != "" {
+			bRef := fmt.Sprintf("%s@%s", c.BundleRepository, digest.Identifier())
+			attestDigest, err = name.NewDigest(bRef)
+			if err != nil {
+				return err
+			}
+			attestOpts, err = c.BundleRegistry.ClientOpts(ctx)
+			if err != nil {
+				return err
+			}
+		}
+		return ociremote.WriteAttestationNewBundleFormat(attestDigest, digest, bundleBytes, predicateType, ociremoteOpts, attestOpts)
 	}
 
 	// We don't actually need to access the remote entity to attach things to it

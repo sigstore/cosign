@@ -32,6 +32,7 @@ type CommonVerifyOptions struct {
 	PrivateInfrastructure bool
 	UseSignedTimestamps   bool
 	NewBundleFormat       bool
+	BundleRepository      string
 	TrustedRootPath       string
 }
 
@@ -65,6 +66,9 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	// TODO: have this default to true as a breaking change
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")
+
+	cmd.Flags().StringVar(&o.BundleRepository, "bundle-repository", "",
+		"discover a Sigstore bundle from a separate repository")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.
@@ -139,6 +143,8 @@ type VerifyAttestationOptions struct {
 	Predicate           PredicateRemoteOptions
 	Policies            []string
 	LocalImage          bool
+
+	BundleRegistry RegistryOptions
 }
 
 var _ Interface = (*VerifyAttestationOptions)(nil)
@@ -151,6 +157,9 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
+
+	o.BundleRegistry.WithPrefix("bundle")
+	o.BundleRegistry.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")

@@ -171,6 +171,11 @@ type CheckOpts struct {
 	// NewBundleFormat enables the new bundle format (Cosign Bundle Spec) and the new verifier.
 	NewBundleFormat bool
 
+	// BundleRepository is the repository to use for the bundle.
+	BundleRepository string
+	// BundleRegistryClientOpts are the options for interacting with the container registry.
+	BundleRegistryClientOpts []ociremote.Option
+
 	// TrustedMaterial is the trusted material to use for verification.
 	// Currently, this is only applicable when NewBundleFormat is true.
 	TrustedMaterial root.TrustedMaterial
@@ -1535,7 +1540,17 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 		return nil, nil, err
 	}
 
-	index, err := ociremote.Referrers(digest, "", co.RegistryClientOpts...)
+	opts := co.RegistryClientOpts
+	if co.BundleRepository != "" {
+		refDigest, err := name.NewDigest(fmt.Sprintf("%s@%s", co.BundleRepository, digest.Identifier()))
+		if err != nil {
+			return nil, nil, err
+		}
+		digest = refDigest
+		opts = co.BundleRegistryClientOpts
+	}
+
+	index, err := ociremote.Referrers(digest, "", opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1545,7 +1560,7 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 		if err != nil {
 			return nil, nil, err
 		}
-		bundle, err := ociremote.Bundle(st, co.RegistryClientOpts...)
+		bundle, err := ociremote.Bundle(st, opts...)
 		if err != nil {
 			// There may be non-Sigstore referrers in the index, so we can ignore them.
 			// TODO: Should we surface any errors here (e.g. if the bundle is invalid)?
