@@ -23,7 +23,7 @@ cosign verify-blob [flags]
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-# Verify a signature with certificate and CA certificate chain
+  # Verify a signature with certificate and CA certificate chain
   cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
 
   # Verify a signature with CA roots and optional intermediate certificates

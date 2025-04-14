@@ -65,20 +65,14 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
       - name: Run Go tests
-        env:
-          # See #2091 for the issue describing this temp workaround.
-          GODEBUG: x509sha1=1
-        run: go test -tags=sct -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
+        run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
           env_vars: OS
       - name: Run Go tests w/ `-race`
-        env:
-          # See #2091 for the issue describing this temp workaround.
-          GODEBUG: x509sha1=1
         if: ${{ runner.os == 'Linux' }}
-        run: go test -tags=sct -race $(go list ./... | grep -v third_party/)
+        run: go test -race $(go list ./... | grep -v third_party/)
 
   e2e-tests:
     name: Run e2e tests
