@@ -51,7 +51,7 @@ jobs:
       # docker/setup-docker doesn't worth with macos-13 and above runners.
       - if: matrix.with-containers && runner.os != 'macOS'
         name: setup containers
-        uses: ramonpetgrave64/scaffolding/actions/test_containers@test-containers # dev branch
+        uses: ramonpetgrave64/scaffolding/actions/setup-sigstore-env@test-containers # dev branch
 
       - name: Run cross platform e2e tests
         run: go test -tags=e2e,cross -v ./test/...
