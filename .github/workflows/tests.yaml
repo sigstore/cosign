@@ -158,6 +158,12 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
+      - name: setup kind cluster
+        run: |
+          # Used to test: cosign generate-key-pair k8s://...
+          go install sigs.k8s.io/kind@v0.20.0
+          kind create cluster
+
       - name: setup containers
         uses: ramonpetgrave64/scaffolding/actions/setup-sigstore-env@test-containers # dev branch
 
