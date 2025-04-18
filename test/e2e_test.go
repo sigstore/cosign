@@ -557,8 +557,11 @@ func downloadTSACerts(downloadDirectory string, tsaServer string) (string, strin
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
-	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
-	must(err, t)
+	home, ok := os.LookupEnv(cloneDirEnvKey)
+	if !ok {
+		t.Fatalf("clone directory env key not set: %s", cloneDirEnvKey)
+	}
+
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()

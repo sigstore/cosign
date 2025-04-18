@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The service containers needed should first be launched by
+# scaffolding/actions/setup-sigstore-env/run-containers.sh
+
 set -ex
 
 echo "running tests"
