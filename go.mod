@@ -1,6 +1,7 @@
 module github.com/sigstore/cosign/v2
 
 go 1.23.4
+toolchain go1.24.1
 
 require (
 	cuelang.org/go v0.12.1
@@ -19,7 +20,7 @@ require (
 	github.com/go-piv/piv-go/v2 v2.3.0
 	github.com/google/certificate-transparency-go v1.3.1
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.20.3
+	github.com/google/go-containerregistry v0.20.4-0.20250225234217-098045d5e61f
 	github.com/google/go-github/v55 v55.0.0
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -31,7 +32,7 @@ require (
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 	github.com/open-policy-agent/opa v1.1.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
-	github.com/sigstore/fulcio v1.6.6
+	github.com/sigstore/fulcio v1.7.0
 	github.com/sigstore/protobuf-specs v0.4.1
 	github.com/sigstore/rekor v1.3.10
 	github.com/sigstore/sigstore v1.9.3
@@ -122,7 +123,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19 // indirect
-	github.com/aws/smithy-go v1.22.2 // indirect
+	github.com/aws/smithy-go v1.22.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/buildkite/go-pipeline v0.13.3 // indirect
