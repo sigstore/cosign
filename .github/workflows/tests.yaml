@@ -164,7 +164,7 @@ jobs:
           kind create cluster
 
       - name: setup containers
-        id: run-containters
+        id: run-containers
         uses: ramonpetgrave64/scaffolding/actions/setup-sigstore-env@test-containers # dev branch
 
       - name: Run end-to-end tests
