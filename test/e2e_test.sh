@@ -21,7 +21,7 @@ set -ex
 
 echo "running tests"
 
-go test -tags=e2e -v -race ./test/...
+go test -tags=e2e -race ./test/...
 
 # Test on a private registry
 echo "testing sign/verify/clean on private registry"
@@ -31,7 +31,7 @@ cleanup() {
 trap cleanup EXIT
 docker run -d -p 5000:5000 --restart always -e REGISTRY_STORAGE_DELETE_ENABLED=true --name registry registry:latest
 export COSIGN_TEST_REPO=localhost:5000
-go test -tags=e2e -v ./test/... -run TestSignVerifyClean
+go test -tags=e2e ./test/... -run TestSignVerifyClean
 
 # Run the built container to make sure it doesn't crash
 make ko-local
