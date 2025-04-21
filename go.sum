@@ -167,8 +167,8 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdnnjpJbkM4JQ=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
-github.com/buildkite/agent/v3 v3.95.1 h1:soe8EyQf068snMYtsQM10+l/l2wwbZIz0P7aDbz+Zws=
-github.com/buildkite/agent/v3 v3.95.1/go.mod h1:k2rfXF1U6fl/wejFXuS4YWXX4nDXZFpvKjCc5KUOAXg=
+github.com/buildkite/agent/v3 v3.96.0 h1:TbXP8dVn+o4h4d2f5HU57P3jPa5mm1zaBal7C5LWfUU=
+github.com/buildkite/agent/v3 v3.96.0/go.mod h1:0v0n5qazGNJrNSV4H6A9vr2ACknJGHohu9ul2yobiN0=
 github.com/buildkite/go-pipeline v0.13.3 h1:llI7sAdZ7sqYE7r8ePlmDADRhJ1K0Kua2+gv74Z9+Es=
 github.com/buildkite/go-pipeline v0.13.3/go.mod h1:1uC2XdHkTV1G5jYv9K8omERIwrsYbBruBrPx1Zu1uFw=
 github.com/buildkite/interpolate v0.1.5 h1:v2Ji3voik69UZlbfoqzx+qfcsOKLA61nHdU79VV+tPU=
