@@ -557,8 +557,8 @@ func downloadTSACerts(downloadDirectory string, tsaServer string) (string, strin
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
-	home, ok := os.LookupEnv(cloneDirEnvKey)
-	if !ok {
+	home := os.Getenv(cloneDirEnvKey)
+	if home == "" {
 		t.Fatalf("clone directory env key not set: %s", cloneDirEnvKey)
 	}
 

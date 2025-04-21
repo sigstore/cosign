@@ -504,8 +504,8 @@ func registryClientOpts(ctx context.Context) []remote.Option {
 // setLocalEnv sets SIGSTORE_CT_LOG_PUBLIC_KEY_FILE, SIGSTORE_ROOT_FILE, and SIGSTORE_REKOR_PUBLIC_KEY for the locally running sigstore deployment.
 func setLocalEnv(t *testing.T, dir string) error {
 	// fulcio repo is downloaded to the user's home directory by e2e_test.sh
-	home, ok := os.LookupEnv(cloneDirEnvKey)
-	if !ok {
+	home := os.Getenv(cloneDirEnvKey)
+	if home == "" {
 		t.Fatalf("clone directory env key not set: %s", cloneDirEnvKey)
 	}
 	t.Setenv(env.VariableSigstoreCTLogPublicKeyFile.String(), path.Join(home, "fulcio/config/ctfe/pubkey.pem"))
