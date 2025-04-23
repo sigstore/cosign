@@ -563,7 +563,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	}
 	// Copied from https://github.com/sigstore/fulcio/blob/273116884c6e247a98cb28a9acc3e5844c4f9b5c/config/ctfe/pubkey.pem
 	// This must be an abosulte path.
-	fulcio_pubkey := filepath.Join(dir, "testdata", "fulcio", "config", "ctfe", "pubkey.pem")
+	fulcioPubkey := filepath.Join(dir, "testdata", "fulcio", "config", "ctfe", "pubkey.pem")
 
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -590,7 +590,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			targets: []targetInfo{
 				{
 					name:   "ct.pub",
-					source: fulcio_pubkey,
+					source: fulcioPubkey,
 				},
 			},
 			wantSignErr: true,
@@ -608,7 +608,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: fulcio_pubkey,
+					source: fulcioPubkey,
 				},
 				{
 					name:   "tsa_leaf.crt.pem",
@@ -637,7 +637,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: fulcio_pubkey,
+					source: fulcioPubkey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -675,7 +675,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				{
 					name:   "cert-transparency.pem",
 					usage:  "CTFE",
-					source: fulcio_pubkey,
+					source: fulcioPubkey,
 				},
 				{
 					name:   "tsaleaf.pem",
