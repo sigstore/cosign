@@ -2017,6 +2017,8 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 	}
 }
 
+// TestGenerateKeyPairK8s calls the k8s API, and is intended to be run
+// after first running `kind create cluster `.
 func TestGenerateKeyPairK8s(t *testing.T) {
 	td := t.TempDir()
 	wd, err := os.Getwd()
