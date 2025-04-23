@@ -557,10 +557,13 @@ func downloadTSACerts(downloadDirectory string, tsaServer string) (string, strin
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
-	home := os.Getenv(cloneDirEnvKey)
-	if home == "" {
-		t.Fatalf("clone directory env key not set: %s", cloneDirEnvKey)
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
 	}
+	// Copied from https://github.com/sigstore/fulcio/blob/273116884c6e247a98cb28a9acc3e5844c4f9b5c/config/ctfe/pubkey.pem
+	// This must be an abosulte path.
+	fulcio_pubkey := filepath.Join(dir, "testdata", "fulcio", "config", "ctfe", "pubkey.pem")
 
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -587,7 +590,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			targets: []targetInfo{
 				{
 					name:   "ct.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: fulcio_pubkey,
 				},
 			},
 			wantSignErr: true,
@@ -605,7 +608,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: fulcio_pubkey,
 				},
 				{
 					name:   "tsa_leaf.crt.pem",
@@ -634,7 +637,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: fulcio_pubkey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -672,7 +675,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				{
 					name:   "cert-transparency.pem",
 					usage:  "CTFE",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: fulcio_pubkey,
 				},
 				{
 					name:   "tsaleaf.pem",

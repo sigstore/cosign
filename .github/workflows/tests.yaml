@@ -172,7 +172,6 @@ jobs:
         run: ./test/e2e_test.sh
         env:
           OIDC_URL:  ${{ steps.run-containers.outputs.oidc-url }}
-          CLONE_DIR: ${{ steps.run-containers.outputs.clone-dir }}
 
       - name: Collect diagnostics
         if: ${{ failure() }}
