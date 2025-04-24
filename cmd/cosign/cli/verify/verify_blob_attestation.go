@@ -220,9 +220,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
 		}
-		co.TSACertificate = tsaCertificates.LeafCert
-		co.TSARootCertificates = tsaCertificates.RootCert
-		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
+		co.TSACertificateChains = tsaCertificates
 	}
 
 	if !c.IgnoreTlog {

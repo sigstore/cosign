@@ -148,12 +148,9 @@ type CheckOpts struct {
 	Offline bool
 
 	// Set of flags to verify an RFC3161 timestamp used for trusted timestamping
-	// TSACertificate is the certificate used to sign the timestamp. Optional, if provided in the timestamp
-	TSACertificate *x509.Certificate
-	// TSARootCertificates are the set of roots to verify the TSA certificate
-	TSARootCertificates []*x509.Certificate
-	// TSAIntermediateCertificates are the set of intermediates for chain building
-	TSAIntermediateCertificates []*x509.Certificate
+	// TSACertificateChains contains a list of TSACertificates structs (leaf, intermediates and roots)
+	// used for signing the timestamp. Optional, if provided in the timestamp
+	TSACertificateChains []TSACertificates
 	// UseSignedTimestamps enables timestamp verification using a TSA
 	UseSignedTimestamps bool
 
@@ -1231,8 +1228,8 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		return nil, err
 	case ts == nil:
 		return nil, nil
-	case co.TSARootCertificates == nil:
-		return nil, errors.New("no TSA root certificate(s) provided to verify timestamp")
+	case len(co.TSACertificateChains) == 0:
+		return nil, errors.New("no TSA certificate chains provided to verify timestamp")
 	}
 
 	b64Sig, err := sig.Base64Signature()
@@ -1257,12 +1254,22 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		tsBytes = rawSig
 	}
 
-	return tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
-		tsaverification.VerifyOpts{
-			TSACertificate: co.TSACertificate,
-			Intermediates:  co.TSAIntermediateCertificates,
-			Roots:          co.TSARootCertificates,
-		})
+	var tsResult *timestamp.Timestamp
+	var errResult error
+	for _, tsaCert := range co.TSACertificateChains {
+		tsResult, errResult = tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
+			tsaverification.VerifyOpts{
+				TSACertificate: tsaCert.LeafCert,
+				Intermediates:  tsaCert.IntermediateCerts,
+				Roots:          tsaCert.RootCert,
+			})
+		if errResult == nil {
+			return tsResult, errResult
+		}
+	}
+
+	// if no TSA certificate chain could validate the provided timestamp, return the last error
+	return tsResult, errResult
 }
 
 // compare bundle signature to the signature we are verifying

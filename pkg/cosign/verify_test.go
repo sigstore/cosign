@@ -667,11 +667,15 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		t.Fatalf("error signing the payload with the tsa client server: %v", err)
 	}
 	if bundleVerified, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
-		SigVerifier:                 sv,
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
-		IgnoreTlog:                  true,
+		SigVerifier: sv,
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+				RootCert:          roots,
+			},
+		},
+		IgnoreTlog: true,
 	}); err != nil || bundleVerified { // bundle is not verified since there's no Rekor bundle
 		t.Fatalf("unexpected error while verifying signature, got %v", err)
 	}
@@ -713,11 +717,15 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
 	}
 	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
-		SigVerifier:                 sv,
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
-		RekorClient:                 mClient,
+		SigVerifier: sv,
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+				RootCert:          roots,
+			},
+		},
+		RekorClient: mClient,
 	}); err == nil || !strings.Contains(err.Error(), "no trusted rekor public keys provided") {
 		// TODO(wlynch): This is a weak test, since this is really failing because
 		// there is no inclusion proof for the Rekor entry rather than failing to
@@ -1552,9 +1560,13 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 
 	// success, signing over signature
 	ts, err := VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+				RootCert:          roots,
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error verifying timestamp with signature: %v", err)
@@ -1574,12 +1586,49 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+				RootCert:          roots,
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error verifying timestamp with payload: %v", err)
+	}
+
+	// test verification when multiple TSA certificate chains are provided
+	client2, err := tsaMock.NewTSAClient((tsaMock.TSAClientOptions{Time: time.Now()}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certChainPEM2, err := cryptoutils.MarshalCertificatesToPEM(client2.CertChain)
+	if err != nil {
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
+	}
+
+	leaves2, intermediates2, roots2, err := tsa.SplitPEMCertificateChain(certChainPEM2)
+	if err != nil {
+		t.Fatal("error splitting response into certificate chain")
+	}
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+				RootCert:          roots,
+			},
+			{
+				LeafCert:          leaves2[0],
+				IntermediateCerts: intermediates2,
+				RootCert:          roots2,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error verifying timestamp with payload when multiple TSA chains are provided: %v", err)
 	}
 
 	// failure with non-base64 encoded signature
@@ -1588,9 +1637,13 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+				RootCert:          roots,
+			},
+		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "base64 data") {
 		t.Fatalf("expected error verifying timestamp with raw signature, got: %v", err)
@@ -1609,9 +1662,13 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+				RootCert:          roots,
+			},
+		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "hashed messages don't match") {
 		t.Fatalf("expected error verifying mismatched signatures, got: %v", err)
@@ -1619,10 +1676,14 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 
 	// failure without root certificate
 	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
+		TSACertificateChains: []TSACertificates{
+			{
+				LeafCert:          leaves[0],
+				IntermediateCerts: intermediates,
+			},
+		},
 	})
-	if err == nil || !strings.Contains(err.Error(), "no TSA root certificate(s) provided to verify timestamp") {
+	if err == nil || !strings.Contains(err.Error(), "no root certificates provided for verifying the certificate chain") {
 		t.Fatalf("expected error verifying without a root certificate, got: %v", err)
 	}
 }

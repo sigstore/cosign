@@ -16,10 +16,12 @@ package cosign
 
 import (
 	"context"
-	"errors"
+	"encoding/pem"
 	"os"
 	"testing"
 
+	"github.com/sigstore/cosign/v2/test"
+	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,17 +49,6 @@ PH5bKk0M9ceasS7VwQIgMkxzlWr+m10OELtAbOlI8faN/5WFKm8m8rrwnhmHzjw=
 -----END CERTIFICATE-----`
 )
 
-func MockGetTufTargets(name string) ([]byte, error) {
-	switch name {
-	case `tsa_leaf.crt.pem`:
-		return []byte(testLeafCert), nil
-	case `tsa_root.crt.pem`:
-		return []byte(testRootCert), nil
-	default:
-		return nil, errors.New("no intermediates")
-	}
-}
-
 func TestGetTSACertsFromEnv(t *testing.T) {
 	tempFile, err := os.CreateTemp("", "tsa_cert_chain.pem")
 	require.NoError(t, err)
@@ -74,9 +65,10 @@ func TestGetTSACertsFromEnv(t *testing.T) {
 		t.Fatalf("Failed to get TSA certs from env: %v", err)
 	}
 	require.NotNil(t, tsaCerts)
-	require.NotNil(t, tsaCerts.LeafCert)
-	require.NotNil(t, tsaCerts.RootCert)
-	require.Len(t, tsaCerts.RootCert, 1)
+	require.Len(t, tsaCerts, 1)
+	require.NotNil(t, tsaCerts[0].LeafCert)
+	require.NotNil(t, tsaCerts[0].RootCert)
+	require.Len(t, tsaCerts[0].RootCert, 1)
 }
 
 func TestGetTSACertsFromPath(t *testing.T) {
@@ -92,9 +84,10 @@ func TestGetTSACertsFromPath(t *testing.T) {
 		t.Fatalf("Failed to get TSA certs from path: %v", err)
 	}
 	require.NotNil(t, tsaCerts)
-	require.NotNil(t, tsaCerts.LeafCert)
-	require.NotNil(t, tsaCerts.RootCert)
-	require.Len(t, tsaCerts.RootCert, 1)
+	require.Len(t, tsaCerts, 1)
+	require.NotNil(t, tsaCerts[0].LeafCert)
+	require.NotNil(t, tsaCerts[0].RootCert)
+	require.Len(t, tsaCerts[0].RootCert, 1)
 }
 
 func TestGetTSACertsFromTUF(t *testing.T) {
@@ -114,7 +107,42 @@ func TestGetTSACertsFromTUF(t *testing.T) {
 		t.Fatalf("Failed to get TSA certs from TUF: %v", err)
 	}
 	require.NotNil(t, tsaCerts)
-	require.NotNil(t, tsaCerts.LeafCert)
-	require.NotNil(t, tsaCerts.RootCert)
-	require.Len(t, tsaCerts.RootCert, 1)
+	require.Len(t, tsaCerts, 1)
+	require.NotNil(t, tsaCerts[0].LeafCert)
+	require.NotNil(t, tsaCerts[0].RootCert)
+	require.Len(t, tsaCerts[0].RootCert, 1)
+}
+
+func TestGetMultipleTSACertsFromTUF(t *testing.T) {
+	originalValue := os.Getenv("SIGSTORE_TSA_CERTIFICATE_FILE")
+	os.Unsetenv("SIGSTORE_TSA_CERTIFICATE_FILE")
+	defer os.Setenv("SIGSTORE_TSA_CERTIFICATE_FILE", originalValue)
+
+	// generate random certificates
+	rootCert0, rootKey0, _ := test.GenerateRootCa()
+	leafCert0, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert0, rootKey0)
+	leafPEM0 := pem.EncodeToMemory(&pem.Block{Type: "Certificate", Bytes: leafCert0.Raw})
+	rootPEM0 := pem.EncodeToMemory(&pem.Block{Type: "Certificate", Bytes: rootCert0.Raw})
+	rootCert1, rootKey1, _ := test.GenerateRootCa()
+	leafCert1, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert1, rootKey1)
+	leafPEM1 := pem.EncodeToMemory(&pem.Block{Type: "Certificate", Bytes: leafCert1.Raw})
+	rootPEM1 := pem.EncodeToMemory(&pem.Block{Type: "Certificate", Bytes: rootCert1.Raw})
+
+	mockGetTufTargets := func(ctx context.Context, usage tuf.UsageKind, names []string) ([][]byte, error) {
+		return [][]byte{
+			[]byte(string(leafPEM0) + "\n" + string(rootPEM0)),
+			[]byte(string(leafPEM1) + "\n" + string(rootPEM1)),
+		}, nil
+	}
+
+	tsaCerts, err := GetTSACerts(context.Background(), "", mockGetTufTargets)
+	if err != nil {
+		t.Fatalf("Failed to get TSA certs from TUF: %v", err)
+	}
+	require.NotNil(t, tsaCerts)
+	require.Len(t, tsaCerts, 2)
+	require.Equal(t, leafCert0, tsaCerts[0].LeafCert)
+	require.Equal(t, rootCert0, tsaCerts[0].RootCert[0])
+	require.Equal(t, leafCert1, tsaCerts[1].LeafCert)
+	require.Equal(t, rootCert1, tsaCerts[1].RootCert[0])
 }

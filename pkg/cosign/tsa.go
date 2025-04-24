@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -38,9 +39,9 @@ type TSACertificates struct {
 	RootCert          []*x509.Certificate
 }
 
-type GetTargetStub func(ctx context.Context, usage tuf.UsageKind, names []string) ([]byte, error)
+type GetTargetStub func(ctx context.Context, usage tuf.UsageKind, names []string) ([][]byte, error)
 
-func GetTufTargets(ctx context.Context, usage tuf.UsageKind, names []string) ([]byte, error) {
+func GetTufTargets(ctx context.Context, usage tuf.UsageKind, names []string) ([][]byte, error) {
 	tufClient, err := tuf.NewFromEnv(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error creating TUF client: %w", err)
@@ -50,12 +51,20 @@ func GetTufTargets(ctx context.Context, usage tuf.UsageKind, names []string) ([]
 		return nil, fmt.Errorf("error fetching targets by metadata with usage %v: %w", usage, err)
 	}
 
-	var buffer bytes.Buffer
+	var allChains [][]byte
+	var namesBuffer bytes.Buffer
 	for _, target := range targets {
-		buffer.Write(target.Target)
-		buffer.WriteByte('\n')
+		if slices.Contains(names, target.Name) {
+			namesBuffer.Write(target.Target)
+			namesBuffer.WriteByte('\n')
+		} else {
+			allChains = append(allChains, target.Target)
+		}
 	}
-	return buffer.Bytes(), nil
+	if namesBuffer.Len() > 0 {
+		allChains = append(allChains, namesBuffer.Bytes())
+	}
+	return allChains, nil
 }
 
 func isTufTargetExist(ctx context.Context, name string) (bool, error) {
@@ -75,17 +84,20 @@ func isTufTargetExist(ctx context.Context, name string) (bool, error) {
 // By default, the certificates come from TUF, but you can override this for test
 // purposes by using an env variable `SIGSTORE_TSA_CERTIFICATE_FILE` or a file path
 // specified in `certChainPath`. If using an alternate, the file should be in PEM format.
-func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*TSACertificates, error) {
+func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) ([]TSACertificates, error) {
 	altTSACert := env.Getenv(env.VariableSigstoreTSACertificateFile)
 
-	var raw []byte
+	var singleRawChain []byte
+	var rawChains [][]byte
 	var err error
 	var exists bool
 	switch {
 	case altTSACert != "":
-		raw, err = os.ReadFile(altTSACert)
+		singleRawChain, err = os.ReadFile(altTSACert)
+		rawChains = append(rawChains, singleRawChain)
 	case certChainPath != "":
-		raw, err = os.ReadFile(certChainPath)
+		singleRawChain, err = os.ReadFile(certChainPath)
+		rawChains = append(rawChains, singleRawChain)
 	default:
 		certNames := []string{tsaLeafCertStr, tsaRootCertStr}
 		for i := 0; ; i++ {
@@ -99,7 +111,7 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*
 			}
 			certNames = append(certNames, intermediateCertStr)
 		}
-		raw, err = fn(ctx, tuf.TSA, certNames)
+		rawChains, err = fn(ctx, tuf.TSA, certNames)
 		if err != nil {
 			return nil, fmt.Errorf("error fetching TSA certificates: %w", err)
 		}
@@ -109,24 +121,28 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) (*
 		return nil, fmt.Errorf("error reading TSA certificate file: %w", err)
 	}
 
-	leaves, intermediates, roots, err := splitPEMCertificateChain(raw)
-	if err != nil {
-		return nil, fmt.Errorf("error splitting TSA certificates: %w", err)
+	var tsaCerts []TSACertificates
+	for _, raw := range rawChains {
+		leaves, intermediates, roots, err := splitPEMCertificateChain(raw)
+		if err != nil {
+			return nil, fmt.Errorf("error splitting TSA certificates: %w", err)
+		}
+
+		if len(leaves) != 1 {
+			return nil, fmt.Errorf("TSA certificate chain must contain exactly one leaf certificate")
+		}
+
+		if len(roots) == 0 {
+			return nil, fmt.Errorf("TSA certificate chain must contain at least one root certificate")
+		}
+		tsaCerts = append(tsaCerts, TSACertificates{
+			LeafCert:          leaves[0],
+			IntermediateCerts: intermediates,
+			RootCert:          roots,
+		})
 	}
 
-	if len(leaves) != 1 {
-		return nil, fmt.Errorf("TSA certificate chain must contain exactly one leaf certificate")
-	}
-
-	if len(roots) == 0 {
-		return nil, fmt.Errorf("TSA certificate chain must contain at least one root certificate")
-	}
-
-	return &TSACertificates{
-		LeafCert:          leaves[0],
-		IntermediateCerts: intermediates,
-		RootCert:          roots,
-	}, nil
+	return tsaCerts, nil
 }
 
 // splitPEMCertificateChain returns a list of leaf (non-CA) certificates, a certificate pool for
