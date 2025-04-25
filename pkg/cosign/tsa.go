@@ -121,7 +121,7 @@ func GetTSACerts(ctx context.Context, certChainPath string, fn GetTargetStub) ([
 		return nil, fmt.Errorf("error reading TSA certificate file: %w", err)
 	}
 
-	var tsaCerts []TSACertificates
+	tsaCerts := make([]TSACertificates, 0, len(rawChains))
 	for _, raw := range rawChains {
 		leaves, intermediates, roots, err := splitPEMCertificateChain(raw)
 		if err != nil {

@@ -128,7 +128,7 @@ func TestGetMultipleTSACertsFromTUF(t *testing.T) {
 	leafPEM1 := pem.EncodeToMemory(&pem.Block{Type: "Certificate", Bytes: leafCert1.Raw})
 	rootPEM1 := pem.EncodeToMemory(&pem.Block{Type: "Certificate", Bytes: rootCert1.Raw})
 
-	mockGetTufTargets := func(ctx context.Context, usage tuf.UsageKind, names []string) ([][]byte, error) {
+	mockGetTufTargets := func(_ context.Context, _ tuf.UsageKind, _ []string) ([][]byte, error) {
 		return [][]byte{
 			[]byte(string(leafPEM0) + "\n" + string(rootPEM0)),
 			[]byte(string(leafPEM1) + "\n" + string(rootPEM1)),
