@@ -166,7 +166,7 @@ jobs:
 
       - name: setup containers
         id: run-containers
-        uses: ramonpetgrave64/scaffolding/actions/setup-sigstore-env@test-containers # dev branch
+        uses: sigstore/scaffolding/actions/setup-sigstore-env@main #main
 
       - name: Run end-to-end tests
         run: ./test/e2e_test.sh
