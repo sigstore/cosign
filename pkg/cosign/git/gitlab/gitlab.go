@@ -31,10 +31,33 @@ const (
 	ReferenceScheme = "gitlab"
 )
 
+type glContext uint8
+
+const (
+	contextProject glContext = iota
+	contextGroup   glContext = iota
+)
+
 type Gl struct{}
 
 func New() *Gl {
 	return &Gl{}
+}
+
+func (g *Gl) getGitlabContext(client *gitlab.Client, ref string) (glContext, error) {
+	_, resp, err := client.Projects.GetProject(ref, &gitlab.GetProjectOptions{})
+	if err == nil {
+		return contextProject, nil
+	} else if resp.StatusCode == 404 {
+		_, _, err := client.Groups.GetGroup(ref, &gitlab.GetGroupOptions{})
+		if err == nil {
+			return contextGroup, nil
+		} else {
+			return contextGroup, err
+		}
+	} else {
+		return contextProject, err
+	}
 }
 
 func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) error {
@@ -62,57 +85,97 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		}
 	}
 
-	_, passwordResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-		Key:              gitlab.Ptr("COSIGN_PASSWORD"),
-		Value:            gitlab.Ptr(string(keys.Password())),
-		VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
-		Protected:        gitlab.Ptr(false),
-		Masked:           gitlab.Ptr(false),
-		EnvironmentScope: gitlab.Ptr("*"),
-	})
+	context, err := g.getGitlabContext(client, ref)
+	if err != nil {
+		return fmt.Errorf("cannot determine if \"%s\" is project or group: %w", ref, err)
+	}
+
+	var resp *gitlab.Response
+
+	if context == contextProject {
+		_, resp, err = client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
+			Key:              gitlab.Ptr("COSIGN_PASSWORD"),
+			Value:            gitlab.Ptr(string(keys.Password())),
+			VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:        gitlab.Ptr(false),
+			Masked:           gitlab.Ptr(false),
+			EnvironmentScope: gitlab.Ptr("*"),
+		})
+	} else if context == contextGroup {
+		_, resp, err = client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
+			Key:              gitlab.Ptr("COSIGN_PASSWORD"),
+			Value:            gitlab.Ptr(string(keys.Password())),
+			VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:        gitlab.Ptr(false),
+			Masked:           gitlab.Ptr(false),
+			EnvironmentScope: gitlab.Ptr("*"),
+		})
+	}
 	if err != nil {
 		ui.Warnf(ctx, "If you are using a self-hosted gitlab please set the \"GITLAB_HOST\" your server name.")
 		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
 	}
 
-	if passwordResp.StatusCode < 200 && passwordResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(passwordResp.Body)
+	if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	ui.Infof(ctx, "Password written to \"COSIGN_PASSWORD\" variable")
 
-	_, privateKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-		Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
-		Value:        gitlab.Ptr(string(keys.PrivateBytes)),
-		VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-		Protected:    gitlab.Ptr(false),
-		Masked:       gitlab.Ptr(false),
-	})
+	if context == contextProject {
+		_, resp, err = client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
+			Value:        gitlab.Ptr(string(keys.PrivateBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+	} else if context == contextGroup {
+		_, resp, err = client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
+			Value:        gitlab.Ptr(string(keys.PrivateBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+
+	}
 	if err != nil {
 		return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" variable: %w", err)
 	}
 
-	if privateKeyResp.StatusCode < 200 && privateKeyResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(privateKeyResp.Body)
+	if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
 	ui.Infof(ctx, "Private key written to \"COSIGN_PRIVATE_KEY\" variable")
 
-	_, publicKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-		Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
-		Value:        gitlab.Ptr(string(keys.PublicBytes)),
-		VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-		Protected:    gitlab.Ptr(false),
-		Masked:       gitlab.Ptr(false),
-	})
+	if context == contextProject {
+		_, resp, err = client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
+			Value:        gitlab.Ptr(string(keys.PublicBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+	} else if context == contextGroup {
+		_, resp, err = client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
+			Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
+			Value:        gitlab.Ptr(string(keys.PublicBytes)),
+			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
+			Protected:    gitlab.Ptr(false),
+			Masked:       gitlab.Ptr(false),
+		})
+
+	}
 	if err != nil {
 		return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" variable: %w", err)
 	}
 
-	if publicKeyResp.StatusCode < 200 && publicKeyResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(publicKeyResp.Body)
+	if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
 
@@ -128,9 +191,9 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 
 func (g *Gl) GetSecret(_ context.Context, ref string, key string) (string, error) {
 	token, tokenExists := env.LookupEnv(env.VariableGitLabToken)
-	var varPubKeyValue string
+	var varKeyValue string
 	if !tokenExists {
-		return varPubKeyValue, fmt.Errorf("could not find %q", env.VariableGitLabToken.String())
+		return varKeyValue, fmt.Errorf("could not find %q", env.VariableGitLabToken.String())
 	}
 
 	var client *gitlab.Client
@@ -138,26 +201,44 @@ func (g *Gl) GetSecret(_ context.Context, ref string, key string) (string, error
 	if url, baseURLExists := env.LookupEnv(env.VariableGitLabHost); baseURLExists {
 		client, err = gitlab.NewClient(token, gitlab.WithBaseURL(url))
 		if err != nil {
-			return varPubKeyValue, fmt.Errorf("could not create GitLab client): %w", err)
+			return varKeyValue, fmt.Errorf("could not create GitLab client): %w", err)
 		}
 	} else {
 		client, err = gitlab.NewClient(token)
 		if err != nil {
-			return varPubKeyValue, fmt.Errorf("could not create GitLab client: %w", err)
+			return varKeyValue, fmt.Errorf("could not create GitLab client: %w", err)
 		}
 	}
 
-	varPubKey, pubKeyResp, err := client.ProjectVariables.GetVariable(ref, key, nil)
+	context, err := g.getGitlabContext(client, ref)
 	if err != nil {
-		return varPubKeyValue, fmt.Errorf("could not retrieve \"COSIGN_PUBLIC_KEY\" variable: %w", err)
+		return "", fmt.Errorf("cannot determine if \"%s\" is project or group: %w", ref, err)
 	}
 
-	varPubKeyValue = varPubKey.Value
+	var statusCode int
+	var bodyBytes []byte
 
-	if pubKeyResp.StatusCode < 200 && pubKeyResp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(pubKeyResp.Body)
-		return varPubKeyValue, fmt.Errorf("%s", bodyBytes)
+	if context == contextProject {
+		varKey, resp, err := client.ProjectVariables.GetVariable(ref, key, nil)
+		if err != nil {
+			return "", fmt.Errorf("could not retrieve \"%s\" variable: %w", key, err)
+		}
+		varKeyValue = varKey.Value
+		statusCode = resp.StatusCode
+		bodyBytes, _ = io.ReadAll(resp.Body)
+	} else if context == contextGroup {
+		varKey, resp, err := client.GroupVariables.GetVariable(ref, key, nil)
+		if err != nil {
+			return "", fmt.Errorf("could not retrieve \"%s\" variable: %w", key, err)
+		}
+		varKeyValue = varKey.Value
+		statusCode = resp.StatusCode
+		bodyBytes, _ = io.ReadAll(resp.Body)
 	}
 
-	return varPubKeyValue, nil
+	if statusCode < 200 && statusCode >= 300 {
+		return varKeyValue, fmt.Errorf("%s", bodyBytes)
+	}
+
+	return varKeyValue, nil
 }
