@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -96,6 +97,20 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
+	trustedMaterial, err := cosign.TrustedRoot()
+	if err != nil {
+		ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+	}
+
+	if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, c.TrustedRootPath) > 0 ||
+		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) != "" ||
+		env.Getenv(env.VariableSigstoreRootFile) != "" ||
+		env.Getenv(env.VariableSigstoreRekorPublicKey) != "" ||
+		env.Getenv(env.VariableSigstoreTSACertificateFile) != "" {
+		// trusted_root.json was found, but a cert chain was explicitly provided, so don't overrule the user's intentions.
+		trustedMaterial = nil
+	}
+
 	co := &cosign.CheckOpts{
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
 		CertGithubWorkflowSha:        c.CertGithubWorkflowSHA,
@@ -108,6 +123,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.KeyOpts.NewBundleFormat || checkNewBundle(c.BundlePath),
+		TrustedMaterial:              trustedMaterial,
 	}
 
 	// Keys are optional!
@@ -191,7 +207,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	} else if c.RFC3161TimestampPath == "" && co.UseSignedTimestamps {
 		return fmt.Errorf("when specifying --use-signed-timestamps or --timestamp-certificate-chain, you must also specify --rfc3161-timestamp-path")
 	}
-	if co.UseSignedTimestamps {
+	if co.UseSignedTimestamps && co.TrustedMaterial == nil {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -209,15 +225,17 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			}
 			co.RekorClient = rekorClient
 		}
-		// This performs an online fetch of the Rekor public keys, but this is needed
-		// for verifying tlog entries (both online and offline).
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Rekor public keys: %w", err)
+		if co.TrustedMaterial == nil {
+			// This performs an online fetch of the Rekor public keys, but this is needed
+			// for verifying tlog entries (both online and offline).
+			co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+			if err != nil {
+				return fmt.Errorf("getting Rekor public keys: %w", err)
+			}
 		}
 	}
 
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && keylessVerification(c.KeyRef, c.Sk) {
 		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
 			return err
 		}
@@ -315,7 +333,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
