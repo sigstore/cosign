@@ -49,8 +49,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	// Initialize all known client auth plugins
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attest"
@@ -79,6 +77,7 @@ import (
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/spf13/viper"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 func TestSignVerify(t *testing.T) {
