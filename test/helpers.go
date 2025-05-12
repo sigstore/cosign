@@ -36,7 +36,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -502,13 +501,8 @@ func registryClientOpts(ctx context.Context) []remote.Option {
 
 // setLocalEnv sets SIGSTORE_CT_LOG_PUBLIC_KEY_FILE, SIGSTORE_ROOT_FILE, and SIGSTORE_REKOR_PUBLIC_KEY for the locally running sigstore deployment.
 func setLocalEnv(t *testing.T, dir string) error {
-	// fulcio repo is downloaded to the user's home directory by e2e_test.sh
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("error getting home directory: %w", err)
-	}
-	t.Setenv(env.VariableSigstoreCTLogPublicKeyFile.String(), path.Join(home, "fulcio/config/ctfe/pubkey.pem"))
-	err = downloadAndSetEnv(t, fulcioURL+"/api/v1/rootCert", env.VariableSigstoreRootFile.String(), dir)
+	t.Setenv(env.VariableSigstoreCTLogPublicKeyFile.String(), "./testdata/fulcio/config/ctfe/pubkey.pem")
+	err := downloadAndSetEnv(t, fulcioURL+"/api/v1/rootCert", env.VariableSigstoreRootFile.String(), dir)
 	if err != nil {
 		return fmt.Errorf("error setting %s env var: %w", env.VariableSigstoreRootFile.String(), err)
 	}
