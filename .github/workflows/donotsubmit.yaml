@@ -40,4 +40,4 @@ jobs:
           persist-credentials: false
 
       - name: Do Not Submit
-        uses: chainguard-dev/actions/donotsubmit@ec48ea414c0cb207549029d8fe35f8f01e563219 # v1.0.8
+        uses: chainguard-dev/actions/donotsubmit@7d40b853210d271a28ac2822827f965f6f1e78fa # v1.0.9
