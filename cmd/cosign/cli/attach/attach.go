@@ -78,8 +78,7 @@ func attachAttestation(ctx context.Context, remoteOpts []ociremote.Option, signe
 			return err
 		}
 		if _, ok := ref.(name.Digest); !ok {
-			msg := fmt.Sprintf(ui.TagReferenceMessage, imageRef)
-			ui.Warnf(ctx, msg)
+			ui.Warnf(ctx, ui.TagReferenceMessage, imageRef)
 		}
 		digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
 		if err != nil {

@@ -46,6 +46,12 @@ linters:
     gosec:
       excludes:
         - G115 # integer overflow conversion int64 -> uint64
+    govet:
+      settings:
+        printf:
+          funcs:
+            - github.com/sigstore/cosign/v2/internal/ui.Infof
+            - github.com/sigstore/cosign/v2/internal/ui.Warnf
   exclusions:
     generated: lax
     presets:
