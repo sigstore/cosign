@@ -24,7 +24,9 @@ linters:
     - gocritic
     - gosec
     - importas
+    - makezero
     - misspell
+    - nilnesserr
     - prealloc
     - revive
     - tparallel
