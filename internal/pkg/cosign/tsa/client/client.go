@@ -130,7 +130,7 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 		client.Transport = tr
 	}
 
-	req, err := http.NewRequest("POST", t.URL, bytes.NewReader(tsq))
+	req, err := http.NewRequest(http.MethodPost, t.URL, bytes.NewReader(tsq))
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
@@ -141,7 +141,7 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 		return nil, fmt.Errorf("error making request to timestamp authority: %w", err)
 	}
 	defer tsr.Body.Close()
-	if tsr.StatusCode != 200 && tsr.StatusCode != 201 {
+	if tsr.StatusCode != http.StatusOK && tsr.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("request to timestamp authority failed with status code %d", tsr.StatusCode)
 	}
 

@@ -33,6 +33,7 @@ linters:
     - tparallel
     - unconvert
     - unparam
+    - usestdlibvars
     - whitespace
   settings:
     forbidigo:
