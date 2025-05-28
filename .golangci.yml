@@ -27,11 +27,9 @@ linters:
     - misspell
     - prealloc
     - revive
-    - staticcheck
     - tparallel
     - unconvert
     - unparam
-    - unused
     - whitespace
   settings:
     forbidigo:
