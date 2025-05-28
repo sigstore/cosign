@@ -140,6 +140,7 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 	if err != nil {
 		return nil, fmt.Errorf("error making request to timestamp authority: %w", err)
 	}
+	defer tsr.Body.Close()
 	if tsr.StatusCode != 200 && tsr.StatusCode != 201 {
 		return nil, fmt.Errorf("request to timestamp authority failed with status code %d", tsr.StatusCode)
 	}
