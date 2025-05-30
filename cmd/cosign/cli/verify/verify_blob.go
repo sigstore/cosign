@@ -374,7 +374,18 @@ func payloadBytes(blobRef string) ([]byte, error) {
 	if blobRef == "-" {
 		blobBytes, err = io.ReadAll(os.Stdin)
 	} else {
-		blobBytes, err = blob.LoadFileOrURL(blobRef)
+		reader, err := blob.LoadFileOrURLUsingReader(blobRef)
+		if err != nil {
+			return nil, err
+		}
+		if closer, ok := reader.(io.Closer); ok {
+			defer func() {
+				if closeErr := closer.Close(); closeErr != nil && err == nil {
+					err = closeErr
+				}
+			}()
+		}
+		blobBytes, err = io.ReadAll(reader) // Read from the io.Reader
 	}
 	if err != nil {
 		return nil, err
