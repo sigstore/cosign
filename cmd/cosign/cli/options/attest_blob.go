@@ -93,8 +93,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 		"write everything required to verify the blob to a FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
-	// TODO: have this default to true as a breaking change
-	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"output bundle in new format that contains all verification material")
 
 	cmd.Flags().StringVar(&o.Hash, "hash", "",
