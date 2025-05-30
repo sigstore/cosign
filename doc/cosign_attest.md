@@ -60,7 +60,7 @@ cosign attest [flags]
       --insecure-skip-verify                                                                     skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
-      --new-bundle-format                                                                        attach a Sigstore bundle using OCI referrers API
+      --new-bundle-format                                                                        attach a Sigstore bundle using OCI referrers API (default true)
       --no-upload                                                                                do not upload the generated attestation, but send the attestation output to STDOUT
       --oidc-client-id string                                                                    OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           Path to file containing OIDC client secret for application
