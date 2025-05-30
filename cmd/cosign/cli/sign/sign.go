@@ -122,8 +122,7 @@ func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) 
 		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
 	if _, ok := ref.(name.Digest); !ok {
-		msg := fmt.Sprintf(ui.TagReferenceMessage, refStr)
-		ui.Warnf(ctx, msg)
+		ui.Warnf(ctx, ui.TagReferenceMessage, refStr)
 	}
 	return ref, nil
 }

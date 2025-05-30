@@ -19,19 +19,21 @@ run:
 linters:
   enable:
     - asciicheck
+    - bodyclose
     - errorlint
     - forbidigo
     - gocritic
     - gosec
     - importas
+    - makezero
     - misspell
+    - nilnesserr
     - prealloc
     - revive
-    - staticcheck
     - tparallel
     - unconvert
     - unparam
-    - unused
+    - usestdlibvars
     - whitespace
   settings:
     forbidigo:
@@ -45,6 +47,12 @@ linters:
     gosec:
       excludes:
         - G115 # integer overflow conversion int64 -> uint64
+    govet:
+      settings:
+        printf:
+          funcs:
+            - github.com/sigstore/cosign/v2/internal/ui.Infof
+            - github.com/sigstore/cosign/v2/internal/ui.Warnf
   exclusions:
     generated: lax
     presets:

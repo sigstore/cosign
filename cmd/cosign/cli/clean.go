@@ -51,7 +51,7 @@ func Clean() *cobra.Command {
 
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType options.CleanType, imageRef string, force bool) error {
 	if !force {
-		ui.Warnf(ctx, prompt(cleanType))
+		ui.Warnf(ctx, prompt(cleanType)) //nolint:govet // practically const
 		if err := ui.ConfirmContinue(ctx); err != nil {
 			return err
 		}
