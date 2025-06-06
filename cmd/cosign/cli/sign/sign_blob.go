@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -45,7 +46,7 @@ import (
 // nolint
 func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
 	var payload internal.HashReader
-
+	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
@@ -240,7 +241,17 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 				return nil, fmt.Errorf("create certificate file: %w", err)
 			}
 			ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
+		} else {
+			pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
+			if err != nil {
+				return nil, err
+			}
+			if err := os.WriteFile(outputCertificate, pemBytes, 0600); err != nil {
+				return nil, err
+			}
+			return pemBytes, nil
 		}
+
 	}
 
 	return sig, nil
