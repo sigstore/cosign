@@ -48,7 +48,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/spiffe/go-spiffe/v2 v2.5.0
 	github.com/stretchr/testify v1.10.0
-	github.com/theupdateframework/go-tuf/v2 v2.0.2
+	github.com/theupdateframework/go-tuf/v2 v2.1.1
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go v0.129.0
@@ -129,6 +129,7 @@ require (
 	github.com/buildkite/interpolate v0.1.5 // indirect
 	github.com/buildkite/roko v1.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
