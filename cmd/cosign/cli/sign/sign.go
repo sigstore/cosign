@@ -605,9 +605,6 @@ func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, err
 	}
 	if sigCert != nil {
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		signedPayload.Cert = ""
 	}
