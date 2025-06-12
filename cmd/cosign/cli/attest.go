@@ -62,6 +62,9 @@ func Attest() *cobra.Command {
   # supply attestation via stdin
   echo <PAYLOAD> | cosign attest --predicate - <IMAGE>
 
+  # write attestation to stdout
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>
+
   # attach an attestation to a container image and honor the creation timestamp of the signature
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>`,
 
