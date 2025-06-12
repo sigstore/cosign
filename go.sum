@@ -614,8 +614,8 @@ github.com/sigstore/rekor v1.3.10 h1:/mSvRo4MZ/59ECIlARhyykAlQlkmeAQpvBPlmJtZOCU
 github.com/sigstore/rekor v1.3.10/go.mod h1:JvryKJ40O0XA48MdzYUPu0y4fyvqt0C4iSY7ri9iu3A=
 github.com/sigstore/sigstore v1.9.4 h1:64+OGed80+A4mRlNzRd055vFcgBeDghjZw24rPLZgDU=
 github.com/sigstore/sigstore v1.9.4/go.mod h1:Q7tGTC3gbtK7c3jcxEmGc2MmK4rRpIRzi3bxRFWKvEY=
-github.com/sigstore/sigstore-go v0.7.2 h1:CN4xPasChSEb0QBMxMW5dLcXdA9KD4QiRyVnMkhXj6U=
-github.com/sigstore/sigstore-go v0.7.2/go.mod h1:AIRj4I3LC82qd07VFm3T2zXYiddxeBV1k/eoS8nTz0E=
+github.com/sigstore/sigstore-go v1.0.0 h1:4N07S2zLxf09nTRwaPKyAxbKzpM8WJYUS8lWWaYxneU=
+github.com/sigstore/sigstore-go v1.0.0/go.mod h1:UYsZ/XHE4eltv1o1Lu+n6poW1Z5to3f0+emvfXNxIN8=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.4 h1:kQqUJ1VuWdJltMkinFXAHTlJrzMRPoNgL+dy6WyJ/dA=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.4/go.mod h1:9miLz7c69vj/7VH7UpCKHDia41HCTIDJWJWf4Ex5yUk=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.4 h1:MHRm7YQuF4zFyoXRLgUdLaNxqVO6JlLGnkDUI9fm9ow=
@@ -672,8 +672,8 @@ github.com/thales-e-security/pool v0.0.2 h1:RAPs4q2EbWsTit6tpzuvTFlgFRJ3S8Evf5gt
 github.com/thales-e-security/pool v0.0.2/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpupY8mv0Phz0gjhU=
 github.com/theupdateframework/go-tuf v0.7.0 h1:CqbQFrWo1ae3/I0UCblSbczevCCbS31Qvs5LdxRWqRI=
 github.com/theupdateframework/go-tuf v0.7.0/go.mod h1:uEB7WSY+7ZIugK6R1hiBMBjQftaFzn7ZCDJcp1tCUug=
-github.com/theupdateframework/go-tuf/v2 v2.0.2 h1:PyNnjV9BJNzN1ZE6BcWK+5JbF+if370jjzO84SS+Ebo=
-github.com/theupdateframework/go-tuf/v2 v2.0.2/go.mod h1:baB22nBHeHBCeuGZcIlctNq4P61PcOdyARlplg5xmLA=
+github.com/theupdateframework/go-tuf/v2 v2.1.1 h1:OWcoHItwsGO+7m0wLa7FDWPR4oB1cj0zOr1kosE4G+I=
+github.com/theupdateframework/go-tuf/v2 v2.1.1/go.mod h1:V675cQGhZONR0OGQ8r1feO0uwtsTBYPDWHzAAPn5rjE=
 github.com/tink-crypto/tink-go-awskms/v2 v2.1.0 h1:N9UxlsOzu5mttdjhxkDLbzwtEecuXmlxZVo/ds7JKJI=
 github.com/tink-crypto/tink-go-awskms/v2 v2.1.0/go.mod h1:PxSp9GlOkKL9rlybW804uspnHuO9nbD98V/fDX4uSis=
 github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0 h1:3B9i6XBXNTRspfkTC0asN5W0K6GhOSgcujNiECNRNb0=
