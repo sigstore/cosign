@@ -23,9 +23,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/rekor-tiles/pkg/note"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -91,9 +93,21 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	}
 
 	for i := 0; i < len(c.RekorKeyPath); i++ {
-		tlogPubKey, id, idBytes, err := getPubKey(c.RekorKeyPath[i])
+		keyParts := strings.SplitN(c.RekorKeyPath[i], ",", 2)
+		keyPath := keyParts[0]
+		tlogPubKey, id, idBytes, err := getPubKey(keyPath)
 		if err != nil {
 			return err
+		}
+		var origin string
+		if len(keyParts) > 1 {
+			origin = keyParts[1]
+		}
+		if origin != "" {
+			id, idBytes, err = getCheckpointID(origin, *tlogPubKey)
+			if err != nil {
+				return err
+			}
 		}
 
 		startTime := time.Unix(0, 0)
@@ -240,4 +254,12 @@ func getPubKey(path string) (*crypto.PublicKey, string, []byte, error) {
 	}
 
 	return &pubKey, keyID, idBytes, nil
+}
+
+func getCheckpointID(origin string, key crypto.PublicKey) (string, []byte, error) {
+	_, id, err := note.KeyHash(origin, key)
+	if err != nil {
+		return "", nil, err
+	}
+	return hex.EncodeToString(id), id, nil
 }
