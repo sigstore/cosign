@@ -17,6 +17,7 @@ package trustedroot
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -41,10 +42,16 @@ func TestCreateCmd(t *testing.T) {
 	tsaChainPath := filepath.Join(td, "timestamp.pem")
 	makeChain(t, tsaChainPath, 3)
 
+	rekorV1KeyPath := filepath.Join(td, "rekor.v1.pub")
+	makeKey(t, rekorV1KeyPath)
+	rekorV2KeyPath := filepath.Join(td, "rekor.v2.pub")
+	makeKey(t, rekorV2KeyPath)
+
 	outPath := filepath.Join(td, "trustedroot.json")
 
 	trustedrootCreate := CreateCmd{
 		CertChain:        []string{fulcioChainPath},
+		RekorKeyPath:     []string{rekorV1KeyPath, rekorV2KeyPath + ",rekor.server"},
 		Out:              outPath,
 		TSACertChainPath: []string{tsaChainPath},
 	}
@@ -123,6 +130,19 @@ func makeChain(t *testing.T, path string, size int) {
 
 	// Ensure we handle unexpected content at the end of the PEM file
 	_, err = fd.Write([]byte("asdf\n"))
+	checkErr(t, err)
+}
+
+func makeKey(t *testing.T, path string) {
+	fd, err := os.Create(path)
+	checkErr(t, err)
+	defer fd.Close()
+
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	checkErr(t, err)
+	derBytes, err := x509.MarshalPKIXPublicKey(pub)
+	checkErr(t, err)
+	err = pem.Encode(fd, &pem.Block{Type: "PUBLIC KEY", Bytes: derBytes})
 	checkErr(t, err)
 }
 
