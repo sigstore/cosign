@@ -45,8 +45,11 @@ func TestCreateCmd(t *testing.T) {
 
 	trustedrootCreate := CreateCmd{
 		CertChain:        []string{fulcioChainPath},
+		FulcioURI:        []string{"https://fulcio.sigstore.example"},
+		RekorURL:         []string{"https://rekor.sigstore.example"},
 		Out:              outPath,
 		TSACertChainPath: []string{tsaChainPath},
+		TSAURI:           []string{"https://tsa.sigstore.example"},
 	}
 
 	err := trustedrootCreate.Exec(ctx)
