@@ -32,12 +32,16 @@ import (
 
 type CreateCmd struct {
 	CertChain        []string
+	FulcioURI        []string
 	CtfeKeyPath      []string
 	CtfeStartTime    []string
+	CtfeURL          []string
 	Out              string
 	RekorKeyPath     []string
 	RekorStartTime   []string
+	RekorURL         []string
 	TSACertChainPath []string
+	TSAURI           []string
 }
 
 func (c *CreateCmd) Exec(_ context.Context) error {
@@ -47,7 +51,11 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	rekorTransparencyLogs := make(map[string]*root.TransparencyLog)
 
 	for i := 0; i < len(c.CertChain); i++ {
-		fulcioAuthority, err := parseCAPEMFile(c.CertChain[i])
+		var fulcioURI string
+		if i < len(c.FulcioURI) {
+			fulcioURI = c.FulcioURI[i]
+		}
+		fulcioAuthority, err := parseCAPEMFile(c.CertChain[i], fulcioURI)
 		if err != nil {
 			return err
 		}
@@ -76,6 +84,10 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			PublicKey:           *ctLogPubKey,
 			SignatureHashFunc:   crypto.SHA256,
 		}
+
+		if i < len(c.CtfeURL) {
+			ctLogs[id].BaseURL = c.CtfeURL[i]
+		}
 	}
 
 	for i := 0; i < len(c.RekorKeyPath); i++ {
@@ -100,10 +112,18 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			PublicKey:           *tlogPubKey,
 			SignatureHashFunc:   crypto.SHA256,
 		}
+
+		if i < len(c.RekorURL) {
+			rekorTransparencyLogs[id].BaseURL = c.RekorURL[i]
+		}
 	}
 
 	for i := 0; i < len(c.TSACertChainPath); i++ {
-		timestampAuthority, err := parseTAPEMFile(c.TSACertChainPath[i])
+		var tsaURI string
+		if i < len(c.TSAURI) {
+			tsaURI = c.TSAURI[i]
+		}
+		timestampAuthority, err := parseTAPEMFile(c.TSACertChainPath[i], tsaURI)
 		if err != nil {
 			return err
 		}
@@ -137,7 +157,7 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	return nil
 }
 
-func parseCAPEMFile(path string) (root.CertificateAuthority, error) {
+func parseCAPEMFile(path, uri string) (root.CertificateAuthority, error) {
 	certs, err := parseCerts(path)
 	if err != nil {
 		return nil, err
@@ -149,11 +169,12 @@ func parseCAPEMFile(path string) (root.CertificateAuthority, error) {
 	if len(certs) > 1 {
 		ca.Intermediates = certs[:len(certs)-1]
 	}
+	ca.URI = uri
 
 	return &ca, nil
 }
 
-func parseTAPEMFile(path string) (root.TimestampingAuthority, error) {
+func parseTAPEMFile(path, uri string) (root.TimestampingAuthority, error) {
 	certs, err := parseCerts(path)
 	if err != nil {
 		return nil, err
@@ -165,6 +186,7 @@ func parseTAPEMFile(path string) (root.TimestampingAuthority, error) {
 	if len(certs) > 1 {
 		ta.Intermediates = certs[:len(certs)-1]
 	}
+	ta.URI = uri
 
 	return &ta, nil
 }
