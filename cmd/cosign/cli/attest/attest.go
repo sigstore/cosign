@@ -49,7 +49,7 @@ import (
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*cbundle.RekorBundle, error) {
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*models.LogEntryAnon, error) {
 	rekorBytes, err := sv.Bytes(ctx)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 		return nil, err
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return cbundle.EntryToBundle(entry), nil
+	return entry, nil
 }
 
 // nolint
@@ -174,20 +174,37 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
+	var timestampBytes []byte
+	var tsaPayload []byte
 	if c.KeyOpts.TSAServerURL != "" {
-		// TODO - change this when we implement protobuf / new bundle support
+		// We need to decide what signature to send to the timestamp authority.
 		//
-		// Historically, cosign sent the entire JSON DSSE Envelope to the
-		// timestamp authority. However, when sigstore clients are verifying a
-		// bundle they will use the DSSE Sig field, so we choose what signature
-		// to send to the timestamp authority based on our output format.
-		//
-		// See cmd/cosign/cli/attest/attest_blob.go
-		responseBytes, err := tsa.GetTimestampedSignature(signedPayload, tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL))
+		// Historically, cosign sent `signedPayload`, which is the entire JSON DSSE
+		// Envelope. However, when sigstore clients are verifying a bundle they
+		// will use the DSSE Sig field, so we choose what signature to send to
+		// the timestamp authority based on our output format.
+		if c.KeyOpts.NewBundleFormat {
+			tsaPayload, err = getEnvelopeSigBytes(signedPayload)
+			if err != nil {
+				return err
+			}
+		} else {
+			tsaPayload = signedPayload
+		}
+		tc := tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL)
+		if c.KeyOpts.TSAClientCert != "" {
+			tc = tsaclient.NewTSAClientMTLS(c.KeyOpts.TSAServerURL,
+				c.KeyOpts.TSAClientCACert,
+				c.KeyOpts.TSAClientCert,
+				c.KeyOpts.TSAClientKey,
+				c.KeyOpts.TSAServerName,
+			)
+		}
+		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tc)
 		if err != nil {
 			return err
 		}
-		bundle := cbundle.TimestampToRFC3161Timestamp(responseBytes)
+		bundle := cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 
 		opts = append(opts, static.WithRFC3161Timestamp(bundle))
 	}
@@ -208,8 +225,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return fmt.Errorf("should upload to tlog: %w", err)
 	}
+	var rekorEntry *models.LogEntryAnon
 	if shouldUpload {
-		bundle, err := uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		rekorEntry, err = uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
 			if c.RekorEntryType == "intoto" {
 				return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
 			} else {
@@ -220,12 +238,24 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		opts = append(opts, static.WithBundle(bundle))
+		opts = append(opts, static.WithBundle(cbundle.EntryToBundle(rekorEntry)))
 	}
 
 	sig, err := static.NewAttestation(signedPayload, opts...)
 	if err != nil {
 		return err
+	}
+
+	if c.KeyOpts.NewBundleFormat {
+		signerBytes, err := sv.Bytes(ctx)
+		if err != nil {
+			return err
+		}
+		bundleBytes, err := makeNewBundle(sv, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
+		if err != nil {
+			return err
+		}
+		return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, ociremoteOpts...)
 	}
 
 	// We don't actually need to access the remote entity to attach things to it

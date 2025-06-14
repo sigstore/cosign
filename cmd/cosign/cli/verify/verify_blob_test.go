@@ -336,7 +336,7 @@ func TestVerifyBlob(t *testing.T) {
 		{
 			name:           "valid signature with public key - new bundle",
 			blob:           blobBytes,
-			signature:      blobSignature,
+			signature:      "",
 			key:            pubKeyBytes,
 			bundlePath:     makeLocalNewBundle(t, []byte(blobSignature), sha256.Sum256(blobBytes)),
 			newBundle:      true,
@@ -346,12 +346,12 @@ func TestVerifyBlob(t *testing.T) {
 		{
 			name:           "invalid signature with public key - new bundle",
 			blob:           blobBytes,
-			signature:      otherSignature,
+			signature:      "",
 			key:            pubKeyBytes,
-			bundlePath:     makeLocalNewBundle(t, []byte(blobSignature), sha256.Sum256(blobBytes)),
+			bundlePath:     makeLocalNewBundle(t, []byte(otherSignature), sha256.Sum256(blobBytes)),
 			newBundle:      true,
 			skipTlogVerify: true,
-			shouldErr:      false,
+			shouldErr:      true,
 		},
 		{
 			name:      "invalid signature with public key",
@@ -628,12 +628,11 @@ func TestVerifyBlob(t *testing.T) {
 			}
 			if tt.newBundle {
 				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
-				cmd.KeyOpts.RekorURL = ""
-				cmd.KeyOpts.RFC3161TimestampPath = ""
-				cmd.KeyOpts.TSACertChainPath = ""
+				cmd.RekorURL = ""
+				cmd.RFC3161TimestampPath = ""
+				cmd.TSACertChainPath = ""
 				cmd.CertChain = ""
 			}
-
 			err := cmd.Exec(context.Background(), blobPath)
 			if (err != nil) != tt.shouldErr {
 				t.Fatalf("verifyBlob()= %s, expected shouldErr=%t ", err, tt.shouldErr)
@@ -829,6 +828,7 @@ func makeLocalNewBundle(t *testing.T, sig []byte, digest [32]byte) string {
 }
 
 func TestVerifyBlobCmdWithBundle(t *testing.T) {
+	t.Setenv("TUF_ROOT", t.TempDir())
 	keyless := newKeylessStack(t)
 	defer os.RemoveAll(keyless.td)
 
@@ -1342,6 +1342,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 }
 
 func TestVerifyBlobCmdInvalidRootCA(t *testing.T) {
+	t.Setenv("TUF_ROOT", t.TempDir())
 	keyless := newKeylessStack(t)
 	defer os.RemoveAll(keyless.td)
 

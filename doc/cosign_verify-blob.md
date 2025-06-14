@@ -23,7 +23,7 @@ cosign verify-blob [flags]
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-# Verify a signature with certificate and CA certificate chain
+  # Verify a signature with certificate and CA certificate chain
   cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
 
   # Verify a signature with CA roots and optional intermediate certificates
@@ -84,7 +84,7 @@ cosign verify-blob [flags]
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                               output bundle in new format that contains all verification material
+      --new-bundle-format                               expect the signature/attestation to be packaged in a Sigstore bundle
       --offline                                         only allow offline verification
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
@@ -94,8 +94,8 @@ cosign verify-blob [flags]
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string              path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
-      --trusted-root string                             path to trusted root FILE
-      --use-signed-timestamps                           use signed timestamps if available
+      --trusted-root string                             Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
+      --use-signed-timestamps                           verify rfc3161 timestamps
 ```
 
 ### Options inherited from parent commands

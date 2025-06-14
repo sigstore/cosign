@@ -104,16 +104,13 @@ cross:
 golangci-lint:
 	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2	 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6  ;\
 
 lint: golangci-lint ## Run golangci-lint linter
 	$(GOLANGCI_LINT_BIN) run -n
 
 test:
 	$(GOEXE) test $(shell $(GOEXE) list ./... | grep -v third_party/)
-
-conformance:
-	$(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/conformance
 
 clean:
 	rm -rf cosign
@@ -132,6 +129,34 @@ ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url="https://raw
 define create_kocache_path
   mkdir -p $(KOCACHE_PATH)
 endef
+
+###################
+# conformance tests
+###################
+
+conformance:
+	$(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/conformance
+
+CONFORMANCE_RUNNER_PATH = sigstore-conformance
+$(CONFORMANCE_RUNNER_PATH):
+	git clone https://github.com/sigstore/sigstore-conformance $@
+
+.PHONY: conformance-runner
+conformance-runner:
+	$(MAKE) $(CONFORMANCE_RUNNER_PATH) conformance-runner-pull conformance-runner-build
+
+.PHONY: conformance-runner-pull
+conformance-runner-pull:
+	cd $(CONFORMANCE_RUNNER_PATH) && git pull
+
+.PHONY: conformance-runner-build
+conformance-runner-build:
+	cd $(CONFORMANCE_RUNNER_PATH) && $(MAKE) dev
+
+CONFORMANCE_BIN = $(shell pwd)/conformance
+.PHONY: conformance-tests
+conformance-tests:
+	cd $(CONFORMANCE_RUNNER_PATH) && env/bin/pytest test --entrypoint=$(CONFORMANCE_BIN)
 
 ##########
 # ko build

@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -31,16 +32,12 @@ import (
 	"strings"
 	"time"
 
-	"errors"
-
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	tsaclient "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -52,6 +49,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // nolint
@@ -163,9 +161,19 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	var rfc3161Timestamp *cbundle.RFC3161Timestamp
 	var timestampBytes []byte
+	var tsaPayload []byte
 	var rekorEntry *models.LogEntryAnon
 
-	if c.TSAServerURL != "" {
+	if c.KeyOpts.TSAServerURL != "" {
+		tc := tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL)
+		if c.TSAClientCert != "" {
+			tc = tsaclient.NewTSAClientMTLS(c.KeyOpts.TSAServerURL,
+				c.KeyOpts.TSAClientCACert,
+				c.KeyOpts.TSAClientCert,
+				c.KeyOpts.TSAClientKey,
+				c.KeyOpts.TSAServerName,
+			)
+		}
 		// We need to decide what signature to send to the timestamp authority.
 		//
 		// Historically, cosign sent `sig`, which is the entire JSON DSSE
@@ -173,28 +181,16 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		// will use the DSSE Sig field, so we choose what signature to send to
 		// the timestamp authority based on our output format.
 		if c.NewBundleFormat {
-			var envelope dsse.Envelope
-			err = json.Unmarshal(sig, &envelope)
-			if err != nil {
-				return err
-			}
-			if len(envelope.Signatures) == 0 {
-				return fmt.Errorf("envelope has no signatures")
-			}
-			envelopeSigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
-			if err != nil {
-				return err
-			}
-
-			timestampBytes, err = tsa.GetTimestampedSignature(envelopeSigBytes, client.NewTSAClient(c.TSAServerURL))
+			tsaPayload, err = getEnvelopeSigBytes(sig)
 			if err != nil {
 				return err
 			}
 		} else {
-			timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(c.TSAServerURL))
-			if err != nil {
-				return err
-			}
+			tsaPayload = sig
+		}
+		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tc)
+		if err != nil {
+			return err
 		}
 		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 		// TODO: Consider uploading RFC3161 TS to Rekor

@@ -70,10 +70,18 @@ for repo in rekor fulcio; do
     fi
     ${docker_compose} up -d
     echo -n "waiting up to 60 sec for system to start"
+    if [ "$repo" == "fulcio" ]; then
+      healthytotal=3
+    elif [ "$repo" == "rekor" ]; then
+      healthytotal=5
+    else
+      # handle no match in case another service is added
+      healthytotal=0
+    fi
     count=0
-    until [ $(${docker_compose} ps | grep -c "(healthy)") == 3 ];
+    until [ $(${docker_compose} ps | grep -c "(healthy)") == $healthytotal ];
     do
-        if [ $count -eq 6 ]; then
+        if [ $count -eq 18 ]; then
            echo "! timeout reached"
            exit 1
         else

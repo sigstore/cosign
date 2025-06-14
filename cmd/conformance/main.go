@@ -124,11 +124,16 @@ func main() {
 	args = append(args, os.Args[len(os.Args)-1])
 
 	dir := filepath.Dir(os.Args[0])
+	initCmd := exec.Command(filepath.Join(dir, "cosign"), "initialize") // #nosec G204
+	err := initCmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 	cmd := exec.Command(filepath.Join(dir, "cosign"), args...) // #nosec G204
 	var out strings.Builder
 	cmd.Stdout = &out
 	cmd.Stderr = &out
-	err := cmd.Run()
+	err = cmd.Run()
 
 	fmt.Println(out.String())
 

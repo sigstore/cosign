@@ -19,15 +19,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/logs"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"sigs.k8s.io/release-utils/version"
-
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
+	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/templates"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
+	"sigs.k8s.io/release-utils/version"
 )
 
 var (

@@ -19,9 +19,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
+	"github.com/spf13/cobra"
 )
 
 // FilesOptions is the wrapper for the files.
@@ -54,5 +53,5 @@ func (o *FilesOptions) String() string {
 func (o *FilesOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSliceVarP(&o.Files, "files", "f", nil,
 		"<filepath>:[platform/arch]")
-	_ = cmd.Flags().SetAnnotation("files", cobra.BashCompFilenameExt, []string{})
+	// _ = cmd.MarkFlagFilename("files") // no typical extensions
 }

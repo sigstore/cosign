@@ -86,7 +86,7 @@ func makeChain(t *testing.T, path string, size int) {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
-	chainKey, err := rsa.GenerateKey(rand.Reader, 512) //nolint:gosec
+	chainKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	checkErr(t, err)
 	rootDer, err := x509.CreateCertificate(rand.Reader, chainCert, chainCert, &chainKey.PublicKey, chainKey)
 	checkErr(t, err)
@@ -97,7 +97,7 @@ func makeChain(t *testing.T, path string, size int) {
 			BasicConstraintsValid: true,
 			IsCA:                  true,
 		}
-		intermediateKey, err := rsa.GenerateKey(rand.Reader, 512) //nolint:gosec
+		intermediateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 		checkErr(t, err)
 		intermediateDer, err := x509.CreateCertificate(rand.Reader, intermediateCert, chainCert, &intermediateKey.PublicKey, chainKey)
 		checkErr(t, err)

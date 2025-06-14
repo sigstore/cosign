@@ -66,42 +66,43 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
-	_ = cmd.Flags().SetAnnotation("key", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
 
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the X.509 certificate in PEM format to include in the OCI Signature")
-	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+
 			"when building the certificate chain for the signing certificate. "+
 			"Must start with the parent intermediate CA certificate of the "+
 			"signing certificate and end with the root certificate. Included in the OCI Signature")
-	_ = cmd.Flags().SetAnnotation("certificate-chain", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
 	cmd.Flags().BoolVar(&o.Upload, "upload", true,
 		"whether to upload the signature")
 
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
-	_ = cmd.Flags().SetAnnotation("output-signature", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("output-signature", signatureExts...)
 	cmd.Flags().StringVar(&o.OutputPayload, "output-payload", "",
 		"write the signed payload to FILE")
-	_ = cmd.Flags().SetAnnotation("output-payload", cobra.BashCompFilenameExt, []string{})
+	// _ = cmd.MarkFlagFilename("output-payload") // no typical extensions
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
-	_ = cmd.Flags().SetAnnotation("output-certificate", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("output-certificate", certificateExts...)
 
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
-	_ = cmd.Flags().SetAnnotation("payload", cobra.BashCompFilenameExt, []string{})
+	// _ = cmd.MarkFlagFilename("payload") // no typical extensions
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")
 
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"DEPRECATED, related image attachment to sign (sbom), default none")
+	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
@@ -111,12 +112,15 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.TSAClientCACert, "timestamp-client-cacert", "",
 		"path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server")
+	_ = cmd.MarkFlagFilename("timestamp-client-cacert", certificateExts...)
 
 	cmd.Flags().StringVar(&o.TSAClientCert, "timestamp-client-cert", "",
 		"path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server")
+	_ = cmd.MarkFlagFilename("timestamp-client-cert", certificateExts...)
 
 	cmd.Flags().StringVar(&o.TSAClientKey, "timestamp-client-key", "",
 		"path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server")
+	_ = cmd.MarkFlagFilename("timestamp-client-key", privateKeyExts...)
 
 	cmd.Flags().StringVar(&o.TSAServerName, "timestamp-server-name", "",
 		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server")
@@ -124,7 +128,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")
 
-	_ = cmd.Flags().SetAnnotation("certificate", cobra.BashCompFilenameExt, []string{"cert"})
+	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")

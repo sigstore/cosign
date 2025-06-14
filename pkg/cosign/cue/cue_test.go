@@ -18,7 +18,6 @@ package cue
 import (
 	"fmt"
 	"os"
-
 	"testing"
 )
 
@@ -158,7 +157,7 @@ func TestValidationJSON(t *testing.T) {
 				}
 			`,
 			pass:     false,
-			errorMsg: "authorityMatches.keysignature.signatures: invalid value [{subject:\"PLACEHOLDER\",issuer:\"PLACEHOLDER\"}] (does not satisfy list.MinItems(2)): len(list) < MinItems(2) (1 < 2) (and 1 more errors)",
+			errorMsg: "authorityMatches.keysignature.signatures: invalid value [{subject:\"PLACEHOLDER\",issuer:\"PLACEHOLDER\"}] (does not satisfy list.MinItems(2))",
 		},
 	}
 

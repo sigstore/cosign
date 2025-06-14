@@ -31,7 +31,7 @@ var _ Interface = (*PKCS11ToolListTokensOptions)(nil)
 func (o *PKCS11ToolListTokensOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.ModulePath, "module-path", env.Getenv(env.VariablePKCS11ModulePath),
 		"absolute path to the PKCS11 module")
-	_ = cmd.Flags().SetAnnotation("module-path", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("module-path", moduleExts...)
 }
 
 // PKCS11ToolListKeysUrisOptions is the wrapper for `pkcs11-tool list-keys-uris` related options.
@@ -47,7 +47,7 @@ var _ Interface = (*PKCS11ToolListKeysUrisOptions)(nil)
 func (o *PKCS11ToolListKeysUrisOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.ModulePath, "module-path", env.Getenv(env.VariablePKCS11ModulePath),
 		"absolute path to the PKCS11 module")
-	_ = cmd.Flags().SetAnnotation("module-path", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("module-path", moduleExts...)
 
 	cmd.Flags().UintVar(&o.SlotID, "slot-id", 0,
 		"id of the PKCS11 slot, uses 0 if empty")

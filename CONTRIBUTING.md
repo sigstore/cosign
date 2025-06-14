@@ -41,6 +41,21 @@ make test
 
 **Make sure all tests pass** without any failures or errors.
 
+#### Conformance tests
+
+To run the conformance tests, first install the conformance test runner:
+
+```shell
+make conformance-runner
+```
+
+Then build `cosign` and `conformance` (the executable that adapts conformance tests to the cosign command), and run the tests:
+
+```shell
+make cosign conformance
+make conformance-tests
+```
+
 ### Running Lint
 
 To run the linting checks, use the following command:

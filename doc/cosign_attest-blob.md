@@ -54,11 +54,15 @@ cosign attest-blob [flags]
       --output-certificate string         write the certificate to FILE
       --output-signature string           write the signature to FILE
       --predicate string                  path to the predicate file.
-      --rekor-entry-type string           specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default).  (default "dsse")
+      --rekor-entry-type string           specifies the type to be used for a rekor entry upload (dsse|intoto) (default "dsse")
       --rekor-url string                  address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
       --sk                                whether to use a hardware security key
       --slot string                       security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-client-cacert string    path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server
+      --timestamp-client-cert string      path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server
+      --timestamp-client-key string       path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server
+      --timestamp-server-name string      SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --timestamp-server-url string       url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                       whether or not to upload to the tlog (default true)
       --type string                       specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")

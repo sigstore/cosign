@@ -1,19 +1,6 @@
-@sigstore/cosign-codeowners
+* @sigstore/cosign-codeowners
 
-# The CODEOWNERS are managed via a GitHub team, but the current list is (in alphabetical order):
-
-# asraa
-# bobcallaway
-# dekkagaijin
-# dentrax
-# developer-guy
-# dlorenc
-# font
-# hectorj2f
-# loosebazooka
-# luhring
-# lukehinds
-# mattmoor
-# n3wscott
-# priyawadhwa
-# vaikas
+/.github/ @sigstore/dep-maintainers
+/release/ @sigstore/dep-maintainers
+go.mod @sigstore/dep-maintainers
+go.sum @sigstore/dep-maintainers

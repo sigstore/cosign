@@ -57,6 +57,7 @@ cosign attest [flags]
       --insecure-skip-verify                                                                     skip verifying fulcio published to the SCT (this should only be used for testing).
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --new-bundle-format                                                                        attach a Sigstore bundle using OCI referrers API
       --no-upload                                                                                do not upload the generated attestation
       --oidc-client-id string                                                                    OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           Path to file containing OIDC client secret for application
@@ -66,7 +67,6 @@ cosign attest [flags]
       --oidc-redirect-url string                                                                 OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --predicate string                                                                         path to the predicate file.
       --record-creation-timestamp                                                                set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value
-  -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
       --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
       --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
@@ -74,11 +74,15 @@ cosign attest [flags]
       --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --rekor-entry-type string                                                                  specifies the type to be used for a rekor entry upload. Options are intoto or dsse (default).  (default "dsse")
+      --rekor-entry-type string                                                                  specifies the type to be used for a rekor entry upload (dsse|intoto) (default "dsse")
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --replace                                                                                  
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-client-cacert string                                                           path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server
+      --timestamp-client-cert string                                                             path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server
+      --timestamp-client-key string                                                              path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server
+      --timestamp-server-name string                                                             SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                                                                              whether or not to upload to the tlog (default true)
       --type string                                                                              specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")

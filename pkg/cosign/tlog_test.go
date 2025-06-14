@@ -15,19 +15,27 @@
 package cosign
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-openapi/swag"
 	ttestdata "github.com/google/certificate-transparency-go/trillian/testdata"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	rtypes "github.com/sigstore/rekor/pkg/types"
+	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/tuf"
 )
 
@@ -173,7 +181,57 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 		t.Fatalf("failed to add RSA key to transparency log public keys: %v", err)
 	}
 
-	err = VerifyTLogEntryOffline(context.Background(), &models.LogEntryAnon{Verification: &models.LogEntryAnonVerification{InclusionProof: &models.InclusionProof{}}}, &rekorPubKeys)
+	// generate a valid log entry with valid inclusion proof
+	sigSigner, err := signature.LoadRSAPKCS1v15Signer(rsaPrivKey.(*rsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatalf("Unable to load RSA signer")
+	}
+	ctx := context.Background()
+	blob := []byte("foo")
+	blobSignature, err := sigSigner.SignMessage(bytes.NewReader(blob))
+	if err != nil {
+		t.Fatal(err)
+	}
+	logID := calculateLogID(t, signer.Public())
+	payloadHash := sha256.Sum256(blob)
+	artifactProperties := rtypes.ArtifactProperties{
+		ArtifactHash:   hex.EncodeToString(payloadHash[:]),
+		SignatureBytes: blobSignature,
+		PublicKeyBytes: [][]byte{rsaPEM},
+		PKIFormat:      "x509",
+	}
+	entryProps, err := hashedrekord_v001.V001Entry{}.CreateFromArtifactProperties(ctx, artifactProperties)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rekorEntry, err := rtypes.UnmarshalEntry(entryProps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalEntry, err := rekorEntry.Canonicalize(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lea := &models.LogEntryAnon{
+		Body:           base64.StdEncoding.EncodeToString(canonicalEntry),
+		LogIndex:       swag.Int64(0),
+		LogID:          swag.String(logID),
+		IntegratedTime: swag.Int64(time.Now().Unix()),
+	}
+	entryUUID, err := ComputeLeafHash(lea)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lea.Verification = &models.LogEntryAnonVerification{
+		InclusionProof: &models.InclusionProof{
+			LogIndex: swag.Int64(0),
+			TreeSize: swag.Int64(1),
+			RootHash: swag.String(hex.EncodeToString(entryUUID)),
+			Hashes:   []string{},
+		},
+	}
+
+	err = VerifyTLogEntryOffline(ctx, lea, &rekorPubKeys, nil)
 	if err == nil {
 		t.Fatal("Wanted error got none")
 	}

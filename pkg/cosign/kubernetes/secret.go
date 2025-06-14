@@ -21,12 +21,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-
-	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
 const (

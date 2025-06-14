@@ -20,9 +20,8 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/spf13/cobra"
-
 	ctypes "github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 // AttachSignatureOptions is the top level wrapper for the attach signature command.
@@ -80,13 +79,17 @@ func (o *AttachSBOMOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SBOM, "sbom", "",
 		"path to the sbom, or {-} for stdin")
-	_ = cmd.Flags().SetAnnotation("sbom", cobra.BashCompFilenameExt, []string{})
+	_ = cmd.MarkFlagFilename("sbom", sbomExts...)
 
-	cmd.Flags().StringVar(&o.SBOMType, "type", "spdx",
-		"type of sbom (spdx|cyclonedx|syft)")
+	sbomTypes := []string{"spdx", "cyclonedx", "syft"}
+	cmd.Flags().StringVar(&o.SBOMType, "type", sbomTypes[0],
+		"type of sbom ("+strings.Join(sbomTypes, "|")+")")
+	_ = cmd.RegisterFlagCompletionFunc("type", cobra.FixedCompletions(sbomTypes, cobra.ShellCompDirectiveNoFileComp))
 
+	inputFormats := []string{ctypes.JSONInputFormat, ctypes.XMLInputFormat, ctypes.TextInputFormat}
 	cmd.Flags().StringVar(&o.SBOMInputFormat, "input-format", "",
-		"type of sbom input format (json|xml|text)")
+		"type of sbom input format ("+strings.Join(inputFormats, "|")+")")
+	_ = cmd.RegisterFlagCompletionFunc("input-format", cobra.FixedCompletions(inputFormats, cobra.ShellCompDirectiveNoFileComp))
 }
 
 func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {

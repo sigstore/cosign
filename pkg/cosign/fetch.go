@@ -74,8 +74,15 @@ func FetchSignaturesForReference(_ context.Context, ref name.Reference, opts ...
 	if err != nil {
 		return nil, err
 	}
+	sigs, err := FetchSignatures(simg)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", ref, err)
+	}
+	return sigs, nil
+}
 
-	sigs, err := simg.Signatures()
+func FetchSignatures(se oci.SignedEntity) ([]SignedPayload, error) {
+	sigs, err := se.Signatures()
 	if err != nil {
 		return nil, fmt.Errorf("remote image: %w", err)
 	}
@@ -84,7 +91,7 @@ func FetchSignaturesForReference(_ context.Context, ref name.Reference, opts ...
 		return nil, fmt.Errorf("fetching signatures: %w", err)
 	}
 	if len(l) == 0 {
-		return nil, fmt.Errorf("no signatures associated with %s", ref)
+		return nil, errors.New("no signatures associated")
 	}
 	if len(l) > maxAllowedSigsOrAtts {
 		return nil, fmt.Errorf("maximum number of signatures on an image is %d, found %d", maxAllowedSigsOrAtts, len(l))

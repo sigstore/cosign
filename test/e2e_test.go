@@ -49,8 +49,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	// Initialize all known client auth plugins
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attest"
@@ -62,6 +60,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/trustedroot"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
@@ -79,6 +78,7 @@ import (
 	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/spf13/viper"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 func TestSignVerify(t *testing.T) {
@@ -556,6 +556,38 @@ func downloadTSACerts(downloadDirectory string, tsaServer string) (string, strin
 	return leafPath, intermediatePath, rootPath, nil
 }
 
+func prepareTrustedRoot(t *testing.T, tsaURL string) string {
+	downloadDirectory := t.TempDir()
+	caPath := filepath.Join(downloadDirectory, "fulcio.crt.pem")
+	caFP, err := os.Create(caPath)
+	must(err, t)
+	defer caFP.Close()
+	must(downloadFile(fulcioURL+"/api/v1/rootCert", caFP), t)
+	rekorPath := filepath.Join(downloadDirectory, "rekor.pub")
+	rekorFP, err := os.Create(rekorPath)
+	must(err, t)
+	defer rekorFP.Close()
+	must(downloadFile(rekorURL+"/api/v1/log/publicKey", rekorFP), t)
+	ctfePath := filepath.Join(downloadDirectory, "ctfe.pub")
+	home, err := os.UserHomeDir()
+	must(err, t)
+	must(copyFile(filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"), ctfePath), t)
+	tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
+	tsaFP, err := os.Create(tsaPath)
+	must(err, t)
+	must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
+	out := filepath.Join(downloadDirectory, "trusted_root.json")
+	cmd := &trustedroot.CreateCmd{
+		CertChain:        []string{caPath},
+		CtfeKeyPath:      []string{ctfePath},
+		Out:              out,
+		RekorKeyPath:     []string{rekorPath},
+		TSACertChainPath: []string{tsaPath},
+	}
+	must(cmd.Exec(context.TODO()), t)
+	return out
+}
+
 func TestSignVerifyWithTUFMirror(t *testing.T) {
 	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
 	must(err, t)
@@ -573,6 +605,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	mirror := tufServer.URL
 	tsaLeaf, tsaInter, tsaRoot, err := downloadTSACerts(t.TempDir(), tsaServer.URL)
 	must(err, t)
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
 	tests := []struct {
 		name          string
 		targets       []targetInfo
@@ -688,6 +721,15 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "trusted root",
+			targets: []targetInfo{
+				{
+					name:   "trusted_root.json",
+					source: trustedRoot,
+				},
+			},
+		},
 	}
 	tuf, err := newTUF(tufMirror, tests[0].targets)
 	must(err, t)
@@ -705,6 +747,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			// Sign an image
 			repo, stop := reg(t)
 			defer stop()
 			imgName := path.Join(repo, "cosign-e2e-tuf")
@@ -718,6 +761,10 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				SkipConfirmation: true,
 				TSAServerURL:     tsaServer.URL + "/api/v1/timestamp",
 			}
+			trustedMaterial, err := cosign.TrustedRoot()
+			if err == nil {
+				ko.TrustedMaterial = trustedMaterial
+			}
 			so := options.SignOptions{
 				Upload:           true,
 				TlogUpload:       true,
@@ -729,6 +776,8 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				return
 			}
 			must(gotErr, t)
+
+			// Verify an image
 			issuer := os.Getenv("OIDC_URL")
 			verifyCmd := cliverify.VerifyCommand{
 				CertVerifyOptions: options.CertVerifyOptions{
@@ -745,17 +794,56 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			} else {
 				must(gotErr, t)
 			}
+
+			// Sign a blob
+			blob := "someblob"
+			blobDir := t.TempDir()
+			bp := filepath.Join(blobDir, blob)
+			if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+				t.Fatal(err)
+			}
+			tsPath := filepath.Join(blobDir, "ts.txt")
+			bundlePath := filepath.Join(blobDir, "bundle.sig")
+			// TODO(cmurphy): make this work with ko.NewBundleFormat = true
+			ko.BundlePath = bundlePath
+			ko.RFC3161TimestampPath = tsPath
+			_, gotErr = sign.SignBlobCmd(ro, ko, bp, true, "", "", true)
+			if test.wantSignErr {
+				mustErr(gotErr, t)
+			} else {
+				must(gotErr, t)
+			}
+
+			// Verify a blob
+			verifyBlobCmd := cliverify.VerifyBlobCmd{
+				KeyOpts: ko,
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertOidcIssuer: issuer,
+					CertIdentity:   certID,
+				},
+				Offline:             true,
+				UseSignedTimestamps: true,
+			}
+			gotErr = verifyBlobCmd.Exec(ctx, bp)
+			if test.wantVerifyErr {
+				mustErr(gotErr, t)
+			} else {
+				must(gotErr, t)
+			}
 		})
 	}
 }
 
 func TestAttestVerify(t *testing.T) {
-	attestVerify(t,
-		"slsaprovenance",
-		`{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`,
-		`predicate: builder: id: "2"`,
-		`predicate: builder: id: "1"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"slsaprovenance",
+			`{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`,
+			`predicate: builder: id: "2"`,
+			`predicate: builder: id: "1"`,
+		)
+	}
 }
 
 func TestAttestVerifySPDXJSON(t *testing.T) {
@@ -763,12 +851,15 @@ func TestAttestVerifySPDXJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attestVerify(t,
-		"spdxjson",
-		string(attestationBytes),
-		`predicate: spdxVersion: "SPDX-2.2"`,
-		`predicate: spdxVersion: "SPDX-9.9"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"spdxjson",
+			string(attestationBytes),
+			`predicate: spdxVersion: "SPDX-2.2"`,
+			`predicate: spdxVersion: "SPDX-9.9"`,
+		)
+	}
 }
 
 func TestAttestVerifyCycloneDXJSON(t *testing.T) {
@@ -776,12 +867,15 @@ func TestAttestVerifyCycloneDXJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attestVerify(t,
-		"cyclonedx",
-		string(attestationBytes),
-		`predicate: specVersion: "1.4"`,
-		`predicate: specVersion: "7.7"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"cyclonedx",
+			string(attestationBytes),
+			`predicate: specVersion: "1.4"`,
+			`predicate: specVersion: "7.7"`,
+		)
+	}
 }
 
 func TestAttestVerifyURI(t *testing.T) {
@@ -789,15 +883,18 @@ func TestAttestVerifyURI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attestVerify(t,
-		"https://example.com/TestResult/v1",
-		string(attestationBytes),
-		`predicate: passed: true`,
-		`predicate: passed: false"`,
-	)
+	for _, newBundleFormat := range []bool{false, true} {
+		attestVerify(t,
+			newBundleFormat,
+			"https://example.com/TestResult/v1",
+			string(attestationBytes),
+			`predicate: passed: true`,
+			`predicate: passed: false"`,
+		)
+	}
 }
 
-func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue string) {
+func attestVerify(t *testing.T, newBundleFormat bool, predicateType, attestation, goodCue, badCue string) {
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -826,6 +923,10 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 		MaxWorkers: 10,
 	}
 
+	if newBundleFormat {
+		verifyAttestation.NewBundleFormat = true
+	}
+
 	// Fail case when using without type and policy flag
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
@@ -834,7 +935,7 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	}
 
 	// Now attest the image
-	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, NewBundleFormat: newBundleFormat}
 	attestCmd := attest.AttestCommand{
 		KeyOpts:        ko,
 		PredicatePath:  attestationPath,

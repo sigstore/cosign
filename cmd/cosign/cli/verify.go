@@ -20,15 +20,13 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/spf13/cobra"
 )
 
-const ignoreTLogMessage = "Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the %s."
+const ignoreTLogMessage = "Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the %s."
 
 func Verify() *cobra.Command {
 	o := &options.VerifyOptions{}
@@ -154,7 +152,7 @@ against the transparency log.`,
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "signature"))
+				ui.Warnf(ctx, ignoreTLogMessage, "signature")
 			}
 
 			return v.Exec(ctx, args)
@@ -220,6 +218,7 @@ against the transparency log.`,
 
 			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
+				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				CertVerifyOptions:            o.CertVerify,
 				CertRef:                      o.CertVerify.Cert,
@@ -257,7 +256,7 @@ against the transparency log.`,
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "attestation"))
+				ui.Warnf(ctx, ignoreTLogMessage, "attestation")
 			}
 
 			return v.Exec(ctx, args)
@@ -285,7 +284,7 @@ The blob may be specified as a path to a file or - for stdin.`,
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-# Verify a signature with certificate and CA certificate chain
+  # Verify a signature with certificate and CA certificate chain
   cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
 
   # Verify a signature with CA roots and optional intermediate certificates
@@ -335,9 +334,9 @@ The blob may be specified as a path to a file or - for stdin.`,
 				Slot:                 o.SecurityKey.Slot,
 				RekorURL:             o.Rekor.URL,
 				BundlePath:           o.BundlePath,
-				NewBundleFormat:      o.NewBundleFormat,
 				RFC3161TimestampPath: o.RFC3161TimestampPath,
 				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
+				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
 			}
 			verifyBlobCmd := &verify.VerifyBlobCmd{
 				KeyOpts:                      ko,
@@ -347,7 +346,6 @@ The blob may be specified as a path to a file or - for stdin.`,
 				CARoots:                      o.CertVerify.CARoots,
 				CAIntermediates:              o.CertVerify.CAIntermediates,
 				SigRef:                       o.Signature,
-				TrustedRootPath:              o.TrustedRootPath,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
@@ -358,13 +356,14 @@ The blob may be specified as a path to a file or - for stdin.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob"))
+				ui.Warnf(ctx, ignoreTLogMessage, "blob")
 			}
 
 			return verifyBlobCmd.Exec(ctx, args[0])
@@ -406,17 +405,16 @@ The blob may be specified as a path to a file.`,
 				Slot:                 o.SecurityKey.Slot,
 				RekorURL:             o.Rekor.URL,
 				BundlePath:           o.BundlePath,
-				NewBundleFormat:      o.NewBundleFormat,
 				RFC3161TimestampPath: o.RFC3161TimestampPath,
 				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
+				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
 			}
 			v := verify.VerifyBlobAttestationCommand{
 				KeyOpts:                      ko,
-				PredicateType:                o.PredicateOptions.Type,
+				PredicateType:                o.Type,
 				CheckClaims:                  o.CheckClaims,
 				SignaturePath:                o.SignaturePath,
 				CertVerifyOptions:            o.CertVerify,
-				TrustedRootPath:              o.TrustedRootPath,
 				CertRef:                      o.CertVerify.Cert,
 				CertChain:                    o.CertVerify.CertChain,
 				CARoots:                      o.CertVerify.CARoots,
@@ -431,6 +429,7 @@ The blob may be specified as a path to a file.`,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 			}
 			// We only use the blob if we are checking claims.
 			if len(args) == 0 && o.CheckClaims {
@@ -445,7 +444,7 @@ The blob may be specified as a path to a file.`,
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob attestation"))
+				ui.Warnf(ctx, ignoreTLogMessage, "blob attestation")
 			}
 
 			return v.Exec(ctx, path)

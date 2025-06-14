@@ -45,7 +45,6 @@ import (
 // nolint
 func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
 	var payload internal.HashReader
-	var err error
 
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
@@ -55,14 +54,11 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	} else {
 		ui.Infof(ctx, "Using payload from: %s", payloadPath)
 		f, err := os.Open(filepath.Clean(payloadPath))
-		defer f.Close()
 		if err != nil {
 			return nil, err
 		}
+		defer f.Close()
 		payload = internal.NewHashReader(f, sha256.New())
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	sv, err := SignerFromKeyOpts(ctx, "", "", ko)

@@ -32,9 +32,8 @@ import (
 	"syscall"
 
 	"github.com/go-piv/piv-go/v2/piv"
-	"golang.org/x/term"
-
 	"github.com/sigstore/sigstore/pkg/signature"
+	"golang.org/x/term"
 )
 
 var (
