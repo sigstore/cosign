@@ -1,3 +1,38 @@
+# v2.5.1
+
+## Features
+
+* Add Rekor v2 support for trusted-root create (#4242)
+* Add baseUrl and Uri to trusted-root create command
+* Upgrade to TUF v2 client with trusted root
+* Don't verify SCT for a private PKI cert (#4225)
+* Bump TSA library to relax EKU chain validation rules (#4219)
+
+## Bug Fixes
+
+* Bump sigstore-go to pick up log index=0 fix (#4162)
+* remove unused recursive flag on attest command (#4187)
+
+## Docs
+
+* Fix indentation in `verify-blob` cmd examples (#4160)
+
+## Releases
+
+* ensure we copy the latest tags on each release (#4157)
+
+## Contributors
+
+* arthurus-rex
+* Babak K. Shandiz
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Colleen Murphy
+* Dmitry Savintsev
+* Emmanuel Ferdman
+* Hayden B
+* Ville Skyttä
+
 # v2.5.0
 
 v2.5.0 includes an implementation of the new bundle specification,
