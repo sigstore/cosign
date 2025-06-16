@@ -20,7 +20,7 @@ cosign trusted-root create [flags]
       --fulcio-uri stringArray                    URI of the Fulcio server issuing certificates.
   -h, --help                                      help for create
       --out string                                path to output trusted root
-      --rekor-key stringArray                     path to a PEM-encoded public key used by transparency log like Rekor.
+      --rekor-key stringArray                     path to a PEM-encoded public key used by transparency log like Rekor. For Rekor V2, append the Rekor server name with ',', e.g. '--rekor-key=/path/to/key.pub,rekor.example.test'.
       --rekor-start-time stringArray              RFC 3339 string describing validity start time for key use by transparency log like Rekor.
       --rekor-url stringArray                     URL of the transparency log.
       --timestamp-certificate-chain stringArray   path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates

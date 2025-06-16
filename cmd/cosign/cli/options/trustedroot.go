@@ -62,7 +62,9 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 	// _ = cmd.MarkFlagFilename("output") // no typical extensions
 
 	cmd.Flags().StringArrayVar(&o.RekorKeyPath, "rekor-key", nil,
-		"path to a PEM-encoded public key used by transparency log like Rekor.")
+		"path to a PEM-encoded public key used by transparency log like Rekor. "+
+			"For Rekor V2, append the Rekor server name with ',', e.g. "+
+			"'--rekor-key=/path/to/key.pub,rekor.example.test'.")
 	_ = cmd.MarkFlagFilename("rekor-key", publicKeyExts...)
 
 	cmd.Flags().StringArrayVar(&o.RekorStartTime, "rekor-start-time", nil,
