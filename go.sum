@@ -723,8 +723,8 @@ github.com/zalando/go-keyring v0.2.3 h1:v9CUu9phlABObO4LPWycf+zwMG7nlbb3t/B5wa97
 github.com/zalando/go-keyring v0.2.3/go.mod h1:HL4k+OXQfJUWaMnqyuSOc0drfGPX2b51Du6K+MRgZMk=
 github.com/zeebo/errs v1.4.0 h1:XNdoD/RRMKP7HD0UhJnIzUy74ISdGGxURlYG8HSWSfM=
 github.com/zeebo/errs v1.4.0/go.mod h1:sgbWHsvVuTPHcqJJGQ1WhI5KbWlHYz+2+2C/LSEtCw4=
-gitlab.com/gitlab-org/api/client-go v0.129.0 h1:o9KLn6fezmxBQWYnQrnilwyuOjlx4206KP0bUn3HuBE=
-gitlab.com/gitlab-org/api/client-go v0.129.0/go.mod h1:ZhSxLAWadqP6J9lMh40IAZOlOxBLPRh7yFOXR/bMJWM=
+gitlab.com/gitlab-org/api/client-go v0.130.1 h1:1xF5C5Zq3sFeNg3PzS2z63oqrxifne3n/OnbI7nptRc=
+gitlab.com/gitlab-org/api/client-go v0.130.1/go.mod h1:ZhSxLAWadqP6J9lMh40IAZOlOxBLPRh7yFOXR/bMJWM=
 go.mongodb.org/mongo-driver v1.14.0 h1:P98w8egYRjYe3XDjxhYJagTokP/H6HzlsnojRgZRd80=
 go.mongodb.org/mongo-driver v1.14.0/go.mod h1:Vzb0Mk/pa7e6cWw85R4F/endUC3u0U9jGcNU603k65c=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
