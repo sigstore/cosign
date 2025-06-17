@@ -1,3 +1,13 @@
+# v2.5.2
+
+## Bug Fixes
+
+* Do not load trusted root when CT env key is set
+
+## Documentation
+
+* docs: improve doc for --no-upload option (#4206)
+
 # v2.5.1
 
 ## Features
