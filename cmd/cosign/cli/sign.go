@@ -25,6 +25,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/spf13/cobra"
 )
 
@@ -130,7 +131,7 @@ race conditions or (worse) malicious tampering.
 				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
 			}
-			if o.Key == "" || o.IssueCertificate {
+			if (o.Key == "" || o.IssueCertificate) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" {
 				trustedMaterial, err := cosign.TrustedRoot()
 				if err != nil {
 					ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)

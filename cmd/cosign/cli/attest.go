@@ -24,6 +24,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/spf13/cobra"
 )
 
@@ -99,7 +100,7 @@ func Attest() *cobra.Command {
 				TSAServerURL:             o.TSAServerURL,
 				NewBundleFormat:          o.NewBundleFormat,
 			}
-			if o.Key == "" { // Get the trusted root if using fulcio for signing
+			if o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" { // Get the trusted root if using fulcio for signing
 				trustedMaterial, err := cosign.TrustedRoot()
 				if err != nil {
 					ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
