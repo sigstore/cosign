@@ -44,6 +44,8 @@ import (
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/tlog"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/transparency-dev/merkle/proof"
@@ -218,7 +220,7 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 			if err != nil {
 				return nil, err
 			}
-			return e, VerifyTLogEntryOffline(ctx, e, rekorPubsFromAPI)
+			return e, VerifyTLogEntryOffline(ctx, e, rekorPubsFromAPI, nil)
 		}
 		return nil, err
 	}
@@ -442,19 +444,13 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 
 // VerifyTLogEntryOffline verifies a TLog entry against a map of trusted rekorPubKeys indexed
 // by log id.
-func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPubKeys *TrustedTransparencyLogPubKeys) error {
+func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPubKeys *TrustedTransparencyLogPubKeys, trustedMaterial root.TrustedMaterial) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
 
-	if rekorPubKeys == nil || rekorPubKeys.Keys == nil {
+	if trustedMaterial == nil && (rekorPubKeys == nil || rekorPubKeys.Keys == nil) {
 		return errors.New("no trusted rekor public keys provided")
-	}
-	// Make sure all the rekorPubKeys are ecsda.PublicKeys
-	for k, v := range rekorPubKeys.Keys {
-		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
-			return fmt.Errorf("rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
-		}
 	}
 
 	hashes := [][]byte{}
@@ -477,11 +473,35 @@ func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPu
 	}
 
 	// Verify rekor's signature over the SET.
+	if trustedMaterial != nil {
+		logID, err := hex.DecodeString(*e.LogID)
+		if err != nil {
+			return fmt.Errorf("decoding log ID: %w", err)
+		}
+		entry, err := tlog.NewEntry(entryBytes, *e.IntegratedTime, *e.LogIndex, logID, e.Verification.SignedEntryTimestamp, e.Verification.InclusionProof)
+		if err != nil {
+			return fmt.Errorf("converting tlog entry: %w", err)
+		}
+		if err := tlog.VerifySET(entry, trustedMaterial.RekorLogs()); err != nil {
+			return fmt.Errorf("verifying SET offline: %w", err)
+		}
+		return nil
+	}
+
+	// No trusted root available, so verify the SET with legacy TUF metadata:
+
 	payload := bundle.RekorPayload{
 		Body:           e.Body,
 		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       *e.LogIndex,
 		LogID:          *e.LogID,
+	}
+
+	// Make sure all the rekorPubKeys are ecsda.PublicKeys
+	for k, v := range rekorPubKeys.Keys {
+		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
+			return fmt.Errorf("rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
+		}
 	}
 
 	pubKey, ok := rekorPubKeys.Keys[payload.LogID]

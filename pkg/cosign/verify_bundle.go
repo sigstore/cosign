@@ -27,7 +27,7 @@ func VerifyNewBundle(_ context.Context, co *CheckOpts, artifactPolicyOption veri
 	if err != nil {
 		return nil, err
 	}
-	verifier, err := verify.NewSignedEntityVerifier(trustedMaterial, verifierOptions...)
+	verifier, err := verify.NewVerifier(trustedMaterial, verifierOptions...)
 	if err != nil {
 		return nil, err
 	}

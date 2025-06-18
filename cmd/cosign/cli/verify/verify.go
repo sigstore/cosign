@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci"
@@ -144,14 +145,24 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		if err != nil {
 			return fmt.Errorf("loading trusted root: %w", err)
 		}
+	} else if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath) == 0 &&
+		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" &&
+		env.Getenv(env.VariableSigstoreRootFile) == "" &&
+		env.Getenv(env.VariableSigstoreRekorPublicKey) == "" &&
+		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
+		// don't overrule the user's intentions if they provided their own keys
+		co.TrustedMaterial, err = cosign.TrustedRoot()
+		if err != nil {
+			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+		}
 	}
 
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	// If we are using signed timestamps, we need to load the TSA certificates
-	if co.UseSignedTimestamps {
+	// If we are using signed timestamps and there is no trusted root, we need to load the TSA certificates
+	if co.UseSignedTimestamps && co.TrustedMaterial == nil {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -169,14 +180,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			}
 			co.RekorClient = rekorClient
 		}
-		// This performs an online fetch of the Rekor public keys, but this is needed
-		// for verifying tlog entries (both online and offline).
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Rekor public keys: %w", err)
+		if co.TrustedMaterial == nil {
+			// This performs an online fetch of the Rekor public keys, but this is needed
+			// for verifying tlog entries (both online and offline).
+			co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+			if err != nil {
+				return fmt.Errorf("getting Rekor public keys: %w", err)
+			}
 		}
 	}
-	if keylessVerification(c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && keylessVerification(c.KeyRef, c.Sk) {
 		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
 			return err
 		}
@@ -186,7 +199,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	certRef := c.CertRef
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
+	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
@@ -223,13 +236,15 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		switch {
 		case c.CertChain == "" && co.RootCerts == nil:
 			// If no certChain and no CARoots are passed, the Fulcio root certificate will be used
-			co.RootCerts, err = fulcio.GetRoots()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio roots: %w", err)
-			}
-			co.IntermediateCerts, err = fulcio.GetIntermediates()
-			if err != nil {
-				return fmt.Errorf("getting Fulcio intermediates: %w", err)
+			if co.TrustedMaterial == nil {
+				co.RootCerts, err = fulcio.GetRoots()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio roots: %w", err)
+				}
+				co.IntermediateCerts, err = fulcio.GetIntermediates()
+				if err != nil {
+					return fmt.Errorf("getting Fulcio intermediates: %w", err)
+				}
 			}
 			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {

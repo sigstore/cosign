@@ -32,7 +32,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -123,8 +122,7 @@ func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) 
 		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
 	if _, ok := ref.(name.Digest); !ok {
-		msg := fmt.Sprintf(ui.TagReferenceMessage, refStr)
-		ui.Warnf(ctx, msg)
+		ui.Warnf(ctx, ui.TagReferenceMessage, refStr)
 	}
 	return ref, nil
 }
@@ -499,23 +497,6 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	if _, err := cosign.TrustedCert(leafCert, rootPool, subPool); err != nil {
 		return nil, fmt.Errorf("unable to validate certificate chain: %w", err)
 	}
-	// Verify SCT if present in the leaf certificate.
-	contains, err := cosign.ContainsSCT(leafCert.Raw)
-	if err != nil {
-		return nil, err
-	}
-	if contains {
-		pubKeys, err := cosign.GetCTLogPubs(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("getting CTLog public keys: %w", err)
-		}
-		var chain []*x509.Certificate
-		chain = append(chain, leafCert)
-		chain = append(chain, certChain...)
-		if err := cosign.VerifyEmbeddedSCT(context.Background(), chain, pubKeys); err != nil {
-			return nil, err
-		}
-	}
 	certSigner.Chain = certChainBytes
 
 	return certSigner, nil
@@ -624,9 +605,6 @@ func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, err
 	}
 	if sigCert != nil {
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		signedPayload.Cert = ""
 	}

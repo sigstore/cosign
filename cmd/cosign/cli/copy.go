@@ -16,10 +16,9 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/copy"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/spf13/cobra"
 )
 
 func Copy() *cobra.Command {
