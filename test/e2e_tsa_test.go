@@ -52,6 +52,10 @@ func TestTSAMTLS(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("withLibraryTSA=%t", tc.withLibraryTSA), func(t *testing.T) {
+			if os.Getenv("TSA_URL") == "" {
+				t.Skip("TSA_URL not set")
+			}
+
 			repo, stop := reg(t)
 			defer stop()
 			td := t.TempDir()
@@ -114,6 +118,10 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("withLibraryTSA=%t", tc.withLibraryTSA), func(t *testing.T) {
+			if os.Getenv("TSA_URL") == "" {
+				t.Skip("TSA_URL not set")
+			}
+
 			td := t.TempDir()
 			blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
 			blobPath := mkfile(blob, td, t)
